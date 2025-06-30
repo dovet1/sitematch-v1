@@ -1,0 +1,20 @@
+# SiteMatch – MVP Product Requirements Document (PRD)
+
+## Table of Contents
+
+- [SiteMatch – MVP Product Requirements Document (PRD)](#table-of-contents)
+  - [1. Purpose & Vision](./1-purpose-vision.md)
+  - [2. User Roles & Access](./2-user-roles-access.md)
+    - [2.1 Landlord Email Capture](./2-user-roles-access.md#21-landlord-email-capture)
+  - [3. Listing Creation Wizard (Occupier)](./3-listing-creation-wizard-occupier.md)
+    - [3.1 Required fieldsfileciteturn4file0L19-L28](./3-listing-creation-wizard-occupier.md#31-required-fieldsfileciteturn4file0l19-l28)
+    - [3.2 Optional fields (all dropdown / controlled except sliders & uploads)fileciteturn4file0L31-L44](./3-listing-creation-wizard-occupier.md#32-optional-fields-all-dropdown-controlled-except-sliders-uploadsfileciteturn4file0l31-l44)
+  - [4. Public Directory & Search](./4-public-directory-search.md)
+    - [4.1 Filters & Search Bar](./4-public-directory-search.md#41-filters-search-bar)
+    - [4.2 Results UI](./4-public-directory-search.md#42-results-ui)
+    - [4.3 Listing Detail Drawer](./4-public-directory-search.md#43-listing-detail-drawer)
+  - [5. Admin & Moderation](./5-admin-moderation.md)
+  - [6. Non‑Functional Requirements](./6-nonfunctional-requirements.md)
+  - [7. Tech Stack (agreed)](./7-tech-stack-agreed.md)
+  - [8. Success Metrics (MVP window)](./8-success-metrics-mvp-window.md)
+  - [9. Open Questions & Next Steps](./9-open-questions-next-steps.md)

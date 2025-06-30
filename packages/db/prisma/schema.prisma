@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - integrates with Supabase Auth
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      UserRole @default(PUBLIC)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  businessListings BusinessListing[]
+
+  @@map("users")
+}
+
+// Business Listing model
+model BusinessListing {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  address     String
+  city        String
+  state       String
+  zipCode     String            @map("zip_code")
+  phone       String?
+  email       String?
+  website     String?
+  category    String
+  status      BusinessStatus    @default(PENDING)
+  ownerId     String            @map("owner_id")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@index([city, state])
+  @@index([status])
+  @@index([ownerId])
+  @@map("business_listings")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  BUSINESS_OWNER
+  PUBLIC
+}
+
+enum BusinessStatus {
+  ACTIVE
+  PENDING
+  INACTIVE
+  REJECTED
+}
