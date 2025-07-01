@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import { DevLogin } from "@/components/auth/dev-login"
 
 export default function Home() {
   return (
@@ -71,6 +72,8 @@ export default function Home() {
           </p>
         </div>
       </div>
+
+      <DevLogin />
     </main>
   )
 }
