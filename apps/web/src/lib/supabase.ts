@@ -113,6 +113,25 @@ export interface Database {
           updated_at?: string
         }
       }
+      leads: {
+        Row: {
+          id: string
+          email: string
+          persona: 'agent' | 'investor' | 'landlord' | 'vendor'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          email: string
+          persona: 'agent' | 'investor' | 'landlord' | 'vendor'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          persona?: 'agent' | 'investor' | 'landlord' | 'vendor'
+        }
+      }
     }
   }
 }
