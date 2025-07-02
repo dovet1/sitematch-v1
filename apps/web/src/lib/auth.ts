@@ -102,3 +102,42 @@ export function isAdmin(userRole: UserRole): boolean {
 export function isOccupier(userRole: UserRole): boolean {
   return userRole === 'occupier'
 }
+
+export async function getCurrentUser(): Promise<UserProfile | null> {
+  const supabase = createServerClient()
+  
+  try {
+    const {
+      data: { user },
+      error
+    } = await supabase.auth.getUser()
+
+    if (error || !user) {
+      return null
+    }
+
+    // Get the user profile with role information
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('id, email, role, org_id, created_at, updated_at')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile) {
+      console.error('Error getting user profile:', profileError)
+      return null
+    }
+
+    return {
+      id: profile.id,
+      email: profile.email,
+      role: profile.role as UserRole,
+      org_id: profile.org_id,
+      created_at: profile.created_at,
+      updated_at: profile.updated_at
+    }
+  } catch (error) {
+    console.error('Error getting current user:', error)
+    return null
+  }
+}

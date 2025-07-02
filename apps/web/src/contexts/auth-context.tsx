@@ -14,10 +14,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [fetchingProfile, setFetchingProfile] = useState(false)
 
   const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
+    // Prevent multiple simultaneous fetches
+    if (fetchingProfile) {
+      return null
+    }
+
     try {
-      const { data, error } = await supabase
+      setFetchingProfile(true)
+      
+      // Add timeout to prevent hanging
+      const profilePromise = supabase
         .from('users')
         .select(`
           *,
@@ -25,6 +34,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         `)
         .eq('id', userId)
         .single()
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      )
+
+      const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any
 
       if (error) {
         console.error('Error fetching user profile:', error)
@@ -35,6 +50,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error fetching user profile:', error)
       return null
+    } finally {
+      setFetchingProfile(false)
     }
   }
 
@@ -76,24 +93,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+          // Skip if user is already set and same user
+          if (user?.id === session.user.id && profile) {
+            return
+          }
+
+          setLoading(true)
           const authUser = session.user as AuthUser
           setUser(authUser)
           
-          const userProfile = await fetchUserProfile(session.user.id)
-          setProfile(userProfile)
-          setLoading(false)
+          try {
+            const userProfile = await fetchUserProfile(session.user.id)
+            if (userProfile) {
+              setProfile(userProfile)
+            } else {
+              // Create a fallback profile if database fetch fails
+              setProfile({
+                id: authUser.id,
+                email: authUser.email || '',
+                role: 'occupier',
+                org_id: null,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+            }
+          } catch (error) {
+            console.error('Failed to fetch user profile:', error)
+          } finally {
+            setLoading(false)
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setProfile(null)
           setLoading(false)
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          const authUser = session.user as AuthUser
-          setUser(authUser)
-          
-          // Refresh profile to get updated claims
-          const userProfile = await fetchUserProfile(session.user.id)
-          setProfile(userProfile)
+          // Only refresh if user is different
+          if (user?.id !== session.user.id) {
+            const authUser = session.user as AuthUser
+            setUser(authUser)
+            
+            const userProfile = await fetchUserProfile(session.user.id)
+            if (userProfile) {
+              setProfile(userProfile)
+            }
+          }
         }
       }
     )
@@ -102,10 +146,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, redirectTo?: string) => {
+    // Ensure consistent hostname for callback URL
+    const origin = window.location.origin.replace('127.0.0.1', 'localhost')
+    const callbackUrl = redirectTo || `${origin}/auth/callback`
+    
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: redirectTo || `${window.location.origin}/auth/callback`
+        emailRedirectTo: callbackUrl
       }
     })
 

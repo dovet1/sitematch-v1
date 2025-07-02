@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createBrowserClient, createServerClient as createSSRServerClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -12,6 +12,9 @@ export const supabase = browserClient
 
 // Export the same instance for consistency
 export const createClientClient = () => browserClient
+
+// Default createClient export for API routes
+export const createClient = () => browserClient
 
 // Server component client (for use in Server Components)
 export const createServerClient = () => {
@@ -51,7 +54,7 @@ export const createServerClient = () => {
 // Admin client (server-side only)
 export const createAdminClient = () => {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-  return createClient(supabaseUrl, supabaseServiceKey, {
+  return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
@@ -130,6 +133,31 @@ export interface Database {
           id?: string
           email?: string
           persona?: 'agent' | 'investor' | 'landlord' | 'vendor'
+        }
+      }
+      organization_audit: {
+        Row: {
+          id: string
+          org_id: string
+          action: 'created' | 'updated' | 'merged'
+          metadata: Record<string, any>
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          action: 'created' | 'updated' | 'merged'
+          metadata?: Record<string, any>
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          action?: 'created' | 'updated' | 'merged'
+          metadata?: Record<string, any>
+          created_by?: string
         }
       }
     }
