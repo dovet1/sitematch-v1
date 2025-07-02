@@ -25,7 +25,6 @@ export async function subscribeToNewsletter(
     await resend.contacts.create({
       email,
       audienceId: process.env.RESEND_AUDIENCE_ID,
-      tags: [persona, 'lead-capture'],
     });
 
     return { success: true };

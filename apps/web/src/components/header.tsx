@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { LoginModal } from '@/components/auth/login-modal'
+import { SignUpModal } from '@/components/auth/signup-modal'
 import { UserMenu } from '@/components/auth/user-menu'
 import { useAuth } from '@/contexts/auth-context'
 
@@ -39,16 +40,19 @@ export function Header() {
           ) : user ? (
             <UserMenu />
           ) : (
-            <LoginModal>
-              <Button>
-                Sign In
-              </Button>
-            </LoginModal>
+            <div className="flex items-center space-x-2">
+              <LoginModal>
+                <Button variant="ghost">
+                  Sign In
+                </Button>
+              </LoginModal>
+              <SignUpModal>
+                <Button>
+                  Sign Up
+                </Button>
+              </SignUpModal>
+            </div>
           )}
-          {/* Temporary debug */}
-          <div className="text-xs bg-gray-100 p-1 rounded">
-            L:{loading ? '1' : '0'} U:{user ? '1' : '0'} A:{isAdmin ? '1' : '0'}
-          </div>
         </div>
       </div>
     </header>

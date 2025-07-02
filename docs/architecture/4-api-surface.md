@@ -12,6 +12,11 @@
 * `POST /listings/:id/publish` – mark pending
 * `POST /media/upload_signed_url` – obtain signed S3 URL (images, brochure)
 
+### 4.2.1 Organization Auto-Creation
+
+* `POST /organizations/auto-create` – create organization during listing submission
+* `GET /organizations/check-name` – check for duplicate organization names
+
 ## 4.3 Admin
 
 * `PATCH /admin/listings/:id` – edit

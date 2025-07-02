@@ -1,7 +1,7 @@
 {
   "extends": [
     "next/core-web-vitals",
-    "@next/eslint-config-next",
+    "@typescript-eslint/recommended",
     "prettier"
   ],
   "rules": {

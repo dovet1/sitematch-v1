@@ -37,8 +37,9 @@ SiteMatch MVP will be delivered as a **serverless full‑stack application** com
 ## 3. Domain Model (ER excerpt)
 
 ```
-users (id PK, email, role {occupier|landlord|admin}, org_id FK, created_at)
-organisations (id PK, name, type {occupier|landlord|agent}, logo_url)
+users (id PK, email, role {occupier|landlord|admin}, org_id FK nullable, created_at)
+organisations (id PK, name unique, type {occupier|landlord|agent}, logo_url, 
+             created_by FK(users), auto_created boolean, created_at)
 listings (id PK, org_id FK, title, brochure_url, site_size_min, site_size_max,
           sector_id FK, use_class_id FK, status {draft|pending|approved|archived|deleted},
           created_by FK(users), created_at, updated_at)
@@ -47,6 +48,8 @@ faqs (id PK, listing_id FK, q, a)
 media_files (id PK, listing_id FK, url, type {image|pdf})
 leads (id PK, email, persona {agent|investor|landlord|vendor}, created_at)
 admin_actions (id PK, listing_id FK, admin_id FK(users), action, reason, created_at)
+organization_audit (id PK, org_id FK, action {created|updated|merged}, 
+                   metadata jsonb, created_by FK(users), created_at)
 ```
 
 *Composite indexes*: `gin(listing_locations geom)` for radius queries; `btree(listings.status, listings.updated_at)` for feeds.
@@ -67,6 +70,11 @@ admin_actions (id PK, listing_id FK, admin_id FK(users), action, reason, created
 * `POST /listings/:id/publish` – mark pending
 * `POST /media/upload_signed_url` – obtain signed S3 URL (images, brochure)
 
+#### 4.2.1 Organization Auto-Creation
+
+* `POST /organizations/auto-create` – create organization during listing submission
+* `GET /organizations/check-name` – check for duplicate organization names
+
 ### 4.3 Admin
 
 * `PATCH /admin/listings/:id` – edit
@@ -83,6 +91,8 @@ admin_actions (id PK, listing_id FK, admin_id FK(users), action, reason, created
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | listings           | Occupier can `select/update` rows where `org_id = current_setting('request.jwt.org_id')`; public can `select` only `status='approved'`; admin full access |
 | listing\_locations | Same as listings                                                                                                                                          |
+| organisations        | Users can `insert` for auto-creation; `select/update` where `id = current_setting('request.jwt.org_id')`; admin full access                               |
+| organization\_audit  | `insert` allowed for authenticated users; `select` restricted to admin and org members                                                                     |
 | leads              | `insert` allowed for anon; `select` restricted to admin                                                                                                   |
 
 Supabase **row‑level security** and **JWT custom claims** ensure minimal surface area.
@@ -93,6 +103,7 @@ Supabase **row‑level security** and **JWT custom claims** ensure minimal surfa
 
 | Function             | Trigger                         | Purpose                                             |
 | -------------------- | ------------------------------- | --------------------------------------------------- |
+| `auto_create_org`    | listing submission              | Auto-create organization with duplicate handling     |
 | `email_alerts`       | `cron '* * * * *'` (every hour) | Send new/updated listing notifications to Pro users |
 | `expire_listings`    | daily 02:00                     | Auto‑archive listings > 90 days old                 |
 | `parse_brochure_pdf` | storage `object_created`        | Extract text & auto‑fill FAQ suggestions (future)   |

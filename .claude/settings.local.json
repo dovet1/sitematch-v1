@@ -10,7 +10,15 @@
       "Bash(ls:*)",
       "Bash(npm run build:*)",
       "Bash(npm run type-check:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(npm test:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx shadcn-ui:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run typecheck:*)",
+      "Bash(true)",
+      "Bash(npm run lint:*)"
     ],
     "deny": []
   }
