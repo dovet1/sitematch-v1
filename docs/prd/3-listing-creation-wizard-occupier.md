@@ -1,6 +1,6 @@
 # 3. Listing Creation Wizard (Occupier)
 
-Multi‑step flow implemented with React Hook Form.
+Multi‑step flow implemented with React Hook Form. **Organization is auto-created** from company information during wizard submission for streamlined onboarding.
 
 ## 3.1 Required fieldsfileciteturn4file0L19-L28
 
@@ -22,5 +22,18 @@ Multi‑step flow implemented with React Hook Form.
 | Example fit‑outs       | image/video gallery                                                                                                                                                                                                       |       |
 
 Validation: all required fields block progression; optional fields clearly labelled.
+
+## 3.3 Organization Auto-Creation
+
+**Streamlined Onboarding**: When an occupier submits their first listing, the system automatically:
+
+1. **Creates organization** from company name provided in wizard
+2. **Handles duplicate names** by appending numbers (e.g., "Acme Corp (2)")  
+3. **Assigns user** to newly created organization
+4. **Associates listing** with the organization
+
+This eliminates the need for separate organization setup, reducing friction and improving conversion rates.
+
+**Error Handling**: If organization creation fails, the entire listing submission fails to maintain data integrity.
 
 ---

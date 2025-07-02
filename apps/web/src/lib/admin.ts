@@ -6,6 +6,20 @@ export interface AdminUserUpdate {
   org_id?: string | null
 }
 
+export interface CreateOrganizationData {
+  name: string
+  type: 'occupier' | 'landlord' | 'agent'
+}
+
+export interface Organization {
+  id: string
+  name: string
+  type: 'occupier' | 'landlord' | 'agent'
+  logo_url: string | null
+  created_at: string
+  updated_at: string
+}
+
 export class AdminService {
   private supabase: any
 
@@ -101,6 +115,38 @@ export class AdminService {
     }
 
     return stats
+  }
+
+  async getAllOrganizations(): Promise<Organization[]> {
+    const { data, error } = await this.supabase
+      .from('organisations')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      throw new Error(`Failed to get organizations: ${error.message}`)
+    }
+
+    return data || []
+  }
+
+  async createOrganization(orgData: CreateOrganizationData): Promise<Organization> {
+    const { data, error } = await this.supabase
+      .from('organisations')
+      .insert({
+        name: orgData.name,
+        type: orgData.type,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(`Failed to create organization: ${error.message}`)
+    }
+
+    return data
   }
 }
 

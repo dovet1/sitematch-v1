@@ -14,7 +14,7 @@ import {
 import { useAuth } from '@/contexts/auth-context'
 
 export function UserMenu() {
-  const { user, profile, signOut, isAdmin } = useAuth()
+  const { user, profile, signOut, isAdmin, loading } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSignOut = async () => {
@@ -28,8 +28,30 @@ export function UserMenu() {
     }
   }
 
-  if (!user || !profile) {
+
+  if (!user) {
     return null
+  }
+
+  // Show loading state if user exists but profile is still loading
+  if (!profile && loading) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="h-8 w-20 bg-muted animate-pulse rounded" />
+      </div>
+    )
+  }
+
+  // If user exists but no profile and not loading, something's wrong
+  if (!profile) {
+    return (
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" className="flex items-center gap-2">
+          <User className="h-4 w-4" />
+          {user.email}
+        </Button>
+      </div>
+    )
   }
 
   return (

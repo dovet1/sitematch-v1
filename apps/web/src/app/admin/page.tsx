@@ -2,7 +2,7 @@ import { requireAdmin } from '@/lib/auth'
 import { AdminService } from '@/lib/admin'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Shield, Users, Building, Activity } from 'lucide-react'
+import { Shield, Users, Activity } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminDashboard() {
@@ -23,28 +23,17 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers}</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.adminUsers} admin{stats.adminUsers !== 1 ? 's' : ''}, {stats.occupierUsers} occupier{stats.occupierUsers !== 1 ? 's' : ''}
+              {stats.admins} admin{stats.admins !== 1 ? 's' : ''}, {stats.occupiers} occupier{stats.occupiers !== 1 ? 's' : ''}
             </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Organizations</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrganizations}</div>
-            <p className="text-xs text-muted-foreground">Active organizations</p>
           </CardContent>
         </Card>
 
@@ -98,7 +87,7 @@ export default async function AdminDashboard() {
                   <div>
                     <p className="font-medium">{user.email}</p>
                     <p className="text-sm text-muted-foreground">
-                      {user.role} • {user.organisation?.name || 'No organization'}
+                      {user.role} • {(user as any).organisation?.name || 'No organization'}
                     </p>
                   </div>
                 </div>
