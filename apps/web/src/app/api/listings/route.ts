@@ -11,6 +11,8 @@ import {
   getListings,
   validateListingData
 } from '@/lib/listings';
+import { validateListingData as validateEnhancedListingData } from '@/lib/enhanced-listing-submission';
+import { createEnhancedListing, sendSubmissionConfirmation } from '@/lib/enhanced-listings';
 import type {
   CreateListingRequest,
   ListingsQueryParams,
@@ -82,8 +84,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Only occupiers can create listings
-    if (user.role !== 'occupier') {
+    // Only occupiers and admins can create listings
+    if (user.role !== 'occupier' && user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Only occupiers can create listings' },
         { status: 403 }
@@ -91,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
-    let requestData: CreateListingRequest;
+    let requestData: any;
     try {
       requestData = await request.json();
     } catch (parseError) {
@@ -101,9 +103,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate the listing data
-    const validation = validateListingData(requestData);
-    if (!validation.isValid) {
+    // Enhanced validation for Story 3.3
+    const validation = validateEnhancedListingData(requestData);
+    if (!validation.valid) {
       return NextResponse.json(
         {
           success: false,
@@ -114,24 +116,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the listing
-    if (!user.org_id) {
+    // Use organization ID from request or user's org
+    const organizationId = requestData.organization_id || user.org_id;
+    if (!organizationId) {
       return NextResponse.json(
-        { success: false, error: 'User must be associated with an organization' },
+        { success: false, error: 'Organization ID is required' },
         { status: 400 }
       );
     }
     
-    const listing = await createListing(requestData, user.id, user.org_id);
+    // Create the enhanced listing with all fields
+    const listing = await createEnhancedListing(requestData, user.id, organizationId);
+
+    // Send confirmation email
+    try {
+      await sendSubmissionConfirmation(requestData.contact_email, listing.id);
+    } catch (emailError) {
+      console.error('Failed to send confirmation email:', emailError);
+      // Don't fail the listing creation for email errors
+    }
 
     // Log the creation for monitoring
-    console.log(`Listing created: ${listing.id} by user ${user.id} (org: ${user.org_id})`);
+    console.log(`Enhanced listing created: ${listing.id} by user ${user.id} (org: ${organizationId})`);
 
     return NextResponse.json(
       {
         success: true,
+        id: listing.id,
         data: listing,
-        message: 'Listing created successfully'
+        message: 'Listing submitted successfully for review'
       },
       { status: 201 }
     );

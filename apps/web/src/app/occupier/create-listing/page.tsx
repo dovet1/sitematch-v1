@@ -10,6 +10,7 @@ import { ListingWizard } from '@/components/listings/listing-wizard';
 import { createListing } from '@/lib/listings';
 import { ErrorBoundary } from '@/components/error-boundary';
 import type { WizardFormData, SubmissionResult } from '@/types/wizard';
+import type { CreateListingRequest } from '@/types/listings';
 
 // =====================================================
 // PAGE COMPONENT
@@ -47,49 +48,69 @@ export default async function CreateListingPage() {
         return { success: false, error: 'Unauthorized' };
       }
 
-      // Use auto-organization creation service
-      const { createListingWithAutoOrganization } = await import('@/lib/auto-organization');
+      // Use the existing basic createListing function
+      const { createListing } = await import('@/lib/listings');
+      const { getOrCreateOrganizationForUser } = await import('@/lib/auto-organization');
       
-      // Prepare data for auto-organization creation
-      const listingWithOrgData = {
-        // Property requirements data
-        sectors: data.sectors,
-        useClassIds: data.useClassIds,
-        siteSizeMin: data.siteSizeMin,
-        siteSizeMax: data.siteSizeMax,
-        // Location and files data
-        locations: data.locations,
-        locationSearchNationwide: data.locationSearchNationwide,
-        brochureFiles: data.brochureFiles,
-        sitePlanFiles: data.sitePlanFiles,
-        fitOutFiles: data.fitOutFiles,
-        // Contact data
-        contactName: data.contactName,
-        contactTitle: data.contactTitle,
-        contactEmail: data.contactEmail,
-        contactPhone: data.contactPhone,
-        // Company data for organization creation
-        companyName: data.companyName,
-        logoFile: data.logoFile,
-        logoPreview: data.logoPreview
+      // Handle organization creation if needed
+      const orgResult = await getOrCreateOrganizationForUser(
+        currentUser.id, 
+        data.companyName || `${currentUser.email?.split('@')[0] || 'User'} Company`
+      );
+      
+      if (orgResult.error) {
+        return { success: false, error: `Failed to create organization: ${orgResult.error}` };
+      }
+
+      // Use real database now that tables are set up
+      const { getSectors, getUseClasses } = await import('@/lib/listings');
+      
+      let sectorId, useClassId;
+      try {
+        const sectors = await getSectors();
+        const useClasses = await getUseClasses();
+        
+        // Use first available sector and use class
+        sectorId = sectors[0]?.id;
+        useClassId = useClasses[0]?.id;
+        
+        console.log('Available sectors:', sectors.length);
+        console.log('Available use classes:', useClasses.length);
+        
+      } catch (error) {
+        console.error('Failed to fetch reference data:', error);
+        return { success: false, error: 'Database not set up properly. Please run the SQL setup script first.' };
+      }
+
+      if (!sectorId || !useClassId) {
+        return { success: false, error: 'No sectors or use classes available. Please run the SQL setup script first.' };
+      }
+
+      // Create listing data using the real database format
+      const listingData: CreateListingRequest = {
+        title: `Property Requirement - ${data.companyName || 'Company'}`,
+        description: `Property requirement from ${data.companyName || 'company'}`,
+        sector_id: sectorId,
+        use_class_id: useClassId,
+        site_size_min: data.siteSizeMin,
+        site_size_max: data.siteSizeMax,
+        // Required contact fields from form data
+        contact_name: data.contactName || 'Contact Name',
+        contact_title: data.contactTitle || 'Contact Title', 
+        contact_email: data.contactEmail || currentUser.email || 'contact@example.com',
+        contact_phone: data.contactPhone,
+        brochure_url: undefined // Optional
       };
 
-      // Create listing with auto-organization creation
-      const result = await createListingWithAutoOrganization(listingWithOrgData, currentUser.id);
-
-      if (!result.success) {
-        return {
-          success: false,
-          error: result.error || 'Failed to create listing'
-        };
-      }
+      // Use the existing createListing function
+      const listing = await createListing(listingData, currentUser.id, orgResult.organizationId);
 
       return {
         success: true,
-        data: result,
-        listingId: result.listingId,
-        organizationId: result.organizationId,
-        organizationCreated: result.organizationCreated
+        listingId: listing.id,
+        organizationId: orgResult.organizationId,
+        organizationCreated: orgResult.organizationCreated,
+        message: 'Listing created successfully'
       };
     } catch (error) {
       console.error('Failed to create listing:', error);

@@ -26,7 +26,8 @@ export const validationSchema: ValidationSchema = {
     contactEmail: { required: true, email: true },
     contactPhone: { phone: true },
     logoFile: {},
-    logoPreview: {}
+    logoPreview: {},
+    logoUrl: {}
   },
   step2: {
     sectors: {},
@@ -41,7 +42,8 @@ export const validationSchema: ValidationSchema = {
   step4: {
     brochureFiles: {},
     sitePlanFiles: {},
-    fitOutFiles: {}
+    fitOutFiles: {},
+    faqs: {}
   }
 };
 

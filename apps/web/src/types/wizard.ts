@@ -77,6 +77,13 @@ export interface SupportingDocumentsData {
     isVideo?: boolean;
     thumbnail?: string;
   }>;
+  // FAQ data - Story 3.3
+  faqs?: Array<{
+    id?: string;
+    question: string;
+    answer: string;
+    displayOrder: number;
+  }>;
 }
 
 // PRD Use Class Options for Dropdown
@@ -167,6 +174,7 @@ export interface SubmissionResult {
   success: boolean;
   data?: any;
   error?: string;
+  message?: string;
   listingId?: string;
   organizationId?: string;
   organizationCreated?: boolean;
