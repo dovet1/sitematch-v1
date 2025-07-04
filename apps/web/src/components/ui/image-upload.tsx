@@ -113,6 +113,7 @@ export function ImageUpload({
   }
 
   const handleRemove = (e: React.MouseEvent) => {
+    e.preventDefault()
     e.stopPropagation()
     setError(null)
     onChange(null)

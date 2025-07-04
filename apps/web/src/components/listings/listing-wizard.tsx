@@ -17,7 +17,9 @@ import { WizardProgress, createProgressSteps } from './wizard-progress';
 import { Step1CompanyInfo } from './steps/step1-company-info';
 import { Step2RequirementDetails } from './steps/step2-requirement-details';
 import { Step3LocationFiles } from './steps/step3-location-files';
-import { Step4SupportingDocuments } from './steps/step4-supporting-documents';
+import { Step4AdditionalContacts } from './steps/step4-additional-contacts';
+import { Step5FAQs } from './steps/step5-faqs';
+import { Step6SupportingDocuments } from './steps/step6-supporting-documents';
 
 import type {
   WizardState,
@@ -47,7 +49,7 @@ import {
 const initialState: WizardState = {
   currentStep: 1,
   formData: {},
-  isValid: { 1: false, 2: false, 3: false, 4: false },
+  isValid: { 1: false, 2: false, 3: false, 4: false, 5: false, 6: false },
   isSubmitting: false,
   errors: {}
 };
@@ -76,6 +78,9 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     
     case 'SET_ERRORS':
       return { ...state, errors: action.errors };
+    
+    case 'SET_LISTING_ID':
+      return { ...state, listingId: action.listingId };
     
     case 'RESET':
       return initialState;
@@ -121,14 +126,63 @@ export function ListingWizard({
     const dataToLoad = savedData || initialData || {};
     
     // Pre-fill contact email if provided
-    if (userEmail && !dataToLoad.contactEmail) {
-      dataToLoad.contactEmail = userEmail;
+    if (userEmail && !dataToLoad.primaryContact?.contactEmail) {
+      if (!dataToLoad.primaryContact) {
+        dataToLoad.primaryContact = {
+          contactName: '',
+          contactTitle: '',
+          contactEmail: userEmail,
+          isPrimaryContact: true
+        };
+      } else {
+        dataToLoad.primaryContact.contactEmail = userEmail;
+      }
     }
 
     if (Object.keys(dataToLoad).length > 0) {
       dispatch({ type: 'UPDATE_DATA', data: dataToLoad });
     }
   }, [initialData, userEmail]);
+
+  // =====================================================
+  // DRAFT LISTING CREATION
+  // =====================================================
+
+  useEffect(() => {
+    // Create draft listing when wizard starts (only if we don't have one already)
+    if (!state.listingId && organizationId && organizationId !== '00000000-0000-0000-0000-000000000000') {
+      createDraftListing();
+    }
+  }, [organizationId, state.listingId]);
+
+  const createDraftListing = async () => {
+    try {
+      const response = await fetch('/api/listings/draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          organizationId,
+          userEmail
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create draft listing');
+      }
+
+      const result = await response.json();
+      if (result.success && result.listingId) {
+        dispatch({ type: 'SET_LISTING_ID', listingId: result.listingId });
+      } else {
+        throw new Error(result.error || 'Failed to create draft listing');
+      }
+    } catch (error) {
+      console.error('Failed to create draft listing:', error);
+      // Don't block the wizard if draft creation fails
+    }
+  };
 
   // =====================================================
   // VALIDATION EFFECTS
@@ -150,13 +204,23 @@ export function ListingWizard({
       dispatch({ type: 'SET_VALID', step: 1, isValid: isStep1Valid });
       dispatch({ type: 'SET_VALID', step: 2, isValid: isStep2Valid });
     }
-    if (state.currentStep === 4) {
+    if (state.currentStep >= 4) {
       const isStep1Valid = isStepValid(1, state.formData);
       const isStep2Valid = isStepValid(2, state.formData);
       const isStep3Valid = isStepValid(3, state.formData);
       dispatch({ type: 'SET_VALID', step: 1, isValid: isStep1Valid });
       dispatch({ type: 'SET_VALID', step: 2, isValid: isStep2Valid });
       dispatch({ type: 'SET_VALID', step: 3, isValid: isStep3Valid });
+      
+      if (state.currentStep >= 5) {
+        const isStep4Valid = isStepValid(4, state.formData);
+        dispatch({ type: 'SET_VALID', step: 4, isValid: isStep4Valid });
+        
+        if (state.currentStep === 6) {
+          const isStep5Valid = isStepValid(5, state.formData);
+          dispatch({ type: 'SET_VALID', step: 5, isValid: isStep5Valid });
+        }
+      }
     }
   }, [state.formData, state.currentStep]);
 
@@ -192,7 +256,7 @@ export function ListingWizard({
   // NAVIGATION HANDLERS
   // =====================================================
 
-  const goToStep = useCallback((step: 1 | 2 | 3 | 4) => {
+  const goToStep = useCallback((step: 1 | 2 | 3 | 4 | 5 | 6) => {
     if (canNavigateToStep(step, state.currentStep, state.isValid)) {
       dispatch({ type: 'SET_STEP', step });
     }
@@ -238,17 +302,19 @@ export function ListingWizard({
         let processedData = { ...state.formData };
         
         // Upload logo file if present and not already uploaded
-        if (processedData.logoFile instanceof File) {
+        if (processedData.logoFile instanceof File && !processedData.logoUrl) {
           try {
             const { uploadFileViaApi } = await import('@/lib/file-upload-api');
             const uploadedFile = await uploadFileViaApi(
               processedData.logoFile,
               'logo',
-              organizationId
+              organizationId,
+              undefined,
+              state.listingId
             );
             
             // Replace File object with uploaded file data
-            processedData.logoFile = undefined;
+            delete processedData.logoFile;
             processedData.logoPreview = uploadedFile.url;
             processedData.logoUrl = uploadedFile.url;
             
@@ -257,7 +323,146 @@ export function ListingWizard({
             console.error('Logo upload failed:', uploadError);
             toast.error('Logo upload failed, but other data saved');
             // Continue with save even if logo upload fails
-            processedData.logoFile = undefined;
+            delete processedData.logoFile;
+          }
+        }
+        
+        // Upload primary contact headshot if present and not already uploaded
+        if (processedData.primaryContact?.headshotFile instanceof File && !processedData.primaryContact?.headshotUrl) {
+          try {
+            const { uploadFileViaApi } = await import('@/lib/file-upload-api');
+            const uploadedFile = await uploadFileViaApi(
+              processedData.primaryContact.headshotFile,
+              'headshot',
+              organizationId,
+              undefined,
+              state.listingId
+            );
+            
+            // Replace File object with uploaded file data
+            delete processedData.primaryContact.headshotFile;
+            processedData.primaryContact.headshotPreview = uploadedFile.url;
+            processedData.primaryContact.headshotUrl = uploadedFile.url;
+            
+            toast.success('Headshot uploaded successfully');
+          } catch (uploadError) {
+            console.error('Primary contact headshot upload failed:', uploadError);
+            toast.error('Headshot upload failed, but other data saved');
+            // Continue with save even if headshot upload fails
+            if (processedData.primaryContact) {
+              delete processedData.primaryContact.headshotFile;
+            }
+          }
+        }
+        
+        // Upload additional contacts headshots if present and not already uploaded
+        if (processedData.additionalContacts && processedData.additionalContacts.length > 0) {
+          for (let i = 0; i < processedData.additionalContacts.length; i++) {
+            const contact = processedData.additionalContacts[i];
+            if (contact.headshotFile instanceof File && !contact.headshotUrl) {
+              try {
+                const { uploadFileViaApi } = await import('@/lib/file-upload-api');
+                const uploadedFile = await uploadFileViaApi(
+                  contact.headshotFile,
+                  'headshot',
+                  organizationId,
+                  undefined,
+                  state.listingId
+                );
+                
+                // Replace File object with uploaded file data
+                delete processedData.additionalContacts[i].headshotFile;
+                processedData.additionalContacts[i].headshotPreview = uploadedFile.url;
+                processedData.additionalContacts[i].headshotUrl = uploadedFile.url;
+                
+                toast.success(`Additional contact headshot uploaded successfully`);
+              } catch (uploadError) {
+                console.error(`Additional contact ${i} headshot upload failed:`, uploadError);
+                toast.error(`Additional contact headshot upload failed, but other data saved`);
+                // Continue with save even if headshot upload fails
+                delete processedData.additionalContacts[i].headshotFile;
+              }
+            }
+          }
+        }
+        
+        // Save locations and FAQs to draft listing if we have a listingId
+        if (state.listingId) {
+          try {
+            // Save locations if not nationwide and locations exist
+            if (!processedData.locationSearchNationwide && processedData.locations && processedData.locations.length > 0) {
+              const { addLocationsToDraftListing } = await import('@/lib/draft-listings');
+              
+              // Clear existing locations first (to handle updates)
+              const { createServerClient } = await import('@/lib/supabase');
+              const supabase = createServerClient();
+              await supabase.from('listing_locations').delete().eq('listing_id', state.listingId);
+              
+              // Add current locations
+              await addLocationsToDraftListing(state.listingId, processedData.locations);
+            }
+            
+            // Save FAQs if they exist
+            if (processedData.faqs && processedData.faqs.length > 0) {
+              const { addFAQsToDraftListing } = await import('@/lib/draft-listings');
+              
+              // Clear existing FAQs first (to handle updates)
+              const { createServerClient } = await import('@/lib/supabase');
+              const supabase = createServerClient();
+              await supabase.from('faqs').delete().eq('listing_id', state.listingId);
+              
+              // Transform and add current FAQs
+              const transformedFAQs = processedData.faqs.map(faq => ({
+                question: faq.question,
+                answer: faq.answer,
+                display_order: faq.displayOrder
+              }));
+              await addFAQsToDraftListing(state.listingId, transformedFAQs);
+            }
+            
+            // Save contacts to draft listing
+            const { addContactsToDraftListing } = await import('@/lib/draft-listings');
+            const { createServerClient } = await import('@/lib/supabase');
+            const supabase = createServerClient();
+            
+            // Clear existing contacts first (to handle updates)
+            await supabase.from('listing_contacts').delete().eq('listing_id', state.listingId);
+            
+            // Add current contacts
+            const contacts = [];
+            
+            // Add primary contact
+            if (processedData.primaryContact) {
+              contacts.push({
+                contact_name: processedData.primaryContact.contactName || 'Contact Name',
+                contact_title: processedData.primaryContact.contactTitle || 'Contact Title',
+                contact_email: processedData.primaryContact.contactEmail || userEmail || 'contact@example.com',
+                contact_phone: processedData.primaryContact.contactPhone,
+                is_primary_contact: true,
+                headshot_url: processedData.primaryContact.headshotUrl
+              });
+            }
+            
+            // Add additional contacts
+            if (processedData.additionalContacts) {
+              processedData.additionalContacts.forEach(contact => {
+                contacts.push({
+                  contact_name: contact.contactName || 'Contact Name',
+                  contact_title: contact.contactTitle || 'Contact Title',
+                  contact_email: contact.contactEmail || 'contact@example.com',
+                  contact_phone: contact.contactPhone,
+                  is_primary_contact: false,
+                  headshot_url: contact.headshotUrl
+                });
+              });
+            }
+
+            if (contacts.length > 0) {
+              await addContactsToDraftListing(state.listingId, contacts);
+            }
+          } catch (error) {
+            console.error('Failed to save locations/FAQs to draft listing:', error);
+            // Don't block the save for this
           }
         }
         
@@ -290,7 +495,9 @@ export function ListingWizard({
     const step2Errors = validateStep(2, state.formData);
     const step3Errors = validateStep(3, state.formData);
     const step4Errors = validateStep(4, state.formData);
-    const allErrors = { ...step1Errors, ...step2Errors, ...step3Errors, ...step4Errors };
+    const step5Errors = validateStep(5, state.formData);
+    const step6Errors = validateStep(6, state.formData);
+    const allErrors = { ...step1Errors, ...step2Errors, ...step3Errors, ...step4Errors, ...step5Errors, ...step6Errors };
 
     if (Object.keys(allErrors).length > 0) {
       dispatch({ type: 'SET_ERRORS', errors: allErrors });
@@ -305,7 +512,51 @@ export function ListingWizard({
     dispatch({ type: 'SET_SUBMITTING', isSubmitting: true });
 
     try {
-      const result = await onSubmit(state.formData as WizardFormData);
+      // Sanitize form data for Server Action - remove File objects
+      const sanitizedData = { ...state.formData };
+      
+      // Remove File objects that can't be serialized
+      if (sanitizedData.logoFile instanceof File) {
+        delete sanitizedData.logoFile;
+      }
+      
+      // Clean primary contact headshot file
+      if (sanitizedData.primaryContact?.headshotFile instanceof File) {
+        sanitizedData.primaryContact = {
+          ...sanitizedData.primaryContact,
+          headshotFile: undefined
+        };
+      }
+      
+      // Clean additional contacts
+      if (sanitizedData.additionalContacts) {
+        sanitizedData.additionalContacts = sanitizedData.additionalContacts.map(contact => {
+          const cleanContact = { ...contact };
+          if (cleanContact.headshotFile instanceof File) {
+            delete cleanContact.headshotFile;
+          }
+          return cleanContact;
+        });
+      }
+      
+      // Clean up any other potential File objects in file arrays
+      if (sanitizedData.brochureFiles) {
+        sanitizedData.brochureFiles = sanitizedData.brochureFiles.filter(file => !(file instanceof File));
+      }
+      if (sanitizedData.sitePlanFiles) {
+        sanitizedData.sitePlanFiles = sanitizedData.sitePlanFiles.filter(file => !(file instanceof File));
+      }
+      if (sanitizedData.fitOutFiles) {
+        sanitizedData.fitOutFiles = sanitizedData.fitOutFiles.filter(file => !(file instanceof File));
+      }
+      
+      // Add existing listingId to the submission data
+      const submissionData = {
+        ...sanitizedData,
+        existingListingId: state.listingId
+      } as WizardFormData;
+
+      const result = await onSubmit(submissionData);
       
       if (result.success) {
         clearLocalStorage();
@@ -342,7 +593,7 @@ export function ListingWizard({
 
   const canGoNext = state.isValid[state.currentStep] && !state.isSubmitting;
   const canGoBack = state.currentStep > 1 && !state.isSubmitting;
-  const canSubmit = state.currentStep === 4 && state.isValid[1] && state.isValid[2] && state.isValid[3] && state.isValid[4] && !state.isSubmitting;
+  const canSubmit = state.currentStep === 6 && state.isValid[1] && state.isValid[2] && state.isValid[3] && state.isValid[4] && state.isValid[5] && state.isValid[6] && !state.isSubmitting;
 
   // =====================================================
   // RENDER
@@ -368,6 +619,8 @@ export function ListingWizard({
                 dispatch({ type: 'SET_VALID', step: 1, isValid })
               }
               errors={state.errors}
+              organizationId={organizationId}
+              listingId={state.listingId}
             />
           )}
 
@@ -398,13 +651,39 @@ export function ListingWizard({
           )}
 
           {state.currentStep === 4 && (
-            <Step4SupportingDocuments
+            <Step4AdditionalContacts
               data={state.formData}
               onUpdate={updateData}
               onNext={goNext}
               onPrevious={goPrevious}
               onValidationChange={(isValid) => 
                 dispatch({ type: 'SET_VALID', step: 4, isValid })
+              }
+              errors={state.errors}
+            />
+          )}
+
+          {state.currentStep === 5 && (
+            <Step5FAQs
+              data={state.formData}
+              onUpdate={updateData}
+              onNext={goNext}
+              onPrevious={goPrevious}
+              onValidationChange={(isValid) => 
+                dispatch({ type: 'SET_VALID', step: 5, isValid })
+              }
+              errors={state.errors}
+            />
+          )}
+
+          {state.currentStep === 6 && (
+            <Step6SupportingDocuments
+              data={state.formData}
+              onUpdate={updateData}
+              onNext={goNext}
+              onPrevious={goPrevious}
+              onValidationChange={(isValid) => 
+                dispatch({ type: 'SET_VALID', step: 6, isValid })
               }
               errors={state.errors}
               organizationId={organizationId}
@@ -456,7 +735,7 @@ export function ListingWizard({
               </div>
               
               {/* Next/Submit button */}
-              {state.currentStep < 4 ? (
+              {state.currentStep < 6 ? (
                 <Button
                   onClick={goNext}
                   disabled={!canGoNext}
@@ -523,7 +802,7 @@ export function ListingWizard({
                 )}
 
                 {/* Next/Submit button */}
-                {state.currentStep < 4 ? (
+                {state.currentStep < 6 ? (
                   <Button
                     onClick={goNext}
                     disabled={!canGoNext}

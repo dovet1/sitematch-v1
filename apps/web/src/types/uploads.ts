@@ -6,7 +6,7 @@
 /**
  * Supported file types for uploads
  */
-export type FileUploadType = 'logo' | 'brochure' | 'sitePlan' | 'fitOut';
+export type FileUploadType = 'logo' | 'brochure' | 'sitePlan' | 'fitOut' | 'headshot';
 
 /**
  * File upload configuration
@@ -61,6 +61,14 @@ export const FILE_UPLOAD_CONFIGS: Record<FileUploadType, FileUploadConfig> = {
     maxFiles: 10,
     requiresOptimization: true,
     description: 'Fit-out examples (JPG, PNG, MP4 - max 5MB each)'
+  },
+  headshot: {
+    bucket: 'headshots',
+    allowedTypes: ['image/jpeg', 'image/png'],
+    maxSize: 2 * 1024 * 1024, // 2MB
+    maxFiles: 1,
+    requiresOptimization: true,
+    description: 'Contact headshot (JPG, PNG - max 2MB)'
   }
 };
 
@@ -215,7 +223,8 @@ export const FILE_TYPE_LABELS: Record<FileUploadType, string> = {
   logo: 'Company Logo',
   brochure: 'Company Brochures',
   sitePlan: 'Site Plans',
-  fitOut: 'Fit-out Examples'
+  fitOut: 'Fit-out Examples',
+  headshot: 'Contact Headshot'
 };
 
 /**
