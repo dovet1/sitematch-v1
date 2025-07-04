@@ -272,9 +272,21 @@ export function isValidEmail(email: string): boolean {
 }
 
 export function isValidPhone(phone: string): boolean {
-  // International phone number format (E.164)
-  const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-  return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''));
+  // Clean the phone number by removing spaces, dashes, and parentheses
+  const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // UK mobile numbers (07xxx xxxxxx) or international format (+447xxx xxxxxx)
+  const ukMobileRegex = /^(\+44|0)?7\d{9}$/;
+  
+  // International phone number format (E.164) - more flexible
+  const internationalRegex = /^\+?[1-9]\d{7,14}$/;
+  
+  // UK landline numbers (01xxx, 02xxx) 
+  const ukLandlineRegex = /^(\+44|0)?[12]\d{8,10}$/;
+  
+  return ukMobileRegex.test(cleanPhone) || 
+         ukLandlineRegex.test(cleanPhone) || 
+         internationalRegex.test(cleanPhone);
 }
 
 export function formatSiteSize(sizeMin: number | null, sizeMax: number | null): string {

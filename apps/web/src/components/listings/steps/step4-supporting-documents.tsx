@@ -14,6 +14,7 @@ import { Upload, AlertCircle } from 'lucide-react';
 import { EnhancedImageUpload } from '@/components/listings/enhanced-image-upload';
 import { DocumentUpload } from '@/components/listings/document-upload';
 import { GalleryUpload } from '@/components/listings/gallery-upload';
+import { FAQManager, type FAQ } from '@/components/listings/faq-manager';
 
 import type { WizardStepProps, SupportingDocumentsData } from '@/types/wizard';
 import type { UploadedFile, GalleryItem } from '@/types/uploads';
@@ -135,6 +136,16 @@ export function Step4SupportingDocuments({
     });
   }, [currentFormData, onUpdate]);
 
+  const handleFAQsChange = useCallback((faqs: FAQ[]) => {
+    onUpdate({
+      ...currentFormData,
+      faqs: faqs.map(faq => ({
+        ...faq,
+        displayOrder: faq.displayOrder
+      }))
+    });
+  }, [currentFormData, onUpdate]);
+
   // =====================================================
   // FORM SUBMISSION
   // =====================================================
@@ -211,6 +222,23 @@ export function Step4SupportingDocuments({
               showCaptions={true}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* FAQ Management Section - Story 3.3 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Frequently Asked Questions</CardTitle>
+          <p className="text-sm text-gray-600">
+            Add questions and answers that might help potential partners understand your requirements better.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <FAQManager
+            faqs={data.faqs || []}
+            onChange={handleFAQsChange}
+            maxFaqs={10}
+          />
         </CardContent>
       </Card>
 
