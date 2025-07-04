@@ -309,11 +309,11 @@ export function ListingWizard({
       
       if (result.success) {
         clearLocalStorage();
-        toast.success('Listing created successfully!');
+        toast.success('Listing submitted successfully!');
         
-        // Redirect to listing or dashboard
+        // Redirect to enhanced success page
         if (result.listingId) {
-          router.push(`/occupier/listings/${result.listingId}`);
+          router.push(`/occupier/listing-submitted/${result.listingId}`);
         } else {
           router.push('/occupier/listings');
         }

@@ -30,7 +30,13 @@
       "Bash(npm run dev:*)",
       "Bash(find:*)",
       "Bash(pkill:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(npx next dev:*)",
+      "Bash(timeout 10 npm run dev)",
+      "Bash(npm start)",
+      "Bash(touch:*)",
+      "Bash(supabase status:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }
