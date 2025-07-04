@@ -81,6 +81,12 @@ export async function createListing(
       use_class_id: listingData.use_class_id,
       site_size_min: listingData.site_size_min,
       site_size_max: listingData.site_size_max,
+      // PRD-required contact fields
+      contact_name: listingData.contact_name,
+      contact_title: listingData.contact_title,
+      contact_email: listingData.contact_email,
+      contact_phone: listingData.contact_phone,
+      // File references
       brochure_url: listingData.brochure_url,
       created_by: userId,
       status: 'pending'
@@ -123,6 +129,51 @@ export async function createListing(
     }
   }
 
+  if (listingData.company_logos && listingData.company_logos.length > 0) {
+    const { error: logosError } = await supabase
+      .from('company_logos')
+      .insert(
+        listingData.company_logos.map(logo => ({
+          listing_id: listing.id,
+          ...logo
+        }))
+      );
+
+    if (logosError) {
+      console.error('Failed to create company logos:', logosError);
+    }
+  }
+
+  if (listingData.listing_documents && listingData.listing_documents.length > 0) {
+    const { error: documentsError } = await supabase
+      .from('listing_documents')
+      .insert(
+        listingData.listing_documents.map(document => ({
+          listing_id: listing.id,
+          ...document
+        }))
+      );
+
+    if (documentsError) {
+      console.error('Failed to create listing documents:', documentsError);
+    }
+  }
+
+  if (listingData.listing_galleries && listingData.listing_galleries.length > 0) {
+    const { error: galleriesError } = await supabase
+      .from('listing_galleries')
+      .insert(
+        listingData.listing_galleries.map(gallery => ({
+          listing_id: listing.id,
+          ...gallery
+        }))
+      );
+
+    if (galleriesError) {
+      console.error('Failed to create listing galleries:', galleriesError);
+    }
+  }
+
   if (listingData.faqs && listingData.faqs.length > 0) {
     const { error: faqsError } = await supabase
       .from('faqs')
@@ -160,6 +211,9 @@ export async function getListings(params: ListingsQueryParams = {}): Promise<Lis
       use_class:use_classes(*),
       locations:listing_locations(*),
       media_files(*),
+      company_logos(*),
+      listing_documents(*),
+      listing_galleries(*),
       faqs(*)
     `);
 
@@ -221,6 +275,9 @@ export async function getListingById(id: string): Promise<ListingWithDetails | n
       use_class:use_classes(*),
       locations:listing_locations(*),
       media_files(*),
+      company_logos(*),
+      listing_documents(*),
+      listing_galleries(*),
       faqs(*)
     `)
     .eq('id', id)
@@ -304,6 +361,8 @@ export async function deleteListing(id: string): Promise<void> {
 export {
   validateListingData,
   isValidUUID,
+  isValidEmail,
+  isValidPhone,
   formatSiteSize,
   getStatusColor,
   getStatusLabel,

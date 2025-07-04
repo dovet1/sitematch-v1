@@ -16,6 +16,8 @@ import { useErrorHandling } from '@/hooks/use-error-handling';
 import { WizardProgress, createProgressSteps } from './wizard-progress';
 import { Step1CompanyInfo } from './steps/step1-company-info';
 import { Step2RequirementDetails } from './steps/step2-requirement-details';
+import { Step3LocationFiles } from './steps/step3-location-files';
+import { Step4SupportingDocuments } from './steps/step4-supporting-documents';
 
 import type {
   WizardState,
@@ -45,7 +47,7 @@ import {
 const initialState: WizardState = {
   currentStep: 1,
   formData: {},
-  isValid: { 1: false, 2: false },
+  isValid: { 1: false, 2: false, 3: false, 4: false },
   isSubmitting: false,
   errors: {}
 };
@@ -92,13 +94,15 @@ interface ListingWizardProps {
   onSubmit?: (data: WizardFormData) => Promise<SubmissionResult>;
   onSave?: (data: Partial<WizardFormData>) => Promise<void>;
   userEmail?: string;
+  organizationId: string;
 }
 
 export function ListingWizard({ 
   initialData, 
   onSubmit, 
   onSave,
-  userEmail 
+  userEmail,
+  organizationId
 }: ListingWizardProps) {
   const router = useRouter();
   const [state, dispatch] = useReducer(wizardReducer, initialState);
@@ -140,6 +144,20 @@ export function ListingWizard({
       const isStep1Valid = isStepValid(1, state.formData);
       dispatch({ type: 'SET_VALID', step: 1, isValid: isStep1Valid });
     }
+    if (state.currentStep === 3) {
+      const isStep1Valid = isStepValid(1, state.formData);
+      const isStep2Valid = isStepValid(2, state.formData);
+      dispatch({ type: 'SET_VALID', step: 1, isValid: isStep1Valid });
+      dispatch({ type: 'SET_VALID', step: 2, isValid: isStep2Valid });
+    }
+    if (state.currentStep === 4) {
+      const isStep1Valid = isStepValid(1, state.formData);
+      const isStep2Valid = isStepValid(2, state.formData);
+      const isStep3Valid = isStepValid(3, state.formData);
+      dispatch({ type: 'SET_VALID', step: 1, isValid: isStep1Valid });
+      dispatch({ type: 'SET_VALID', step: 2, isValid: isStep2Valid });
+      dispatch({ type: 'SET_VALID', step: 3, isValid: isStep3Valid });
+    }
   }, [state.formData, state.currentStep]);
 
   // =====================================================
@@ -174,7 +192,7 @@ export function ListingWizard({
   // NAVIGATION HANDLERS
   // =====================================================
 
-  const goToStep = useCallback((step: 1 | 2) => {
+  const goToStep = useCallback((step: 1 | 2 | 3 | 4) => {
     if (canNavigateToStep(step, state.currentStep, state.isValid)) {
       dispatch({ type: 'SET_STEP', step });
     }
@@ -215,20 +233,52 @@ export function ListingWizard({
     if (onSave) {
       try {
         setAutoSave({ isSaving: true });
-        await onSave(state.formData);
-        saveToLocalStorage(state.formData);
+        
+        // Create a copy of form data for processing
+        let processedData = { ...state.formData };
+        
+        // Upload logo file if present and not already uploaded
+        if (processedData.logoFile instanceof File) {
+          try {
+            const { uploadFileViaApi } = await import('@/lib/file-upload-api');
+            const uploadedFile = await uploadFileViaApi(
+              processedData.logoFile,
+              'logo',
+              organizationId
+            );
+            
+            // Replace File object with uploaded file data
+            processedData.logoFile = undefined;
+            processedData.logoPreview = uploadedFile.url;
+            processedData.logoUrl = uploadedFile.url;
+            
+            toast.success('Logo uploaded successfully');
+          } catch (uploadError) {
+            console.error('Logo upload failed:', uploadError);
+            toast.error('Logo upload failed, but other data saved');
+            // Continue with save even if logo upload fails
+            processedData.logoFile = undefined;
+          }
+        }
+        
+        await onSave(processedData);
+        saveToLocalStorage(processedData);
         setAutoSave({ 
           lastSaved: new Date(), 
           isDirty: false, 
           isSaving: false 
         });
+        
+        // Update form data with processed data (including uploaded logo URL)
+        dispatch({ type: 'UPDATE_DATA', data: processedData });
+        
         toast.success('Progress saved');
       } catch (error) {
         setAutoSave({ isSaving: false, saveError: 'Failed to save' });
         toast.error('Failed to save progress');
       }
     }
-  }, [onSave, state.formData]);
+  }, [onSave, state.formData, organizationId]);
 
   // =====================================================
   // SUBMISSION HANDLER
@@ -238,7 +288,9 @@ export function ListingWizard({
     // Final validation
     const step1Errors = validateStep(1, state.formData);
     const step2Errors = validateStep(2, state.formData);
-    const allErrors = { ...step1Errors, ...step2Errors };
+    const step3Errors = validateStep(3, state.formData);
+    const step4Errors = validateStep(4, state.formData);
+    const allErrors = { ...step1Errors, ...step2Errors, ...step3Errors, ...step4Errors };
 
     if (Object.keys(allErrors).length > 0) {
       dispatch({ type: 'SET_ERRORS', errors: allErrors });
@@ -290,21 +342,21 @@ export function ListingWizard({
 
   const canGoNext = state.isValid[state.currentStep] && !state.isSubmitting;
   const canGoBack = state.currentStep > 1 && !state.isSubmitting;
-  const canSubmit = state.currentStep === 2 && state.isValid[1] && state.isValid[2] && !state.isSubmitting;
+  const canSubmit = state.currentStep === 4 && state.isValid[1] && state.isValid[2] && state.isValid[3] && state.isValid[4] && !state.isSubmitting;
 
   // =====================================================
   // RENDER
   // =====================================================
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-3 md:p-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Create Property Requirement Listing</CardTitle>
+        <CardHeader className="pb-4 md:pb-6">
+          <CardTitle className="text-lg md:text-xl">Create Property Requirement Listing</CardTitle>
           <WizardProgress steps={progressSteps} currentStep={state.currentStep} />
         </CardHeader>
 
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 md:space-y-6 px-3 md:px-6">
           {/* Step Content */}
           {state.currentStep === 1 && (
             <Step1CompanyInfo
@@ -332,50 +384,83 @@ export function ListingWizard({
             />
           )}
 
-          {/* Navigation Controls */}
-          <div className="flex items-center justify-between pt-6 border-t">
-            <div className="flex items-center space-x-4">
-              {canGoBack && (
-                <Button
-                  variant="outline"
-                  onClick={goPrevious}
-                  disabled={state.isSubmitting}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Previous
-                </Button>
-              )}
-            </div>
+          {state.currentStep === 3 && (
+            <Step3LocationFiles
+              data={state.formData}
+              onUpdate={updateData}
+              onNext={goNext}
+              onPrevious={goPrevious}
+              onValidationChange={(isValid) => 
+                dispatch({ type: 'SET_VALID', step: 3, isValid })
+              }
+              errors={state.errors}
+            />
+          )}
 
-            <div className="flex items-center space-x-4">
+          {state.currentStep === 4 && (
+            <Step4SupportingDocuments
+              data={state.formData}
+              onUpdate={updateData}
+              onNext={goNext}
+              onPrevious={goPrevious}
+              onValidationChange={(isValid) => 
+                dispatch({ type: 'SET_VALID', step: 4, isValid })
+              }
+              errors={state.errors}
+              organizationId={organizationId}
+            />
+          )}
+
+          {/* Navigation Controls */}
+          <div className="pt-4 md:pt-6 border-t">
+            {/* Mobile: Stacked Layout */}
+            <div className="md:hidden space-y-3">
               {/* Auto-save status */}
               {autoSave.lastSaved && (
-                <span className="text-sm text-gray-500">
-                  Saved {autoSave.lastSaved.toLocaleTimeString()}
-                </span>
+                <div className="text-center">
+                  <span className="text-xs text-gray-500">
+                    Saved {autoSave.lastSaved.toLocaleTimeString()}
+                  </span>
+                </div>
               )}
-
-              {/* Save button */}
-              {onSave && (
-                <Button
-                  variant="outline"
-                  onClick={handleSave}
-                  disabled={autoSave.isSaving || state.isSubmitting}
-                >
-                  {autoSave.isSaving ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  Save
-                </Button>
-              )}
-
+              
+              {/* Navigation buttons */}
+              <div className="flex gap-2">
+                {canGoBack && (
+                  <Button
+                    variant="outline"
+                    onClick={goPrevious}
+                    disabled={state.isSubmitting}
+                    className="flex-1"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Previous
+                  </Button>
+                )}
+                
+                {onSave && (
+                  <Button
+                    variant="outline"
+                    onClick={handleSave}
+                    disabled={autoSave.isSaving || state.isSubmitting}
+                    className="flex-1"
+                  >
+                    {autoSave.isSaving ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Save
+                  </Button>
+                )}
+              </div>
+              
               {/* Next/Submit button */}
-              {state.currentStep < 2 ? (
+              {state.currentStep < 4 ? (
                 <Button
                   onClick={goNext}
                   disabled={!canGoNext}
+                  className="w-full"
                 >
                   Next
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -384,6 +469,7 @@ export function ListingWizard({
                 <Button
                   onClick={submitWizard}
                   disabled={!canSubmit}
+                  className="w-full"
                 >
                   {state.isSubmitting ? (
                     <>
@@ -395,6 +481,72 @@ export function ListingWizard({
                   )}
                 </Button>
               )}
+            </div>
+
+            {/* Desktop: Horizontal Layout */}
+            <div className="hidden md:flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                {canGoBack && (
+                  <Button
+                    variant="outline"
+                    onClick={goPrevious}
+                    disabled={state.isSubmitting}
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Previous
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-4">
+                {/* Auto-save status */}
+                {autoSave.lastSaved && (
+                  <span className="text-sm text-gray-500">
+                    Saved {autoSave.lastSaved.toLocaleTimeString()}
+                  </span>
+                )}
+
+                {/* Save button */}
+                {onSave && (
+                  <Button
+                    variant="outline"
+                    onClick={handleSave}
+                    disabled={autoSave.isSaving || state.isSubmitting}
+                  >
+                    {autoSave.isSaving ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Save
+                  </Button>
+                )}
+
+                {/* Next/Submit button */}
+                {state.currentStep < 4 ? (
+                  <Button
+                    onClick={goNext}
+                    disabled={!canGoNext}
+                  >
+                    Next
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={submitWizard}
+                    disabled={!canSubmit}
+                  >
+                    {state.isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create Listing'
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

@@ -145,3 +145,50 @@ A full token set is defined in **`/styles/index.css`** (see extract below). All 
 > **Accessibility check:** Colour contrast of primary (#6F5AFF approx) vs white passes WCAG AA (4.6 : 1). Maintain > 3 : 1 for text on accent backgrounds.
 
 This section supersedes the earlier placeholder palette. Engineering to integrate tokens in Sprint 1 story **US‑1** (repo scaffold) and **US‑5** (Wizard Step 1 UI).
+
+---
+
+## 8. Updated Epic E-2: Enhanced Occupier Listing Wizard
+
+**Date**: 2 July 2025  
+**Update Reason**: UX Expert analysis revealed gaps between current stories and PRD requirements
+
+Following comprehensive UX analysis, Epic E-2 has been significantly enhanced to ensure full PRD compliance:
+
+### Updated Story Breakdown
+
+| Story ID  | Title                                    | Story Points | Sprint | Key Changes |
+| --------- | ---------------------------------------- | ------------ | ------ | ----------- |
+| **Story 3.0** | Enhanced Database Schema & API           | 8 (+3)       | 1      | Added contact name/title fields, multi-file tables, FAQ support |
+| **Story 3.1** | Enhanced Listing Wizard UI              | 13 (+5)      | 1-2    | Complete contact form, "Violet Bloom" design, enhanced components |
+| **Story 3.2** | Multi-Type File Upload & Location Search| 10 (+2)      | 2      | Added logos, site plans, fit-out galleries, location chips |
+| **Story 3.3** | Complete Integration & FAQ System       | 8 (+3)       | 2      | FAQ management, enhanced validation, complex error handling |
+| **Story 3.4** | "Violet Bloom" Design System            | 5 (NEW)      | 2      | OKLCH color implementation, typography, component theming |
+
+### Impact Summary
+
+- **Original Epic E-2**: 8 story points
+- **Enhanced Epic E-2**: 44 story points
+- **Increase**: +36 points (+450%)
+
+### Critical PRD Gaps Addressed
+
+1. **Missing Required Fields**: Contact name and title now implemented
+2. **File Upload Limitations**: Extended from PDF-only to multi-type support
+3. **Design System**: "Violet Bloom" theme properly implemented
+4. **Location UX**: Enhanced with chips and nationwide toggle
+5. **FAQ System**: Added accordion-based FAQ management
+
+### Delivery Impact
+
+**Option 1**: Extend to 3 sprints (recommended)
+- Sprint 1: Stories 3.0, 3.1 (partial) - 21 points
+- Sprint 2: Stories 3.1 (complete), 3.2, 3.4 - 28 points  
+- Sprint 3: Story 3.3, integration testing - 8 points
+
+**Option 2**: Prioritize core features for 2-sprint delivery
+- Implement Stories 3.0, 3.1, 3.3 (39 points)
+- Defer Stories 3.2, 3.4 to post-MVP
+
+**Recommendation**: Option 1 for full PRD compliance and professional user experience.
+EOF < /dev/null

@@ -95,9 +95,6 @@ const sectorSchema = z.enum(['retail', 'office', 'industrial', 'leisure', 'mixed
 // Main form schemas
 export const companyInfoSchema = z.object({
   companyName: companyNameSchema,
-  companyDescription: z.string()
-    .max(500, 'Description must be less than 500 characters')
-    .optional(),
   contactEmail: emailSchema,
   contactPhone: phoneSchema
 });
@@ -135,7 +132,6 @@ export const requirementDetailsSchema = z.object({
 // Combined schema - simplified for TypeScript compatibility
 export const fullWizardSchema = z.object({
   companyName: companyNameSchema,
-  companyDescription: z.string().max(500).optional(),
   contactEmail: emailSchema,
   contactPhone: phoneSchema,
   title: titleSchema,

@@ -18,7 +18,19 @@
       "Bash(npm run lint)",
       "Bash(npm run typecheck:*)",
       "Bash(true)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(sed:*)",
+      "Bash(supabase db:*)",
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "Bash(timeout 30s npm run dev)",
+      "Bash(gtimeout 30s npm run dev)",
+      "Bash(curl:*)",
+      "Bash(rg:*)",
+      "Bash(npm run dev:*)",
+      "Bash(find:*)",
+      "Bash(pkill:*)",
+      "Bash(npx supabase:*)"
     ],
     "deny": []
   }

@@ -6,9 +6,10 @@
 'use client';
 
 import React, { ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Bug, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { errorMonitoring } from '@/lib/error-monitoring';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -16,6 +17,11 @@ interface ErrorBoundaryProps {
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
   resetOnPropsChange?: boolean;
   resetKeys?: Array<string | number>;
+  context?: {
+    component?: string;
+    userId?: string;
+    feature?: string;
+  };
 }
 
 interface ErrorBoundaryState {
@@ -23,6 +29,11 @@ interface ErrorBoundaryState {
   error: Error | null;
   errorId: string;
   resetCount: number;
+  errorDetails?: {
+    componentStack: string;
+    timestamp: Date;
+    userAgent: string;
+  };
 }
 
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -50,17 +61,42 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error to monitoring service
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Enhanced error details
+    const errorDetails = {
+      componentStack: errorInfo.componentStack || 'Unknown',
+      timestamp: new Date(),
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown'
+    };
+
+    // Update state with error details
+    this.setState({ errorDetails });
+
+    // Log error to enhanced monitoring service
+    const errorId = errorMonitoring.captureError({
+      type: 'javascript',
+      severity: 'high',
+      message: error.message,
+      stack: error.stack,
+      context: {
+        component: this.props.context?.component,
+        userId: this.props.context?.userId,
+        feature: this.props.context?.feature,
+        componentStack: errorInfo.componentStack,
+        resetCount: this.state.resetCount,
+        errorBoundary: true,
+        ...this.props.context
+      }
+    });
+
+    console.error('ErrorBoundary caught an error:', {
+      errorId,
+      error,
+      errorInfo,
+      context: this.props.context
+    });
     
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);
-
-    // In production, you might want to send this to a logging service
-    if (process.env.NODE_ENV === 'production') {
-      // Example: Sentry, LogRocket, etc.
-      // Sentry.captureException(error, { extra: errorInfo });
-    }
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps) {
@@ -97,8 +133,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   render() {
-    const { hasError, error, errorId } = this.state;
-    const { children, fallback } = this.props;
+    const { hasError, error, errorId, errorDetails, resetCount } = this.state;
+    const { children, fallback, context } = this.props;
 
     if (hasError) {
       // Custom fallback UI
@@ -106,32 +142,72 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
         return fallback;
       }
 
-      // Default error UI
+      // Enhanced error UI with better user guidance
       return (
         <div className="min-h-[200px] flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-lg">
             <CardHeader className="text-center">
               <div className="flex justify-center mb-2">
                 <AlertTriangle className="h-12 w-12 text-red-500" />
               </div>
-              <CardTitle className="text-red-600">Something went wrong</CardTitle>
+              <CardTitle className="text-red-600">
+                {context?.feature ? `${context.feature} Error` : 'Something went wrong'}
+              </CardTitle>
               <CardDescription>
-                We encountered an unexpected error. Don't worry, your data is safe.
+                {resetCount > 0 
+                  ? `We've tried ${resetCount} time${resetCount > 1 ? 's' : ''} to fix this. Your data is safe.`
+                  : 'We encountered an unexpected error. Don\'t worry, your data is safe.'
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Error context for user */}
+              {context?.component && (
+                <div className="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-400">
+                  <div className="flex items-center">
+                    <Bug className="h-4 w-4 text-blue-600 mr-2" />
+                    <span className="text-sm font-medium text-blue-800">
+                      Error in: {context.component}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Timestamp */}
+              {errorDetails?.timestamp && (
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Clock className="h-4 w-4 mr-2" />
+                    Occurred at: {errorDetails.timestamp.toLocaleString()}
+                  </div>
+                </div>
+              )}
+
+              {/* Development error details */}
               {process.env.NODE_ENV === 'development' && error && (
                 <details className="text-xs text-gray-600">
                   <summary className="cursor-pointer font-medium mb-2">
                     Error Details (Development Mode)
                   </summary>
-                  <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded border overflow-auto max-h-32">
-                    {error.message}
-                    {error.stack && `\n\n${error.stack}`}
-                  </pre>
-                  <p className="mt-2 text-xs text-gray-500">
-                    Error ID: {errorId}
-                  </p>
+                  <div className="space-y-2">
+                    <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded border overflow-auto max-h-32">
+                      {error.message}
+                      {error.stack && `\n\n${error.stack}`}
+                    </pre>
+                    {errorDetails?.componentStack && (
+                      <details>
+                        <summary className="cursor-pointer font-medium">Component Stack</summary>
+                        <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded border overflow-auto max-h-24 mt-1">
+                          {errorDetails.componentStack}
+                        </pre>
+                      </details>
+                    )}
+                    <div className="text-xs text-gray-500 space-y-1">
+                      <p>Error ID: {errorId}</p>
+                      <p>Reset Count: {resetCount}</p>
+                      {context?.userId && <p>User ID: {context.userId}</p>}
+                    </div>
+                  </div>
                 </details>
               )}
               
@@ -140,9 +216,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                   onClick={this.resetErrorBoundary}
                   className="flex-1"
                   variant="outline"
+                  disabled={resetCount >= 3}
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
-                  Try Again
+                  {resetCount >= 3 ? 'Max Retries Reached' : 'Try Again'}
                 </Button>
                 <Button 
                   onClick={() => window.location.reload()}
@@ -152,10 +229,23 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                 </Button>
               </div>
 
+              {/* Progressive error messages */}
               <div className="text-center">
-                <p className="text-xs text-gray-500">
-                  If this problem persists, please contact support with Error ID: {errorId}
-                </p>
+                {resetCount === 0 && (
+                  <p className="text-xs text-gray-500">
+                    If this problem persists, try reloading the page.
+                  </p>
+                )}
+                {resetCount >= 1 && resetCount < 3 && (
+                  <p className="text-xs text-orange-600">
+                    This error is recurring. Consider reloading the page or contacting support.
+                  </p>
+                )}
+                {resetCount >= 3 && (
+                  <p className="text-xs text-red-600">
+                    Persistent error detected. Please reload the page or contact support with Error ID: {errorId}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

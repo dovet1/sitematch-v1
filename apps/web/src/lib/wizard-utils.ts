@@ -9,6 +9,8 @@ import type {
   ValidationRule,
   CompanyInfoData,
   RequirementDetailsData,
+  LocationData,
+  SupportingDocumentsData,
   AutoSaveState
 } from '@/types/wizard';
 
@@ -19,24 +21,38 @@ import type {
 export const validationSchema: ValidationSchema = {
   step1: {
     companyName: { required: true, minLength: 2, maxLength: 100 },
-    companyDescription: { maxLength: 500 },
+    contactName: { required: true, minLength: 2, maxLength: 100 },
+    contactTitle: { required: true, minLength: 2, maxLength: 100 },
     contactEmail: { required: true, email: true },
-    contactPhone: { phone: true }
+    contactPhone: { phone: true },
+    logoFile: {},
+    logoPreview: {}
   },
   step2: {
-    title: { required: true, minLength: 5, maxLength: 200 },
-    description: { maxLength: 2000 },
-    sector: { required: true },
-    useClass: { required: true, minLength: 2, maxLength: 50 },
+    sectors: {},
+    useClassIds: {},
     siteSizeMin: { min: 0, max: 10000000 },
     siteSizeMax: { min: 0, max: 10000000 }
+  },
+  step3: {
+    locations: {}, // Not required - handled by cross-field validation
+    locationSearchNationwide: {}
+  },
+  step4: {
+    brochureFiles: {},
+    sitePlanFiles: {},
+    fitOutFiles: {}
   }
 };
 
 export function validateField(value: any, rule: ValidationRule): string | null {
   // Handle required fields
-  if (rule.required && (!value || (typeof value === 'string' && !value.trim()))) {
-    return 'This field is required';
+  if (rule.required) {
+    if (!value || 
+        (typeof value === 'string' && !value.trim()) ||
+        (Array.isArray(value) && value.length === 0)) {
+      return 'This field is required';
+    }
   }
 
   // Skip further validation if field is empty and not required
@@ -84,9 +100,21 @@ export function validateField(value: any, rule: ValidationRule): string | null {
   return null;
 }
 
-export function validateStep(stepNumber: 1 | 2, data: Partial<WizardFormData>): Record<string, string> {
+export function validateStep(stepNumber: 1 | 2 | 3 | 4, data: Partial<WizardFormData>): Record<string, string> {
   const errors: Record<string, string> = {};
-  const schema = stepNumber === 1 ? validationSchema.step1 : validationSchema.step2;
+  let schema;
+  
+  if (stepNumber === 1) {
+    schema = validationSchema.step1;
+  } else if (stepNumber === 2) {
+    schema = validationSchema.step2;
+  } else if (stepNumber === 3) {
+    schema = validationSchema.step3;
+  } else if (stepNumber === 4) {
+    schema = validationSchema.step4;
+  } else {
+    return errors;
+  }
 
   Object.entries(schema).forEach(([fieldName, rule]) => {
     const value = data[fieldName as keyof WizardFormData];
@@ -104,10 +132,22 @@ export function validateStep(stepNumber: 1 | 2, data: Partial<WizardFormData>): 
     }
   }
 
+  // Cross-field validation for step 3
+  if (stepNumber === 3) {
+    const { locations, locationSearchNationwide } = data;
+    // Require either locations OR nationwide flag
+    const hasLocations = locations && Array.isArray(locations) && locations.length > 0;
+    const isNationwide = locationSearchNationwide === true;
+    
+    if (!hasLocations && !isNationwide) {
+      errors.locations = 'Please select at least one location or choose nationwide coverage';
+    }
+  }
+
   return errors;
 }
 
-export function isStepValid(stepNumber: 1 | 2, data: Partial<WizardFormData>): boolean {
+export function isStepValid(stepNumber: 1 | 2 | 3 | 4, data: Partial<WizardFormData>): boolean {
   const errors = validateStep(stepNumber, data);
   return Object.keys(errors).length === 0;
 }
@@ -121,7 +161,18 @@ const STORAGE_TIMESTAMP_KEY = 'listing-wizard-timestamp';
 
 export function saveToLocalStorage(data: Partial<WizardFormData>): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    // Create a sanitized version without File objects for localStorage
+    const sanitizedData = { ...data };
+    
+    // Remove File objects as they can't be serialized
+    if (sanitizedData.logoFile instanceof File) {
+      delete sanitizedData.logoFile;
+    }
+    
+    // Keep the logoPreview (base64 string) if it exists
+    // This allows us to restore the logo preview on reload
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizedData));
     localStorage.setItem(STORAGE_TIMESTAMP_KEY, new Date().toISOString());
   } catch (error) {
     console.warn('Failed to save wizard data to localStorage:', error);
@@ -167,22 +218,34 @@ export function clearLocalStorage(): void {
 // STEP NAVIGATION UTILITIES
 // =====================================================
 
-export function canNavigateToStep(targetStep: 1 | 2, currentStep: 1 | 2, stepValidation: Record<number, boolean>): boolean {
+export function canNavigateToStep(targetStep: 1 | 2 | 3 | 4, currentStep: 1 | 2 | 3 | 4, stepValidation: Record<number, boolean>): boolean {
   // Can always go to step 1
   if (targetStep === 1) return true;
   
   // Can only go to step 2 if step 1 is valid
   if (targetStep === 2) return stepValidation[1] === true;
   
+  // Can only go to step 3 if steps 1 and 2 are valid
+  if (targetStep === 3) return stepValidation[1] === true && stepValidation[2] === true;
+  
+  // Can only go to step 4 if steps 1, 2 and 3 are valid
+  if (targetStep === 4) return stepValidation[1] === true && stepValidation[2] === true && stepValidation[3] === true;
+  
   return false;
 }
 
-export function getNextStep(currentStep: 1 | 2): 2 | null {
-  return currentStep === 1 ? 2 : null;
+export function getNextStep(currentStep: 1 | 2 | 3 | 4): 2 | 3 | 4 | null {
+  if (currentStep === 1) return 2;
+  if (currentStep === 2) return 3;
+  if (currentStep === 3) return 4;
+  return null;
 }
 
-export function getPreviousStep(currentStep: 1 | 2): 1 | null {
-  return currentStep === 2 ? 1 : null;
+export function getPreviousStep(currentStep: 1 | 2 | 3 | 4): 1 | 2 | 3 | null {
+  if (currentStep === 2) return 1;
+  if (currentStep === 3) return 2;
+  if (currentStep === 4) return 3;
+  return null;
 }
 
 // =====================================================
@@ -196,18 +259,25 @@ export function mergeFormData(current: Partial<WizardFormData>, updates: Partial
   };
 }
 
-export function getStepData(stepNumber: 1 | 2, formData: Partial<WizardFormData>): Partial<CompanyInfoData> | Partial<RequirementDetailsData> {
+export function getStepData(stepNumber: 1 | 2 | 3 | 4, formData: Partial<WizardFormData>): Partial<CompanyInfoData> | Partial<RequirementDetailsData> | Partial<LocationData> | Partial<SupportingDocumentsData> {
   if (stepNumber === 1) {
-    const { companyName, companyDescription, contactEmail, contactPhone } = formData;
-    return { companyName, companyDescription, contactEmail, contactPhone };
-  } else {
-    const { title, description, sector, useClass, siteSizeMin, siteSizeMax } = formData;
-    return { title, description, sector, useClass, siteSizeMin, siteSizeMax };
+    const { companyName, contactName, contactTitle, contactEmail, contactPhone, logoFile, logoPreview } = formData;
+    return { companyName, contactName, contactTitle, contactEmail, contactPhone, logoFile, logoPreview };
+  } else if (stepNumber === 2) {
+    const { sectors, useClassIds, siteSizeMin, siteSizeMax } = formData;
+    return { sectors, useClassIds, siteSizeMin, siteSizeMax };
+  } else if (stepNumber === 3) {
+    const { locations, locationSearchNationwide } = formData;
+    return { locations, locationSearchNationwide };
+  } else if (stepNumber === 4) {
+    const { brochureFiles, sitePlanFiles, fitOutFiles } = formData;
+    return { brochureFiles, sitePlanFiles, fitOutFiles };
   }
+  return {};
 }
 
 export function isFormComplete(data: Partial<WizardFormData>): boolean {
-  return isStepValid(1, data) && isStepValid(2, data);
+  return isStepValid(1, data) && isStepValid(2, data) && isStepValid(3, data) && isStepValid(4, data);
 }
 
 // =====================================================
@@ -264,7 +334,7 @@ export function shouldAutoSave(autoSave: AutoSaveState, data: Partial<WizardForm
 // =====================================================
 
 export interface StepConfig {
-  number: 1 | 2;
+  number: 1 | 2 | 3;
   title: string;
   description: string;
   fields: string[];
@@ -275,16 +345,22 @@ export const wizardSteps: StepConfig[] = [
     number: 1,
     title: 'Company Information',
     description: 'Tell us about your company and contact details',
-    fields: ['companyName', 'companyDescription', 'contactEmail', 'contactPhone']
+    fields: ['companyName', 'contactName', 'contactTitle', 'contactEmail', 'contactPhone', 'logoFile']
   },
   {
     number: 2,
     title: 'Property Requirements',
     description: 'Specify your property requirements and preferences',
-    fields: ['title', 'description', 'sector', 'useClass', 'siteSizeMin', 'siteSizeMax']
+    fields: ['sectors', 'useClassIds', 'siteSizeMin', 'siteSizeMax']
+  },
+  {
+    number: 3,
+    title: 'Location & Files',
+    description: 'Add target locations and supporting documents',
+    fields: ['locations', 'brochureFiles', 'sitePlanFiles', 'fitOutFiles']
   }
 ];
 
-export function getStepConfig(stepNumber: 1 | 2): StepConfig {
+export function getStepConfig(stepNumber: 1 | 2 | 3): StepConfig {
   return wizardSteps.find(step => step.number === stepNumber) || wizardSteps[0];
 }

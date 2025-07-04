@@ -45,7 +45,6 @@ describe('Wizard Integration Tests', () => {
 
       // Fill out step 1
       await user.type(screen.getByLabelText(/company name/i), 'Test Company Ltd');
-      await user.type(screen.getByLabelText(/company description/i), 'A test company for integration testing');
       await user.type(screen.getByLabelText(/contact phone/i), '+44 20 1234 5678');
 
       // Verify email is pre-filled and readonly
@@ -83,7 +82,6 @@ describe('Wizard Integration Tests', () => {
         expect(mockOnSubmit).toHaveBeenCalledWith(
           expect.objectContaining({
             companyName: 'Test Company Ltd',
-            companyDescription: 'A test company for integration testing',
             contactEmail: 'test@example.com',
             contactPhone: '+44 20 1234 5678',
             title: 'Retail Space Required in Central London',
