@@ -12,12 +12,18 @@ export async function uploadFileViaApi(
   file: File,
   type: FileUploadType,
   organizationId: string,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  listingId?: string
 ): Promise<UploadedFile> {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('type', type)
   formData.append('organizationId', organizationId)
+  
+  // Add listing ID if provided (for draft listing association)
+  if (listingId) {
+    formData.append('listingId', listingId)
+  }
 
   // Create XMLHttpRequest for progress tracking
   return new Promise((resolve, reject) => {
@@ -66,7 +72,8 @@ export async function uploadMultipleFilesViaApi(
   files: File[],
   type: FileUploadType,
   organizationId: string,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  listingId?: string
 ): Promise<UploadedFile[]> {
   const uploadPromises = files.map((file, index) => {
     return uploadFileViaApi(file, type, organizationId, (fileProgress) => {
@@ -75,7 +82,7 @@ export async function uploadMultipleFilesViaApi(
         const overallProgress = ((index + fileProgress / 100) / files.length) * 100
         onProgress(overallProgress)
       }
-    })
+    }, listingId)
   })
 
   return Promise.all(uploadPromises)

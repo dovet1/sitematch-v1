@@ -48,8 +48,9 @@ export default async function CreateListingPage() {
         return { success: false, error: 'Unauthorized' };
       }
 
-      // Use the existing basic createListing function
-      const { createListing } = await import('@/lib/listings');
+      // Use the enhanced listing function that handles contacts and files
+      const { createEnhancedListing } = await import('@/lib/enhanced-listings');
+      const { finalizeDraftListing } = await import('@/lib/draft-listings');
       const { getOrCreateOrganizationForUser } = await import('@/lib/auto-organization');
       
       // Handle organization creation if needed
@@ -86,32 +87,122 @@ export default async function CreateListingPage() {
         return { success: false, error: 'No sectors or use classes available. Please run the SQL setup script first.' };
       }
 
-      // Create listing data using the real database format
-      const listingData: CreateListingRequest = {
+      // Create enhanced listing data that includes all related data
+      const enhancedListingData = {
         title: `Property Requirement - ${data.companyName || 'Company'}`,
         description: `Property requirement from ${data.companyName || 'company'}`,
         sector_id: sectorId,
         use_class_id: useClassId,
         site_size_min: data.siteSizeMin,
         site_size_max: data.siteSizeMax,
-        // Required contact fields from form data
-        contact_name: data.contactName || 'Contact Name',
-        contact_title: data.contactTitle || 'Contact Title', 
-        contact_email: data.contactEmail || currentUser.email || 'contact@example.com',
-        contact_phone: data.contactPhone,
-        brochure_url: undefined // Optional
+        // Contact fields from primary contact
+        contact_name: data.primaryContact?.contactName || 'Contact Name',
+        contact_title: data.primaryContact?.contactTitle || 'Contact Title', 
+        contact_email: data.primaryContact?.contactEmail || currentUser.email || 'contact@example.com',
+        contact_phone: data.primaryContact?.contactPhone,
+        // Additional data for enhanced listing
+        company_name: data.companyName,
+        is_nationwide: data.locationSearchNationwide || false,
+        locations: data.locationSearchNationwide ? [] : (data.locations || []),
+        faqs: data.faqs?.map(faq => ({
+          question: faq.question,
+          answer: faq.answer,
+          display_order: faq.displayOrder
+        })) || [],
+        additional_contacts: data.additionalContacts?.map(contact => ({
+          contact_name: contact.contactName || '',
+          contact_title: contact.contactTitle || '',
+          contact_email: contact.contactEmail || '',
+          contact_phone: contact.contactPhone,
+          headshot_url: contact.headshotUrl
+        })) || [],
+        logo_url: data.logoUrl,
+        brochure_urls: data.brochureFiles?.map(f => f.url).filter(Boolean) || [],
+        site_plan_urls: data.sitePlanFiles?.map(f => f.url).filter(Boolean) || [],
+        fit_out_urls: data.fitOutFiles?.map(f => f.url).filter(Boolean) || [],
+        organization_id: orgResult.organizationId,
+        status: 'pending' as const
       };
 
-      // Use the existing createListing function
-      const listing = await createListing(listingData, currentUser.id, orgResult.organizationId);
+      // Check if we have an existing draft listing to update
+      if (data.existingListingId) {
+        // Import additional draft listing functions
+        const { addContactsToDraftListing, addFAQsToDraftListing, addLocationsToDraftListing } = await import('@/lib/draft-listings');
 
-      return {
-        success: true,
-        listingId: listing.id,
-        organizationId: orgResult.organizationId,
-        organizationCreated: orgResult.organizationCreated,
-        message: 'Listing created successfully'
-      };
+        // Finalize the existing draft listing
+        await finalizeDraftListing(data.existingListingId, {
+          title: `Property Requirement - ${data.companyName || 'Company'}`,
+          description: `Property requirement from ${data.companyName || 'company'}`,
+          status: 'pending'
+        });
+
+        // Add contacts to the draft listing
+        const contacts = [];
+        
+        // Add primary contact
+        if (data.primaryContact) {
+          contacts.push({
+            contact_name: data.primaryContact.contactName || 'Contact Name',
+            contact_title: data.primaryContact.contactTitle || 'Contact Title',
+            contact_email: data.primaryContact.contactEmail || currentUser.email || 'contact@example.com',
+            contact_phone: data.primaryContact.contactPhone,
+            is_primary_contact: true,
+            headshot_url: data.primaryContact.headshotUrl
+          });
+        }
+        
+        // Add additional contacts
+        if (data.additionalContacts) {
+          data.additionalContacts.forEach(contact => {
+            contacts.push({
+              contact_name: contact.contactName || 'Contact Name',
+              contact_title: contact.contactTitle || 'Contact Title',
+              contact_email: contact.contactEmail || 'contact@example.com',
+              contact_phone: contact.contactPhone,
+              is_primary_contact: false,
+              headshot_url: contact.headshotUrl
+            });
+          });
+        }
+
+        if (contacts.length > 0) {
+          await addContactsToDraftListing(data.existingListingId, contacts);
+        }
+
+        // Add FAQs to the draft listing
+        if (data.faqs && data.faqs.length > 0) {
+          const transformedFAQs = data.faqs.map(faq => ({
+            question: faq.question,
+            answer: faq.answer,
+            display_order: faq.displayOrder
+          }));
+          await addFAQsToDraftListing(data.existingListingId, transformedFAQs);
+        }
+
+        // Add locations to the draft listing (if not nationwide)
+        if (!data.locationSearchNationwide && data.locations && data.locations.length > 0) {
+          await addLocationsToDraftListing(data.existingListingId, data.locations);
+        }
+
+        return {
+          success: true,
+          listingId: data.existingListingId,
+          organizationId: orgResult.organizationId,
+          organizationCreated: orgResult.organizationCreated,
+          message: 'Listing submitted successfully'
+        };
+      } else {
+        // Create a new listing (fallback for cases where draft creation failed)
+        const listing = await createEnhancedListing(enhancedListingData, currentUser.id, orgResult.organizationId);
+
+        return {
+          success: true,
+          listingId: listing.id,
+          organizationId: orgResult.organizationId,
+          organizationCreated: orgResult.organizationCreated,
+          message: 'Listing created successfully'
+        };
+      }
     } catch (error) {
       console.error('Failed to create listing:', error);
       return { 
@@ -203,7 +294,12 @@ export default async function CreateListingPage() {
         >
           <ListingWizard
             initialData={{
-              contactEmail: user.email
+              primaryContact: {
+                contactName: '',
+                contactTitle: '',
+                contactEmail: user.email,
+                isPrimaryContact: true
+              }
             }}
             onSubmit={handleSubmit}
             onSave={handleSave}

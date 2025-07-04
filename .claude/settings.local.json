@@ -36,7 +36,11 @@
       "Bash(npm start)",
       "Bash(touch:*)",
       "Bash(supabase status:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(psql:*)",
+      "Bash(supabase stop:*)",
+      "Bash(supabase start:*)"
     ],
     "deny": []
   }

@@ -73,11 +73,11 @@ export async function submitEnhancedListing(
 
     // 3. Prepare enhanced listing data with all PRD fields
     const enhancedListingData = {
-      // Enhanced contact fields (PRD required)
-      contact_name: formData.contactName,
-      contact_title: formData.contactTitle,
-      contact_email: formData.contactEmail,
-      contact_phone: formData.contactPhone,
+      // Enhanced contact fields (PRD required) - from primary contact
+      contact_name: formData.primaryContact?.contactName,
+      contact_title: formData.primaryContact?.contactTitle,
+      contact_email: formData.primaryContact?.contactEmail,
+      contact_phone: formData.primaryContact?.contactPhone,
       
       // Company information
       company_name: formData.companyName,
@@ -101,10 +101,19 @@ export async function submitEnhancedListing(
       // FAQ data
       faqs: processedFaqs,
       
+      // Additional contacts data
+      additional_contacts: formData.additionalContacts?.map(contact => ({
+        contact_name: contact.contactName || '',
+        contact_title: contact.contactTitle || '',
+        contact_email: contact.contactEmail || '',
+        contact_phone: contact.contactPhone,
+        headshot_url: contact.headshotUrl
+      })) || [],
+      
       // Organization ID
       organization_id: organizationId,
       
-      status: 'pending'
+      status: 'pending' as const
     };
 
     onProgress?.(60); // Data preparation complete
@@ -303,14 +312,14 @@ export function handleSubmissionError(error: SubmissionError): void {
 export function validateListingData(data: WizardFormData): { valid: boolean; errors: Record<string, string> } {
   const errors: Record<string, string> = {};
 
-  // Required contact fields
-  if (!data.contactName?.trim()) {
+  // Required contact fields (from primary contact)
+  if (!data.primaryContact?.contactName?.trim()) {
     errors.contactName = 'Contact name is required';
   }
-  if (!data.contactTitle?.trim()) {
+  if (!data.primaryContact?.contactTitle?.trim()) {
     errors.contactTitle = 'Contact title is required';
   }
-  if (!data.contactEmail?.trim()) {
+  if (!data.primaryContact?.contactEmail?.trim()) {
     errors.contactEmail = 'Contact email is required';
   }
   if (!data.companyName?.trim()) {

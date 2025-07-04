@@ -24,10 +24,18 @@ describe('ListingWizard', () => {
   });
 
   const defaultProps = {
-    initialData: { contactEmail: 'test@example.com' },
+    initialData: { 
+      primaryContact: {
+        contactName: '',
+        contactTitle: '',
+        contactEmail: 'test@example.com',
+        isPrimaryContact: true
+      }
+    },
     onSubmit: mockOnSubmit,
     onSave: mockOnSave,
-    userEmail: 'test@example.com'
+    userEmail: 'test@example.com',
+    organizationId: 'test-org-id'
   };
 
   it('renders wizard with progress indicator', () => {

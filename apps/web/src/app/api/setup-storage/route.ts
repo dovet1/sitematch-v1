@@ -29,6 +29,12 @@ export async function POST() {
         public: true,
         fileSizeLimit: 10 * 1024 * 1024, // 10MB
         allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg', 'video/mp4', 'video/quicktime']
+      },
+      {
+        name: 'headshots',
+        public: true,
+        fileSizeLimit: 2 * 1024 * 1024, // 2MB
+        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/jpg']
       }
     ]
 

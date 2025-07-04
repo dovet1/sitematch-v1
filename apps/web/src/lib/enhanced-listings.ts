@@ -50,6 +50,15 @@ export interface EnhancedListingData {
     display_order: number;
   }>;
   
+  // Additional contacts data
+  additional_contacts?: Array<{
+    contact_name: string;
+    contact_title: string;
+    contact_email: string;
+    contact_phone?: string;
+    headshot_url?: string;
+  }>;
+  
   // Organization ID
   organization_id: string;
   
@@ -119,7 +128,7 @@ export async function createEnhancedListing(
     // Try to find matching sector
     if (allSectors && allSectors.length > 0) {
       if (data.sectors && data.sectors.length > 0) {
-        const matchingSector = allSectors.find(s => s.name === data.sectors[0]);
+        const matchingSector = allSectors.find(s => s.name === data.sectors![0]);
         if (matchingSector) {
           insertData.sector_id = matchingSector.id;
         }
@@ -135,7 +144,7 @@ export async function createEnhancedListing(
     // Try to find matching use class
     if (allUseClasses && allUseClasses.length > 0) {
       if (data.use_class_ids && data.use_class_ids.length > 0) {
-        const matchingUseClass = allUseClasses.find(uc => uc.id === data.use_class_ids[0] || uc.code === data.use_class_ids[0]);
+        const matchingUseClass = allUseClasses.find(uc => uc.id === data.use_class_ids![0] || uc.code === data.use_class_ids![0]);
         if (matchingUseClass) {
           insertData.use_class_id = matchingUseClass.id;
         }
@@ -161,7 +170,7 @@ export async function createEnhancedListing(
       console.error('Listing creation error details:', JSON.stringify(listingError, null, 2));
       console.error('Insert data that failed:', JSON.stringify(insertData, null, 2));
       
-      const errorMessage = listingError.message || listingError.error_description || listingError.hint || 'Unknown database error';
+      const errorMessage = listingError.message || listingError.hint || 'Unknown database error';
       throw new Error(`Failed to create listing: ${errorMessage}`);
     }
 
@@ -204,6 +213,66 @@ export async function createEnhancedListing(
         console.error('FAQ insertion error:', faqsError);
         // Don't fail the entire operation for FAQ errors
       }
+    }
+
+    // Insert primary contact
+    if (data.contact_name || data.contact_title || data.contact_email) {
+      const primaryContactInsert = {
+        listing_id: listing.id,
+        contact_name: data.contact_name || '',
+        contact_title: data.contact_title || '',
+        contact_email: data.contact_email || '',
+        contact_phone: data.contact_phone || null,
+        is_primary_contact: true,
+        headshot_url: null // Will be updated later if headshot uploaded
+      };
+
+      const { error: contactError } = await supabase
+        .from('listing_contacts')
+        .insert(primaryContactInsert);
+
+      if (contactError) {
+        console.error('Primary contact insertion error:', contactError);
+        // Don't fail the entire operation for contact errors
+      }
+    }
+
+    // Insert additional contacts if provided
+    if (data.additional_contacts && data.additional_contacts.length > 0) {
+      const additionalContactInserts = data.additional_contacts.map((contact: any) => ({
+        listing_id: listing.id,
+        contact_name: contact.contact_name || '',
+        contact_title: contact.contact_title || '',
+        contact_email: contact.contact_email || '',
+        contact_phone: contact.contact_phone || null,
+        is_primary_contact: false,
+        headshot_url: contact.headshot_url || null
+      }));
+
+      const { error: additionalContactsError } = await supabase
+        .from('listing_contacts')
+        .insert(additionalContactInserts);
+
+      if (additionalContactsError) {
+        console.error('Additional contacts insertion error:', additionalContactsError);
+        // Don't fail the entire operation for additional contact errors
+      }
+    }
+
+    // Link any remaining orphaned files to this listing
+    // (Files should already be linked via draft listing, but this is a fallback)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { error: fileUpdateError } = await supabase
+      .from('file_uploads')
+      .update({ listing_id: listing.id })
+      .eq('user_id', userId)
+      .eq('org_id', organizationId)
+      .is('listing_id', null)
+      .gte('created_at', oneHourAgo);
+
+    if (fileUpdateError) {
+      console.error('File linking error:', fileUpdateError);
+      // Don't fail the entire operation for file linking errors
     }
 
     return listing;

@@ -18,7 +18,13 @@ describe('Listings API Validation', () => {
       const validData: CreateListingRequest = {
         title: 'Test Listing',
         sector_id: '123e4567-e89b-12d3-a456-426614174000',
-        use_class_id: '123e4567-e89b-12d3-a456-426614174001'
+        use_class_id: '123e4567-e89b-12d3-a456-426614174001',
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'john@example.com',
+          isPrimaryContact: true
+        }
       };
 
       const result = validateListingData(validData);
@@ -30,7 +36,13 @@ describe('Listings API Validation', () => {
       const invalidData: CreateListingRequest = {
         title: '',
         sector_id: '123e4567-e89b-12d3-a456-426614174000',
-        use_class_id: '123e4567-e89b-12d3-a456-426614174001'
+        use_class_id: '123e4567-e89b-12d3-a456-426614174001',
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'john@example.com',
+          isPrimaryContact: true
+        }
       };
 
       const result = validateListingData(invalidData);
@@ -44,7 +56,13 @@ describe('Listings API Validation', () => {
       const invalidData: CreateListingRequest = {
         title: 'Hi',
         sector_id: '123e4567-e89b-12d3-a456-426614174000',
-        use_class_id: '123e4567-e89b-12d3-a456-426614174001'
+        use_class_id: '123e4567-e89b-12d3-a456-426614174001',
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'john@example.com',
+          isPrimaryContact: true
+        }
       };
 
       const result = validateListingData(invalidData);
@@ -57,7 +75,13 @@ describe('Listings API Validation', () => {
       const invalidData: CreateListingRequest = {
         title: 'A'.repeat(201),
         sector_id: '123e4567-e89b-12d3-a456-426614174000',
-        use_class_id: '123e4567-e89b-12d3-a456-426614174001'
+        use_class_id: '123e4567-e89b-12d3-a456-426614174001',
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'john@example.com',
+          isPrimaryContact: true
+        }
       };
 
       const result = validateListingData(invalidData);
@@ -70,7 +94,13 @@ describe('Listings API Validation', () => {
       const invalidData: CreateListingRequest = {
         title: 'Test Listing',
         sector_id: 'invalid-uuid',
-        use_class_id: '123e4567-e89b-12d3-a456-426614174001'
+        use_class_id: '123e4567-e89b-12d3-a456-426614174001',
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'john@example.com',
+          isPrimaryContact: true
+        }
       };
 
       const result = validateListingData(invalidData);
@@ -83,7 +113,13 @@ describe('Listings API Validation', () => {
       const invalidData: CreateListingRequest = {
         title: 'Test Listing',
         sector_id: '123e4567-e89b-12d3-a456-426614174000',
-        use_class_id: 'invalid-uuid'
+        use_class_id: 'invalid-uuid',
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'john@example.com',
+          isPrimaryContact: true
+        }
       };
 
       const result = validateListingData(invalidData);
@@ -97,7 +133,13 @@ describe('Listings API Validation', () => {
         title: 'Test Listing',
         sector_id: '123e4567-e89b-12d3-a456-426614174000',
         use_class_id: '123e4567-e89b-12d3-a456-426614174001',
-        site_size_min: -100
+        site_size_min: -100,
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'john@example.com',
+          isPrimaryContact: true
+        }
       };
 
       const result = validateListingData(invalidData);
@@ -112,7 +154,13 @@ describe('Listings API Validation', () => {
         sector_id: '123e4567-e89b-12d3-a456-426614174000',
         use_class_id: '123e4567-e89b-12d3-a456-426614174001',
         site_size_min: 5000,
-        site_size_max: 1000
+        site_size_max: 1000,
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'john@example.com',
+          isPrimaryContact: true
+        }
       };
 
       const result = validateListingData(invalidData);
@@ -127,7 +175,13 @@ describe('Listings API Validation', () => {
         sector_id: '123e4567-e89b-12d3-a456-426614174000',
         use_class_id: '123e4567-e89b-12d3-a456-426614174001',
         site_size_min: 1000,
-        site_size_max: 5000
+        site_size_max: 5000,
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'john@example.com',
+          isPrimaryContact: true
+        }
       };
 
       const result = validateListingData(validData);
@@ -156,7 +210,13 @@ describe('Listings API Validation', () => {
         title: 'Test Listing',
         description: 'A'.repeat(2001), // Over 2000 character limit
         sector_id: '123e4567-e89b-12d3-a456-426614174000',
-        use_class_id: '123e4567-e89b-12d3-a456-426614174001'
+        use_class_id: '123e4567-e89b-12d3-a456-426614174001',
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'john@example.com',
+          isPrimaryContact: true
+        }
       };
 
       const result = validateListingData(invalidData);

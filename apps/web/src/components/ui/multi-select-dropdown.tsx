@@ -102,8 +102,8 @@ export function MultiSelectDropdown({
                       className="text-xs bg-violet-100 text-violet-800 hover:bg-violet-200"
                     >
                       {option.label}
-                      <button
-                        className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      <span
+                        className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer hover:bg-violet-300 inline-flex items-center justify-center"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             handleRemove(option.value);
@@ -114,9 +114,12 @@ export function MultiSelectDropdown({
                           e.stopPropagation();
                         }}
                         onClick={() => handleRemove(option.value)}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Remove ${option.label}`}
                       >
                         <X className="h-3 w-3 text-violet-600 hover:text-violet-800" />
-                      </button>
+                      </span>
                     </Badge>
                   ))}
                   {remainingCount > 0 && (

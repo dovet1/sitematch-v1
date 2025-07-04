@@ -22,8 +22,17 @@ DROP POLICY IF EXISTS "Users can view own organization files" ON storage.objects
 DROP POLICY IF EXISTS "Users can update own organization files" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete own organization files" ON storage.objects;
 
--- Enable RLS on storage.objects if not already enabled
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- Enable RLS on storage.objects if not already enabled (skip if not owner)
+DO $$
+BEGIN
+  -- Check if we can alter the table (will fail silently if not owner)
+  IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'objects' AND relowner = current_user::regrole) THEN
+    ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  -- Ignore permission errors
+  NULL;
+END $$;
 
 -- =====================================================
 -- UPLOAD POLICIES
