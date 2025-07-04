@@ -10,6 +10,8 @@ import type {
   CompanyInfoData,
   RequirementDetailsData,
   LocationData,
+  AdditionalContactsData,
+  FAQData,
   SupportingDocumentsData,
   AutoSaveState
 } from '@/types/wizard';
@@ -21,13 +23,11 @@ import type {
 export const validationSchema: ValidationSchema = {
   step1: {
     companyName: { required: true, minLength: 2, maxLength: 100 },
-    contactName: { required: true, minLength: 2, maxLength: 100 },
-    contactTitle: { required: true, minLength: 2, maxLength: 100 },
-    contactEmail: { required: true, email: true },
-    contactPhone: { phone: true },
+    primaryContact: { required: true },
     logoFile: {},
     logoPreview: {},
-    logoUrl: {}
+    logoUrl: {},
+    brochureFiles: {}
   },
   step2: {
     sectors: {},
@@ -40,10 +40,14 @@ export const validationSchema: ValidationSchema = {
     locationSearchNationwide: {}
   },
   step4: {
-    brochureFiles: {},
+    additionalContacts: {} // Optional
+  },
+  step5: {
+    faqs: {} // Optional
+  },
+  step6: {
     sitePlanFiles: {},
-    fitOutFiles: {},
-    faqs: {}
+    fitOutFiles: {}
   }
 };
 
@@ -102,7 +106,7 @@ export function validateField(value: any, rule: ValidationRule): string | null {
   return null;
 }
 
-export function validateStep(stepNumber: 1 | 2 | 3 | 4, data: Partial<WizardFormData>): Record<string, string> {
+export function validateStep(stepNumber: 1 | 2 | 3 | 4 | 5 | 6, data: Partial<WizardFormData>): Record<string, string> {
   const errors: Record<string, string> = {};
   let schema;
   
@@ -114,15 +118,49 @@ export function validateStep(stepNumber: 1 | 2 | 3 | 4, data: Partial<WizardForm
     schema = validationSchema.step3;
   } else if (stepNumber === 4) {
     schema = validationSchema.step4;
+  } else if (stepNumber === 5) {
+    schema = validationSchema.step5;
+  } else if (stepNumber === 6) {
+    schema = validationSchema.step6;
   } else {
     return errors;
   }
 
   Object.entries(schema).forEach(([fieldName, rule]) => {
     const value = data[fieldName as keyof WizardFormData];
-    const error = validateField(value, rule);
-    if (error) {
-      errors[fieldName] = error;
+    
+    // Special handling for primaryContact
+    if (fieldName === 'primaryContact' && stepNumber === 1) {
+      const contact = value as any;
+      if (!contact) {
+        errors.primaryContact = 'Contact information is required';
+      } else {
+        if (!contact.contactName?.trim()) {
+          errors['primaryContact.contactName'] = 'Contact name is required';
+        }
+        if (!contact.contactTitle?.trim()) {
+          errors['primaryContact.contactTitle'] = 'Contact title is required';
+        }
+        if (!contact.contactEmail?.trim()) {
+          errors['primaryContact.contactEmail'] = 'Contact email is required';
+        } else {
+          const emailError = validateField(contact.contactEmail, { email: true });
+          if (emailError) {
+            errors['primaryContact.contactEmail'] = emailError;
+          }
+        }
+        if (contact.contactPhone?.trim()) {
+          const phoneError = validateField(contact.contactPhone, { phone: true });
+          if (phoneError) {
+            errors['primaryContact.contactPhone'] = phoneError;
+          }
+        }
+      }
+    } else {
+      const error = validateField(value, rule);
+      if (error) {
+        errors[fieldName] = error;
+      }
     }
   });
 
@@ -149,7 +187,7 @@ export function validateStep(stepNumber: 1 | 2 | 3 | 4, data: Partial<WizardForm
   return errors;
 }
 
-export function isStepValid(stepNumber: 1 | 2 | 3 | 4, data: Partial<WizardFormData>): boolean {
+export function isStepValid(stepNumber: 1 | 2 | 3 | 4 | 5 | 6, data: Partial<WizardFormData>): boolean {
   const errors = validateStep(stepNumber, data);
   return Object.keys(errors).length === 0;
 }
@@ -220,7 +258,7 @@ export function clearLocalStorage(): void {
 // STEP NAVIGATION UTILITIES
 // =====================================================
 
-export function canNavigateToStep(targetStep: 1 | 2 | 3 | 4, currentStep: 1 | 2 | 3 | 4, stepValidation: Record<number, boolean>): boolean {
+export function canNavigateToStep(targetStep: 1 | 2 | 3 | 4 | 5 | 6, currentStep: 1 | 2 | 3 | 4 | 5 | 6, stepValidation: Record<number, boolean>): boolean {
   // Can always go to step 1
   if (targetStep === 1) return true;
   
@@ -233,20 +271,30 @@ export function canNavigateToStep(targetStep: 1 | 2 | 3 | 4, currentStep: 1 | 2 
   // Can only go to step 4 if steps 1, 2 and 3 are valid
   if (targetStep === 4) return stepValidation[1] === true && stepValidation[2] === true && stepValidation[3] === true;
   
+  // Can only go to step 5 if steps 1, 2 and 3 are valid (4 is optional)
+  if (targetStep === 5) return stepValidation[1] === true && stepValidation[2] === true && stepValidation[3] === true;
+  
+  // Can only go to step 6 if steps 1, 2 and 3 are valid (4 and 5 are optional)
+  if (targetStep === 6) return stepValidation[1] === true && stepValidation[2] === true && stepValidation[3] === true;
+  
   return false;
 }
 
-export function getNextStep(currentStep: 1 | 2 | 3 | 4): 2 | 3 | 4 | null {
+export function getNextStep(currentStep: 1 | 2 | 3 | 4 | 5 | 6): 2 | 3 | 4 | 5 | 6 | null {
   if (currentStep === 1) return 2;
   if (currentStep === 2) return 3;
   if (currentStep === 3) return 4;
+  if (currentStep === 4) return 5;
+  if (currentStep === 5) return 6;
   return null;
 }
 
-export function getPreviousStep(currentStep: 1 | 2 | 3 | 4): 1 | 2 | 3 | null {
+export function getPreviousStep(currentStep: 1 | 2 | 3 | 4 | 5 | 6): 1 | 2 | 3 | 4 | 5 | null {
   if (currentStep === 2) return 1;
   if (currentStep === 3) return 2;
   if (currentStep === 4) return 3;
+  if (currentStep === 5) return 4;
+  if (currentStep === 6) return 5;
   return null;
 }
 
@@ -261,10 +309,10 @@ export function mergeFormData(current: Partial<WizardFormData>, updates: Partial
   };
 }
 
-export function getStepData(stepNumber: 1 | 2 | 3 | 4, formData: Partial<WizardFormData>): Partial<CompanyInfoData> | Partial<RequirementDetailsData> | Partial<LocationData> | Partial<SupportingDocumentsData> {
+export function getStepData(stepNumber: 1 | 2 | 3 | 4 | 5 | 6, formData: Partial<WizardFormData>): Partial<CompanyInfoData> | Partial<RequirementDetailsData> | Partial<LocationData> | Partial<AdditionalContactsData> | Partial<FAQData> | Partial<SupportingDocumentsData> {
   if (stepNumber === 1) {
-    const { companyName, contactName, contactTitle, contactEmail, contactPhone, logoFile, logoPreview } = formData;
-    return { companyName, contactName, contactTitle, contactEmail, contactPhone, logoFile, logoPreview };
+    const { companyName, primaryContact, logoFile, logoPreview, logoUrl, brochureFiles } = formData;
+    return { companyName, primaryContact, logoFile, logoPreview, logoUrl, brochureFiles };
   } else if (stepNumber === 2) {
     const { sectors, useClassIds, siteSizeMin, siteSizeMax } = formData;
     return { sectors, useClassIds, siteSizeMin, siteSizeMax };
@@ -272,14 +320,20 @@ export function getStepData(stepNumber: 1 | 2 | 3 | 4, formData: Partial<WizardF
     const { locations, locationSearchNationwide } = formData;
     return { locations, locationSearchNationwide };
   } else if (stepNumber === 4) {
-    const { brochureFiles, sitePlanFiles, fitOutFiles } = formData;
-    return { brochureFiles, sitePlanFiles, fitOutFiles };
+    const { additionalContacts } = formData;
+    return { additionalContacts };
+  } else if (stepNumber === 5) {
+    const { faqs } = formData;
+    return { faqs };
+  } else if (stepNumber === 6) {
+    const { sitePlanFiles, fitOutFiles } = formData;
+    return { sitePlanFiles, fitOutFiles };
   }
   return {};
 }
 
 export function isFormComplete(data: Partial<WizardFormData>): boolean {
-  return isStepValid(1, data) && isStepValid(2, data) && isStepValid(3, data) && isStepValid(4, data);
+  return isStepValid(1, data) && isStepValid(2, data) && isStepValid(3, data) && isStepValid(4, data) && isStepValid(5, data) && isStepValid(6, data);
 }
 
 // =====================================================

@@ -27,6 +27,7 @@ interface DocumentUploadProps extends MultiFileUploadProps {
   maxFileSize?: number;
   showPreview?: boolean;
   organizationId: string;
+  listingId?: string;
 }
 
 export function DocumentUpload({
@@ -40,7 +41,8 @@ export function DocumentUpload({
   acceptedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
   maxFileSize = 10 * 1024 * 1024, // 10MB default
   showPreview = true,
-  organizationId
+  organizationId,
+  listingId
 }: DocumentUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -80,7 +82,8 @@ export function DocumentUpload({
         (progress) => {
           setUploadProgress(progress);
           onProgress?.(progress);
-        }
+        },
+        listingId
       );
 
       // Add to existing files
@@ -214,7 +217,11 @@ export function DocumentUpload({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open(file.url, '_blank')}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              window.open(file.url, '_blank');
+            }}
             className="h-8 w-8 p-0"
           >
             {isImageFile(file.mimeType) ? (
@@ -229,7 +236,11 @@ export function DocumentUpload({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => handleFileRemove(file)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleFileRemove(file);
+          }}
           disabled={disabled}
           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
         >

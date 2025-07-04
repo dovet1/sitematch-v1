@@ -41,7 +41,6 @@ export function Step4SupportingDocuments({
     formState: { errors: formErrors }
   } = useForm<Step4FormData>({
     defaultValues: {
-      brochureFiles: data.brochureFiles || [],
       sitePlanFiles: data.sitePlanFiles || [],
       fitOutFiles: data.fitOutFiles || []
     },
@@ -60,7 +59,6 @@ export function Step4SupportingDocuments({
   // =====================================================
 
   const currentFormData: Step4FormData = {
-    brochureFiles: data.brochureFiles || [],
     sitePlanFiles: data.sitePlanFiles || [],
     fitOutFiles: data.fitOutFiles || []
   };

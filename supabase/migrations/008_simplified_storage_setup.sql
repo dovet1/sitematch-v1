@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS file_uploads (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   
   -- Constraints
-  CONSTRAINT valid_file_type CHECK (file_type IN ('logo', 'brochure', 'sitePlan', 'fitOut')),
-  CONSTRAINT valid_bucket CHECK (bucket_name IN ('logos', 'brochures', 'site-plans', 'fit-outs')),
+  CONSTRAINT valid_file_type CHECK (file_type IN ('logo', 'brochure', 'sitePlan', 'fitOut', 'headshot')),
+  CONSTRAINT valid_bucket CHECK (bucket_name IN ('logos', 'brochures', 'site-plans', 'fit-outs', 'headshots')),
   CONSTRAINT file_size_positive CHECK (file_size > 0)
 );
 

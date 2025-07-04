@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File
     const fileType = formData.get('type') as string
     const organizationId = formData.get('organizationId') as string
+    const listingId = formData.get('listingId') as string
 
     if (!file || !fileType) {
       return NextResponse.json({ error: 'Missing file or type' }, { status: 400 })
@@ -45,7 +46,8 @@ export async function POST(request: NextRequest) {
       'logo': 'logos',
       'brochure': 'brochures', 
       'sitePlan': 'site-plans',
-      'fitOut': 'fit-outs'
+      'fitOut': 'fit-outs',
+      'headshot': 'headshots'
     }
     
     const bucket = bucketMap[fileType as keyof typeof bucketMap] || 'brochures'
@@ -67,18 +69,25 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(uploadData.path)
 
     // Create database record
+    const fileInsertData: any = {
+      org_id: finalOrgId,
+      user_id: user.id,
+      file_path: uploadData.path,
+      file_name: file.name,
+      file_size: file.size,
+      file_type: fileType,
+      mime_type: file.type,
+      bucket_name: bucket
+    };
+
+    // Add listing_id if provided (for draft listing association)
+    if (listingId && listingId !== 'undefined') {
+      fileInsertData.listing_id = listingId;
+    }
+
     const { data: fileRecord, error: dbError } = await supabase
       .from('file_uploads')
-      .insert({
-        org_id: finalOrgId,
-        user_id: user.id,
-        file_path: uploadData.path,
-        file_name: file.name,
-        file_size: file.size,
-        file_type: fileType,
-        mime_type: file.type,
-        bucket_name: bucket
-      })
+      .insert(fileInsertData)
       .select()
       .single()
 

@@ -86,13 +86,17 @@ describe('Validation Functions', () => {
   describe('validateStep', () => {
     const validStep1Data: Partial<WizardFormData> = {
       companyName: 'Test Company',
-      contactEmail: 'test@example.com'
+      primaryContact: {
+        contactName: 'John Doe',
+        contactTitle: 'Property Manager',
+        contactEmail: 'test@example.com',
+        isPrimaryContact: true
+      }
     };
 
     const validStep2Data: Partial<WizardFormData> = {
-      title: 'Test Listing Title',
-      sector: 'retail',
-      useClass: 'E(a)'
+      sectors: ['retail'],
+      useClassIds: ['E(a)']
     };
 
     it('validates step 1 correctly', () => {
@@ -106,11 +110,19 @@ describe('Validation Functions', () => {
     });
 
     it('returns errors for invalid step 1 data', () => {
-      const invalidData = { companyName: '', contactEmail: 'invalid' };
+      const invalidData = { 
+        companyName: '', 
+        primaryContact: {
+          contactName: '',
+          contactTitle: '',
+          contactEmail: 'invalid',
+          isPrimaryContact: true
+        }
+      };
       const errors = validateStep(1, invalidData);
       
       expect(errors.companyName).toBeDefined();
-      expect(errors.contactEmail).toBeDefined();
+      expect(errors['primaryContact.contactEmail']).toBeDefined();
     });
 
     it('validates site size cross-field validation', () => {
@@ -129,7 +141,12 @@ describe('Validation Functions', () => {
     it('returns true for valid step data', () => {
       const validData = {
         companyName: 'Test Company',
-        contactEmail: 'test@example.com'
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'test@example.com',
+          isPrimaryContact: true
+        }
       };
       
       expect(isStepValid(1, validData)).toBe(true);
@@ -138,7 +155,12 @@ describe('Validation Functions', () => {
     it('returns false for invalid step data', () => {
       const invalidData = {
         companyName: '',
-        contactEmail: 'invalid'
+        primaryContact: {
+          contactName: '',
+          contactTitle: '',
+          contactEmail: 'invalid',
+          isPrimaryContact: true
+        }
       };
       
       expect(isStepValid(1, invalidData)).toBe(false);
@@ -245,14 +267,22 @@ describe('Navigation Functions', () => {
       expect(getNextStep(1)).toBe(2);
     });
 
-    it('returns null from step 2', () => {
-      expect(getNextStep(2)).toBeNull();
+    it('returns step 3 from step 2', () => {
+      expect(getNextStep(2)).toBe(3);
+    });
+
+    it('returns null from step 6', () => {
+      expect(getNextStep(6)).toBeNull();
     });
   });
 
   describe('getPreviousStep', () => {
     it('returns step 1 from step 2', () => {
       expect(getPreviousStep(2)).toBe(1);
+    });
+
+    it('returns step 5 from step 6', () => {
+      expect(getPreviousStep(6)).toBe(5);
     });
 
     it('returns null from step 1', () => {
@@ -264,15 +294,36 @@ describe('Navigation Functions', () => {
 describe('Form Data Functions', () => {
   describe('mergeFormData', () => {
     it('merges form data correctly', () => {
-      const current = { companyName: 'Test', contactEmail: 'old@example.com' };
-      const updates = { contactEmail: 'new@example.com', title: 'New Title' };
+      const current = { 
+        companyName: 'Test', 
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'old@example.com',
+          isPrimaryContact: true
+        }
+      };
+      const updates = { 
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'new@example.com',
+          isPrimaryContact: true
+        },
+        sectors: ['retail']
+      };
       
       const result = mergeFormData(current, updates);
       
       expect(result).toEqual({
         companyName: 'Test',
-        contactEmail: 'new@example.com',
-        title: 'New Title'
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'new@example.com',
+          isPrimaryContact: true
+        },
+        sectors: ['retail']
       });
     });
   });
@@ -280,27 +331,33 @@ describe('Form Data Functions', () => {
   describe('getStepData', () => {
     const fullData: Partial<WizardFormData> = {
       companyName: 'Test Company',
-      contactEmail: 'test@example.com',
-      title: 'Test Title',
-      sector: 'retail'
+      primaryContact: {
+        contactName: 'John Doe',
+        contactTitle: 'Property Manager',
+        contactEmail: 'test@example.com',
+        isPrimaryContact: true
+      },
+      sectors: ['retail'],
+      useClassIds: ['E(a)']
     };
 
     it('returns step 1 data', () => {
       const step1Data = getStepData(1, fullData);
       expect(step1Data).toEqual({
         companyName: 'Test Company',
-        contactEmail: 'test@example.com',
-        contactPhone: undefined
+        primaryContact: undefined,
+        logoFile: undefined,
+        logoPreview: undefined,
+        logoUrl: undefined,
+        brochureFiles: undefined
       });
     });
 
     it('returns step 2 data', () => {
       const step2Data = getStepData(2, fullData);
       expect(step2Data).toEqual({
-        title: 'Test Title',
-        sector: 'retail',
-        description: undefined,
-        useClass: undefined,
+        sectors: ['retail'],
+        useClassIds: ['E(a)'],
         siteSizeMin: undefined,
         siteSizeMax: undefined
       });
@@ -311,10 +368,15 @@ describe('Form Data Functions', () => {
     it('returns true for complete form', () => {
       const completeData: Partial<WizardFormData> = {
         companyName: 'Test Company',
-        contactEmail: 'test@example.com',
-        title: 'Test Listing',
-        sector: 'retail',
-        useClass: 'E(a)'
+        primaryContact: {
+          contactName: 'John Doe',
+          contactTitle: 'Property Manager',
+          contactEmail: 'test@example.com',
+          isPrimaryContact: true
+        },
+        sectors: ['retail'],
+        useClassIds: ['E(a)'],
+        locations: [{ id: '1', name: 'London' }]
       };
       
       expect(isFormComplete(completeData)).toBe(true);

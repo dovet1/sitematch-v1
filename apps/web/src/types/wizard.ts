@@ -3,18 +3,42 @@
 // TypeScript types for the listing creation wizard
 // =====================================================
 
+// Contact data structure for listing_contacts table
+export interface ListingContact {
+  id?: string; // UUID, optional for new contacts
+  listingId?: string; // UUID reference to listing
+  contactName: string; // required
+  contactTitle: string; // required
+  contactEmail: string; // required, pre-filled from auth for primary
+  contactPhone?: string; // optional, UK/international format
+  isPrimaryContact: boolean; // true for Step 1, false for Step 4
+  headshotUrl?: string; // stored headshot URL
+  headshotFile?: File; // local file for upload
+  headshotPreview?: string; // base64 preview
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 // Step-specific form data interfaces
 export interface CompanyInfoData {
   companyName: string; // required
-  // PRD-required contact fields
-  contactName: string; // required
-  contactTitle: string; // required
-  contactEmail: string; // pre-filled from auth, read-only
-  contactPhone?: string; // optional, UK format
+  // Primary contact data (goes to listing_contacts table)
+  primaryContact: ListingContact;
   // Company logo
   logoFile?: File; // optional, PNG/JPG/SVG max 2MB
   logoPreview?: string; // base64 preview
   logoUrl?: string; // uploaded logo URL
+  // Requirements brochure (moved from step 4)
+  brochureFiles?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    path: string;
+    type: 'brochure';
+    size: number;
+    mimeType: string;
+    uploadedAt: Date;
+  }>;
 }
 
 export interface RequirementDetailsData {
@@ -40,19 +64,24 @@ export interface LocationData {
   locationSearchNationwide?: boolean;
 }
 
-// Step 4: Supporting Documents Data - Story 3.2
+// Step 4: Additional Contacts Data
+export interface AdditionalContactsData {
+  additionalContacts?: ListingContact[]; // Array of additional contacts (isPrimaryContact = false)
+}
+
+// Step 5: FAQ Data
+export interface FAQData {
+  faqs?: Array<{
+    id?: string;
+    question: string;
+    answer: string;
+    displayOrder: number;
+  }>;
+}
+
+// Step 6: Supporting Documents Data - Story 3.2 (brochure removed)
 export interface SupportingDocumentsData {
   // File upload data
-  brochureFiles?: Array<{
-    id: string;
-    name: string;
-    url: string;
-    path: string;
-    type: 'brochure';
-    size: number;
-    mimeType: string;
-    uploadedAt: Date;
-  }>;
   sitePlanFiles?: Array<{
     id: string;
     name: string;
@@ -77,13 +106,6 @@ export interface SupportingDocumentsData {
     isVideo?: boolean;
     thumbnail?: string;
   }>;
-  // FAQ data - Story 3.3
-  faqs?: Array<{
-    id?: string;
-    question: string;
-    answer: string;
-    displayOrder: number;
-  }>;
 }
 
 // PRD Use Class Options for Dropdown
@@ -95,20 +117,23 @@ export interface UseClassOption {
 }
 
 // Combined wizard form data
-export interface WizardFormData extends CompanyInfoData, RequirementDetailsData, LocationData, SupportingDocumentsData {}
+export interface WizardFormData extends CompanyInfoData, RequirementDetailsData, LocationData, AdditionalContactsData, FAQData, SupportingDocumentsData {
+  existingListingId?: string; // Draft listing ID that should be updated instead of creating new
+}
 
 // Wizard state management
 export interface WizardState {
-  currentStep: 1 | 2 | 3 | 4;
+  currentStep: 1 | 2 | 3 | 4 | 5 | 6;
   formData: Partial<WizardFormData>;
   isValid: Record<number, boolean>;
   isSubmitting: boolean;
   errors: Record<string, string>;
+  listingId?: string; // Draft listing ID created when wizard starts
 }
 
 // Step configuration
 export interface WizardStep {
-  number: 1 | 2 | 3 | 4;
+  number: 1 | 2 | 3 | 4 | 5 | 6;
   title: string;
   description: string;
   component: React.ComponentType<WizardStepProps>;
@@ -129,11 +154,12 @@ export interface WizardStepProps {
 
 // Navigation actions
 export type WizardAction = 
-  | { type: 'SET_STEP'; step: 1 | 2 | 3 | 4 }
+  | { type: 'SET_STEP'; step: 1 | 2 | 3 | 4 | 5 | 6 }
   | { type: 'UPDATE_DATA'; data: Partial<WizardFormData> }
   | { type: 'SET_VALID'; step: number; isValid: boolean }
   | { type: 'SET_SUBMITTING'; isSubmitting: boolean }
   | { type: 'SET_ERRORS'; errors: Record<string, string> }
+  | { type: 'SET_LISTING_ID'; listingId: string }
   | { type: 'RESET' };
 
 // Validation schema types
@@ -151,7 +177,9 @@ export interface ValidationSchema {
   step1: Record<keyof CompanyInfoData, ValidationRule>;
   step2: Record<keyof RequirementDetailsData, ValidationRule>;
   step3: Record<keyof LocationData, ValidationRule>;
-  step4: Record<keyof SupportingDocumentsData, ValidationRule>;
+  step4: Record<keyof AdditionalContactsData, ValidationRule>;
+  step5: Record<keyof FAQData, ValidationRule>;
+  step6: Record<keyof SupportingDocumentsData, ValidationRule>;
 }
 
 // Auto-organization creation
@@ -202,7 +230,7 @@ export interface AutoSaveState {
 export interface WizardContextType {
   state: WizardState;
   dispatch: React.Dispatch<WizardAction>;
-  goToStep: (step: 1 | 2 | 3 | 4) => void;
+  goToStep: (step: 1 | 2 | 3 | 4 | 5 | 6) => void;
   goNext: () => void;
   goPrevious: () => void;
   updateData: (data: Partial<WizardFormData>) => void;
