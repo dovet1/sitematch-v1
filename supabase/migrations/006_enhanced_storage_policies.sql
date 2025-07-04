@@ -1,0 +1,323 @@
+-- =====================================================
+-- Enhanced Storage Policies - Story 3.2 Task 2
+-- Create organized storage buckets and security policies
+-- =====================================================
+
+-- Create organized storage buckets for different file types
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES 
+  ('logos', 'Company Logos', false, 2097152, ARRAY['image/jpeg', 'image/png', 'image/svg+xml']),
+  ('brochures', 'Company Brochures', false, 10485760, ARRAY['application/pdf']),
+  ('site-plans', 'Site Plans', false, 10485760, ARRAY['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png']),
+  ('fit-outs', 'Fit-out Examples', false, 5242880, ARRAY['image/jpeg', 'image/png', 'video/mp4'])
+ON CONFLICT (id) DO UPDATE SET
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Authenticated users can upload logos" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload brochures" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload site plans" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload fit-outs" ON storage.objects;
+DROP POLICY IF EXISTS "Users can view own organization files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own organization files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own organization files" ON storage.objects;
+
+-- Enable RLS on storage.objects if not already enabled
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- =====================================================
+-- UPLOAD POLICIES
+-- =====================================================
+
+-- Allow authenticated users to upload logo files
+CREATE POLICY "Authenticated users can upload logos" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'logos'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] IN (
+      SELECT organization_members.organization_id::text
+      FROM organization_members
+      WHERE organization_members.user_id = auth.uid()
+    )
+  );
+
+-- Allow authenticated users to upload brochure files
+CREATE POLICY "Authenticated users can upload brochures" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'brochures'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] IN (
+      SELECT organization_members.organization_id::text
+      FROM organization_members
+      WHERE organization_members.user_id = auth.uid()
+    )
+  );
+
+-- Allow authenticated users to upload site plan files
+CREATE POLICY "Authenticated users can upload site plans" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'site-plans'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] IN (
+      SELECT organization_members.organization_id::text
+      FROM organization_members
+      WHERE organization_members.user_id = auth.uid()
+    )
+  );
+
+-- Allow authenticated users to upload fit-out files
+CREATE POLICY "Authenticated users can upload fit-outs" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'fit-outs'
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] IN (
+      SELECT organization_members.organization_id::text
+      FROM organization_members
+      WHERE organization_members.user_id = auth.uid()
+    )
+  );
+
+-- =====================================================
+-- VIEW POLICIES
+-- =====================================================
+
+-- Allow users to view files from their own organization
+CREATE POLICY "Users can view own organization files" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (
+    bucket_id IN ('logos', 'brochures', 'site-plans', 'fit-outs')
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] IN (
+      SELECT organization_members.organization_id::text
+      FROM organization_members
+      WHERE organization_members.user_id = auth.uid()
+    )
+  );
+
+-- =====================================================
+-- UPDATE POLICIES
+-- =====================================================
+
+-- Allow users to update files from their own organization
+CREATE POLICY "Users can update own organization files" ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (
+    bucket_id IN ('logos', 'brochures', 'site-plans', 'fit-outs')
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] IN (
+      SELECT organization_members.organization_id::text
+      FROM organization_members
+      WHERE organization_members.user_id = auth.uid()
+    )
+  );
+
+-- =====================================================
+-- DELETE POLICIES
+-- =====================================================
+
+-- Allow users to delete files from their own organization
+CREATE POLICY "Users can delete own organization files" ON storage.objects
+  FOR DELETE TO authenticated
+  USING (
+    bucket_id IN ('logos', 'brochures', 'site-plans', 'fit-outs')
+    AND auth.uid() IS NOT NULL
+    AND (storage.foldername(name))[1] IN (
+      SELECT organization_members.organization_id::text
+      FROM organization_members
+      WHERE organization_members.user_id = auth.uid()
+    )
+  );
+
+-- =====================================================
+-- ADMIN POLICIES
+-- =====================================================
+
+-- Allow admins to manage all files
+CREATE POLICY "Admins can manage all files" ON storage.objects
+  FOR ALL TO authenticated
+  USING (
+    bucket_id IN ('logos', 'brochures', 'site-plans', 'fit-outs')
+    AND auth.uid() IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE user_profiles.id = auth.uid()
+      AND user_profiles.role = 'admin'
+    )
+  );
+
+-- =====================================================
+-- FILE METADATA TABLE
+-- =====================================================
+
+-- Create table to store file metadata and associations
+CREATE TABLE IF NOT EXISTS file_uploads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  listing_id UUID REFERENCES listings(id) ON DELETE CASCADE,
+  
+  -- File information
+  file_path TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  file_size INTEGER NOT NULL,
+  file_type TEXT NOT NULL, -- 'logo', 'brochure', 'sitePlan', 'fitOut'
+  mime_type TEXT NOT NULL,
+  bucket_name TEXT NOT NULL,
+  
+  -- Optional metadata
+  display_order INTEGER DEFAULT 0,
+  caption TEXT,
+  is_primary BOOLEAN DEFAULT false,
+  
+  -- Timestamps
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  -- Constraints
+  CONSTRAINT valid_file_type CHECK (file_type IN ('logo', 'brochure', 'sitePlan', 'fitOut')),
+  CONSTRAINT valid_bucket CHECK (bucket_name IN ('logos', 'brochures', 'site-plans', 'fit-outs')),
+  CONSTRAINT file_size_positive CHECK (file_size > 0)
+);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_file_uploads_organization_id ON file_uploads(organization_id);
+CREATE INDEX IF NOT EXISTS idx_file_uploads_listing_id ON file_uploads(listing_id);
+CREATE INDEX IF NOT EXISTS idx_file_uploads_user_id ON file_uploads(user_id);
+CREATE INDEX IF NOT EXISTS idx_file_uploads_file_type ON file_uploads(file_type);
+CREATE INDEX IF NOT EXISTS idx_file_uploads_created_at ON file_uploads(created_at);
+
+-- Enable RLS on file_uploads table
+ALTER TABLE file_uploads ENABLE ROW LEVEL SECURITY;
+
+-- =====================================================
+-- FILE_UPLOADS TABLE POLICIES
+-- =====================================================
+
+-- Allow users to insert file metadata for their own organization
+CREATE POLICY "Users can insert own organization file metadata" ON file_uploads
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND user_id = auth.uid()
+    AND organization_id IN (
+      SELECT organization_members.organization_id
+      FROM organization_members
+      WHERE organization_members.user_id = auth.uid()
+    )
+  );
+
+-- Allow users to view file metadata for their own organization
+CREATE POLICY "Users can view own organization file metadata" ON file_uploads
+  FOR SELECT TO authenticated
+  USING (
+    auth.uid() IS NOT NULL
+    AND organization_id IN (
+      SELECT organization_members.organization_id
+      FROM organization_members
+      WHERE organization_members.user_id = auth.uid()
+    )
+  );
+
+-- Allow users to update file metadata for their own organization
+CREATE POLICY "Users can update own organization file metadata" ON file_uploads
+  FOR UPDATE TO authenticated
+  USING (
+    auth.uid() IS NOT NULL
+    AND organization_id IN (
+      SELECT organization_members.organization_id
+      FROM organization_members
+      WHERE organization_members.user_id = auth.uid()
+    )
+  );
+
+-- Allow users to delete file metadata for their own organization
+CREATE POLICY "Users can delete own organization file metadata" ON file_uploads
+  FOR DELETE TO authenticated
+  USING (
+    auth.uid() IS NOT NULL
+    AND organization_id IN (
+      SELECT organization_members.organization_id
+      FROM organization_members
+      WHERE organization_members.user_id = auth.uid()
+    )
+  );
+
+-- Allow admins to manage all file metadata
+CREATE POLICY "Admins can manage all file metadata" ON file_uploads
+  FOR ALL TO authenticated
+  USING (
+    auth.uid() IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE user_profiles.id = auth.uid()
+      AND user_profiles.role = 'admin'
+    )
+  );
+
+-- =====================================================
+-- FUNCTIONS AND TRIGGERS
+-- =====================================================
+
+-- Function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_file_uploads_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS trigger_update_file_uploads_updated_at ON file_uploads;
+CREATE TRIGGER trigger_update_file_uploads_updated_at
+  BEFORE UPDATE ON file_uploads
+  FOR EACH ROW
+  EXECUTE FUNCTION update_file_uploads_updated_at();
+
+-- Function to clean up orphaned files (to be called by a scheduled job)
+CREATE OR REPLACE FUNCTION cleanup_orphaned_files()
+RETURNS INTEGER AS $$
+DECLARE
+  deleted_count INTEGER := 0;
+BEGIN
+  -- This function should be called by a scheduled job to clean up
+  -- files that exist in storage but have no corresponding metadata record
+  -- Implementation would require storage API integration
+  
+  -- For now, just return 0
+  RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =====================================================
+-- SEED DATA (DEVELOPMENT ONLY)
+-- =====================================================
+
+-- Insert some example file upload records for development
+-- This should be removed in production
+INSERT INTO file_uploads (
+  organization_id,
+  user_id,
+  file_path,
+  file_name,
+  file_size,
+  file_type,
+  mime_type,
+  bucket_name,
+  caption
+) VALUES (
+  -- These are example values - replace with actual data
+  (SELECT id FROM organizations LIMIT 1),
+  (SELECT id FROM auth.users LIMIT 1),
+  'example-org/logo.png',
+  'Company Logo.png',
+  245760,
+  'logo',
+  'image/png',
+  'logos',
+  'Main company logo'
+) ON CONFLICT DO NOTHING;

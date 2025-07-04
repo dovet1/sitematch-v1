@@ -290,7 +290,6 @@ describe('Form Data Functions', () => {
       expect(step1Data).toEqual({
         companyName: 'Test Company',
         contactEmail: 'test@example.com',
-        companyDescription: undefined,
         contactPhone: undefined
       });
     });

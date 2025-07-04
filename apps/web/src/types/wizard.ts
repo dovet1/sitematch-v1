@@ -6,26 +6,93 @@
 // Step-specific form data interfaces
 export interface CompanyInfoData {
   companyName: string; // required
-  companyDescription?: string; // optional
+  // PRD-required contact fields
+  contactName: string; // required
+  contactTitle: string; // required
   contactEmail: string; // pre-filled from auth, read-only
-  contactPhone?: string; // optional
+  contactPhone?: string; // optional, UK format
+  // Company logo
+  logoFile?: File; // optional, PNG/JPG/SVG max 2MB
+  logoPreview?: string; // base64 preview
+  logoUrl?: string; // uploaded logo URL
 }
 
 export interface RequirementDetailsData {
-  title: string; // required
-  description?: string; // optional
-  sector: 'retail' | 'office' | 'industrial' | 'leisure' | 'mixed'; // required
-  useClass: string; // required
-  siteSizeMin?: number; // square feet
-  siteSizeMax?: number; // square feet
+  // PRD-specified sector options - now multi-select and optional
+  sectors?: string[]; // optional array of sector values
+  useClassIds?: string[]; // optional array of use class IDs from multi-select
+  siteSizeMin?: number; // square feet, from double-thumb slider
+  siteSizeMax?: number; // square feet, from double-thumb slider
+}
+
+// Step 3: Location Data - Story 3.2
+export interface LocationData {
+  // Location search data - using LocationSelection type for consistency
+  locations?: Array<{
+    id: string;
+    place_name: string;
+    coordinates: [number, number];
+    type: 'preferred' | 'acceptable';
+    formatted_address: string;
+    region?: string;
+    country?: string;
+  }>;
+  locationSearchNationwide?: boolean;
+}
+
+// Step 4: Supporting Documents Data - Story 3.2
+export interface SupportingDocumentsData {
+  // File upload data
+  brochureFiles?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    path: string;
+    type: 'brochure';
+    size: number;
+    mimeType: string;
+    uploadedAt: Date;
+  }>;
+  sitePlanFiles?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    path: string;
+    type: 'sitePlan';
+    size: number;
+    mimeType: string;
+    uploadedAt: Date;
+  }>;
+  fitOutFiles?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    path: string;
+    type: 'fitOut';
+    size: number;
+    mimeType: string;
+    uploadedAt: Date;
+    displayOrder: number;
+    caption?: string;
+    isVideo?: boolean;
+    thumbnail?: string;
+  }>;
+}
+
+// PRD Use Class Options for Dropdown
+export interface UseClassOption {
+  id: string;
+  code: string; // E.g., 'E(a)', 'B2', 'Sui Generis'
+  name: string; // E.g., 'Retail', 'General Industrial'
+  description: string;
 }
 
 // Combined wizard form data
-export interface WizardFormData extends CompanyInfoData, RequirementDetailsData {}
+export interface WizardFormData extends CompanyInfoData, RequirementDetailsData, LocationData, SupportingDocumentsData {}
 
 // Wizard state management
 export interface WizardState {
-  currentStep: 1 | 2;
+  currentStep: 1 | 2 | 3 | 4;
   formData: Partial<WizardFormData>;
   isValid: Record<number, boolean>;
   isSubmitting: boolean;
@@ -34,7 +101,7 @@ export interface WizardState {
 
 // Step configuration
 export interface WizardStep {
-  number: 1 | 2;
+  number: 1 | 2 | 3 | 4;
   title: string;
   description: string;
   component: React.ComponentType<WizardStepProps>;
@@ -55,7 +122,7 @@ export interface WizardStepProps {
 
 // Navigation actions
 export type WizardAction = 
-  | { type: 'SET_STEP'; step: 1 | 2 }
+  | { type: 'SET_STEP'; step: 1 | 2 | 3 | 4 }
   | { type: 'UPDATE_DATA'; data: Partial<WizardFormData> }
   | { type: 'SET_VALID'; step: number; isValid: boolean }
   | { type: 'SET_SUBMITTING'; isSubmitting: boolean }
@@ -76,6 +143,15 @@ export interface ValidationRule {
 export interface ValidationSchema {
   step1: Record<keyof CompanyInfoData, ValidationRule>;
   step2: Record<keyof RequirementDetailsData, ValidationRule>;
+  step3: Record<keyof LocationData, ValidationRule>;
+  step4: Record<keyof SupportingDocumentsData, ValidationRule>;
+}
+
+// Auto-organization creation
+export interface OrganizationCreationResult {
+  success: boolean;
+  organizationId?: string;
+  error?: string;
 }
 
 // Form submission types
@@ -84,6 +160,7 @@ export interface WizardSubmissionData extends WizardFormData {
   orgId?: string;
   userId?: string;
   status?: 'draft' | 'pending';
+  organizationCreated?: boolean;
 }
 
 export interface SubmissionResult {
@@ -91,6 +168,8 @@ export interface SubmissionResult {
   data?: any;
   error?: string;
   listingId?: string;
+  organizationId?: string;
+  organizationCreated?: boolean;
 }
 
 // Progress indicator types
@@ -115,7 +194,7 @@ export interface AutoSaveState {
 export interface WizardContextType {
   state: WizardState;
   dispatch: React.Dispatch<WizardAction>;
-  goToStep: (step: 1 | 2) => void;
+  goToStep: (step: 1 | 2 | 3 | 4) => void;
   goNext: () => void;
   goPrevious: () => void;
   updateData: (data: Partial<WizardFormData>) => void;

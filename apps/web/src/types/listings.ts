@@ -27,6 +27,12 @@ export interface Listing {
   use_class_id: string;
   site_size_min: number | null;
   site_size_max: number | null;
+  // PRD-required contact fields
+  contact_name: string;
+  contact_title: string;
+  contact_email: string;
+  contact_phone: string | null;
+  // File references
   brochure_url: string | null;
   status: ListingStatus;
   created_by: string;
@@ -62,6 +68,37 @@ export interface FAQ {
   created_at: string;
 }
 
+export interface CompanyLogo {
+  id: string;
+  listing_id: string;
+  file_url: string;
+  file_name: string;
+  file_size: number;
+  created_at: string;
+}
+
+export interface ListingDocument {
+  id: string;
+  listing_id: string;
+  document_type: 'site_plan' | 'store_plan' | 'brochure';
+  file_url: string;
+  file_name: string;
+  file_size: number;
+  created_at: string;
+}
+
+export interface ListingGallery {
+  id: string;
+  listing_id: string;
+  media_type: 'image' | 'video';
+  file_url: string;
+  file_name: string;
+  file_size: number;
+  thumbnail_url: string | null;
+  display_order: number;
+  created_at: string;
+}
+
 // =====================================================
 // ENUMS
 // =====================================================
@@ -70,7 +107,7 @@ export type ListingStatus = 'draft' | 'pending' | 'approved' | 'rejected';
 
 export type LocationType = 'preferred' | 'acceptable';
 
-export type MediaFileType = 'brochure' | 'image' | 'pdf';
+export type MediaFileType = 'brochure' | 'logo' | 'site_plan' | 'fit_out' | 'image' | 'pdf' | 'video';
 
 // =====================================================
 // EXTENDED TYPES WITH RELATIONS
@@ -81,6 +118,9 @@ export interface ListingWithDetails extends Listing {
   use_class: UseClass;
   locations: ListingLocation[];
   media_files: MediaFile[];
+  company_logos: CompanyLogo[];
+  listing_documents: ListingDocument[];
+  listing_galleries: ListingGallery[];
   faqs: FAQ[];
 }
 
@@ -95,9 +135,18 @@ export interface CreateListingRequest {
   use_class_id: string;
   site_size_min?: number;
   site_size_max?: number;
+  // PRD-required contact fields
+  contact_name: string;
+  contact_title: string;
+  contact_email: string;
+  contact_phone?: string;
+  // File references
   brochure_url?: string;
   locations?: Omit<ListingLocation, 'id' | 'listing_id' | 'created_at'>[];
   media_files?: Omit<MediaFile, 'id' | 'listing_id' | 'created_at'>[];
+  company_logos?: Omit<CompanyLogo, 'id' | 'listing_id' | 'created_at'>[];
+  listing_documents?: Omit<ListingDocument, 'id' | 'listing_id' | 'created_at'>[];
+  listing_galleries?: Omit<ListingGallery, 'id' | 'listing_id' | 'created_at'>[];
   faqs?: Omit<FAQ, 'id' | 'listing_id' | 'created_at'>[];
 }
 

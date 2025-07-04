@@ -2,28 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Violet Bloom Design System - Typography */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Lora:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    /* Violet Bloom Design System - OKLCH Color Space */
+    --background: oklch(0.9940 0 0); /* Pure white */
+    --foreground: oklch(0 0 0); /* Pure black */
+    --card: oklch(0.9940 0 0);
+    --card-foreground: oklch(0 0 0);
+    --popover: oklch(0.9940 0 0);
+    --popover-foreground: oklch(0 0 0);
+    --primary: oklch(0.5393 0.2713 286.7462); /* #6F5AFF Violet Bloom primary */
+    --primary-foreground: oklch(0.9940 0 0);
+    --secondary: oklch(0.9540 0.0063 255.4755); /* Light gray-blue */
+    --secondary-foreground: oklch(0 0 0);
+    --muted: oklch(0.9540 0.0063 255.4755);
+    --muted-foreground: oklch(0.4619 0.0256 256.8491);
+    --accent: oklch(0.9393 0.0288 266.3680); /* Soft violet accent */
+    --accent-foreground: oklch(0 0 0);
+    --destructive: oklch(0.6020 0.2842 27.3293); /* Error red */
+    --destructive-foreground: oklch(0.9940 0 0);
+    --border: oklch(0.9144 0.0318 256.3478);
+    --input: oklch(0.9144 0.0318 256.3478);
+    --ring: oklch(0.5393 0.2713 286.7462);
+    --radius: 12px; /* 12px border radius as specified */
   }
 
   .dark {
@@ -54,6 +58,42 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+/* Violet Bloom Design System - Typography Classes */
+@layer utilities {
+  .font-sans {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  
+  .font-serif {
+    font-family: 'Lora', serif;
+  }
+  
+  .font-mono {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* Violet Bloom specific classes */
+  .violet-bloom-card {
+    @apply bg-card border border-border rounded-[12px] shadow-sm;
+  }
+  
+  .violet-bloom-input {
+    @apply rounded-[12px] border-border focus:ring-primary;
+  }
+  
+  .violet-bloom-button {
+    @apply rounded-[12px] font-medium transition-colors;
+  }
+  
+  .violet-bloom-button-primary {
+    @apply violet-bloom-button bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+  
+  .violet-bloom-button-secondary {
+    @apply violet-bloom-button bg-secondary text-secondary-foreground hover:bg-secondary/80;
   }
 }

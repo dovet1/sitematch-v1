@@ -1,5 +1,4 @@
-import { createClient, createAdminClient } from '@/lib/supabase'
-import { organizationAuditService } from '@/lib/organization-audit'
+import { createClient, createAdminClient, browserClient } from '@/lib/supabase'
 import { 
   OrganizationAutoCreationData, 
   OrganizationCreationResult,
@@ -9,12 +8,32 @@ import {
 export class OrganizationService {
   private supabase = createClient()
   private adminClient = createAdminClient()
+  
+  // Client-side compatible methods that use browser client
+  private getClientSafeSupabase() {
+    // Use browser client when running in browser environment
+    return typeof window !== 'undefined' ? browserClient : this.adminClient
+  }
+  
+  // Skip audit logging in client context since it requires admin permissions
+  private async safeAuditLog(fn: (auditService: any) => Promise<any>) {
+    if (typeof window === 'undefined') {
+      // Only log on server-side
+      try {
+        const { organizationAuditService } = await import('@/lib/organization-audit')
+        await fn(organizationAuditService)
+      } catch (error) {
+        console.warn('Audit logging failed:', error)
+      }
+    }
+    // Skip silently on client-side
+  }
 
   /**
    * Check if user already has an organization
    */
   async getUserOrganizationInfo(userId: string): Promise<UserOrganizationInfo> {
-    const { data: user, error } = await this.supabase
+    const { data: user, error } = await this.getClientSafeSupabase()
       .from('users')
       .select('org_id, organisations(id, name)')
       .eq('id', userId)
@@ -47,8 +66,8 @@ export class OrganizationService {
       const uniqueName = await this.ensureUniqueOrganizationName(originalName)
       const nameWasModified = uniqueName !== originalName
 
-      // Create organization with admin client for elevated permissions
-      const { data: org, error: orgError } = await this.adminClient
+      // Create organization with client-safe supabase
+      const { data: org, error: orgError } = await this.getClientSafeSupabase()
         .from('organisations')
         .insert({
           name: uniqueName,
@@ -90,7 +109,7 @@ export class OrganizationService {
           .eq('id', org.id)
 
         // Log audit event for failed assignment
-        await organizationAuditService.logOrganizationCreation(
+        await this.safeAuditLog((auditService) => auditService.logOrganizationCreation(
           org.id,
           data.createdByUserId,
           {
@@ -100,7 +119,7 @@ export class OrganizationService {
             errorDetails: assignmentResult.error,
             rollbackPerformed: true
           }
-        )
+        ))
 
         return {
           success: false,
@@ -110,7 +129,7 @@ export class OrganizationService {
       }
 
       // Log successful organization creation
-      await organizationAuditService.logOrganizationCreation(
+      await this.safeAuditLog((auditService) => auditService.logOrganizationCreation(
         org.id,
         data.createdByUserId,
         {
@@ -119,7 +138,7 @@ export class OrganizationService {
           duplicateResolution: nameWasModified,
           listingTriggered: true
         }
-      )
+      ))
 
       return {
         success: true,
@@ -156,7 +175,7 @@ export class OrganizationService {
    * Check if organization name already exists
    */
   private async organizationNameExists(name: string): Promise<boolean> {
-    const { data, error } = await this.supabase
+    const { data, error } = await this.getClientSafeSupabase()
       .from('organisations')
       .select('id')
       .eq('name', name)

@@ -15,7 +15,7 @@ async function createOrganization(formData: FormData) {
   const type = formData.get('type') as 'occupier' | 'landlord' | 'agent'
   
   if (!name || !type) {
-    return { error: 'Name and type are required' }
+    throw new Error('Name and type are required')
   }
   
   try {
@@ -24,7 +24,7 @@ async function createOrganization(formData: FormData) {
     redirect('/admin/organizations?success=created')
   } catch (error) {
     console.error('Failed to create organization:', error)
-    return { error: 'Failed to create organization' }
+    throw new Error('Failed to create organization')
   }
 }
 
