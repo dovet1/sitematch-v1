@@ -3,7 +3,14 @@
   "private": true,
   "version": "0.1.0",
   "description": "SiteMatch commercial directory - full-stack monorepo",
-  "keywords": ["commercial", "directory", "business", "listings", "next.js", "supabase"],
+  "keywords": [
+    "commercial",
+    "directory",
+    "business",
+    "listings",
+    "next.js",
+    "supabase"
+  ],
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -14,16 +21,21 @@
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
   },
   "devDependencies": {
-    "turbo": "^1.10.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
-    "prettier": "^3.0.0",
     "husky": "^8.0.3",
-    "lint-staged": "^15.1.0"
+    "lint-staged": "^15.1.0",
+    "prettier": "^3.0.0",
+    "turbo": "^1.10.0",
+    "typescript": "^5.0.0"
   },
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
-  "packageManager": "npm@9.0.0"
+  "packageManager": "npm@9.0.0",
+  "dependencies": {
+    "@radix-ui/react-popover": "^1.1.14",
+    "@radix-ui/react-slider": "^1.3.5",
+    "cmdk": "^1.1.1"
+  }
 }

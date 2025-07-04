@@ -23,11 +23,12 @@ export default async function CreateListingPage() {
     redirect('/auth/login?redirect=/occupier/create-listing');
   }
 
-  if (user.role !== 'occupier') {
+  if (user.role !== 'occupier' && user.role !== 'admin') {
     redirect('/unauthorized');
   }
 
-  if (!user.org_id) {
+  // Only require org_id for occupiers, admins can create listings for any organization
+  if (user.role === 'occupier' && !user.org_id) {
     redirect('/occupier/setup-organization');
   }
 
@@ -42,28 +43,53 @@ export default async function CreateListingPage() {
       // Get current user for server action
       const currentUser = await getCurrentUser();
       
-      if (!currentUser || currentUser.role !== 'occupier' || !currentUser.org_id) {
+      if (!currentUser || (currentUser.role !== 'occupier' && currentUser.role !== 'admin')) {
         return { success: false, error: 'Unauthorized' };
       }
 
-      // Transform wizard data to API format
-      const listingData = {
-        title: data.title,
-        description: data.description,
-        sector_id: data.sector, // This will need to be mapped to actual sector ID
-        use_class_id: data.useClass, // This will need to be mapped to actual use class ID
-        site_size_min: data.siteSizeMin,
-        site_size_max: data.siteSizeMax,
-        // Company info can be stored in organization or listing metadata
+      // Use auto-organization creation service
+      const { createListingWithAutoOrganization } = await import('@/lib/auto-organization');
+      
+      // Prepare data for auto-organization creation
+      const listingWithOrgData = {
+        // Property requirements data
+        sectors: data.sectors,
+        useClassIds: data.useClassIds,
+        siteSizeMin: data.siteSizeMin,
+        siteSizeMax: data.siteSizeMax,
+        // Location and files data
+        locations: data.locations,
+        locationSearchNationwide: data.locationSearchNationwide,
+        brochureFiles: data.brochureFiles,
+        sitePlanFiles: data.sitePlanFiles,
+        fitOutFiles: data.fitOutFiles,
+        // Contact data
+        contactName: data.contactName,
+        contactTitle: data.contactTitle,
+        contactEmail: data.contactEmail,
+        contactPhone: data.contactPhone,
+        // Company data for organization creation
+        companyName: data.companyName,
+        logoFile: data.logoFile,
+        logoPreview: data.logoPreview
       };
 
-      // Create the listing
-      const listing = await createListing(listingData, currentUser.id, currentUser.org_id);
+      // Create listing with auto-organization creation
+      const result = await createListingWithAutoOrganization(listingWithOrgData, currentUser.id);
 
-      return { 
-        success: true, 
-        data: listing,
-        listingId: listing.id 
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error || 'Failed to create listing'
+        };
+      }
+
+      return {
+        success: true,
+        data: result,
+        listingId: result.listingId,
+        organizationId: result.organizationId,
+        organizationCreated: result.organizationCreated
       };
     } catch (error) {
       console.error('Failed to create listing:', error);
@@ -81,9 +107,42 @@ export default async function CreateListingPage() {
   async function handleSave(data: Partial<WizardFormData>): Promise<void> {
     'use server';
     
-    // This could save as draft to the database
-    // For now, we'll just rely on localStorage auto-save
-    console.log('Saving draft:', data);
+    try {
+      // Get current user for server action
+      const currentUser = await getCurrentUser();
+      
+      if (!currentUser) {
+        throw new Error('Unauthorized');
+      }
+
+      // Create a sanitized version without File objects for server action
+      const sanitizedData = { ...data };
+      
+      // Remove File objects as they can't be serialized in server actions
+      if (sanitizedData.logoFile instanceof File) {
+        delete sanitizedData.logoFile;
+      }
+      
+      // Remove other File arrays as well
+      if (sanitizedData.brochureFiles) {
+        delete sanitizedData.brochureFiles;
+      }
+      if (sanitizedData.sitePlanFiles) {
+        delete sanitizedData.sitePlanFiles;
+      }
+      if (sanitizedData.fitOutFiles) {
+        delete sanitizedData.fitOutFiles;
+      }
+      
+      // This could save as draft to the database in the future
+      // For now, we'll just acknowledge the save was successful
+      console.log('Saving draft for user:', currentUser.id, 'data keys:', Object.keys(sanitizedData));
+      
+      // The actual saving happens in localStorage via the wizard component
+    } catch (error) {
+      console.error('Save failed:', error);
+      throw new Error('Failed to save progress');
+    }
   }
 
   // =====================================================
@@ -114,11 +173,12 @@ export default async function CreateListingPage() {
       {/* Main Content */}
       <div className="py-8">
         <ErrorBoundary
-          onError={(error, errorInfo) => {
-            console.error('Wizard Error:', error, errorInfo);
-            // In production, send to monitoring service
-          }}
           resetKeys={[user.email]} // Reset boundary when user changes
+          context={{
+            component: 'ListingWizard',
+            userId: user.id,
+            feature: 'Listing Creation'
+          }}
         >
           <ListingWizard
             initialData={{
@@ -127,6 +187,7 @@ export default async function CreateListingPage() {
             onSubmit={handleSubmit}
             onSave={handleSave}
             userEmail={user.email}
+            organizationId={user.org_id || '00000000-0000-0000-0000-000000000000'}
           />
         </ErrorBoundary>
       </div>

@@ -196,7 +196,7 @@ export class OrganizationAuditService {
       // Group by day
       const createdByDay = records.reduce((acc, record) => {
         const date = record.created_at.split('T')[0] // Get date part only
-        const existing = acc.find(item => item.date === date)
+        const existing = acc.find((item: any) => item.date === date)
         if (existing) {
           existing.count++
         } else {
@@ -211,7 +211,7 @@ export class OrganizationAuditService {
           totalCreated,
           autoCreated,
           duplicateResolutions,
-          createdByDay: createdByDay.sort((a, b) => a.date.localeCompare(b.date))
+          createdByDay: createdByDay.sort((a: any, b: any) => a.date.localeCompare(b.date))
         }
       }
 

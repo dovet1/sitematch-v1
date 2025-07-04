@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from '@/lib/supabase'
+import { browserClient } from '@/lib/supabase'
 import { organizationService } from '@/lib/organization-service'
 import { 
   CreateListingWithOrgData, 
@@ -14,7 +14,7 @@ export async function createListingWithAutoOrganization(
   userId: string
 ): Promise<CreateListingResult> {
   
-  const adminClient = createAdminClient()
+  const supabase = browserClient
   
   try {
     // 1. Check if user already has an organization
@@ -27,7 +27,6 @@ export async function createListingWithAutoOrganization(
     if (!userOrgInfo.hasOrganization) {
       const orgResult = await organizationService.createOrganizationFromCompanyInfo({
         name: listingData.companyName,
-        description: listingData.companyDescription,
         type: 'occupier',
         createdByUserId: userId
       })
@@ -43,9 +42,8 @@ export async function createListingWithAutoOrganization(
       organizationCreated = true
     }
 
-    // 3. Create listing with organization - placeholder for now
-    // This will integrate with the actual listing creation logic from Story 3.0
-    const listingId = await createPlaceholderListing(listingData, orgId!, userId)
+    // 3. Create listing with organization
+    const listingId = await createActualListing(listingData, orgId!, userId)
 
     return {
       success: true,
@@ -64,26 +62,95 @@ export async function createListingWithAutoOrganization(
 }
 
 /**
- * Placeholder listing creation - will be replaced with actual listing service
- * when integrating with Story 3.0 listing implementation
+ * Create actual listing with integrated database services
  */
-async function createPlaceholderListing(
+async function createActualListing(
   listingData: CreateListingWithOrgData, 
   orgId: string, 
   userId: string
 ): Promise<string> {
-  // This is a placeholder that simulates listing creation
-  // In the actual implementation, this would call the listing service
-  // from Story 3.0 to create the actual listing record
+  // Import listing services
+  const { createListing, getSectors, getUseClasses } = await import('@/lib/listings');
   
-  console.log('Creating listing with auto-organization:', {
-    orgId,
-    userId,
-    companyName: listingData.companyName
-  })
-  
-  // Return placeholder listing ID
-  return `listing_${Date.now()}_${orgId}`
+  try {
+    // Get reference data for mapping
+    const [sectors, useClasses] = await Promise.all([
+      getSectors(),
+      getUseClasses()
+    ]);
+
+    // Handle sectors array (use first one if multiple, or create a default)
+    let sectorId: string;
+    if (listingData.sectors && listingData.sectors.length > 0) {
+      const sector = sectors.find(s => s.name === listingData.sectors![0]);
+      if (!sector) {
+        throw new Error(`Invalid sector: ${listingData.sectors![0]}`);
+      }
+      sectorId = sector.id;
+    } else {
+      // Default to 'other' if no sectors specified
+      const defaultSector = sectors.find(s => s.name === 'other');
+      if (!defaultSector) {
+        throw new Error('No sectors specified and default sector not found');
+      }
+      sectorId = defaultSector.id;
+    }
+
+    // Handle use class IDs array (use first one if multiple, or create a default)
+    let useClassId: string;
+    if (listingData.useClassIds && listingData.useClassIds.length > 0) {
+      const useClass = useClasses.find(uc => uc.id === listingData.useClassIds![0]);
+      if (!useClass) {
+        throw new Error(`Invalid use class ID: ${listingData.useClassIds![0]}`);
+      }
+      useClassId = listingData.useClassIds[0];
+    } else {
+      // Use first available use class as default
+      if (useClasses.length === 0) {
+        throw new Error('No use classes specified and no default available');
+      }
+      useClassId = useClasses[0].id;
+    }
+
+    // Generate a title from company name and requirements
+    const title = `${listingData.companyName} - Property Requirement`;
+    const description = `Property requirement for ${listingData.companyName}`;
+
+    // Prepare listing creation data
+    const createListingRequest = {
+      title,
+      description,
+      sector_id: sectorId,
+      use_class_id: useClassId,
+      site_size_min: listingData.siteSizeMin,
+      site_size_max: listingData.siteSizeMax,
+      contact_name: listingData.contactName,
+      contact_title: listingData.contactTitle,
+      contact_email: listingData.contactEmail,
+      contact_phone: listingData.contactPhone,
+      // Handle company logo if provided
+      company_logos: listingData.logoFile ? [{
+        file_url: '', // Will be handled by file upload service
+        file_name: listingData.logoFile.name,
+        file_size: listingData.logoFile.size
+      }] : []
+    };
+
+    // Create the listing
+    const listing = await createListing(createListingRequest, userId, orgId);
+    
+    console.log('Successfully created listing with auto-organization:', {
+      listingId: listing.id,
+      orgId,
+      userId,
+      companyName: listingData.companyName
+    });
+    
+    return listing.id;
+  } catch (error) {
+    console.error('Error creating listing:', error);
+    throw error;
+  }
 }
 
 /**
@@ -92,8 +159,7 @@ async function createPlaceholderListing(
  */
 export async function getOrCreateOrganizationForUser(
   userId: string,
-  companyName: string,
-  companyDescription?: string
+  companyName: string
 ): Promise<{ organizationId: string; organizationCreated: boolean; error?: string }> {
   
   try {
@@ -110,7 +176,6 @@ export async function getOrCreateOrganizationForUser(
     // Create new organization
     const orgResult = await organizationService.createOrganizationFromCompanyInfo({
       name: companyName,
-      description: companyDescription,
       type: 'occupier',
       createdByUserId: userId
     })

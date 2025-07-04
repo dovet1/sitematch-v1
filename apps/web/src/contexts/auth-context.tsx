@@ -36,14 +36,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
       )
 
       const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any
 
       if (error) {
-        console.error('Error fetching user profile:', error)
-        return null
+        console.warn('Profile fetch failed, retrying...', error.message)
+        // Try one more time with a simpler query
+        try {
+          const { data: simpleData, error: simpleError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single()
+          
+          if (simpleError) {
+            console.error('Simple profile fetch also failed:', simpleError)
+            return null
+          }
+          
+          return simpleData as UserProfile
+        } catch (retryError) {
+          console.error('Retry profile fetch failed:', retryError)
+          return null
+        }
       }
 
       return data as UserProfile
