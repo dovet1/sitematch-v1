@@ -22,7 +22,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null
     }
 
-    const profileStartTime = Date.now()
     try {
       setFetchingProfile(true)
       
@@ -44,7 +43,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null
       }
 
-      console.log(`Profile fetch took ${Date.now() - profileStartTime}ms`)
       return data as UserProfile
     } catch (error) {
       console.error('Error fetching user profile:', error)
@@ -55,10 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const refresh = async () => {
-    const startTime = Date.now()
     try {
       const { data: { user: authUser }, error } = await supabase.auth.getUser()
-      console.log(`Auth getUser took ${Date.now() - startTime}ms`)
       
       if (error) {
         // Only log errors that aren't "Auth session missing" (which is normal on first load)

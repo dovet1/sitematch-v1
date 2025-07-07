@@ -551,10 +551,7 @@ export function ListingWizard({
         
         const serializedData = deepSerialize(processedData);
         
-        console.log('Attempting to save serialized data:', {
-          keys: Object.keys(serializedData),
-          dataTypes: Object.entries(serializedData).map(([key, value]) => [key, typeof value])
-        });
+        // Debug logging temporarily disabled
         
         await onSave(serializedData);
         saveToLocalStorage(processedData);

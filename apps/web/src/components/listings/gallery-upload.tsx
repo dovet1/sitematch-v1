@@ -255,9 +255,9 @@ export function GalleryUpload({
             <Button
               variant="secondary"
               size="sm"
-              className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0 bg-white/90 hover:bg-white"
+              className="opacity-0 group-hover:opacity-100 h-10 w-10 sm:h-8 sm:w-8 p-0 bg-white/90 hover:bg-white"
             >
-              <GripVertical className="w-4 h-4" />
+              <GripVertical className="w-5 h-5 sm:w-4 sm:h-4" />
             </Button>
           )}
 
@@ -267,9 +267,9 @@ export function GalleryUpload({
             size="sm"
             onClick={() => handleItemRemove(item)}
             disabled={disabled}
-            className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0 ml-auto"
+            className="opacity-0 group-hover:opacity-100 h-10 w-10 sm:h-8 sm:w-8 p-0 ml-auto"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5 sm:w-4 sm:h-4" />
           </Button>
         </div>
 

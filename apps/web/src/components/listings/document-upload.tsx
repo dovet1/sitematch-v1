@@ -194,58 +194,131 @@ export function DocumentUpload({
   const renderFileItem = (file: UploadedFile, index: number) => (
     <div
       key={file.id}
-      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
+      className="bg-gray-50 rounded-lg border"
     >
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="text-2xl">{getFileIcon(file)}</div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-gray-900 truncate">{file.name}</p>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Badge variant="secondary" className="text-xs">
-              {getFileTypeLabel(file.mimeType)}
-            </Badge>
-            <span>{formatFileSize(file.size)}</span>
-            <span>•</span>
-            <span>{new Date(file.uploadedAt).toLocaleDateString()}</span>
+      {/* Desktop Layout: Horizontal */}
+      <div className="hidden sm:flex items-center justify-between p-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="text-2xl">{getFileIcon(file)}</div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-gray-900 truncate">{file.name}</p>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Badge variant="secondary" className="text-xs">
+                {getFileTypeLabel(file.mimeType)}
+              </Badge>
+              <span>{formatFileSize(file.size)}</span>
+              <span>•</span>
+              <span>{new Date(file.uploadedAt).toLocaleDateString()}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex items-center gap-2">
-        {/* Preview/Download Button */}
-        {showPreview && (
+        <div className="flex items-center gap-2">
+          {/* Preview/Download Button */}
+          {showPreview && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(file.url, '_blank');
+              }}
+              className="h-8 w-8 p-0"
+            >
+              {isImageFile(file.mimeType) ? (
+                <Eye className="w-4 h-4" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+            </Button>
+          )}
+
+          {/* Remove Button */}
           <Button
             variant="outline"
             size="sm"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              window.open(file.url, '_blank');
+              handleFileRemove(file);
             }}
-            className="h-8 w-8 p-0"
+            disabled={disabled}
+            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
           >
-            {isImageFile(file.mimeType) ? (
-              <Eye className="w-4 h-4" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
+            <X className="w-4 h-4" />
           </Button>
-        )}
+        </div>
+      </div>
 
-        {/* Remove Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleFileRemove(file);
-          }}
-          disabled={disabled}
-          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-        >
-          <X className="w-4 h-4" />
-        </Button>
+      {/* Mobile Layout: Vertical Stack */}
+      <div className="sm:hidden">
+        {/* File Info Section */}
+        <div className="flex items-center gap-3 p-3">
+          <div className="text-2xl">{getFileIcon(file)}</div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-gray-900 text-sm leading-tight">{file.name}</p>
+            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+              <Badge variant="secondary" className="text-xs">
+                {getFileTypeLabel(file.mimeType)}
+              </Badge>
+              <span>{formatFileSize(file.size)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons Section */}
+        <div className="border-t border-gray-200 bg-white rounded-b-lg">
+          <div className="flex">
+            {/* Preview/Download Button */}
+            {showPreview && (
+              <Button
+                variant="ghost"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.open(file.url, '_blank');
+                }}
+                className="flex-1 h-11 justify-center gap-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-none rounded-bl-lg"
+              >
+                {isImageFile(file.mimeType) ? (
+                  <>
+                    <Eye className="w-4 h-4" />
+                    Preview
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    Download
+                  </>
+                )}
+              </Button>
+            )}
+
+            {/* Separator */}
+            {showPreview && (
+              <div className="w-px bg-gray-200" />
+            )}
+
+            {/* Remove Button */}
+            <Button
+              variant="ghost"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleFileRemove(file);
+              }}
+              disabled={disabled}
+              className={cn(
+                "h-11 justify-center gap-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-none",
+                showPreview ? "flex-1 rounded-br-lg" : "w-full rounded-b-lg"
+              )}
+            >
+              <X className="w-4 h-4" />
+              Remove
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
