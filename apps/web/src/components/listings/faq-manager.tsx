@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // =====================================================
@@ -162,12 +162,28 @@ export function FAQManager({
         </Button>
       </div>
 
-      {faqs.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-8">
+      <div className="mt-6">
+        {faqs.length === 0 ? (
+        <Card className="border-2 border-dashed border-gray-200 bg-gray-50/50">
+          <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="text-center text-gray-500">
-              <p className="text-sm">No FAQs added yet</p>
-              <p className="text-xs mt-1">Click "Add FAQ" to get started</p>
+              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                <HelpCircle className="w-6 h-6 text-gray-400" />
+              </div>
+              <p className="text-sm font-medium text-gray-700">No FAQs added yet</p>
+              <p className="text-xs mt-2 text-gray-500 max-w-sm">
+                Help potential partners by adding common questions and detailed answers about your requirements
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={addFAQ}
+                className="mt-4 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add your first FAQ
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -183,60 +199,74 @@ export function FAQManager({
             <AccordionItem
               key={faq.id || index}
               value={faq.id || index.toString()}
-              className="border rounded-lg"
+              className="border rounded-lg group"
             >
               <Card className="border-none shadow-none">
-                <AccordionTrigger className="hover:no-underline">
-                  <CardHeader className="flex-1 py-3">
-                    <div className="flex items-center justify-between w-full">
-                      <CardTitle className="text-sm font-medium text-left">
+                <AccordionTrigger className="hover:no-underline px-4 py-3">
+                  <div className="flex items-center justify-between w-full pr-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-left">
                         {faq.question || `FAQ ${index + 1}`}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 ml-4">
-                        <span className="text-xs text-gray-500">#{index + 1}</span>
-                        <div className="flex gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              moveFAQ(index, 'up');
-                            }}
-                            disabled={index === 0}
-                            className="h-6 w-6 p-0"
-                          >
-                            <ChevronUp className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              moveFAQ(index, 'down');
-                            }}
-                            disabled={index === faqs.length - 1}
-                            className="h-6 w-6 p-0"
-                          >
-                            <ChevronDown className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeFAQ(index);
-                            }}
-                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
+                      </span>
+                      <span className="px-2 py-1 bg-gray-100 text-xs text-gray-600 rounded-md font-medium">
+                        #{index + 1}
+                      </span>
                     </div>
-                  </CardHeader>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      {/* Move Up Button */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveFAQ(index, 'up');
+                        }}
+                        disabled={index === 0}
+                        className={cn(
+                          "h-7 w-7 p-0 hover:bg-gray-100 transition-colors",
+                          index === 0 && "opacity-30 cursor-not-allowed"
+                        )}
+                        title={index === 0 ? "Already at the top" : "Move up"}
+                      >
+                        <ChevronUp className="w-3 h-3" />
+                      </Button>
+                      
+                      {/* Move Down Button */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveFAQ(index, 'down');
+                        }}
+                        disabled={index === faqs.length - 1}
+                        className={cn(
+                          "h-7 w-7 p-0 hover:bg-gray-100 transition-colors",
+                          index === faqs.length - 1 && "opacity-30 cursor-not-allowed"
+                        )}
+                        title={index === faqs.length - 1 ? "Already at the bottom" : "Move down"}
+                      >
+                        <ChevronDown className="w-3 h-3" />
+                      </Button>
+                      
+                      {/* Delete Button */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFAQ(index);
+                        }}
+                        className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600 text-gray-400 transition-colors ml-2"
+                        title="Delete FAQ"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
                 </AccordionTrigger>
 
                 <AccordionContent>
@@ -285,7 +315,8 @@ export function FAQManager({
             </AccordionItem>
           ))}
         </Accordion>
-      )}
+        )}
+      </div>
 
       {faqs.length > 0 && (
         <div className="text-xs text-gray-500 text-center">
