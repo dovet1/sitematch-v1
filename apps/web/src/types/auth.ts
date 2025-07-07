@@ -18,8 +18,6 @@ export interface UserProfile {
   id: string
   email: string
   role: UserRole
-  org_id: string | null
-  organisation?: DbOrganisation | null
   created_at: string
   updated_at: string
 }

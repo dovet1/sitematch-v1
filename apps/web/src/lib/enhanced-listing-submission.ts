@@ -147,8 +147,7 @@ export async function submitEnhancedListing(
     
     const result = await createEnhancedListing(
       enhancedListingData, 
-      currentUser.id, 
-      organizationId
+      currentUser.id
     );
     
     console.log('createEnhancedListing result:', result);

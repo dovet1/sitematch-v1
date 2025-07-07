@@ -12,11 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get request data
-    const { organizationId, userEmail } = await request.json()
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Missing organizationId' }, { status: 400 })
-    }
+    const { userEmail } = await request.json()
 
     // Get first available sector and use class for draft
     const { data: sectors } = await supabase
@@ -33,16 +29,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No reference data available' }, { status: 500 })
     }
 
-    // Create minimal draft listing
+    // Create minimal draft listing with required contact fields  
     const draftData = {
-      org_id: organizationId,
       created_by: user.id,
       title: 'Draft Listing - In Progress',
       description: 'Draft listing created during wizard process',
       status: 'draft',
       sector_id: sectors[0].id,
       use_class_id: useClasses[0].id,
-      contact_email: userEmail || user.email || 'contact@example.com'
+      // Required contact fields from schema
+      contact_name: 'Contact Name',
+      contact_title: 'Contact Title', 
+      contact_email: userEmail || user.email || 'contact@example.com',
+      // Required company_name field
+      company_name: 'Draft Company'
     }
 
     const { data: listing, error: listingError } = await supabase

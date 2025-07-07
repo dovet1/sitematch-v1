@@ -13,30 +13,30 @@ export function Header() {
   return (
     <header className="border-b border-border bg-background">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-xl">
+        <Link href="/" className="heading-4 violet-bloom-link">
           SiteMatch
         </Link>
         
-        <nav className="hidden md:flex items-center space-x-6">
-          <Link href="/directory" className="text-muted-foreground hover:text-foreground">
+        <nav className="hidden md:flex items-center space-x-2">
+          <Link href="/directory" className="violet-bloom-nav-item">
             Directory
           </Link>
-          <Link href="/search" className="text-muted-foreground hover:text-foreground">
+          <Link href="/search" className="violet-bloom-nav-item">
             Search
           </Link>
-          <Link href="/list" className="text-muted-foreground hover:text-foreground">
+          <Link href="/list" className="violet-bloom-nav-item">
             List Property
           </Link>
           {isAdmin && (
-            <Link href="/admin" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link href="/admin" className="violet-bloom-nav-item active">
               Admin
             </Link>
           )}
         </nav>
 
         <div className="flex items-center space-x-4">
-          {loading ? (
-            <div className="h-9 w-20 bg-muted animate-pulse rounded" />
+          {loading && !user ? (
+            <div className="h-9 w-20 bg-muted animate-pulse violet-bloom-loading" style={{ borderRadius: "var(--radius-md)" }} />
           ) : user ? (
             <UserMenu />
           ) : (

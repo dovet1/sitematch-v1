@@ -200,7 +200,8 @@ export async function getListings(params: ListingsQueryParams = {}): Promise<Lis
     sector_id,
     use_class_id,
     org_id,
-    search
+    search,
+    created_by
   } = params;
 
   let query = supabase
@@ -232,6 +233,10 @@ export async function getListings(params: ListingsQueryParams = {}): Promise<Lis
 
   if (org_id) {
     query = query.eq('org_id', org_id);
+  }
+
+  if (created_by) {
+    query = query.eq('created_by', created_by);
   }
 
   if (search) {

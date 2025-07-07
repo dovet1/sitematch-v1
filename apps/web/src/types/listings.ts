@@ -20,8 +20,8 @@ export interface UseClass {
 
 export interface Listing {
   id: string;
-  org_id: string;
   title: string;
+  company_name: string;
   description: string | null;
   sector_id: string;
   use_class_id: string;
@@ -167,6 +167,7 @@ export interface ListingsQueryParams {
   use_class_id?: string;
   org_id?: string;
   search?: string;
+  created_by?: string;
 }
 
 export interface ListingsResponse {

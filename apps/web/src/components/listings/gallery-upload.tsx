@@ -25,6 +25,7 @@ import type {
 
 interface ExtendedGalleryUploadProps extends GalleryUploadProps {
   organizationId: string;
+  listingId?: string;
   allowReordering?: boolean;
   showCaptions?: boolean;
 }
@@ -38,6 +39,7 @@ export function GalleryUpload({
   error,
   className,
   organizationId,
+  listingId,
   allowReordering = true,
   showCaptions = true
 }: ExtendedGalleryUploadProps) {
@@ -90,7 +92,8 @@ export function GalleryUpload({
         (progress) => {
           setUploadProgress(progress);
           onProgress?.(progress);
-        }
+        },
+        listingId
       );
 
       // Convert to gallery items

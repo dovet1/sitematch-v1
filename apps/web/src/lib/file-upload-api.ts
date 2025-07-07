@@ -18,7 +18,8 @@ export async function uploadFileViaApi(
   const formData = new FormData()
   formData.append('file', file)
   formData.append('type', type)
-  formData.append('organizationId', organizationId)
+  // Organization ID is no longer required but kept for API compatibility
+  formData.append('organizationId', organizationId || '')
   
   // Add listing ID if provided (for draft listing association)
   if (listingId) {
@@ -76,7 +77,7 @@ export async function uploadMultipleFilesViaApi(
   listingId?: string
 ): Promise<UploadedFile[]> {
   const uploadPromises = files.map((file, index) => {
-    return uploadFileViaApi(file, type, organizationId, (fileProgress) => {
+    return uploadFileViaApi(file, type, organizationId || '', (fileProgress) => {
       if (onProgress) {
         // Calculate overall progress across all files
         const overallProgress = ((index + fileProgress / 100) / files.length) * 100
