@@ -45,9 +45,9 @@ export async function GET(request: NextRequest) {
       search: searchParams.get('search') || undefined
     };
 
-    // For non-admin users, filter by their organization
-    if (user.role !== 'admin' && user.org_id) {
-      queryParams.org_id = user.org_id;
+    // For non-admin users, filter by their user ID
+    if (user.role !== 'admin') {
+      queryParams.created_by = user.id;
     }
 
     const result = await getListings(queryParams);
@@ -116,17 +116,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use organization ID from request or user's org
-    const organizationId = requestData.organization_id || user.org_id;
-    if (!organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID is required' },
-        { status: 400 }
-      );
-    }
+    // Use user ID for ownership - no organization needed
+    const userId = user.id;
     
     // Create the enhanced listing with all fields
-    const listing = await createEnhancedListing(requestData, user.id, organizationId);
+    const listing = await createEnhancedListing(requestData, user.id);
 
     // Send confirmation email
     try {
@@ -137,7 +131,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the creation for monitoring
-    console.log(`Enhanced listing created: ${listing.id} by user ${user.id} (org: ${organizationId})`);
+    console.log(`Enhanced listing created: ${listing.id} by user ${user.id}`);
 
     return NextResponse.json(
       {

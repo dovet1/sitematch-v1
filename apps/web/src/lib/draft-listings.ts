@@ -80,14 +80,39 @@ export async function updateDraftListing(
     description: string;
     contact_name: string;
     contact_title: string;
+    contact_email: string;
     contact_phone: string;
     site_size_min: number;
     site_size_max: number;
+    brochure_url: string;
   }>
 ): Promise<void> {
-  const supabase = createServerClient();
+  // Use browser client if we're on the client side, server client otherwise
+  let supabase;
+  if (typeof window !== 'undefined') {
+    const { browserClient } = await import('@/lib/supabase');
+    supabase = browserClient;
+  } else {
+    supabase = createServerClient();
+  }
 
   try {
+    // Validate phone number if present
+    if (updateData.contact_phone && typeof updateData.contact_phone === 'string') {
+      const trimmedPhone = updateData.contact_phone.trim();
+      if (trimmedPhone.length > 0) {
+        const phoneRegex = /^(\+44|0)[1-9]\d{8,9}$|^\+\d{7,15}$/;
+        if (phoneRegex.test(trimmedPhone.replace(/\s/g, ''))) {
+          updateData.contact_phone = trimmedPhone;
+        } else {
+          console.warn('Invalid phone format in updateDraftListing, removing field:', trimmedPhone);
+          delete updateData.contact_phone;
+        }
+      } else {
+        delete updateData.contact_phone;
+      }
+    }
+
     const { error } = await supabase
       .from('listings')
       .update(updateData)
@@ -116,17 +141,68 @@ export async function finalizeDraftListing(
     title: string;
     description: string;
     status: 'pending' | 'approved' | 'rejected';
+    site_size_min?: number;
+    site_size_max?: number;
+    brochure_url?: string;
+    contact_name?: string;
+    contact_title?: string;
+    contact_email?: string;
+    contact_phone?: string;
   }
 ): Promise<void> {
-  const supabase = createServerClient();
+  // Use browser client if we're on the client side, server client otherwise
+  let supabase;
+  if (typeof window !== 'undefined') {
+    const { browserClient } = await import('@/lib/supabase');
+    supabase = browserClient;
+  } else {
+    supabase = createServerClient();
+  }
 
   try {
+    const updateData: any = {
+      title: finalData.title,
+      description: finalData.description,
+      status: finalData.status,
+      updated_at: new Date().toISOString()
+    };
+
+    // Add optional fields if provided
+    if (finalData.site_size_min !== undefined) {
+      updateData.site_size_min = finalData.site_size_min;
+    }
+    if (finalData.site_size_max !== undefined) {
+      updateData.site_size_max = finalData.site_size_max;
+    }
+    if (finalData.brochure_url) {
+      updateData.brochure_url = finalData.brochure_url;
+    }
+    if (finalData.contact_name) {
+      updateData.contact_name = finalData.contact_name;
+    }
+    if (finalData.contact_title) {
+      updateData.contact_title = finalData.contact_title;
+    }
+    if (finalData.contact_email) {
+      updateData.contact_email = finalData.contact_email;
+    }
+    if (finalData.contact_phone) {
+      // Validate phone number format
+      const trimmedPhone = finalData.contact_phone.trim();
+      if (trimmedPhone.length > 0) {
+        const phoneRegex = /^(\+44|0)[1-9]\d{8,9}$|^\+\d{7,15}$/;
+        if (phoneRegex.test(trimmedPhone.replace(/\s/g, ''))) {
+          updateData.contact_phone = trimmedPhone;
+        } else {
+          console.warn('Invalid phone format for main listing, removing field:', trimmedPhone);
+          // Don't set the field at all if invalid
+        }
+      }
+    }
+
     const { error } = await supabase
       .from('listings')
-      .update({
-        ...finalData,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', listingId);
 
     if (error) {
@@ -157,13 +233,39 @@ export async function addContactsToDraftListing(
     headshot_url?: string;
   }>
 ): Promise<void> {
-  const supabase = createServerClient();
+  // Use browser client if we're on the client side, server client otherwise
+  let supabase;
+  if (typeof window !== 'undefined') {
+    const { browserClient } = await import('@/lib/supabase');
+    supabase = browserClient;
+  } else {
+    supabase = createServerClient();
+  }
 
   try {
-    const contactInserts = contacts.map(contact => ({
-      ...contact,
-      listing_id: listingId
-    }));
+    const contactInserts = contacts.map(contact => {
+      // Clean and validate phone number
+      let cleanPhone = null;
+      if (contact.contact_phone && typeof contact.contact_phone === 'string') {
+        const trimmedPhone = contact.contact_phone.trim();
+        if (trimmedPhone.length > 0) {
+          // Basic phone validation - allow UK format or international
+          const phoneRegex = /^(\+44|0)[1-9]\d{8,9}$|^\+\d{7,15}$/;
+          if (phoneRegex.test(trimmedPhone.replace(/\s/g, ''))) {
+            cleanPhone = trimmedPhone;
+          } else {
+            console.warn('Invalid phone format, setting to null:', trimmedPhone);
+            cleanPhone = null;
+          }
+        }
+      }
+      
+      return {
+        ...contact,
+        listing_id: listingId,
+        contact_phone: cleanPhone
+      };
+    });
 
     const { error } = await supabase
       .from('listing_contacts')
@@ -194,7 +296,14 @@ export async function addFAQsToDraftListing(
     display_order: number;
   }>
 ): Promise<void> {
-  const supabase = createServerClient();
+  // Use browser client if we're on the client side, server client otherwise
+  let supabase;
+  if (typeof window !== 'undefined') {
+    const { browserClient } = await import('@/lib/supabase');
+    supabase = browserClient;
+  } else {
+    supabase = createServerClient();
+  }
 
   try {
     const faqInserts = faqs.map(faq => ({
@@ -229,17 +338,32 @@ export async function addLocationsToDraftListing(
     place_name: string;
     coordinates: [number, number];
     type: 'preferred' | 'acceptable';
-    formatted_address: string;
+    formatted_address?: string;
     region?: string;
     country?: string;
   }>
 ): Promise<void> {
-  const supabase = createServerClient();
+  // Use browser client if we're on the client side, server client otherwise
+  let supabase;
+  if (typeof window !== 'undefined') {
+    const { browserClient } = await import('@/lib/supabase');
+    supabase = browserClient;
+  } else {
+    supabase = createServerClient();
+  }
 
   try {
     const locationInserts = locations.map(location => ({
-      ...location,
-      listing_id: listingId
+      listing_id: listingId,
+      place_name: location.place_name,
+      type: location.type,
+      coordinates: {
+        lat: location.coordinates[1],
+        lng: location.coordinates[0]
+      },
+      formatted_address: location.formatted_address || location.place_name,
+      region: location.region,
+      country: location.country
     }));
 
     const { error } = await supabase

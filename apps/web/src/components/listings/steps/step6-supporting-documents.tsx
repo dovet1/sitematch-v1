@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 interface Step6FormData extends SupportingDocumentsData {}
 
 interface Step6Props extends WizardStepProps {
-  organizationId: string;
+  listingId?: string;
 }
 
 export function Step6SupportingDocuments({
@@ -33,7 +33,7 @@ export function Step6SupportingDocuments({
   onPrevious,
   onValidationChange,
   errors,
-  organizationId
+  listingId
 }: Step6Props) {
   const {
     handleSubmit,
@@ -196,7 +196,8 @@ export function Step6SupportingDocuments({
           <DocumentUpload
             value={sitePlanFiles}
             onChange={handleSitePlanFilesChange}
-            organizationId={organizationId}
+            organizationId=""
+            listingId={listingId}
             type="sitePlan"
             acceptedTypes={[
               "application/pdf",
@@ -233,7 +234,8 @@ export function Step6SupportingDocuments({
           <GalleryUpload
             value={fitOutFiles}
             onChange={handleFitOutFilesChange}
-            organizationId={organizationId}
+            organizationId=""
+            listingId={listingId}
             maxFiles={10}
           />
           {uploadErrors.fitOuts && (

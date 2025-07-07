@@ -34,10 +34,7 @@ export async function getServerUserProfile(): Promise<UserProfile | null> {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select(`
-        *,
-        organisation:organisations(*)
-      `)
+      .select('id, email, role, created_at, updated_at')
       .eq('id', user.id)
       .single()
 
@@ -119,7 +116,7 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
     // Get the user profile with role information
     const { data: profile, error: profileError } = await supabase
       .from('users')
-      .select('id, email, role, org_id, created_at, updated_at')
+      .select('id, email, role, created_at, updated_at')
       .eq('id', user.id)
       .single()
 
@@ -132,7 +129,6 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
       id: profile.id,
       email: profile.email,
       role: profile.role as UserRole,
-      org_id: profile.org_id,
       created_at: profile.created_at,
       updated_at: profile.updated_at
     }

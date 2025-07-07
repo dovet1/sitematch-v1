@@ -85,7 +85,7 @@ export default async function TestListingPage({ params }: Props) {
                     <Badge variant="secondary">Status: {listing.status}</Badge>
                     {listing.is_nationwide && <Badge variant="outline">Nationwide</Badge>}
                   </div>
-                  <p><strong>Organization:</strong> {organization?.name || 'N/A'}</p>
+                  <p><strong>Company:</strong> {listing.title?.includes('Property Requirement - ') ? listing.title.replace('Property Requirement - ', '') : organization?.name || 'N/A'}</p>
                   <p><strong>Sector ID:</strong> {listing.sector_id || 'N/A'}</p>
                   <p><strong>Use Class ID:</strong> {listing.use_class_id || 'N/A'}</p>
                   <p><strong>Site Size:</strong> {listing.site_size_min || 'N/A'} - {listing.site_size_max || 'N/A'} sq ft</p>
@@ -102,6 +102,14 @@ export default async function TestListingPage({ params }: Props) {
                     <img src={listing.logo_url} alt="Logo" className="w-16 h-16 object-contain mt-1" />
                   </div>
                 )}
+                {listing.brochure_url && (
+                  <div>
+                    <strong>Brochure:</strong>
+                    <a href={listing.brochure_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      View Brochure
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -112,54 +120,74 @@ export default async function TestListingPage({ params }: Props) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="w-5 h-5" />
-              Contacts ({contacts?.length || 0})
+              Contacts ({1 + (contacts?.length || 0)})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {contacts && contacts.length > 0 ? (
-              <div className="grid gap-4">
-                {contacts.map((contact) => (
-                  <div key={contact.id} className="border rounded-lg p-4">
-                    <div className="flex items-start gap-4">
-                      {contact.headshot_url && (
-                        <img 
-                          src={contact.headshot_url} 
-                          alt={contact.contact_name}
-                          className="w-16 h-16 rounded-full object-cover"
-                        />
-                      )}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-semibold">{contact.contact_name}</h4>
-                          {contact.is_primary_contact && (
-                            <Badge variant="default">Primary Contact</Badge>
-                          )}
+            <div className="grid gap-4">
+              {/* Primary Contact from main listing */}
+              <div className="border rounded-lg p-4 bg-blue-50">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="font-semibold">{listing.contact_name}</h4>
+                      <Badge variant="default">Primary Contact</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">{listing.contact_title}</p>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        {listing.contact_email}
+                      </div>
+                      {listing.contact_phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4" />
+                          {listing.contact_phone}
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">{contact.contact_title}</p>
-                        <div className="space-y-1 text-sm">
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Additional Contacts from contacts table */}
+              {contacts && contacts.length > 0 && contacts.map((contact) => (
+                <div key={contact.id} className="border rounded-lg p-4">
+                  <div className="flex items-start gap-4">
+                    {contact.headshot_url && (
+                      <img 
+                        src={contact.headshot_url} 
+                        alt={contact.contact_name}
+                        className="w-16 h-16 rounded-full object-cover"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-semibold">{contact.contact_name}</h4>
+                        <Badge variant="outline">Additional Contact</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">{contact.contact_title}</p>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4" />
+                          {contact.contact_email}
+                        </div>
+                        {contact.contact_phone && (
                           <div className="flex items-center gap-2">
-                            <Mail className="w-4 h-4" />
-                            {contact.contact_email}
+                            <Phone className="w-4 h-4" />
+                            {contact.contact_phone}
                           </div>
-                          {contact.contact_phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="w-4 h-4" />
-                              {contact.contact_phone}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            Created: {new Date(contact.created_at).toLocaleString()}
-                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          Created: {new Date(contact.created_at).toLocaleString()}
                         </div>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">No contacts found</p>
-            )}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
@@ -176,11 +204,11 @@ export default async function TestListingPage({ params }: Props) {
               <div className="grid gap-2">
                 {locations.map((location) => (
                   <div key={location.id} className="border rounded p-3">
-                    <p className="font-medium">{location.location_name}</p>
-                    <p className="text-sm text-muted-foreground">Type: {location.location_type}</p>
+                    <p className="font-medium">{location.place_name}</p>
+                    <p className="text-sm text-muted-foreground">Type: {location.type}</p>
                     {location.coordinates && (
                       <p className="text-sm text-muted-foreground">
-                        Coordinates: {location.coordinates.x}, {location.coordinates.y}
+                        Coordinates: {location.coordinates.lat}, {location.coordinates.lng}
                       </p>
                     )}
                   </div>

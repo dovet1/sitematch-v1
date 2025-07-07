@@ -10,10 +10,10 @@ export default function Home() {
       </div>
 
       <div className="text-center space-y-6">
-        <h1 className="text-4xl font-bold tracking-tight">
+        <h1 className="heading-1">
           Welcome to SiteMatch
         </h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+        <p className="body-large text-muted-foreground max-w-2xl mx-auto">
           Find and list commercial properties and businesses in your area
         </p>
         <div className="flex gap-4 justify-center">
@@ -23,50 +23,50 @@ export default function Home() {
       </div>
 
       <div className="mt-16 grid text-center lg:max-w-5xl lg:w-full lg:grid-cols-4 lg:text-left gap-6">
-        <div className="group rounded-lg border border-border px-5 py-4 transition-colors hover:bg-accent hover:text-accent-foreground">
-          <h2 className="mb-3 text-2xl font-semibold">
+        <div className="group border border-border px-5 py-4 transition-colors hover:bg-accent hover:text-accent-foreground violet-bloom-card violet-bloom-card-hover">
+          <h2 className="mb-3 heading-3">
             Directory{' '}
             <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
               →
             </span>
           </h2>
-          <p className="m-0 max-w-[30ch] text-sm text-muted-foreground">
+          <p className="m-0 max-w-[30ch] body-small text-muted-foreground">
             Browse commercial properties and business listings
           </p>
         </div>
 
-        <div className="group rounded-lg border border-border px-5 py-4 transition-colors hover:bg-accent hover:text-accent-foreground">
-          <h2 className="mb-3 text-2xl font-semibold">
+        <div className="group border border-border px-5 py-4 transition-colors hover:bg-accent hover:text-accent-foreground violet-bloom-card violet-bloom-card-hover">
+          <h2 className="mb-3 heading-3">
             Search{' '}
             <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
               →
             </span>
           </h2>
-          <p className="m-0 max-w-[30ch] text-sm text-muted-foreground">
+          <p className="m-0 max-w-[30ch] body-small text-muted-foreground">
             Find properties by location, type, and amenities
           </p>
         </div>
 
-        <div className="group rounded-lg border border-border px-5 py-4 transition-colors hover:bg-accent hover:text-accent-foreground">
-          <h2 className="mb-3 text-2xl font-semibold">
+        <div className="group border border-border px-5 py-4 transition-colors hover:bg-accent hover:text-accent-foreground violet-bloom-card violet-bloom-card-hover">
+          <h2 className="mb-3 heading-3">
             List{' '}
             <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
               →
             </span>
           </h2>
-          <p className="m-0 max-w-[30ch] text-sm text-muted-foreground">
+          <p className="m-0 max-w-[30ch] body-small text-muted-foreground">
             Add your commercial property to our directory
           </p>
         </div>
 
-        <div className="group rounded-lg border border-border px-5 py-4 transition-colors hover:bg-accent hover:text-accent-foreground">
-          <h2 className="mb-3 text-2xl font-semibold">
+        <div className="group border border-border px-5 py-4 transition-colors hover:bg-accent hover:text-accent-foreground violet-bloom-card violet-bloom-card-hover">
+          <h2 className="mb-3 heading-3">
             Connect{' '}
             <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
               →
             </span>
           </h2>
-          <p className="m-0 max-w-[30ch] text-sm text-muted-foreground">
+          <p className="m-0 max-w-[30ch] body-small text-muted-foreground">
             Connect property owners with potential tenants
           </p>
         </div>

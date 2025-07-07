@@ -22,47 +22,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null
     }
 
+    const profileStartTime = Date.now()
     try {
       setFetchingProfile(true)
       
-      // Add timeout to prevent hanging
+      // Shorter timeout for better UX - 3 seconds should be plenty
       const profilePromise = supabase
         .from('users')
-        .select(`
-          *,
-          organisation:organisations(*)
-        `)
+        .select('id, email, role, created_at, updated_at')
         .eq('id', userId)
         .single()
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
       )
 
       const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any
 
       if (error) {
-        console.warn('Profile fetch failed, retrying...', error.message)
-        // Try one more time with a simpler query
-        try {
-          const { data: simpleData, error: simpleError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', userId)
-            .single()
-          
-          if (simpleError) {
-            console.error('Simple profile fetch also failed:', simpleError)
-            return null
-          }
-          
-          return simpleData as UserProfile
-        } catch (retryError) {
-          console.error('Retry profile fetch failed:', retryError)
-          return null
-        }
+        console.warn('Profile fetch failed:', error.message)
+        return null
       }
 
+      console.log(`Profile fetch took ${Date.now() - profileStartTime}ms`)
       return data as UserProfile
     } catch (error) {
       console.error('Error fetching user profile:', error)
@@ -73,8 +55,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const refresh = async () => {
+    const startTime = Date.now()
     try {
       const { data: { user: authUser }, error } = await supabase.auth.getUser()
+      console.log(`Auth getUser took ${Date.now() - startTime}ms`)
       
       if (error) {
         // Only log errors that aren't "Auth session missing" (which is normal on first load)
@@ -83,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setUser(null)
         setProfile(null)
+        setLoading(false)
         return
       }
 
@@ -90,17 +75,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const authUserWithMetadata = authUser as AuthUser
         setUser(authUserWithMetadata)
         
-        const userProfile = await fetchUserProfile(authUser.id)
-        setProfile(userProfile)
+        // Fetch profile async - don't block user display
+        fetchUserProfile(authUser.id).then(userProfile => {
+          if (userProfile) {
+            setProfile(userProfile)
+          } else {
+            // Create fallback profile from auth data
+            setProfile({
+              id: authUser.id,
+              email: authUser.email || '',
+              role: 'occupier',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+          }
+        }).catch(error => {
+          console.error('Failed to fetch profile:', error)
+          // Still create fallback profile
+          setProfile({
+            id: authUser.id,
+            email: authUser.email || '',
+            role: 'occupier',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+        })
+        
+        // Set loading to false immediately after getting user
+        setLoading(false)
       } else {
         setUser(null)
         setProfile(null)
+        setLoading(false)
       }
     } catch (error) {
       console.error('Error refreshing auth state:', error)
       setUser(null)
       setProfile(null)
-    } finally {
       setLoading(false)
     }
   }
@@ -113,33 +124,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
           // Skip if user is already set and same user
           if (user?.id === session.user.id && profile) {
+            setLoading(false)
             return
           }
 
-          setLoading(true)
           const authUser = session.user as AuthUser
           setUser(authUser)
           
-          try {
-            const userProfile = await fetchUserProfile(session.user.id)
+          // Fetch profile async - don't block user display
+          fetchUserProfile(session.user.id).then(userProfile => {
             if (userProfile) {
               setProfile(userProfile)
             } else {
-              // Create a fallback profile if database fetch fails
+              // Create fallback profile from auth data
               setProfile({
                 id: authUser.id,
                 email: authUser.email || '',
                 role: 'occupier',
-                org_id: null,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               })
             }
-          } catch (error) {
-            console.error('Failed to fetch user profile:', error)
-          } finally {
-            setLoading(false)
-          }
+          }).catch(error => {
+            console.error('Failed to fetch profile:', error)
+            // Still create fallback profile
+            setProfile({
+              id: authUser.id,
+              email: authUser.email || '',
+              role: 'occupier',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+          })
+          
+          // Set loading to false immediately after setting user
+          setLoading(false)
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setProfile(null)

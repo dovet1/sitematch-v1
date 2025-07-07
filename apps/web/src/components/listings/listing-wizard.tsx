@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useEffect, useReducer, useCallback, useMemo } from 'react';
+import { useEffect, useReducer, useCallback, useMemo, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -99,7 +99,7 @@ interface ListingWizardProps {
   onSubmit?: (data: WizardFormData) => Promise<SubmissionResult>;
   onSave?: (data: Partial<WizardFormData>) => Promise<void>;
   userEmail?: string;
-  organizationId: string;
+  organizationId?: string; // Optional for backwards compatibility
 }
 
 export function ListingWizard({ 
@@ -115,6 +115,8 @@ export function ListingWizard({
     (prev: AutoSaveState, updates: Partial<AutoSaveState>) => ({ ...prev, ...updates }),
     createAutoSaveState()
   );
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
+  const hasCreatedDraftRef = useRef(false);
 
   // =====================================================
   // INITIALIZATION
@@ -150,39 +152,51 @@ export function ListingWizard({
 
   useEffect(() => {
     // Create draft listing when wizard starts (only if we don't have one already)
-    if (!state.listingId && organizationId && organizationId !== '00000000-0000-0000-0000-000000000000') {
+    if (!state.listingId && !isCreatingDraft && !hasCreatedDraftRef.current) {
+      hasCreatedDraftRef.current = true;
+      
+      const createDraftListing = async () => {
+        if (isCreatingDraft) return; // Prevent multiple concurrent calls
+        
+        try {
+          setIsCreatingDraft(true);
+          console.log('Creating draft listing...');
+          const response = await fetch('/api/listings/draft', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userEmail
+            })
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Draft listing API error:', response.status, errorText);
+            throw new Error(`Failed to create draft listing: ${response.status}`);
+          }
+
+          const result = await response.json();
+          if (result.success && result.listingId) {
+            console.log('Draft listing created successfully:', result.listingId);
+            dispatch({ type: 'SET_LISTING_ID', listingId: result.listingId });
+          } else {
+            // Don't reset hasCreatedDraftRef to prevent infinite loops
+            throw new Error(result.error || 'Failed to create draft listing');
+          }
+        } catch (error) {
+          console.error('Failed to create draft listing:', error);
+          // Don't reset hasCreatedDraftRef to prevent infinite loops
+          // Don't block the wizard if draft creation fails
+        } finally {
+          setIsCreatingDraft(false);
+        }
+      };
+      
       createDraftListing();
     }
-  }, [organizationId, state.listingId]);
-
-  const createDraftListing = async () => {
-    try {
-      const response = await fetch('/api/listings/draft', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          organizationId,
-          userEmail
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create draft listing');
-      }
-
-      const result = await response.json();
-      if (result.success && result.listingId) {
-        dispatch({ type: 'SET_LISTING_ID', listingId: result.listingId });
-      } else {
-        throw new Error(result.error || 'Failed to create draft listing');
-      }
-    } catch (error) {
-      console.error('Failed to create draft listing:', error);
-      // Don't block the wizard if draft creation fails
-    }
-  };
+  }, [state.listingId, isCreatingDraft, userEmail]);
 
   // =====================================================
   // VALIDATION EFFECTS
@@ -300,6 +314,7 @@ export function ListingWizard({
         
         // Create a copy of form data for processing
         let processedData = { ...state.formData };
+        console.log('Saving progress with data:', processedData);
         
         // Upload logo file if present and not already uploaded
         if (processedData.logoFile instanceof File && !processedData.logoUrl) {
@@ -308,7 +323,7 @@ export function ListingWizard({
             const uploadedFile = await uploadFileViaApi(
               processedData.logoFile,
               'logo',
-              organizationId,
+              '',
               undefined,
               state.listingId
             );
@@ -334,7 +349,7 @@ export function ListingWizard({
             const uploadedFile = await uploadFileViaApi(
               processedData.primaryContact.headshotFile,
               'headshot',
-              organizationId,
+              '',
               undefined,
               state.listingId
             );
@@ -365,7 +380,7 @@ export function ListingWizard({
                 const uploadedFile = await uploadFileViaApi(
                   contact.headshotFile,
                   'headshot',
-                  organizationId,
+                  '',
                   undefined,
                   state.listingId
                 );
@@ -386,17 +401,50 @@ export function ListingWizard({
           }
         }
         
-        // Save locations and FAQs to draft listing if we have a listingId
+        // Save all data to draft listing if we have a listingId
         if (state.listingId) {
           try {
+            // Update main listing record with site sizes and other basic data
+            const { updateDraftListing } = await import('@/lib/draft-listings');
+            const mainUpdateData: any = {};
+            
+            if (processedData.siteSizeMin !== undefined) {
+              mainUpdateData.site_size_min = processedData.siteSizeMin;
+            }
+            if (processedData.siteSizeMax !== undefined) {
+              mainUpdateData.site_size_max = processedData.siteSizeMax;
+            }
+            if (processedData.companyName) {
+              mainUpdateData.company_name = processedData.companyName;
+              mainUpdateData.title = `Property Requirement - ${processedData.companyName}`;
+            }
+            if (processedData.primaryContact?.contactName) {
+              mainUpdateData.contact_name = processedData.primaryContact.contactName;
+            }
+            if (processedData.primaryContact?.contactTitle) {
+              mainUpdateData.contact_title = processedData.primaryContact.contactTitle;
+            }
+            if (processedData.primaryContact?.contactEmail) {
+              mainUpdateData.contact_email = processedData.primaryContact.contactEmail;
+            }
+            if (processedData.primaryContact?.contactPhone) {
+              mainUpdateData.contact_phone = processedData.primaryContact.contactPhone;
+            }
+            // Save brochure URL to main listing if available
+            if (processedData.brochureFiles && processedData.brochureFiles.length > 0) {
+              mainUpdateData.brochure_url = processedData.brochureFiles[0].url;
+            }
+            
+            if (Object.keys(mainUpdateData).length > 0) {
+              await updateDraftListing(state.listingId, mainUpdateData);
+            }
             // Save locations if not nationwide and locations exist
             if (!processedData.locationSearchNationwide && processedData.locations && processedData.locations.length > 0) {
               const { addLocationsToDraftListing } = await import('@/lib/draft-listings');
               
               // Clear existing locations first (to handle updates)
-              const { createServerClient } = await import('@/lib/supabase');
-              const supabase = createServerClient();
-              await supabase.from('listing_locations').delete().eq('listing_id', state.listingId);
+              const { browserClient } = await import('@/lib/supabase');
+              await browserClient.from('listing_locations').delete().eq('listing_id', state.listingId);
               
               // Add current locations
               await addLocationsToDraftListing(state.listingId, processedData.locations);
@@ -407,9 +455,8 @@ export function ListingWizard({
               const { addFAQsToDraftListing } = await import('@/lib/draft-listings');
               
               // Clear existing FAQs first (to handle updates)
-              const { createServerClient } = await import('@/lib/supabase');
-              const supabase = createServerClient();
-              await supabase.from('faqs').delete().eq('listing_id', state.listingId);
+              const { browserClient } = await import('@/lib/supabase');
+              await browserClient.from('faqs').delete().eq('listing_id', state.listingId);
               
               // Transform and add current FAQs
               const transformedFAQs = processedData.faqs.map(faq => ({
@@ -422,31 +469,24 @@ export function ListingWizard({
             
             // Save contacts to draft listing
             const { addContactsToDraftListing } = await import('@/lib/draft-listings');
-            const { createServerClient } = await import('@/lib/supabase');
-            const supabase = createServerClient();
+            const { browserClient } = await import('@/lib/supabase');
             
             // Clear existing contacts first (to handle updates)
-            await supabase.from('listing_contacts').delete().eq('listing_id', state.listingId);
+            await browserClient.from('listing_contacts').delete().eq('listing_id', state.listingId);
             
-            // Add current contacts
-            const contacts = [];
+            // Add additional contacts only (primary contact is in main listings table)
+            const additionalContacts: Array<{
+              contact_name: string;
+              contact_title: string;
+              contact_email: string;
+              contact_phone?: string;
+              is_primary_contact: boolean;
+              headshot_url?: string;
+            }> = [];
             
-            // Add primary contact
-            if (processedData.primaryContact) {
-              contacts.push({
-                contact_name: processedData.primaryContact.contactName || 'Contact Name',
-                contact_title: processedData.primaryContact.contactTitle || 'Contact Title',
-                contact_email: processedData.primaryContact.contactEmail || userEmail || 'contact@example.com',
-                contact_phone: processedData.primaryContact.contactPhone,
-                is_primary_contact: true,
-                headshot_url: processedData.primaryContact.headshotUrl
-              });
-            }
-            
-            // Add additional contacts
             if (processedData.additionalContacts) {
               processedData.additionalContacts.forEach(contact => {
-                contacts.push({
+                additionalContacts.push({
                   contact_name: contact.contactName || 'Contact Name',
                   contact_title: contact.contactTitle || 'Contact Title',
                   contact_email: contact.contactEmail || 'contact@example.com',
@@ -457,8 +497,8 @@ export function ListingWizard({
               });
             }
 
-            if (contacts.length > 0) {
-              await addContactsToDraftListing(state.listingId, contacts);
+            if (additionalContacts.length > 0) {
+              await addContactsToDraftListing(state.listingId, additionalContacts);
             }
           } catch (error) {
             console.error('Failed to save locations/FAQs to draft listing:', error);
@@ -466,7 +506,57 @@ export function ListingWizard({
           }
         }
         
-        await onSave(processedData);
+        // Deep serialize data for Server Action - remove all non-serializable objects
+        const deepSerialize = (obj: any): any => {
+          if (obj === null || obj === undefined) {
+            return obj;
+          }
+          
+          // Handle primitive types
+          if (typeof obj !== 'object') {
+            return obj;
+          }
+          
+          // Handle File objects
+          if (obj instanceof File) {
+            return undefined;
+          }
+          
+          // Handle Date objects
+          if (obj instanceof Date) {
+            return obj.toISOString();
+          }
+          
+          // Handle Arrays
+          if (Array.isArray(obj)) {
+            return obj.map(item => deepSerialize(item)).filter(item => item !== undefined);
+          }
+          
+          // Handle plain objects (including objects with null prototype)
+          if (typeof obj === 'object') {
+            const serialized: any = {};
+            for (const key in obj) {
+              if (obj.hasOwnProperty(key)) {
+                const value = deepSerialize(obj[key]);
+                if (value !== undefined) {
+                  serialized[key] = value;
+                }
+              }
+            }
+            return serialized;
+          }
+          
+          return obj;
+        };
+        
+        const serializedData = deepSerialize(processedData);
+        
+        console.log('Attempting to save serialized data:', {
+          keys: Object.keys(serializedData),
+          dataTypes: Object.entries(serializedData).map(([key, value]) => [key, typeof value])
+        });
+        
+        await onSave(serializedData);
         saveToLocalStorage(processedData);
         setAutoSave({ 
           lastSaved: new Date(), 
@@ -479,11 +569,13 @@ export function ListingWizard({
         
         toast.success('Progress saved');
       } catch (error) {
-        setAutoSave({ isSaving: false, saveError: 'Failed to save' });
-        toast.error('Failed to save progress');
+        console.error('Save progress error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to save progress';
+        setAutoSave({ isSaving: false, saveError: errorMessage });
+        toast.error(`Failed to save progress: ${errorMessage}`);
       }
     }
-  }, [onSave, state.formData, organizationId]);
+  }, [onSave, state.formData, state.listingId]);
 
   // =====================================================
   // SUBMISSION HANDLER
@@ -601,9 +693,9 @@ export function ListingWizard({
 
   return (
     <div className="max-w-4xl mx-auto p-3 md:p-6">
-      <Card>
+      <Card className="violet-bloom-card-hover">
         <CardHeader className="pb-4 md:pb-6">
-          <CardTitle className="text-lg md:text-xl">Create Property Requirement Listing</CardTitle>
+          <CardTitle>Create Property Requirement Listing</CardTitle>
           <WizardProgress steps={progressSteps} currentStep={state.currentStep} />
         </CardHeader>
 
@@ -619,7 +711,6 @@ export function ListingWizard({
                 dispatch({ type: 'SET_VALID', step: 1, isValid })
               }
               errors={state.errors}
-              organizationId={organizationId}
               listingId={state.listingId}
             />
           )}
@@ -686,7 +777,7 @@ export function ListingWizard({
                 dispatch({ type: 'SET_VALID', step: 6, isValid })
               }
               errors={state.errors}
-              organizationId={organizationId}
+              listingId={state.listingId}
             />
           )}
 
@@ -697,7 +788,7 @@ export function ListingWizard({
               {/* Auto-save status */}
               {autoSave.lastSaved && (
                 <div className="text-center">
-                  <span className="text-xs text-gray-500">
+                  <span className="caption text-muted-foreground">
                     Saved {autoSave.lastSaved.toLocaleTimeString()}
                   </span>
                 </div>

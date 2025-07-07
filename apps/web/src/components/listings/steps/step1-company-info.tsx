@@ -26,9 +26,8 @@ export function Step1CompanyInfo({
   onNext,
   onValidationChange,
   errors,
-  organizationId,
   listingId
-}: WizardStepProps & { organizationId?: string; listingId?: string }) {
+}: WizardStepProps & { listingId?: string }) {
   const {
     register,
     handleSubmit,
@@ -168,12 +167,12 @@ export function Step1CompanyInfo({
               placeholder="Enter your company name"
               className={
                 formErrors.companyName || errors?.companyName
-                  ? 'border-red-500 focus:ring-red-500'
+                  ? 'violet-bloom-error'
                   : ''
               }
             />
             {(formErrors.companyName || errors?.companyName) && (
-              <p className="text-sm text-red-600">
+              <p className="body-small text-error">
                 {formErrors.companyName?.message || errors?.companyName}
               </p>
             )}
@@ -184,7 +183,7 @@ export function Step1CompanyInfo({
       {/* Company Logo Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Company Logo</CardTitle>
+          <CardTitle>Company Logo</CardTitle>
         </CardHeader>
         <CardContent>
           <ImageUpload
@@ -213,7 +212,7 @@ export function Step1CompanyInfo({
       {/* Requirements Brochure Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Requirements Brochure</CardTitle>
+          <CardTitle>Requirements Brochure</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -242,7 +241,7 @@ export function Step1CompanyInfo({
               }}
               acceptedTypes={['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']}
               maxFileSize={10 * 1024 * 1024} // 10MB
-              organizationId={organizationId || ''}
+              organizationId=""
               listingId={listingId}
             />
           </div>
@@ -252,12 +251,12 @@ export function Step1CompanyInfo({
       {/* Contact Information Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Contact Information</CardTitle>
+          <CardTitle>Contact Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Contact Name */}
           <div className="space-y-2">
-            <Label htmlFor="contactName" className="text-sm font-medium">
+            <Label htmlFor="contactName">
               Contact Name *
             </Label>
             <Input
@@ -276,12 +275,12 @@ export function Step1CompanyInfo({
               placeholder="Enter the primary contact name"
               className={
                 formErrors.primaryContact?.contactName || errors?.contactName
-                  ? 'border-red-500 focus:ring-red-500'
+                  ? 'violet-bloom-error'
                   : ''
               }
             />
             {(formErrors.primaryContact?.contactName || errors?.contactName) && (
-              <p className="text-sm text-red-600">
+              <p className="body-small text-error">
                 {formErrors.primaryContact?.contactName?.message || errors?.contactName}
               </p>
             )}
@@ -289,7 +288,7 @@ export function Step1CompanyInfo({
 
           {/* Contact Title */}
           <div className="space-y-2">
-            <Label htmlFor="contactTitle" className="text-sm font-medium">
+            <Label htmlFor="contactTitle">
               Contact Title *
             </Label>
             <Input
@@ -308,12 +307,12 @@ export function Step1CompanyInfo({
               placeholder="e.g., Property Manager, Facilities Director"
               className={
                 formErrors.primaryContact?.contactTitle || errors?.contactTitle
-                  ? 'border-red-500 focus:ring-red-500'
+                  ? 'violet-bloom-error'
                   : ''
               }
             />
             {(formErrors.primaryContact?.contactTitle || errors?.contactTitle) && (
-              <p className="text-sm text-red-600">
+              <p className="body-small text-error">
                 {formErrors.primaryContact?.contactTitle?.message || errors?.contactTitle}
               </p>
             )}

@@ -28,10 +28,7 @@ export default async function CreateListingPage() {
     redirect('/unauthorized');
   }
 
-  // Only require org_id for occupiers, admins can create listings for any organization
-  if (user.role === 'occupier' && !user.org_id) {
-    redirect('/occupier/setup-organization');
-  }
+  // Organization requirements removed - listings are now independent
 
   // =====================================================
   // SUBMISSION HANDLER
@@ -51,17 +48,8 @@ export default async function CreateListingPage() {
       // Use the enhanced listing function that handles contacts and files
       const { createEnhancedListing } = await import('@/lib/enhanced-listings');
       const { finalizeDraftListing } = await import('@/lib/draft-listings');
-      const { getOrCreateOrganizationForUser } = await import('@/lib/auto-organization');
       
-      // Handle organization creation if needed
-      const orgResult = await getOrCreateOrganizationForUser(
-        currentUser.id, 
-        data.companyName || `${currentUser.email?.split('@')[0] || 'User'} Company`
-      );
-      
-      if (orgResult.error) {
-        return { success: false, error: `Failed to create organization: ${orgResult.error}` };
-      }
+      // Organization creation is no longer needed - using user-based access control
 
       // Use real database now that tables are set up
       const { getSectors, getUseClasses } = await import('@/lib/listings');
@@ -120,7 +108,6 @@ export default async function CreateListingPage() {
         brochure_urls: data.brochureFiles?.map(f => f.url).filter(Boolean) || [],
         site_plan_urls: data.sitePlanFiles?.map(f => f.url).filter(Boolean) || [],
         fit_out_urls: data.fitOutFiles?.map(f => f.url).filter(Boolean) || [],
-        organization_id: orgResult.organizationId,
         status: 'pending' as const
       };
 
@@ -129,77 +116,35 @@ export default async function CreateListingPage() {
         // Import additional draft listing functions
         const { addContactsToDraftListing, addFAQsToDraftListing, addLocationsToDraftListing } = await import('@/lib/draft-listings');
 
-        // Finalize the existing draft listing
+        // Finalize the existing draft listing with all data
         await finalizeDraftListing(data.existingListingId, {
           title: `Property Requirement - ${data.companyName || 'Company'}`,
           description: `Property requirement from ${data.companyName || 'company'}`,
-          status: 'pending'
+          status: 'pending',
+          site_size_min: data.siteSizeMin,
+          site_size_max: data.siteSizeMax,
+          brochure_url: data.brochureFiles?.[0]?.url,
+          contact_name: data.primaryContact?.contactName || 'Contact Name',
+          contact_title: data.primaryContact?.contactTitle || 'Contact Title',
+          contact_email: data.primaryContact?.contactEmail || currentUser.email || 'contact@example.com',
+          contact_phone: data.primaryContact?.contactPhone
         });
 
-        // Add contacts to the draft listing
-        const contacts = [];
-        
-        // Add primary contact
-        if (data.primaryContact) {
-          contacts.push({
-            contact_name: data.primaryContact.contactName || 'Contact Name',
-            contact_title: data.primaryContact.contactTitle || 'Contact Title',
-            contact_email: data.primaryContact.contactEmail || currentUser.email || 'contact@example.com',
-            contact_phone: data.primaryContact.contactPhone,
-            is_primary_contact: true,
-            headshot_url: data.primaryContact.headshotUrl
-          });
-        }
-        
-        // Add additional contacts
-        if (data.additionalContacts) {
-          data.additionalContacts.forEach(contact => {
-            contacts.push({
-              contact_name: contact.contactName || 'Contact Name',
-              contact_title: contact.contactTitle || 'Contact Title',
-              contact_email: contact.contactEmail || 'contact@example.com',
-              contact_phone: contact.contactPhone,
-              is_primary_contact: false,
-              headshot_url: contact.headshotUrl
-            });
-          });
-        }
-
-        if (contacts.length > 0) {
-          await addContactsToDraftListing(data.existingListingId, contacts);
-        }
-
-        // Add FAQs to the draft listing
-        if (data.faqs && data.faqs.length > 0) {
-          const transformedFAQs = data.faqs.map(faq => ({
-            question: faq.question,
-            answer: faq.answer,
-            display_order: faq.displayOrder
-          }));
-          await addFAQsToDraftListing(data.existingListingId, transformedFAQs);
-        }
-
-        // Add locations to the draft listing (if not nationwide)
-        if (!data.locationSearchNationwide && data.locations && data.locations.length > 0) {
-          await addLocationsToDraftListing(data.existingListingId, data.locations);
-        }
+        // Note: Contacts, FAQs, and locations are already saved during wizard progression
+        // No need to re-add them here during final submission
 
         return {
           success: true,
           listingId: data.existingListingId,
-          organizationId: orgResult.organizationId,
-          organizationCreated: orgResult.organizationCreated,
           message: 'Listing submitted successfully'
         };
       } else {
         // Create a new listing (fallback for cases where draft creation failed)
-        const listing = await createEnhancedListing(enhancedListingData, currentUser.id, orgResult.organizationId);
+        const listing = await createEnhancedListing(enhancedListingData, currentUser.id);
 
         return {
           success: true,
           listingId: listing.id,
-          organizationId: orgResult.organizationId,
-          organizationCreated: orgResult.organizationCreated,
           message: 'Listing created successfully'
         };
       }
@@ -246,6 +191,45 @@ export default async function CreateListingPage() {
         delete sanitizedData.fitOutFiles;
       }
       
+      // Clean primary contact headshot file
+      if (sanitizedData.primaryContact?.headshotFile instanceof File) {
+        sanitizedData.primaryContact = {
+          ...sanitizedData.primaryContact,
+          headshotFile: undefined
+        };
+      }
+      
+      // Clean additional contacts headshot files
+      if (sanitizedData.additionalContacts) {
+        sanitizedData.additionalContacts = sanitizedData.additionalContacts.map(contact => {
+          const cleanContact = { ...contact };
+          if (cleanContact.headshotFile instanceof File) {
+            cleanContact.headshotFile = undefined;
+          }
+          return cleanContact;
+        });
+      }
+      
+      // Remove any Date objects or other non-serializable data
+      const cleanData = JSON.parse(JSON.stringify(sanitizedData, (key, value) => {
+        // Remove File objects
+        if (value instanceof File) {
+          return undefined;
+        }
+        // Convert Date objects to ISO strings
+        if (value instanceof Date) {
+          return value.toISOString();
+        }
+        // Remove functions
+        if (typeof value === 'function') {
+          return undefined;
+        }
+        return value;
+      }));
+      
+      // Use the cleaned data
+      Object.assign(sanitizedData, cleanData);
+      
       // This could save as draft to the database in the future
       // For now, we'll just acknowledge the save was successful
       console.log('Saving draft for user:', currentUser.id, 'data keys:', Object.keys(sanitizedData));
@@ -262,21 +246,21 @@ export default async function CreateListingPage() {
   // =====================================================
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Breadcrumb Navigation */}
-      <div className="bg-white border-b">
+      <div className="bg-background border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <nav className="flex items-center space-x-4 text-sm">
-              <a href="/occupier" className="text-gray-500 hover:text-gray-700">
+            <nav className="flex items-center space-x-4 body-small">
+              <a href="/occupier" className="text-muted-foreground hover:text-foreground violet-bloom-nav-item">
                 Dashboard
               </a>
-              <span className="text-gray-300">/</span>
-              <a href="/occupier/listings" className="text-gray-500 hover:text-gray-700">
+              <span className="text-muted-foreground">/</span>
+              <a href="/occupier/listings" className="text-muted-foreground hover:text-foreground violet-bloom-nav-item">
                 Listings
               </a>
-              <span className="text-gray-300">/</span>
-              <span className="text-gray-900 font-medium">Create New Listing</span>
+              <span className="text-muted-foreground">/</span>
+              <span className="text-foreground font-medium">Create New Listing</span>
             </nav>
           </div>
         </div>
@@ -304,7 +288,6 @@ export default async function CreateListingPage() {
             onSubmit={handleSubmit}
             onSave={handleSave}
             userEmail={user.email}
-            organizationId={user.org_id || '00000000-0000-0000-0000-000000000000'}
           />
         </ErrorBoundary>
       </div>

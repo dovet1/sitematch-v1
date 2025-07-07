@@ -33,16 +33,7 @@ export function UserMenu() {
     return null
   }
 
-  // Show loading state if user exists but profile is still loading
-  if (!profile && loading) {
-    return (
-      <div className="flex items-center gap-2">
-        <div className="h-8 w-20 bg-muted animate-pulse rounded" />
-      </div>
-    )
-  }
-
-  // If user exists but no profile and not loading, something's wrong
+  // Show user email immediately, even if profile is still loading
   if (!profile) {
     return (
       <div className="flex items-center gap-2">
@@ -61,7 +52,7 @@ export function UserMenu() {
           <Button variant="ghost" size="sm" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             {profile.email}
-            {isAdmin && <Shield className="h-3 w-3 text-blue-500" />}
+            {isAdmin && <Shield className="h-3 w-3 text-primary" />}
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
@@ -78,25 +69,19 @@ export function UserMenu() {
           <div className="space-y-4">
             <div className="grid gap-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Email:</span>
-                <span className="text-sm text-muted-foreground">{profile.email}</span>
+                <span className="body-small font-medium">Email:</span>
+                <span className="body-small text-muted-foreground">{profile.email}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Role:</span>
+                <span className="body-small font-medium">Role:</span>
                 <div className="flex items-center gap-1">
-                  <span className="text-sm text-muted-foreground capitalize">{profile.role}</span>
-                  {isAdmin && <Shield className="h-3 w-3 text-blue-500" />}
+                  <span className="body-small text-muted-foreground capitalize">{profile.role}</span>
+                  {isAdmin && <Shield className="h-3 w-3 text-primary" />}
                 </div>
               </div>
-              {profile.organisation && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Organization:</span>
-                  <span className="text-sm text-muted-foreground">{profile.organisation.name}</span>
-                </div>
-              )}
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Member since:</span>
-                <span className="text-sm text-muted-foreground">
+                <span className="body-small font-medium">Member since:</span>
+                <span className="body-small text-muted-foreground">
                   {new Date(profile.created_at).toLocaleDateString()}
                 </span>
               </div>
@@ -131,7 +116,7 @@ export function UserMenuButton() {
     <Button variant="ghost" size="sm" className="flex items-center gap-2">
       <User className="h-4 w-4" />
       <span className="hidden sm:inline">{profile.email}</span>
-      {profile.role === 'admin' && <Shield className="h-3 w-3 text-blue-500" />}
+      {profile.role === 'admin' && <Shield className="h-3 w-3 text-primary" />}
     </Button>
   )
 }

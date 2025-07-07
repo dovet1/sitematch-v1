@@ -9,10 +9,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'SiteMatch - Commercial Directory',
-  description: 'Find and list commercial properties and businesses',
-  icons: {
-    icon: '/favicon.svg',
-  },
+  description: 'Find and list commercial space with SiteMatch',
 }
 
 export default function RootLayout({
@@ -23,13 +20,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <div id="root">
-          <AuthProvider>
-            <Header />
+        <AuthProvider>
+          <Header />
+          <main>
             {children}
-            <LeadCaptureProvider />
-          </AuthProvider>
-        </div>
+          </main>
+          <LeadCaptureProvider />
+        </AuthProvider>
       </body>
     </html>
   )

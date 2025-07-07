@@ -31,9 +31,9 @@ export function WizardProgress({ steps, currentStep, className }: WizardProgress
                   className={cn(
                     'w-3 h-3 rounded-full border-2 transition-all duration-200',
                     {
-                      'bg-violet-600 border-violet-600': isActive,
-                      'bg-green-600 border-green-600': isCompleted,
-                      'bg-gray-200 border-gray-300': !isActive && !isCompleted,
+                      'bg-primary border-primary': isActive,
+                      'bg-success border-success': isCompleted,
+                      'bg-muted border-border': !isActive && !isCompleted,
                     }
                   )}
                 />
@@ -42,8 +42,8 @@ export function WizardProgress({ steps, currentStep, className }: WizardProgress
                     className={cn(
                       'w-8 h-0.5 mx-1 transition-colors duration-200',
                       {
-                        'bg-violet-600': isActive || isCompleted,
-                        'bg-gray-200': !isActive && !isCompleted,
+                        'bg-primary': isActive || isCompleted,
+                        'bg-border': !isActive && !isCompleted,
                       }
                     )}
                   />
@@ -55,10 +55,10 @@ export function WizardProgress({ steps, currentStep, className }: WizardProgress
         
         {/* Current step info */}
         <div className="text-center">
-          <div className="text-sm font-medium text-violet-700">
+          <div className="body-small font-medium text-primary">
             Step {currentStep} of {steps.length}
           </div>
-          <div className="text-xs text-gray-600 mt-1">
+          <div className="caption text-muted-foreground mt-1">
             {steps.find(s => s.number === currentStep)?.title}
           </div>
         </div>
@@ -78,13 +78,13 @@ export function WizardProgress({ steps, currentStep, className }: WizardProgress
                 <div className="flex items-center min-w-0">
                   <div
                     className={cn(
-                      'flex items-center justify-center w-8 h-8 rounded-full border-2 font-medium text-sm transition-all duration-200 relative flex-shrink-0',
+                      'flex items-center justify-center w-8 h-8 rounded-full border-2 font-medium text-sm transition-all duration-200 relative flex-shrink-0 violet-bloom-touch',
                       {
-                        'bg-green-600 border-green-600 text-white': isCompleted,
-                        'bg-violet-600 border-violet-600 text-white': isActive && !isCompleted,
-                        'bg-white border-gray-300 text-gray-500 hover:border-violet-300': 
+                        'bg-success border-success text-white': isCompleted,
+                        'bg-primary border-primary text-primary-foreground': isActive && !isCompleted,
+                        'bg-background border-border text-muted-foreground hover:border-primary-300': 
                           !isActive && !isCompleted && isAccessible,
-                        'bg-gray-100 border-gray-200 text-gray-400': 
+                        'bg-muted border-border text-muted-foreground': 
                           !isActive && !isCompleted && !isAccessible,
                       }
                     )}
@@ -99,10 +99,10 @@ export function WizardProgress({ steps, currentStep, className }: WizardProgress
                   {/* Step label - only show for active step on desktop */}
                   {isActive && (
                     <div className="ml-3 min-w-0 flex-shrink-0">
-                      <div className="text-sm font-medium text-violet-700 whitespace-nowrap">
+                      <div className="body-small font-medium text-primary whitespace-nowrap">
                         {step.title}
                       </div>
-                      <div className="text-xs text-gray-500 mt-0.5 whitespace-nowrap">
+                      <div className="caption text-muted-foreground mt-0.5 whitespace-nowrap">
                         {step.description}
                       </div>
                     </div>
@@ -116,9 +116,9 @@ export function WizardProgress({ steps, currentStep, className }: WizardProgress
                       className={cn(
                         'h-0.5 w-full transition-colors duration-200',
                         {
-                          'bg-violet-600': isCompleted || (isActive && steps[index + 1].isCompleted),
-                          'bg-green-600': isCompleted && steps[index + 1].isCompleted,
-                          'bg-gray-200': !isCompleted && !isActive,
+                          'bg-primary': isCompleted || (isActive && steps[index + 1].isCompleted),
+                          'bg-success': isCompleted && steps[index + 1].isCompleted,
+                          'bg-border': !isCompleted && !isActive,
                         }
                       )}
                     />
@@ -131,13 +131,16 @@ export function WizardProgress({ steps, currentStep, className }: WizardProgress
 
         {/* Progress bar */}
         <div className="mt-4 max-w-4xl mx-auto">
-          <div className="w-full bg-gray-200 rounded-full h-1">
+          <div className="w-full bg-primary-100 h-1" style={{ borderRadius: "var(--radius-md)" }}>
             <div 
-              className="bg-gradient-to-r from-violet-600 to-violet-500 h-1 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+              className="bg-gradient-to-r from-primary to-primary-600 h-1 transition-all duration-500 ease-out"
+              style={{ 
+                borderRadius: "var(--radius-md)",
+                width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`
+              }}
             />
           </div>
-          <div className="flex justify-between text-xs text-gray-500 mt-2">
+          <div className="flex justify-between caption text-muted-foreground mt-2">
             <span>Start</span>
             <span>{Math.round(((currentStep - 1) / (steps.length - 1)) * 100)}% Complete</span>
             <span>Finish</span>

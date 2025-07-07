@@ -59,8 +59,6 @@ export interface EnhancedListingData {
     headshot_url?: string;
   }>;
   
-  // Organization ID
-  organization_id: string;
   
   status: 'pending' | 'approved' | 'rejected';
 }
@@ -71,8 +69,7 @@ export interface EnhancedListingData {
 
 export async function createEnhancedListing(
   data: EnhancedListingData,
-  userId: string,
-  organizationId: string
+  userId: string
 ) {
   const supabase = createServerClient();
 
@@ -80,7 +77,6 @@ export async function createEnhancedListing(
     // Start transaction
     // Map enhanced data to database schema - start with minimal required fields
     const insertData: any = {
-      org_id: organizationId,
       created_by: userId,
       title: data.company_name || 'Property Requirement',
       description: `Property requirement from ${data.company_name}`,
@@ -266,7 +262,6 @@ export async function createEnhancedListing(
       .from('file_uploads')
       .update({ listing_id: listing.id })
       .eq('user_id', userId)
-      .eq('org_id', organizationId)
       .is('listing_id', null)
       .gte('created_at', oneHourAgo);
 
