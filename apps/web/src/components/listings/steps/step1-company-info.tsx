@@ -34,7 +34,7 @@ export function Step1CompanyInfo({
     watch,
     setValue,
     formState: { errors: formErrors }
-  } = useForm<Step1FormData>({
+  } = useForm<Step1FormData & { logoUrl?: string }>({
     defaultValues: {
       companyName: data.companyName || '',
       primaryContact: {
@@ -49,6 +49,7 @@ export function Step1CompanyInfo({
       },
       logoFile: data.logoFile || undefined,
       logoPreview: data.logoPreview || data.logoUrl || '',
+      logoUrl: data.logoUrl || '',
       brochureFiles: data.brochureFiles || []
     },
     mode: 'onChange'
@@ -188,18 +189,48 @@ export function Step1CompanyInfo({
         <CardContent>
           <ImageUpload
             value={watchedValues.logoFile || watchedValues.logoPreview || data.logoUrl}
-            onChange={useCallback((file) => {
+            onChange={useCallback(async (file) => {
               setValue('logoFile', file || undefined);
               if (!file) {
                 setValue('logoPreview', '');
               }
-              // Update parent state to clear logo URL when removing
-              onUpdate({ 
-                ...watchedValues,
-                logoFile: file || undefined,
-                logoPreview: file ? undefined : '',
-                logoUrl: file ? data.logoUrl : undefined
-              });
+              
+              // Upload logo file to server if provided
+              if (file instanceof File) {
+                try {
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  formData.append('type', 'logo');
+                  
+                  const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                  });
+                  
+                  if (response.ok) {
+                    const result = await response.json();
+                    setValue('logoUrl', result.url);
+                    // Update parent state with the uploaded logo URL
+                    onUpdate({ 
+                      ...watchedValues,
+                      logoFile: file,
+                      logoUrl: result.url
+                    });
+                  } else {
+                    console.error('Failed to upload logo:', await response.text());
+                  }
+                } catch (error) {
+                  console.error('Error uploading logo:', error);
+                }
+              } else {
+                // Update parent state to clear logo URL when removing
+                onUpdate({ 
+                  ...watchedValues,
+                  logoFile: file || undefined,
+                  logoPreview: file ? undefined : '',
+                  logoUrl: file ? data.logoUrl : undefined
+                });
+              }
             }, [setValue, onUpdate, data.logoUrl, watchedValues])}
             onPreviewChange={useCallback((preview: string | null) => setValue('logoPreview', preview || ''), [setValue])}
             placeholder="Upload your company logo"
@@ -386,10 +417,33 @@ export function Step1CompanyInfo({
             </Label>
             <ImageUpload
               value={watchedValues.primaryContact?.headshotFile || watchedValues.primaryContact?.headshotPreview || data.primaryContact?.headshotUrl}
-              onChange={useCallback((file) => {
+              onChange={useCallback(async (file) => {
                 setValue('primaryContact.headshotFile', file || undefined);
                 if (!file) {
                   setValue('primaryContact.headshotPreview', '');
+                  setValue('primaryContact.headshotUrl', '');
+                } else {
+                  // Upload the file to get a URL
+                  try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('type', 'headshot');
+                    formData.append('is_primary', 'true'); // Mark as primary contact headshot
+                    
+                    const response = await fetch('/api/upload', {
+                      method: 'POST',
+                      body: formData,
+                    });
+                    
+                    if (response.ok) {
+                      const result = await response.json();
+                      setValue('primaryContact.headshotUrl', result.url);
+                    } else {
+                      console.error('Failed to upload headshot:', await response.text());
+                    }
+                  } catch (error) {
+                    console.error('Error uploading headshot:', error);
+                  }
                 }
                 // Update parent state to save headshot changes
                 onUpdate({ 

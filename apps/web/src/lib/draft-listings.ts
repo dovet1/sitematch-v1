@@ -141,15 +141,22 @@ export async function finalizeDraftListing(
     title: string;
     description: string;
     status: 'pending' | 'approved' | 'rejected';
+    company_name?: string;
     site_size_min?: number;
     site_size_max?: number;
     brochure_url?: string;
+    logo_url?: string;
     contact_name?: string;
     contact_title?: string;
     contact_email?: string;
     contact_phone?: string;
   }
 ): Promise<void> {
+  console.log('=== FINALIZE DRAFT DEBUG ===');
+  console.log('Listing ID:', listingId);
+  console.log('Final data company_name:', finalData.company_name);
+  console.log('Final data company_name type:', typeof finalData.company_name);
+  console.log('Final data keys:', Object.keys(finalData));
   // Use browser client if we're on the client side, server client otherwise
   let supabase;
   if (typeof window !== 'undefined') {
@@ -164,6 +171,7 @@ export async function finalizeDraftListing(
       title: finalData.title,
       description: finalData.description,
       status: finalData.status,
+      company_name: finalData.company_name || 'Company Name Required',
       updated_at: new Date().toISOString()
     };
 
@@ -177,6 +185,10 @@ export async function finalizeDraftListing(
     if (finalData.brochure_url) {
       updateData.brochure_url = finalData.brochure_url;
     }
+    if (finalData.logo_url) {
+      updateData.logo_url = finalData.logo_url;
+    }
+    // company_name is now always set in the base updateData above
     if (finalData.contact_name) {
       updateData.contact_name = finalData.contact_name;
     }

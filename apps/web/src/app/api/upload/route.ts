@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File
     const fileType = formData.get('type') as string
     const listingId = formData.get('listingId') as string
+    const isPrimary = formData.get('is_primary') as string
 
     if (!file || !fileType) {
       return NextResponse.json({ error: 'Missing file or type' }, { status: 400 })
@@ -61,7 +62,8 @@ export async function POST(request: NextRequest) {
       file_size: file.size,
       file_type: fileType,
       mime_type: file.type,
-      bucket_name: bucket
+      bucket_name: bucket,
+      is_primary: isPrimary === 'true' // Convert string to boolean
     };
 
     // Add listing_id if provided (for draft listing association)

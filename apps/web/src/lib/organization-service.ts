@@ -15,19 +15,7 @@ export class OrganizationService {
     return typeof window !== 'undefined' ? browserClient : this.adminClient
   }
   
-  // Skip audit logging in client context since it requires admin permissions
-  private async safeAuditLog(fn: (auditService: any) => Promise<any>) {
-    if (typeof window === 'undefined') {
-      // Only log on server-side
-      try {
-        const { organizationAuditService } = await import('@/lib/organization-audit')
-        await fn(organizationAuditService)
-      } catch (error) {
-        console.warn('Audit logging failed:', error)
-      }
-    }
-    // Skip silently on client-side
-  }
+  // Audit logging removed - no longer using organization_audit table
 
   /**
    * Check if user already has an organization
@@ -108,18 +96,7 @@ export class OrganizationService {
           .delete()
           .eq('id', org.id)
 
-        // Log audit event for failed assignment
-        await this.safeAuditLog((auditService) => auditService.logOrganizationCreation(
-          org.id,
-          data.createdByUserId,
-          {
-            originalName,
-            finalName: uniqueName,
-            duplicateResolution: nameWasModified,
-            errorDetails: assignmentResult.error,
-            rollbackPerformed: true
-          }
-        ))
+        // Audit logging removed
 
         return {
           success: false,
@@ -128,17 +105,7 @@ export class OrganizationService {
         }
       }
 
-      // Log successful organization creation
-      await this.safeAuditLog((auditService) => auditService.logOrganizationCreation(
-        org.id,
-        data.createdByUserId,
-        {
-          originalName,
-          finalName: uniqueName,
-          duplicateResolution: nameWasModified,
-          listingTriggered: true
-        }
-      ))
+      // Audit logging removed
 
       return {
         success: true,

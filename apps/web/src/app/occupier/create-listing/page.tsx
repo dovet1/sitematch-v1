@@ -38,6 +38,15 @@ export default async function CreateListingPage() {
     'use server';
     
     try {
+      // Debug: Log the received data to see what's actually being submitted
+      console.log('=== LISTING SUBMISSION DEBUG ===');
+      console.log('Received data keys:', Object.keys(data));
+      console.log('Company name:', data.companyName);
+      console.log('Company name type:', typeof data.companyName);
+      console.log('Company name length:', data.companyName?.length);
+      console.log('Primary contact:', data.primaryContact);
+      console.log('Existing listing ID:', data.existingListingId);
+      
       // Get current user for server action
       const currentUser = await getCurrentUser();
       
@@ -89,7 +98,8 @@ export default async function CreateListingPage() {
         contact_email: data.primaryContact?.contactEmail || currentUser.email || 'contact@example.com',
         contact_phone: data.primaryContact?.contactPhone,
         // Additional data for enhanced listing
-        company_name: data.companyName,
+        company_name: data.companyName || 'Company Name Required',
+        logo_url: data.logoUrl,
         is_nationwide: data.locationSearchNationwide || false,
         locations: data.locationSearchNationwide ? [] : (data.locations || []),
         faqs: data.faqs?.map(faq => ({
@@ -104,7 +114,6 @@ export default async function CreateListingPage() {
           contact_phone: contact.contactPhone,
           headshot_url: contact.headshotUrl
         })) || [],
-        logo_url: data.logoUrl,
         brochure_urls: data.brochureFiles?.map(f => f.url).filter(Boolean) || [],
         site_plan_urls: data.sitePlanFiles?.map(f => f.url).filter(Boolean) || [],
         fit_out_urls: data.fitOutFiles?.map(f => f.url).filter(Boolean) || [],
@@ -112,7 +121,12 @@ export default async function CreateListingPage() {
       };
 
       // Check if we have an existing draft listing to update
+      console.log('=== PATH DECISION ===');
+      console.log('Has existing listing ID:', !!data.existingListingId);
+      console.log('Existing listing ID value:', data.existingListingId);
+      
       if (data.existingListingId) {
+        console.log('Taking FINALIZE DRAFT path');
         // Import additional draft listing functions
         const { addContactsToDraftListing, addFAQsToDraftListing, addLocationsToDraftListing } = await import('@/lib/draft-listings');
 
@@ -121,17 +135,66 @@ export default async function CreateListingPage() {
           title: `Property Requirement - ${data.companyName || 'Company'}`,
           description: `Property requirement from ${data.companyName || 'company'}`,
           status: 'pending',
+          company_name: data.companyName || 'Company Name Required',
           site_size_min: data.siteSizeMin,
           site_size_max: data.siteSizeMax,
           brochure_url: data.brochureFiles?.[0]?.url,
+          logo_url: data.logoUrl,
           contact_name: data.primaryContact?.contactName || 'Contact Name',
           contact_title: data.primaryContact?.contactTitle || 'Contact Title',
           contact_email: data.primaryContact?.contactEmail || currentUser.email || 'contact@example.com',
           contact_phone: data.primaryContact?.contactPhone
         });
 
-        // Note: Contacts, FAQs, and locations are already saved during wizard progression
-        // No need to re-add them here during final submission
+        // Save FAQs if provided
+        if (data.faqs && data.faqs.length > 0) {
+          const faqsForDatabase = data.faqs.map(faq => ({
+            question: faq.question,
+            answer: faq.answer,
+            display_order: faq.displayOrder
+          }));
+          await addFAQsToDraftListing(data.existingListingId, faqsForDatabase);
+        }
+
+        // Save contacts if provided
+        if (data.primaryContact || (data.additionalContacts && data.additionalContacts.length > 0)) {
+          const allContacts = [];
+          
+          // Add primary contact
+          if (data.primaryContact) {
+            allContacts.push({
+              contact_name: data.primaryContact.contactName || '',
+              contact_title: data.primaryContact.contactTitle || '',
+              contact_email: data.primaryContact.contactEmail || currentUser.email || '',
+              contact_phone: data.primaryContact.contactPhone,
+              is_primary_contact: true,
+              headshot_url: data.primaryContact.headshotUrl
+            });
+          }
+          
+          // Add additional contacts
+          if (data.additionalContacts) {
+            data.additionalContacts.forEach(contact => {
+              allContacts.push({
+                contact_name: contact.contactName || '',
+                contact_title: contact.contactTitle || '',
+                contact_email: contact.contactEmail || '',
+                contact_phone: contact.contactPhone,
+                is_primary_contact: false,
+                headshot_url: contact.headshotUrl
+              });
+            });
+          }
+          
+          if (allContacts.length > 0) {
+            await addContactsToDraftListing(data.existingListingId, allContacts);
+          }
+        }
+
+        // Save locations if provided (but not if nationwide is selected)
+        if (!data.locationSearchNationwide && data.locations && data.locations.length > 0) {
+          await addLocationsToDraftListing(data.existingListingId, data.locations);
+        }
 
         return {
           success: true,
@@ -139,6 +202,7 @@ export default async function CreateListingPage() {
           message: 'Listing submitted successfully'
         };
       } else {
+        console.log('Taking CREATE ENHANCED LISTING path (no existing draft ID)');
         // Create a new listing (fallback for cases where draft creation failed)
         const listing = await createEnhancedListing(enhancedListingData, currentUser.id);
 
