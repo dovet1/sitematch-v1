@@ -246,8 +246,8 @@ export class AdminService {
     const logoFiles = fileUploads?.filter((file: any) => file.file_type === 'logo') || []
     const headshotFiles = fileUploads?.filter((file: any) => file.file_type === 'headshot') || []
     const brochureFiles = fileUploads?.filter((file: any) => file.file_type === 'brochure') || []
-    const sitePlanFiles = fileUploads?.filter((file: any) => file.file_type === 'site_plan') || []
-    const fitOutFiles = fileUploads?.filter((file: any) => file.file_type === 'fit_out') || []
+    const sitePlanFiles = fileUploads?.filter((file: any) => ['sitePlan', 'site_plan'].includes(file.file_type)) || []
+    const fitOutFiles = fileUploads?.filter((file: any) => ['fitOut', 'fit_out'].includes(file.file_type)) || []
     const mediaFiles = fileUploads?.filter((file: any) => ['image', 'video', 'pdf'].includes(file.file_type)) || []
 
     // Process contacts - separate primary from additional and link headshots
@@ -289,25 +289,26 @@ export class AdminService {
       // Contact information
       primary_contact: primaryContact,
       additional_contacts: additionalContacts,
-      // File information organized by type
-      logo_url: logoFiles?.[0]?.file_url || listing.logo_url || null,
-      company_logos: logoFiles.map((file: any) => ({
+      // File information organized by type - generate proper URLs
+      logo_url: logoFiles?.[0] ? `https://***REMOVED***.supabase.co/storage/v1/object/public/${logoFiles[0].bucket_name}/${logoFiles[0].file_path}` : (listing.logo_url || null),
+      brochure_url: brochureFiles?.[0] ? `https://***REMOVED***.supabase.co/storage/v1/object/public/${brochureFiles[0].bucket_name}/${brochureFiles[0].file_path}` : (listing.brochure_url || null),
+      company_logos: logoFiles.slice(1).map((file: any) => ({
         id: file.id,
-        file_url: file.file_url,
+        file_url: `https://***REMOVED***.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
         file_name: file.file_name,
         file_size: file.file_size
       })),
       listing_documents: [...sitePlanFiles, ...fitOutFiles, ...brochureFiles].map((file: any) => ({
         id: file.id,
         document_type: file.file_type,
-        file_url: file.file_url,
+        file_url: `https://***REMOVED***.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
         file_name: file.file_name,
         file_size: file.file_size
       })),
       media_files: mediaFiles.map((file: any) => ({
         id: file.id,
         file_type: file.file_type,
-        file_url: file.file_url,
+        file_url: `https://***REMOVED***.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
         file_name: file.file_name,
         file_size: file.file_size
       })),
