@@ -50,13 +50,8 @@ export function Step6SupportingDocuments({
   // STATE MANAGEMENT
   // =====================================================
 
-  const [sitePlanFiles, setSitePlanFiles] = useState<UploadedFile[]>(data.sitePlanFiles || []);
-  const [fitOutFiles, setFitOutFiles] = useState<GalleryItem[]>(
-    (data.fitOutFiles || []).map(file => ({
-      ...file,
-      isVideo: file.isVideo || false
-    }))
-  );
+  const [sitePlanFiles, setSitePlanFiles] = useState<UploadedFile[]>([]);
+  const [fitOutFiles, setFitOutFiles] = useState<GalleryItem[]>([]);
 
   const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -68,39 +63,79 @@ export function Step6SupportingDocuments({
   const prevValuesRef = useRef<string>('');
   const prevValidRef = useRef<boolean>(false);
 
-  // Update parent when files change
+  // Track if we've ever loaded data to prevent overwriting user changes
+  const hasInitializedRef = useRef(false);
+  
+  // Update local state when data prop changes (for edit mode) - only on first load
   useEffect(() => {
-    const formData = {
-      sitePlanFiles: sitePlanFiles.map(file => ({
-        ...file,
-        type: 'sitePlan' as const
-      })),
-      fitOutFiles: fitOutFiles.map(file => ({
-        id: file.id,
-        name: file.name,
-        url: file.url,
-        path: file.path,
-        type: 'fitOut' as const,
-        size: file.size,
-        mimeType: file.mimeType,
-        uploadedAt: file.uploadedAt,
-        displayOrder: file.displayOrder,
-        caption: file.caption,
-        isVideo: file.isVideo,
-        thumbnail: file.thumbnail
-      }))
-    };
-    const currentJson = JSON.stringify(formData, (key, value) => {
-      if (value instanceof File) {
-        return { name: value.name, size: value.size, type: value.type };
-      }
-      return value;
+    // Only initialize once with loaded data 
+    const shouldUpdateSitePlans = data.sitePlanFiles && data.sitePlanFiles.length > 0 && !hasInitializedRef.current;
+    const shouldUpdateFitOuts = data.fitOutFiles && data.fitOutFiles.length > 0 && !hasInitializedRef.current;
+    
+    console.log('Step6 initialization check:', {
+      shouldUpdateSitePlans,
+      shouldUpdateFitOuts,
+      hasInitialized: hasInitializedRef.current,
+      sitePlanCount: data.sitePlanFiles?.length || 0,
+      fitOutCount: data.fitOutFiles?.length || 0
     });
     
-    if (prevValuesRef.current !== currentJson) {
-      prevValuesRef.current = currentJson;
-      onUpdate(formData);
+    if (shouldUpdateSitePlans) {
+      console.log('Initializing Step6 site plans:', data.sitePlanFiles);
+      setSitePlanFiles(data.sitePlanFiles || []);
     }
+    
+    if (shouldUpdateFitOuts) {
+      console.log('Initializing Step6 fit-outs:', data.fitOutFiles);
+      const transformedFitOutFiles = (data.fitOutFiles || []).map(file => ({
+        ...file,
+        isVideo: file.isVideo || false
+      }));
+      setFitOutFiles(transformedFitOutFiles);
+    }
+    
+    if ((shouldUpdateSitePlans || shouldUpdateFitOuts) && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+    }
+  }, [data.sitePlanFiles, data.fitOutFiles]);
+
+  // Update parent when files change (debounced to prevent loops)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const formData = {
+        sitePlanFiles: sitePlanFiles.map(file => ({
+          ...file,
+          type: 'sitePlan' as const
+        })),
+        fitOutFiles: fitOutFiles.map(file => ({
+          id: file.id,
+          name: file.name,
+          url: file.url,
+          path: file.path,
+          type: 'fitOut' as const,
+          size: file.size,
+          mimeType: file.mimeType,
+          uploadedAt: file.uploadedAt,
+          displayOrder: file.displayOrder,
+          caption: file.caption,
+          isVideo: file.isVideo,
+          thumbnail: file.thumbnail
+        }))
+      };
+      const currentJson = JSON.stringify(formData, (key, value) => {
+        if (value instanceof File) {
+          return { name: value.name, size: value.size, type: value.type };
+        }
+        return value;
+      });
+      
+      if (prevValuesRef.current !== currentJson) {
+        prevValuesRef.current = currentJson;
+        onUpdate(formData);
+      }
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, [sitePlanFiles, fitOutFiles, onUpdate]);
 
   // Validation

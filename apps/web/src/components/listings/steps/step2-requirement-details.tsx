@@ -17,6 +17,7 @@ import { MultiSelectDropdown } from '@/components/ui/multi-select-dropdown';
 
 import type { WizardStepProps, RequirementDetailsData } from '@/types/wizard';
 import { validateStep, formatSiteSize } from '@/lib/wizard-utils';
+import { getSectorOptions, getUseClassOptions } from '@/lib/reference-data';
 
 interface Step2FormData extends RequirementDetailsData {}
 
@@ -57,8 +58,19 @@ export function Step2RequirementDetails({
     data.siteSizeMax || 10000
   ]);
 
-  const [selectedSectors, setSelectedSectors] = useState<string[]>(data.sectors || []);
-  const [selectedUseClasses, setSelectedUseClasses] = useState<string[]>(data.useClassIds || []);
+  // Database options state
+  const [sectorOptions, setSectorOptions] = useState<SearchableOption[]>([]);
+  const [useClassOptions, setUseClassOptions] = useState<SearchableOption[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+
+  // Handle both single values (from database) and arrays (from form)
+  const [selectedSectors, setSelectedSectors] = useState<string[]>(() => {
+    return data.sectors || [];
+  });
+  
+  const [selectedUseClasses, setSelectedUseClasses] = useState<string[]>(() => {
+    return data.useClassIds || [];
+  });
 
   const {
     handleSubmit,
@@ -91,6 +103,58 @@ export function Step2RequirementDetails({
   // =====================================================
   // EFFECTS
   // =====================================================
+
+  // Load database options on mount
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const [sectors, useClasses] = await Promise.all([
+          getSectorOptions(),
+          getUseClassOptions()
+        ]);
+        
+        setSectorOptions(sectors);
+        setUseClassOptions(useClasses);
+      } catch (error) {
+        console.error('Failed to load reference data options:', error);
+        // Use hardcoded fallbacks
+        setSectorOptions(SECTOR_OPTIONS);
+        setUseClassOptions(USE_CLASS_OPTIONS);
+      } finally {
+        setIsLoadingOptions(false);
+      }
+    };
+
+    loadOptions();
+  }, []);
+
+  // Update selected values when data changes (for edit mode) - only once
+  const hasInitializedStep2Ref = useRef(false);
+  
+  useEffect(() => {
+    const hasValidData = data.sectors && data.sectors.length > 0;
+    
+    if (hasValidData && !hasInitializedStep2Ref.current) {
+      hasInitializedStep2Ref.current = true;
+      
+      console.log('Initializing Step2 with loaded data:', {
+        sectors: data.sectors,
+        useClassIds: data.useClassIds,
+        siteSizeMin: data.siteSizeMin,
+        siteSizeMax: data.siteSizeMax
+      });
+      
+      if (data.sectors && data.sectors.length > 0) {
+        setSelectedSectors(data.sectors);
+      }
+      if (data.useClassIds && data.useClassIds.length > 0) {
+        setSelectedUseClasses(data.useClassIds);
+      }
+      if (data.siteSizeMin !== undefined || data.siteSizeMax !== undefined) {
+        setSiteSize([data.siteSizeMin || 0, data.siteSizeMax || 10000]);
+      }
+    }
+  }, [data.sectors, data.useClassIds, data.siteSizeMin, data.siteSizeMax]);
 
   // Debounced update to parent component when form data changes
   useEffect(() => {
@@ -170,25 +234,27 @@ export function Step2RequirementDetails({
           {/* Sector Multi-Select */}
           <MultiSelectDropdown
             label="Sectors (Optional)"
-            placeholder="Select relevant sectors..."
+            placeholder={isLoadingOptions ? "Loading sectors..." : "Select relevant sectors..."}
             searchPlaceholder="Search sectors..."
             emptyText="No sectors found"
-            options={SECTOR_OPTIONS}
+            options={sectorOptions.length > 0 ? sectorOptions : SECTOR_OPTIONS}
             value={selectedSectors}
             onChange={setSelectedSectors}
             maxDisplay={3}
+            disabled={isLoadingOptions}
           />
 
           {/* Use Class Multi-Select */}
           <MultiSelectDropdown
             label="Planning Use Class (Optional)"
-            placeholder="Select planning use classes..."
+            placeholder={isLoadingOptions ? "Loading use classes..." : "Select planning use classes..."}
             searchPlaceholder="Search use classes..."
             emptyText="No use classes found"
-            options={USE_CLASS_OPTIONS}
+            options={useClassOptions.length > 0 ? useClassOptions : USE_CLASS_OPTIONS}
             value={selectedUseClasses}
             onChange={setSelectedUseClasses}
             maxDisplay={2}
+            disabled={isLoadingOptions}
           />
 
           {/* Site Size Range Slider */}

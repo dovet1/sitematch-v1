@@ -35,6 +35,7 @@ export interface Listing {
   // File references
   brochure_url: string | null;
   status: ListingStatus;
+  rejection_reason: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -180,6 +181,7 @@ export interface ListingWithDetails extends Listing {
 export interface CreateListingRequest {
   title: string;
   description?: string;
+  company_name: string;
   sector_id: string;
   use_class_id: string;
   site_size_min?: number;
@@ -200,7 +202,6 @@ export interface CreateListingRequest {
 }
 
 export interface UpdateListingRequest extends Partial<CreateListingRequest> {
-  id: string;
 }
 
 export interface UpdateListingStatusRequest {

@@ -16,7 +16,11 @@ import type { CreateListingRequest } from '@/types/listings';
 // PAGE COMPONENT
 // =====================================================
 
-export default async function CreateListingPage() {
+export default async function CreateListingPage({
+  searchParams
+}: {
+  searchParams: { edit?: string }
+}) {
   // Check authentication and authorization
   const user = await getCurrentUser();
   
@@ -28,6 +32,9 @@ export default async function CreateListingPage() {
     redirect('/unauthorized');
   }
 
+  // Get edit listing ID from URL parameters
+  const editListingId = searchParams.edit;
+
   // Organization requirements removed - listings are now independent
 
   // =====================================================
@@ -37,15 +44,13 @@ export default async function CreateListingPage() {
   async function handleSubmit(data: WizardFormData): Promise<SubmissionResult> {
     'use server';
     
+    console.log('handleSubmit called with data:', { 
+      companyName: data.companyName, 
+      existingListingId: data.existingListingId,
+      editListingId 
+    });
+    
     try {
-      // Debug: Log the received data to see what's actually being submitted
-      console.log('=== LISTING SUBMISSION DEBUG ===');
-      console.log('Received data keys:', Object.keys(data));
-      console.log('Company name:', data.companyName);
-      console.log('Company name type:', typeof data.companyName);
-      console.log('Company name length:', data.companyName?.length);
-      console.log('Primary contact:', data.primaryContact);
-      console.log('Existing listing ID:', data.existingListingId);
       
       // Get current user for server action
       const currentUser = await getCurrentUser();
@@ -72,8 +77,6 @@ export default async function CreateListingPage() {
         sectorId = sectors[0]?.id;
         useClassId = useClasses[0]?.id;
         
-        console.log('Available sectors:', sectors.length);
-        console.log('Available use classes:', useClasses.length);
         
       } catch (error) {
         console.error('Failed to fetch reference data:', error);
@@ -120,15 +123,270 @@ export default async function CreateListingPage() {
         status: 'pending' as const
       };
 
-      // Check if we have an existing draft listing to update
-      console.log('=== PATH DECISION ===');
-      console.log('Has existing listing ID:', !!data.existingListingId);
-      console.log('Existing listing ID value:', data.existingListingId);
-      
+      // Check if we have an existing listing to update or draft to finalize
       if (data.existingListingId) {
-        console.log('Taking FINALIZE DRAFT path');
-        // Import additional draft listing functions
-        const { addContactsToDraftListing, addFAQsToDraftListing, addLocationsToDraftListing } = await import('@/lib/draft-listings');
+        console.log('Have existingListingId:', data.existingListingId);
+        console.log('editListingId from URL:', editListingId);
+        
+        // Distinguish between editing an existing listing vs finalizing a draft
+        // If editListingId exists, we're editing an existing listing (not a draft)
+        if (editListingId) {
+          console.log('Entering update path for listing:', data.existingListingId);
+          
+          // Import update function
+          const { updateListing } = await import('@/lib/listings');
+          const { createServerClient } = await import('@/lib/supabase');
+          const serverClient = createServerClient();
+          
+          // Update the existing listing (without logo_url - logos are stored in separate table)
+          const updatedListing = await updateListing(data.existingListingId, {
+            title: `Property Requirement - ${data.companyName || 'Company'}`,
+            description: `Property requirement from ${data.companyName || 'company'}`,
+            company_name: data.companyName || 'Company Name Required',
+            site_size_min: data.siteSizeMin,
+            site_size_max: data.siteSizeMax,
+            brochure_url: data.brochureFiles?.[0]?.url,
+            contact_name: data.primaryContact?.contactName || 'Contact Name',
+            contact_title: data.primaryContact?.contactTitle || 'Contact Title',
+            contact_email: data.primaryContact?.contactEmail || currentUser.email || 'contact@example.com',
+            contact_phone: data.primaryContact?.contactPhone,
+            // Use the sector/use class IDs from the form data if available
+            sector_id: data.sectors?.[0] || sectorId,
+            use_class_id: data.useClassIds?.[0] || useClassId
+          }, serverClient);
+
+          // Update related data (contacts, FAQs, locations, documents, files)
+          try {
+            console.log('Starting related data update for listing:', data.existingListingId);
+            // Use the same server client for consistency
+            const supabase = serverClient;
+
+            // 1. Delete existing additional contacts (keep primary contact in main table)
+          await supabase
+            .from('listing_contacts')
+            .delete()
+            .eq('listing_id', data.existingListingId);
+
+          // 2. Delete existing FAQs
+          await supabase
+            .from('faqs')
+            .delete()
+            .eq('listing_id', data.existingListingId);
+
+          // 3. Delete existing locations
+          console.log('Deleting existing locations...');
+          const { error: deleteLocationsError } = await supabase
+            .from('listing_locations')
+            .delete()
+            .eq('listing_id', data.existingListingId);
+          
+          if (deleteLocationsError) {
+            console.error('Error deleting locations:', deleteLocationsError);
+          } else {
+            console.log('Successfully deleted existing locations');
+          }
+
+          // 4. Delete existing file uploads for this listing
+          console.log('Deleting existing file uploads...');
+          const { error: deleteFilesError } = await supabase
+            .from('file_uploads')
+            .delete()
+            .eq('listing_id', data.existingListingId);
+          
+          if (deleteFilesError) {
+            console.error('Error deleting file uploads:', deleteFilesError);
+          } else {
+            console.log('Successfully deleted existing file uploads');
+          }
+
+          // 5. Add updated logo file (if any)
+          if (data.logoUrl) {
+            await supabase
+              .from('file_uploads')
+              .insert({
+                user_id: currentUser.id,
+                listing_id: data.existingListingId,
+                file_path: data.logoUrl,
+                file_name: 'company-logo',
+                file_size: 0, // Size not tracked for existing URLs
+                file_type: 'logo',
+                mime_type: 'image/jpeg', // Default - could be improved
+                bucket_name: 'logos',
+                is_primary: true
+              });
+          }
+
+          // 6. Add updated contacts (if any)
+          if (data.additionalContacts && data.additionalContacts.length > 0) {
+            console.log('Adding additional contacts:', data.additionalContacts.length);
+            const contactsForDatabase = data.additionalContacts.map(contact => ({
+              listing_id: data.existingListingId,
+              contact_name: contact.contactName || '',
+              contact_title: contact.contactTitle || '',
+              contact_email: contact.contactEmail || '',
+              contact_phone: contact.contactPhone,
+              is_primary_contact: false,
+              headshot_url: contact.headshotUrl
+            }));
+
+            const { error: contactsError } = await supabase
+              .from('listing_contacts')
+              .insert(contactsForDatabase);
+            
+            if (contactsError) {
+              console.error('Error inserting contacts:', contactsError);
+            } else {
+              console.log('Successfully inserted contacts');
+            }
+
+            // Add headshot files for contacts that have them
+            for (let i = 0; i < data.additionalContacts.length; i++) {
+              const contact = data.additionalContacts[i];
+              if (contact.headshotUrl) {
+                await supabase
+                  .from('file_uploads')
+                  .insert({
+                    user_id: currentUser.id,
+                    listing_id: data.existingListingId,
+                    file_path: contact.headshotUrl,
+                    file_name: `headshot-${i + 1}`,
+                    file_size: 0,
+                    file_type: 'headshot',
+                    mime_type: 'image/jpeg',
+                    bucket_name: 'headshots',
+                    display_order: i
+                  });
+              }
+            }
+          }
+
+          // 7. Add updated FAQs (if any)
+          if (data.faqs && data.faqs.length > 0) {
+            const faqsForDatabase = data.faqs.map(faq => ({
+              listing_id: data.existingListingId,
+              question: faq.question,
+              answer: faq.answer,
+              display_order: faq.displayOrder
+            }));
+
+            await supabase
+              .from('faqs')
+              .insert(faqsForDatabase);
+          }
+
+          // 8. Add updated locations (if not nationwide)
+          console.log('Processing locations:', { 
+            locationSearchNationwide: data.locationSearchNationwide, 
+            locationsCount: data.locations?.length,
+            locations: data.locations 
+          });
+          
+          if (!data.locationSearchNationwide && data.locations && data.locations.length > 0) {
+            console.log('Adding locations to database:', data.locations.length);
+            const locationsForDatabase = data.locations.map(location => ({
+              listing_id: data.existingListingId,
+              place_name: location.place_name || location.formatted_address || 'Unknown Location',
+              type: location.type || 'preferred',
+              formatted_address: location.formatted_address || location.place_name || 'Unknown Address',
+              region: location.region || null,
+              country: location.country || null,
+              coordinates: location.coordinates || null
+            }));
+
+            console.log('Locations for database:', locationsForDatabase);
+            const { error: locationsError } = await supabase
+              .from('listing_locations')
+              .insert(locationsForDatabase);
+            
+            if (locationsError) {
+              console.error('Error inserting locations:', locationsError);
+            } else {
+              console.log('Successfully inserted locations');
+            }
+          } else {
+            console.log('Skipping location insert - either nationwide or no locations provided');
+          }
+
+          // 9. Add updated brochure files (if any)
+          if (data.brochureFiles && data.brochureFiles.length > 0) {
+            for (let i = 0; i < data.brochureFiles.length; i++) {
+              const file = data.brochureFiles[i];
+              await supabase
+                .from('file_uploads')
+                .insert({
+                  user_id: currentUser.id,
+                  listing_id: data.existingListingId,
+                  file_path: file.url,
+                  file_name: file.name,
+                  file_size: file.size || 0,
+                  file_type: 'brochure',
+                  mime_type: file.mimeType || 'application/pdf',
+                  bucket_name: 'brochures',
+                  display_order: i,
+                  is_primary: i === 0 // First brochure is primary
+                });
+            }
+          }
+
+          // 10. Add updated site plan files (if any)
+          if (data.sitePlanFiles && data.sitePlanFiles.length > 0) {
+            for (let i = 0; i < data.sitePlanFiles.length; i++) {
+              const file = data.sitePlanFiles[i];
+              await supabase
+                .from('file_uploads')
+                .insert({
+                  user_id: currentUser.id,
+                  listing_id: data.existingListingId,
+                  file_path: file.url,
+                  file_name: file.name,
+                  file_size: file.size || 0,
+                  file_type: 'sitePlan',
+                  mime_type: file.mimeType || 'application/pdf',
+                  bucket_name: 'site-plans',
+                  display_order: i
+                });
+            }
+          }
+
+          // 11. Add updated fit-out files (if any)
+          if (data.fitOutFiles && data.fitOutFiles.length > 0) {
+            for (let i = 0; i < data.fitOutFiles.length; i++) {
+              const file = data.fitOutFiles[i];
+              await supabase
+                .from('file_uploads')
+                .insert({
+                  user_id: currentUser.id,
+                  listing_id: data.existingListingId,
+                  file_path: file.url,
+                  file_name: file.name,
+                  file_size: file.size || 0,
+                  file_type: 'fitOut',
+                  mime_type: file.mimeType || 'image/jpeg',
+                  bucket_name: 'fit-outs',
+                  display_order: file.displayOrder || i
+                });
+            }
+          }
+
+          } catch (relatedDataError) {
+            console.error('Failed to update related data:', relatedDataError);
+            // Main listing was updated successfully, but related data failed
+            return {
+              success: true,
+              listingId: updatedListing.id,
+              message: 'Listing updated successfully (some related data may not have been saved)'
+            };
+          }
+
+          console.log('Returning success for updated listing:', updatedListing.id);
+          return {
+            success: true,
+            listingId: updatedListing.id,
+            message: 'Listing updated successfully'
+          };
+        } else {
+          // Import additional draft listing functions
+          const { addContactsToDraftListing, addFAQsToDraftListing, addLocationsToDraftListing } = await import('@/lib/draft-listings');
 
         // Finalize the existing draft listing with all data
         await finalizeDraftListing(data.existingListingId, {
@@ -196,13 +454,13 @@ export default async function CreateListingPage() {
           await addLocationsToDraftListing(data.existingListingId, data.locations);
         }
 
-        return {
-          success: true,
-          listingId: data.existingListingId,
-          message: 'Listing submitted successfully'
-        };
+          return {
+            success: true,
+            listingId: data.existingListingId,
+            message: 'Listing submitted successfully'
+          };
+        }
       } else {
-        console.log('Taking CREATE ENHANCED LISTING path (no existing draft ID)');
         // Create a new listing (fallback for cases where draft creation failed)
         const listing = await createEnhancedListing(enhancedListingData, currentUser.id);
 
@@ -214,10 +472,19 @@ export default async function CreateListingPage() {
       }
     } catch (error) {
       console.error('Failed to create listing:', error);
-      return { 
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        cause: error instanceof Error ? error.cause : undefined
+      });
+      
+      const errorResult = { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to create listing' 
       };
+      console.log('Returning error result:', errorResult);
+      return errorResult;
     }
   }
 
@@ -296,8 +563,6 @@ export default async function CreateListingPage() {
       
       // This could save as draft to the database in the future
       // For now, we'll just acknowledge the save was successful
-      console.log('Saving draft for user:', currentUser.id, 'data keys:', Object.keys(sanitizedData));
-      
       // The actual saving happens in localStorage via the wizard component
     } catch (error) {
       console.error('Save failed:', error);
@@ -324,7 +589,9 @@ export default async function CreateListingPage() {
                 Listings
               </a>
               <span className="text-muted-foreground">/</span>
-              <span className="text-foreground font-medium">Create New Listing</span>
+              <span className="text-foreground font-medium">
+                {editListingId ? 'Update Listing' : 'Create New Listing'}
+              </span>
             </nav>
           </div>
         </div>
@@ -347,11 +614,13 @@ export default async function CreateListingPage() {
                 contactTitle: '',
                 contactEmail: user.email,
                 isPrimaryContact: true
-              }
+              },
+              existingListingId: editListingId
             }}
             onSubmit={handleSubmit}
             onSave={handleSave}
             userEmail={user.email}
+            editMode={!!editListingId}
           />
         </ErrorBoundary>
       </div>
