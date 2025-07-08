@@ -103,7 +103,56 @@ export interface ListingGallery {
 // ENUMS
 // =====================================================
 
-export type ListingStatus = 'draft' | 'pending' | 'approved' | 'rejected';
+export type ListingStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'archived';
+
+// =====================================================
+// MODERATION TYPES - Story 5.0
+// =====================================================
+
+export type RejectionReason = 
+  | 'incomplete_company_info'
+  | 'missing_contact_details'
+  | 'unclear_requirements'
+  | 'invalid_brochure'
+  | 'duplicate_listing'
+  | 'requirements_too_vague'
+  | 'suspected_spam'
+  | 'other';
+
+export const REJECTION_REASONS: Record<RejectionReason, string> = {
+  incomplete_company_info: 'Incomplete company information',
+  missing_contact_details: 'Missing required contact details',
+  unclear_requirements: 'Unclear property requirements',
+  invalid_brochure: 'Invalid or poor quality brochure',
+  duplicate_listing: 'Duplicate listing detected',
+  requirements_too_vague: 'Requirements too vague or broad',
+  suspected_spam: 'Suspected spam or invalid submission',
+  other: 'Other (specify below)'
+};
+
+export type ModerationAction = 'approved' | 'rejected' | 'archived' | 'unarchived';
+
+export interface ModerationLog {
+  id: string;
+  listing_id: string;
+  admin_id: string;
+  action: ModerationAction;
+  reason?: string;
+  created_at: string;
+}
+
+export interface ModerationRequest {
+  action: ModerationAction;
+  reason?: string;
+  rejection_reason?: RejectionReason;
+}
+
+export interface BulkModerationRequest {
+  listing_ids: string[];
+  action: ModerationAction;
+  reason?: string;
+  rejection_reason?: RejectionReason;
+}
 
 export type LocationType = 'preferred' | 'acceptable';
 

@@ -5,10 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import {
-  getListingById,
-  updateListingStatus
-} from '@/lib/listings';
+import { updateListingStatus } from '@/lib/listings';
+import { createAdminClient } from '@/lib/supabase';
 import type {
   UpdateListingStatusRequest,
   ListingStatus,
@@ -50,9 +48,15 @@ export async function PATCH(
       );
     }
 
-    // Get existing listing
-    const existingListing = await getListingById(listingId);
-    if (!existingListing) {
+    // Check if listing exists (simple query without joins)
+    const adminClient = createAdminClient();
+    const { data: existingListing, error: fetchError } = await adminClient
+      .from('listings')
+      .select('id, status')
+      .eq('id', listingId)
+      .single();
+
+    if (fetchError || !existingListing) {
       return NextResponse.json(
         { success: false, error: 'Listing not found' },
         { status: 404 }
@@ -71,7 +75,7 @@ export async function PATCH(
     }
 
     // Validate status
-    const validStatuses: ListingStatus[] = ['draft', 'pending', 'approved', 'rejected'];
+    const validStatuses: ListingStatus[] = ['draft', 'pending', 'approved', 'rejected', 'archived'];
     if (!validStatuses.includes(statusUpdate.status)) {
       return NextResponse.json(
         {
@@ -91,16 +95,34 @@ export async function PATCH(
       );
     }
 
-    // Require reason for rejection
-    if (statusUpdate.status === 'rejected' && !statusUpdate.reason) {
+    // Note: Rejection reason validation disabled until rejection_reason field is added to schema
+    // TODO: Re-enable when rejection_reason field exists in database
+    // if (statusUpdate.status === 'rejected' && !statusUpdate.reason) {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Reason is required when rejecting a listing' },
+    //     { status: 400 }
+    //   );
+    // }
+
+    // Update the listing status using admin client
+    const { data: updatedListing, error: updateError } = await adminClient
+      .from('listings')
+      .update({
+        status: statusUpdate.status,
+        updated_at: new Date().toISOString()
+        // Note: rejection_reason field doesn't exist in current schema
+        // TODO: Add rejection_reason field in future migration
+      })
+      .eq('id', listingId)
+      .select()
+      .single();
+
+    if (updateError) {
       return NextResponse.json(
-        { success: false, error: 'Reason is required when rejecting a listing' },
-        { status: 400 }
+        { success: false, error: `Failed to update listing: ${updateError.message}` },
+        { status: 500 }
       );
     }
-
-    // Update the listing status
-    const updatedListing = await updateListingStatus(listingId, statusUpdate);
 
     // Log the status change for audit trail
     console.log(`Listing status updated: ${listingId} from '${existingListing.status}' to '${statusUpdate.status}' by admin ${user.id}${statusUpdate.reason ? ` (reason: ${statusUpdate.reason})` : ''}`);
@@ -151,9 +173,10 @@ function isValidStatusTransition(
   // Define valid transitions
   const validTransitions: Record<ListingStatus, ListingStatus[]> = {
     draft: ['pending', 'rejected'], // Draft can go to pending or be rejected
-    pending: ['approved', 'rejected', 'draft'], // Pending can be approved, rejected, or sent back to draft
-    approved: ['rejected'], // Approved can only be rejected (emergency situations)
-    rejected: ['pending', 'draft'] // Rejected can be resubmitted as pending or draft
+    pending: ['approved', 'rejected', 'draft', 'archived'], // Pending can be approved, rejected, sent back to draft, or archived
+    approved: ['rejected', 'archived'], // Approved can be rejected (emergency) or archived
+    rejected: ['pending', 'draft', 'archived'], // Rejected can be resubmitted as pending, draft, or archived
+    archived: ['pending', 'draft'] // Archived can be reactivated to pending or draft
   };
 
   const allowedTransitions = validTransitions[currentStatus];

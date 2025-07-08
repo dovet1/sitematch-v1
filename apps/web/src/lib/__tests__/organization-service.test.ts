@@ -1,5 +1,4 @@
 import { OrganizationService } from '../organization-service'
-import { organizationAuditService } from '../organization-audit'
 
 // Mock Supabase clients with complete chain
 const createMockSupabaseChain = () => {
@@ -21,12 +20,7 @@ jest.mock('../supabase', () => ({
   createAdminClient: jest.fn(() => createMockSupabaseChain())
 }))
 
-// Mock audit service
-jest.mock('../organization-audit', () => ({
-  organizationAuditService: {
-    logOrganizationCreation: jest.fn().mockResolvedValue({ success: true })
-  }
-}))
+// Audit service removed
 
 describe('OrganizationService', () => {
   let service: OrganizationService
@@ -173,16 +167,7 @@ describe('OrganizationService', () => {
         organizationName: 'Test Company'
       })
 
-      expect(organizationAuditService.logOrganizationCreation).toHaveBeenCalledWith(
-        'org-456',
-        'user-123',
-        expect.objectContaining({
-          originalName: 'Test Company',
-          finalName: 'Test Company',
-          duplicateResolution: false,
-          listingTriggered: true
-        })
-      )
+      // Audit logging removed
     })
 
     it('should handle organization creation database error', async () => {
@@ -280,15 +265,7 @@ describe('OrganizationService', () => {
         organizationName: 'Test Company (2)'
       })
 
-      expect(organizationAuditService.logOrganizationCreation).toHaveBeenCalledWith(
-        'org-456',
-        'user-123',
-        expect.objectContaining({
-          originalName: 'Test Company',
-          finalName: 'Test Company (2)',
-          duplicateResolution: true
-        })
-      )
+      // Audit logging removed
     })
   })
 

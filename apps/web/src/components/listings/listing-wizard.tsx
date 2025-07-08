@@ -117,6 +117,7 @@ export function ListingWizard({
   );
   const [isCreatingDraft, setIsCreatingDraft] = useState(false);
   const hasCreatedDraftRef = useRef(false);
+  const draftCreationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // =====================================================
   // INITIALIZATION
@@ -152,15 +153,21 @@ export function ListingWizard({
 
   useEffect(() => {
     // Create draft listing when wizard starts (only if we don't have one already)
-    if (!state.listingId && !isCreatingDraft && !hasCreatedDraftRef.current) {
+    if (!state.listingId && !isCreatingDraft && !hasCreatedDraftRef.current && userEmail) {
       hasCreatedDraftRef.current = true;
       
-      const createDraftListing = async () => {
-        if (isCreatingDraft) return; // Prevent multiple concurrent calls
+      // Clear any existing timeout
+      if (draftCreationTimeoutRef.current) {
+        clearTimeout(draftCreationTimeoutRef.current);
+      }
+      
+      // Debounce draft creation to prevent rapid-fire calls
+      draftCreationTimeoutRef.current = setTimeout(async () => {
+        if (isCreatingDraft || state.listingId) return; // Double-check conditions
         
         try {
           setIsCreatingDraft(true);
-          console.log('Creating draft listing...');
+          console.log('Creating draft listing for user:', userEmail);
           const response = await fetch('/api/listings/draft', {
             method: 'POST',
             headers: {
@@ -179,24 +186,33 @@ export function ListingWizard({
 
           const result = await response.json();
           if (result.success && result.listingId) {
-            console.log('Draft listing created successfully:', result.listingId);
+            console.log('Draft listing created/retrieved successfully:', result.listingId);
             dispatch({ type: 'SET_LISTING_ID', listingId: result.listingId });
           } else {
-            // Don't reset hasCreatedDraftRef to prevent infinite loops
+            // Reset flag on failure to allow retry
+            hasCreatedDraftRef.current = false;
             throw new Error(result.error || 'Failed to create draft listing');
           }
         } catch (error) {
           console.error('Failed to create draft listing:', error);
-          // Don't reset hasCreatedDraftRef to prevent infinite loops
+          // Reset flag on error to allow retry after a delay
+          setTimeout(() => {
+            hasCreatedDraftRef.current = false;
+          }, 5000);
           // Don't block the wizard if draft creation fails
         } finally {
           setIsCreatingDraft(false);
         }
-      };
-      
-      createDraftListing();
+      }, 100); // 100ms debounce
     }
-  }, [state.listingId, isCreatingDraft, userEmail]);
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (draftCreationTimeoutRef.current) {
+        clearTimeout(draftCreationTimeoutRef.current);
+      }
+    };
+  }, [state.listingId, userEmail]); // Removed isCreatingDraft from dependencies to prevent re-triggers
 
   // =====================================================
   // VALIDATION EFFECTS

@@ -59,7 +59,7 @@ export const createServerClient = () => {
 // Admin client (server-side only)
 export const createAdminClient = () => {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-  return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
+  return createSupabaseClient<Database>(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
@@ -140,29 +140,105 @@ export interface Database {
           persona?: 'agent' | 'investor' | 'landlord' | 'vendor'
         }
       }
-      organization_audit: {
+      listings: {
         Row: {
           id: string
-          org_id: string
-          action: 'created' | 'updated' | 'merged'
-          metadata: Record<string, any>
+          title: string
+          company_name: string
+          description: string | null
+          sector_id: string
+          use_class_id: string
+          site_size_min: number | null
+          site_size_max: number | null
+          contact_name: string
+          contact_title: string
+          contact_email: string
+          contact_phone: string | null
+          brochure_url: string | null
+          status: 'draft' | 'pending' | 'approved' | 'rejected' | 'archived'
           created_by: string
+          created_at: string
+          updated_at: string
+          org_id: string | null
+        }
+        Insert: {
+          id?: string
+          title: string
+          company_name: string
+          description?: string | null
+          sector_id: string
+          use_class_id: string
+          site_size_min?: number | null
+          site_size_max?: number | null
+          contact_name: string
+          contact_title: string
+          contact_email: string
+          contact_phone?: string | null
+          brochure_url?: string | null
+          status?: 'draft' | 'pending' | 'approved' | 'rejected' | 'archived'
+          created_by: string
+          created_at?: string
+          updated_at?: string
+          org_id?: string | null
+        }
+        Update: {
+          id?: string
+          title?: string
+          company_name?: string
+          description?: string | null
+          sector_id?: string
+          use_class_id?: string
+          site_size_min?: number | null
+          site_size_max?: number | null
+          contact_name?: string
+          contact_title?: string
+          contact_email?: string
+          contact_phone?: string | null
+          brochure_url?: string | null
+          status?: 'draft' | 'pending' | 'approved' | 'rejected' | 'archived'
+          updated_at?: string
+          org_id?: string | null
+        }
+      }
+      sectors: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
           created_at: string
         }
         Insert: {
           id?: string
-          org_id: string
-          action: 'created' | 'updated' | 'merged'
-          metadata?: Record<string, any>
-          created_by: string
+          name: string
+          description?: string | null
           created_at?: string
         }
         Update: {
           id?: string
-          org_id?: string
-          action?: 'created' | 'updated' | 'merged'
-          metadata?: Record<string, any>
-          created_by?: string
+          name?: string
+          description?: string | null
+        }
+      }
+      use_classes: {
+        Row: {
+          id: string
+          code: string
+          name: string
+          description: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          name: string
+          description?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          name?: string
+          description?: string | null
         }
       }
     }

@@ -80,6 +80,7 @@ export async function createEnhancedListing(
       created_by: userId,
       title: data.company_name || 'Property Requirement',
       description: `Property requirement from ${data.company_name}`,
+      company_name: data.company_name || 'Company Name Required',
       status: data.status || 'pending'
     };
     

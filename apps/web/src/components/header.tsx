@@ -24,7 +24,7 @@ export function Header() {
           <Link href="/search" className="violet-bloom-nav-item">
             Search
           </Link>
-          <Link href="/list" className="violet-bloom-nav-item">
+          <Link href="/occupier/create-listing" className="violet-bloom-nav-item">
             List Property
           </Link>
           {isAdmin && (

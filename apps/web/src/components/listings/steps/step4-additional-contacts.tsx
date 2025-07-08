@@ -304,10 +304,33 @@ export function Step4AdditionalContacts({
               </Label>
               <ImageUpload
                 value={watchedValues.additionalContacts?.[index]?.headshotFile || watchedValues.additionalContacts?.[index]?.headshotPreview}
-                onChange={(file) => {
+                onChange={async (file) => {
                   setValue(`additionalContacts.${index}.headshotFile`, file || undefined);
                   if (!file) {
                     setValue(`additionalContacts.${index}.headshotPreview`, '');
+                    setValue(`additionalContacts.${index}.headshotUrl`, '');
+                  } else {
+                    // Upload the file to get a URL
+                    try {
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      formData.append('type', 'headshot');
+                      formData.append('is_primary', 'false'); // Mark as additional contact headshot
+                      
+                      const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData,
+                      });
+                      
+                      if (response.ok) {
+                        const result = await response.json();
+                        setValue(`additionalContacts.${index}.headshotUrl`, result.url);
+                      } else {
+                        console.error('Failed to upload headshot:', await response.text());
+                      }
+                    } catch (error) {
+                      console.error('Error uploading headshot:', error);
+                    }
                   }
                 }}
                 onPreviewChange={(preview: string | null) => {

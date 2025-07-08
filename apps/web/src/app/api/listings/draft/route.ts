@@ -11,6 +11,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Check for existing recent draft listings to prevent duplicates
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+    const { data: recentDrafts } = await supabase
+      .from('listings')
+      .select('id, created_at')
+      .eq('created_by', user.id)
+      .eq('status', 'draft')
+      .gte('created_at', fiveMinutesAgo)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (recentDrafts && recentDrafts.length > 0) {
+      console.log('Returning existing recent draft listing:', recentDrafts[0].id)
+      return NextResponse.json({
+        success: true,
+        listingId: recentDrafts[0].id,
+        message: 'Using existing recent draft'
+      })
+    }
+
     // Get request data
     const { userEmail } = await request.json()
 
@@ -59,6 +79,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Draft listing created successfully:', listing.id)
+    
+    // Clean up old draft listings (older than 24 hours) for this user to prevent accumulation
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    await supabase
+      .from('listings')
+      .delete()
+      .eq('created_by', user.id)
+      .eq('status', 'draft')
+      .lt('created_at', twentyFourHoursAgo)
     
     return NextResponse.json({
       success: true,
