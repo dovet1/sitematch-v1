@@ -62,6 +62,33 @@ export async function getUseClassOptions(): Promise<SearchableOption[]> {
 }
 
 /**
+ * Get sector options for searchable dropdown
+ * Returns cached data or fetches from database
+ */
+export async function getSectorOptions(): Promise<SearchableOption[]> {
+  if (sectorsCache) {
+    return sectorsCache;
+  }
+
+  try {
+    const sectors = await getSectors();
+    
+    sectorsCache = sectors.map(sector => ({
+      value: sector.id,
+      label: sector.name,
+      description: sector.description || undefined
+    }));
+
+    return sectorsCache;
+  } catch (error) {
+    console.error('Failed to fetch sectors:', error);
+    
+    // Return fallback options based on PRD specifications
+    return [...SECTOR_OPTIONS];
+  }
+}
+
+/**
  * Get sector options with database validation
  * Ensures all PRD sectors exist in database
  */
@@ -132,6 +159,7 @@ export function clearReferenceDataCache(): void {
 export async function preloadReferenceData(): Promise<void> {
   try {
     await Promise.all([
+      getSectorOptions(),
       getUseClassOptions(),
       validateSectorOptions()
     ]);

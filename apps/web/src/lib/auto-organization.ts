@@ -120,6 +120,7 @@ async function createActualListing(
     const createListingRequest = {
       title,
       description,
+      company_name: listingData.companyName,
       sector_id: sectorId,
       use_class_id: useClassId,
       site_size_min: listingData.siteSizeMin,

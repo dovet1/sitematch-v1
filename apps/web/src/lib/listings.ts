@@ -215,7 +215,8 @@ export async function getListings(params: ListingsQueryParams = {}): Promise<Lis
       company_logos(*),
       listing_documents(*),
       listing_galleries(*),
-      faqs(*)
+      faqs(*),
+      file_uploads(*)
     `);
 
   // Apply filters
@@ -283,7 +284,8 @@ export async function getListingById(id: string): Promise<ListingWithDetails | n
       company_logos(*),
       listing_documents(*),
       listing_galleries(*),
-      faqs(*)
+      faqs(*),
+      file_uploads(*)
     `)
     .eq('id', id)
     .single();
@@ -300,8 +302,14 @@ export async function getListingById(id: string): Promise<ListingWithDetails | n
 
 export async function updateListing(
   id: string,
-  updates: UpdateListingRequest
+  updates: UpdateListingRequest,
+  client?: any
 ): Promise<Listing> {
+  console.log('updateListing called with:', { id, updates });
+  
+  // Use provided client or default to browser client
+  const activeClient = client || supabase;
+  
   // Validate updates
   if (updates.title || updates.sector_id || updates.use_class_id) {
     const validation = validateListingData(updates as CreateListingRequest);
@@ -310,7 +318,20 @@ export async function updateListing(
     }
   }
 
-  const { data, error } = await supabase
+  // First, let's check if the listing exists and we have access
+  const { data: existingListing, error: fetchError } = await activeClient
+    .from('listings')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  console.log('Existing listing check:', { existingListing, fetchError });
+
+  if (fetchError || !existingListing) {
+    throw new Error(`Listing not found or access denied: ${fetchError?.message || 'Unknown error'}`);
+  }
+
+  const { data, error } = await activeClient
     .from('listings')
     .update({
       ...updates,
@@ -319,6 +340,8 @@ export async function updateListing(
     .eq('id', id)
     .select()
     .single();
+
+  console.log('updateListing result:', { data, error });
 
   if (error) {
     throw new Error(`Failed to update listing: ${error.message}`);

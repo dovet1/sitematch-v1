@@ -52,25 +52,39 @@ export async function subscribeToNewsletter(
 
 export async function sendEmail(request: EmailRequest): Promise<EmailResult> {
   try {
+    console.log(`📧 RESEND: Attempting to send email to ${request.to} with subject: ${request.subject}`);
+    
     if (!process.env.RESEND_API_KEY) {
-      console.warn('RESEND_API_KEY not configured - skipping email sending');
+      console.warn('📧 RESEND: RESEND_API_KEY not configured - skipping email sending');
       return { success: true }; // Don't fail the operation
     }
 
+    console.log(`📧 RESEND: API key found, sending email...`);
     const result = await resend.emails.send({
-      from: 'SiteMatch <notifications@sitematch.com>',
+      from: 'SiteMatch <onboarding@resend.dev>',
       to: request.to,
       subject: request.subject,
       html: request.html,
       text: request.text,
     });
 
+    console.log(`📧 RESEND: Email result:`, result);
+    
+    // Check if Resend returned an error
+    if (result.error) {
+      console.error(`📧 RESEND: API returned error:`, result.error);
+      return {
+        success: false,
+        error: result.error.message || 'Resend API error'
+      };
+    }
+    
     return { 
       success: true, 
       id: result.data?.id 
     };
   } catch (error) {
-    console.error('Email sending failed:', error);
+    console.error('📧 RESEND: Email sending failed:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

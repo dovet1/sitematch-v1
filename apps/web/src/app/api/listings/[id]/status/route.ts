@@ -95,24 +95,28 @@ export async function PATCH(
       );
     }
 
-    // Note: Rejection reason validation disabled until rejection_reason field is added to schema
-    // TODO: Re-enable when rejection_reason field exists in database
-    // if (statusUpdate.status === 'rejected' && !statusUpdate.reason) {
-    //   return NextResponse.json(
-    //     { success: false, error: 'Reason is required when rejecting a listing' },
-    //     { status: 400 }
-    //   );
-    // }
+    // Validate rejection reason is provided when rejecting
+    if (statusUpdate.status === 'rejected' && !statusUpdate.reason) {
+      return NextResponse.json(
+        { success: false, error: 'Reason is required when rejecting a listing' },
+        { status: 400 }
+      );
+    }
 
     // Update the listing status using admin client
+    const updateData: any = {
+      status: statusUpdate.status,
+      updated_at: new Date().toISOString()
+    };
+
+    // Add rejection reason if provided and status is rejected
+    if (statusUpdate.status === 'rejected' && statusUpdate.reason) {
+      updateData.rejection_reason = statusUpdate.reason;
+    }
+
     const { data: updatedListing, error: updateError } = await adminClient
       .from('listings')
-      .update({
-        status: statusUpdate.status,
-        updated_at: new Date().toISOString()
-        // Note: rejection_reason field doesn't exist in current schema
-        // TODO: Add rejection_reason field in future migration
-      })
+      .update(updateData)
       .eq('id', listingId)
       .select()
       .single();
@@ -127,8 +131,13 @@ export async function PATCH(
     // Log the status change for audit trail
     console.log(`Listing status updated: ${listingId} from '${existingListing.status}' to '${statusUpdate.status}' by admin ${user.id}${statusUpdate.reason ? ` (reason: ${statusUpdate.reason})` : ''}`);
 
-    // TODO: Send notification to listing owner about status change
-    // This would be implemented in a future story for notifications
+    // Send email notifications based on status change
+    try {
+      await sendStatusChangeNotification(updatedListing, statusUpdate, existingListing.status);
+    } catch (emailError) {
+      // Log email error but don't fail the status update
+      console.error('Email notification failed:', emailError);
+    }
 
     return NextResponse.json({
       success: true,
@@ -216,4 +225,99 @@ function getStatusChangeMessage(oldStatus: ListingStatus, newStatus: ListingStat
 function isValidUUID(uuid: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
+}
+
+/**
+ * Send email notification based on status change
+ */
+async function sendStatusChangeNotification(
+  listing: any,
+  statusUpdate: UpdateListingStatusRequest,
+  previousStatus: ListingStatus
+) {
+  console.log(`📧 Email notification check: status=${statusUpdate.status}, previousStatus=${previousStatus}, hasEmail=${!!listing.contact_email}`);
+  
+  try {
+    // Only send emails for meaningful status changes
+    if (statusUpdate.status === 'rejected') {
+      console.log(`📧 Sending rejection email to ${listing.contact_email}`);
+      await sendRejectionNotification(listing, statusUpdate.reason || 'No reason provided');
+    } else if (statusUpdate.status === 'approved' && previousStatus === 'pending') {
+      console.log(`📧 Sending approval email to ${listing.contact_email}`);
+      await sendApprovalNotification(listing);
+    } else {
+      console.log(`📧 No email needed for status change: ${previousStatus} → ${statusUpdate.status}`);
+    }
+  } catch (error) {
+    // Log error but don't fail the status update
+    console.error('Failed to send status change notification:', error);
+    throw error; // Re-throw so we can see the error in the parent catch
+  }
+}
+
+/**
+ * Send rejection email to listing owner
+ */
+async function sendRejectionNotification(listing: any, reason: string) {
+  const { sendRejectionEmail } = await import('@/lib/email-templates');
+  
+  // Map reason string to rejection reason type
+  const rejectionReasonMap: Record<string, any> = {
+    'incomplete_company_info': 'incomplete_company_info',
+    'missing_contact_details': 'missing_contact_details', 
+    'unclear_requirements': 'unclear_requirements',
+    'invalid_brochure': 'invalid_brochure',
+    'duplicate_listing': 'duplicate_listing',
+    'requirements_too_vague': 'requirements_too_vague',
+    'suspected_spam': 'suspected_spam',
+    'other': 'other'
+  };
+
+  const rejectionReason = rejectionReasonMap[reason] || 'other';
+  const customReason = rejectionReasonMap[reason] ? undefined : reason;
+
+  const emailData = {
+    contactName: listing.contact_name,
+    contactEmail: listing.contact_email,
+    companyName: listing.company_name || 'Your Company',
+    rejectionReason,
+    customReason,
+    listingEditUrl: `${process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://app.sitematch.com')}/occupier/create-listing?edit=${listing.id}`,
+    listingTitle: listing.title || `Property Requirement for ${listing.company_name}`
+  };
+
+  console.log(`📧 Sending rejection email with data:`, emailData);
+  const emailResult = await sendRejectionEmail(emailData);
+  console.log(`📧 Rejection email result:`, emailResult);
+  
+  if (emailResult.success) {
+    console.log(`✅ Rejection email sent successfully to ${listing.contact_email} for listing ${listing.id}`);
+  } else {
+    console.error(`❌ Rejection email failed: ${emailResult.error}`);
+  }
+}
+
+/**
+ * Send approval email to listing owner
+ */
+async function sendApprovalNotification(listing: any) {
+  const { sendApprovalEmail } = await import('@/lib/email-templates');
+  
+  const emailData = {
+    contactName: listing.contact_name,
+    contactEmail: listing.contact_email,
+    companyName: listing.company_name || 'Your Company',
+    listingTitle: listing.title || `Property Requirement for ${listing.company_name}`,
+    publicListingUrl: `${process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://app.sitematch.com')}/listings/${listing.id}`
+  };
+
+  console.log(`📧 Sending approval email with data:`, emailData);
+  const emailResult = await sendApprovalEmail(emailData);
+  console.log(`📧 Approval email result:`, emailResult);
+  
+  if (emailResult.success) {
+    console.log(`✅ Approval email sent successfully to ${listing.contact_email} for listing ${listing.id}`);
+  } else {
+    console.error(`❌ Approval email failed: ${emailResult.error}`);
+  }
 }

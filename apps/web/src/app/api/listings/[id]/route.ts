@@ -6,11 +6,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import {
-  getListingById,
   updateListing,
   deleteListing,
   validateListingData
 } from '@/lib/listings';
+import { createAdminService } from '@/lib/admin';
 import type {
   UpdateListingRequest,
   ApiResponse
@@ -36,7 +36,9 @@ export async function GET(
       );
     }
 
-    const listing = await getListingById(listingId);
+    // Use admin service for comprehensive listing data with proper error handling
+    const adminService = createAdminService();
+    const listing = await adminService.getListingById(listingId);
 
     if (!listing) {
       return NextResponse.json(
@@ -99,7 +101,8 @@ export async function PUT(
     }
 
     // Get existing listing
-    const existingListing = await getListingById(listingId);
+    const adminService = createAdminService();
+    const existingListing = await adminService.getListingById(listingId);
     if (!existingListing) {
       return NextResponse.json(
         { success: false, error: 'Listing not found' },
@@ -120,7 +123,6 @@ export async function PUT(
     let updateData: UpdateListingRequest;
     try {
       updateData = await request.json();
-      updateData.id = listingId; // Ensure ID is set
     } catch (parseError) {
       return NextResponse.json(
         { success: false, error: 'Invalid JSON in request body' },
@@ -141,8 +143,10 @@ export async function PUT(
       );
     }
 
-    // Update the listing
-    const updatedListing = await updateListing(listingId, updateData);
+    // Update the listing with proper server client
+    const { createServerClient } = require('@/lib/supabase');
+    const serverClient = createServerClient();
+    const updatedListing = await updateListing(listingId, updateData, serverClient);
 
     // Log the update for monitoring
     console.log(`Listing updated: ${listingId} by user ${user.id}`);
@@ -211,7 +215,8 @@ export async function DELETE(
     }
 
     // Get existing listing
-    const existingListing = await getListingById(listingId);
+    const adminService = createAdminService();
+    const existingListing = await adminService.getListingById(listingId);
     if (!existingListing) {
       return NextResponse.json(
         { success: false, error: 'Listing not found' },
@@ -266,8 +271,13 @@ function canUserAccessListing(user: any, listing: any): boolean {
     return true;
   }
 
-  // Users can access their organization's listings
-  if (user.org_id === listing.org_id) {
+  // Users can access listings they created
+  if (user.id === listing.created_by) {
+    return true;
+  }
+
+  // Legacy: Users can access their organization's listings (if org_id exists)
+  if (user.org_id && listing.org_id && user.org_id === listing.org_id) {
     return true;
   }
 
@@ -283,8 +293,13 @@ function canUserUpdateListing(user: any, listing: any): boolean {
     return true;
   }
 
-  // Occupiers can update their organization's listings
-  if (user.role === 'occupier' && user.org_id === listing.org_id) {
+  // Users can update listings they created
+  if (user.id === listing.created_by) {
+    return true;
+  }
+
+  // Legacy: Occupiers can update their organization's listings (if org_id exists)
+  if (user.role === 'occupier' && user.org_id && listing.org_id && user.org_id === listing.org_id) {
     return true;
   }
 
@@ -299,8 +314,13 @@ function canUserDeleteListing(user: any, listing: any): boolean {
     return true;
   }
 
-  // Occupiers can delete their organization's listings
-  if (user.role === 'occupier' && user.org_id === listing.org_id) {
+  // Users can delete listings they created
+  if (user.id === listing.created_by) {
+    return true;
+  }
+
+  // Legacy: Occupiers can delete their organization's listings (if org_id exists)
+  if (user.role === 'occupier' && user.org_id && listing.org_id && user.org_id === listing.org_id) {
     return true;
   }
 

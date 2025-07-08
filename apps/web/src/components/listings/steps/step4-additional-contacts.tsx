@@ -100,6 +100,43 @@ export function Step4AdditionalContacts({
     return () => clearTimeout(timeoutId);
   }, [watchedValues, onValidationChange]);
 
+  // Set initial values when data prop changes (for edit mode) - only once
+  const prevDataRef = useRef(data);
+  const hasInitializedStep4Ref = useRef(false);
+  
+  useEffect(() => {
+    const hasValidData = data.additionalContacts && data.additionalContacts.length > 0;
+    
+    if (hasValidData && !hasInitializedStep4Ref.current) {
+      hasInitializedStep4Ref.current = true;
+      
+      console.log('Initializing Step4 with loaded data:', {
+        additionalContactsCount: data.additionalContacts.length,
+        contacts: data.additionalContacts
+      });
+      
+      if (data.additionalContacts && data.additionalContacts.length > 0) {
+        // Replace the entire form array with loaded data
+        data.additionalContacts.forEach((contact, index) => {
+          if (index >= fields.length) {
+            // Need to add more fields
+            append(contact);
+          } else {
+            // Update existing field
+            Object.keys(contact).forEach(key => {
+              setValue(`additionalContacts.${index}.${key}` as any, (contact as any)[key]);
+            });
+          }
+        });
+        
+        // Remove extra fields if loaded data has fewer contacts
+        while (fields.length > data.additionalContacts.length) {
+          remove(fields.length - 1);
+        }
+      }
+    }
+  }, [data, setValue, fields, append, remove]);
+
   // =====================================================
   // HANDLERS
   // =====================================================
@@ -303,7 +340,7 @@ export function Step4AdditionalContacts({
                 <span className="text-gray-500 font-normal ml-1">(Optional)</span>
               </Label>
               <ImageUpload
-                value={watchedValues.additionalContacts?.[index]?.headshotFile || watchedValues.additionalContacts?.[index]?.headshotPreview}
+                value={watchedValues.additionalContacts?.[index]?.headshotFile || watchedValues.additionalContacts?.[index]?.headshotPreview || watchedValues.additionalContacts?.[index]?.headshotUrl}
                 onChange={async (file) => {
                   setValue(`additionalContacts.${index}.headshotFile`, file || undefined);
                   if (!file) {

@@ -76,6 +76,7 @@ export function Step1CompanyInfo({
       
       if (prevValuesRef.current !== currentJson) {
         prevValuesRef.current = currentJson;
+        // console.log('Step1 updating:', watchedValues.companyName);
         onUpdate(watchedValues);
       }
     }, 150);
@@ -98,11 +99,24 @@ export function Step1CompanyInfo({
     return () => clearTimeout(timeoutId);
   }, [watchedValues, onValidationChange]);
 
-  // Set initial values
+  // Track if we've initialized the logo to prevent overwriting
+  const hasInitializedLogoRef = useRef(false);
+  
+  // Set initial values when data loads from database (for edit mode)
   const prevDataRef = useRef(data);
+  const hasInitializedFormRef = useRef(false);
+  
   useEffect(() => {
-    if (prevDataRef.current !== data) {
-      prevDataRef.current = data;
+    // Only initialize when we get meaningful data (not empty objects)
+    const hasValidData = data.companyName && data.companyName.trim() !== '';
+    
+    if (hasValidData && !hasInitializedFormRef.current) {
+      hasInitializedFormRef.current = true;
+      
+      console.log('Initializing form with loaded data:', {
+        companyName: data.companyName,
+        contactName: data.primaryContact?.contactName
+      });
       
       if (data.companyName !== undefined) setValue('companyName', data.companyName);
       
@@ -122,7 +136,11 @@ export function Step1CompanyInfo({
       
       if (data.logoFile !== undefined) setValue('logoFile', data.logoFile);
       if (data.logoPreview !== undefined) setValue('logoPreview', data.logoPreview);
-      if (data.logoUrl !== undefined) setValue('logoPreview', data.logoUrl);
+      // Only set logoPreview from logoUrl if it's a valid URL (not empty) and we haven't initialized yet
+      if (data.logoUrl && data.logoUrl.trim() !== '' && !hasInitializedLogoRef.current) {
+        setValue('logoPreview', data.logoUrl);
+        hasInitializedLogoRef.current = true;
+      }
       if (data.brochureFiles !== undefined) setValue('brochureFiles', data.brochureFiles);
     }
   }, [data, setValue]);

@@ -65,7 +65,9 @@ export function ListingReview({ listing }: ListingReviewProps) {
         router.push('/admin/listings')
         router.refresh()
       } else {
-        console.error('Failed to update listing status')
+        const errorData = await response.json()
+        console.error('Failed to update listing status:', errorData)
+        alert(`Failed to update status: ${errorData.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Error updating listing status:', error)

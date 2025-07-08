@@ -61,6 +61,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     
     case 'UPDATE_DATA':
       const updatedData = { ...state.formData, ...action.data };
+      // console.log('UPDATE_DATA action:', { mergedData: updatedData });
       return { 
         ...state, 
         formData: updatedData,
@@ -100,6 +101,7 @@ interface ListingWizardProps {
   onSave?: (data: Partial<WizardFormData>) => Promise<void>;
   userEmail?: string;
   organizationId?: string; // Optional for backwards compatibility
+  editMode?: boolean;
 }
 
 export function ListingWizard({ 
@@ -107,6 +109,7 @@ export function ListingWizard({
   onSubmit, 
   onSave,
   userEmail,
+  editMode = false,
   organizationId
 }: ListingWizardProps) {
   const router = useRouter();
@@ -124,6 +127,12 @@ export function ListingWizard({
   // =====================================================
 
   useEffect(() => {
+    // Load existing listing data if in edit mode
+    if (editMode && initialData?.existingListingId) {
+      loadExistingListingData(initialData.existingListingId);
+      return;
+    }
+
     // Load saved data from localStorage or use initial data
     const savedData = loadFromLocalStorage();
     const dataToLoad = savedData || initialData || {};
@@ -145,15 +154,152 @@ export function ListingWizard({
     if (Object.keys(dataToLoad).length > 0) {
       dispatch({ type: 'UPDATE_DATA', data: dataToLoad });
     }
-  }, [initialData, userEmail]);
+  }, [initialData, userEmail, editMode]);
+
+  // =====================================================
+  // LOAD EXISTING LISTING DATA
+  // =====================================================
+
+  const loadExistingListingData = async (listingId: string) => {
+    try {
+      const response = await fetch(`/api/listings/${listingId}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to load listing data:', errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to load listing data`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Invalid listing data response');
+      }
+      
+      const listing = result.data;
+      
+      // Transform database listing to wizard form data
+      const formData: Partial<WizardFormData> = {
+        existingListingId: listingId,
+        companyName: listing.company_name,
+        
+        // Sector and Use Class IDs for dropdowns (convert single values to arrays)
+        sectors: [listing.sector_id],
+        useClassIds: [listing.use_class_id],
+        
+        primaryContact: {
+          contactName: listing.contact_name,
+          contactTitle: listing.contact_title,
+          contactEmail: listing.contact_email,
+          contactPhone: listing.contact_phone,
+          isPrimaryContact: true,
+          headshotUrl: listing.primary_contact?.headshot_url
+        },
+        additionalContacts: listing.additional_contacts?.map((contact: any) => ({
+          id: contact.id,
+          contactName: contact.contact_name,
+          contactTitle: contact.contact_title,
+          contactEmail: contact.contact_email,
+          contactPhone: contact.contact_phone,
+          isPrimaryContact: false,
+          headshotUrl: contact.headshot_url
+        })) || [],
+        
+        siteSizeMin: listing.site_size_min,
+        siteSizeMax: listing.site_size_max,
+        locations: listing.locations || [],
+        locationSearchNationwide: !listing.locations || listing.locations.length === 0,
+        
+        faqs: listing.faqs?.map((faq: any) => ({
+          id: faq.id,
+          question: faq.question,
+          answer: faq.answer,
+          displayOrder: faq.display_order
+        })) || [],
+        
+        // Company logo (from file_uploads table or fallback to company_logos table)
+        logoUrl: listing.file_uploads?.find((file: any) => file.file_type === 'logo')?.file_path || 
+                 listing.company_logos?.[0]?.file_url || '',
+        
+        brochureFiles: listing.brochure_url ? [{
+          id: 'existing',
+          name: 'Company Brochure',
+          url: listing.brochure_url,
+          path: '',
+          type: 'brochure' as const,
+          size: 0,
+          mimeType: 'application/pdf',
+          uploadedAt: new Date()
+        }] : [],
+        
+        // Supporting documents from file_uploads table or fallback to listing_documents
+        sitePlanFiles: listing.file_uploads?.filter((file: any) => file.file_type === 'sitePlan').map((file: any) => ({
+          id: file.id,
+          name: file.file_name || 'Site Plan',
+          url: file.file_path,
+          path: file.file_path,
+          type: 'sitePlan' as const,
+          size: file.file_size || 0,
+          mimeType: file.mime_type || 'application/pdf',
+          uploadedAt: new Date(file.created_at || Date.now())
+        })) || listing.listing_documents?.filter((doc: any) => 
+          ['sitePlan', 'site_plan'].includes(doc.document_type)
+        ).map((doc: any) => ({
+          id: doc.id,
+          name: doc.file_name || 'Site Plan',
+          url: doc.file_url,
+          path: '',
+          type: 'sitePlan' as const,
+          size: doc.file_size || 0,
+          mimeType: 'application/pdf',
+          uploadedAt: new Date()
+        })) || [],
+        
+        fitOutFiles: listing.file_uploads?.filter((file: any) => file.file_type === 'fitOut').map((file: any) => ({
+          id: file.id,
+          name: file.file_name || 'Fit-Out Example',
+          url: file.file_path,
+          path: file.file_path,
+          type: 'fitOut' as const,
+          size: file.file_size || 0,
+          mimeType: file.mime_type || 'image/jpeg',
+          uploadedAt: new Date(file.created_at || Date.now()),
+          displayOrder: file.display_order || 0,
+          caption: file.caption || '',
+          isVideo: false,
+          thumbnail: ''
+        })) || listing.listing_documents?.filter((doc: any) => 
+          ['fitOut', 'fit_out'].includes(doc.document_type)
+        ).map((doc: any) => ({
+          id: doc.id,
+          name: doc.file_name || 'Fit-Out',
+          url: doc.file_url,
+          path: '',
+          type: 'fitOut' as const,
+          size: doc.file_size || 0,
+          mimeType: 'application/pdf',
+          uploadedAt: new Date()
+        })) || []
+      };
+      
+      dispatch({ type: 'UPDATE_DATA', data: formData });
+      
+      // Set the listing ID in state so it knows we're editing
+      dispatch({ type: 'SET_LISTING_ID', listingId });
+      
+    } catch (error) {
+      console.error('Failed to load existing listing data:', error);
+      toast.error('Failed to load listing data. Please try again.');
+    }
+  };
 
   // =====================================================
   // DRAFT LISTING CREATION
   // =====================================================
 
   useEffect(() => {
-    // Create draft listing when wizard starts (only if we don't have one already)
-    if (!state.listingId && !isCreatingDraft && !hasCreatedDraftRef.current && userEmail) {
+    // Create draft listing when wizard starts (only if we don't have one already and not in edit mode)
+    if (!editMode && !state.listingId && !isCreatingDraft && !hasCreatedDraftRef.current && userEmail) {
       hasCreatedDraftRef.current = true;
       
       // Clear any existing timeout
@@ -212,7 +358,7 @@ export function ListingWizard({
         clearTimeout(draftCreationTimeoutRef.current);
       }
     };
-  }, [state.listingId, userEmail]); // Removed isCreatingDraft from dependencies to prevent re-triggers
+  }, [state.listingId, userEmail, editMode]); // Removed isCreatingDraft from dependencies to prevent re-triggers
 
   // =====================================================
   // VALIDATION EFFECTS
@@ -661,7 +807,14 @@ export function ListingWizard({
         existingListingId: state.listingId
       } as WizardFormData;
 
+      // console.log('Submitting data:', { companyName: submissionData.companyName });
+
       const result = await onSubmit(submissionData);
+      
+      // Handle case where result might be undefined
+      if (!result) {
+        throw new Error('Submission failed: No response received');
+      }
       
       if (result.success) {
         clearLocalStorage();
@@ -708,7 +861,9 @@ export function ListingWizard({
     <div className="max-w-4xl mx-auto p-3 md:p-6">
       <Card className="violet-bloom-card-hover">
         <CardHeader className="pb-4 md:pb-6">
-          <CardTitle>Create Property Requirement Listing</CardTitle>
+          <CardTitle>
+            {editMode ? 'Update Listing' : 'Create New Listing'}
+          </CardTitle>
           <WizardProgress steps={progressSteps} currentStep={state.currentStep} />
         </CardHeader>
 
@@ -857,10 +1012,10 @@ export function ListingWizard({
                   {state.isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Creating...
+                      {editMode ? 'Updating...' : 'Creating...'}
                     </>
                   ) : (
-                    'Create Listing'
+                    editMode ? 'Update Listing' : 'Create Listing'
                   )}
                 </Button>
               )}
@@ -922,10 +1077,10 @@ export function ListingWizard({
                     {state.isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating...
+                        {editMode ? 'Updating...' : 'Creating...'}
                       </>
                     ) : (
-                      'Create Listing'
+                      editMode ? 'Update Listing' : 'Create Listing'
                     )}
                   </Button>
                 )}

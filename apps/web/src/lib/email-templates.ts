@@ -206,27 +206,33 @@ SiteMatch - Connecting occupiers with the perfect property
 }
 
 // Email sending utilities
-export async function sendRejectionEmail(data: RejectionEmailData) {
+export async function sendRejectionEmail(data: RejectionEmailData & { contactEmail?: string }) {
   const emailTemplate = createRejectionEmail(data);
   
   // Implementation will use existing Resend service
   const { sendEmail } = await import('./resend');
   
+  // Use contactEmail if provided, fallback to contactName for backward compatibility
+  const emailAddress = data.contactEmail || data.contactName;
+  
   return sendEmail({
-    to: [data.contactName],
+    to: [emailAddress],
     subject: emailTemplate.subject,
     html: emailTemplate.html,
     text: emailTemplate.text
   });
 }
 
-export async function sendApprovalEmail(data: ApprovalEmailData) {
+export async function sendApprovalEmail(data: ApprovalEmailData & { contactEmail?: string }) {
   const emailTemplate = createApprovalEmail(data);
   
   const { sendEmail } = await import('./resend');
   
+  // Use contactEmail if provided, fallback to contactName for backward compatibility
+  const emailAddress = data.contactEmail || data.contactName;
+  
   return sendEmail({
-    to: [data.contactName],
+    to: [emailAddress],
     subject: emailTemplate.subject,
     html: emailTemplate.html,
     text: emailTemplate.text
