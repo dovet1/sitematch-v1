@@ -416,7 +416,7 @@ export function ListingReview({ listing }: ListingReviewProps) {
       </Card>
 
       {/* Supporting Documents */}
-      {(listing.brochure_url || listing.logo_url || listing.company_logos || listing.listing_documents || listing.media_files) && (
+      {(listing.brochure_url || listing.logo_url || (listing.company_logos && listing.company_logos.length > 0) || (listing.listing_documents && listing.listing_documents.length > 0) || (listing.media_files && listing.media_files.length > 0) || (listing.all_files && listing.all_files.length > 0)) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -424,114 +424,262 @@ export function ListingReview({ listing }: ListingReviewProps) {
               Supporting Documents
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Company Logo */}
-            {listing.logo_url && (
-              <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-2 flex-1">
-                  <img 
-                    src={listing.logo_url} 
-                    alt="Company Logo"
-                    className="w-12 h-12 object-contain bg-white rounded border"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                      if (nextElement) {
-                        nextElement.style.display = 'block';
-                      }
-                    }}
-                  />
-                  <Globe className="h-4 w-4 hidden" />
-                  <span className="font-medium">Company Logo</span>
+          <CardContent className="space-y-6">
+            {/* Company Logo Section */}
+            {(listing.logo_url || (listing.company_logos && listing.company_logos.length > 0)) && (
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-lg">🏢</span>
+                  Company Logo
+                </h4>
+                <div className="space-y-2">
+                  {listing.logo_url && (
+                    <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2 flex-1">
+                        <img 
+                          src={listing.logo_url} 
+                          alt="Company Logo"
+                          className="w-12 h-12 object-contain bg-white rounded border"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (nextElement) {
+                              nextElement.style.display = 'block';
+                            }
+                          }}
+                        />
+                        <Globe className="h-4 w-4 hidden" />
+                        <span className="font-medium">Company Logo</span>
+                      </div>
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={listing.logo_url} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          View
+                        </a>
+                      </Button>
+                    </div>
+                  )}
+                  {listing.company_logos && listing.company_logos.map((logo: any, index: number) => (
+                    <div key={logo.id} className="flex items-center gap-4 p-3 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2 flex-1">
+                        <img 
+                          src={logo.file_url} 
+                          alt={logo.file_name || 'Company Logo'}
+                          className="w-12 h-12 object-contain bg-white rounded border"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (nextElement) {
+                              nextElement.style.display = 'block';
+                            }
+                          }}
+                        />
+                        <Globe className="h-4 w-4 hidden" />
+                        <span className="font-medium">{logo.file_name || 'Company Logo'}</span>
+                      </div>
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={logo.file_url} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          View
+                        </a>
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-                <Button size="sm" variant="outline" asChild>
-                  <a href={listing.logo_url} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-4 w-4 mr-2" />
-                    View
-                  </a>
-                </Button>
               </div>
             )}
 
-            {/* Company Brochure */}
+            {/* Company Brochure Section */}
             {listing.brochure_url && (
-              <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                <FileText className="h-4 w-4" />
-                <span className="flex-1 font-medium">Company Brochure</span>
-                <Button size="sm" variant="outline" asChild>
-                  <a href={listing.brochure_url} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </a>
-                </Button>
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-lg">📄</span>
+                  Company Brochure
+                </h4>
+                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <FileText className="h-4 w-4" />
+                  <span className="flex-1 font-medium">Company Brochure</span>
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={listing.brochure_url} target="_blank" rel="noopener noreferrer">
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </a>
+                  </Button>
+                </div>
               </div>
             )}
 
-            {/* Company Logos from relation */}
-            {listing.company_logos && listing.company_logos.length > 0 && listing.company_logos.map((logo: any, index: number) => (
-              <div key={logo.id} className="flex items-center gap-4 p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-2 flex-1">
-                  <img 
-                    src={logo.file_url} 
-                    alt={logo.file_name || 'Company Logo'}
-                    className="w-12 h-12 object-contain bg-white rounded border"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                      if (nextElement) {
-                        nextElement.style.display = 'block';
+            {/* Site Plan Documents Section */}
+            {listing.listing_documents && listing.listing_documents.filter((doc: any) => ['sitePlan', 'site_plan'].includes(doc.document_type)).length > 0 && (
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-lg">📐</span>
+                  Site Plan
+                </h4>
+                <div className="space-y-2">
+                  {listing.listing_documents.filter((doc: any) => ['sitePlan', 'site_plan'].includes(doc.document_type)).map((doc: any, index: number) => (
+                    <div key={doc.id} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                      <FileText className="h-4 w-4" />
+                      <span className="flex-1">{doc.file_name || 'Site Plan Document'}</span>
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </a>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Fit-Out Documents Section */}
+            {listing.listing_documents && listing.listing_documents.filter((doc: any) => ['fitOut', 'fit_out'].includes(doc.document_type)).length > 0 && (
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-lg">🔨</span>
+                  Fit-Out
+                </h4>
+                <div className="space-y-2">
+                  {listing.listing_documents.filter((doc: any) => ['fitOut', 'fit_out'].includes(doc.document_type)).map((doc: any, index: number) => (
+                    <div key={doc.id} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                      <FileText className="h-4 w-4" />
+                      <span className="flex-1">{doc.file_name || 'Fit-Out Document'}</span>
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </a>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Other Documents Section */}
+            {listing.listing_documents && listing.listing_documents.filter((doc: any) => !['sitePlan', 'site_plan', 'fitOut', 'fit_out', 'brochure'].includes(doc.document_type)).length > 0 && (
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-lg">📎</span>
+                  Other Documents
+                </h4>
+                <div className="space-y-2">
+                  {listing.listing_documents.filter((doc: any) => !['sitePlan', 'site_plan', 'fitOut', 'fit_out', 'brochure'].includes(doc.document_type)).map((doc: any, index: number) => {
+                    const getDocumentLabel = (type: string) => {
+                      return type.charAt(0).toUpperCase() + type.slice(1);
+                    };
+                    
+                    return (
+                      <div key={doc.id} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                        <FileText className="h-4 w-4" />
+                        <span className="flex-1">{doc.file_name || `${getDocumentLabel(doc.document_type)} Document`}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {getDocumentLabel(doc.document_type)}
+                          </Badge>
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Media Files Section */}
+            {listing.media_files && listing.media_files.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-lg">🎬</span>
+                  Media Files
+                </h4>
+                <div className="space-y-2">
+                  {listing.media_files.map((media: any, index: number) => (
+                    <div key={media.id} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                      <FileText className="h-4 w-4" />
+                      <span className="flex-1">{media.file_name || `Media File`}</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {media.file_type}
+                        </Badge>
+                        <Button size="sm" variant="outline" asChild>
+                          <a href={media.file_url} target="_blank" rel="noopener noreferrer">
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Fallback: Show all files if organized sections are empty */}
+            {(!listing.logo_url && !listing.brochure_url && (!listing.company_logos || listing.company_logos.length === 0) && (!listing.listing_documents || listing.listing_documents.length === 0) && (!listing.media_files || listing.media_files.length === 0)) && listing.all_files && listing.all_files.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-lg">📁</span>
+                  All Uploaded Files
+                </h4>
+                <div className="space-y-2">
+                  {listing.all_files
+                    .filter((file: any) => file.file_type !== 'headshot') // Exclude headshots as they're shown with contacts
+                    .map((file: any, index: number) => {
+                    const getFileIcon = (type: string) => {
+                      switch (type) {
+                        case 'logo': return '🏢';
+                        case 'brochure': return '📄';
+                        case 'sitePlan': return '📐';
+                        case 'fitOut': return '🔨';
+                        case 'headshot': return '👤';
+                        default: return '📎';
                       }
-                    }}
-                  />
-                  <Globe className="h-4 w-4 hidden" />
-                  <span className="font-medium">{logo.file_name || 'Company Logo'}</span>
-                </div>
-                <Button size="sm" variant="outline" asChild>
-                  <a href={logo.file_url} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-4 w-4 mr-2" />
-                    View
-                  </a>
-                </Button>
-              </div>
-            ))}
-
-            {/* Listing Documents */}
-            {listing.listing_documents && listing.listing_documents.length > 0 && listing.listing_documents.map((doc: any, index: number) => (
-              <div key={doc.id} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                <FileText className="h-4 w-4" />
-                <span className="flex-1">{doc.file_name || `${doc.document_type} Document`}</span>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    {doc.document_type}
-                  </Badge>
-                  <Button size="sm" variant="outline" asChild>
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            ))}
-
-            {/* Media Files */}
-            {listing.media_files && listing.media_files.length > 0 && listing.media_files.map((media: any, index: number) => (
-              <div key={media.id} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                <FileText className="h-4 w-4" />
-                <span className="flex-1">{media.file_name || `Media File`}</span>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    {media.file_type}
-                  </Badge>
-                  <Button size="sm" variant="outline" asChild>
-                    <a href={media.file_url} target="_blank" rel="noopener noreferrer">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </a>
-                  </Button>
+                    };
+                    
+                    const getFileLabel = (type: string) => {
+                      switch (type) {
+                        case 'sitePlan': return 'Site Plan';
+                        case 'fitOut': return 'Fit-Out';
+                        case 'headshot': return 'Headshot';
+                        default: return type.charAt(0).toUpperCase() + type.slice(1);
+                      }
+                    };
+                    
+                    const fileUrl = `https://***REMOVED***.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`;
+                    
+                    return (
+                      <div key={file.id} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                        <span className="text-lg">{getFileIcon(file.file_type)}</span>
+                        <div className="flex-1">
+                          <div className="font-medium">{file.file_name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {getFileLabel(file.file_type)} • {Math.round(file.file_size / 1024)}KB
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {getFileLabel(file.file_type)}
+                          </Badge>
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       )}
