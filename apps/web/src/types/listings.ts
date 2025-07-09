@@ -202,6 +202,7 @@ export interface CreateListingRequest {
 }
 
 export interface UpdateListingRequest extends Partial<CreateListingRequest> {
+  status?: ListingStatus;
 }
 
 export interface UpdateListingStatusRequest {

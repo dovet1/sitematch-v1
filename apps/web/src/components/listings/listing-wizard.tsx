@@ -100,6 +100,7 @@ interface ListingWizardProps {
   onSubmit?: (data: WizardFormData) => Promise<SubmissionResult>;
   onSave?: (data: Partial<WizardFormData>) => Promise<void>;
   userEmail?: string;
+  userId?: string;
   organizationId?: string; // Optional for backwards compatibility
   editMode?: boolean;
 }
@@ -109,6 +110,7 @@ export function ListingWizard({
   onSubmit, 
   onSave,
   userEmail,
+  userId,
   editMode = false,
   organizationId
 }: ListingWizardProps) {
@@ -133,8 +135,18 @@ export function ListingWizard({
       return;
     }
 
+    // Clean up any legacy non-user-specific localStorage data
+    if (userId) {
+      const legacyData = loadFromLocalStorage(); // Load without userId
+      if (legacyData && Object.keys(legacyData).length > 0) {
+        // Migrate legacy data to user-specific storage
+        saveToLocalStorage(legacyData, userId);
+        clearLocalStorage(); // Clear non-user-specific storage
+      }
+    }
+
     // Load saved data from localStorage or use initial data
-    const savedData = loadFromLocalStorage();
+    const savedData = loadFromLocalStorage(userId);
     const dataToLoad = savedData || initialData || {};
     
     // Pre-fill contact email if provided
@@ -154,7 +166,17 @@ export function ListingWizard({
     if (Object.keys(dataToLoad).length > 0) {
       dispatch({ type: 'UPDATE_DATA', data: dataToLoad });
     }
-  }, [initialData, userEmail, editMode]);
+  }, [initialData, userEmail, userId, editMode]);
+
+  // Cleanup effect - Clear localStorage on unmount if listing was submitted
+  useEffect(() => {
+    return () => {
+      // Only clear if we have a listingId (indicating successful submission)
+      if (state.listingId && userId) {
+        clearLocalStorage(userId);
+      }
+    };
+  }, [state.listingId, userId]);
 
   // =====================================================
   // LOAD EXISTING LISTING DATA
@@ -410,7 +432,7 @@ export function ListingWizard({
         setAutoSave({ isSaving: true });
         
         try {
-          saveToLocalStorage(state.formData);
+          saveToLocalStorage(state.formData, userId);
           setAutoSave({ 
             lastSaved: new Date(), 
             isDirty: false, 
@@ -716,7 +738,7 @@ export function ListingWizard({
         // Debug logging temporarily disabled
         
         await onSave(serializedData);
-        saveToLocalStorage(processedData);
+        saveToLocalStorage(processedData, userId);
         setAutoSave({ 
           lastSaved: new Date(), 
           isDirty: false, 
@@ -817,14 +839,14 @@ export function ListingWizard({
       }
       
       if (result.success) {
-        clearLocalStorage();
+        clearLocalStorage(userId);
         toast.success('Listing submitted successfully!');
         
         // Redirect to enhanced success page
         if (result.listingId) {
           router.push(`/occupier/listing-submitted/${result.listingId}`);
         } else {
-          router.push('/occupier/listings');
+          router.push('/occupier/dashboard');
         }
       } else {
         toast.error(result.error || 'Failed to create listing');

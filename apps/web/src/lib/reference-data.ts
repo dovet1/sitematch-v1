@@ -21,29 +21,52 @@ export const SECTOR_OPTIONS = [
 
 export type SectorValue = typeof SECTOR_OPTIONS[number]['value'];
 
-// Cache for reference data to avoid repeated database calls
-let sectorsCache: SearchableOption[] | null = null;
-let useClassesCache: SearchableOption[] | null = null;
+// Note: Removed module-level caching to prevent cross-user data leakage
+// Each request will fetch fresh data from the database
+
+/**
+ * Format sector names for better display
+ * Converts database names like "retail" to "Retail" or "industrial_logistics" to "Industrial & Logistics"
+ */
+function formatSectorName(name: string): string {
+  const formatMap: Record<string, string> = {
+    'retail': 'Retail',
+    'office': 'Office',
+    'industrial': 'Industrial',
+    'leisure': 'Entertainment & Leisure',
+    'mixed': 'Mixed Use',
+    'food_beverage': 'Food & Beverage',
+    'industrial_logistics': 'Industrial & Logistics',
+    'healthcare': 'Healthcare',
+    'automotive': 'Automotive',
+    'roadside': 'Roadside Services'
+  };
+
+  // Check for exact match first
+  if (formatMap[name]) {
+    return formatMap[name];
+  }
+
+  // Fall back to title case formatting
+  return name
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' & ');
+}
 
 /**
  * Get use class options for searchable dropdown
  * Returns cached data or fetches from database
  */
 export async function getUseClassOptions(): Promise<SearchableOption[]> {
-  if (useClassesCache) {
-    return useClassesCache;
-  }
-
   try {
     const useClasses = await getUseClasses();
     
-    useClassesCache = useClasses.map(uc => ({
+    return useClasses.map(uc => ({
       value: uc.id,
       label: `${uc.code} - ${uc.name}`,
       description: uc.description || undefined
     }));
-
-    return useClassesCache;
   } catch (error) {
     console.error('Failed to fetch use classes:', error);
     
@@ -66,20 +89,14 @@ export async function getUseClassOptions(): Promise<SearchableOption[]> {
  * Returns cached data or fetches from database
  */
 export async function getSectorOptions(): Promise<SearchableOption[]> {
-  if (sectorsCache) {
-    return sectorsCache;
-  }
-
   try {
     const sectors = await getSectors();
     
-    sectorsCache = sectors.map(sector => ({
+    return sectors.map(sector => ({
       value: sector.id,
-      label: sector.name,
+      label: formatSectorName(sector.name),
       description: sector.description || undefined
     }));
-
-    return sectorsCache;
   } catch (error) {
     console.error('Failed to fetch sectors:', error);
     
@@ -145,11 +162,11 @@ export async function validateUseClassId(useClassId: string): Promise<boolean> {
 
 /**
  * Clear reference data cache
- * Useful for testing or when data is updated
+ * Note: Caching has been removed to prevent cross-user data leakage
+ * This function is kept for backward compatibility but does nothing
  */
 export function clearReferenceDataCache(): void {
-  sectorsCache = null;
-  useClassesCache = null;
+  // No-op: caching has been removed
 }
 
 /**

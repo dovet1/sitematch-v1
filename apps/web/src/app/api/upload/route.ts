@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing file or type' }, { status: 400 })
     }
 
-    // Upload file to Supabase Storage
+    // Upload file to Supabase Storage - use user_id for folder structure
     const fileBuffer = await file.arrayBuffer()
     const fileName = `${user.id}/${Date.now()}-${file.name}`
     

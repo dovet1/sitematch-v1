@@ -111,7 +111,7 @@ export function Step4AdditionalContacts({
       hasInitializedStep4Ref.current = true;
       
       console.log('Initializing Step4 with loaded data:', {
-        additionalContactsCount: data.additionalContacts.length,
+        additionalContactsCount: data.additionalContacts?.length || 0,
         contacts: data.additionalContacts
       });
       

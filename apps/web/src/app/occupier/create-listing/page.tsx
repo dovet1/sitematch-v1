@@ -150,6 +150,7 @@ export default async function CreateListingPage({
             contact_title: data.primaryContact?.contactTitle || 'Contact Title',
             contact_email: data.primaryContact?.contactEmail || currentUser.email || 'contact@example.com',
             contact_phone: data.primaryContact?.contactPhone,
+            status: 'pending', // Reset to pending when edited
             // Use the sector/use class IDs from the form data if available
             sector_id: data.sectors?.[0] || sectorId,
             use_class_id: data.useClassIds?.[0] || useClassId
@@ -476,7 +477,7 @@ export default async function CreateListingPage({
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        cause: error instanceof Error ? error.cause : undefined
+        cause: error instanceof Error ? (error as any).cause : undefined
       });
       
       const errorResult = { 
@@ -581,12 +582,8 @@ export default async function CreateListingPage({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <nav className="flex items-center space-x-4 body-small">
-              <a href="/occupier" className="text-muted-foreground hover:text-foreground violet-bloom-nav-item">
+              <a href="/occupier/dashboard" className="text-muted-foreground hover:text-foreground violet-bloom-nav-item">
                 Dashboard
-              </a>
-              <span className="text-muted-foreground">/</span>
-              <a href="/occupier/listings" className="text-muted-foreground hover:text-foreground violet-bloom-nav-item">
-                Listings
               </a>
               <span className="text-muted-foreground">/</span>
               <span className="text-foreground font-medium">
@@ -620,6 +617,7 @@ export default async function CreateListingPage({
             onSubmit={handleSubmit}
             onSave={handleSave}
             userEmail={user.email}
+            userId={user.id}
             editMode={!!editListingId}
           />
         </ErrorBoundary>

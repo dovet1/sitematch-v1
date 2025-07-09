@@ -42,30 +42,64 @@ export default async function ListingSubmittedPage({ params }: PageProps) {
   const user = await getCurrentUser();
   
   if (!user) {
-    redirect('/auth/login?redirect=/occupier/listings');
+    redirect('/auth/login?redirect=/occupier/dashboard');
   }
 
   if (user.role !== 'occupier' && user.role !== 'admin') {
     redirect('/unauthorized');
   }
 
-  // For demo purposes, create mock data
-  // In real implementation, this would fetch from database
-  const submissionData: SubmissionSuccessData = {
-    listingId: params.id,
-    title: `Property Requirement - ${user.email?.split('@')[0] || 'User'} Company`,
-    submittedAt: new Date(),
-    estimatedReviewTime: '1-2 business days',
-    nextSteps: [
-      'Our admin team will review your listing for completeness and accuracy',
-      'You will receive an email notification once your listing is approved',
-      'Your listing will be published and visible to potential partners',
-      'You can track responses and manage your listing from your dashboard'
-    ],
-    contactEmail: user.email || '',
-    companyName: `${user.email?.split('@')[0] || 'User'} Company`,
-    status: 'pending'
-  };
+  // Fetch actual listing data from database
+  let submissionData: SubmissionSuccessData;
+  
+  try {
+    const { createAdminService } = await import('@/lib/admin');
+    const adminService = createAdminService();
+    const listing = await adminService.getListingById(params.id);
+    
+    if (!listing) {
+      notFound();
+    }
+    
+    // Check if user owns this listing or is admin
+    if (listing.created_by !== user.id && user.role !== 'admin') {
+      redirect('/unauthorized');
+    }
+    
+    submissionData = {
+      listingId: params.id,
+      title: listing.title || `Property Requirement - ${listing.company_name}`,
+      submittedAt: new Date(listing.created_at),
+      estimatedReviewTime: '1-2 business days',
+      nextSteps: [
+        'Our admin team will review your listing for completeness and accuracy',
+        'You will receive an email notification once your listing is approved',
+        'Your listing will be published and visible to potential partners',
+        'You can track responses and manage your listing from your dashboard'
+      ],
+      contactEmail: listing.contact_email || user.email || '',
+      companyName: listing.company_name || 'Company Name Not Provided',
+      status: listing.status || 'pending'
+    };
+  } catch (error) {
+    console.error('Failed to fetch listing:', error);
+    // Fallback to basic data if fetch fails
+    submissionData = {
+      listingId: params.id,
+      title: `Property Requirement - Listing ${params.id}`,
+      submittedAt: new Date(),
+      estimatedReviewTime: '1-2 business days',
+      nextSteps: [
+        'Our admin team will review your listing for completeness and accuracy',
+        'You will receive an email notification once your listing is approved',
+        'Your listing will be published and visible to potential partners',
+        'You can track responses and manage your listing from your dashboard'
+      ],
+      contactEmail: user.email || '',
+      companyName: 'Company Name Not Available',
+      status: 'pending'
+    };
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -114,9 +148,18 @@ export default async function ListingSubmittedPage({ params }: PageProps) {
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Status</Label>
                     <div className="mt-1">
-                      <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                      <Badge 
+                        variant="secondary" 
+                        className={
+                          submissionData.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          submissionData.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }
+                      >
                         <Clock className="w-3 h-3 mr-1" />
-                        Pending Review
+                        {submissionData.status === 'approved' ? 'Approved' :
+                         submissionData.status === 'rejected' ? 'Rejected' :
+                         'Pending Review'}
                       </Badge>
                     </div>
                   </div>
@@ -127,8 +170,15 @@ export default async function ListingSubmittedPage({ params }: PageProps) {
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Submitted</Label>
                     <p className="text-sm">
-                      {submissionData.submittedAt.toLocaleDateString()} at{' '}
-                      {submissionData.submittedAt.toLocaleTimeString()}
+                      {submissionData.submittedAt.toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })} at{' '}
+                      {submissionData.submittedAt.toLocaleTimeString('en-GB', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </p>
                   </div>
                 </div>
@@ -157,13 +207,13 @@ export default async function ListingSubmittedPage({ params }: PageProps) {
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-4">
               <Button asChild className="flex-1">
-                <Link href="/occupier/listings">
+                <Link href="/occupier/dashboard">
                   <Home className="w-4 h-4 mr-2" />
-                  View All Listings
+                  View Dashboard
                 </Link>
               </Button>
               <Button variant="outline" asChild className="flex-1">
-                <Link href="/occupier">
+                <Link href="/occupier/dashboard">
                   <ArrowRight className="w-4 h-4 mr-2" />
                   Go to Dashboard
                 </Link>

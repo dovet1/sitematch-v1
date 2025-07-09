@@ -42,7 +42,8 @@
       "Bash(supabase stop:*)",
       "Bash(supabase start:*)",
       "Bash(npm run:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "mcp__ide__executeCode"
     ],
     "deny": []
   }
