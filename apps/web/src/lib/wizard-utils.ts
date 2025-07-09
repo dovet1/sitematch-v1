@@ -196,10 +196,18 @@ export function isStepValid(stepNumber: 1 | 2 | 3 | 4 | 5 | 6, data: Partial<Wiz
 // LOCAL STORAGE UTILITIES
 // =====================================================
 
-const STORAGE_KEY = 'listing-wizard-data';
-const STORAGE_TIMESTAMP_KEY = 'listing-wizard-timestamp';
+// Make storage keys user-specific to prevent data leakage between users
+const getStorageKey = (userId?: string) => {
+  const baseKey = 'listing-wizard-data';
+  return userId ? `${baseKey}-${userId}` : baseKey;
+};
 
-export function saveToLocalStorage(data: Partial<WizardFormData>): void {
+const getTimestampKey = (userId?: string) => {
+  const baseKey = 'listing-wizard-timestamp';
+  return userId ? `${baseKey}-${userId}` : baseKey;
+};
+
+export function saveToLocalStorage(data: Partial<WizardFormData>, userId?: string): void {
   try {
     // Create a sanitized version without File objects for localStorage
     const sanitizedData = { ...data };
@@ -212,27 +220,33 @@ export function saveToLocalStorage(data: Partial<WizardFormData>): void {
     // Keep the logoPreview (base64 string) if it exists
     // This allows us to restore the logo preview on reload
     
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizedData));
-    localStorage.setItem(STORAGE_TIMESTAMP_KEY, new Date().toISOString());
+    const storageKey = getStorageKey(userId);
+    const timestampKey = getTimestampKey(userId);
+    
+    localStorage.setItem(storageKey, JSON.stringify(sanitizedData));
+    localStorage.setItem(timestampKey, new Date().toISOString());
   } catch (error) {
     console.warn('Failed to save wizard data to localStorage:', error);
   }
 }
 
-export function loadFromLocalStorage(): Partial<WizardFormData> | null {
+export function loadFromLocalStorage(userId?: string): Partial<WizardFormData> | null {
   try {
-    const data = localStorage.getItem(STORAGE_KEY);
+    const storageKey = getStorageKey(userId);
+    const timestampKey = getTimestampKey(userId);
+    
+    const data = localStorage.getItem(storageKey);
     if (!data) return null;
 
     // Check if data is older than 24 hours
-    const timestamp = localStorage.getItem(STORAGE_TIMESTAMP_KEY);
+    const timestamp = localStorage.getItem(timestampKey);
     if (timestamp) {
       const savedTime = new Date(timestamp);
       const now = new Date();
       const hoursAgo = (now.getTime() - savedTime.getTime()) / (1000 * 60 * 60);
       
       if (hoursAgo > 24) {
-        clearLocalStorage();
+        clearLocalStorage(userId);
         return null;
       }
     }
@@ -240,15 +254,24 @@ export function loadFromLocalStorage(): Partial<WizardFormData> | null {
     return JSON.parse(data);
   } catch (error) {
     console.warn('Failed to load wizard data from localStorage:', error);
-    clearLocalStorage();
+    clearLocalStorage(userId);
     return null;
   }
 }
 
-export function clearLocalStorage(): void {
+export function clearLocalStorage(userId?: string): void {
   try {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(STORAGE_TIMESTAMP_KEY);
+    const storageKey = getStorageKey(userId);
+    const timestampKey = getTimestampKey(userId);
+    
+    localStorage.removeItem(storageKey);
+    localStorage.removeItem(timestampKey);
+    
+    // Also clean up any legacy non-user-specific keys if they exist
+    if (!userId) {
+      localStorage.removeItem('listing-wizard-data');
+      localStorage.removeItem('listing-wizard-timestamp');
+    }
   } catch (error) {
     console.warn('Failed to clear wizard data from localStorage:', error);
   }

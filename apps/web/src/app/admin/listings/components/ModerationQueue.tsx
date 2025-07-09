@@ -71,8 +71,7 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
     .filter(listing => {
       const matchesStatus = filterStatus === 'all' || listing.status === filterStatus
       const matchesSearch = searchTerm === '' || 
-        listing.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.title?.toLowerCase().includes(searchTerm.toLowerCase())
+        listing.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
       return matchesStatus && matchesSearch
     })
     .sort((a, b) => {
@@ -102,7 +101,7 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
           <Input
-            placeholder="Search by company name or title..."
+            placeholder="Search by company name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
@@ -152,10 +151,6 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Company</TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead>Sector</TableHead>
-              <TableHead>Use Class</TableHead>
-              <TableHead>Size Range</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Submitted</TableHead>
               <TableHead>Submitted By</TableHead>
@@ -165,7 +160,7 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
           <TableBody>
             {filteredAndSortedListings.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   No listings found matching your criteria
                 </TableCell>
               </TableRow>
@@ -174,27 +169,6 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
                 <TableRow key={listing.id}>
                   <TableCell className="font-medium">
                     {listing.company_name || 'Unnamed Company'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-[200px] truncate">
-                      {listing.title || 'Untitled Listing'}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {listing.sectors?.name || listing.sector_id?.slice(0, 10) || 'Unknown'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-[100px] truncate">
-                      {listing.use_classes?.code || listing.use_class_id?.slice(0, 8) || 'Unknown'}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {listing.site_size_min && listing.site_size_max ? 
-                      `${listing.site_size_min.toLocaleString()} - ${listing.site_size_max.toLocaleString()} sq ft` :
-                      listing.site_size_min ? 
-                        `${listing.site_size_min.toLocaleString()}+ sq ft` :
-                        'Not specified'
-                    }
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={listing.status} />
