@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { RangeSlider } from '@/components/ui/range-slider';
 import { SearchableDropdown, type SearchableOption } from '@/components/ui/searchable-dropdown';
-import { MultiSelectDropdown } from '@/components/ui/multi-select-dropdown';
+import { MultiSelectDropdown, type MultiSelectOption } from '@/components/ui/multi-select-dropdown';
 
 import type { WizardStepProps, RequirementDetailsData } from '@/types/wizard';
 import { validateStep, formatSiteSize } from '@/lib/wizard-utils';
@@ -22,7 +22,7 @@ import { getSectorOptions, getUseClassOptions } from '@/lib/reference-data';
 interface Step2FormData extends RequirementDetailsData {}
 
 // PRD-specified sector options for multi-select
-const SECTOR_OPTIONS: SearchableOption[] = [
+const SECTOR_OPTIONS: MultiSelectOption[] = [
   { value: 'retail', label: 'Retail', description: 'Retail and consumer-facing businesses' },
   { value: 'food_beverage', label: 'Food & Beverage', description: 'Food & Beverage establishments' },
   { value: 'leisure', label: 'Leisure', description: 'Entertainment and hospitality' },
@@ -34,16 +34,16 @@ const SECTOR_OPTIONS: SearchableOption[] = [
   { value: 'other', label: 'Other', description: 'Other sectors not specified above' }
 ];
 
-// PRD use class options for dropdown
-const USE_CLASS_OPTIONS: SearchableOption[] = [
-  { value: 'e-a', label: 'E(a) - Retail', description: 'Display or retail sale of goods' },
-  { value: 'e-b', label: 'E(b) - Café/Restaurant', description: 'Sale of food and drink for consumption' },
-  { value: 'e-g-i', label: 'E(g)(i) - Office', description: 'Offices to carry out operational/administrative functions' },
-  { value: 'e-g-iii', label: 'E(g)(iii) - Light Industrial', description: 'Light industrial processes' },
-  { value: 'b2', label: 'B2 - General Industrial', description: 'General industrial processes' },
-  { value: 'b8', label: 'B8 - Storage/Distribution', description: 'Storage or distribution of goods' },
-  { value: 'c1', label: 'C1 - Hotel', description: 'Hotels and accommodation' },
-  { value: 'sui-generis', label: 'Sui Generis - Special Use', description: 'Drive-thru, Petrol, Cinema, Casino, etc.' }
+// PRD use class options for dropdown - using actual database codes
+const USE_CLASS_OPTIONS: MultiSelectOption[] = [
+  { value: 'E(a)', label: 'E(a) - Retail', description: 'Display or retail sale of goods' },
+  { value: 'E(b)', label: 'E(b) - Café/Restaurant', description: 'Sale of food and drink for consumption' },
+  { value: 'E(g)(i)', label: 'E(g)(i) - Office', description: 'Offices to carry out operational/administrative functions' },
+  { value: 'E(g)(iii)', label: 'E(g)(iii) - Light Industrial', description: 'Light industrial processes' },
+  { value: 'B2', label: 'B2 - General Industrial', description: 'General industrial processes' },
+  { value: 'B8', label: 'B8 - Storage/Distribution', description: 'Storage or distribution of goods' },
+  { value: 'C1', label: 'C1 - Hotel', description: 'Hotels and accommodation' },
+  { value: 'Sui Generis', label: 'Sui Generis - Special Use', description: 'Drive-thru, Petrol, Cinema, Casino, etc.' }
 ];
 
 export function Step2RequirementDetails({
@@ -59,11 +59,11 @@ export function Step2RequirementDetails({
   ]);
 
   // Database options state
-  const [sectorOptions, setSectorOptions] = useState<SearchableOption[]>([]);
-  const [useClassOptions, setUseClassOptions] = useState<SearchableOption[]>([]);
+  const [sectorOptions, setSectorOptions] = useState<MultiSelectOption[]>([]);
+  const [useClassOptions, setUseClassOptions] = useState<MultiSelectOption[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
 
-  // Handle both single values (from database) and arrays (from form)
+  // Handle multiple values (multiple sectors and use classes per listing)
   const [selectedSectors, setSelectedSectors] = useState<string[]>(() => {
     return data.sectors || [];
   });
@@ -85,7 +85,7 @@ export function Step2RequirementDetails({
     mode: 'onChange'
   });
 
-  // Current form values
+  // Current form values - arrays for multiple selections
   const currentFormData = {
     sectors: selectedSectors,
     useClassIds: selectedUseClasses,
@@ -113,11 +113,24 @@ export function Step2RequirementDetails({
           getUseClassOptions()
         ]);
         
-        setSectorOptions(sectors);
-        setUseClassOptions(useClasses);
+        // Convert SearchableOption[] to MultiSelectOption[]
+        const sectorMultiOptions: MultiSelectOption[] = sectors.map(s => ({
+          value: s.value, // This is the database ID
+          label: s.label,
+          description: s.description || ''
+        }));
+        
+        const useClassMultiOptions: MultiSelectOption[] = useClasses.map(uc => ({
+          value: uc.value, // This is the database ID
+          label: uc.label,
+          description: uc.description || ''
+        }));
+        
+        setSectorOptions(sectorMultiOptions);
+        setUseClassOptions(useClassMultiOptions);
       } catch (error) {
         console.error('Failed to load reference data options:', error);
-        // Use hardcoded fallbacks
+        // Use hardcoded fallbacks only if database completely fails
         setSectorOptions(SECTOR_OPTIONS);
         setUseClassOptions(USE_CLASS_OPTIONS);
       } finally {
@@ -192,8 +205,8 @@ export function Step2RequirementDetails({
     if (prevDataRef.current !== data) {
       prevDataRef.current = data;
       
-      if (data.sectors !== undefined) setSelectedSectors(data.sectors);
-      if (data.useClassIds !== undefined) setSelectedUseClasses(data.useClassIds);
+      if (data.sectors !== undefined && data.sectors.length > 0) setSelectedSectors(data.sectors);
+      if (data.useClassIds !== undefined && data.useClassIds.length > 0) setSelectedUseClasses(data.useClassIds);
       
       if (data.siteSizeMin !== undefined || data.siteSizeMax !== undefined) {
         setSiteSize([
@@ -231,29 +244,27 @@ export function Step2RequirementDetails({
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Sector Multi-Select */}
+          {/* Sector Selection - Multi Select */}
           <MultiSelectDropdown
             label="Sectors (Optional)"
-            placeholder={isLoadingOptions ? "Loading sectors..." : "Select relevant sectors..."}
+            placeholder={isLoadingOptions ? "Loading sectors..." : "Select sectors..."}
             searchPlaceholder="Search sectors..."
             emptyText="No sectors found"
             options={sectorOptions.length > 0 ? sectorOptions : SECTOR_OPTIONS}
             value={selectedSectors}
             onChange={setSelectedSectors}
-            maxDisplay={3}
             disabled={isLoadingOptions}
           />
 
-          {/* Use Class Multi-Select */}
+          {/* Use Class Selection - Multi Select */}
           <MultiSelectDropdown
-            label="Planning Use Class (Optional)"
+            label="Planning Use Classes (Optional)"
             placeholder={isLoadingOptions ? "Loading use classes..." : "Select planning use classes..."}
             searchPlaceholder="Search use classes..."
             emptyText="No use classes found"
             options={useClassOptions.length > 0 ? useClassOptions : USE_CLASS_OPTIONS}
             value={selectedUseClasses}
             onChange={setSelectedUseClasses}
-            maxDisplay={2}
             disabled={isLoadingOptions}
           />
 

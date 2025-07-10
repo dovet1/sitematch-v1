@@ -103,6 +103,7 @@ interface ListingWizardProps {
   userId?: string;
   organizationId?: string; // Optional for backwards compatibility
   editMode?: boolean;
+  startFresh?: boolean;
 }
 
 export function ListingWizard({ 
@@ -112,6 +113,7 @@ export function ListingWizard({
   userEmail,
   userId,
   editMode = false,
+  startFresh = false,
   organizationId
 }: ListingWizardProps) {
   const router = useRouter();
@@ -131,7 +133,12 @@ export function ListingWizard({
   useEffect(() => {
     // Load existing listing data if in edit mode
     if (editMode && initialData?.existingListingId) {
-      loadExistingListingData(initialData.existingListingId);
+      loadExistingListingData(initialData.existingListingId).catch((error) => {
+        console.error('Failed to load existing listing data:', error);
+        // Show user-friendly error message
+        toast.error('Failed to load listing data. Starting with a fresh form.');
+        // Continue with fresh creation mode
+      });
       return;
     }
 
@@ -145,9 +152,52 @@ export function ListingWizard({
       }
     }
 
-    // Load saved data from localStorage or use initial data
-    const savedData = loadFromLocalStorage(userId);
-    const dataToLoad = savedData || initialData || {};
+    // Handle draft creation for new listings
+    let dataToLoad = initialData || {};
+    
+    if (!editMode && userId) {
+      if (startFresh) {
+        // User explicitly wants to start fresh - clear localStorage and create new draft
+        clearLocalStorage(userId);
+        // Create a new draft listing after a short delay to allow form to initialize
+        draftCreationTimeoutRef.current = setTimeout(() => {
+          createDraftListing().then((draftId) => {
+            if (draftId) {
+              console.log('New draft listing created for fresh start:', draftId);
+            }
+          });
+        }, 1000);
+      } else {
+        // For new listings without explicit fresh flag, load saved data
+        const savedData = loadFromLocalStorage(userId);
+        if (savedData && Object.keys(savedData).length > 0) {
+          // Show a toast to let user know we're restoring their progress
+          toast.info('Restoring your previous listing progress...', {
+            description: 'We found unsaved changes from your last session'
+          });
+          // Merge saved data with initial data, prioritizing saved data
+          dataToLoad = { ...dataToLoad, ...savedData };
+          
+          // If we have saved data, try to create a draft listing to store future changes
+          draftCreationTimeoutRef.current = setTimeout(() => {
+            createDraftListing().then((draftId) => {
+              if (draftId) {
+                console.log('Draft listing created for restored progress:', draftId);
+              }
+            });
+          }, 1500);
+        } else {
+          // No saved data, create a new draft for auto-save
+          draftCreationTimeoutRef.current = setTimeout(() => {
+            createDraftListing().then((draftId) => {
+              if (draftId) {
+                console.log('New draft listing created for auto-save:', draftId);
+              }
+            });
+          }, 2000);
+        }
+      }
+    }
     
     // Pre-fill contact email if provided
     if (userEmail && !dataToLoad.primaryContact?.contactEmail) {
@@ -166,7 +216,7 @@ export function ListingWizard({
     if (Object.keys(dataToLoad).length > 0) {
       dispatch({ type: 'UPDATE_DATA', data: dataToLoad });
     }
-  }, [initialData, userEmail, userId, editMode]);
+  }, [initialData, userEmail, userId, editMode, startFresh]);
 
   // Cleanup effect - Clear localStorage on unmount if listing was submitted
   useEffect(() => {
@@ -179,16 +229,92 @@ export function ListingWizard({
   }, [state.listingId, userId]);
 
   // =====================================================
+  // DRAFT LISTING CREATION
+  // =====================================================
+
+  const createDraftListing = useCallback(async (): Promise<string | null> => {
+    if (isCreatingDraft || hasCreatedDraftRef.current || !userId) {
+      return state.listingId || null;
+    }
+
+    setIsCreatingDraft(true);
+    
+    try {
+      const response = await fetch('/api/listings/draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          userEmail,
+          companyName: state.formData.companyName || '',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create draft listing');
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.listingId) {
+        hasCreatedDraftRef.current = true;
+        dispatch({ type: 'SET_LISTING_ID', listingId: result.listingId });
+        console.log('Draft listing created:', result.listingId);
+        return result.listingId;
+      } else {
+        throw new Error(result.error || 'Failed to create draft listing');
+      }
+    } catch (error) {
+      console.error('Error creating draft listing:', error);
+      toast.error('Failed to create draft. Using local storage instead.');
+      return null;
+    } finally {
+      setIsCreatingDraft(false);
+    }
+  }, [isCreatingDraft, userId, userEmail, state.formData.companyName, state.listingId]);
+
+  // =====================================================
   // LOAD EXISTING LISTING DATA
   // =====================================================
 
   const loadExistingListingData = async (listingId: string) => {
+    // Validate listing ID format (should be a UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(listingId)) {
+      console.warn(`Invalid listing ID format: ${listingId}, switching to new listing mode`);
+      if (userId) {
+        clearLocalStorage(userId);
+      }
+      // Remove the edit parameter from the URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('edit');
+      window.history.replaceState({}, '', url.toString());
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/listings/${listingId}`);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Failed to load listing data:', errorData);
+        
+        // If it's a 404, the listing doesn't exist - clear the edit mode and continue with fresh creation
+        if (response.status === 404) {
+          console.warn(`Listing ${listingId} not found, switching to new listing mode`);
+          // Clear any stored reference to this listing and start fresh
+          if (userId) {
+            clearLocalStorage(userId);
+          }
+          // Remove the edit parameter from the URL
+          const url = new URL(window.location.href);
+          url.searchParams.delete('edit');
+          window.history.replaceState({}, '', url.toString());
+          return; // Don't throw, just return without loading data
+        }
+        
         throw new Error(errorData.error || `HTTP ${response.status}: Failed to load listing data`);
       }
       
@@ -205,9 +331,9 @@ export function ListingWizard({
         existingListingId: listingId,
         companyName: listing.company_name,
         
-        // Sector and Use Class IDs for dropdowns (convert single values to arrays)
-        sectors: [listing.sector_id],
-        useClassIds: [listing.use_class_id],
+        // Sector and Use Class selections from junction tables or fallback to legacy single values
+        sectors: listing.sectors?.map((s: any) => s.id) || [],
+        useClassIds: listing.use_classes?.map((uc: any) => uc.id) || [],
         
         primaryContact: {
           contactName: listing.contact_name,
@@ -427,28 +553,45 @@ export function ListingWizard({
   // =====================================================
 
   useEffect(() => {
-    const autoSaveTimer = setTimeout(() => {
+    const autoSaveTimer = setTimeout(async () => {
       if (shouldAutoSave(autoSave, state.formData) && Object.keys(state.formData).length > 0) {
         setAutoSave({ isSaving: true });
         
         try {
-          saveToLocalStorage(state.formData, userId);
+          // Save to database draft if we have a listing ID, otherwise fallback to localStorage
+          if (state.listingId && onSave) {
+            // Use the server action to save to database
+            await onSave(state.formData);
+          } else {
+            // Fallback to localStorage if no draft listing exists yet
+            saveToLocalStorage(state.formData, userId);
+          }
+          
           setAutoSave({ 
             lastSaved: new Date(), 
             isDirty: false, 
             isSaving: false 
           });
         } catch (error) {
+          console.error('Auto-save failed:', error);
           setAutoSave({ 
             isSaving: false, 
             saveError: 'Failed to auto-save' 
           });
+          
+          // Fallback to localStorage if database save fails
+          try {
+            saveToLocalStorage(state.formData, userId);
+            setAutoSave({ saveError: undefined }); // Clear error if localStorage works
+          } catch (localError) {
+            console.error('LocalStorage fallback also failed:', localError);
+          }
         }
       }
     }, 1000);
 
     return () => clearTimeout(autoSaveTimer);
-  }, [state.formData, autoSave]);
+  }, [state.formData, autoSave, state.listingId, onSave, userId]);
 
   // =====================================================
   // NAVIGATION HANDLERS
@@ -839,7 +982,14 @@ export function ListingWizard({
       }
       
       if (result.success) {
+        // Clear localStorage immediately after successful submission
         clearLocalStorage(userId);
+        
+        // Set the listing ID in state to trigger cleanup
+        if (result.listingId) {
+          dispatch({ type: 'SET_LISTING_ID', listingId: result.listingId });
+        }
+        
         toast.success('Listing submitted successfully!');
         
         // Redirect to enhanced success page
@@ -941,6 +1091,7 @@ export function ListingWizard({
                 dispatch({ type: 'SET_VALID', step: 4, isValid })
               }
               errors={state.errors}
+              listingId={state.listingId}
             />
           )}
 

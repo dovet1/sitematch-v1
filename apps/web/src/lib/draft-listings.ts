@@ -341,6 +341,132 @@ export async function addFAQsToDraftListing(
 }
 
 // =====================================================
+// ADD SECTORS TO DRAFT LISTING
+// =====================================================
+
+export async function addSectorsToDraftListing(
+  listingId: string,
+  sectorNames: string[]
+): Promise<void> {
+  // Use browser client if we're on the client side, server client otherwise
+  let supabase;
+  if (typeof window !== 'undefined') {
+    const { browserClient } = await import('@/lib/supabase');
+    supabase = browserClient;
+  } else {
+    supabase = createServerClient();
+  }
+
+  try {
+    // Get sector IDs from names
+    const { data: sectors, error: sectorsError } = await supabase
+      .from('sectors')
+      .select('id, name')
+      .in('name', sectorNames);
+
+    if (sectorsError) {
+      console.error('Error fetching sectors:', sectorsError);
+      throw new Error(`Failed to fetch sectors: ${sectorsError.message}`);
+    }
+
+    if (!sectors || sectors.length === 0) {
+      console.log('No matching sectors found for:', sectorNames);
+      return;
+    }
+
+    // Clear existing sectors first
+    await supabase
+      .from('listing_sectors')
+      .delete()
+      .eq('listing_id', listingId);
+
+    // Insert new sectors
+    const sectorInserts = sectors.map(sector => ({
+      listing_id: listingId,
+      sector_id: sector.id
+    }));
+
+    const { error } = await supabase
+      .from('listing_sectors')
+      .insert(sectorInserts);
+
+    if (error) {
+      console.error('Sector insertion error:', error);
+      throw new Error(`Failed to add sectors to draft listing: ${error.message}`);
+    }
+
+    console.log('Sectors added to draft listing successfully:', listingId);
+
+  } catch (error) {
+    console.error('Adding sectors to draft listing failed:', error);
+    throw error;
+  }
+}
+
+// =====================================================
+// ADD USE CLASSES TO DRAFT LISTING
+// =====================================================
+
+export async function addUseClassesToDraftListing(
+  listingId: string,
+  useClassIds: string[]
+): Promise<void> {
+  // Use browser client if we're on the client side, server client otherwise
+  let supabase;
+  if (typeof window !== 'undefined') {
+    const { browserClient } = await import('@/lib/supabase');
+    supabase = browserClient;
+  } else {
+    supabase = createServerClient();
+  }
+
+  try {
+    // Get use class IDs - they could be passed as IDs or codes
+    const { data: useClasses, error: useClassesError } = await supabase
+      .from('use_classes')
+      .select('id, code')
+      .or(`id.in.(${useClassIds.join(',')}),code.in.(${useClassIds.join(',')})`);
+
+    if (useClassesError) {
+      console.error('Error fetching use classes:', useClassesError);
+      throw new Error(`Failed to fetch use classes: ${useClassesError.message}`);
+    }
+
+    if (!useClasses || useClasses.length === 0) {
+      console.log('No matching use classes found for:', useClassIds);
+      return;
+    }
+
+    // Clear existing use classes first
+    await supabase
+      .from('listing_use_classes')
+      .delete()
+      .eq('listing_id', listingId);
+
+    // Insert new use classes
+    const useClassInserts = useClasses.map(useClass => ({
+      listing_id: listingId,
+      use_class_id: useClass.id
+    }));
+
+    const { error } = await supabase
+      .from('listing_use_classes')
+      .insert(useClassInserts);
+
+    if (error) {
+      console.error('Use class insertion error:', error);
+      throw new Error(`Failed to add use classes to draft listing: ${error.message}`);
+    }
+
+    console.log('Use classes added to draft listing successfully:', listingId);
+
+  } catch (error) {
+    console.error('Adding use classes to draft listing failed:', error);
+    throw error;
+  }
+}
+
+// =====================================================
 // ADD LOCATIONS TO DRAFT LISTING
 // =====================================================
 

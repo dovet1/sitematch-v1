@@ -7,9 +7,9 @@ import { createHash } from 'crypto';
 
 // Allowed MIME types with strict validation
 export const ALLOWED_IMAGE_TYPES = {
-  'image/png': { ext: '.png', maxSize: 2048 * 1024, description: 'PNG Image' },
-  'image/jpeg': { ext: '.jpg', maxSize: 2048 * 1024, description: 'JPEG Image' },
-  'image/jpg': { ext: '.jpg', maxSize: 2048 * 1024, description: 'JPG Image' },
+  'image/png': { ext: '.png', maxSize: 5120 * 1024, description: 'PNG Image' },
+  'image/jpeg': { ext: '.jpg', maxSize: 5120 * 1024, description: 'JPEG Image' },
+  'image/jpg': { ext: '.jpg', maxSize: 5120 * 1024, description: 'JPG Image' },
   'image/svg+xml': { ext: '.svg', maxSize: 1024 * 1024, description: 'SVG Image' }, // Smaller limit for SVG
 } as const;
 

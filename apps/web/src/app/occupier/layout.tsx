@@ -1,17 +1,19 @@
 import { redirect } from 'next/navigation';
-import { createServerClient } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/auth';
 
 export default async function OccupierLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createServerClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   
   if (!user) {
-    redirect('/auth/login');
+    redirect('/?login=1&redirect=/occupier/dashboard');
+  }
+
+  if (user.role !== 'occupier' && user.role !== 'admin') {
+    redirect('/unauthorized');
   }
 
   return (

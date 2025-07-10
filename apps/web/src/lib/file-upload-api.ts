@@ -18,8 +18,6 @@ export async function uploadFileViaApi(
   const formData = new FormData()
   formData.append('file', file)
   formData.append('type', type)
-  // Organization ID is no longer required but kept for API compatibility
-  formData.append('organizationId', organizationId || '')
   
   // Add listing ID if provided (for draft listing association)
   if (listingId) {

@@ -96,7 +96,7 @@ export function SearchableDropdown({
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "w-full justify-between bg-white",
+              "w-full justify-between bg-white hover:bg-gray-50 hover:text-foreground",
               !selectedOption && "text-muted-foreground",
               disabled && "opacity-50 cursor-not-allowed"
             )}
@@ -105,7 +105,7 @@ export function SearchableDropdown({
             <div className="flex items-center flex-1 min-w-0">
               {selectedOption ? (
                 <div className="flex flex-col items-start min-w-0">
-                  <span className="truncate">{selectedOption.label}</span>
+                  <span className="truncate text-sm">{selectedOption.label}</span>
                   {selectedOption.description && (
                     <span className="text-xs text-muted-foreground truncate">
                       {selectedOption.description}

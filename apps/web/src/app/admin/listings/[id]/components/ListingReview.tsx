@@ -207,12 +207,36 @@ export function ListingReview({ listing }: ListingReviewProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label className="text-sm font-medium text-muted-foreground">Sector</Label>
-              <p className="text-sm">{listing.sectors?.name || 'Not specified'}</p>
+              <Label className="text-sm font-medium text-muted-foreground">Sectors</Label>
+              <div className="text-sm">
+                {listing.sectors && listing.sectors.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {listing.sectors.map((sector: any) => (
+                      <Badge key={sector.id} variant="secondary" className="text-xs">
+                        {sector.name}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p>Not specified</p>
+                )}
+              </div>
             </div>
             <div>
-              <Label className="text-sm font-medium text-muted-foreground">Use Class</Label>
-              <p className="text-sm">{listing.use_classes?.code ? `${listing.use_classes.code} - ${listing.use_classes.name}` : 'Not specified'}</p>
+              <Label className="text-sm font-medium text-muted-foreground">Use Classes</Label>
+              <div className="text-sm">
+                {listing.use_classes && listing.use_classes.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {listing.use_classes.map((useClass: any) => (
+                      <Badge key={useClass.id} variant="secondary" className="text-xs">
+                        {useClass.code} - {useClass.name}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p>Not specified</p>
+                )}
+              </div>
             </div>
             <div>
               <Label className="text-sm font-medium text-muted-foreground">Site Size Range</Label>

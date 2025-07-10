@@ -73,6 +73,10 @@ export async function createEnhancedListing(
 ) {
   const supabase = createServerClient();
 
+  console.log('Creating enhanced listing with sectors:', data.sectors, 'use_class_ids:', data.use_class_ids);
+  console.log('Sector types:', data.sectors?.map(s => typeof s + ': ' + s));
+  console.log('Use class types:', data.use_class_ids?.map(uc => typeof uc + ': ' + uc));
+
   try {
     // Start transaction
     // Map enhanced data to database schema - start with minimal required fields
@@ -122,7 +126,11 @@ export async function createEnhancedListing(
     console.log('Available sectors:', allSectors);
     console.log('Available use classes:', allUseClasses);
     
-    // Try to find matching sector
+    // Note: Sectors and use classes will be handled via junction tables after listing creation
+    // Remove the old single sector/use class assignment logic
+    
+    // For backward compatibility, we'll still use first sector/use class for the main table
+    // until we fully migrate to junction tables only
     if (allSectors && allSectors.length > 0) {
       if (data.sectors && data.sectors.length > 0) {
         const matchingSector = allSectors.find(s => s.name === data.sectors![0]);
@@ -138,7 +146,7 @@ export async function createEnhancedListing(
       }
     }
     
-    // Try to find matching use class
+    // For backward compatibility, use first use class for main table
     if (allUseClasses && allUseClasses.length > 0) {
       if (data.use_class_ids && data.use_class_ids.length > 0) {
         const matchingUseClass = allUseClasses.find(uc => uc.id === data.use_class_ids![0] || uc.code === data.use_class_ids![0]);
@@ -169,6 +177,80 @@ export async function createEnhancedListing(
       
       const errorMessage = listingError.message || listingError.hint || 'Unknown database error';
       throw new Error(`Failed to create listing: ${errorMessage}`);
+    }
+
+    // Insert sectors to junction table
+    if (data.sectors && data.sectors.length > 0 && allSectors) {
+      const sectorInserts = data.sectors
+        .map(sectorId => {
+          // Check if it's a UUID (new format) or name (legacy format)
+          const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sectorId);
+          
+          let sector;
+          if (isUUID) {
+            // Find by ID
+            sector = allSectors.find(s => s.id === sectorId);
+          } else {
+            // Find by name (legacy format)
+            sector = allSectors.find(s => s.name === sectorId);
+          }
+          
+          return sector ? {
+            listing_id: listing.id,
+            sector_id: sector.id
+          } : null;
+        })
+        .filter(Boolean);
+
+      if (sectorInserts.length > 0) {
+        const { data: insertedSectors, error: sectorsError } = await supabase
+          .from('listing_sectors')
+          .insert(sectorInserts)
+          .select();
+
+        if (sectorsError) {
+          console.error('Sector junction insertion error:', sectorsError);
+        } else {
+          console.log(`Successfully inserted ${insertedSectors?.length} sectors to junction table`);
+        }
+      }
+    }
+
+    // Insert use classes to junction table
+    if (data.use_class_ids && data.use_class_ids.length > 0 && allUseClasses) {
+      const useClassInserts = data.use_class_ids
+        .map(useClassId => {
+          // Check if it's a UUID (new format) or code (legacy format)
+          const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(useClassId);
+          
+          let useClass;
+          if (isUUID) {
+            // Find by ID
+            useClass = allUseClasses.find(uc => uc.id === useClassId);
+          } else {
+            // Find by code (legacy format)
+            useClass = allUseClasses.find(uc => uc.code === useClassId);
+          }
+          
+          return useClass ? {
+            listing_id: listing.id,
+            use_class_id: useClass.id
+          } : null;
+        })
+        .filter(Boolean);
+
+      if (useClassInserts.length > 0) {
+        const { data: insertedUseClasses, error: useClassesError } = await supabase
+          .from('listing_use_classes')
+          .insert(useClassInserts)
+          .select();
+
+        if (useClassesError) {
+          console.error('Use class junction insertion error:', useClassesError);
+        } else {
+          console.log(`Successfully inserted ${insertedUseClasses?.length} use classes to junction table`);
+        }
+      }
     }
 
     // Insert locations if not nationwide

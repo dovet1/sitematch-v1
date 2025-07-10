@@ -4,6 +4,7 @@
 // =====================================================
 
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { Toaster } from 'sonner';
 import { getCurrentUser } from '@/lib/auth';
 import { ListingWizard } from '@/components/listings/listing-wizard';
@@ -19,13 +20,13 @@ import type { CreateListingRequest } from '@/types/listings';
 export default async function CreateListingPage({
   searchParams
 }: {
-  searchParams: { edit?: string }
+  searchParams: { edit?: string; fresh?: string }
 }) {
   // Check authentication and authorization
   const user = await getCurrentUser();
   
   if (!user) {
-    redirect('/auth/login?redirect=/occupier/create-listing');
+    redirect('/?login=1&redirect=/occupier/create-listing');
   }
 
   if (user.role !== 'occupier' && user.role !== 'admin') {
@@ -34,6 +35,7 @@ export default async function CreateListingPage({
 
   // Get edit listing ID from URL parameters
   const editListingId = searchParams.edit;
+  const startFresh = searchParams.fresh === 'true';
 
   // Organization requirements removed - listings are now independent
 
@@ -47,7 +49,11 @@ export default async function CreateListingPage({
     console.log('handleSubmit called with data:', { 
       companyName: data.companyName, 
       existingListingId: data.existingListingId,
-      editListingId 
+      editListingId,
+      sectors: data.sectors,
+      useClassIds: data.useClassIds,
+      sectorsType: typeof data.sectors?.[0],
+      useClassIdsType: typeof data.useClassIds?.[0]
     });
     
     try {
@@ -105,6 +111,9 @@ export default async function CreateListingPage({
         logo_url: data.logoUrl,
         is_nationwide: data.locationSearchNationwide || false,
         locations: data.locationSearchNationwide ? [] : (data.locations || []),
+        // Include sectors and use_class_ids for junction table population
+        sectors: data.sectors || [],
+        use_class_ids: data.useClassIds || [],
         faqs: data.faqs?.map(faq => ({
           question: faq.question,
           answer: faq.answer,
@@ -138,6 +147,40 @@ export default async function CreateListingPage({
           const { createServerClient } = await import('@/lib/supabase');
           const serverClient = createServerClient();
           
+          // Prepare sector and use class IDs for main table update
+          let finalSectorId = sectorId;
+          let finalUseClassId = useClassId;
+          
+          // If user selected sectors/use classes, validate they're UUIDs and use the first one for main table
+          if (data.sectors && data.sectors.length > 0) {
+            const firstSector = data.sectors[0];
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(firstSector);
+            if (isUUID) {
+              finalSectorId = firstSector;
+            } else {
+              console.warn('First sector is not a UUID, using fallback:', firstSector);
+            }
+          }
+          
+          if (data.useClassIds && data.useClassIds.length > 0) {
+            const firstUseClass = data.useClassIds[0];
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(firstUseClass);
+            if (isUUID) {
+              finalUseClassId = firstUseClass;
+            } else {
+              console.warn('First use class is not a UUID, using fallback:', firstUseClass);
+            }
+          }
+          
+          console.log('Update data debug:', {
+            originalSectors: data.sectors,
+            originalUseClassIds: data.useClassIds,
+            finalSectorId,
+            finalUseClassId,
+            fallbackSectorId: sectorId,
+            fallbackUseClassId: useClassId
+          });
+
           // Update the existing listing (without logo_url - logos are stored in separate table)
           const updatedListing = await updateListing(data.existingListingId, {
             title: `Property Requirement - ${data.companyName || 'Company'}`,
@@ -151,9 +194,9 @@ export default async function CreateListingPage({
             contact_email: data.primaryContact?.contactEmail || currentUser.email || 'contact@example.com',
             contact_phone: data.primaryContact?.contactPhone,
             status: 'pending', // Reset to pending when edited
-            // Use the sector/use class IDs from the form data if available
-            sector_id: data.sectors?.[0] || sectorId,
-            use_class_id: data.useClassIds?.[0] || useClassId
+            // Use validated UUIDs
+            sector_id: finalSectorId,
+            use_class_id: finalUseClassId
           }, serverClient);
 
           // Update related data (contacts, FAQs, locations, documents, files)
@@ -369,6 +412,84 @@ export default async function CreateListingPage({
             }
           }
 
+          // 12. Update junction tables for sectors and use classes
+          console.log('Updating junction tables with data:', {
+            sectors: data.sectors,
+            useClassIds: data.useClassIds
+          });
+
+          // Clear existing junction table entries
+          await supabase.from('listing_sectors').delete().eq('listing_id', data.existingListingId);
+          await supabase.from('listing_use_classes').delete().eq('listing_id', data.existingListingId);
+
+          // Add new sectors to junction table
+          if (data.sectors && data.sectors.length > 0) {
+            // Get sector data to handle both UUID and name formats
+            const { data: allSectors } = await supabase.from('sectors').select('id, name');
+            
+            const sectorInserts = data.sectors
+              .map(sectorIdOrName => {
+                const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sectorIdOrName);
+                let sector;
+                if (isUUID) {
+                  sector = allSectors?.find(s => s.id === sectorIdOrName);
+                } else {
+                  sector = allSectors?.find(s => s.name === sectorIdOrName);
+                }
+                return sector ? {
+                  listing_id: data.existingListingId,
+                  sector_id: sector.id
+                } : null;
+              })
+              .filter(Boolean);
+
+            if (sectorInserts.length > 0) {
+              const { error: sectorsError } = await supabase
+                .from('listing_sectors')
+                .insert(sectorInserts);
+
+              if (sectorsError) {
+                console.error('Error updating sectors:', sectorsError);
+              } else {
+                console.log(`Updated ${sectorInserts.length} sectors in junction table`);
+              }
+            }
+          }
+
+          // Add new use classes to junction table
+          if (data.useClassIds && data.useClassIds.length > 0) {
+            // Get use class data to handle both UUID and code formats
+            const { data: allUseClasses } = await supabase.from('use_classes').select('id, code');
+            
+            const useClassInserts = data.useClassIds
+              .map(useClassIdOrCode => {
+                const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(useClassIdOrCode);
+                let useClass;
+                if (isUUID) {
+                  useClass = allUseClasses?.find(uc => uc.id === useClassIdOrCode);
+                } else {
+                  useClass = allUseClasses?.find(uc => uc.code === useClassIdOrCode);
+                }
+                return useClass ? {
+                  listing_id: data.existingListingId,
+                  use_class_id: useClass.id
+                } : null;
+              })
+              .filter(Boolean);
+
+            if (useClassInserts.length > 0) {
+              const { error: useClassesError } = await supabase
+                .from('listing_use_classes')
+                .insert(useClassInserts);
+
+              if (useClassesError) {
+                console.error('Error updating use classes:', useClassesError);
+              } else {
+                console.log(`Updated ${useClassInserts.length} use classes in junction table`);
+              }
+            }
+          }
+
           } catch (relatedDataError) {
             console.error('Failed to update related data:', relatedDataError);
             // Main listing was updated successfully, but related data failed
@@ -387,7 +508,7 @@ export default async function CreateListingPage({
           };
         } else {
           // Import additional draft listing functions
-          const { addContactsToDraftListing, addFAQsToDraftListing, addLocationsToDraftListing } = await import('@/lib/draft-listings');
+          const { addContactsToDraftListing, addFAQsToDraftListing, addLocationsToDraftListing, addSectorsToDraftListing, addUseClassesToDraftListing } = await import('@/lib/draft-listings');
 
         // Finalize the existing draft listing with all data
         await finalizeDraftListing(data.existingListingId, {
@@ -404,6 +525,16 @@ export default async function CreateListingPage({
           contact_email: data.primaryContact?.contactEmail || currentUser.email || 'contact@example.com',
           contact_phone: data.primaryContact?.contactPhone
         });
+
+        // Save sectors to junction table if provided
+        if (data.sectors && data.sectors.length > 0) {
+          await addSectorsToDraftListing(data.existingListingId, data.sectors);
+        }
+
+        // Save use classes to junction table if provided
+        if (data.useClassIds && data.useClassIds.length > 0) {
+          await addUseClassesToDraftListing(data.existingListingId, data.useClassIds);
+        }
 
         // Save FAQs if provided
         if (data.faqs && data.faqs.length > 0) {
@@ -582,9 +713,9 @@ export default async function CreateListingPage({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <nav className="flex items-center space-x-4 body-small">
-              <a href="/occupier/dashboard" className="text-muted-foreground hover:text-foreground violet-bloom-nav-item">
+              <Link href="/occupier/dashboard" className="text-muted-foreground hover:text-foreground violet-bloom-nav-item">
                 Dashboard
-              </a>
+              </Link>
               <span className="text-muted-foreground">/</span>
               <span className="text-foreground font-medium">
                 {editListingId ? 'Update Listing' : 'Create New Listing'}
@@ -619,6 +750,7 @@ export default async function CreateListingPage({
             userEmail={user.email}
             userId={user.id}
             editMode={!!editListingId}
+            startFresh={startFresh}
           />
         </ErrorBoundary>
       </div>

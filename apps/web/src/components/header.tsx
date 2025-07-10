@@ -23,7 +23,7 @@ export function Header() {
 
   const navigationItems = [
     {
-      href: '/occupier/create-listing',
+      href: '/occupier/create-listing?fresh=true',
       label: 'List Property',
       primary: true,
       showWhen: 'always'

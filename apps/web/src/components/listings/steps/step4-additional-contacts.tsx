@@ -30,14 +30,19 @@ interface ContactForm {
   headshotUrl?: string;
 }
 
+interface Step4Props extends WizardStepProps {
+  listingId?: string;
+}
+
 export function Step4AdditionalContacts({
   data,
   onUpdate,
   onNext,
   onPrevious,
   onValidationChange,
-  errors
-}: WizardStepProps) {
+  errors,
+  listingId
+}: Step4Props) {
   const {
     register,
     handleSubmit,
@@ -354,6 +359,11 @@ export function Step4AdditionalContacts({
                       formData.append('type', 'headshot');
                       formData.append('is_primary', 'false'); // Mark as additional contact headshot
                       
+                      // Add listing ID if available
+                      if (listingId) {
+                        formData.append('listingId', listingId);
+                      }
+                      
                       const response = await fetch('/api/upload', {
                         method: 'POST',
                         body: formData,
@@ -374,7 +384,7 @@ export function Step4AdditionalContacts({
                   setValue(`additionalContacts.${index}.headshotPreview`, preview || '');
                 }}
                 placeholder="Upload contact headshot"
-                maxSize={2 * 1024 * 1024} // 2MB
+                maxSize={5 * 1024 * 1024} // 5MB
                 acceptedTypes={["image/png", "image/jpeg", "image/jpg"]}
               />
             </div>
