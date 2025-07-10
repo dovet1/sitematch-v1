@@ -678,7 +678,7 @@ export function ListingReview({ listing }: ListingReviewProps) {
                       }
                     };
                     
-                    const fileUrl = `https://***REMOVED***.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`;
+                    const fileUrl = `https://nunvbolbcekvtlwuacul.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`;
                     
                     return (
                       <div key={file.id} className="flex items-center gap-2 p-3 bg-muted rounded-lg">

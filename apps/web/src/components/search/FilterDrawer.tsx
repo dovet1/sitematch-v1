@@ -103,7 +103,7 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
       {/* Backdrop */}
       <div
         className={cn(
-          "fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300",
+          "fixed inset-0 bg-black/40 backdrop-blur-sm z-modal-backdrop transition-opacity duration-300",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={onClose}
@@ -112,7 +112,7 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
       {/* Drawer */}
       <div
         className={cn(
-          "fixed top-0 left-0 h-full w-full max-w-md bg-white shadow-xl z-50 overflow-y-auto transition-transform duration-300 ease-in-out",
+          "fixed top-0 left-0 h-full w-full max-w-md bg-white shadow-xl z-modal overflow-y-auto transition-transform duration-300 ease-in-out",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

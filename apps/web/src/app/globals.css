@@ -69,6 +69,17 @@
     --shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.1), 0 2px 4px -2px oklch(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px oklch(0 0 0 / 0.1), 0 4px 6px -4px oklch(0 0 0 / 0.1);
     
+    /* Z-index layering system */
+    --z-base: 0;
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+    --z-toast: 1080;
+    
     /* Spacing scale */
     --space-0: 0;
     --space-1: 0.25rem;  /* 4px */
@@ -385,6 +396,78 @@
   .violet-bloom-touch {
     min-height: 44px;
     min-width: 44px;
+  }
+  
+  /* Z-index utility classes */
+  .z-dropdown {
+    z-index: var(--z-dropdown);
+  }
+  
+  .z-sticky {
+    z-index: var(--z-sticky);
+  }
+  
+  .z-fixed {
+    z-index: var(--z-fixed);
+  }
+  
+  .z-modal-backdrop {
+    z-index: var(--z-modal-backdrop);
+  }
+  
+  .z-modal {
+    z-index: var(--z-modal);
+  }
+  
+  .z-popover {
+    z-index: var(--z-popover);
+  }
+  
+  .z-tooltip {
+    z-index: var(--z-tooltip);
+  }
+  
+  .z-toast {
+    z-index: var(--z-toast);
+  }
+  
+  /* Search header animations */
+  .search-header-enter {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  
+  .search-header-enter-active {
+    transform: translateY(0);
+    opacity: 1;
+    transition: transform 300ms ease-out, opacity 300ms ease-out;
+  }
+  
+  .search-bar-focus {
+    transform: scale(1.02);
+    transition: transform 200ms ease-out;
+  }
+  
+  .mobile-search-modal-enter {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  
+  .mobile-search-modal-enter-active {
+    transform: translateY(0);
+    opacity: 1;
+    transition: transform 300ms ease-out, opacity 300ms ease-out;
+  }
+  
+  .dropdown-enter {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  
+  .dropdown-enter-active {
+    transform: translateY(0);
+    opacity: 1;
+    transition: transform 200ms ease-out, opacity 200ms ease-out;
   }
   
   /* Enhanced hover states for different element types */

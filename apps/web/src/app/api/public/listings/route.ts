@@ -13,11 +13,11 @@ export async function GET(request: NextRequest) {
     const lng = searchParams.get('lng') ? Number(searchParams.get('lng')) : null;
     const radius = Number(searchParams.get('radius') || 5); // Default 5 miles radius
     const companyName = searchParams.get('companyName') || '';
-    const sector = searchParams.getAll('sector');
-    const useClass = searchParams.getAll('useClass');
+    const sector = [...searchParams.getAll('sector'), ...searchParams.getAll('sectors[]')];
+    const useClass = [...searchParams.getAll('useClass'), ...searchParams.getAll('useClasses[]')];
     const sizeMin = searchParams.get('sizeMin') ? Number(searchParams.get('sizeMin')) : null;
     const sizeMax = searchParams.get('sizeMax') ? Number(searchParams.get('sizeMax')) : null;
-    const isNationwide = searchParams.get('isNationwide') === 'true';
+    const isNationwide = searchParams.get('isNationwide') === 'true' || searchParams.get('nationwide') === 'true';
     const page = Number(searchParams.get('page')) || 1;
     const limit = Math.min(Number(searchParams.get('limit')) || 20, 100); // Max 100 results per page
     
@@ -129,9 +129,8 @@ export async function GET(request: NextRequest) {
       query = query.or(`site_size_min.lte.${sizeMax},site_size_min.is.null`);
     }
     
-    if (isNationwide) {
-      query = query.eq('is_nationwide', true);
-    }
+    // Note: Nationwide filtering is handled client-side after fetching locations
+    // A listing is nationwide if it has no linked listing_locations
 
     const { data: listings, error, count } = await query;
 
@@ -195,6 +194,11 @@ export async function GET(request: NextRequest) {
         created_at: listing.created_at
       };
     }) || [];
+
+    // Apply nationwide filtering if requested
+    if (isNationwide) {
+      results = results.filter(listing => listing.is_nationwide);
+    }
 
     // Apply location-based filtering if coordinates are provided
     if (lat !== null && lng !== null) {

@@ -132,6 +132,22 @@ module.exports = {
   			wider: 'var(--tracking-wider)',
   			widest: 'var(--tracking-widest)'
   		},
+  		zIndex: {
+  			dropdown: 'var(--z-dropdown)',
+  			sticky: 'var(--z-sticky)',
+  			fixed: 'var(--z-fixed)',
+  			'modal-backdrop': 'var(--z-modal-backdrop)',
+  			modal: 'var(--z-modal)',
+  			popover: 'var(--z-popover)',
+  			tooltip: 'var(--z-tooltip)',
+  			toast: 'var(--z-toast)',
+  			60: '60',
+  			50: '50',
+  			40: '40',
+  			30: '30',
+  			20: '20',
+  			10: '10'
+  		},
   		keyframes: {
   			'accordion-down': {
   				from: {

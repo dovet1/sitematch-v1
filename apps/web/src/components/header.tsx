@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { LoginModal } from '@/components/auth/login-modal'
 import { SignUpModal } from '@/components/auth/signup-modal'
@@ -12,6 +13,12 @@ import { Menu, X, Sparkles } from 'lucide-react'
 export function Header() {
   const { user, loading, isAdmin } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const pathname = usePathname()
+  
+  // Hide header on search page - the search page will handle its own header
+  if (pathname === '/search') {
+    return null
+  }
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)

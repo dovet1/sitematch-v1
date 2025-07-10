@@ -81,6 +81,8 @@ export function ListingModal({ listingId, isOpen, onClose }: ListingModalProps) 
           description: 'We are seeking a modern, flexible office space in a prime central location. The space should accommodate our growing team of 50+ professionals with room for expansion. Key requirements include open-plan areas, meeting rooms, kitchen facilities, and excellent transport links. We value sustainability, natural light, and modern amenities. The ideal space would be move-in ready with high-speed internet infrastructure and professional reception areas.',
           site_size_min: 5000,
           site_size_max: 10000,
+          sectors: [{ id: '1', name: 'Technology' }],
+          use_classes: [{ id: '1', name: 'Office', code: 'B1' }],
           sector: 'Technology',
           use_class: 'Office (B1)',
           contact_name: 'Sarah Johnson',
