@@ -18,6 +18,10 @@ export interface SearchResult {
   description: string;
   site_size_min: number | null;
   site_size_max: number | null;
+  // Multiple sectors and use classes from junction tables
+  sectors: Array<{ id: string; name: string }>;
+  use_classes: Array<{ id: string; name: string; code: string }>;
+  // Legacy single values for backwards compatibility
   sector: string | null;
   use_class: string | null;
   contact_name: string;

@@ -220,6 +220,11 @@ export function Step1CompanyInfo({
                   formData.append('file', file);
                   formData.append('type', 'logo');
                   
+                  // Add listing ID if available
+                  if (listingId) {
+                    formData.append('listingId', listingId);
+                  }
+                  
                   const response = await fetch('/api/upload', {
                     method: 'POST',
                     body: formData,
@@ -448,6 +453,11 @@ export function Step1CompanyInfo({
                     formData.append('type', 'headshot');
                     formData.append('is_primary', 'true'); // Mark as primary contact headshot
                     
+                    // Add listing ID if available
+                    if (listingId) {
+                      formData.append('listingId', listingId);
+                    }
+                    
                     const response = await fetch('/api/upload', {
                       method: 'POST',
                       body: formData,
@@ -476,7 +486,7 @@ export function Step1CompanyInfo({
               }, [setValue, onUpdate, data.primaryContact?.headshotUrl, watchedValues])}
               onPreviewChange={useCallback((preview: string | null) => setValue('primaryContact.headshotPreview', preview || ''), [setValue])}
               placeholder="Upload professional headshot"
-              maxSize={2 * 1024 * 1024} // 2MB
+              maxSize={5 * 1024 * 1024} // 5MB
               acceptedTypes={["image/png", "image/jpeg", "image/jpg"]}
             />
           </div>

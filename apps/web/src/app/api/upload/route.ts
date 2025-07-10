@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Upload API: Request received')
     const supabase = createServerClient()
     
     // Check authentication

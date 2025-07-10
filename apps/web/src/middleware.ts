@@ -61,7 +61,7 @@ export async function middleware(request: NextRequest) {
   // Admin route protection
   if (request.nextUrl.pathname.startsWith('/admin')) {
     if (!user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
+      return NextResponse.redirect(new URL('/?login=1', request.url))
     }
 
     // Check if user has admin role
@@ -76,11 +76,36 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Occupier route protection
+  if (request.nextUrl.pathname.startsWith('/occupier')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/?login=1', request.url))
+    }
+
+    // Check if user has occupier or admin role
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    console.log('Middleware auth check:', { 
+      userId: user.id, 
+      profile, 
+      pathname: request.nextUrl.pathname 
+    });
+
+    if (!profile || (profile.role !== 'occupier' && profile.role !== 'admin')) {
+      console.log('Middleware redirect: unauthorized');
+      return NextResponse.redirect(new URL('/unauthorized', request.url))
+    }
+  }
+
   // Protected routes that require any authentication
   const protectedRoutes = ['/dashboard', '/listings/create', '/listings/manage']
   if (protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))) {
     if (!user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
+      return NextResponse.redirect(new URL('/?login=1', request.url))
     }
   }
 

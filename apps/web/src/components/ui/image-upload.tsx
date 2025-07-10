@@ -20,7 +20,7 @@ export function ImageUpload({
   value,
   onChange,
   onPreviewChange,
-  maxSize = 2 * 1024 * 1024, // 2MB default
+  maxSize = 5 * 1024 * 1024, // 5MB default
   acceptedTypes = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml"],
   className,
   disabled = false,

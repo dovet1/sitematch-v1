@@ -19,31 +19,35 @@ interface FilterDrawerProps {
 
 export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: FilterDrawerProps) {
   const [localFilters, setLocalFilters] = useState<SearchFilters>(filters);
-
-  // Mock data - in production, this would come from API
-  const sectors: SectorOption[] = [
-    { id: '1', value: 'retail', label: 'Retail', count: 245 },
-    { id: '2', value: 'office', label: 'Office', count: 189 },
-    { id: '3', value: 'industrial', label: 'Industrial', count: 156 },
-    { id: '4', value: 'hospitality', label: 'Hospitality', count: 123 },
-    { id: '5', value: 'healthcare', label: 'Healthcare', count: 98 },
-    { id: '6', value: 'education', label: 'Education', count: 87 },
-  ];
-
-  const useClasses: UseClassOption[] = [
-    { id: '1', value: 'a1', label: 'A1 - Shops', count: 156 },
-    { id: '2', value: 'a3', label: 'A3 - Restaurants', count: 89 },
-    { id: '3', value: 'b1', label: 'B1 - Business/Office', count: 234 },
-    { id: '4', value: 'b2', label: 'B2 - General Industrial', count: 67 },
-    { id: '5', value: 'b8', label: 'B8 - Storage/Distribution', count: 45 },
-    { id: '6', value: 'c1', label: 'C1 - Hotels', count: 34 },
-    { id: '7', value: 'd1', label: 'D1 - Non-residential institutions', count: 23 },
-    { id: '8', value: 'd2', label: 'D2 - Assembly/Leisure', count: 56 },
-  ];
+  const [sectors, setSectors] = useState<SectorOption[]>([]);
+  const [useClasses, setUseClasses] = useState<UseClassOption[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
+
+  // Fetch reference data from API
+  useEffect(() => {
+    const fetchReferenceData = async () => {
+      try {
+        const response = await fetch('/api/public/reference-data');
+        if (response.ok) {
+          const data = await response.json();
+          setSectors(data.sectors || []);
+          setUseClasses(data.useClasses || []);
+        } else {
+          console.error('Failed to fetch reference data');
+        }
+      } catch (error) {
+        console.error('Error fetching reference data:', error);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    fetchReferenceData();
+  }, []);
 
   const handleInputChange = (field: keyof SearchFilters, value: any) => {
     setLocalFilters(prev => ({ ...prev, [field]: value }));
@@ -151,8 +155,16 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
           {/* Sectors */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Sectors</Label>
+            {localFilters.sector.length > 1 && (
+              <p className="text-xs text-muted-foreground">Showing listings from any selected sector</p>
+            )}
             <div className="space-y-2">
-              {sectors.map((sector) => (
+              {isLoadingData ? (
+                <div className="text-sm text-muted-foreground">Loading sectors...</div>
+              ) : sectors.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No sectors available</div>
+              ) : (
+                sectors.map((sector) => (
                 <div key={sector.id} className="flex items-center space-x-2">
                   <Checkbox
                     id={`sector-${sector.id}`}
@@ -168,15 +180,23 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
                     <span className="text-muted-foreground">({sector.count})</span>
                   </Label>
                 </div>
-              ))}
+              )))}
             </div>
           </div>
 
           {/* Use Classes */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Planning Use Class</Label>
+            {localFilters.useClass.length > 1 && (
+              <p className="text-xs text-muted-foreground">Showing listings from any selected use class</p>
+            )}
             <div className="space-y-2">
-              {useClasses.map((useClass) => (
+              {isLoadingData ? (
+                <div className="text-sm text-muted-foreground">Loading use classes...</div>
+              ) : useClasses.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No use classes available</div>
+              ) : (
+                useClasses.map((useClass) => (
                 <div key={useClass.id} className="flex items-center space-x-2">
                   <Checkbox
                     id={`use-class-${useClass.id}`}
@@ -192,7 +212,7 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
                     <span className="text-muted-foreground">({useClass.count})</span>
                   </Label>
                 </div>
-              ))}
+              )))}
             </div>
           </div>
 

@@ -168,18 +168,65 @@ export class AdminService {
       .from('users')
       .select('id, email')
 
+    // Get junction table data for all listings
+    const listingIds = listings.map((l: any) => l.id);
+    
+    const { data: allListingSectors } = await this.supabase
+      .from('listing_sectors')
+      .select(`
+        listing_id,
+        sector:sectors(id, name)
+      `)
+      .in('listing_id', listingIds)
+
+    const { data: allListingUseClasses } = await this.supabase
+      .from('listing_use_classes')
+      .select(`
+        listing_id,
+        use_class:use_classes(id, code, name)
+      `)
+      .in('listing_id', listingIds)
+
     // Create lookup maps
     const sectorsMap = new Map(sectors?.map((s: any) => [s.id, s]) || [])
     const useClassesMap = new Map(useClasses?.map((uc: any) => [uc.id, uc]) || [])
     const usersMap = new Map(users?.map((u: any) => [u.id, u]) || [])
 
-    // Join data in JavaScript
-    const listingsWithJoins = listings.map((listing: any) => ({
-      ...listing,
-      sectors: sectorsMap.get(listing.sector_id) || null,
-      use_classes: useClassesMap.get(listing.use_class_id) || null,
-      users: usersMap.get(listing.created_by) || null
-    }))
+    // Create junction data maps
+    const listingSectorsMap = new Map<string, any[]>();
+    const listingUseClassesMap = new Map<string, any[]>();
+
+    allListingSectors?.forEach((ls: any) => {
+      if (!listingSectorsMap.has(ls.listing_id)) {
+        listingSectorsMap.set(ls.listing_id, []);
+      }
+      if (ls.sector) {
+        listingSectorsMap.get(ls.listing_id)!.push(ls.sector);
+      }
+    });
+
+    allListingUseClasses?.forEach((luc: any) => {
+      if (!listingUseClassesMap.has(luc.listing_id)) {
+        listingUseClassesMap.set(luc.listing_id, []);
+      }
+      if (luc.use_class) {
+        listingUseClassesMap.get(luc.listing_id)!.push(luc.use_class);
+      }
+    });
+
+    // Join data in JavaScript - support both junction tables and legacy single relationships
+    const listingsWithJoins = listings.map((listing: any) => {
+      const sectorsFromJunction = listingSectorsMap.get(listing.id) || [];
+      const useClassesFromJunction = listingUseClassesMap.get(listing.id) || [];
+
+      return {
+        ...listing,
+        // Use junction table data if available, fallback to single relationships
+        sectors: sectorsFromJunction.length > 0 ? sectorsFromJunction : (sectorsMap.get(listing.sector_id) ? [sectorsMap.get(listing.sector_id)] : []),
+        use_classes: useClassesFromJunction.length > 0 ? useClassesFromJunction : (useClassesMap.get(listing.use_class_id) ? [useClassesMap.get(listing.use_class_id)] : []),
+        users: usersMap.get(listing.created_by) || null
+      };
+    })
 
     return listingsWithJoins
   }
@@ -237,6 +284,21 @@ export class AdminService {
       .select('*')
       .eq('listing_id', id)
 
+    // Get junction table data for multiple sectors and use classes
+    const { data: listingSectors } = await this.supabase
+      .from('listing_sectors')
+      .select(`
+        sector:sectors(id, name, description)
+      `)
+      .eq('listing_id', id)
+
+    const { data: listingUseClasses } = await this.supabase
+      .from('listing_use_classes')
+      .select(`
+        use_class:use_classes(id, code, name, description)
+      `)
+      .eq('listing_id', id)
+
     // Create lookup maps
     const sectorsMap = new Map(sectors?.map((s: any) => [s.id, s]) || [])
     const useClassesMap = new Map(useClasses?.map((uc: any) => [uc.id, uc]) || [])
@@ -278,11 +340,15 @@ export class AdminService {
       })
     }
 
-    // Join data
+    // Join data - support both junction tables (new) and single relationships (legacy)
+    const sectorsFromJunction = listingSectors?.map((ls: any) => ls.sector).filter(Boolean) || [];
+    const useClassesFromJunction = listingUseClasses?.map((luc: any) => luc.use_class).filter(Boolean) || [];
+    
     const listingWithDetails = {
       ...listing,
-      sectors: sectorsMap.get(listing.sector_id) || null,
-      use_classes: useClassesMap.get(listing.use_class_id) || null,
+      // Use junction table data if available, fallback to single relationships
+      sectors: sectorsFromJunction.length > 0 ? sectorsFromJunction : (sectorsMap.get(listing.sector_id) ? [sectorsMap.get(listing.sector_id)] : []),
+      use_classes: useClassesFromJunction.length > 0 ? useClassesFromJunction : (useClassesMap.get(listing.use_class_id) ? [useClassesMap.get(listing.use_class_id)] : []),
       users: usersMap.get(listing.created_by) || null,
       locations: locations || [],
       faqs: faqs || [],

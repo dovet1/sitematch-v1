@@ -42,7 +42,7 @@ export default async function ListingSubmittedPage({ params }: PageProps) {
   const user = await getCurrentUser();
   
   if (!user) {
-    redirect('/auth/login?redirect=/occupier/dashboard');
+    redirect('/?login=1&redirect=/occupier/dashboard');
   }
 
   if (user.role !== 'occupier' && user.role !== 'admin') {

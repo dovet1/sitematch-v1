@@ -180,7 +180,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, redirectTo?: string) => {
     // Ensure consistent hostname for callback URL
     const origin = window.location.origin.replace('127.0.0.1', 'localhost')
-    const callbackUrl = redirectTo || `${origin}/auth/callback`
+    // Default redirect to dashboard if not specified
+    const defaultRedirect = redirectTo || '/occupier/dashboard'
+    const callbackUrl = `${origin}/auth/callback?next=${encodeURIComponent(defaultRedirect)}`
     
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -202,7 +204,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     setUser(null)
     setProfile(null)
-    router.push('/')
+    // Use replace instead of push to avoid back button issues
+    router.replace('/')
   }
 
   const hasRole = (roles: UserRole | UserRole[]): boolean => {
