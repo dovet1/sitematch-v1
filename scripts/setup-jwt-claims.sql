@@ -16,7 +16,7 @@ BEGIN
   
   -- Make HTTP request to our Edge Function
   SELECT http_post(
-    'https://***REMOVED***.supabase.co/functions/v1/auth-hook',
+    'https://nunvbolbcekvtlwuacul.supabase.co/functions/v1/auth-hook',
     jsonb_build_object(
       'type', TG_OP,
       'table', 'public.users',

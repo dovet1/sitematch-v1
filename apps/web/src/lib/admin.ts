@@ -323,7 +323,7 @@ export class AdminService {
       if (primaryContact && !primaryContact.headshot_url && primaryHeadshot) {
         primaryContact = {
           ...primaryContact,
-          headshot_url: `https://***REMOVED***.supabase.co/storage/v1/object/public/${primaryHeadshot.bucket_name}/${primaryHeadshot.file_path}`
+          headshot_url: `https://nunvbolbcekvtlwuacul.supabase.co/storage/v1/object/public/${primaryHeadshot.bucket_name}/${primaryHeadshot.file_path}`
         }
       }
       
@@ -333,7 +333,7 @@ export class AdminService {
         if (!contact.headshot_url && additionalHeadshots[index]) {
           return {
             ...contact,
-            headshot_url: `https://***REMOVED***.supabase.co/storage/v1/object/public/${additionalHeadshots[index].bucket_name}/${additionalHeadshots[index].file_path}`
+            headshot_url: `https://nunvbolbcekvtlwuacul.supabase.co/storage/v1/object/public/${additionalHeadshots[index].bucket_name}/${additionalHeadshots[index].file_path}`
           }
         }
         return contact
@@ -356,25 +356,25 @@ export class AdminService {
       primary_contact: primaryContact,
       additional_contacts: additionalContacts,
       // File information organized by type - generate proper URLs
-      logo_url: logoFiles?.[0] ? `https://***REMOVED***.supabase.co/storage/v1/object/public/${logoFiles[0].bucket_name}/${logoFiles[0].file_path}` : (listing.logo_url || null),
-      brochure_url: brochureFiles?.[0] ? `https://***REMOVED***.supabase.co/storage/v1/object/public/${brochureFiles[0].bucket_name}/${brochureFiles[0].file_path}` : (listing.brochure_url || null),
+      logo_url: logoFiles?.[0] ? `https://nunvbolbcekvtlwuacul.supabase.co/storage/v1/object/public/${logoFiles[0].bucket_name}/${logoFiles[0].file_path}` : (listing.logo_url || null),
+      brochure_url: brochureFiles?.[0] ? `https://nunvbolbcekvtlwuacul.supabase.co/storage/v1/object/public/${brochureFiles[0].bucket_name}/${brochureFiles[0].file_path}` : (listing.brochure_url || null),
       company_logos: logoFiles.slice(1).map((file: any) => ({
         id: file.id,
-        file_url: `https://***REMOVED***.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
+        file_url: `https://nunvbolbcekvtlwuacul.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
         file_name: file.file_name,
         file_size: file.file_size
       })),
       listing_documents: [...sitePlanFiles, ...fitOutFiles, ...brochureFiles].map((file: any) => ({
         id: file.id,
         document_type: file.file_type,
-        file_url: `https://***REMOVED***.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
+        file_url: `https://nunvbolbcekvtlwuacul.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
         file_name: file.file_name,
         file_size: file.file_size
       })),
       media_files: mediaFiles.map((file: any) => ({
         id: file.id,
         file_type: file.file_type,
-        file_url: `https://***REMOVED***.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
+        file_url: `https://nunvbolbcekvtlwuacul.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
         file_name: file.file_name,
         file_size: file.file_size
       })),

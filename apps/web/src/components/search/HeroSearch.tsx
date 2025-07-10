@@ -1,52 +1,52 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Filter, MapPin } from 'lucide-react';
+import { Globe } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { LocationSearch } from './LocationSearch';
 import { SearchFilters } from '@/types/search';
-import { cn } from '@/lib/utils';
 
 interface HeroSearchProps {
-  onSearch: (filters: SearchFilters) => void;
-  onFilterToggle: () => void;
-  searchFilters: SearchFilters;
+  searchFilters?: SearchFilters;
 }
 
-export function HeroSearch({ onSearch, onFilterToggle, searchFilters }: HeroSearchProps) {
-  const [localLocation, setLocalLocation] = useState(searchFilters.location);
+export function HeroSearch({ searchFilters }: HeroSearchProps) {
+  const router = useRouter();
+  const [localLocation, setLocalLocation] = useState(searchFilters?.location || '');
   
   useEffect(() => {
-    setLocalLocation(searchFilters.location);
-  }, [searchFilters.location]);
+    setLocalLocation(searchFilters?.location || '');
+  }, [searchFilters?.location]);
 
   const handleLocationChange = (location: string) => {
     setLocalLocation(location);
-    onSearch({ ...searchFilters, location });
   };
 
   const handleLocationSelect = (locationData: { name: string; coordinates: { lat: number; lng: number } }) => {
-    setLocalLocation(locationData.name);
-    onSearch({ 
-      ...searchFilters, 
+    // Navigate to search page with location parameters
+    const params = new URLSearchParams({
       location: locationData.name,
-      coordinates: locationData.coordinates 
+      lat: locationData.coordinates.lat.toString(),
+      lng: locationData.coordinates.lng.toString()
     });
+    router.push(`/search?${params.toString()}`);
+  };
+
+  const handleNationwideSearch = () => {
+    // Navigate to search page with nationwide parameter
+    // For the home page, always enable nationwide since we're starting fresh
+    router.push('/search?nationwide=true');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSearch({ ...searchFilters, location: localLocation });
+    if (localLocation) {
+      // If location text exists but wasn't selected from dropdown, navigate with just location text
+      const params = new URLSearchParams({ location: localLocation });
+      router.push(`/search?${params.toString()}`);
+    }
   };
-
-  const activeFiltersCount = [
-    searchFilters.companyName,
-    searchFilters.sector.length > 0,
-    searchFilters.useClass.length > 0,
-    searchFilters.sizeMin !== null || searchFilters.sizeMax !== null,
-    searchFilters.isNationwide
-  ].filter(Boolean).length;
 
   return (
     <section className="hero-section relative">
@@ -67,38 +67,36 @@ export function HeroSearch({ onSearch, onFilterToggle, searchFilters }: HeroSear
           </p>
           
           {/* Search Form */}
-          <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
-            <div className="flex flex-col sm:flex-row gap-4 p-2 bg-white rounded-2xl shadow-lg border border-border">
-              {/* Location Search */}
-              <div className="flex-1">
-                <LocationSearch
-                  value={localLocation}
-                  onChange={handleLocationChange}
-                  onLocationSelect={handleLocationSelect}
-                  placeholder="Enter address, postcode, or location..."
-                  className="search-bar w-full h-14 border-0 bg-transparent text-lg placeholder:text-muted-foreground focus:ring-0"
-                />
+          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Location Search with Nationwide Button */}
+              <div className="flex flex-col sm:flex-row gap-4 p-2 bg-white rounded-2xl shadow-lg border border-border flex-1">
+                <div className="flex-1">
+                  <LocationSearch
+                    value={localLocation}
+                    onChange={handleLocationChange}
+                    onLocationSelect={handleLocationSelect}
+                    placeholder="Enter location"
+                    className="search-bar w-full h-14 border-0 bg-transparent text-lg placeholder:text-muted-foreground focus:ring-0"
+                  />
+                </div>
+                
+                {/* Divider */}
+                <div className="hidden sm:block w-px h-14 bg-border self-center" />
+                <div className="sm:hidden h-px w-full bg-border" />
+                
+                {/* Nationwide Button */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="lg"
+                  onClick={handleNationwideSearch}
+                  className="violet-bloom-touch flex items-center gap-2 h-14 px-6 hover:bg-primary-50 transition-colors"
+                >
+                  <Globe className="w-5 h-5" />
+                  <span>Search Nationwide</span>
+                </Button>
               </div>
-              
-              {/* Filter Button */}
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                onClick={onFilterToggle}
-                className={cn(
-                  "violet-bloom-touch flex items-center gap-2 h-14 px-6 bg-white border-l border-border sm:border-l-0 sm:border-none relative",
-                  activeFiltersCount > 0 && "bg-primary-50 border-primary-200"
-                )}
-              >
-                <Filter className="w-5 h-5" />
-                <span className="hidden sm:inline">Filters</span>
-                {activeFiltersCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 text-primary-foreground text-xs rounded-full flex items-center justify-center">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </Button>
             </div>
           </form>
           

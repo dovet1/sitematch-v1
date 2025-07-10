@@ -19,7 +19,7 @@ SELECT id, email, role, org_id FROM public.users;
 */
 
 -- Or use the Edge Function URL directly:
--- POST to: https://***REMOVED***.supabase.co/functions/v1/auth-hook
+-- POST to: https://nunvbolbcekvtlwuacul.supabase.co/functions/v1/auth-hook
 -- With body:
 /*
 {

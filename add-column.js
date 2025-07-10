@@ -1,7 +1,7 @@
 const { Client } = require('pg');
 
 const client = new Client({
-  connectionString: 'postgresql://postgres.***REMOVED***:***REMOVED***@aws-0-eu-west-2.pooler.supabase.com:6543/postgres'
+  connectionString: 'postgresql://postgres.nunvbolbcekvtlwuacul:mysupabasepassword@aws-0-eu-west-2.pooler.supabase.com:6543/postgres'
 });
 
 async function addColumn() {

@@ -11,16 +11,23 @@ interface LocationSearchProps {
   value: string;
   onChange: (value: string) => void;
   onLocationSelect?: (location: { name: string; coordinates: { lat: number; lng: number } }) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
   placeholder?: string;
   className?: string;
+  autoFocus?: boolean;
+  hideIcon?: boolean;
 }
 
-export function LocationSearch({ value, onChange, onLocationSelect, placeholder = "Enter location", className }: LocationSearchProps) {
+export function LocationSearch({ value, onChange, onLocationSelect, onFocus, onBlur, placeholder = "Enter location", className, autoFocus = false, hideIcon = false }: LocationSearchProps) {
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const justSelectedRef = useRef(false);
 
   // Mock suggestions - in production, this would connect to a geocoding API
   const mockSuggestions: LocationSuggestion[] = [
@@ -39,6 +46,18 @@ export function LocationSearch({ value, onChange, onLocationSelect, placeholder 
       if (value.length < 2) {
         setSuggestions([]);
         setShowSuggestions(false);
+        justSelectedRef.current = false;
+        return;
+      }
+
+      // Don't show suggestions if we just selected a location
+      if (justSelectedRef.current) {
+        justSelectedRef.current = false;
+        return;
+      }
+
+      // Don't show suggestions automatically on page load - only when user has interacted
+      if (!hasUserInteracted) {
         return;
       }
 
@@ -52,6 +71,7 @@ export function LocationSearch({ value, onChange, onLocationSelect, placeholder 
           const data = await response.json();
           setSuggestions(data.results || []);
           setShowSuggestions(true);
+          setSelectedIndex(-1);
         } else {
           // Fallback to mock data
           const filtered = mockSuggestions.filter(suggestion =>
@@ -60,6 +80,7 @@ export function LocationSearch({ value, onChange, onLocationSelect, placeholder 
           );
           setSuggestions(filtered);
           setShowSuggestions(true);
+          setSelectedIndex(-1);
         }
       } catch (error) {
         console.error('Error fetching location suggestions:', error);
@@ -71,6 +92,7 @@ export function LocationSearch({ value, onChange, onLocationSelect, placeholder 
         );
         setSuggestions(filtered);
         setShowSuggestions(true);
+        setSelectedIndex(-1);
       } finally {
         setIsLoading(false);
       }
@@ -78,15 +100,19 @@ export function LocationSearch({ value, onChange, onLocationSelect, placeholder 
 
     const debounceTimer = setTimeout(handleSearch, 300);
     return () => clearTimeout(debounceTimer);
-  }, [value]);
+  }, [value, hasUserInteracted]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    justSelectedRef.current = false; // Reset flag when user types
+    setHasUserInteracted(true); // Mark that user has interacted
     onChange(e.target.value);
   };
 
   const handleSuggestionClick = (suggestion: LocationSuggestion) => {
+    justSelectedRef.current = true;
     onChange(suggestion.description); // Use full description for display
     setShowSuggestions(false);
+    setSelectedIndex(-1);
     
     // Call onLocationSelect if provided
     if (onLocationSelect) {
@@ -97,18 +123,56 @@ export function LocationSearch({ value, onChange, onLocationSelect, placeholder 
     }
   };
 
+  const handleSuggestionSelect = (index: number) => {
+    if (index >= 0 && index < suggestions.length) {
+      const suggestion = suggestions[index];
+      handleSuggestionClick(suggestion);
+    }
+  };
+
   const handleClear = () => {
     onChange('');
     inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      setShowSuggestions(false);
+    if (!showSuggestions) {
+      if (e.key === 'Enter') {
+        // Form submission will be handled by parent
+        e.preventDefault();
+      }
+      return;
     }
-    if (e.key === 'Enter' && !showSuggestions) {
-      // Form submission will be handled by parent
-      e.preventDefault();
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev => 
+          prev < suggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev => 
+          prev > 0 ? prev - 1 : suggestions.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedIndex >= 0) {
+          handleSuggestionSelect(selectedIndex);
+        }
+        break;
+      case 'Tab':
+        if (selectedIndex >= 0) {
+          e.preventDefault();
+          handleSuggestionSelect(selectedIndex);
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setSelectedIndex(-1);
+        break;
     }
   };
 
@@ -121,6 +185,7 @@ export function LocationSearch({ value, onChange, onLocationSelect, placeholder 
         !inputRef.current?.contains(event.target as Node)
       ) {
         setShowSuggestions(false);
+        setSelectedIndex(-1);
       }
     };
 
@@ -137,43 +202,73 @@ export function LocationSearch({ value, onChange, onLocationSelect, placeholder 
 
   return (
     <div className="relative">
-      <div className="relative">
-        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+      {hideIcon ? (
         <Input
           ref={inputRef}
           type="text"
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onFocus={() => {
+            setHasUserInteracted(true);
+            onFocus?.();
+          }}
+          onBlur={onBlur}
           placeholder={placeholder}
-          className={cn(
-            "pl-12 pr-10 violet-bloom-input",
-            className
-          )}
+          autoFocus={autoFocus}
+          className={className}
           aria-label="Location search"
           aria-expanded={showSuggestions}
           aria-haspopup="listbox"
+          aria-activedescendant={selectedIndex >= 0 ? `suggestion-${suggestions[selectedIndex]?.id}` : undefined}
           role="combobox"
         />
-        {value && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleClear}
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
-            aria-label="Clear search"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
+      ) : (
+        <div className="relative">
+          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => {
+              setHasUserInteracted(true);
+              onFocus?.();
+            }}
+            onBlur={onBlur}
+            placeholder={placeholder}
+            autoFocus={autoFocus}
+            className={cn(
+              "pl-12 pr-10 violet-bloom-input",
+              className
+            )}
+            aria-label="Location search"
+            aria-expanded={showSuggestions}
+            aria-haspopup="listbox"
+            aria-activedescendant={selectedIndex >= 0 ? `suggestion-${suggestions[selectedIndex]?.id}` : undefined}
+            role="combobox"
+          />
+          {value && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClear}
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Suggestions Dropdown */}
       {showSuggestions && (
         <div
           ref={suggestionsRef}
-          className="absolute top-full left-0 right-0 z-[9999] mt-1 bg-white border border-border rounded-md shadow-lg max-h-60 overflow-auto"
+          className="absolute top-full left-0 right-0 z-dropdown mt-1 bg-white border border-border rounded-md shadow-lg max-h-60 overflow-auto"
           role="listbox"
         >
           {isLoading ? (
@@ -182,13 +277,17 @@ export function LocationSearch({ value, onChange, onLocationSelect, placeholder 
               <span className="sr-only">Loading suggestions...</span>
             </div>
           ) : suggestions.length > 0 ? (
-            suggestions.map((suggestion) => (
+            suggestions.map((suggestion, index) => (
               <button
                 key={suggestion.id}
+                id={`suggestion-${suggestion.id}`}
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="w-full px-3 py-2 text-left hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none"
+                className={cn(
+                  "w-full px-3 py-2 text-left hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none",
+                  selectedIndex === index && "bg-accent text-accent-foreground"
+                )}
                 role="option"
-                aria-selected={false}
+                aria-selected={selectedIndex === index}
               >
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
