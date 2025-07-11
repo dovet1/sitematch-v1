@@ -1,104 +1,102 @@
 'use client';
 
-import { Search, FileText, Users, CheckCircle } from 'lucide-react';
+import { FileText, Shield, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export function HowItWorks() {
   const steps = [
     {
-      icon: Search,
-      title: 'Search & Discover',
-      description: 'Use our advanced search to find commercial property requirements that match your portfolio or interests.',
-      color: 'bg-blue-50 text-blue-600',
+      icon: FileText,
+      title: 'Post Requirement',
+      description: 'Share your specific commercial property needs including location, size, budget, and timing requirements.',
     },
     {
-      icon: FileText,
-      title: 'Review Details',
-      description: 'Access comprehensive requirement details including location, size, use class, and specific business needs.',
-      color: 'bg-green-50 text-green-600',
+      icon: Shield,
+      title: 'Admin Review',
+      description: 'Our team reviews and verifies your requirement to ensure quality and authenticity for all users.',
     },
     {
       icon: Users,
-      title: 'Connect Directly',
-      description: 'Contact requirement listers directly through secure contact details and start meaningful conversations.',
-      color: 'bg-purple-50 text-purple-600',
-    },
-    {
-      icon: CheckCircle,
-      title: 'Close Deals',
-      description: 'Work together to finalize arrangements and create successful property matches that benefit everyone.',
-      color: 'bg-orange-50 text-orange-600',
+      title: 'Landlords Contact You',
+      description: 'Qualified property owners and agents reach out directly with suitable options that match your needs.',
     },
   ];
 
   return (
-    <section className="py-20 bg-muted/30">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h2 className="heading-2 font-bold text-foreground mb-4">
-            How SiteMatch Works
-          </h2>
-          <p className="body-large text-muted-foreground max-w-2xl mx-auto">
-            Our simple 4-step process connects property opportunities with requirements efficiently and transparently.
-          </p>
-        </div>
+    <section className="how-it-works py-20 bg-white">
+      <div className="how-it-works__container max-w-7xl mx-auto px-6">
+        <h2 className="how-it-works__title text-3xl font-bold text-gray-800 text-center mb-16">
+          How It Works
+        </h2>
 
-        {/* Steps */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="how-it-works__steps grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 relative mb-8 md:mb-12">
+          {/* Connector lines for desktop */}
+          <div className="hidden md:block absolute top-15 left-1/3 w-1/3 h-0.5 bg-gradient-to-r from-violet-500 to-orange-500 transform -translate-x-1/2"></div>
+          <div className="hidden md:block absolute top-15 left-2/3 w-1/3 h-0.5 bg-gradient-to-r from-violet-500 to-orange-500 transform -translate-x-1/2"></div>
+
           {steps.map((step, index) => {
             const Icon = step.icon;
             return (
-              <div key={index} className="relative">
-                {/* Connector Line (hidden on mobile, visible on lg+) */}
-                {index < steps.length - 1 && (
-                  <div className="hidden lg:block absolute top-12 left-full w-full h-0.5 bg-border z-0" />
-                )}
-                
-                <div className="relative bg-background rounded-lg p-6 shadow-sm border border-border hover:shadow-md transition-shadow">
-                  {/* Step Number */}
-                  <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+              <div key={index} className="how-it-works__step text-center relative">
+                <div 
+                  className="how-it-works__step-icon w-24 h-24 md:w-30 md:h-30 mx-auto mb-4 md:mb-6 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center relative shadow-lg shadow-violet-500/30"
+                  data-step={index + 1}
+                >
+                  <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 w-6 h-6 md:w-8 md:h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-xs md:text-sm">
                     {index + 1}
                   </div>
-                  
-                  {/* Icon */}
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${step.color}`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  
-                  {/* Content */}
-                  <h3 className="heading-4 font-semibold text-foreground mb-3">
-                    {step.title}
-                  </h3>
-                  <p className="body-small text-muted-foreground leading-relaxed">
-                    {step.description}
-                  </p>
+                  <Icon className="w-6 h-6 md:w-8 md:h-8 text-white" />
                 </div>
+                
+                <h3 className="how-it-works__step-title text-lg md:text-xl font-semibold text-gray-800 mb-3 md:mb-4">
+                  {step.title}
+                </h3>
+                <p className="how-it-works__step-description text-sm md:text-base text-gray-600 leading-relaxed max-w-sm mx-auto px-4 md:px-0">
+                  {step.description}
+                </p>
               </div>
             );
           })}
         </div>
 
-        {/* Bottom CTA */}
-        <div className="text-center mt-12">
-          <p className="body-large text-muted-foreground mb-6">
-            Ready to get started?
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="#hero-search"
-              className="inline-flex items-center justify-center px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
-            >
-              Start Searching
+        <div className="text-center">
+          <Button 
+            asChild 
+            className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-3 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            <a href="/occupier/create-listing?fresh=true">
+              Post Your Requirement
             </a>
-            <a
-              href="/occupier/create-listing?fresh=true"
-              className="inline-flex items-center justify-center px-6 py-3 border border-border text-foreground rounded-lg font-medium hover:bg-accent transition-colors"
-            >
-              Post a Requirement
-            </a>
-          </div>
+          </Button>
         </div>
       </div>
+
+      <style jsx>{`
+        .how-it-works__step-icon {
+          width: 120px;
+          height: 120px;
+        }
+        
+        @media (max-width: 768px) {
+          .how-it-works {
+            padding: 48px 0;
+          }
+          
+          .how-it-works__title {
+            font-size: 24px;
+            margin-bottom: 32px;
+          }
+          
+          .how-it-works__step-icon {
+            width: 100px;
+            height: 100px;
+          }
+          
+          .how-it-works__steps {
+            gap: 32px;
+          }
+        }
+      `}</style>
     </section>
   );
 }

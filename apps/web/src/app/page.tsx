@@ -1,9 +1,11 @@
 import { HeroSearch } from '@/components/search/HeroSearch';
-import { ValueProposition } from '@/components/homepage/ValueProposition';
+import { CompanyCarousel } from '@/components/homepage/CompanyCarousel';
 import { HowItWorks } from '@/components/homepage/HowItWorks';
 import { Testimonials } from '@/components/homepage/Testimonials';
-import { TrustIndicators } from '@/components/homepage/TrustIndicators';
-import { HomeCTA } from '@/components/homepage/HomeCTA';
+import { FAQ } from '@/components/homepage/FAQ';
+import { MeetTheFounders } from '@/components/homepage/MeetTheFounders';
+import { LandlordNewsletter } from '@/components/homepage/LandlordNewsletter';
+import { EnhancedCTA } from '@/components/homepage/EnhancedCTA';
 
 export default function Home() {
   return (
@@ -11,8 +13,8 @@ export default function Home() {
       {/* Hero Section */}
       <HeroSearch />
 
-      {/* Platform Value Proposition */}
-      <ValueProposition />
+      {/* Company Carousel */}
+      <CompanyCarousel />
 
       {/* How It Works */}
       <HowItWorks />
@@ -20,11 +22,17 @@ export default function Home() {
       {/* Testimonials */}
       <Testimonials />
 
-      {/* Trust Indicators */}
-      <TrustIndicators />
+      {/* FAQ */}
+      <FAQ />
 
-      {/* Call to Action */}
-      <HomeCTA />
+      {/* Meet the Founders */}
+      <MeetTheFounders />
+
+      {/* Landlord Newsletter */}
+      <LandlordNewsletter />
+
+      {/* Enhanced CTA */}
+      <EnhancedCTA />
     </main>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -11,7 +11,7 @@ export function Testimonials() {
       author: "Sarah Chen",
       role: "Expansion Director",
       company: "Artisan Coffee Co.",
-      type: "Property Seeker",
+      type: "Occupier",
       image: null, // Placeholder for future photo implementation
     },
     {
@@ -19,7 +19,7 @@ export function Testimonials() {
       author: "Mike Thompson",
       role: "Operations Manager",
       company: "Thompson Logistics",
-      type: "Requirement Lister",
+      type: "Occupier",
       image: null,
     },
     {
@@ -27,7 +27,7 @@ export function Testimonials() {
       author: "Emma Rodriguez",
       role: "Property Portfolio Manager",
       company: "Urban Developments",
-      type: "Property Seeker",
+      type: "Landlord",
       image: null,
     },
     {
@@ -35,7 +35,7 @@ export function Testimonials() {
       author: "James Wilson",
       role: "Facilities Director",
       company: "TechManufacturing Ltd",
-      type: "Requirement Lister",
+      type: "Occupier",
       image: null,
     },
     {
@@ -43,12 +43,13 @@ export function Testimonials() {
       author: "Rachel Adams",
       role: "Commercial Director",
       company: "Adams Property Group",
-      type: "Property Seeker",
+      type: "Landlord",
       image: null,
     },
   ];
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
   const nextTestimonial = () => {
     setCurrentIndex((prev) => (prev + 1) % testimonials.length);
@@ -62,49 +63,60 @@ export function Testimonials() {
     setCurrentIndex(index);
   };
 
+  useEffect(() => {
+    if (!isAutoPlaying) return;
+    
+    const interval = setInterval(() => {
+      nextTestimonial();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isAutoPlaying]);
+
+  const handleMouseEnter = () => setIsAutoPlaying(false);
+  const handleMouseLeave = () => setIsAutoPlaying(true);
+
   return (
-    <section className="py-20 bg-background">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h2 className="heading-2 font-bold text-foreground mb-4">
-            What Our Users Say
-          </h2>
-          <p className="body-large text-muted-foreground max-w-2xl mx-auto">
-            Real stories from property seekers and requirement listers who've found success through SiteMatch.
-          </p>
-        </div>
+    <section className="testimonials py-20 bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="testimonials__container max-w-7xl mx-auto px-6">
+        <h2 className="testimonials__title text-3xl font-bold text-gray-800 text-center mb-16">
+          What Our Users Say
+        </h2>
 
         {/* Carousel */}
-        <div className="relative max-w-4xl mx-auto">
-          <div className="bg-muted/30 rounded-2xl p-8 md:p-12 relative">
+        <div 
+          className="testimonials__carousel relative max-w-4xl mx-auto"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div className="testimonials__card bg-white rounded-2xl p-8 md:p-12 relative shadow-lg border border-gray-100">
             {/* Quote Icon */}
-            <Quote className="w-8 h-8 text-primary-600 mb-6" />
+            <Quote className="w-12 h-12 text-violet-600 mb-6" />
             
             {/* Testimonial Content */}
-            <div className="min-h-[200px] flex flex-col justify-between">
-              <blockquote className="text-lg md:text-xl text-foreground leading-relaxed mb-8">
+            <div className="min-h-[180px] md:min-h-[200px] flex flex-col justify-between">
+              <blockquote className="text-base md:text-lg lg:text-xl text-gray-700 leading-relaxed mb-6 md:mb-8 font-medium">
                 "{testimonials[currentIndex].quote}"
               </blockquote>
               
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <p className="font-semibold text-foreground">
+                <div className="text-center sm:text-left">
+                  <p className="font-bold text-gray-800 text-base md:text-lg">
                     {testimonials[currentIndex].author}
                   </p>
-                  <p className="text-muted-foreground">
+                  <p className="text-gray-600 font-medium text-sm md:text-base">
                     {testimonials[currentIndex].role}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs md:text-sm text-gray-500">
                     {testimonials[currentIndex].company}
                   </p>
                 </div>
                 
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    testimonials[currentIndex].type === 'Property Seeker' 
-                      ? 'bg-blue-50 text-blue-700' 
-                      : 'bg-green-50 text-green-700'
+                <div className="flex items-center justify-center sm:justify-end gap-2">
+                  <span className={`px-3 md:px-4 py-1 md:py-2 rounded-full text-xs md:text-sm font-semibold ${
+                    testimonials[currentIndex].type === 'Occupier' 
+                      ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                      : 'bg-green-100 text-green-800 border border-green-200'
                   }`}>
                     {testimonials[currentIndex].type}
                   </span>
@@ -118,63 +130,57 @@ export function Testimonials() {
             variant="outline"
             size="sm"
             onClick={prevTestimonial}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 p-0 rounded-full shadow-md"
+            className="absolute -left-2 md:-left-6 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 p-0 rounded-full shadow-lg bg-white hover:bg-gray-50 border-gray-200"
             aria-label="Previous testimonial"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
           </Button>
           
           <Button
             variant="outline"
             size="sm"
             onClick={nextTestimonial}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 p-0 rounded-full shadow-md"
+            className="absolute -right-2 md:-right-6 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 p-0 rounded-full shadow-lg bg-white hover:bg-gray-50 border-gray-200"
             aria-label="Next testimonial"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
           </Button>
         </div>
 
         {/* Dots Indicator */}
-        <div className="flex justify-center mt-8 gap-2">
+        <div className="testimonials__dots flex justify-center mt-8 gap-3">
           {testimonials.map((_, index) => (
             <button
               key={index}
               onClick={() => goToTestimonial(index)}
-              className={`w-3 h-3 rounded-full transition-colors ${
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${
                 index === currentIndex 
-                  ? 'bg-primary-600' 
-                  : 'bg-border hover:bg-muted-foreground'
+                  ? 'bg-violet-600 scale-125' 
+                  : 'bg-gray-300 hover:bg-gray-400'
               }`}
               aria-label={`Go to testimonial ${index + 1}`}
             />
           ))}
         </div>
 
-        {/* Mobile Grid (Alternative view for smaller screens) */}
-        <div className="md:hidden mt-12 space-y-6">
-          {testimonials.slice(0, 3).map((testimonial, index) => (
-            <div key={index} className="bg-muted/30 rounded-lg p-6">
-              <blockquote className="text-sm text-foreground mb-4">
-                "{testimonial.quote}"
-              </blockquote>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-sm">{testimonial.author}</p>
-                  <p className="text-xs text-muted-foreground">{testimonial.company}</p>
-                </div>
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  testimonial.type === 'Property Seeker' 
-                    ? 'bg-blue-50 text-blue-700' 
-                    : 'bg-green-50 text-green-700'
-                }`}>
-                  {testimonial.type}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
+
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .testimonials {
+            padding: 48px 0;
+          }
+          
+          .testimonials__title {
+            font-size: 24px;
+            margin-bottom: 32px;
+          }
+          
+          .testimonials__card {
+            padding: 24px;
+          }
+        }
+      `}</style>
     </section>
   );
 }
