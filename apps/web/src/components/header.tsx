@@ -31,21 +31,9 @@ export function Header() {
   const navigationItems = [
     {
       href: '/occupier/create-listing?fresh=true',
-      label: 'List Property',
+      label: 'Post Requirement',
       primary: true,
       showWhen: 'always'
-    },
-    {
-      href: '/occupier/dashboard',
-      label: 'Dashboard',
-      primary: false,
-      showWhen: 'authenticated'
-    },
-    {
-      href: '/admin',
-      label: 'Admin',
-      primary: false,
-      showWhen: 'admin'
     }
   ]
 

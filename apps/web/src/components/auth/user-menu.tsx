@@ -1,21 +1,47 @@
 'use client'
 
 import { useState } from 'react'
-import { LogOut, User, Settings, Shield } from 'lucide-react'
+import { LogOut, User, Settings, Shield, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/auth-context'
+import Link from 'next/link'
+
+function UserAvatar({ email }: { email: string }) {
+  // Create avatar from email initials
+  const initials = email
+    .split('@')[0]
+    .split('.')
+    .map(part => part.charAt(0).toUpperCase())
+    .join('')
+    .slice(0, 2)
+
+  return (
+    <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+      {initials}
+    </div>
+  )
+}
 
 export function UserMenu() {
   const { user, profile, signOut, isAdmin, loading } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
 
   const handleSignOut = async () => {
     setIsLoading(true)
@@ -28,7 +54,6 @@ export function UserMenu() {
     }
   }
 
-
   if (!user) {
     return null
   }
@@ -38,24 +63,73 @@ export function UserMenu() {
     return (
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" className="flex items-center gap-2">
-          <User className="h-4 w-4" />
-          {user.email}
+          <UserAvatar email={user.email || ''} />
+          <span className="hidden sm:inline">{user.email}</span>
         </Button>
       </div>
     )
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button variant="ghost" size="sm" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            {profile.email}
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="flex items-center gap-2 hover:bg-accent">
+            <UserAvatar email={profile.email} />
+            <span className="hidden sm:inline">{profile.email}</span>
             {isAdmin && <Shield className="h-3 w-3 text-primary" />}
           </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56 z-[9999]" align="end" sideOffset={5}>
+          <DropdownMenuLabel className="flex items-center gap-2">
+            <UserAvatar email={profile.email} />
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">{profile.email}</span>
+              <span className="text-xs text-muted-foreground capitalize">
+                {profile.role}
+                {isAdmin && " • Admin"}
+              </span>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem asChild>
+              <Link href="/occupier/dashboard" className="flex items-center gap-2 cursor-pointer">
+                <LayoutDashboard className="h-4 w-4" />
+                <span>Dashboard</span>
+              </Link>
+            </DropdownMenuItem>
+            {isAdmin && (
+              <DropdownMenuItem asChild>
+                <Link href="/admin" className="flex items-center gap-2 cursor-pointer">
+                  <Shield className="h-4 w-4" />
+                  <span>Admin</span>
+                </Link>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem 
+              onClick={() => setShowProfileModal(true)}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <User className="h-4 w-4" />
+              <span>Profile</span>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={handleSignOut}
+            disabled={isLoading}
+            className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>{isLoading ? 'Signing out...' : 'Sign out'}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Profile Modal */}
+      <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>
+        <DialogContent className="sm:max-w-[425px] z-[9999]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
@@ -86,22 +160,10 @@ export function UserMenu() {
                 </span>
               </div>
             </div>
-            
-            <div className="border-t pt-4">
-              <Button
-                onClick={handleSignOut}
-                disabled={isLoading}
-                variant="outline"
-                className="w-full flex items-center gap-2"
-              >
-                <LogOut className="h-4 w-4" />
-                {isLoading ? 'Signing out...' : 'Sign out'}
-              </Button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }
 

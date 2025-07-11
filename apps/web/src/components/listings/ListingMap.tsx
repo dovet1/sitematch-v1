@@ -25,8 +25,8 @@ const DEFAULT_VIEW_STATE: MapViewState = {
   zoom: 5.5
 };
 
-// Mock Mapbox token for development - in production this should be from environment
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || 'pk.eyJ1IjoidGVzdCIsImEiOiJjbGc5MDFpbWkwMzBhM2RwZmFvaGN5bG00In0.test';
+// Mapbox token must be provided via environment variables
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 export function ListingMap({ filters, onListingClick }: ListingMapProps) {
   const [viewState, setViewState] = useState<MapViewState>(DEFAULT_VIEW_STATE);
@@ -173,6 +173,19 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
     if (max) return `Up to ${max.toLocaleString()} sq ft`;
     return '';
   };
+
+  // Check for missing Mapbox token
+  if (!MAPBOX_TOKEN) {
+    return (
+      <div className="map-container h-96 bg-muted rounded-lg flex items-center justify-center">
+        <div className="text-center">
+          <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+          <p className="text-muted-foreground">Map unavailable</p>
+          <p className="text-sm text-muted-foreground mt-1">Mapbox token not configured</p>
+        </div>
+      </div>
+    );
+  }
 
   if (error && listings.length === 0) {
     return (

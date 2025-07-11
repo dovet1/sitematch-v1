@@ -11,9 +11,12 @@ export async function POST() {
       'DROP POLICY IF EXISTS "Authenticated users can upload brochures" ON storage.objects', 
       'DROP POLICY IF EXISTS "Authenticated users can upload site plans" ON storage.objects',
       'DROP POLICY IF EXISTS "Authenticated users can upload fit-outs" ON storage.objects',
+      'DROP POLICY IF EXISTS "Authenticated users can upload headshots" ON storage.objects',
       'DROP POLICY IF EXISTS "Users can view own organization files" ON storage.objects',
       'DROP POLICY IF EXISTS "Users can update own organization files" ON storage.objects',
       'DROP POLICY IF EXISTS "Users can delete own organization files" ON storage.objects',
+      'DROP POLICY IF EXISTS "Users can update own files" ON storage.objects',
+      'DROP POLICY IF EXISTS "Users can delete own files" ON storage.objects',
       'DROP POLICY IF EXISTS "Admins can manage all files" ON storage.objects',
       'DROP POLICY IF EXISTS "Public read access" ON storage.objects'
     ]
@@ -26,20 +29,14 @@ export async function POST() {
       // Public read access for all buckets (since we want public file access)
       `CREATE POLICY "Public read access" ON storage.objects
         FOR SELECT TO anon, authenticated
-        USING (bucket_id IN ('logos', 'brochures', 'site-plans', 'fit-outs'))`,
+        USING (bucket_id IN ('logos', 'brochures', 'site-plans', 'fit-outs', 'headshots'))`,
       
-      // Upload policies - users can upload to their own organization folder
+      // Upload policies - authenticated users can upload files
       `CREATE POLICY "Authenticated users can upload logos" ON storage.objects
         FOR INSERT TO authenticated
         WITH CHECK (
           bucket_id = 'logos'
           AND auth.uid() IS NOT NULL
-          AND (storage.foldername(name))[1] IN (
-            SELECT users.org_id::text
-            FROM users
-            WHERE users.id = auth.uid()
-            AND users.org_id IS NOT NULL
-          )
         )`,
       
       `CREATE POLICY "Authenticated users can upload brochures" ON storage.objects
@@ -47,12 +44,6 @@ export async function POST() {
         WITH CHECK (
           bucket_id = 'brochures'
           AND auth.uid() IS NOT NULL
-          AND (storage.foldername(name))[1] IN (
-            SELECT users.org_id::text
-            FROM users
-            WHERE users.id = auth.uid()
-            AND users.org_id IS NOT NULL
-          )
         )`,
       
       `CREATE POLICY "Authenticated users can upload site plans" ON storage.objects
@@ -60,12 +51,6 @@ export async function POST() {
         WITH CHECK (
           bucket_id = 'site-plans'
           AND auth.uid() IS NOT NULL
-          AND (storage.foldername(name))[1] IN (
-            SELECT users.org_id::text
-            FROM users
-            WHERE users.id = auth.uid()
-            AND users.org_id IS NOT NULL
-          )
         )`,
       
       `CREATE POLICY "Authenticated users can upload fit-outs" ON storage.objects
@@ -73,46 +58,35 @@ export async function POST() {
         WITH CHECK (
           bucket_id = 'fit-outs'
           AND auth.uid() IS NOT NULL
-          AND (storage.foldername(name))[1] IN (
-            SELECT users.org_id::text
-            FROM users
-            WHERE users.id = auth.uid()
-            AND users.org_id IS NOT NULL
-          )
         )`,
       
-      // Update/Delete policies for users' own organization files
-      `CREATE POLICY "Users can update own organization files" ON storage.objects
+      `CREATE POLICY "Authenticated users can upload headshots" ON storage.objects
+        FOR INSERT TO authenticated
+        WITH CHECK (
+          bucket_id = 'headshots'
+          AND auth.uid() IS NOT NULL
+        )`,
+      
+      // Update/Delete policies for authenticated users
+      `CREATE POLICY "Users can update own files" ON storage.objects
         FOR UPDATE TO authenticated
         USING (
-          bucket_id IN ('logos', 'brochures', 'site-plans', 'fit-outs')
+          bucket_id IN ('logos', 'brochures', 'site-plans', 'fit-outs', 'headshots')
           AND auth.uid() IS NOT NULL
-          AND (storage.foldername(name))[1] IN (
-            SELECT users.org_id::text
-            FROM users
-            WHERE users.id = auth.uid()
-            AND users.org_id IS NOT NULL
-          )
         )`,
       
-      `CREATE POLICY "Users can delete own organization files" ON storage.objects
+      `CREATE POLICY "Users can delete own files" ON storage.objects
         FOR DELETE TO authenticated
         USING (
-          bucket_id IN ('logos', 'brochures', 'site-plans', 'fit-outs')
+          bucket_id IN ('logos', 'brochures', 'site-plans', 'fit-outs', 'headshots')
           AND auth.uid() IS NOT NULL
-          AND (storage.foldername(name))[1] IN (
-            SELECT users.org_id::text
-            FROM users
-            WHERE users.id = auth.uid()
-            AND users.org_id IS NOT NULL
-          )
         )`,
       
       // Admin policies
       `CREATE POLICY "Admins can manage all files" ON storage.objects
         FOR ALL TO authenticated
         USING (
-          bucket_id IN ('logos', 'brochures', 'site-plans', 'fit-outs')
+          bucket_id IN ('logos', 'brochures', 'site-plans', 'fit-outs', 'headshots')
           AND auth.uid() IS NOT NULL
           AND EXISTS (
             SELECT 1 FROM users
@@ -124,33 +98,12 @@ export async function POST() {
 
     const results = []
 
-    // Drop existing policies
-    for (const sql of dropPolicies) {
-      try {
-        const { error } = await supabase.rpc('exec_sql', { sql })
-        if (error) {
-          results.push({ action: 'drop', sql: sql.slice(0, 50) + '...', status: 'error', error: error.message })
-        } else {
-          results.push({ action: 'drop', sql: sql.slice(0, 50) + '...', status: 'success' })
-        }
-      } catch (err) {
-        results.push({ action: 'drop', sql: sql.slice(0, 50) + '...', status: 'error', error: 'RPC failed' })
-      }
-    }
-
-    // Create new policies
-    for (const sql of createPolicies) {
-      try {
-        const { error } = await supabase.rpc('exec_sql', { sql })
-        if (error) {
-          results.push({ action: 'create', sql: sql.slice(0, 50) + '...', status: 'error', error: error.message })
-        } else {
-          results.push({ action: 'create', sql: sql.slice(0, 50) + '...', status: 'success' })
-        }
-      } catch (err) {
-        results.push({ action: 'create', sql: sql.slice(0, 50) + '...', status: 'error', error: 'RPC failed' })
-      }
-    }
+    // For now, let's just return the SQL statements that need to be run manually
+    results.push({ 
+      message: 'Storage policies need to be updated manually in Supabase dashboard',
+      dropPolicies,
+      createPolicies 
+    })
 
     return NextResponse.json({
       success: true,

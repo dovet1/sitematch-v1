@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Building, MapPin, DollarSign, Search } from 'lucide-react';
+import { X, Building, MapPin, DollarSign, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,40 +17,120 @@ interface FilterDrawerProps {
   onFiltersChange: (filters: SearchFilters) => void;
 }
 
+interface CollapsibleSectionProps {
+  title: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  hasActiveFilters: boolean;
+  children: React.ReactNode;
+}
+
+function CollapsibleSection({ title, isOpen, onToggle, hasActiveFilters, children }: CollapsibleSectionProps) {
+  return (
+    <div className="border-b border-border pb-4 last:border-b-0">
+      <button
+        onClick={onToggle}
+        className={cn(
+          "flex items-center justify-between w-full py-2 text-left hover:bg-accent/50 rounded-lg px-2 transition-colors",
+          hasActiveFilters && "bg-primary/10"
+        )}
+      >
+        <div className="flex items-center space-x-2">
+          <span className="text-sm font-medium">{title}</span>
+          {hasActiveFilters && (
+            <div className="w-2 h-2 bg-primary rounded-full" />
+          )}
+        </div>
+        {isOpen ? (
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="mt-3 space-y-3">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: FilterDrawerProps) {
   const [localFilters, setLocalFilters] = useState<SearchFilters>(filters);
   const [sectors, setSectors] = useState<SectorOption[]>([]);
   const [useClasses, setUseClasses] = useState<UseClassOption[]>([]);
+  const [companyNames, setCompanyNames] = useState<string[]>([]);
+  const [filteredCompanyNames, setFilteredCompanyNames] = useState<string[]>([]);
+  const [companySearchValue, setCompanySearchValue] = useState('');
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [expandedSections, setExpandedSections] = useState({
+    company: false,
+    sectors: false,
+    useClasses: false,
+    siteSize: false
+  });
 
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
 
-  // Fetch reference data from API
+  // Fetch reference data and company names from API
   useEffect(() => {
-    const fetchReferenceData = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/public/reference-data');
-        if (response.ok) {
-          const data = await response.json();
-          setSectors(data.sectors || []);
-          setUseClasses(data.useClasses || []);
-        } else {
-          console.error('Failed to fetch reference data');
+        // Fetch reference data
+        const referenceResponse = await fetch('/api/public/reference-data');
+        if (referenceResponse.ok) {
+          const referenceData = await referenceResponse.json();
+          // Only show sectors and use classes that have published listings
+          setSectors(referenceData.sectors?.filter((s: SectorOption) => (s.count || 0) > 0) || []);
+          setUseClasses(referenceData.useClasses?.filter((uc: UseClassOption) => (uc.count || 0) > 0) || []);
+        }
+
+        // Fetch company names from published listings
+        const listingsResponse = await fetch('/api/public/listings?limit=100');
+        if (listingsResponse.ok) {
+          const listingsData = await listingsResponse.json();
+          const uniqueCompanyNames = Array.from(new Set(
+            listingsData.results
+              .map((listing: any) => listing.company_name)
+              .filter((name: string) => name && name.trim())
+          )) as string[];
+          uniqueCompanyNames.sort();
+          setCompanyNames(uniqueCompanyNames);
+          setFilteredCompanyNames(uniqueCompanyNames);
         }
       } catch (error) {
-        console.error('Error fetching reference data:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setIsLoadingData(false);
       }
     };
 
-    fetchReferenceData();
+    fetchData();
   }, []);
 
   const handleInputChange = (field: keyof SearchFilters, value: any) => {
     setLocalFilters(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCompanySearch = (value: string) => {
+    setCompanySearchValue(value);
+    const filtered = companyNames.filter(name => 
+      name.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredCompanyNames(filtered);
+  };
+
+  const handleCompanySelect = (companyName: string) => {
+    setLocalFilters(prev => ({ ...prev, companyName }));
+    setCompanySearchValue(companyName);
+    setFilteredCompanyNames(companyNames);
+  };
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
   const handleSectorChange = (sectorValue: string, checked: boolean) => {
@@ -88,6 +168,8 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
       isNationwide: false,
     };
     setLocalFilters(clearedFilters);
+    setCompanySearchValue('');
+    setFilteredCompanyNames(companyNames);
     onFiltersChange(clearedFilters);
   };
 
@@ -95,8 +177,7 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
     localFilters.sector.length > 0 || 
     localFilters.useClass.length > 0 || 
     localFilters.sizeMin !== null || 
-    localFilters.sizeMax !== null || 
-    localFilters.isNationwide;
+    localFilters.sizeMax !== null;
 
   return (
     <>
@@ -133,30 +214,68 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
         </div>
 
         {/* Filter Content */}
-        <div className="p-4 space-y-6">
+        <div className="p-4 space-y-4">
           {/* Company Name Search */}
-          <div className="space-y-2">
-            <Label htmlFor="company-search" className="text-sm font-medium">
-              Company Name
-            </Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="company-search"
-                type="text"
-                placeholder="Search by company name..."
-                value={localFilters.companyName}
-                onChange={(e) => handleInputChange('companyName', e.target.value)}
-                className="pl-10 violet-bloom-input"
-              />
+          <CollapsibleSection
+            title="Company Name"
+            isOpen={expandedSections.company}
+            onToggle={() => toggleSection('company')}
+            hasActiveFilters={!!localFilters.companyName}
+          >
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="company-search"
+                  type="text"
+                  placeholder="Search by company name..."
+                  value={companySearchValue || localFilters.companyName}
+                  onChange={(e) => {
+                    handleCompanySearch(e.target.value);
+                    handleInputChange('companyName', e.target.value);
+                  }}
+                  className="pl-10 violet-bloom-input"
+                />
+              </div>
+              {expandedSections.company && (
+                <div className="max-h-32 overflow-y-auto border border-border rounded-lg">
+                  {isLoadingData ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      Loading company names...
+                    </div>
+                  ) : companyNames.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      No companies found
+                    </div>
+                  ) : filteredCompanyNames.length === 0 && companySearchValue ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      No companies found matching "{companySearchValue}"
+                    </div>
+                  ) : (
+                    filteredCompanyNames.slice(0, 10).map((name, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleCompanySelect(name)}
+                        className="w-full text-left px-3 py-2 hover:bg-accent text-sm border-b border-border last:border-b-0"
+                      >
+                        {name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
-          </div>
+          </CollapsibleSection>
 
           {/* Sectors */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Sectors</Label>
+          <CollapsibleSection
+            title="Sectors"
+            isOpen={expandedSections.sectors}
+            onToggle={() => toggleSection('sectors')}
+            hasActiveFilters={localFilters.sector.length > 0}
+          >
             {localFilters.sector.length > 1 && (
-              <p className="text-xs text-muted-foreground">Showing listings from any selected sector</p>
+              <p className="text-xs text-muted-foreground mb-2">Showing listings from any selected sector</p>
             )}
             <div className="space-y-2">
               {isLoadingData ? (
@@ -182,13 +301,17 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
                 </div>
               )))}
             </div>
-          </div>
+          </CollapsibleSection>
 
           {/* Use Classes */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Planning Use Class</Label>
+          <CollapsibleSection
+            title="Planning Use Class"
+            isOpen={expandedSections.useClasses}
+            onToggle={() => toggleSection('useClasses')}
+            hasActiveFilters={localFilters.useClass.length > 0}
+          >
             {localFilters.useClass.length > 1 && (
-              <p className="text-xs text-muted-foreground">Showing listings from any selected use class</p>
+              <p className="text-xs text-muted-foreground mb-2">Showing listings from any selected use class</p>
             )}
             <div className="space-y-2">
               {isLoadingData ? (
@@ -214,11 +337,15 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
                 </div>
               )))}
             </div>
-          </div>
+          </CollapsibleSection>
 
           {/* Site Size Range */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Site Size (sq ft)</Label>
+          <CollapsibleSection
+            title="Site Size (sq ft)"
+            isOpen={expandedSections.siteSize}
+            onToggle={() => toggleSection('siteSize')}
+            hasActiveFilters={localFilters.sizeMin !== null || localFilters.sizeMax !== null}
+          >
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="size-min" className="text-xs text-muted-foreground">
@@ -247,20 +374,8 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
                 />
               </div>
             </div>
-          </div>
+          </CollapsibleSection>
 
-          {/* Nationwide Option */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="nationwide"
-              checked={localFilters.isNationwide}
-              onCheckedChange={(checked) => handleInputChange('isNationwide', checked)}
-              className="violet-bloom-checkbox"
-            />
-            <Label htmlFor="nationwide" className="text-sm cursor-pointer">
-              Include nationwide requirements
-            </Label>
-          </div>
         </div>
 
         {/* Footer */}
@@ -277,8 +392,7 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
                   localFilters.companyName && 'Company',
                   localFilters.sector.length > 0 && `${localFilters.sector.length} Sectors`,
                   localFilters.useClass.length > 0 && `${localFilters.useClass.length} Use Classes`,
-                  (localFilters.sizeMin || localFilters.sizeMax) && 'Size',
-                  localFilters.isNationwide && 'Nationwide'
+                  (localFilters.sizeMin || localFilters.sizeMax) && 'Size'
                 ].filter(Boolean).length}
               </span>
             )}

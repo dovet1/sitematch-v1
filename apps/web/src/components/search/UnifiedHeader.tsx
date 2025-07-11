@@ -44,21 +44,9 @@ export function UnifiedHeader({
   const navigationItems = [
     {
       href: '/occupier/create-listing?fresh=true',
-      label: 'List Property',
+      label: 'Post Requirement',
       primary: true,
       showWhen: 'always' as const
-    },
-    {
-      href: '/occupier/dashboard',
-      label: 'Dashboard',
-      primary: false,
-      showWhen: 'authenticated' as const
-    },
-    {
-      href: '/admin',
-      label: 'Admin',
-      primary: false,
-      showWhen: 'admin' as const
     }
   ];
 
