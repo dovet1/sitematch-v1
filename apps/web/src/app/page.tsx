@@ -1,18 +1,30 @@
 import { HeroSearch } from '@/components/search/HeroSearch';
+import { ValueProposition } from '@/components/homepage/ValueProposition';
+import { HowItWorks } from '@/components/homepage/HowItWorks';
+import { Testimonials } from '@/components/homepage/Testimonials';
+import { TrustIndicators } from '@/components/homepage/TrustIndicators';
+import { HomeCTA } from '@/components/homepage/HomeCTA';
 
 export default function Home() {
-
   return (
     <main className="min-h-screen bg-background">
       {/* Hero Section */}
       <HeroSearch />
 
-      {/* TODO: Add homepage content sections here */}
-      {/* - Platform value proposition */}
-      {/* - How it works */}
-      {/* - Testimonials */}
-      {/* - Trust indicators */}
-      {/* - CTAs */}
+      {/* Platform Value Proposition */}
+      <ValueProposition />
+
+      {/* How It Works */}
+      <HowItWorks />
+
+      {/* Testimonials */}
+      <Testimonials />
+
+      {/* Trust Indicators */}
+      <TrustIndicators />
+
+      {/* Call to Action */}
+      <HomeCTA />
     </main>
   );
 }

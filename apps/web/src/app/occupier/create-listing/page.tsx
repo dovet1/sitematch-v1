@@ -3,6 +3,13 @@
 // Protected route for occupiers to create listings
 // =====================================================
 
+// Helper function to extract storage path from full Supabase URL
+function extractStoragePath(url: string): string {
+  // Extract path after /storage/v1/object/public/{bucket}/
+  const match = url.match(/\/storage\/v1\/object\/public\/[^\/]+\/(.+)$/);
+  return match ? match[1] : url;
+}
+
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Toaster } from 'sonner';
@@ -230,12 +237,13 @@ export default async function CreateListingPage({
             console.log('Successfully deleted existing locations');
           }
 
-          // 4. Delete existing file uploads for this listing
-          console.log('Deleting existing file uploads...');
+          // 4. Delete existing file uploads for this listing (except headshots)
+          console.log('Deleting existing file uploads (except headshots)...');
           const { error: deleteFilesError } = await supabase
             .from('file_uploads')
             .delete()
-            .eq('listing_id', data.existingListingId);
+            .eq('listing_id', data.existingListingId)
+            .neq('file_type', 'headshot');
           
           if (deleteFilesError) {
             console.error('Error deleting file uploads:', deleteFilesError);
@@ -283,25 +291,8 @@ export default async function CreateListingPage({
               console.log('Successfully inserted contacts');
             }
 
-            // Add headshot files for contacts that have them
-            for (let i = 0; i < data.additionalContacts.length; i++) {
-              const contact = data.additionalContacts[i];
-              if (contact.headshotUrl) {
-                await supabase
-                  .from('file_uploads')
-                  .insert({
-                    user_id: currentUser.id,
-                    listing_id: data.existingListingId,
-                    file_path: contact.headshotUrl,
-                    file_name: `headshot-${i + 1}`,
-                    file_size: 0,
-                    file_type: 'headshot',
-                    mime_type: 'image/jpeg',
-                    bucket_name: 'headshots',
-                    display_order: i
-                  });
-              }
-            }
+            // Headshots are already saved to file_uploads during upload via /api/upload
+            // No need to manually insert them here
           }
 
           // 7. Add updated FAQs (if any)
@@ -360,7 +351,7 @@ export default async function CreateListingPage({
                 .insert({
                   user_id: currentUser.id,
                   listing_id: data.existingListingId,
-                  file_path: file.url,
+                  file_path: file.path || extractStoragePath(file.url), // Use file.path if available, extract from URL
                   file_name: file.name,
                   file_size: file.size || 0,
                   file_type: 'brochure',
@@ -381,7 +372,7 @@ export default async function CreateListingPage({
                 .insert({
                   user_id: currentUser.id,
                   listing_id: data.existingListingId,
-                  file_path: file.url,
+                  file_path: file.path || extractStoragePath(file.url), // Use file.path if available, extract from URL
                   file_name: file.name,
                   file_size: file.size || 0,
                   file_type: 'sitePlan',
@@ -401,7 +392,7 @@ export default async function CreateListingPage({
                 .insert({
                   user_id: currentUser.id,
                   listing_id: data.existingListingId,
-                  file_path: file.url,
+                  file_path: file.path || extractStoragePath(file.url), // Use file.path if available, extract from URL
                   file_name: file.name,
                   file_size: file.size || 0,
                   file_type: 'fitOut',

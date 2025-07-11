@@ -247,7 +247,7 @@ export default async function TestListingPage({ params }: Props) {
                       </div>
                       {file.file_type === 'headshot' && (
                         <img 
-                          src={`https://nunvbolbcekvtlwuacul.supabase.co/storage/v1/object/public/${file.bucket_name}/${file.file_path}`}
+                          src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${file.bucket_name}/${file.file_path}`}
                           alt={file.file_name}
                           className="w-12 h-12 rounded object-cover"
                         />

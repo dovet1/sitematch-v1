@@ -1,8 +1,8 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createBrowserClient, createServerClient as createSSRServerClient } from '@supabase/ssr'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nunvbolbcekvtlwuacul.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51bnZib2xiY2VrdnRsd3VhY3VsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTE1NjQsImV4cCI6MjA2Njg2NzU2NH0.jUm56NfiHXDwxf-wfeoID9_JNrpNpc_1i0On68LHoEU'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables!')

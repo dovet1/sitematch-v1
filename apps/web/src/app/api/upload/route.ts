@@ -19,14 +19,16 @@ export async function POST(request: NextRequest) {
     const fileType = formData.get('type') as string
     const listingId = formData.get('listingId') as string
     const isPrimary = formData.get('is_primary') as string
+    
 
     if (!file || !fileType) {
       return NextResponse.json({ error: 'Missing file or type' }, { status: 400 })
     }
 
-    // Upload file to Supabase Storage - use user_id for folder structure
+    // Upload file to Supabase Storage - use listing_id for folder structure if available
     const fileBuffer = await file.arrayBuffer()
-    const fileName = `${user.id}/${Date.now()}-${file.name}`
+    const folderName = listingId && listingId !== 'undefined' ? listingId : user.id
+    const fileName = `${folderName}/${Date.now()}-${file.name}`
     
     // Determine bucket based on file type
     const bucketMap = {
