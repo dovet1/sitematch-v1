@@ -1,0 +1,127 @@
+import { useMemo } from 'react';
+import { SearchResult } from '@/types/search';
+
+export interface MapCluster {
+  id: string;
+  type: 'single' | 'cluster';
+  coordinates: { lat: number; lng: number };
+  count: number;
+  listings: SearchResult[];
+}
+
+interface ClusteringOptions {
+  enabled: boolean;
+  minZoom: number;
+  maxDistance: number; // in pixels at zoom level 14
+}
+
+const DEFAULT_OPTIONS: ClusteringOptions = {
+  enabled: true,
+  minZoom: 10,
+  maxDistance: 50
+};
+
+export function useMapClustering(
+  listings: SearchResult[],
+  zoom: number,
+  options: Partial<ClusteringOptions> = {}
+): MapCluster[] {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+
+  return useMemo(() => {
+    // Filter listings with valid coordinates
+    const validListings = listings.filter(
+      listing => listing.coordinates?.lat && listing.coordinates?.lng
+    );
+
+    // If clustering is disabled or zoom is too high, return individual markers
+    if (!opts.enabled || zoom >= opts.minZoom || validListings.length <= 1) {
+      return validListings.map(listing => ({
+        id: listing.id,
+        type: 'single' as const,
+        coordinates: listing.coordinates!,
+        count: 1,
+        listings: [listing]
+      }));
+    }
+
+    // Group listings by proximity
+    const clusters: MapCluster[] = [];
+    const processed = new Set<string>();
+
+    for (const listing of validListings) {
+      if (processed.has(listing.id)) continue;
+
+      // Find nearby listings
+      const nearby = validListings.filter(other => {
+        if (processed.has(other.id) || other.id === listing.id) return false;
+        
+        const distance = calculateDistance(
+          listing.coordinates!,
+          other.coordinates!
+        );
+        
+        // Adjust distance threshold based on zoom level
+        const threshold = opts.maxDistance * Math.pow(2, (14 - zoom));
+        return distance <= threshold;
+      });
+
+      if (nearby.length > 0) {
+        // Create cluster
+        const clusterListings = [listing, ...nearby];
+        const center = calculateCenterPoint(clusterListings);
+        
+        clusters.push({
+          id: `cluster-${listing.id}`,
+          type: 'cluster',
+          coordinates: center,
+          count: clusterListings.length,
+          listings: clusterListings
+        });
+
+        // Mark all listings as processed
+        clusterListings.forEach(l => processed.add(l.id));
+      } else {
+        // Single listing
+        clusters.push({
+          id: listing.id,
+          type: 'single',
+          coordinates: listing.coordinates!,
+          count: 1,
+          listings: [listing]
+        });
+        processed.add(listing.id);
+      }
+    }
+
+    return clusters;
+  }, [listings, zoom, opts.enabled, opts.minZoom, opts.maxDistance]);
+}
+
+function calculateDistance(
+  point1: { lat: number; lng: number },
+  point2: { lat: number; lng: number }
+): number {
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = point1.lat * Math.PI / 180;
+  const φ2 = point2.lat * Math.PI / 180;
+  const Δφ = (point2.lat - point1.lat) * Math.PI / 180;
+  const Δλ = (point2.lng - point1.lng) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
+function calculateCenterPoint(listings: SearchResult[]): { lat: number; lng: number } {
+  const totalLat = listings.reduce((sum, l) => sum + l.coordinates!.lat, 0);
+  const totalLng = listings.reduce((sum, l) => sum + l.coordinates!.lng, 0);
+  
+  return {
+    lat: totalLat / listings.length,
+    lng: totalLng / listings.length
+  };
+}

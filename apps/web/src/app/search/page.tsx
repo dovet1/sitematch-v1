@@ -150,6 +150,8 @@ function SearchPageContent() {
         listingId={selectedListingId}
         isOpen={!!selectedListingId}
         onClose={handleModalClose}
+        searchState={searchFilters}
+        scrollPosition={previousScrollPosition}
       />
     </div>
   );

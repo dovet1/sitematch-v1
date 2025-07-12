@@ -1,0 +1,127 @@
+/* Mobile-specific map optimizations */
+
+/* Map wrapper to allow popups to overflow */
+.map-wrapper {
+  position: relative;
+  z-index: 0;
+  overflow: visible;
+  padding: 20px; /* Add padding to allow popup overflow */
+  margin: -20px; /* Negative margin to maintain original size */
+}
+
+/* Keep map container clipped for rounded corners */
+.map-container {
+  overflow: hidden;
+  margin: 20px; /* Restore margin */
+}
+
+/* Ensure popups can overflow the map container */
+.mapboxgl-popup {
+  z-index: 1000 !important;
+  max-width: none !important;
+}
+
+/* Override Mapbox's default max-width for popups */
+.mapboxgl-popup-content {
+  max-width: none !important;
+}
+
+.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+  border-bottom-color: white;
+}
+
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+  border-top-color: white;
+}
+
+/* Ensure touch targets are at least 44x44px on mobile */
+@media (max-width: 768px) {
+  .map-marker-button {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    padding: 6px;
+  }
+
+  /* Mobile popup optimizations */
+  .mapboxgl-popup {
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    position: fixed !important;
+    max-width: none !important;
+    transform: none !important;
+  }
+
+  .mapboxgl-popup-content {
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 60vh !important;
+    overflow-y: auto !important;
+    margin: 0 !important;
+  }
+
+  .mapboxgl-popup-close-button {
+    width: 44px !important;
+    height: 44px !important;
+    top: 8px !important;
+    right: 8px !important;
+    border-radius: 22px !important;
+    background: rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Map controls positioning */
+  .map-container .map-stats {
+    top: 8px !important;
+    left: 8px !important;
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+  }
+
+  /* Touch-friendly map gestures */
+  .mapboxgl-map {
+    touch-action: manipulation !important;
+  }
+
+  /* Mobile-friendly loading states */
+  .map-container .loading-overlay {
+    backdrop-filter: blur(4px) !important;
+  }
+
+  .map-container .loading-spinner {
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
+/* Tablet-specific optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .map-marker-button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+/* High-DPI display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .map-marker-button {
+    border-width: 1.5px;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+  .mapboxgl-popup-content {
+    max-height: 80vh !important;
+  }
+}
+
+/* Dark mode support for mobile */
+@media (prefers-color-scheme: dark) {
+  .map-container .map-stats {
+    background: rgba(0, 0, 0, 0.8) !important;
+    color: white !important;
+  }
+}

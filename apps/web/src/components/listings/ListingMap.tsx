@@ -2,10 +2,15 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Map, { Marker, Popup } from 'react-map-gl/mapbox';
-import { MapPin, Building2, Users, Square } from 'lucide-react';
+import { MapPin } from 'lucide-react';
+import '@/styles/map-mobile.css';
 import { SearchFilters, SearchResult } from '@/types/search';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { useMapClustering, MapCluster } from '@/hooks/useMapClustering';
+import { useMapCache } from '@/hooks/useMapCache';
+import { MapMarker } from '@/components/map/MapMarker';
+import { MultiListingPopup } from '@/components/map/MultiListingPopup';
+import { SearchLocationMarker } from '@/components/map/SearchLocationMarker';
+import { MapLoadingSkeleton } from '@/components/map/MapLoadingSkeleton';
 
 interface ListingMapProps {
   filters: SearchFilters;
@@ -28,11 +33,28 @@ const DEFAULT_VIEW_STATE: MapViewState = {
 // Mapbox token must be provided via environment variables
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
+// Helper function to calculate map bounds from current view state
+function calculateBounds(viewState: MapViewState) {
+  // Calculate approximate bounds based on zoom level and center point
+  // This is a simplified calculation - in production you'd use map.getBounds()
+  const latDelta = 180 / Math.pow(2, viewState.zoom + 1);
+  const lngDelta = 360 / Math.pow(2, viewState.zoom + 1);
+  
+  return {
+    north: viewState.latitude + latDelta,
+    south: viewState.latitude - latDelta,
+    east: viewState.longitude + lngDelta,
+    west: viewState.longitude - lngDelta
+  };
+}
+
 export function ListingMap({ filters, onListingClick }: ListingMapProps) {
   const [viewState, setViewState] = useState<MapViewState>(DEFAULT_VIEW_STATE);
   const [listings, setListings] = useState<SearchResult[]>([]);
-  const [selectedListing, setSelectedListing] = useState<SearchResult | null>(null);
+  const [selectedCluster, setSelectedCluster] = useState<MapCluster | null>(null);
+  const [hoveredCluster, setHoveredCluster] = useState<MapCluster | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Filter listings that have coordinates
@@ -41,6 +63,28 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
     [listings]
   );
 
+  // Initialize cache
+  const mapCache = useMapCache();
+
+  // Create clusters based on current zoom level
+  const clusters = useMapClustering(mappableListings, viewState.zoom, {
+    enabled: true,
+    minZoom: 12,
+    maxDistance: 60
+  });
+
+  // Navigate map when location coordinates change
+  useEffect(() => {
+    if (filters.coordinates) {
+      const newViewState = {
+        longitude: filters.coordinates.lng,
+        latitude: filters.coordinates.lat,
+        zoom: Math.max(viewState.zoom, 10) // Ensure reasonable zoom level for location search
+      };
+      setViewState(newViewState);
+    }
+  }, [filters.coordinates]);
+
   // Fetch listings data
   useEffect(() => {
     const fetchListings = async () => {
@@ -48,14 +92,35 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
       setError(null);
       
       try {
+        // Add map bounds for optimized querying
+        const bounds = calculateBounds(viewState);
+        
+        // Check cache first
+        const cacheKey = mapCache.generateCacheKey(filters, bounds);
+        const cachedData = mapCache.getCachedData(cacheKey);
+        
+        if (cachedData) {
+          setListings(cachedData);
+          setIsLoading(false);
+          setIsInitialLoad(false);
+          return;
+        }
+
         const params = new URLSearchParams();
+        params.set('north', bounds.north.toString());
+        params.set('south', bounds.south.toString());
+        params.set('east', bounds.east.toString());
+        params.set('west', bounds.west.toString());
+        params.set('zoom', viewState.zoom.toString());
+        
+        // Add search filters
         if (filters.location) params.set('location', filters.location);
-        if (filters.companyName) params.set('company', filters.companyName);
-        if (filters.sector.length > 0) params.set('sectors', filters.sector.join(','));
-        if (filters.useClass.length > 0) params.set('useClasses', filters.useClass.join(','));
+        if (filters.companyName) params.set('companyName', filters.companyName);
+        if (filters.sector.length > 0) params.set('sector', filters.sector.join(','));
+        if (filters.useClass.length > 0) params.set('useClass', filters.useClass.join(','));
         if (filters.sizeMin) params.set('sizeMin', filters.sizeMin.toString());
         if (filters.sizeMax) params.set('sizeMax', filters.sizeMax.toString());
-        if (filters.isNationwide) params.set('nationwide', 'true');
+        if (filters.isNationwide) params.set('isNationwide', 'true');
 
         const response = await fetch(`/api/public/listings/map?${params.toString()}`);
         
@@ -64,7 +129,11 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
         }
 
         const data = await response.json();
-        setListings(data.results || []);
+        const results = data.results || [];
+        setListings(results);
+        
+        // Cache the results
+        mapCache.setCachedData(cacheKey, results, bounds);
 
         // Adjust view if we have listings with coordinates
         const coordListings = data.results?.filter((l: SearchResult) => l.coordinates) || [];
@@ -151,19 +220,26 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
         setListings(mockListings);
       } finally {
         setIsLoading(false);
+        setIsInitialLoad(false);
       }
     };
 
-    fetchListings();
-  }, [filters]);
+    // Debounce the fetch to avoid too many requests while panning/zooming
+    const timeoutId = setTimeout(fetchListings, 300);
+    return () => clearTimeout(timeoutId);
+  }, [filters, viewState.latitude, viewState.longitude, viewState.zoom]);
 
-  const handleMarkerClick = (listing: SearchResult) => {
-    setSelectedListing(listing);
+  const handleClusterClick = (cluster: MapCluster) => {
+    setSelectedCluster(cluster);
   };
 
   const handleListingClick = (listingId: string) => {
-    setSelectedListing(null);
+    setSelectedCluster(null);
     onListingClick(listingId);
+  };
+
+  const handleClusterHover = (cluster: MapCluster | null) => {
+    setHoveredCluster(cluster);
   };
 
   const formatSizeRange = (min: number | null, max: number | null) => {
@@ -176,36 +252,26 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
 
   // Check for missing Mapbox token
   if (!MAPBOX_TOKEN) {
-    return (
-      <div className="map-container h-96 bg-muted rounded-lg flex items-center justify-center">
-        <div className="text-center">
-          <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-          <p className="text-muted-foreground">Map unavailable</p>
-          <p className="text-sm text-muted-foreground mt-1">Mapbox token not configured</p>
-        </div>
-      </div>
-    );
+    return <MapLoadingSkeleton message="Map unavailable - Mapbox token not configured" />;
   }
 
-  if (error && listings.length === 0) {
-    return (
-      <div className="map-container h-96 bg-muted rounded-lg flex items-center justify-center">
-        <div className="text-center">
-          <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
-          <p className="text-muted-foreground">{error}</p>
-          <p className="text-sm text-muted-foreground mt-1">Using sample data for demo</p>
-        </div>
-      </div>
-    );
+  // Show skeleton on initial load
+  if (isInitialLoad && isLoading) {
+    return <MapLoadingSkeleton message="Loading map..." />;
+  }
+
+  if (error && listings.length === 0 && !isLoading) {
+    return <MapLoadingSkeleton message="Map unavailable - using demo data" />;
   }
 
   return (
-    <div className="map-container relative h-96 w-full rounded-lg overflow-hidden border border-border">
-      {isLoading && (
-        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="flex items-center gap-3">
-            <div className="animate-spin w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full" />
-            <span className="text-sm text-muted-foreground">Loading map...</span>
+    <div className="map-wrapper relative">
+      <div className="map-container relative h-96 w-full rounded-lg overflow-hidden border border-border">
+      {isLoading && !isInitialLoad && (
+        <div className="absolute top-4 right-4 z-50">
+          <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-lg">
+            <div className="animate-spin w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full" />
+            <span className="text-xs text-muted-foreground">Updating...</span>
           </div>
         </div>
       )}
@@ -218,119 +284,65 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
         mapStyle="mapbox://styles/mapbox/light-v11"
         attributionControl={false}
       >
-        {/* Listing Markers */}
-        {mappableListings.map((listing) => (
+        {/* Search Location Marker */}
+        {filters.coordinates && filters.location && (
           <Marker
-            key={listing.id}
-            longitude={listing.coordinates!.lng}
-            latitude={listing.coordinates!.lat}
+            longitude={filters.coordinates.lng}
+            latitude={filters.coordinates.lat}
             anchor="bottom"
-            onClick={() => handleMarkerClick(listing)}
           >
-            <div 
-              className="relative cursor-pointer group"
-              style={{ transform: 'translate(-50%, -100%)' }}
-            >
-              {/* Map Pin */}
-              <div className="relative">
-                <div className="w-8 h-8 bg-primary-500 border-2 border-white rounded-full shadow-lg flex items-center justify-center transform transition-all duration-200 group-hover:scale-110">
-                  <div className="w-2 h-2 bg-white rounded-full" />
-                </div>
-                {/* Pin stem */}
-                <div className="absolute top-6 left-1/2 w-0.5 h-2 bg-primary-500 transform -translate-x-1/2" />
-              </div>
-              
-              {/* Hover tooltip */}
-              <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-white border border-border rounded-lg shadow-lg p-2 min-w-48 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
-                <div className="text-sm font-medium">{listing.company_name}</div>
-                <div className="text-xs text-muted-foreground">{listing.place_name}</div>
-                <div className="text-xs text-muted-foreground">{formatSizeRange(listing.site_size_min, listing.site_size_max)}</div>
-              </div>
-            </div>
+            <SearchLocationMarker
+              coordinates={filters.coordinates}
+              locationName={filters.location}
+            />
+          </Marker>
+        )}
+
+        {/* Enhanced Clustered Markers */}
+        {clusters.map((cluster) => (
+          <Marker
+            key={cluster.id}
+            longitude={cluster.coordinates.lng}
+            latitude={cluster.coordinates.lat}
+            anchor="bottom"
+          >
+            <MapMarker
+              cluster={cluster}
+              isSelected={selectedCluster?.id === cluster.id}
+              isHovered={hoveredCluster?.id === cluster.id}
+              onClick={() => handleClusterClick(cluster)}
+              onMouseEnter={() => handleClusterHover(cluster)}
+              onMouseLeave={() => handleClusterHover(null)}
+            />
           </Marker>
         ))}
 
-        {/* Listing Details Popup */}
-        {selectedListing && selectedListing.coordinates && (
+        {/* Enhanced Multi-Listing Popup */}
+        {selectedCluster && (
           <Popup
-            longitude={selectedListing.coordinates.lng}
-            latitude={selectedListing.coordinates.lat}
-            anchor="top"
-            onClose={() => setSelectedListing(null)}
+            longitude={selectedCluster.coordinates.lng}
+            latitude={selectedCluster.coordinates.lat}
+            anchor="bottom"
+            onClose={() => setSelectedCluster(null)}
             closeOnClick={false}
             className="[&_.mapboxgl-popup-content]:p-0 [&_.mapboxgl-popup-content]:rounded-lg [&_.mapboxgl-popup-content]:shadow-lg"
+            offset={{
+              'bottom': [0, -40],
+              'top': [0, 40],
+              'left': [40, 0],
+              'right': [-40, 0],
+              'bottom-left': [20, -20],
+              'bottom-right': [-20, -20],
+              'top-left': [20, 20],
+              'top-right': [-20, 20]
+            }}
+            maxWidth="none"
           >
-            <div className="w-80 p-4">
-              {/* Header */}
-              <div className="flex items-start gap-3 mb-3">
-                <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Building2 className="w-6 h-6 text-primary-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm text-foreground truncate">
-                    {selectedListing.company_name}
-                  </h3>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {selectedListing.title}
-                  </p>
-                </div>
-              </div>
-
-              {/* Details */}
-              <div className="space-y-2 mb-4">
-                {selectedListing.place_name && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <MapPin className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">{selectedListing.place_name}</span>
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-2 text-xs">
-                  <Square className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {formatSizeRange(selectedListing.site_size_min, selectedListing.site_size_max)}
-                  </span>
-                </div>
-
-                {selectedListing.contact_name && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <Users className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      {selectedListing.contact_name}
-                      {selectedListing.contact_title && `, ${selectedListing.contact_title}`}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Badges */}
-              <div className="flex flex-wrap gap-1 mb-4">
-                {selectedListing.sector && (
-                  <Badge variant="secondary" className="text-xs">
-                    {selectedListing.sector}
-                  </Badge>
-                )}
-                {selectedListing.use_class && (
-                  <Badge variant="outline" className="text-xs">
-                    {selectedListing.use_class}
-                  </Badge>
-                )}
-                {selectedListing.is_nationwide && (
-                  <Badge className="text-xs bg-primary-500 text-primary-foreground">
-                    Nationwide
-                  </Badge>
-                )}
-              </div>
-
-              {/* Action Button */}
-              <Button 
-                onClick={() => handleListingClick(selectedListing.id)}
-                className="w-full h-8 text-xs"
-                size="sm"
-              >
-                View Details
-              </Button>
-            </div>
+            <MultiListingPopup
+              cluster={selectedCluster}
+              onListingClick={handleListingClick}
+              onClose={() => setSelectedCluster(null)}
+            />
           </Popup>
         )}
       </Map>
@@ -339,8 +351,14 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
       <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm border border-border rounded-lg px-3 py-2 text-sm">
         <span className="text-muted-foreground">
           {mappableListings.length} listing{mappableListings.length !== 1 ? 's' : ''} shown
+          {clusters.length !== mappableListings.length && (
+            <span className="ml-2 text-xs">
+              ({clusters.length} marker{clusters.length !== 1 ? 's' : ''})
+            </span>
+          )}
         </span>
       </div>
+    </div>
     </div>
   );
 }

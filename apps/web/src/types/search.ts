@@ -72,6 +72,85 @@ export interface ModalState {
   searchState: SearchFilters;
 }
 
+// Enhanced modal content interfaces for LDM story
+export interface ContactDetails {
+  name: string;
+  title: string;
+  email: string;
+  phone: string;
+  headshot_url?: string;
+}
+
+export interface Location {
+  id?: string;
+  place_name: string;
+  coordinates?: { lat: number; lng: number };
+}
+
+export interface FAQ {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+export interface FileAttachment {
+  id: string;
+  type: 'brochure' | 'fit_out' | 'site_plan';
+  name: string;
+  size: number;
+  url: string;
+  thumbnail_url?: string;
+  mime_type?: string;
+}
+
+export interface EnhancedListingModalContent {
+  // Core company information
+  company: {
+    name: string;
+    logo_url?: string;
+    sector: string;
+    use_class: string;
+    site_size: string;
+  };
+  
+  // Enhanced contact information  
+  contacts: {
+    primary: ContactDetails;
+    additional: ContactDetails[];
+  };
+  
+  // Location requirements
+  locations: {
+    preferred: Location[];
+    acceptable: Location[];
+    is_nationwide: boolean;
+  };
+  
+  // FAQs with ordering
+  faqs: FAQ[];
+  
+  // File attachments
+  files: {
+    brochures: FileAttachment[];
+    fit_outs: FileAttachment[];
+    site_plans: FileAttachment[];
+  };
+
+  // Metadata
+  id: string;
+  title: string;
+  description: string;
+  created_at: string;
+}
+
+export interface ListingModalProps {
+  listingId: string | null;
+  isOpen: boolean;
+  onClose: () => void;
+  searchState?: SearchFilters;
+  scrollPosition?: number;
+}
+
 // Typography and animation constants
 export const TYPOGRAPHY = {
   hero: 'heading-1',
