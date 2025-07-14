@@ -24,6 +24,9 @@ export const validationSchema: ValidationSchema = {
   step1: {
     companyName: { required: true, minLength: 2, maxLength: 100 },
     primaryContact: { required: true },
+    logoMethod: {},
+    companyDomain: {},
+    clearbitLogo: {},
     logoFile: {},
     logoPreview: {},
     logoUrl: {},

@@ -78,6 +78,7 @@ export async function submitEnhancedListing(
       contact_title: formData.primaryContact?.contactTitle,
       contact_email: formData.primaryContact?.contactEmail,
       contact_phone: formData.primaryContact?.contactPhone,
+      contact_area: formData.primaryContact?.contactArea,
       
       // Company information
       company_name: formData.companyName,
@@ -88,8 +89,11 @@ export async function submitEnhancedListing(
       site_size_min: formData.siteSizeMin,
       site_size_max: formData.siteSizeMax,
       
-      // File URLs
-      logo_url: fileUploads.logoUrl,
+      // File URLs and logo method fields - Story 9.0
+      // Only store logo_url for uploaded logos, not Clearbit logos
+      logo_url: formData.clearbitLogo ? null : fileUploads.logoUrl,
+      clearbit_logo: formData.clearbitLogo || false,
+      company_domain: formData.companyDomain,
       brochure_urls: fileUploads.brochureUrls || [],
       site_plan_urls: fileUploads.sitePlanUrls || [],
       fit_out_urls: fileUploads.fitOutUrls || [],
@@ -107,6 +111,7 @@ export async function submitEnhancedListing(
         contact_title: contact.contactTitle || '',
         contact_email: contact.contactEmail || '',
         contact_phone: contact.contactPhone,
+        contact_area: contact.contactArea,
         headshot_url: contact.headshotUrl
       })) || [],
       

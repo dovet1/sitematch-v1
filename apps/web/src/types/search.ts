@@ -30,6 +30,9 @@ export interface SearchResult {
   contact_phone: string;
   is_nationwide: boolean;
   logo_url: string | null;
+  // Logo management fields - Story 9.0
+  clearbit_logo: boolean;
+  company_domain: string | null;
   place_name: string | null;
   coordinates: { lat: number; lng: number } | null;
   created_at: string;
@@ -78,6 +81,7 @@ export interface ContactDetails {
   title: string;
   email: string;
   phone: string;
+  contact_area?: string;
   headshot_url?: string;
 }
 

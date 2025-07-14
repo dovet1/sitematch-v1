@@ -87,19 +87,35 @@ Manual Test Steps:
 
 ## Dev Agent Record
 
-### Agent Model Used: {{Agent Model Name/Version}}
+### Agent Model Used: Claude Opus 4
 
 ### Debug Log References
 
-[[LLM: (Dev Agent) If the debug is logged to during the current story progress, create a table with the debug log and the specific task section in the debug log - do not repeat all the details in the story]]
+No debug logging was required during implementation.
 
 ### Completion Notes List
 
-[[LLM: (Dev Agent) Anything the SM needs to know that deviated from the story that might impact drafting the next story.]]
+All acceptance criteria successfully implemented:
+- Removed "Primary Contact" labels from UI while maintaining backend data integrity
+- Added Coverage Area field to both primary and additional contacts
+- Updated all data models, API endpoints, and form state management
+- Display shows all contacts uniformly without hierarchical distinction
+- Backend still treats first contact as primary for data integrity (as specified)
 
 ### File List
 
-[[LLM: (Dev Agent) List every new file created, or existing file modified in a bullet list.]]
+- `apps/web/src/types/wizard.ts` - Added contactArea field to ListingContact interface
+- `apps/web/src/types/search.ts` - Added contact_area field to ContactDetails interface for modal display
+- `apps/web/src/types/listings.ts` - Added contact_area field to Listing and CreateListingRequest interfaces
+- `apps/web/src/components/listings/steps/step1-company-info.tsx` - Updated primary contact form to remove "Primary" label and add Coverage Area field
+- `apps/web/src/components/listings/steps/step4-additional-contacts.tsx` - Added Coverage Area field to additional contacts form
+- `apps/web/src/components/listings/EnhancedListingModal.tsx` - Removed "Primary Contact" labels and added coverage area display
+- `apps/web/src/lib/enhanced-listing-submission.ts` - Updated submission logic to handle contact_area for both primary and additional contacts
+- `apps/web/src/lib/enhanced-listings.ts` - Updated listing creation interface and database operations to handle contact_area
+- `apps/web/src/lib/draft-listings.ts` - Updated draft listing functions to handle contact_area in all contact operations
+- `apps/web/src/components/listings/listing-wizard.tsx` - Updated wizard to save contact_area for primary contact and additional contacts
+- `apps/web/src/app/occupier/create-listing/page.tsx` - Fixed data mapping to include contact_area in all contact operations (CRITICAL FIX)
+- `supabase/migrations/013_add_contact_area_fields.sql` - Database migration to add contact_area columns (already applied to production)
 
 ### Change Log
 

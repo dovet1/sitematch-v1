@@ -757,6 +757,9 @@ export function ListingWizard({
             if (processedData.primaryContact?.contactPhone) {
               mainUpdateData.contact_phone = processedData.primaryContact.contactPhone;
             }
+            if (processedData.primaryContact?.contactArea) {
+              mainUpdateData.contact_area = processedData.primaryContact.contactArea;
+            }
             // Save brochure URL to main listing if available
             if (processedData.brochureFiles && processedData.brochureFiles.length > 0) {
               mainUpdateData.brochure_url = processedData.brochureFiles[0].url;
@@ -807,6 +810,7 @@ export function ListingWizard({
               contact_title: string;
               contact_email: string;
               contact_phone?: string;
+              contact_area?: string;
               is_primary_contact: boolean;
               headshot_url?: string;
             }> = [];
@@ -818,6 +822,7 @@ export function ListingWizard({
                   contact_title: contact.contactTitle || 'Contact Title',
                   contact_email: contact.contactEmail || 'contact@example.com',
                   contact_phone: contact.contactPhone,
+                  contact_area: contact.contactArea,
                   is_primary_contact: false,
                   headshot_url: contact.headshotUrl
                 });

@@ -82,6 +82,7 @@ export async function updateDraftListing(
     contact_title: string;
     contact_email: string;
     contact_phone: string;
+    contact_area: string;
     site_size_min: number;
     site_size_max: number;
     brochure_url: string;
@@ -146,10 +147,14 @@ export async function finalizeDraftListing(
     site_size_max?: number;
     brochure_url?: string;
     logo_url?: string;
+    // Logo method fields - Story 9.0
+    clearbit_logo?: boolean;
+    company_domain?: string;
     contact_name?: string;
     contact_title?: string;
     contact_email?: string;
     contact_phone?: string;
+    contact_area?: string;
   }
 ): Promise<void> {
   console.log('=== FINALIZE DRAFT DEBUG ===');
@@ -188,6 +193,13 @@ export async function finalizeDraftListing(
     if (finalData.logo_url) {
       updateData.logo_url = finalData.logo_url;
     }
+    // Logo method fields - Story 9.0
+    if (finalData.clearbit_logo !== undefined) {
+      updateData.clearbit_logo = finalData.clearbit_logo;
+    }
+    if (finalData.company_domain) {
+      updateData.company_domain = finalData.company_domain;
+    }
     // company_name is now always set in the base updateData above
     if (finalData.contact_name) {
       updateData.contact_name = finalData.contact_name;
@@ -210,6 +222,9 @@ export async function finalizeDraftListing(
           // Don't set the field at all if invalid
         }
       }
+    }
+    if (finalData.contact_area) {
+      updateData.contact_area = finalData.contact_area;
     }
 
     const { error } = await supabase
@@ -241,6 +256,7 @@ export async function addContactsToDraftListing(
     contact_title: string;
     contact_email: string;
     contact_phone?: string;
+    contact_area?: string;
     is_primary_contact: boolean;
     headshot_url?: string;
   }>
