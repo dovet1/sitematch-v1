@@ -412,9 +412,6 @@ export function ListingReview({ listing }: ListingReviewProps) {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">
-                      {location.location_type || location.type || 'preferred'}
-                    </Badge>
                     {location.coordinates && (
                       <Badge variant="secondary" className="text-xs">
                         {Array.isArray(location.coordinates) 

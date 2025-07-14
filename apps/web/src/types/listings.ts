@@ -159,7 +159,7 @@ export interface BulkModerationRequest {
   rejection_reason?: RejectionReason;
 }
 
-export type LocationType = 'preferred' | 'acceptable';
+export type LocationType = 'preferred' | 'acceptable'; // DEPRECATED - will be removed
 
 export type MediaFileType = 'brochure' | 'logo' | 'site_plan' | 'fit_out' | 'image' | 'pdf' | 'video';
 

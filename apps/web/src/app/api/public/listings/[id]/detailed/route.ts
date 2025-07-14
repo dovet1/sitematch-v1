@@ -68,7 +68,7 @@ export async function GET(
     ] = await Promise.all([
       supabase.from('sectors').select('id, name').eq('id', listing.sector_id),
       supabase.from('use_classes').select('id, name, code').eq('id', listing.use_class_id),
-      supabase.from('listing_locations').select('id, place_name, coordinates, type, formatted_address').eq('listing_id', id),
+      supabase.from('listing_locations').select('id, place_name, coordinates, formatted_address').eq('listing_id', id),
       supabase.from('faqs').select('id, question, answer, display_order').eq('listing_id', id),
       supabase.from('file_uploads').select('id, file_path, file_name, file_size, file_type, bucket_name, is_primary, caption, display_order').eq('listing_id', id),
       supabase.from('listing_contacts').select('id, contact_name, contact_title, contact_email, contact_phone, headshot_url, is_primary_contact').eq('listing_id', id),
@@ -164,15 +164,7 @@ export async function GET(
       
       // Location requirements
       locations: {
-        preferred: (locations || [])
-          .filter((loc: any) => loc.type === 'preferred')
-          .map((loc: any) => ({
-            id: loc.id,
-            place_name: loc.place_name,
-            coordinates: loc.coordinates
-          })),
-        acceptable: (locations || [])
-          .filter((loc: any) => loc.type === 'acceptable')
+        all: (locations || [])
           .map((loc: any) => ({
             id: loc.id,
             place_name: loc.place_name,

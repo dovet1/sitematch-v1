@@ -332,7 +332,6 @@ export default async function CreateListingPage({
             const locationsForDatabase = data.locations.map(location => ({
               listing_id: data.existingListingId,
               place_name: location.place_name || location.formatted_address || 'Unknown Location',
-              type: location.type || 'preferred',
               formatted_address: location.formatted_address || location.place_name || 'Unknown Address',
               region: location.region || null,
               country: location.country || null,
@@ -522,7 +521,7 @@ export default async function CreateListingPage({
           site_size_max: data.siteSizeMax,
           brochure_url: data.brochureFiles?.[0]?.url,
           // Only store logo_url for uploaded logos, not Clearbit logos
-          logo_url: data.clearbitLogo ? null : data.logoUrl,
+          logo_url: data.clearbitLogo ? undefined : data.logoUrl,
           // Logo method fields - Story 9.0
           clearbit_logo: data.clearbitLogo || false,
           company_domain: data.companyDomain,

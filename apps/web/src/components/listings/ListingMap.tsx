@@ -191,6 +191,8 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
             contact_phone: '020 1234 5678',
             is_nationwide: false,
             logo_url: null,
+            clearbit_logo: false,
+            company_domain: null,
             place_name: 'London, UK',
             coordinates: { lat: 51.5074, lng: -0.1278 },
             created_at: new Date().toISOString()
@@ -212,6 +214,8 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
             contact_phone: '0161 234 5678',
             is_nationwide: false,
             logo_url: null,
+            clearbit_logo: false,
+            company_domain: null,
             place_name: 'Manchester, UK',
             coordinates: { lat: 53.4808, lng: -2.2426 },
             created_at: new Date().toISOString()

@@ -27,7 +27,7 @@ export interface EnhancedListingData {
   site_size_max?: number;
   
   // File URLs and logo method fields - Story 9.0
-  logo_url?: string;
+  logo_url?: string | null;
   clearbit_logo?: boolean;
   company_domain?: string;
   brochure_urls?: string[];
@@ -39,7 +39,7 @@ export interface EnhancedListingData {
     id: string;
     place_name: string;
     coordinates: [number, number];
-    type: 'preferred' | 'acceptable';
+    type: 'preferred' | 'acceptable'; // Deprecated - keeping for backward compatibility
     formatted_address: string;
     region?: string;
     country?: string;
@@ -272,7 +272,6 @@ export async function createEnhancedListing(
         listing_id: listing.id,
         place_name: location.place_name,
         coordinates: location.coordinates,
-        type: location.type,
         formatted_address: location.formatted_address,
         region: location.region,
         country: location.country
