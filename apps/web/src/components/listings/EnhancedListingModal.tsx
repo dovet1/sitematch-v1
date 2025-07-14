@@ -22,6 +22,8 @@ export function EnhancedListingModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedFAQs, setExpandedFAQs] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['overview', 'contact']));
+  const [activeTab, setActiveTab] = useState<'overview' | 'contact' | 'requirements' | 'files'>('overview');
   const [isClosing, setIsClosing] = useState(false);
   
   const modalRef = useRef<HTMLDivElement>(null);
@@ -133,7 +135,7 @@ export function EnhancedListingModal({
         const mockListing: EnhancedListingModalContent = {
           company: {
             name: 'Demo Company Ltd',
-            logo_url: null,
+            logo_url: undefined,
             sector: 'Technology',
             use_class: 'Office (B1)',
             site_size: '5,000 - 10,000 sq ft'
@@ -144,7 +146,7 @@ export function EnhancedListingModal({
               title: 'Property Manager',
               email: 'sarah.johnson@democompany.co.uk',
               phone: '+44 20 1234 5678',
-              headshot_url: null
+              headshot_url: undefined
             },
             additional: [
               {
@@ -152,7 +154,7 @@ export function EnhancedListingModal({
                 title: 'Senior Associate',
                 email: 'mark.thompson@democompany.co.uk',
                 phone: '+44 20 1234 5679',
-                headshot_url: null
+                headshot_url: undefined
               }
             ]
           },
@@ -239,6 +241,19 @@ export function EnhancedListingModal({
     });
   };
 
+  // Section toggle handler
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(sectionId)) {
+        newExpanded.delete(sectionId);
+      } else {
+        newExpanded.add(sectionId);
+      }
+      return newExpanded;
+    });
+  };
+
   // File size formatter
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
@@ -256,17 +271,45 @@ export function EnhancedListingModal({
     });
   };
 
-  // File type icon
+  // File type icon with enhanced styling
   const getFileIcon = (type: string) => {
     switch (type) {
       case 'brochure':
-        return <FileText className="w-4 h-4" />;
+        return <FileText className="w-5 h-5" />;
       case 'fit_out':
-        return <ImageIcon className="w-4 h-4" />;
+        return <ImageIcon className="w-5 h-5" />;
       case 'site_plan':
-        return <File className="w-4 h-4" />;
+        return <File className="w-5 h-5" />;
       default:
-        return <File className="w-4 h-4" />;
+        return <File className="w-5 h-5" />;
+    }
+  };
+
+  // File type color
+  const getFileTypeColor = (type: string) => {
+    switch (type) {
+      case 'brochure':
+        return 'bg-blue-100 text-blue-600';
+      case 'fit_out':
+        return 'bg-green-100 text-green-600';
+      case 'site_plan':
+        return 'bg-purple-100 text-purple-600';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  };
+
+  // File type label
+  const getFileTypeLabel = (type: string) => {
+    switch (type) {
+      case 'brochure':
+        return 'Brochure';
+      case 'fit_out':
+        return 'Fit-out';
+      case 'site_plan':
+        return 'Site Plan';
+      default:
+        return 'Document';
     }
   };
 
@@ -366,6 +409,72 @@ export function EnhancedListingModal({
 
           {/* Mobile swipe indicator */}
           <div className="md:hidden w-12 h-1 bg-gray-300 rounded-full mx-auto mt-2 mb-4" />
+
+          {/* Tab Navigation */}
+          {listing && !isLoading && (
+            <div className="border-b border-border bg-white sticky top-[73px] md:top-[85px] z-10">
+              <div className="flex overflow-x-auto">
+                <button
+                  onClick={() => setActiveTab('overview')}
+                  className={cn(
+                    "flex-1 min-w-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+                    activeTab === 'overview'
+                      ? "border-primary-500 text-primary-600 bg-primary-50"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300"
+                  )}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Overview
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('contact')}
+                  className={cn(
+                    "flex-1 min-w-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+                    activeTab === 'contact'
+                      ? "border-primary-500 text-primary-600 bg-primary-50"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300"
+                  )}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Contact
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('requirements')}
+                  className={cn(
+                    "flex-1 min-w-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+                    activeTab === 'requirements'
+                      ? "border-primary-500 text-primary-600 bg-primary-50"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300"
+                  )}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    Requirements
+                  </div>
+                </button>
+                {(listing?.files.fit_outs.length > 0 || listing?.files.site_plans.length > 0) && (
+                  <button
+                    onClick={() => setActiveTab('files')}
+                    className={cn(
+                      "flex-1 min-w-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+                      activeTab === 'files'
+                        ? "border-primary-500 text-primary-600 bg-primary-50"
+                        : "border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300"
+                    )}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Files
+                    </div>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Scrollable Content */}
           <div className="overflow-y-auto flex-1">
@@ -483,57 +592,193 @@ export function EnhancedListingModal({
                 </Button>
               </div>
             ) : listing ? (
-              <div className="p-4 md:p-6 space-y-8">
-                {/* Title & Description */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 id="modal-description" className="heading-3 text-foreground mb-2">
-                      {listing.title}
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-2 mb-4">
-                      <Badge variant="secondary">
-                        {listing.company.sector}
-                      </Badge>
-                      <Badge variant="outline">
-                        {listing.company.use_class}
-                      </Badge>
-                      {listing.locations.is_nationwide && (
-                        <Badge className="bg-primary-500 text-primary-foreground">
-                          Nationwide Search
-                        </Badge>
+              <div className="p-4 md:p-6">
+                {/* Summary Card - Always Visible */}
+                <div className="bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl p-6 mb-8 border border-primary-200">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      {listing.company.logo_url ? (
+                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
+                          <img
+                            src={listing.company.logo_url}
+                            alt={`${listing.company.name} logo`}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 bg-primary-500 rounded-xl flex items-center justify-center">
+                          <Building2 className="w-8 h-8 text-white" />
+                        </div>
                       )}
-                      <Badge variant="outline" className="text-xs">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        Posted {formatDate(listing.created_at)}
-                      </Badge>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="heading-3 text-foreground mb-2 truncate">
+                        {listing.company.name}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Building2 className="w-3 h-3 text-white" />
+                          </div>
+                          <span className="text-foreground font-medium">{listing.company.sector}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Square className="w-3 h-3 text-white" />
+                          </div>
+                          <span className="text-foreground font-medium">{listing.company.site_size}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
+                            <MapPin className="w-3 h-3 text-white" />
+                          </div>
+                          <span className="text-foreground font-medium">
+                            {listing.locations.is_nationwide ? 'Nationwide' : 
+                             listing.locations.preferred.length > 0 ? listing.locations.preferred[0].place_name : 
+                             'Location flexible'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <Badge variant="secondary" className="text-xs">
+                          {listing.company.use_class}
+                        </Badge>
+                        {listing.locations.is_nationwide && (
+                          <Badge className="bg-primary-500 text-primary-foreground text-xs">
+                            Nationwide Search
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="text-xs">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          Posted {formatDate(listing.created_at)}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="prose prose-sm max-w-none">
-                    <p className="text-muted-foreground leading-relaxed">
-                      {listing.description}
-                    </p>
-                  </div>
-
-                  {/* Brochure Button */}
-                  {listing.files.brochures.length > 0 && (
-                    <div className="mt-4">
-                      <Button
-                        onClick={() => window.open(listing.files.brochures[0].url, '_blank')}
-                        className="violet-bloom-button flex items-center gap-2"
-                      >
-                        <FileText className="w-4 h-4" />
-                        View Company Brochure
-                        <span className="text-xs opacity-80">
-                          ({formatFileSize(listing.files.brochures[0].size)})
-                        </span>
-                      </Button>
-                    </div>
-                  )}
                 </div>
 
+                {/* Overview Tab */}
+                {activeTab === 'overview' && (
+                  <div className="space-y-8">
+                    {/* Quick Actions - High Priority */}
+                    <div className="bg-white border border-primary-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-primary-500 rounded-full"></span>
+                        Quick Actions
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {listing.contacts.primary.email && (
+                          <Button
+                            onClick={() => {
+                              const subject = encodeURIComponent(`Property Enquiry: ${listing.title}`);
+                              const body = encodeURIComponent(`Dear ${listing.contacts.primary.name},\n\nI am interested in discussing your property requirement for ${listing.title}.\n\nBest regards`);
+                              window.open(`mailto:${listing.contacts.primary.email}?subject=${subject}&body=${body}`);
+                            }}
+                            className="violet-bloom-button justify-start"
+                          >
+                            <Mail className="w-4 h-4 mr-2" />
+                            Send Enquiry to {listing.contacts.primary.name}
+                          </Button>
+                        )}
+                        {listing.files.brochures.length > 0 && (
+                          <Button
+                            onClick={() => window.open(listing.files.brochures[0].url, '_blank')}
+                            variant="outline"
+                            className="justify-start"
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            View Company Brochure ({formatFileSize(listing.files.brochures[0].size)})
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Property Requirement Details */}
+                    <div className="space-y-6">
+                      <div>
+                        <h3 id="modal-description" className="heading-3 text-foreground mb-2">
+                          {listing.title}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                          <Badge variant="secondary">
+                            {listing.company.sector}
+                          </Badge>
+                          <Badge variant="outline">
+                            {listing.company.use_class}
+                          </Badge>
+                          {listing.locations.is_nationwide && (
+                            <Badge className="bg-primary-500 text-primary-foreground">
+                              Nationwide Search
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="text-xs">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            Posted {formatDate(listing.created_at)}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="prose prose-sm max-w-none">
+                        <p className="text-muted-foreground leading-relaxed">
+                          {listing.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Key Requirements - Highlighted */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+                      <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                        <span className="w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">!</span>
+                        </span>
+                        Key Requirements at a Glance
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
+                            <Square className="w-4 h-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">Space Requirement</p>
+                            <p className="text-sm text-muted-foreground">{listing.company.site_size}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
+                            <MapPin className="w-4 h-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">Location Preference</p>
+                            <p className="text-sm text-muted-foreground">
+                              {listing.locations.is_nationwide ? 'Nationwide UK' : 
+                               listing.locations.preferred.length > 0 ? listing.locations.preferred[0].place_name : 
+                               'Flexible on location'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
+                            <Building2 className="w-4 h-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">Business Sector</p>
+                            <p className="text-sm text-muted-foreground">{listing.company.sector}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center">
+                            <Users className="w-4 h-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">Use Class</p>
+                            <p className="text-sm text-muted-foreground">{listing.company.use_class}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                 {/* Company Overview */}
-                <div className="bg-primary-50 rounded-lg p-4 md:p-6">
+                <div className="bg-primary-50 rounded-lg p-6 md:p-8 border border-primary-100">
                   <h4 className="heading-4 text-foreground mb-4 flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-primary-500" />
                     Company Overview
@@ -553,16 +798,79 @@ export function EnhancedListingModal({
                     </div>
                   </div>
                 </div>
+                  </div>
+                )}
 
-                {/* Contact Information */}
-                <div className="space-y-4">
-                  <h4 className="heading-4 text-foreground flex items-center gap-2">
-                    <Users className="w-4 h-4 text-primary-500" />
-                    Contact Information
-                  </h4>
+                {/* Contact Tab */}
+                {activeTab === 'contact' && (
+                  <div className="space-y-8">
+                    {/* Priority Contact - Always Visible */}
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                      <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                        <span className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                          <Users className="w-3 h-3 text-white" />
+                        </span>
+                        Primary Contact - Ready to Connect
+                      </h4>
+                      <div className="bg-white rounded-lg p-4 border border-green-100">
+                        <div className="flex items-start gap-4">
+                          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            {listing.contacts.primary.headshot_url ? (
+                              <img
+                                src={listing.contacts.primary.headshot_url}
+                                alt={listing.contacts.primary.name}
+                                className="w-16 h-16 rounded-full object-cover"
+                              />
+                            ) : (
+                              <User className="w-8 h-8 text-green-600" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h5 className="font-semibold text-foreground text-lg">{listing.contacts.primary.name}</h5>
+                              <Badge className="bg-green-500 text-white text-xs">Primary Contact</Badge>
+                            </div>
+                            {listing.contacts.primary.title && (
+                              <p className="text-muted-foreground mb-3">{listing.contacts.primary.title}</p>
+                            )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {listing.contacts.primary.email && (
+                                <a 
+                                  href={`mailto:${listing.contacts.primary.email}`}
+                                  className="flex items-center gap-3 text-sm text-green-600 hover:text-green-700 transition-colors p-3 rounded-lg hover:bg-green-50 border border-green-200"
+                                >
+                                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Mail className="w-4 h-4 text-green-600" />
+                                  </div>
+                                  <span className="font-medium">{listing.contacts.primary.email}</span>
+                                </a>
+                              )}
+                              {listing.contacts.primary.phone && (
+                                <a 
+                                  href={`tel:${listing.contacts.primary.phone}`}
+                                  className="flex items-center gap-3 text-sm text-green-600 hover:text-green-700 transition-colors p-3 rounded-lg hover:bg-green-50 border border-green-200"
+                                >
+                                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Phone className="w-4 h-4 text-green-600" />
+                                  </div>
+                                  <span className="font-medium">{listing.contacts.primary.phone}</span>
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* All Contact Information */}
+                    <div className="space-y-6">
+                      <h4 className="heading-4 text-foreground flex items-center gap-2">
+                        <Users className="w-4 h-4 text-primary-500" />
+                        All Contacts
+                      </h4>
                   
                   {/* Primary Contact */}
-                  <div className="bg-white border border-border rounded-lg p-4">
+                  <div className="bg-white border border-border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
                         {listing.contacts.primary.headshot_url ? (
@@ -583,23 +891,27 @@ export function EnhancedListingModal({
                         {listing.contacts.primary.title && (
                           <p className="text-sm text-muted-foreground mb-2">{listing.contacts.primary.title}</p>
                         )}
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-col gap-3">
                           {listing.contacts.primary.email && (
                             <a 
                               href={`mailto:${listing.contacts.primary.email}`}
-                              className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
+                              className="flex items-center gap-3 text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded-lg hover:bg-primary-50 min-h-[44px]"
                             >
-                              <Mail className="w-4 h-4" />
-                              {listing.contacts.primary.email}
+                              <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Mail className="w-4 h-4 text-primary-600" />
+                              </div>
+                              <span className="font-medium">{listing.contacts.primary.email}</span>
                             </a>
                           )}
                           {listing.contacts.primary.phone && (
                             <a 
                               href={`tel:${listing.contacts.primary.phone}`}
-                              className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
+                              className="flex items-center gap-3 text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded-lg hover:bg-primary-50 min-h-[44px]"
                             >
-                              <Phone className="w-4 h-4" />
-                              {listing.contacts.primary.phone}
+                              <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Phone className="w-4 h-4 text-primary-600" />
+                              </div>
+                              <span className="font-medium">{listing.contacts.primary.phone}</span>
                             </a>
                           )}
                         </div>
@@ -612,7 +924,7 @@ export function EnhancedListingModal({
                     <div className="space-y-3">
                       <h5 className="font-medium text-foreground">Additional Contacts</h5>
                       {listing.contacts.additional.map((contact, index) => (
-                        <div key={index} className="bg-white border border-border rounded-lg p-4">
+                        <div key={index} className="bg-white border border-border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
                           <div className="flex items-start gap-4">
                             <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
                               {contact.headshot_url ? (
@@ -630,23 +942,27 @@ export function EnhancedListingModal({
                               {contact.title && (
                                 <p className="text-sm text-muted-foreground mb-2">{contact.title}</p>
                               )}
-                              <div className="flex flex-wrap gap-3">
+                              <div className="flex flex-col gap-3">
                                 {contact.email && (
                                   <a 
                                     href={`mailto:${contact.email}`}
-                                    className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
+                                    className="flex items-center gap-3 text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded-lg hover:bg-primary-50 min-h-[44px]"
                                   >
-                                    <Mail className="w-4 h-4" />
-                                    {contact.email}
+                                    <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <Mail className="w-4 h-4 text-primary-600" />
+                                    </div>
+                                    <span className="font-medium">{contact.email}</span>
                                   </a>
                                 )}
                                 {contact.phone && (
                                   <a 
                                     href={`tel:${contact.phone}`}
-                                    className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
+                                    className="flex items-center gap-3 text-sm text-primary-600 hover:text-primary-700 transition-colors p-2 rounded-lg hover:bg-primary-50 min-h-[44px]"
                                   >
-                                    <Phone className="w-4 h-4" />
-                                    {contact.phone}
+                                    <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <Phone className="w-4 h-4 text-primary-600" />
+                                    </div>
+                                    <span className="font-medium">{contact.phone}</span>
                                   </a>
                                 )}
                               </div>
@@ -657,16 +973,33 @@ export function EnhancedListingModal({
                     </div>
                   )}
                 </div>
+                  </div>
+                )}
 
-                {/* Location Requirements */}
-                <div className="space-y-4">
-                  <h4 className="heading-4 text-foreground flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-primary-500" />
-                    Location Requirements
-                  </h4>
+                {/* Requirements Tab */}
+                {activeTab === 'requirements' && (
+                  <div className="space-y-8">
+                    {/* Location Requirements */}
+                <div className="space-y-6">
+                  <button
+                    onClick={() => toggleSection('locations')}
+                    className="w-full flex items-center justify-between p-0 text-left hover:text-primary-600 transition-colors"
+                  >
+                    <h4 className="heading-4 text-foreground flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-primary-500" />
+                      Location Requirements
+                    </h4>
+                    {expandedSections.has('locations') ? (
+                      <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </button>
                   
-                  {/* Check if no specific locations and assume nationwide */}
-                  {listing.locations.preferred.length === 0 && listing.locations.acceptable.length === 0 ? (
+                  {expandedSections.has('locations') && (
+                    <div className="space-y-4">
+                      {/* Check if no specific locations and assume nationwide */}
+                      {listing.locations.preferred.length === 0 && listing.locations.acceptable.length === 0 ? (
                     <div className="bg-primary-50 rounded-lg p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
@@ -706,19 +1039,21 @@ export function EnhancedListingModal({
                     </div>
                   )}
                   
-                  {/* Additional nationwide indicator if flag is set */}
-                  {listing.locations.is_nationwide && (listing.locations.preferred.length > 0 || listing.locations.acceptable.length > 0) && (
-                    <div className="bg-primary-50 rounded-lg p-3">
-                      <p className="text-sm text-primary-700 font-medium">
-                        Also open to nationwide opportunities beyond the locations listed above
-                      </p>
+                      {/* Additional nationwide indicator if flag is set */}
+                      {listing.locations.is_nationwide && (listing.locations.preferred.length > 0 || listing.locations.acceptable.length > 0) && (
+                        <div className="bg-primary-50 rounded-lg p-3">
+                          <p className="text-sm text-primary-700 font-medium">
+                            Also open to nationwide opportunities beyond the locations listed above
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* FAQs */}
-                {listing.faqs.length > 0 && (
-                  <div className="space-y-4">
+                    {/* FAQs */}
+                    {listing.faqs.length > 0 && (
+                  <div className="space-y-6">
                     <h4 className="heading-4 text-foreground">
                       Frequently Asked Questions
                     </h4>
@@ -746,42 +1081,74 @@ export function EnhancedListingModal({
                     </div>
                   </div>
                 )}
+                  </div>
+                )}
 
-                {/* Files & Documents */}
+                {/* Files Tab */}
+                {activeTab === 'files' && (
+                  <div className="space-y-8">
+                    {/* Files & Documents */}
                 {(listing.files.fit_outs.length > 0 || listing.files.site_plans.length > 0) && (
-                  <div className="space-y-4">
-                    <h4 className="heading-4 text-foreground">
-                      Files & Documents
-                    </h4>
+                  <div className="space-y-6">
+                    <button
+                      onClick={() => toggleSection('files')}
+                      className="w-full flex items-center justify-between p-0 text-left hover:text-primary-600 transition-colors"
+                    >
+                      <h4 className="heading-4 text-foreground flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-primary-500" />
+                        Files & Documents
+                      </h4>
+                      {expandedSections.has('files') ? (
+                        <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </button>
                     
-                    <div className="grid md:grid-cols-2 gap-4">
+                    {expandedSections.has('files') && (
+                      <div className="grid md:grid-cols-2 gap-4">
                       {/* Fit-outs */}
                       {listing.files.fit_outs.length > 0 && (
                         <div className="space-y-2">
                           <h5 className="font-medium text-foreground">Fit-out Examples</h5>
                           {listing.files.fit_outs.map((file) => (
-                            <div key={file.id} className="flex items-center gap-2 p-3 bg-white border border-border rounded-lg">
-                              {file.thumbnail_url ? (
-                                <img
-                                  src={file.thumbnail_url}
-                                  alt={file.name}
-                                  className="w-8 h-8 rounded object-cover"
-                                />
-                              ) : (
-                                getFileIcon(file.type)
-                              )}
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-foreground">{file.name}</p>
+                            <div key={file.id} className="group bg-white border border-border rounded-xl overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-primary-300">
+                              {/* File Preview/Thumbnail */}
+                              <div className="aspect-video relative bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                                {file.thumbnail_url ? (
+                                  <img
+                                    src={file.thumbnail_url}
+                                    alt={file.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className={cn("w-16 h-16 rounded-lg flex items-center justify-center", getFileTypeColor(file.type))}>
+                                    {getFileIcon(file.type)}
+                                  </div>
+                                )}
+                                {/* File Type Badge */}
+                                <div className="absolute top-2 left-2">
+                                  <Badge variant="secondary" className="text-xs bg-white/90 backdrop-blur-sm">
+                                    {getFileTypeLabel(file.type)}
+                                  </Badge>
+                                </div>
+                                {/* Download Overlay */}
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => window.open(file.url, '_blank')}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity bg-white text-gray-900 hover:bg-gray-100"
+                                  >
+                                    <Download className="w-4 h-4 mr-2" />
+                                    Download
+                                  </Button>
+                                </div>
+                              </div>
+                              {/* File Info */}
+                              <div className="p-4">
+                                <p className="text-sm font-medium text-foreground truncate mb-1">{file.name}</p>
                                 <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
                               </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => window.open(file.url, '_blank')}
-                                className="violet-bloom-touch"
-                              >
-                                <Download className="w-4 h-4" />
-                              </Button>
                             </div>
                           ))}
                         </div>
@@ -792,30 +1159,48 @@ export function EnhancedListingModal({
                         <div className="space-y-2">
                           <h5 className="font-medium text-foreground">Site Plans</h5>
                           {listing.files.site_plans.map((file) => (
-                            <div key={file.id} className="flex items-center gap-2 p-3 bg-white border border-border rounded-lg">
-                              {getFileIcon(file.type)}
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-foreground">{file.name}</p>
+                            <div key={file.id} className="group bg-white border border-border rounded-xl overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-primary-300">
+                              {/* File Preview */}
+                              <div className="aspect-video relative bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                                <div className={cn("w-16 h-16 rounded-lg flex items-center justify-center", getFileTypeColor(file.type))}>
+                                  {getFileIcon(file.type)}
+                                </div>
+                                {/* File Type Badge */}
+                                <div className="absolute top-2 left-2">
+                                  <Badge variant="secondary" className="text-xs bg-white/90 backdrop-blur-sm">
+                                    {getFileTypeLabel(file.type)}
+                                  </Badge>
+                                </div>
+                                {/* Download Overlay */}
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => window.open(file.url, '_blank')}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity bg-white text-gray-900 hover:bg-gray-100"
+                                  >
+                                    <Download className="w-4 h-4 mr-2" />
+                                    Download
+                                  </Button>
+                                </div>
+                              </div>
+                              {/* File Info */}
+                              <div className="p-4">
+                                <p className="text-sm font-medium text-foreground truncate mb-1">{file.name}</p>
                                 <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
                               </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => window.open(file.url, '_blank')}
-                                className="violet-bloom-touch"
-                              >
-                                <Download className="w-4 h-4" />
-                              </Button>
                             </div>
                           ))}
                         </div>
                       )}
-                    </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                   </div>
                 )}
 
-                {/* Action Buttons */}
-                <div className="border-t border-border pt-6">
+                {/* Desktop Action Buttons */}
+                <div className="hidden md:block border-t border-border pt-8 mt-12">
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button 
                       className="flex-1 violet-bloom-button"
@@ -845,7 +1230,7 @@ export function EnhancedListingModal({
                 </div>
 
                 {/* Footer */}
-                <div className="border-t border-border pt-4">
+                <div className="border-t border-border pt-4 pb-20 md:pb-4">
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>Listing ID: {listing.id}</span>
                     <span>Posted on {formatDate(listing.created_at)}</span>
@@ -854,6 +1239,38 @@ export function EnhancedListingModal({
               </div>
             ) : null}
           </div>
+
+          {/* Sticky Action Bar - Mobile */}
+          {listing && (
+            <div className="md:hidden sticky bottom-0 left-0 right-0 bg-white border-t border-border p-4 z-10 rounded-b-2xl">
+              <div className="flex flex-col gap-3">
+                <Button 
+                  className="w-full violet-bloom-button h-12"
+                  onClick={() => {
+                    if (listing.contacts.primary.email) {
+                      const subject = encodeURIComponent(`Property Enquiry: ${listing.title}`);
+                      const body = encodeURIComponent(`Dear ${listing.contacts.primary.name},\n\nI am interested in discussing your property requirement for ${listing.title}.\n\nBest regards`);
+                      window.open(`mailto:${listing.contacts.primary.email}?subject=${subject}&body=${body}`);
+                    }
+                  }}
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  Send Enquiry
+                </Button>
+                
+                {listing.contacts.primary.phone && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-12"
+                    onClick={() => window.open(`tel:${listing.contacts.primary.phone}`)}
+                  >
+                    <Phone className="w-4 h-4 mr-2" />
+                    Call Now
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
