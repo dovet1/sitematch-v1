@@ -60,7 +60,7 @@ export interface LocationData {
     id: string;
     place_name: string;
     coordinates: [number, number];
-    type: 'preferred' | 'acceptable';
+    type: 'preferred' | 'acceptable'; // Deprecated - keeping for backward compatibility
     formatted_address: string;
     region?: string;
     country?: string;

@@ -46,8 +46,7 @@ export async function GET(request: NextRequest) {
           coordinates,
           formatted_address,
           region,
-          country,
-          type
+          country
         ),
         listing_sectors(
           sector:sectors(
@@ -177,7 +176,7 @@ export async function GET(request: NextRequest) {
     let results = listings?.map(listing => {
       console.log('Processing listing:', listing.company_name, 'has logo:', !!logoMap[listing.id]);
       const locations = (listing.listing_locations as any) || [];
-      const primaryLocation = locations.find((loc: any) => loc.type === 'preferred') || locations[0];
+      const primaryLocation = locations[0];
       const sectors = (listing.listing_sectors as any) || [];
       const useClasses = (listing.listing_use_classes as any) || [];
       

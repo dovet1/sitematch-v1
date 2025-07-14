@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, MapPin, X, Globe, Star } from 'lucide-react';
+import { Search, MapPin, X, Globe } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -113,17 +113,6 @@ export function LocationSearch({
       errors.push(`Maximum ${maxLocations} locations allowed`);
     }
 
-    // Check preferred/acceptable limits
-    const preferredCount = value.filter(loc => loc.type === 'preferred').length;
-    const acceptableCount = value.filter(loc => loc.type === 'acceptable').length;
-
-    if (preferredCount > DEFAULT_LOCATION_RULES.maxPreferred) {
-      warnings.push(`Consider limiting preferred locations to ${DEFAULT_LOCATION_RULES.maxPreferred}`);
-    }
-
-    if (acceptableCount > DEFAULT_LOCATION_RULES.maxAcceptable) {
-      warnings.push(`Consider limiting acceptable locations to ${DEFAULT_LOCATION_RULES.maxAcceptable}`);
-    }
 
     // Check for duplicates (shouldn't happen but good to validate)
     const uniqueIds = new Set(value.map(loc => loc.id));
@@ -154,7 +143,7 @@ export function LocationSearch({
   // EVENT HANDLERS
   // =====================================================
 
-  const handleLocationSelect = (location: LocationResult, type: 'preferred' | 'acceptable' = 'preferred') => {
+  const handleLocationSelect = (location: LocationResult) => {
     if (value.length >= maxLocations) {
       setSearchError(`Maximum ${maxLocations} locations allowed`);
       return;
@@ -164,7 +153,7 @@ export function LocationSearch({
       id: location.id,
       place_name: location.place_name,
       coordinates: location.center,
-      type,
+      type: 'preferred', // Default type - will be removed from database
       formatted_address: formatLocationDisplay(location),
       region: location.context?.find(ctx => ctx.id.startsWith('region'))?.text,
       country: location.context?.find(ctx => ctx.id.startsWith('country'))?.text
@@ -185,12 +174,6 @@ export function LocationSearch({
     onChange(updatedLocations);
   };
 
-  const handleLocationTypeChange = (locationId: string, newType: 'preferred' | 'acceptable') => {
-    const updatedLocations = value.map(loc => 
-      loc.id === locationId ? { ...loc, type: newType } : loc
-    );
-    onChange(updatedLocations);
-  };
 
   const lastToggleRef = useRef<boolean | null>(null);
   
@@ -246,33 +229,11 @@ export function LocationSearch({
   const renderLocationChip = (location: LocationSelection) => (
     <div 
       key={location.id}
-      className={cn(
-        "flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm",
-        location.type === 'preferred' 
-          ? "bg-purple-50 border-purple-200 text-purple-700" 
-          : "bg-blue-50 border-blue-200 text-blue-700"
-      )}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm bg-blue-50 border-blue-200 text-blue-700"
     >
-      {location.type === 'preferred' ? (
-        <Star className="w-3 h-3 fill-current" />
-      ) : (
-        <MapPin className="w-3 h-3" />
-      )}
+      <MapPin className="w-3 h-3" />
       
       <span className="font-medium">{location.formatted_address}</span>
-      
-      {/* Type toggle button */}
-      <button
-        type="button"
-        onClick={() => handleLocationTypeChange(
-          location.id, 
-          location.type === 'preferred' ? 'acceptable' : 'preferred'
-        )}
-        className="text-xs px-1.5 py-0.5 rounded bg-white/50 hover:bg-white/80 transition-colors"
-        disabled={disabled}
-      >
-        {location.type === 'preferred' ? 'Pref' : 'Accept'}
-      </button>
 
       {/* Remove button */}
       <button
@@ -303,32 +264,18 @@ export function LocationSearch({
         </div>
       </div>
 
-      <div className="flex gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleLocationSelect(location, 'preferred');
-          }}
-          className="px-2 py-1 h-auto text-xs"
-        >
-          <Star className="w-3 h-3 mr-1" />
-          Preferred
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleLocationSelect(location, 'acceptable');
-          }}
-          className="px-2 py-1 h-auto text-xs"
-        >
-          <MapPin className="w-3 h-3 mr-1" />
-          Acceptable
-        </Button>
-      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleLocationSelect(location);
+        }}
+        className="px-2 py-1 h-auto text-xs"
+      >
+        <MapPin className="w-3 h-3 mr-1" />
+        Add Location
+      </Button>
     </div>
   );
 
@@ -401,7 +348,7 @@ export function LocationSearch({
       {!isNationwide && (
         <div className="space-y-3">
           <div className="relative">
-            <Label className="font-medium">Preferred Locations</Label>
+            <Label className="font-medium">Locations</Label>
             <p className="text-sm text-gray-600 mb-2">
               Search and select specific locations where you'd like to operate
             </p>
@@ -460,17 +407,6 @@ export function LocationSearch({
                 {value.map(renderLocationChip)}
               </div>
 
-              {/* Legend */}
-              <div className="flex items-center gap-4 text-xs text-gray-600">
-                <div className="flex items-center gap-1">
-                  <Star className="w-3 h-3 text-purple-600 fill-current" />
-                  <span>Preferred locations</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-blue-600" />
-                  <span>Acceptable locations</span>
-                </div>
-              </div>
             </div>
           )}
 

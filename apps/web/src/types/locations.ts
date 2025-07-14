@@ -6,13 +6,13 @@
 import type { LocationResult } from '@/lib/mapbox';
 
 /**
- * Location selection with preference type
+ * Location selection
  */
 export interface LocationSelection {
   id: string;
   place_name: string;
   coordinates: [number, number]; // [lng, lat]
-  type: 'preferred' | 'acceptable';
+  type: 'preferred' | 'acceptable'; // Keeping for backward compatibility during migration
   formatted_address: string;
   region?: string;
   country?: string;
@@ -36,7 +36,7 @@ export interface LocationSearchState {
 export interface LocationChip {
   id: string;
   label: string;
-  type: 'preferred' | 'acceptable';
+  type: 'preferred' | 'acceptable'; // Keeping for backward compatibility during migration
   removable: boolean;
 }
 
@@ -70,7 +70,7 @@ export interface LocationSearchProps {
 export interface LocationChipProps {
   location: LocationSelection;
   onRemove: (id: string) => void;
-  onTypeChange?: (id: string, type: 'preferred' | 'acceptable') => void;
+  onTypeChange?: (id: string, type: 'preferred' | 'acceptable') => void; // Deprecated - will be removed
   showTypeToggle?: boolean;
   disabled?: boolean;
 }
@@ -109,8 +109,8 @@ export interface LocationSearchAnalytics {
  * Location validation rules
  */
 export interface LocationValidationRules {
-  maxPreferred: number;
-  maxAcceptable: number;
+  maxPreferred: number; // Deprecated - will be removed
+  maxAcceptable: number; // Deprecated - will be removed
   maxTotal: number;
   allowDuplicates: boolean;
   requiresAtLeastOne: boolean;
@@ -121,8 +121,8 @@ export interface LocationValidationRules {
  * Default location validation rules
  */
 export const DEFAULT_LOCATION_RULES: LocationValidationRules = {
-  maxPreferred: 10,
-  maxAcceptable: 20,
+  maxPreferred: 10, // Deprecated - will be removed
+  maxAcceptable: 20, // Deprecated - will be removed
   maxTotal: 999,
   allowDuplicates: false,
   requiresAtLeastOne: true,
@@ -130,7 +130,7 @@ export const DEFAULT_LOCATION_RULES: LocationValidationRules = {
 };
 
 /**
- * Location preference levels
+ * Location preference levels - DEPRECATED
  */
 export const LOCATION_TYPES = {
   PREFERRED: 'preferred' as const,
@@ -138,7 +138,7 @@ export const LOCATION_TYPES = {
 };
 
 /**
- * Location type display labels
+ * Location type display labels - DEPRECATED
  */
 export const LOCATION_TYPE_LABELS = {
   preferred: 'Preferred',
