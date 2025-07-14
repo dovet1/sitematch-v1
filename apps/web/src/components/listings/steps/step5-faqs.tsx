@@ -98,7 +98,7 @@ export function Step5FAQs({
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <HelpCircle className="w-5 h-5" />
-            Frequently Asked Questions
+            Frequently Asked Questions (Optional)
           </CardTitle>
           <p className="text-sm text-gray-600">
             Add common questions and answers about your property requirements to help potential partners understand your needs better.
