@@ -144,7 +144,7 @@ export function FAQManager({
     <div className={cn('space-y-4', className)}>
       <div className="flex items-center justify-between">
         <div>
-          <Label className="text-base font-medium">Frequently Asked Questions</Label>
+          <Label className="text-base font-medium">Frequently Asked Questions (Optional)</Label>
           <p className="text-sm text-gray-600 mt-1">
             Add questions and answers that might help potential partners understand your requirements
           </p>

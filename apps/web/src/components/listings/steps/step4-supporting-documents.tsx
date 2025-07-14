@@ -226,7 +226,7 @@ export function Step4SupportingDocuments({
       {/* FAQ Management Section - Story 3.3 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Frequently Asked Questions</CardTitle>
+          <CardTitle className="text-lg">Frequently Asked Questions (Optional)</CardTitle>
           <p className="text-sm text-gray-600">
             Add questions and answers that might help potential partners understand your requirements better.
           </p>
