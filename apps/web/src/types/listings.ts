@@ -32,8 +32,12 @@ export interface Listing {
   contact_title: string;
   contact_email: string;
   contact_phone: string | null;
+  contact_area: string | null;
   // File references
   brochure_url: string | null;
+  // Logo fields
+  clearbit_logo: boolean;
+  company_domain: string | null;
   status: ListingStatus;
   rejection_reason: string | null;
   created_by: string;
@@ -191,8 +195,12 @@ export interface CreateListingRequest {
   contact_title: string;
   contact_email: string;
   contact_phone?: string;
+  contact_area?: string;
   // File references
   brochure_url?: string;
+  // Logo fields
+  clearbit_logo?: boolean;
+  company_domain?: string;
   locations?: Omit<ListingLocation, 'id' | 'listing_id' | 'created_at'>[];
   media_files?: Omit<MediaFile, 'id' | 'listing_id' | 'created_at'>[];
   company_logos?: Omit<CompanyLogo, 'id' | 'listing_id' | 'created_at'>[];

@@ -19,6 +19,11 @@ export async function uploadFileViaApi(
   formData.append('file', file)
   formData.append('type', type)
   
+  // Mark logos and headshots as primary files for search functionality
+  if (type === 'logo' || type === 'headshot') {
+    formData.append('is_primary', 'true')
+  }
+  
   // Add listing ID if provided (for draft listing association)
   if (listingId) {
     formData.append('listingId', listingId)

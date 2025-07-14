@@ -11,6 +11,7 @@ export interface ListingContact {
   contactTitle: string; // required
   contactEmail: string; // required, pre-filled from auth for primary
   contactPhone?: string; // optional, UK/international format
+  contactArea?: string; // optional, e.g., "The South West"
   isPrimaryContact: boolean; // true for Step 1, false for Step 4
   headshotUrl?: string; // stored headshot URL
   headshotFile?: File; // local file for upload
@@ -24,10 +25,13 @@ export interface CompanyInfoData {
   companyName: string; // required
   // Primary contact data (goes to listing_contacts table)
   primaryContact: ListingContact;
-  // Company logo
-  logoFile?: File; // optional, PNG/JPG/SVG max 2MB
-  logoPreview?: string; // base64 preview
-  logoUrl?: string; // uploaded logo URL
+  // Company logo - Story 9.0
+  logoMethod?: 'clearbit' | 'upload'; // Method selection: Clearbit API or file upload
+  companyDomain?: string; // For Clearbit logo fetching
+  clearbitLogo?: boolean; // Whether using Clearbit logo
+  logoFile?: File; // optional, PNG/JPG/SVG max 2MB (upload method)
+  logoPreview?: string; // base64 preview or Clearbit URL
+  logoUrl?: string; // uploaded logo URL or Clearbit URL
   // Requirements brochure (moved from step 4)
   brochureFiles?: Array<{
     id: string;

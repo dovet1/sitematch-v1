@@ -3,6 +3,7 @@
 import { MapPin } from 'lucide-react';
 import { SearchResult } from '@/types/search';
 import { cn } from '@/lib/utils';
+import { getSearchResultLogoUrl } from '@/lib/search-logo-utils';
 
 interface ListingCardProps {
   listing: SearchResult;
@@ -19,6 +20,9 @@ function getInitials(companyName: string): string {
 }
 
 export function ListingCard({ listing, onClick }: ListingCardProps) {
+  // Get the appropriate logo URL based on clearbit_logo flag and available data
+  const logoUrl = getSearchResultLogoUrl(listing);
+  
   return (
     <article 
       className={cn(
@@ -46,9 +50,9 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
           </div>
         )}
         
-        {listing.logo_url ? (
+        {logoUrl ? (
           <img 
-            src={listing.logo_url} 
+            src={logoUrl} 
             alt={`${listing.company_name} logo`}
             className="max-w-full max-h-full object-contain"
             loading="lazy"
@@ -69,7 +73,8 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
           "logo-placeholder",
           "w-20 h-20 bg-primary-100 text-primary-600 rounded-md",
           "flex items-center justify-center text-3xl font-semibold tracking-tight",
-          listing.logo_url ? "hidden" : ""
+          "leading-none", // Ensure no extra line height affects centering
+          logoUrl ? "hidden" : ""
         )}>
           {getInitials(listing.company_name)}
         </div>

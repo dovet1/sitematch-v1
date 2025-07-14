@@ -810,7 +810,7 @@ export function EnhancedListingModal({
                         <span className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                           <Users className="w-3 h-3 text-white" />
                         </span>
-                        Primary Contact - Ready to Connect
+                        Ready to Connect
                       </h4>
                       <div className="bg-white rounded-lg p-4 border border-green-100">
                         <div className="flex items-start gap-4">
@@ -828,10 +828,14 @@ export function EnhancedListingModal({
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <h5 className="font-semibold text-foreground text-lg">{listing.contacts.primary.name}</h5>
-                              <Badge className="bg-green-500 text-white text-xs">Primary Contact</Badge>
                             </div>
                             {listing.contacts.primary.title && (
-                              <p className="text-muted-foreground mb-3">{listing.contacts.primary.title}</p>
+                              <p className="text-muted-foreground mb-1">{listing.contacts.primary.title}</p>
+                            )}
+                            {listing.contacts.primary.contact_area && (
+                              <p className="text-sm text-muted-foreground mb-3">
+                                <span className="font-medium">Coverage Area:</span> {listing.contacts.primary.contact_area}
+                              </p>
                             )}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               {listing.contacts.primary.email && (
@@ -869,7 +873,7 @@ export function EnhancedListingModal({
                         All Contacts
                       </h4>
                   
-                  {/* Primary Contact */}
+                  {/* Contact */}
                   <div className="bg-white border border-border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -886,10 +890,14 @@ export function EnhancedListingModal({
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h5 className="font-medium text-foreground">{listing.contacts.primary.name}</h5>
-                          <Badge variant="outline" className="text-xs">Primary</Badge>
                         </div>
                         {listing.contacts.primary.title && (
-                          <p className="text-sm text-muted-foreground mb-2">{listing.contacts.primary.title}</p>
+                          <p className="text-sm text-muted-foreground mb-1">{listing.contacts.primary.title}</p>
+                        )}
+                        {listing.contacts.primary.contact_area && (
+                          <p className="text-sm text-muted-foreground mb-2">
+                            <span className="font-medium">Coverage Area:</span> {listing.contacts.primary.contact_area}
+                          </p>
                         )}
                         <div className="flex flex-col gap-3">
                           {listing.contacts.primary.email && (
@@ -940,7 +948,12 @@ export function EnhancedListingModal({
                             <div className="flex-1">
                               <h6 className="font-medium text-foreground">{contact.name}</h6>
                               {contact.title && (
-                                <p className="text-sm text-muted-foreground mb-2">{contact.title}</p>
+                                <p className="text-sm text-muted-foreground mb-1">{contact.title}</p>
+                              )}
+                              {contact.contact_area && (
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  <span className="font-medium">Coverage Area:</span> {contact.contact_area}
+                                </p>
                               )}
                               <div className="flex flex-col gap-3">
                                 {contact.email && (

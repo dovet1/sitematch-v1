@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         contact_title, 
         contact_email, 
         contact_phone,
+        clearbit_logo,
         company_domain,
         created_at,
         listing_locations(
@@ -146,30 +147,42 @@ export async function GET(request: NextRequest) {
 
     console.log('Raw listings data:', JSON.stringify(listings, null, 2));
 
-    // Helper function to get logo URL from Clearbit
-    const getLogoUrl = (companyDomain: string | null) => {
-      console.log('Company domain:', companyDomain);
+    // Fetch logo files for all listings
+    const listingIds = listings?.map(l => l.id) || [];
+    let logoFiles: any[] = [];
+    
+    if (listingIds.length > 0) {
+      const { data: files } = await supabase
+        .from('file_uploads')
+        .select('listing_id, file_path, bucket_name, file_type')
+        .in('listing_id', listingIds)
+        .eq('file_type', 'logo')
+        .order('created_at', { ascending: false }); // Get most recent logo if multiple exist
       
-      if (!companyDomain) {
-        console.log('Missing domain, returning null');
-        return null; // Fallback to initials if no domain
+      logoFiles = files || [];
+    }
+    
+    // Create a map of listing_id to logo URL (taking the first/most recent one if multiple exist)
+    const logoMap: Record<string, string> = {};
+    logoFiles.forEach(file => {
+      if (file.file_path && file.bucket_name && !logoMap[file.listing_id]) {
+        logoMap[file.listing_id] = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${file.bucket_name}/${file.file_path}`;
       }
-      
-      // Clearbit provides direct image URLs without authentication
-      const logoUrl = `https://logo.clearbit.com/${companyDomain}`;
-      console.log('Clearbit URL:', logoUrl);
-      
-      return logoUrl;
-    };
+    });
 
     // Transform data to match SearchResult interface with logo fetching
     console.log('Processing', listings?.length, 'listings');
+    console.log('Logo map:', logoMap);
+    
     let results = listings?.map(listing => {
-      console.log('Processing listing:', listing.company_name, 'domain:', listing.company_domain);
+      console.log('Processing listing:', listing.company_name, 'has logo:', !!logoMap[listing.id]);
       const locations = (listing.listing_locations as any) || [];
       const primaryLocation = locations.find((loc: any) => loc.type === 'preferred') || locations[0];
       const sectors = (listing.listing_sectors as any) || [];
       const useClasses = (listing.listing_use_classes as any) || [];
+      
+      // Get the uploaded logo URL from our map
+      const uploadedLogoUrl = logoMap[listing.id] || null;
       
       return {
         id: listing.id,
@@ -188,7 +201,13 @@ export async function GET(request: NextRequest) {
         contact_email: listing.contact_email,
         contact_phone: listing.contact_phone,
         is_nationwide: locations.length === 0, // Treat as nationwide if no locations
-        logo_url: getLogoUrl(listing.company_domain),
+        // Implement correct fallback logic:
+        // 1. If clearbit_logo is true, use company_domain for Clearbit
+        // 2. If clearbit_logo is false, use uploaded logo from file_uploads table
+        // 3. If no uploaded logo exists, fall back to initials
+        logo_url: uploadedLogoUrl,
+        clearbit_logo: listing.clearbit_logo || false,
+        company_domain: listing.company_domain,
         place_name: primaryLocation?.place_name || null,
         coordinates: primaryLocation?.coordinates || null,
         created_at: listing.created_at

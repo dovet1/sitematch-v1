@@ -25,6 +25,7 @@ interface ContactForm {
   contactTitle: string;
   contactEmail: string;
   contactPhone?: string;
+  contactArea?: string;
   headshotFile?: File;
   headshotPreview?: string;
   headshotUrl?: string;
@@ -153,6 +154,7 @@ export function Step4AdditionalContacts({
       contactTitle: '',
       contactEmail: '',
       contactPhone: '',
+      contactArea: '',
       isPrimaryContact: false,
       headshotFile: undefined,
       headshotPreview: '',
@@ -334,6 +336,34 @@ export function Step4AdditionalContacts({
               {formErrors.additionalContacts?.[index]?.contactPhone && (
                 <p className="text-sm text-red-600">
                   {formErrors.additionalContacts[index]?.contactPhone?.message}
+                </p>
+              )}
+            </div>
+
+            {/* Coverage Area */}
+            <div className="space-y-2">
+              <Label htmlFor={`contact-${index}-area`} className="text-sm font-medium">
+                Coverage Area
+                <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+              </Label>
+              <Input
+                id={`contact-${index}-area`}
+                {...register(`additionalContacts.${index}.contactArea`, {
+                  maxLength: {
+                    value: 255,
+                    message: 'Coverage area must be no more than 255 characters'
+                  }
+                })}
+                placeholder="e.g., The South West"
+                className={
+                  formErrors.additionalContacts?.[index]?.contactArea
+                    ? 'border-red-500 focus:ring-red-500'
+                    : ''
+                }
+              />
+              {formErrors.additionalContacts?.[index]?.contactArea && (
+                <p className="text-sm text-red-600">
+                  {formErrors.additionalContacts[index]?.contactArea?.message}
                 </p>
               )}
             </div>

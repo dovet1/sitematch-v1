@@ -15,6 +15,7 @@ export interface EnhancedListingData {
   contact_title: string;
   contact_email: string;
   contact_phone?: string;
+  contact_area?: string;
   
   // Company information
   company_name: string;
@@ -25,8 +26,10 @@ export interface EnhancedListingData {
   site_size_min?: number;
   site_size_max?: number;
   
-  // File URLs
+  // File URLs and logo method fields - Story 9.0
   logo_url?: string;
+  clearbit_logo?: boolean;
+  company_domain?: string;
   brochure_urls?: string[];
   site_plan_urls?: string[];
   fit_out_urls?: string[];
@@ -56,6 +59,7 @@ export interface EnhancedListingData {
     contact_title: string;
     contact_email: string;
     contact_phone?: string;
+    contact_area?: string;
     headshot_url?: string;
   }>;
   
@@ -102,8 +106,17 @@ export async function createEnhancedListing(
       if (data.contact_title) insertData.contact_title = data.contact_title;
       if (data.contact_email) insertData.contact_email = data.contact_email;
       if (data.contact_phone) insertData.contact_phone = data.contact_phone;
+      if (data.contact_area) insertData.contact_area = data.contact_area;
     } catch (error) {
       console.log('Contact fields not available in current schema');
+    }
+
+    // Add logo method fields - Story 9.0
+    try {
+      if (data.clearbit_logo !== undefined) insertData.clearbit_logo = data.clearbit_logo;
+      if (data.company_domain) insertData.company_domain = data.company_domain;
+    } catch (error) {
+      console.log('Logo method fields not available in current schema');
     }
 
     // Get all available sectors and use classes first
@@ -302,6 +315,7 @@ export async function createEnhancedListing(
         contact_title: data.contact_title || '',
         contact_email: data.contact_email || '',
         contact_phone: data.contact_phone || null,
+        contact_area: data.contact_area || null,
         is_primary_contact: true,
         headshot_url: null // Will be updated later if headshot uploaded
       };
@@ -324,6 +338,7 @@ export async function createEnhancedListing(
         contact_title: contact.contact_title || '',
         contact_email: contact.contact_email || '',
         contact_phone: contact.contact_phone || null,
+        contact_area: contact.contact_area || null,
         is_primary_contact: false,
         headshot_url: contact.headshot_url || null
       }));

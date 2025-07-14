@@ -113,9 +113,14 @@ export default async function CreateListingPage({
         contact_title: data.primaryContact?.contactTitle || 'Contact Title', 
         contact_email: data.primaryContact?.contactEmail || currentUser.email || 'contact@example.com',
         contact_phone: data.primaryContact?.contactPhone,
+        contact_area: data.primaryContact?.contactArea,
         // Additional data for enhanced listing
         company_name: data.companyName || 'Company Name Required',
-        logo_url: data.logoUrl,
+        // Only store logo_url for uploaded logos, not Clearbit logos
+        logo_url: data.clearbitLogo ? null : data.logoUrl,
+        // Logo method fields - Story 9.0
+        clearbit_logo: data.clearbitLogo || false,
+        company_domain: data.companyDomain,
         is_nationwide: data.locationSearchNationwide || false,
         locations: data.locationSearchNationwide ? [] : (data.locations || []),
         // Include sectors and use_class_ids for junction table population
@@ -131,6 +136,7 @@ export default async function CreateListingPage({
           contact_title: contact.contactTitle || '',
           contact_email: contact.contactEmail || '',
           contact_phone: contact.contactPhone,
+          contact_area: contact.contactArea,
           headshot_url: contact.headshotUrl
         })) || [],
         brochure_urls: data.brochureFiles?.map(f => f.url).filter(Boolean) || [],
@@ -188,7 +194,7 @@ export default async function CreateListingPage({
             fallbackUseClassId: useClassId
           });
 
-          // Update the existing listing (without logo_url - logos are stored in separate table)
+          // Update the existing listing (with logo fields - Story 9.0)
           const updatedListing = await updateListing(data.existingListingId, {
             title: `Property Requirement - ${data.companyName || 'Company'}`,
             description: `Property requirement from ${data.companyName || 'company'}`,
@@ -200,6 +206,10 @@ export default async function CreateListingPage({
             contact_title: data.primaryContact?.contactTitle || 'Contact Title',
             contact_email: data.primaryContact?.contactEmail || currentUser.email || 'contact@example.com',
             contact_phone: data.primaryContact?.contactPhone,
+            contact_area: data.primaryContact?.contactArea,
+            // Logo method fields - Story 9.0
+            clearbit_logo: data.clearbitLogo || false,
+            company_domain: data.companyDomain,
             status: 'pending', // Reset to pending when edited
             // Use validated UUIDs
             sector_id: finalSectorId,
@@ -277,6 +287,7 @@ export default async function CreateListingPage({
               contact_title: contact.contactTitle || '',
               contact_email: contact.contactEmail || '',
               contact_phone: contact.contactPhone,
+              contact_area: contact.contactArea,
               is_primary_contact: false,
               headshot_url: contact.headshotUrl
             }));
@@ -510,11 +521,16 @@ export default async function CreateListingPage({
           site_size_min: data.siteSizeMin,
           site_size_max: data.siteSizeMax,
           brochure_url: data.brochureFiles?.[0]?.url,
-          logo_url: data.logoUrl,
+          // Only store logo_url for uploaded logos, not Clearbit logos
+          logo_url: data.clearbitLogo ? null : data.logoUrl,
+          // Logo method fields - Story 9.0
+          clearbit_logo: data.clearbitLogo || false,
+          company_domain: data.companyDomain,
           contact_name: data.primaryContact?.contactName || 'Contact Name',
           contact_title: data.primaryContact?.contactTitle || 'Contact Title',
           contact_email: data.primaryContact?.contactEmail || currentUser.email || 'contact@example.com',
-          contact_phone: data.primaryContact?.contactPhone
+          contact_phone: data.primaryContact?.contactPhone,
+          contact_area: data.primaryContact?.contactArea
         });
 
         // Save sectors to junction table if provided
@@ -548,6 +564,7 @@ export default async function CreateListingPage({
               contact_title: data.primaryContact.contactTitle || '',
               contact_email: data.primaryContact.contactEmail || currentUser.email || '',
               contact_phone: data.primaryContact.contactPhone,
+              contact_area: data.primaryContact.contactArea,
               is_primary_contact: true,
               headshot_url: data.primaryContact.headshotUrl
             });
@@ -561,6 +578,7 @@ export default async function CreateListingPage({
                 contact_title: contact.contactTitle || '',
                 contact_email: contact.contactEmail || '',
                 contact_phone: contact.contactPhone,
+                contact_area: contact.contactArea,
                 is_primary_contact: false,
                 headshot_url: contact.headshotUrl
               });
