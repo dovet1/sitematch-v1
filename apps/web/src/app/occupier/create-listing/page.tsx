@@ -101,6 +101,7 @@ export default async function CreateListingPage({
       }
 
       // Create enhanced listing data that includes all related data
+      console.log('🔍 DEBUG: Property page link in create:', data.propertyPageLink);
       const enhancedListingData = {
         title: `Property Requirement - ${data.companyName || 'Company'}`,
         description: `Property requirement from ${data.companyName || 'company'}`,
@@ -122,6 +123,13 @@ export default async function CreateListingPage({
         // Logo method fields - Story 9.0
         clearbit_logo: data.clearbitLogo || false,
         company_domain: data.companyDomain,
+        // Property page link field
+        property_page_link: data.propertyPageLink,
+        // Residential fields
+        dwelling_count_min: data.dwellingCountMin,
+        dwelling_count_max: data.dwellingCountMax,
+        site_acreage_min: data.siteAcreageMin,
+        site_acreage_max: data.siteAcreageMax,
         is_nationwide: data.locationSearchNationwide || false,
         locations: data.locationSearchNationwide ? [] : (data.locations || []),
         // Include sectors and use_class_ids for junction table population
@@ -145,6 +153,8 @@ export default async function CreateListingPage({
         fit_out_urls: data.fitOutFiles?.map(f => f.url).filter(Boolean) || [],
         status: 'pending' as const
       };
+
+      console.log('🔍 DEBUG: Enhanced listing data property_page_link:', enhancedListingData.property_page_link);
 
       // Check if we have an existing listing to update or draft to finalize
       if (data.existingListingId) {
@@ -204,6 +214,9 @@ export default async function CreateListingPage({
             logoMethod: data.logoMethod
           });
 
+          // Debug property page link
+          console.log('🔍 DEBUG: Property page link in update:', data.propertyPageLink);
+
           // Update the existing listing (with logo fields - Story 9.0)
           const updatedListing = await updateListing(data.existingListingId, {
             title: `Property Requirement - ${data.companyName || 'Company'}`,
@@ -221,6 +234,13 @@ export default async function CreateListingPage({
             // Logo method fields - Story 9.0
             clearbit_logo: data.clearbitLogo || false,
             company_domain: data.companyDomain,
+            // Property page link field
+            property_page_link: data.propertyPageLink,
+            // Residential fields
+            dwelling_count_min: data.dwellingCountMin,
+            dwelling_count_max: data.dwellingCountMax,
+            site_acreage_min: data.siteAcreageMin,
+            site_acreage_max: data.siteAcreageMax,
             status: 'pending', // Reset to pending when edited
             // Use validated UUIDs
             sector_id: finalSectorId,

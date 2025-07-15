@@ -44,6 +44,8 @@ export interface CompanyInfoData {
     mimeType: string;
     uploadedAt: Date;
   }>;
+  // Property page link field
+  propertyPageLink?: string;
 }
 
 export interface RequirementDetailsData {
@@ -52,6 +54,12 @@ export interface RequirementDetailsData {
   useClassIds?: string[]; // optional array of use class IDs from multi-select
   siteSizeMin?: number; // square feet, from double-thumb slider
   siteSizeMax?: number; // square feet, from double-thumb slider
+  
+  // Residential-specific fields
+  dwellingCountMin?: number; // minimum number of dwellings
+  dwellingCountMax?: number; // maximum number of dwellings
+  siteAcreageMin?: number; // minimum site acreage
+  siteAcreageMax?: number; // maximum site acreage
 }
 
 // Step 3: Location Data - Story 3.2

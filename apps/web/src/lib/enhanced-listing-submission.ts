@@ -72,6 +72,7 @@ export async function submitEnhancedListing(
     }));
 
     // 3. Prepare enhanced listing data with all PRD fields
+    console.log('🔍 DEBUG: Preparing enhancedListingData with propertyPageLink:', formData.propertyPageLink);
     const enhancedListingData = {
       // Enhanced contact fields (PRD required) - from primary contact
       contact_name: formData.primaryContact?.contactName,
@@ -90,6 +91,12 @@ export async function submitEnhancedListing(
       site_size_min: formData.siteSizeMin,
       site_size_max: formData.siteSizeMax,
       
+      // Residential fields
+      dwelling_count_min: formData.dwellingCountMin,
+      dwelling_count_max: formData.dwellingCountMax,
+      site_acreage_min: formData.siteAcreageMin,
+      site_acreage_max: formData.siteAcreageMax,
+      
       // File URLs and logo method fields - Story 9.0
       // Logo handling: Clearbit uses company_domain, uploaded logos stored in file_uploads table
       clearbit_logo: formData.clearbitLogo || false,
@@ -97,6 +104,9 @@ export async function submitEnhancedListing(
       brochure_urls: fileUploads.brochureUrls || [],
       site_plan_urls: fileUploads.sitePlanUrls || [],
       fit_out_urls: fileUploads.fitOutUrls || [],
+      
+      // Property page link field
+      property_page_link: formData.propertyPageLink,
       
       // Location data with nationwide toggle
       locations: formData.locationSearchNationwide ? [] : (formData.locations || []),
@@ -340,9 +350,43 @@ export function validateListingData(data: WizardFormData): { valid: boolean; err
     errors.companyName = 'Company name is required';
   }
 
+  // Property page link validation (optional field)
+  console.log('🔍 DEBUG: Validating propertyPageLink:', data.propertyPageLink);
+  if (data.propertyPageLink && data.propertyPageLink.trim()) {
+    const urlPattern = /^https?:\/\/[^\s/$.?#].[^\s]*$/;
+    if (!urlPattern.test(data.propertyPageLink.trim())) {
+      errors.propertyPageLink = 'Property page link must be a valid URL starting with http:// or https://';
+    }
+  }
+
   // Location validation
   if (!data.locationSearchNationwide && (!data.locations || data.locations.length === 0)) {
     errors.locations = 'Please select locations or choose nationwide coverage';
+  }
+
+  // Residential fields validation
+  if (data.dwellingCountMin !== undefined && data.dwellingCountMax !== undefined) {
+    if (data.dwellingCountMin < 0) {
+      errors.dwellingCountMin = 'Minimum dwelling count must be 0 or greater';
+    }
+    if (data.dwellingCountMax < 0) {
+      errors.dwellingCountMax = 'Maximum dwelling count must be 0 or greater';
+    }
+    if (data.dwellingCountMin > data.dwellingCountMax) {
+      errors.dwellingCountRange = 'Minimum dwelling count must be less than or equal to maximum';
+    }
+  }
+
+  if (data.siteAcreageMin !== undefined && data.siteAcreageMax !== undefined) {
+    if (data.siteAcreageMin < 0) {
+      errors.siteAcreageMin = 'Minimum site acreage must be 0 or greater';
+    }
+    if (data.siteAcreageMax < 0) {
+      errors.siteAcreageMax = 'Maximum site acreage must be 0 or greater';
+    }
+    if (data.siteAcreageMin > data.siteAcreageMax) {
+      errors.siteAcreageRange = 'Minimum site acreage must be less than or equal to maximum';
+    }
   }
 
   // FAQ validation
