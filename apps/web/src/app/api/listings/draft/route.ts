@@ -62,7 +62,9 @@ export async function POST(request: NextRequest) {
       contact_title: 'Contact Title', 
       contact_email: userEmail || user.email || 'contact@example.com',
       // Required company_name field
-      company_name: 'Draft Company'
+      company_name: 'Draft Company',
+      // Default listing type
+      listing_type: 'commercial'
     }
 
     const { data: listing, error: listingError } = await supabase

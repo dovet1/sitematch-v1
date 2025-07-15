@@ -326,10 +326,26 @@ export function ListingWizard({
       
       const listing = result.data;
       
+      // Debug logging
+      console.log('🔍 DEBUG: Raw listing data from API:', listing);
+      console.log('🔍 DEBUG: listing_type value:', listing.listing_type);
+      console.log('🔍 DEBUG: clearbit_logo value:', listing.clearbit_logo);
+      console.log('🔍 DEBUG: company_domain value:', listing.company_domain);
+      console.log('🔍 DEBUG: logo_url value:', listing.logo_url);
+      console.log('🔍 DEBUG: company_logos array:', listing.company_logos);
+      
       // Transform database listing to wizard form data
       const formData: Partial<WizardFormData> = {
         existingListingId: listingId,
         companyName: listing.company_name,
+        
+        // Listing type
+        listingType: listing.listing_type || 'commercial',
+        
+        // Logo method fields
+        logoMethod: listing.clearbit_logo ? 'clearbit' : 'upload',
+        companyDomain: listing.company_domain || '',
+        clearbitLogo: listing.clearbit_logo || false,
         
         // Sector and Use Class selections from junction tables or fallback to legacy single values
         sectors: listing.sectors?.map((s: any) => s.id) || [],
@@ -340,6 +356,7 @@ export function ListingWizard({
           contactTitle: listing.contact_title,
           contactEmail: listing.contact_email,
           contactPhone: listing.contact_phone,
+          contactArea: listing.contact_area,
           isPrimaryContact: true,
           headshotUrl: listing.primary_contact?.headshot_url
         },
@@ -365,9 +382,9 @@ export function ListingWizard({
           displayOrder: faq.display_order
         })) || [],
         
-        // Company logo (from file_uploads table or fallback to company_logos table)
-        logoUrl: listing.file_uploads?.find((file: any) => file.file_type === 'logo')?.file_path || 
-                 listing.company_logos?.[0]?.file_url || '',
+        // Company logo (from file_uploads table via admin service)
+        logoUrl: listing.logo_url || '',
+        logoPreview: listing.logo_url || '',
         
         brochureFiles: listing.brochure_url ? [{
           id: 'existing',
@@ -429,6 +446,15 @@ export function ListingWizard({
           uploadedAt: new Date()
         })) || []
       };
+      
+      // Debug logging for form data
+      console.log('🔍 DEBUG: Transformed form data:', formData);
+      console.log('🔍 DEBUG: formData.listingType:', formData.listingType);
+      console.log('🔍 DEBUG: formData.logoMethod:', formData.logoMethod);
+      console.log('🔍 DEBUG: formData.clearbitLogo:', formData.clearbitLogo);
+      console.log('🔍 DEBUG: formData.companyDomain:', formData.companyDomain);
+      console.log('🔍 DEBUG: formData.logoUrl:', formData.logoUrl);
+      console.log('🔍 DEBUG: formData.logoPreview:', formData.logoPreview);
       
       dispatch({ type: 'UPDATE_DATA', data: formData });
       
@@ -936,6 +962,14 @@ export function ListingWizard({
       // Sanitize form data for Server Action - remove File objects
       const sanitizedData = { ...state.formData };
       
+      console.log('🔍 DEBUG: Submitting wizard with data:', {
+        existingListingId: sanitizedData.existingListingId,
+        faqsCount: sanitizedData.faqs?.length || 0,
+        additionalContactsCount: sanitizedData.additionalContacts?.length || 0,
+        faqs: sanitizedData.faqs,
+        additionalContacts: sanitizedData.additionalContacts
+      });
+      
       // Remove File objects that can't be serialized
       if (sanitizedData.logoFile instanceof File) {
         delete sanitizedData.logoFile;
@@ -951,6 +985,7 @@ export function ListingWizard({
       
       // Clean additional contacts
       if (sanitizedData.additionalContacts) {
+        console.log('🔍 DEBUG: Additional contacts before cleaning:', sanitizedData.additionalContacts.length);
         sanitizedData.additionalContacts = sanitizedData.additionalContacts.map(contact => {
           const cleanContact = { ...contact };
           if (cleanContact.headshotFile instanceof File) {
@@ -980,6 +1015,8 @@ export function ListingWizard({
       // console.log('Submitting data:', { companyName: submissionData.companyName });
 
       const result = await onSubmit(submissionData);
+      
+      console.log('🔍 DEBUG: Submission result:', result);
       
       // Handle case where result might be undefined
       if (!result) {

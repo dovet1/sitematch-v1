@@ -19,6 +19,7 @@ export interface EnhancedListingData {
   
   // Company information
   company_name: string;
+  listing_type?: 'residential' | 'commercial';
   
   // Property requirements
   sectors?: string[];
@@ -26,8 +27,7 @@ export interface EnhancedListingData {
   site_size_min?: number;
   site_size_max?: number;
   
-  // File URLs and logo method fields - Story 9.0
-  logo_url?: string | null;
+  // Logo method fields - Story 9.0
   clearbit_logo?: boolean;
   company_domain?: string;
   brochure_urls?: string[];
@@ -89,6 +89,7 @@ export async function createEnhancedListing(
       title: data.company_name || 'Property Requirement',
       description: `Property requirement from ${data.company_name}`,
       company_name: data.company_name || 'Company Name Required',
+      listing_type: data.listing_type || 'commercial',
       status: data.status || 'pending'
     };
     

@@ -23,6 +23,7 @@ import type {
 export const validationSchema: ValidationSchema = {
   step1: {
     companyName: { required: true, minLength: 2, maxLength: 100 },
+    listingType: { required: true },
     primaryContact: { required: true },
     logoMethod: {},
     companyDomain: {},

@@ -38,6 +38,8 @@ export interface Listing {
   // Logo fields
   clearbit_logo: boolean;
   company_domain: string | null;
+  // Listing type
+  listing_type: 'residential' | 'commercial';
   status: ListingStatus;
   rejection_reason: string | null;
   created_by: string;
@@ -201,6 +203,8 @@ export interface CreateListingRequest {
   // Logo fields
   clearbit_logo?: boolean;
   company_domain?: string;
+  // Listing type
+  listing_type?: 'residential' | 'commercial';
   locations?: Omit<ListingLocation, 'id' | 'listing_id' | 'created_at'>[];
   media_files?: Omit<MediaFile, 'id' | 'listing_id' | 'created_at'>[];
   company_logos?: Omit<CompanyLogo, 'id' | 'listing_id' | 'created_at'>[];

@@ -146,10 +146,10 @@ export async function finalizeDraftListing(
     site_size_min?: number;
     site_size_max?: number;
     brochure_url?: string;
-    logo_url?: string;
     // Logo method fields - Story 9.0
     clearbit_logo?: boolean;
     company_domain?: string;
+    listing_type?: 'residential' | 'commercial';
     contact_name?: string;
     contact_title?: string;
     contact_email?: string;
@@ -177,6 +177,7 @@ export async function finalizeDraftListing(
       description: finalData.description,
       status: finalData.status,
       company_name: finalData.company_name || 'Company Name Required',
+      listing_type: finalData.listing_type || 'commercial',
       updated_at: new Date().toISOString()
     };
 
@@ -189,9 +190,6 @@ export async function finalizeDraftListing(
     }
     if (finalData.brochure_url) {
       updateData.brochure_url = finalData.brochure_url;
-    }
-    if (finalData.logo_url) {
-      updateData.logo_url = finalData.logo_url;
     }
     // Logo method fields - Story 9.0
     if (finalData.clearbit_logo !== undefined) {

@@ -116,6 +116,7 @@ export default async function CreateListingPage({
         contact_area: data.primaryContact?.contactArea,
         // Additional data for enhanced listing
         company_name: data.companyName || 'Company Name Required',
+        listing_type: data.listingType || 'commercial',
         // Only store logo_url for uploaded logos, not Clearbit logos
         logo_url: data.clearbitLogo ? null : data.logoUrl,
         // Logo method fields - Story 9.0
@@ -194,11 +195,21 @@ export default async function CreateListingPage({
             fallbackUseClassId: useClassId
           });
 
+          // Debug logo data
+          console.log('🔍 DEBUG: Logo data in update:', {
+            logoUrl: data.logoUrl,
+            clearbitLogo: data.clearbitLogo,
+            companyDomain: data.companyDomain,
+            logoFile: data.logoFile?.name || 'none',
+            logoMethod: data.logoMethod
+          });
+
           // Update the existing listing (with logo fields - Story 9.0)
           const updatedListing = await updateListing(data.existingListingId, {
             title: `Property Requirement - ${data.companyName || 'Company'}`,
             description: `Property requirement from ${data.companyName || 'company'}`,
             company_name: data.companyName || 'Company Name Required',
+            listing_type: data.listingType || 'commercial',
             site_size_min: data.siteSizeMin,
             site_size_max: data.siteSizeMax,
             brochure_url: data.brochureFiles?.[0]?.url,
@@ -219,20 +230,37 @@ export default async function CreateListingPage({
           // Update related data (contacts, FAQs, locations, documents, files)
           try {
             console.log('Starting related data update for listing:', data.existingListingId);
+            console.log('FAQs data received:', data.faqs);
+            console.log('Additional contacts data received:', data.additionalContacts);
+            console.log('Primary contact data received:', data.primaryContact);
             // Use the same server client for consistency
             const supabase = serverClient;
 
             // 1. Delete existing additional contacts (keep primary contact in main table)
-          await supabase
+          console.log('Deleting existing contacts for listing:', data.existingListingId);
+          const { error: deleteContactsError } = await supabase
             .from('listing_contacts')
             .delete()
             .eq('listing_id', data.existingListingId);
+          
+          if (deleteContactsError) {
+            console.error('Error deleting contacts:', deleteContactsError);
+          } else {
+            console.log('Successfully deleted existing contacts');
+          }
 
           // 2. Delete existing FAQs
-          await supabase
+          console.log('Deleting existing FAQs for listing:', data.existingListingId);
+          const { error: deleteFAQsError } = await supabase
             .from('faqs')
             .delete()
             .eq('listing_id', data.existingListingId);
+          
+          if (deleteFAQsError) {
+            console.error('Error deleting FAQs:', deleteFAQsError);
+          } else {
+            console.log('Successfully deleted existing FAQs');
+          }
 
           // 3. Delete existing locations
           console.log('Deleting existing locations...');
@@ -248,50 +276,89 @@ export default async function CreateListingPage({
           }
 
           // 4. Delete existing file uploads for this listing (except headshots)
+          // Handle logos separately based on method
           console.log('Deleting existing file uploads (except headshots)...');
-          const { error: deleteFilesError } = await supabase
-            .from('file_uploads')
-            .delete()
-            .eq('listing_id', data.existingListingId)
-            .neq('file_type', 'headshot');
           
-          if (deleteFilesError) {
-            console.error('Error deleting file uploads:', deleteFilesError);
-          } else {
-            console.log('Successfully deleted existing file uploads');
-          }
-
-          // 5. Add updated logo file (if any)
-          if (data.logoUrl) {
-            await supabase
+          // If using Clearbit, delete any uploaded logos
+          if (data.clearbitLogo) {
+            console.log('Using Clearbit logo - deleting uploaded logos...');
+            const { error: deleteLogosError } = await supabase
               .from('file_uploads')
-              .insert({
-                user_id: currentUser.id,
-                listing_id: data.existingListingId,
-                file_path: data.logoUrl,
-                file_name: 'company-logo',
-                file_size: 0, // Size not tracked for existing URLs
-                file_type: 'logo',
-                mime_type: 'image/jpeg', // Default - could be improved
-                bucket_name: 'logos',
-                is_primary: true
-              });
+              .delete()
+              .eq('listing_id', data.existingListingId)
+              .eq('file_type', 'logo');
+            
+            if (deleteLogosError) {
+              console.error('Error deleting uploaded logos:', deleteLogosError);
+            } else {
+              console.log('Successfully deleted uploaded logos (using Clearbit)');
+            }
           }
+          
+          // Delete other file uploads except headshots and current logos (if upload method)
+          const fileTypesToDelete = ['brochure', 'sitePlan', 'site_plan', 'fitOut', 'fit_out', 'image', 'video', 'pdf'];
+          // If using Clearbit, also delete uploaded logos
+          if (data.clearbitLogo) {
+            fileTypesToDelete.push('logo');
+          }
+          
+          for (const fileType of fileTypesToDelete) {
+            const { error: deleteFileError } = await supabase
+              .from('file_uploads')
+              .delete()
+              .eq('listing_id', data.existingListingId)
+              .eq('file_type', fileType);
+            
+            if (deleteFileError) {
+              console.error(`Error deleting ${fileType} files:`, deleteFileError);
+            }
+          }
+          
+          console.log('Successfully deleted existing file uploads (except headshots and preserved logos)');
 
-          // 6. Add updated contacts (if any)
+          // 5. Logo handling is complete:
+          // - Uploaded logos are preserved in file_uploads table (uploaded in Step1)
+          // - Clearbit logos only need company_domain field (no file_uploads entry needed)
+
+          // 6. Add updated contacts (primary + additional)
+          const contactsForDatabase = [];
+          
+          // Add primary contact to listing_contacts table
+          if (data.primaryContact) {
+            console.log('Adding primary contact to listing_contacts table:', data.primaryContact);
+            const primaryContactData = {
+              listing_id: data.existingListingId,
+              contact_name: data.primaryContact.contactName || '',
+              contact_title: data.primaryContact.contactTitle || '',
+              contact_email: data.primaryContact.contactEmail || '',
+              contact_phone: data.primaryContact.contactPhone,
+              contact_area: data.primaryContact.contactArea,
+              is_primary_contact: true,
+              headshot_url: data.primaryContact.headshotUrl
+            };
+            console.log('Primary contact data prepared:', primaryContactData);
+            contactsForDatabase.push(primaryContactData);
+          }
+          
+          // Add additional contacts
           if (data.additionalContacts && data.additionalContacts.length > 0) {
             console.log('Adding additional contacts:', data.additionalContacts.length);
-            const contactsForDatabase = data.additionalContacts.map(contact => ({
-              listing_id: data.existingListingId,
-              contact_name: contact.contactName || '',
-              contact_title: contact.contactTitle || '',
-              contact_email: contact.contactEmail || '',
-              contact_phone: contact.contactPhone,
-              contact_area: contact.contactArea,
-              is_primary_contact: false,
-              headshot_url: contact.headshotUrl
-            }));
+            data.additionalContacts.forEach(contact => {
+              contactsForDatabase.push({
+                listing_id: data.existingListingId,
+                contact_name: contact.contactName || '',
+                contact_title: contact.contactTitle || '',
+                contact_email: contact.contactEmail || '',
+                contact_phone: contact.contactPhone,
+                contact_area: contact.contactArea,
+                is_primary_contact: false,
+                headshot_url: contact.headshotUrl
+              });
+            });
+          }
 
+          // Insert all contacts if any exist
+          if (contactsForDatabase.length > 0) {
             const { error: contactsError } = await supabase
               .from('listing_contacts')
               .insert(contactsForDatabase);
@@ -299,25 +366,31 @@ export default async function CreateListingPage({
             if (contactsError) {
               console.error('Error inserting contacts:', contactsError);
             } else {
-              console.log('Successfully inserted contacts');
+              console.log(`Successfully inserted ${contactsForDatabase.length} contacts (${contactsForDatabase.filter(c => c.is_primary_contact).length} primary, ${contactsForDatabase.filter(c => !c.is_primary_contact).length} additional)`);
             }
-
-            // Headshots are already saved to file_uploads during upload via /api/upload
-            // No need to manually insert them here
           }
 
           // 7. Add updated FAQs (if any)
           if (data.faqs && data.faqs.length > 0) {
-            const faqsForDatabase = data.faqs.map(faq => ({
+            console.log('Adding FAQs:', data.faqs.length);
+            console.log('FAQs data:', JSON.stringify(data.faqs, null, 2));
+            const faqsForDatabase = data.faqs.map((faq, index) => ({
               listing_id: data.existingListingId,
               question: faq.question,
               answer: faq.answer,
-              display_order: faq.displayOrder
+              display_order: faq.displayOrder !== undefined ? faq.displayOrder : index
             }));
+            console.log('FAQs prepared for database:', JSON.stringify(faqsForDatabase, null, 2));
 
-            await supabase
+            const { error: faqsError } = await supabase
               .from('faqs')
               .insert(faqsForDatabase);
+            
+            if (faqsError) {
+              console.error('Error inserting FAQs:', faqsError);
+            } else {
+              console.log(`Successfully inserted ${faqsForDatabase.length} FAQs`);
+            }
           }
 
           // 8. Add updated locations (if not nationwide)
@@ -505,7 +578,12 @@ export default async function CreateListingPage({
           return {
             success: true,
             listingId: updatedListing.id,
-            message: 'Listing updated successfully'
+            message: 'Listing updated successfully',
+            // Debug info to check in client
+            debug: {
+              faqsProcessed: data.faqs?.length || 0,
+              contactsProcessed: (data.additionalContacts?.length || 0) + 1 // +1 for primary
+            }
           };
         } else {
           // Import additional draft listing functions
@@ -517,11 +595,10 @@ export default async function CreateListingPage({
           description: `Property requirement from ${data.companyName || 'company'}`,
           status: 'pending',
           company_name: data.companyName || 'Company Name Required',
+          listing_type: data.listingType || 'commercial',
           site_size_min: data.siteSizeMin,
           site_size_max: data.siteSizeMax,
           brochure_url: data.brochureFiles?.[0]?.url,
-          // Only store logo_url for uploaded logos, not Clearbit logos
-          logo_url: data.clearbitLogo ? undefined : data.logoUrl,
           // Logo method fields - Story 9.0
           clearbit_logo: data.clearbitLogo || false,
           company_domain: data.companyDomain,
