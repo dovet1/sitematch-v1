@@ -23,6 +23,7 @@ export interface ListingContact {
 // Step-specific form data interfaces
 export interface CompanyInfoData {
   companyName: string; // required
+  listingType: 'residential' | 'commercial'; // required - type of listing
   // Primary contact data (goes to listing_contacts table)
   primaryContact: ListingContact;
   // Company logo - Story 9.0
@@ -210,6 +211,10 @@ export interface SubmissionResult {
   listingId?: string;
   organizationId?: string;
   organizationCreated?: boolean;
+  debug?: {
+    faqsProcessed?: number;
+    contactsProcessed?: number;
+  };
 }
 
 // Progress indicator types

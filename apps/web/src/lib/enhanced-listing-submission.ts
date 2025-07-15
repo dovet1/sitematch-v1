@@ -82,6 +82,7 @@ export async function submitEnhancedListing(
       
       // Company information
       company_name: formData.companyName,
+      listing_type: formData.listingType || 'commercial',
       
       // Property requirements
       sectors: formData.sectors || [],
@@ -90,8 +91,7 @@ export async function submitEnhancedListing(
       site_size_max: formData.siteSizeMax,
       
       // File URLs and logo method fields - Story 9.0
-      // Only store logo_url for uploaded logos, not Clearbit logos
-      logo_url: formData.clearbitLogo ? null : fileUploads.logoUrl,
+      // Logo handling: Clearbit uses company_domain, uploaded logos stored in file_uploads table
       clearbit_logo: formData.clearbitLogo || false,
       company_domain: formData.companyDomain,
       brochure_urls: fileUploads.brochureUrls || [],
@@ -213,8 +213,17 @@ async function uploadAllFiles(
     return results;
   }
 
-  // Upload logo
-  if (formData.logoFile instanceof File) {
+  // Upload logo - check if already uploaded or needs uploading
+  console.log('🔍 DEBUG: Logo submission check - logoUrl:', formData.logoUrl, 'clearbitLogo:', formData.clearbitLogo, 'logoFile:', formData.logoFile?.name || 'none');
+  
+  if (formData.logoUrl && !formData.clearbitLogo) {
+    // Logo already uploaded (from Step1), use existing URL
+    console.log('🔍 DEBUG: Using existing uploaded logo URL:', formData.logoUrl);
+    results.logoUrl = formData.logoUrl;
+    completedUploads++;
+    onProgress(completedUploads / totalFiles);
+  } else if (formData.logoFile instanceof File && !formData.logoUrl) {
+    // Logo file needs to be uploaded
     try {
       const uploadedFile = await uploadFileViaApi(formData.logoFile, 'logo', organizationId);
       results.logoUrl = uploadedFile.url;
@@ -225,6 +234,7 @@ async function uploadAllFiles(
       // Continue with other uploads
     }
   } else if (formData.logoUrl) {
+    // Use existing URL (could be Clearbit or uploaded)
     results.logoUrl = formData.logoUrl;
   }
 

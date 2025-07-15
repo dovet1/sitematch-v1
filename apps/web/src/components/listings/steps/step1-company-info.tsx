@@ -41,6 +41,7 @@ export function Step1CompanyInfo({
   } = useForm<Step1FormData>({
     defaultValues: {
       companyName: data.companyName || '',
+      listingType: data.listingType || 'commercial',
       primaryContact: {
         contactName: data.primaryContact?.contactName || (data as any).contactName || '',
         contactTitle: data.primaryContact?.contactTitle || (data as any).contactTitle || '',
@@ -126,12 +127,23 @@ export function Step1CompanyInfo({
     if (hasValidData && !hasInitializedFormRef.current) {
       hasInitializedFormRef.current = true;
       
-      console.log('Initializing form with loaded data:', {
+      console.log('🔍 DEBUG: Initializing form with loaded data:', {
         companyName: data.companyName,
+        listingType: data.listingType,
+        logoMethod: data.logoMethod,
+        clearbitLogo: data.clearbitLogo,
+        companyDomain: data.companyDomain,
+        logoUrl: data.logoUrl,
+        logoPreview: data.logoPreview,
+        hasLogoFile: !!data.logoFile,
         contactName: data.primaryContact?.contactName
       });
       
       if (data.companyName !== undefined) setValue('companyName', data.companyName);
+      if (data.listingType !== undefined) setValue('listingType', data.listingType);
+      if (data.logoMethod !== undefined) setValue('logoMethod', data.logoMethod);
+      if (data.clearbitLogo !== undefined) setValue('clearbitLogo', data.clearbitLogo);
+      if (data.companyDomain !== undefined) setValue('companyDomain', data.companyDomain);
       
       // Handle primary contact data (support both old and new structure)
       const primaryContact = data.primaryContact || {
@@ -176,15 +188,18 @@ export function Step1CompanyInfo({
       setValue('logoUrl', '');
       setValue('clearbitLogo', false);
     } else {
-      // Switching to upload method - clear ALL logo data including Clearbit  
+      // Switching to upload method - clear Clearbit data but preserve uploaded logo data
       setValue('companyDomain', '');
       setValue('clearbitLogo', false);
-      setValue('logoPreview', '');
-      setValue('logoUrl', '');
+      // Only clear logo preview/URL if it was from Clearbit (not from upload)
+      if (watchedValues.clearbitLogo) {
+        setValue('logoPreview', '');
+        setValue('logoUrl', '');
+      }
       setLogoLoading(false);
       setDomainError('');
     }
-  }, [setValue]);
+  }, [setValue, watchedValues.clearbitLogo]);
 
   // Handle domain input - just update the value, don't fetch yet
   const handleDomainInput = useCallback((domain: string) => {
@@ -259,6 +274,7 @@ export function Step1CompanyInfo({
 
   // Logo upload callback for file upload method
   const handleLogoFileUpload = useCallback(async (file: File | null) => {
+    console.log('🔍 DEBUG: Logo file upload handler called with:', file?.name || 'null');
     setValue('logoFile', file || undefined);
     setValue('clearbitLogo', false); // Not using Clearbit
     if (!file) {
@@ -267,6 +283,7 @@ export function Step1CompanyInfo({
     
     // Upload logo file to server if provided
     if (file instanceof File) {
+      console.log('🔍 DEBUG: Uploading logo file to server, listingId:', listingId);
       try {
         const formData = new FormData();
         formData.append('file', file);
@@ -285,6 +302,7 @@ export function Step1CompanyInfo({
         
         if (response.ok) {
           const result = await response.json();
+          console.log('🔍 DEBUG: Logo upload successful, URL:', result.url);
           setValue('logoUrl', result.url);
         } else {
           console.error('Failed to upload logo:', await response.text());
@@ -366,6 +384,50 @@ export function Step1CompanyInfo({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Listing Type Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Listing Type</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Listing Type Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Select listing type *</Label>
+            <RadioGroup
+              value={watchedValues.listingType || 'commercial'}
+              onValueChange={(value) => setValue('listingType', value as 'residential' | 'commercial')}
+              className="space-y-3"
+            >
+              {/* Commercial Option */}
+              <div className="flex items-start space-x-3 p-3 sm:p-4 rounded-lg border border-muted hover:bg-muted/30 transition-colors">
+                <RadioGroupItem value="commercial" id="commercial" className="mt-0.5" />
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="commercial" className="text-sm font-medium cursor-pointer">
+                    Commercial
+                  </Label>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Office spaces, retail units, industrial sites, and other business properties
+                  </p>
+                </div>
+              </div>
+              
+              {/* Residential Option */}
+              <div className="flex items-start space-x-3 p-3 sm:p-4 rounded-lg border border-muted hover:bg-muted/30 transition-colors">
+                <RadioGroupItem value="residential" id="residential" className="mt-0.5" />
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="residential" className="text-sm font-medium cursor-pointer">
+                    Residential
+                  </Label>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Houses, apartments, condos, and other living spaces
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Company Details Section */}
       <Card>
         <CardHeader>
@@ -552,16 +614,26 @@ export function Step1CompanyInfo({
           )}
 
           {/* File Upload Method */}
-          {watchedValues.logoMethod === 'upload' && (
-            <ImageUpload
-              value={watchedValues.logoFile || watchedValues.logoPreview || data.logoUrl}
-              onChange={handleLogoFileUpload}
-              onPreviewChange={handleLogoPreviewChange}
-              placeholder="Upload your company logo"
-              maxSize={2 * 1024 * 1024} // 2MB
-              acceptedTypes={["image/png", "image/jpeg", "image/jpg", "image/svg+xml"]}
-            />
-          )}
+          {watchedValues.logoMethod === 'upload' && (() => {
+            const uploadValue = watchedValues.logoFile || watchedValues.logoPreview || data.logoUrl;
+            console.log('🔍 DEBUG: ImageUpload value for logo:', {
+              logoFile: watchedValues.logoFile?.name || 'none',
+              logoPreview: watchedValues.logoPreview || 'none',
+              dataLogoUrl: data.logoUrl || 'none',
+              finalValue: uploadValue
+            });
+            
+            return (
+              <ImageUpload
+                value={uploadValue}
+                onChange={handleLogoFileUpload}
+                onPreviewChange={handleLogoPreviewChange}
+                placeholder="Upload your company logo"
+                maxSize={2 * 1024 * 1024} // 2MB
+                acceptedTypes={["image/png", "image/jpeg", "image/jpg", "image/svg+xml"]}
+              />
+            );
+          })()}
         </CardContent>
       </Card>
 
