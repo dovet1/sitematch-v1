@@ -13,7 +13,7 @@ import { ArrowLeft, ArrowRight, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useErrorHandling } from '@/hooks/use-error-handling';
 
-import { WizardProgress, createProgressSteps } from './wizard-progress';
+import { WizardProgress, createProgressSteps, createProgressStepsForListingType } from './wizard-progress';
 import { Step1CompanyInfo } from './steps/step1-company-info';
 import { Step2RequirementDetails } from './steps/step2-requirement-details';
 import { Step3LocationFiles } from './steps/step3-location-files';
@@ -39,7 +39,13 @@ import {
   getPreviousStep,
   canNavigateToStep,
   createAutoSaveState,
-  shouldAutoSave
+  shouldAutoSave,
+  getVisibleStepsForListingType,
+  isStepVisibleForListingType,
+  getNextVisibleStep,
+  getPreviousVisibleStep,
+  getLastVisibleStep,
+  canNavigateToStepForListingType
 } from '@/lib/wizard-utils';
 
 // =====================================================
@@ -333,6 +339,11 @@ export function ListingWizard({
       console.log('🔍 DEBUG: company_domain value:', listing.company_domain);
       console.log('🔍 DEBUG: logo_url value:', listing.logo_url);
       console.log('🔍 DEBUG: company_logos array:', listing.company_logos);
+      console.log('🔍 DEBUG: property_page_link value:', listing.property_page_link);
+      console.log('🔍 DEBUG: dwelling_count_min value:', listing.dwelling_count_min);
+      console.log('🔍 DEBUG: dwelling_count_max value:', listing.dwelling_count_max);
+      console.log('🔍 DEBUG: site_acreage_min value:', listing.site_acreage_min);
+      console.log('🔍 DEBUG: site_acreage_max value:', listing.site_acreage_max);
       
       // Transform database listing to wizard form data
       const formData: Partial<WizardFormData> = {
@@ -347,9 +358,22 @@ export function ListingWizard({
         companyDomain: listing.company_domain || '',
         clearbitLogo: listing.clearbit_logo || false,
         
+        // Property page link field
+        propertyPageLink: listing.property_page_link || '',
+        
         // Sector and Use Class selections from junction tables or fallback to legacy single values
         sectors: listing.sectors?.map((s: any) => s.id) || [],
         useClassIds: listing.use_classes?.map((uc: any) => uc.id) || [],
+        
+        // Site size requirements (commercial)
+        siteSizeMin: listing.site_size_min,
+        siteSizeMax: listing.site_size_max,
+        
+        // Residential fields
+        dwellingCountMin: listing.dwelling_count_min,
+        dwellingCountMax: listing.dwelling_count_max,
+        siteAcreageMin: listing.site_acreage_min,
+        siteAcreageMax: listing.site_acreage_max,
         
         primaryContact: {
           contactName: listing.contact_name,
@@ -455,6 +479,11 @@ export function ListingWizard({
       console.log('🔍 DEBUG: formData.companyDomain:', formData.companyDomain);
       console.log('🔍 DEBUG: formData.logoUrl:', formData.logoUrl);
       console.log('🔍 DEBUG: formData.logoPreview:', formData.logoPreview);
+      console.log('🔍 DEBUG: formData.propertyPageLink:', formData.propertyPageLink);
+      console.log('🔍 DEBUG: formData.dwellingCountMin:', formData.dwellingCountMin);
+      console.log('🔍 DEBUG: formData.dwellingCountMax:', formData.dwellingCountMax);
+      console.log('🔍 DEBUG: formData.siteAcreageMin:', formData.siteAcreageMin);
+      console.log('🔍 DEBUG: formData.siteAcreageMax:', formData.siteAcreageMax);
       
       dispatch({ type: 'UPDATE_DATA', data: formData });
       
@@ -620,36 +649,160 @@ export function ListingWizard({
   }, [state.formData, autoSave, state.listingId, onSave, userId]);
 
   // =====================================================
+  // SUBMISSION HANDLER
+  // =====================================================
+
+  const submitWizard = useCallback(async (): Promise<SubmissionResult> => {
+    // Final validation
+    const step1Errors = validateStep(1, state.formData);
+    const step2Errors = validateStep(2, state.formData);
+    const step3Errors = validateStep(3, state.formData);
+    const step4Errors = validateStep(4, state.formData);
+    const step5Errors = validateStep(5, state.formData);
+    const step6Errors = validateStep(6, state.formData);
+    const allErrors = { ...step1Errors, ...step2Errors, ...step3Errors, ...step4Errors, ...step5Errors, ...step6Errors };
+
+    if (Object.keys(allErrors).length > 0) {
+      dispatch({ type: 'SET_ERRORS', errors: allErrors });
+      toast.error('Please fix all errors before submitting');
+      return { success: false, error: 'Validation failed' };
+    }
+
+    if (!onSubmit) {
+      return { success: false, error: 'No submission handler provided' };
+    }
+
+    dispatch({ type: 'SET_SUBMITTING', isSubmitting: true });
+
+    try {
+      // Sanitize form data for Server Action - remove File objects
+      const sanitizedData = { ...state.formData };
+      
+      console.log('🔍 DEBUG: Submitting wizard with data:', {
+        existingListingId: sanitizedData.existingListingId,
+        faqsCount: sanitizedData.faqs?.length || 0,
+        additionalContactsCount: sanitizedData.additionalContacts?.length || 0,
+        faqs: sanitizedData.faqs,
+        additionalContacts: sanitizedData.additionalContacts,
+        propertyPageLink: sanitizedData.propertyPageLink
+      });
+      
+      // Remove File objects that can't be serialized
+      if (sanitizedData.logoFile instanceof File) {
+        delete sanitizedData.logoFile;
+      }
+      
+      // Clean primary contact headshot file
+      if (sanitizedData.primaryContact?.headshotFile instanceof File) {
+        sanitizedData.primaryContact = {
+          ...sanitizedData.primaryContact,
+          headshotFile: undefined
+        };
+      }
+      
+      // Clean additional contacts headshot files
+      if (sanitizedData.additionalContacts) {
+        sanitizedData.additionalContacts = sanitizedData.additionalContacts.map(contact => {
+          const cleanContact = { ...contact };
+          if (cleanContact.headshotFile instanceof File) {
+            cleanContact.headshotFile = undefined;
+          }
+          return cleanContact;
+        });
+      }
+      
+      // Remove other File arrays as well
+      if (sanitizedData.brochureFiles) {
+        sanitizedData.brochureFiles = sanitizedData.brochureFiles.map(file => {
+          if (file instanceof File) return undefined;
+          return file;
+        }).filter(Boolean);
+      }
+      if (sanitizedData.sitePlanFiles) {
+        sanitizedData.sitePlanFiles = sanitizedData.sitePlanFiles.map(file => {
+          if (file instanceof File) return undefined;
+          return file;
+        }).filter(Boolean);
+      }
+      if (sanitizedData.fitOutFiles) {
+        sanitizedData.fitOutFiles = sanitizedData.fitOutFiles.map(file => {
+          if (file instanceof File) return undefined;
+          return file;
+        }).filter(Boolean);
+      }
+
+      const result = await onSubmit(sanitizedData as WizardFormData);
+      
+      if (result.success) {
+        // Clear localStorage after successful submission
+        clearLocalStorage(userId);
+        
+        // Store the new listing ID in state for any future operations
+        if (result.listingId) {
+          dispatch({ type: 'SET_LISTING_ID', listingId: result.listingId });
+        }
+        
+        toast.success('Listing submitted successfully!');
+        
+        // Redirect to enhanced success page
+        if (result.listingId) {
+          router.push(`/occupier/listing-submitted/${result.listingId}`);
+        } else {
+          router.push('/occupier/dashboard');
+        }
+      } else {
+        toast.error(result.error || 'Failed to create listing');
+      }
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      dispatch({ type: 'SET_SUBMITTING', isSubmitting: false });
+    }
+  }, [state.formData, onSubmit, router, clearLocalStorage, userId]);
+
+  // =====================================================
   // NAVIGATION HANDLERS
   // =====================================================
 
   const goToStep = useCallback((step: 1 | 2 | 3 | 4 | 5 | 6) => {
-    if (canNavigateToStep(step, state.currentStep, state.isValid)) {
+    const listingType = state.formData.listingType || 'commercial';
+    if (canNavigateToStepForListingType(step, state.currentStep, listingType, state.isValid)) {
       dispatch({ type: 'SET_STEP', step });
     }
-  }, [state.currentStep, state.isValid]);
+  }, [state.currentStep, state.isValid, state.formData.listingType]);
 
-  const goNext = useCallback(() => {
-    const nextStep = getNextStep(state.currentStep);
-    if (nextStep) {
-      // Validate current step before proceeding
-      const errors = validateStep(state.currentStep, state.formData);
-      if (Object.keys(errors).length > 0) {
-        dispatch({ type: 'SET_ERRORS', errors });
-        toast.error('Please fix the errors before continuing');
-        return;
-      }
-      
+  const goNext = useCallback(async () => {
+    const listingType = state.formData.listingType || 'commercial';
+    const nextStep = getNextVisibleStep(state.currentStep, listingType);
+    const lastStep = getLastVisibleStep(listingType);
+    
+    // Validate current step before proceeding
+    const errors = validateStep(state.currentStep, state.formData);
+    if (Object.keys(errors).length > 0) {
+      dispatch({ type: 'SET_ERRORS', errors });
+      toast.error('Please fix the errors before continuing');
+      return;
+    }
+    
+    // If we're on the last visible step and there's no next step, submit the form
+    if (state.currentStep === lastStep && !nextStep) {
+      await submitWizard();
+    } else if (nextStep) {
       goToStep(nextStep);
     }
-  }, [state.currentStep, state.formData, goToStep]);
+  }, [state.currentStep, state.formData, goToStep, submitWizard]);
 
   const goPrevious = useCallback(() => {
-    const previousStep = getPreviousStep(state.currentStep);
+    const listingType = state.formData.listingType || 'commercial';
+    const previousStep = getPreviousVisibleStep(state.currentStep, listingType);
     if (previousStep) {
       goToStep(previousStep);
     }
-  }, [state.currentStep, goToStep]);
+  }, [state.currentStep, state.formData.listingType, goToStep]);
 
   // =====================================================
   // DATA HANDLERS
@@ -933,139 +1086,25 @@ export function ListingWizard({
   }, [onSave, state.formData, state.listingId]);
 
   // =====================================================
-  // SUBMISSION HANDLER
-  // =====================================================
-
-  const submitWizard = useCallback(async (): Promise<SubmissionResult> => {
-    // Final validation
-    const step1Errors = validateStep(1, state.formData);
-    const step2Errors = validateStep(2, state.formData);
-    const step3Errors = validateStep(3, state.formData);
-    const step4Errors = validateStep(4, state.formData);
-    const step5Errors = validateStep(5, state.formData);
-    const step6Errors = validateStep(6, state.formData);
-    const allErrors = { ...step1Errors, ...step2Errors, ...step3Errors, ...step4Errors, ...step5Errors, ...step6Errors };
-
-    if (Object.keys(allErrors).length > 0) {
-      dispatch({ type: 'SET_ERRORS', errors: allErrors });
-      toast.error('Please fix all errors before submitting');
-      return { success: false, error: 'Validation failed' };
-    }
-
-    if (!onSubmit) {
-      return { success: false, error: 'No submission handler provided' };
-    }
-
-    dispatch({ type: 'SET_SUBMITTING', isSubmitting: true });
-
-    try {
-      // Sanitize form data for Server Action - remove File objects
-      const sanitizedData = { ...state.formData };
-      
-      console.log('🔍 DEBUG: Submitting wizard with data:', {
-        existingListingId: sanitizedData.existingListingId,
-        faqsCount: sanitizedData.faqs?.length || 0,
-        additionalContactsCount: sanitizedData.additionalContacts?.length || 0,
-        faqs: sanitizedData.faqs,
-        additionalContacts: sanitizedData.additionalContacts
-      });
-      
-      // Remove File objects that can't be serialized
-      if (sanitizedData.logoFile instanceof File) {
-        delete sanitizedData.logoFile;
-      }
-      
-      // Clean primary contact headshot file
-      if (sanitizedData.primaryContact?.headshotFile instanceof File) {
-        sanitizedData.primaryContact = {
-          ...sanitizedData.primaryContact,
-          headshotFile: undefined
-        };
-      }
-      
-      // Clean additional contacts
-      if (sanitizedData.additionalContacts) {
-        console.log('🔍 DEBUG: Additional contacts before cleaning:', sanitizedData.additionalContacts.length);
-        sanitizedData.additionalContacts = sanitizedData.additionalContacts.map(contact => {
-          const cleanContact = { ...contact };
-          if (cleanContact.headshotFile instanceof File) {
-            delete cleanContact.headshotFile;
-          }
-          return cleanContact;
-        });
-      }
-      
-      // Clean up any other potential File objects in file arrays
-      if (sanitizedData.brochureFiles) {
-        sanitizedData.brochureFiles = sanitizedData.brochureFiles.filter(file => !(file instanceof File));
-      }
-      if (sanitizedData.sitePlanFiles) {
-        sanitizedData.sitePlanFiles = sanitizedData.sitePlanFiles.filter(file => !(file instanceof File));
-      }
-      if (sanitizedData.fitOutFiles) {
-        sanitizedData.fitOutFiles = sanitizedData.fitOutFiles.filter(file => !(file instanceof File));
-      }
-      
-      // Add existing listingId to the submission data
-      const submissionData = {
-        ...sanitizedData,
-        existingListingId: state.listingId
-      } as WizardFormData;
-
-      // console.log('Submitting data:', { companyName: submissionData.companyName });
-
-      const result = await onSubmit(submissionData);
-      
-      console.log('🔍 DEBUG: Submission result:', result);
-      
-      // Handle case where result might be undefined
-      if (!result) {
-        throw new Error('Submission failed: No response received');
-      }
-      
-      if (result.success) {
-        // Clear localStorage immediately after successful submission
-        clearLocalStorage(userId);
-        
-        // Set the listing ID in state to trigger cleanup
-        if (result.listingId) {
-          dispatch({ type: 'SET_LISTING_ID', listingId: result.listingId });
-        }
-        
-        toast.success('Listing submitted successfully!');
-        
-        // Redirect to enhanced success page
-        if (result.listingId) {
-          router.push(`/occupier/listing-submitted/${result.listingId}`);
-        } else {
-          router.push('/occupier/dashboard');
-        }
-      } else {
-        toast.error(result.error || 'Failed to create listing');
-      }
-
-      return result;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      toast.error(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      dispatch({ type: 'SET_SUBMITTING', isSubmitting: false });
-    }
-  }, [state.formData, onSubmit, router]);
-
-  // =====================================================
   // COMPUTED VALUES
   // =====================================================
 
-  const progressSteps = useMemo(
-    () => createProgressSteps(state.currentStep, state.isValid),
-    [state.currentStep, state.isValid]
-  );
+  const progressSteps = useMemo(() => {
+    const listingType = state.formData.listingType || 'commercial';
+    return createProgressStepsForListingType(state.currentStep, state.isValid, listingType);
+  }, [state.currentStep, state.isValid, state.formData.listingType]);
 
+  const listingType = state.formData.listingType || 'commercial';
+  const lastVisibleStep = getLastVisibleStep(listingType);
   const canGoNext = state.isValid[state.currentStep] && !state.isSubmitting;
   const canGoBack = state.currentStep > 1 && !state.isSubmitting;
-  const canSubmit = state.currentStep === 6 && state.isValid[1] && state.isValid[2] && state.isValid[3] && state.isValid[4] && state.isValid[5] && state.isValid[6] && !state.isSubmitting;
+  
+  // For residential: can submit when on step 5 (last visible step) and steps 1-5 are valid
+  // For commercial: can submit when on step 6 and steps 1-6 are valid
+  const canSubmit = state.currentStep === lastVisibleStep && 
+    state.isValid[1] && state.isValid[2] && state.isValid[3] && state.isValid[4] && state.isValid[5] && 
+    (listingType === 'commercial' ? state.isValid[6] : true) && 
+    !state.isSubmitting;
 
   // =====================================================
   // RENDER
@@ -1150,7 +1189,7 @@ export function ListingWizard({
             />
           )}
 
-          {state.currentStep === 6 && (
+          {state.currentStep === 6 && isStepVisibleForListingType(6, state.formData.listingType || 'commercial') && (
             <Step6SupportingDocuments
               data={state.formData}
               onUpdate={updateData}
@@ -1209,7 +1248,7 @@ export function ListingWizard({
               </div>
               
               {/* Next/Submit button */}
-              {state.currentStep < 6 ? (
+              {state.currentStep < lastVisibleStep ? (
                 <Button
                   onClick={goNext}
                   disabled={!canGoNext}
@@ -1220,7 +1259,7 @@ export function ListingWizard({
                 </Button>
               ) : (
                 <Button
-                  onClick={submitWizard}
+                  onClick={goNext}
                   disabled={!canSubmit}
                   className="w-full"
                 >
@@ -1230,7 +1269,7 @@ export function ListingWizard({
                       {editMode ? 'Updating...' : 'Creating...'}
                     </>
                   ) : (
-                    editMode ? 'Update Listing' : 'Create Listing'
+                    editMode ? 'Update Listing' : 'Submit Listing'
                   )}
                 </Button>
               )}
@@ -1276,7 +1315,7 @@ export function ListingWizard({
                 )}
 
                 {/* Next/Submit button */}
-                {state.currentStep < 6 ? (
+                {state.currentStep < lastVisibleStep ? (
                   <Button
                     onClick={goNext}
                     disabled={!canGoNext}
@@ -1286,7 +1325,7 @@ export function ListingWizard({
                   </Button>
                 ) : (
                   <Button
-                    onClick={submitWizard}
+                    onClick={goNext}
                     disabled={!canSubmit}
                   >
                     {state.isSubmitting ? (
@@ -1295,7 +1334,7 @@ export function ListingWizard({
                         {editMode ? 'Updating...' : 'Creating...'}
                       </>
                     ) : (
-                      editMode ? 'Update Listing' : 'Create Listing'
+                      editMode ? 'Update Listing' : 'Submit Listing'
                     )}
                   </Button>
                 )}

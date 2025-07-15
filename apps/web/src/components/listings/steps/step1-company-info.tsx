@@ -60,7 +60,8 @@ export function Step1CompanyInfo({
       logoFile: data.logoFile || undefined,
       logoPreview: data.logoPreview || data.logoUrl || '',
       logoUrl: data.logoUrl || '',
-      brochureFiles: data.brochureFiles || []
+      brochureFiles: data.brochureFiles || [],
+      propertyPageLink: data.propertyPageLink || ''
     },
     mode: 'onChange'
   });
@@ -90,7 +91,7 @@ export function Step1CompanyInfo({
       
       if (prevValuesRef.current !== currentJson) {
         prevValuesRef.current = currentJson;
-        // console.log('Step1 updating:', watchedValues.companyName);
+        console.log('Step1 updating with propertyPageLink:', watchedValues.propertyPageLink);
         onUpdate(watchedValues);
       }
     }, 150);
@@ -168,6 +169,7 @@ export function Step1CompanyInfo({
         hasInitializedLogoRef.current = true;
       }
       if (data.brochureFiles !== undefined) setValue('brochureFiles', data.brochureFiles);
+      if (data.propertyPageLink !== undefined) setValue('propertyPageLink', data.propertyPageLink);
     }
   }, [data, setValue]);
 
@@ -640,9 +642,10 @@ export function Step1CompanyInfo({
       {/* Requirements Brochure Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Requirements Brochure</CardTitle>
+          <CardTitle>Requirements Material</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          {/* Requirements Brochure Upload */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">
               Requirements Brochure
@@ -672,6 +675,39 @@ export function Step1CompanyInfo({
               organizationId=""
               listingId={listingId}
             />
+          </div>
+          
+          {/* Property Page Link */}
+          <div className="space-y-2">
+            <Label htmlFor="propertyPageLink" className="text-sm font-medium">
+              Property Page Link
+              <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+            </Label>
+            <Input
+              id="propertyPageLink"
+              type="url"
+              {...register('propertyPageLink', {
+                pattern: {
+                  value: /^https?:\/\/[^\s/$.?#].[^\s]*$/,
+                  message: 'Please enter a valid URL starting with http:// or https://'
+                }
+              })}
+              placeholder="https://example.com/property-page"
+              className={cn(
+                formErrors.propertyPageLink || errors?.propertyPageLink
+                  ? 'border-red-500 focus:ring-red-500'
+                  : '',
+                'placeholder:text-muted-foreground'
+              )}
+            />
+            {(formErrors.propertyPageLink || errors?.propertyPageLink) && (
+              <p className="text-sm text-red-600">
+                {formErrors.propertyPageLink?.message || errors?.propertyPageLink}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Link to the occupier's property page or additional information
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -183,3 +183,47 @@ export function createProgressSteps(currentStep: 1 | 2 | 3 | 4 | 5 | 6, stepVali
     };
   });
 }
+
+/**
+ * Creates progress steps filtered by listing type
+ * Residential listings: Steps 1-5 (Step 6 hidden)
+ * Commercial listings: Steps 1-6 (all steps visible)
+ */
+export function createProgressStepsForListingType(
+  currentStep: 1 | 2 | 3 | 4 | 5 | 6, 
+  stepValidation: Record<number, boolean>,
+  listingType: 'residential' | 'commercial'
+): ProgressStep[] {
+  const stepTitles = [
+    'Company Info',
+    'Requirements', 
+    'Locations',
+    'Contacts',
+    'FAQs',
+    'Documents'
+  ];
+
+  const stepDescriptions = [
+    'Company details and contact info',
+    listingType === 'residential' ? 'Residential property requirements' : 'Commercial property requirements',
+    'Target locations',
+    'Additional contacts',
+    'Frequently asked questions',
+    'Supporting documents'
+  ];
+
+  // For residential, only show steps 1-5; for commercial, show all 6 steps
+  const maxSteps = listingType === 'residential' ? 5 : 6;
+  
+  return Array.from({ length: maxSteps }, (_, i) => {
+    const stepNumber = (i + 1) as 1 | 2 | 3 | 4 | 5 | 6;
+    return {
+      number: stepNumber,
+      title: stepTitles[i],
+      description: stepDescriptions[i],
+      isActive: currentStep === stepNumber,
+      isCompleted: stepValidation[stepNumber] === true && currentStep > stepNumber,
+      isAccessible: stepNumber === 1 || (stepNumber <= 3 ? stepValidation[1] === true : stepValidation[1] === true && stepValidation[2] === true && stepValidation[3] === true)
+    };
+  });
+}

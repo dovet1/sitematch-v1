@@ -31,13 +31,18 @@ export const validationSchema: ValidationSchema = {
     logoFile: {},
     logoPreview: {},
     logoUrl: {},
-    brochureFiles: {}
+    brochureFiles: {},
+    propertyPageLink: {}
   },
   step2: {
     sectors: {},
     useClassIds: {},
     siteSizeMin: { min: 0, max: 10000000 },
-    siteSizeMax: { min: 0, max: 10000000 }
+    siteSizeMax: { min: 0, max: 10000000 },
+    dwellingCountMin: { min: 0 },
+    dwellingCountMax: { min: 0 },
+    siteAcreageMin: { min: 0 },
+    siteAcreageMax: { min: 0 }
   },
   step3: {
     locations: {}, // Not required - handled by cross-field validation
@@ -446,4 +451,82 @@ export const wizardSteps: StepConfig[] = [
 
 export function getStepConfig(stepNumber: 1 | 2 | 3): StepConfig {
   return wizardSteps.find(step => step.number === stepNumber) || wizardSteps[0];
+}
+
+// =====================================================
+// CONDITIONAL STEP VISIBILITY
+// =====================================================
+
+/**
+ * Determines which steps should be visible based on listing type
+ * Residential listings: Steps 1-5 (Step 6 is hidden)
+ * Commercial listings: Steps 1-6 (all steps visible)
+ */
+export function getVisibleStepsForListingType(listingType: 'residential' | 'commercial'): (1 | 2 | 3 | 4 | 5 | 6)[] {
+  if (listingType === 'residential') {
+    return [1, 2, 3, 4, 5]; // Hide Step 6 (Supporting Documents)
+  }
+  return [1, 2, 3, 4, 5, 6]; // Show all steps for commercial
+}
+
+/**
+ * Checks if a specific step should be visible for the given listing type
+ */
+export function isStepVisibleForListingType(stepNumber: 1 | 2 | 3 | 4 | 5 | 6, listingType: 'residential' | 'commercial'): boolean {
+  const visibleSteps = getVisibleStepsForListingType(listingType);
+  return visibleSteps.includes(stepNumber);
+}
+
+/**
+ * Gets the next visible step for the given listing type
+ */
+export function getNextVisibleStep(currentStep: 1 | 2 | 3 | 4 | 5 | 6, listingType: 'residential' | 'commercial'): 1 | 2 | 3 | 4 | 5 | 6 | null {
+  const visibleSteps = getVisibleStepsForListingType(listingType);
+  const currentIndex = visibleSteps.indexOf(currentStep);
+  
+  if (currentIndex === -1 || currentIndex === visibleSteps.length - 1) {
+    return null; // Current step not found or is the last step
+  }
+  
+  return visibleSteps[currentIndex + 1];
+}
+
+/**
+ * Gets the previous visible step for the given listing type
+ */
+export function getPreviousVisibleStep(currentStep: 1 | 2 | 3 | 4 | 5 | 6, listingType: 'residential' | 'commercial'): 1 | 2 | 3 | 4 | 5 | 6 | null {
+  const visibleSteps = getVisibleStepsForListingType(listingType);
+  const currentIndex = visibleSteps.indexOf(currentStep);
+  
+  if (currentIndex === -1 || currentIndex === 0) {
+    return null; // Current step not found or is the first step
+  }
+  
+  return visibleSteps[currentIndex - 1];
+}
+
+/**
+ * Gets the last visible step for the given listing type
+ */
+export function getLastVisibleStep(listingType: 'residential' | 'commercial'): 1 | 2 | 3 | 4 | 5 | 6 {
+  const visibleSteps = getVisibleStepsForListingType(listingType);
+  return visibleSteps[visibleSteps.length - 1];
+}
+
+/**
+ * Validates that navigation to a target step is allowed based on listing type and step validity
+ */
+export function canNavigateToStepForListingType(
+  targetStep: 1 | 2 | 3 | 4 | 5 | 6, 
+  currentStep: 1 | 2 | 3 | 4 | 5 | 6, 
+  listingType: 'residential' | 'commercial',
+  stepValidation: Record<number, boolean>
+): boolean {
+  // First check if the target step is visible for this listing type
+  if (!isStepVisibleForListingType(targetStep, listingType)) {
+    return false;
+  }
+  
+  // Then use the existing navigation logic
+  return canNavigateToStep(targetStep, currentStep, stepValidation);
 }

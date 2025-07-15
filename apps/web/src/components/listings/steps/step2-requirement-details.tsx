@@ -72,6 +72,17 @@ export function Step2RequirementDetails({
     return data.useClassIds || [];
   });
 
+  // Residential-specific fields
+  const [dwellingCountRange, setDwellingCountRange] = useState<[number, number]>([
+    data.dwellingCountMin || 1,
+    data.dwellingCountMax || 100
+  ]);
+  
+  const [siteAcreageRange, setSiteAcreageRange] = useState<[number, number]>([
+    data.siteAcreageMin || 0.1,
+    data.siteAcreageMax || 10
+  ]);
+
   const {
     handleSubmit,
     formState: { errors: formErrors }
@@ -90,7 +101,12 @@ export function Step2RequirementDetails({
     sectors: selectedSectors,
     useClassIds: selectedUseClasses,
     siteSizeMin: siteSize[0] || undefined,
-    siteSizeMax: siteSize[1] || undefined
+    siteSizeMax: siteSize[1] || undefined,
+    // Residential fields
+    dwellingCountMin: dwellingCountRange[0] || undefined,
+    dwellingCountMax: dwellingCountRange[1] || undefined,
+    siteAcreageMin: siteAcreageRange[0] || undefined,
+    siteAcreageMax: siteAcreageRange[1] || undefined
   };
 
   // =====================================================
@@ -166,8 +182,14 @@ export function Step2RequirementDetails({
       if (data.siteSizeMin !== undefined || data.siteSizeMax !== undefined) {
         setSiteSize([data.siteSizeMin || 0, data.siteSizeMax || 10000]);
       }
+      if (data.dwellingCountMin !== undefined || data.dwellingCountMax !== undefined) {
+        setDwellingCountRange([data.dwellingCountMin || 1, data.dwellingCountMax || 100]);
+      }
+      if (data.siteAcreageMin !== undefined || data.siteAcreageMax !== undefined) {
+        setSiteAcreageRange([data.siteAcreageMin || 0.1, data.siteAcreageMax || 10]);
+      }
     }
-  }, [data.sectors, data.useClassIds, data.siteSizeMin, data.siteSizeMax]);
+  }, [data.sectors, data.useClassIds, data.siteSizeMin, data.siteSizeMax, data.dwellingCountMin, data.dwellingCountMax, data.siteAcreageMin, data.siteAcreageMax]);
 
   // Debounced update to parent component when form data changes
   useEffect(() => {
@@ -214,6 +236,18 @@ export function Step2RequirementDetails({
           data.siteSizeMax || 10000
         ]);
       }
+      if (data.dwellingCountMin !== undefined || data.dwellingCountMax !== undefined) {
+        setDwellingCountRange([
+          data.dwellingCountMin || 1,
+          data.dwellingCountMax || 100
+        ]);
+      }
+      if (data.siteAcreageMin !== undefined || data.siteAcreageMax !== undefined) {
+        setSiteAcreageRange([
+          data.siteAcreageMin || 0.1,
+          data.siteAcreageMax || 10
+        ]);
+      }
     }
   }, [data]);
 
@@ -225,9 +259,22 @@ export function Step2RequirementDetails({
     setSiteSize(newValue);
   };
 
+  const handleDwellingCountChange = (newValue: [number, number]) => {
+    setDwellingCountRange(newValue);
+  };
+
+  const handleSiteAcreageChange = (newValue: [number, number]) => {
+    setSiteAcreageRange(newValue);
+  };
+
   const onSubmit = (formData: Step2FormData) => {
     // Form is submitted via the wizard's submit button
   };
+
+  // Determine listing type for conditional rendering
+  const isResidential = data.listingType === 'residential';
+  const isCommercial = data.listingType === 'commercial' || !data.listingType; // Default to commercial if not set
+  
 
   // =====================================================
   // RENDER
@@ -240,46 +287,85 @@ export function Step2RequirementDetails({
         <CardHeader>
           <CardTitle className="text-lg">Property Requirements</CardTitle>
           <p className="text-sm text-gray-600">
-            Specify your property requirements and preferences. All fields are optional.
+            {isResidential 
+              ? "Specify your residential property requirements and preferences. All fields are optional."
+              : "Specify your commercial property requirements and preferences. All fields are optional."
+            }
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Sector Selection - Multi Select */}
-          <MultiSelectDropdown
-            label="Sectors (Optional)"
-            placeholder={isLoadingOptions ? "Loading sectors..." : "Select sectors..."}
-            searchPlaceholder="Search sectors..."
-            emptyText="No sectors found"
-            options={sectorOptions.length > 0 ? sectorOptions : SECTOR_OPTIONS}
-            value={selectedSectors}
-            onChange={setSelectedSectors}
-            disabled={isLoadingOptions}
-          />
+          {/* Commercial-specific fields */}
+          {isCommercial && (
+            <>
+              {/* Sector Selection - Multi Select */}
+              <MultiSelectDropdown
+                label="Sectors (Optional)"
+                placeholder={isLoadingOptions ? "Loading sectors..." : "Select sectors..."}
+                searchPlaceholder="Search sectors..."
+                emptyText="No sectors found"
+                options={sectorOptions.length > 0 ? sectorOptions : SECTOR_OPTIONS}
+                value={selectedSectors}
+                onChange={setSelectedSectors}
+                disabled={isLoadingOptions}
+              />
 
-          {/* Use Class Selection - Multi Select */}
-          <MultiSelectDropdown
-            label="Planning Use Classes (Optional)"
-            placeholder={isLoadingOptions ? "Loading use classes..." : "Select planning use classes..."}
-            searchPlaceholder="Search use classes..."
-            emptyText="No use classes found"
-            options={useClassOptions.length > 0 ? useClassOptions : USE_CLASS_OPTIONS}
-            value={selectedUseClasses}
-            onChange={setSelectedUseClasses}
-            disabled={isLoadingOptions}
-          />
+              {/* Use Class Selection - Multi Select */}
+              <MultiSelectDropdown
+                label="Planning Use Classes (Optional)"
+                placeholder={isLoadingOptions ? "Loading use classes..." : "Select planning use classes..."}
+                searchPlaceholder="Search use classes..."
+                emptyText="No use classes found"
+                options={useClassOptions.length > 0 ? useClassOptions : USE_CLASS_OPTIONS}
+                value={selectedUseClasses}
+                onChange={setSelectedUseClasses}
+                disabled={isLoadingOptions}
+              />
 
-          {/* Site Size Range Slider */}
-          <RangeSlider
-            label="Site Size Range (Optional)"
-            value={siteSize}
-            onChange={handleSiteSizeChange}
-            min={0}
-            max={50000}
-            step={100}
-            unit="sq ft"
-            showInputs={true}
-            formatValue={(value) => value.toLocaleString()}
-          />
+              {/* Site Size Range Slider */}
+              <RangeSlider
+                label="Site Size Range (Optional)"
+                value={siteSize}
+                onChange={handleSiteSizeChange}
+                min={0}
+                max={50000}
+                step={100}
+                unit="sq ft"
+                showInputs={true}
+                formatValue={(value) => value.toLocaleString()}
+              />
+            </>
+          )}
+
+          {/* Residential-specific fields */}
+          {isResidential && (
+            <>
+              {/* Dwelling Count Range Slider */}
+              <RangeSlider
+                label="Number of Dwellings (Optional)"
+                value={dwellingCountRange}
+                onChange={handleDwellingCountChange}
+                min={1}
+                max={500}
+                step={1}
+                unit="dwellings"
+                showInputs={true}
+                formatValue={(value) => value.toString()}
+              />
+
+              {/* Site Acreage Range Slider */}
+              <RangeSlider
+                label="Site Acreage (Optional)"
+                value={siteAcreageRange}
+                onChange={handleSiteAcreageChange}
+                min={0.1}
+                max={50}
+                step={0.1}
+                unit="acres"
+                showInputs={true}
+                formatValue={(value) => value.toFixed(1)}
+              />
+            </>
+          )}
         </CardContent>
       </Card>
 

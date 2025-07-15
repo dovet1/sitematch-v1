@@ -27,12 +27,21 @@ export interface EnhancedListingData {
   site_size_min?: number;
   site_size_max?: number;
   
+  // Residential fields
+  dwelling_count_min?: number;
+  dwelling_count_max?: number;
+  site_acreage_min?: number;
+  site_acreage_max?: number;
+  
   // Logo method fields - Story 9.0
   clearbit_logo?: boolean;
   company_domain?: string;
   brochure_urls?: string[];
   site_plan_urls?: string[];
   fit_out_urls?: string[];
+  
+  // Property page link field
+  property_page_link?: string;
   
   // Location data
   locations?: Array<{
@@ -101,6 +110,20 @@ export async function createEnhancedListing(
       insertData.site_size_max = data.site_size_max;
     }
     
+    // Add residential fields
+    if (data.dwelling_count_min) {
+      insertData.dwelling_count_min = data.dwelling_count_min;
+    }
+    if (data.dwelling_count_max) {
+      insertData.dwelling_count_max = data.dwelling_count_max;
+    }
+    if (data.site_acreage_min) {
+      insertData.site_acreage_min = data.site_acreage_min;
+    }
+    if (data.site_acreage_max) {
+      insertData.site_acreage_max = data.site_acreage_max;
+    }
+    
     // Try to add contact fields - these might not exist in the current schema
     try {
       if (data.contact_name) insertData.contact_name = data.contact_name;
@@ -118,6 +141,19 @@ export async function createEnhancedListing(
       if (data.company_domain) insertData.company_domain = data.company_domain;
     } catch (error) {
       console.log('Logo method fields not available in current schema');
+    }
+
+    // Add property page link field
+    console.log('🔍 DEBUG: Processing property_page_link:', data.property_page_link);
+    try {
+      if (data.property_page_link && data.property_page_link.trim() !== '') {
+        insertData.property_page_link = data.property_page_link.trim();
+        console.log('🔍 DEBUG: Added property_page_link to insertData:', insertData.property_page_link);
+      } else {
+        console.log('🔍 DEBUG: No property_page_link provided or empty string');
+      }
+    } catch (error) {
+      console.log('Property page link field not available in current schema', error);
     }
 
     // Get all available sectors and use classes first
@@ -176,7 +212,8 @@ export async function createEnhancedListing(
       }
     }
 
-    console.log('Final insert data:', JSON.stringify(insertData, null, 2));
+    console.log('🔍 DEBUG: Final insert data:', JSON.stringify(insertData, null, 2));
+    console.log('🔍 DEBUG: property_page_link in insertData:', insertData.property_page_link);
 
     const { data: listing, error: listingError } = await supabase
       .from('listings')
@@ -192,6 +229,9 @@ export async function createEnhancedListing(
       const errorMessage = listingError.message || listingError.hint || 'Unknown database error';
       throw new Error(`Failed to create listing: ${errorMessage}`);
     }
+
+    console.log('🔍 DEBUG: Created listing:', JSON.stringify(listing, null, 2));
+    console.log('🔍 DEBUG: property_page_link in created listing:', listing.property_page_link);
 
     // Insert sectors to junction table
     if (data.sectors && data.sectors.length > 0 && allSectors) {
