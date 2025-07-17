@@ -5,6 +5,7 @@ import { X, Building2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SearchResult } from '@/types/search';
 import { cn } from '@/lib/utils';
+import { getSearchResultLogoUrl } from '@/lib/search-logo-utils';
 
 interface MultiListingClusterPopupProps {
   listings: SearchResult[];
@@ -71,13 +72,15 @@ export function MultiListingClusterPopup({
     onListingClick(listingId);
   };
 
-  const getLogoUrl = (listing: SearchResult) => {
-    if (listing.logo_url) return listing.logo_url;
-    if (listing.clearbit_logo && listing.company_domain) {
-      return `https://logo.clearbit.com/${listing.company_domain}`;
-    }
-    return null;
+  const getInitials = (companyName: string): string => {
+    return companyName
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
+
 
   if (!isOpen) return null;
 
@@ -89,7 +92,7 @@ export function MultiListingClusterPopup({
           <div
             ref={popupRef}
             className={cn(
-              "w-full bg-white rounded-t-2xl shadow-2xl transition-transform duration-200 ease-out",
+              "w-full bg-white rounded-t-2xl shadow-2xl transition-transform duration-200 ease-out flex flex-col",
               isClosing ? "translate-y-full" : "translate-y-0"
             )}
             style={{ maxHeight: '80vh' }}
@@ -117,7 +120,7 @@ export function MultiListingClusterPopup({
             </div>
 
             {/* Mobile content */}
-            <div className="cluster-popup-mobile overflow-y-auto p-4 space-y-2">
+            <div className="cluster-popup-mobile overflow-y-auto p-4 space-y-2 pb-6 flex-1 min-h-0">
               {listings.map((listing) => (
                 <div
                   key={listing.id}
@@ -127,20 +130,29 @@ export function MultiListingClusterPopup({
                   <div className="flex items-center gap-3">
                     {/* Logo */}
                     <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center flex-shrink-0">
-                      {getLogoUrl(listing) ? (
+                      {getSearchResultLogoUrl(listing) ? (
                         <img
-                          src={getLogoUrl(listing)!}
+                          src={getSearchResultLogoUrl(listing)!}
                           alt={`${listing.company_name} logo`}
                           className="w-6 h-6 object-contain"
+                          loading="lazy"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
-                            const fallback = target.parentElement?.querySelector('.logo-fallback');
-                            if (fallback) fallback.classList.remove('hidden');
+                            const placeholder = target.nextElementSibling;
+                            if (placeholder) {
+                              placeholder.classList.remove('hidden');
+                            }
                           }}
                         />
                       ) : null}
-                      <Building2 className={cn("w-5 h-5 text-gray-400 logo-fallback", getLogoUrl(listing) ? "hidden" : "")} />
+                      <div className={cn(
+                        "w-6 h-6 bg-primary-100 text-primary-600 rounded text-xs font-semibold",
+                        "flex items-center justify-center leading-none",
+                        getSearchResultLogoUrl(listing) ? "hidden" : ""
+                      )}>
+                        {getInitials(listing.company_name)}
+                      </div>
                     </div>
 
                     {/* Content */}
@@ -168,7 +180,7 @@ export function MultiListingClusterPopup({
         <div
           ref={popupRef}
           className={cn(
-            "cluster-popup-desktop fixed bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-200 ease-out",
+            "cluster-popup-desktop fixed bg-white rounded-lg shadow-xl border border-gray-200 transition-all duration-200 ease-out flex flex-col",
             isClosing ? "opacity-0 scale-95" : "opacity-100 scale-100"
           )}
           style={{
@@ -200,7 +212,7 @@ export function MultiListingClusterPopup({
           </div>
 
           {/* Desktop content */}
-          <div className="overflow-y-auto p-2 space-y-1.5 max-h-80">
+          <div className="overflow-y-auto p-2 space-y-1.5 flex-1 min-h-0">
             {listings.map((listing) => (
               <div
                 key={listing.id}
@@ -210,20 +222,29 @@ export function MultiListingClusterPopup({
                 <div className="flex items-center gap-2.5">
                   {/* Logo */}
                   <div className="w-8 h-8 rounded-md bg-white border border-gray-200 flex items-center justify-center flex-shrink-0">
-                    {getLogoUrl(listing) ? (
+                    {getSearchResultLogoUrl(listing) ? (
                       <img
-                        src={getLogoUrl(listing)!}
+                        src={getSearchResultLogoUrl(listing)!}
                         alt={`${listing.company_name} logo`}
                         className="w-5 h-5 object-contain"
+                        loading="lazy"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
-                          const fallback = target.parentElement?.querySelector('.logo-fallback');
-                          if (fallback) fallback.classList.remove('hidden');
+                          const placeholder = target.nextElementSibling;
+                          if (placeholder) {
+                            placeholder.classList.remove('hidden');
+                          }
                         }}
                       />
                     ) : null}
-                    <Building2 className={cn("w-4 h-4 text-gray-400 logo-fallback", getLogoUrl(listing) ? "hidden" : "")} />
+                    <div className={cn(
+                      "w-5 h-5 bg-primary-100 text-primary-600 rounded text-xs font-semibold",
+                      "flex items-center justify-center leading-none",
+                      getSearchResultLogoUrl(listing) ? "hidden" : ""
+                    )}>
+                      {getInitials(listing.company_name)}
+                    </div>
                   </div>
 
                   {/* Content */}

@@ -156,6 +156,29 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Fetch logo files for all listings
+    const listingIds = listings?.map(l => l.id) || [];
+    let logoFiles: any[] = [];
+    
+    if (listingIds.length > 0) {
+      const { data: files } = await supabase
+        .from('file_uploads')
+        .select('listing_id, file_path, bucket_name, file_type')
+        .in('listing_id', listingIds)
+        .eq('file_type', 'logo')
+        .order('created_at', { ascending: false }); // Get most recent logo if multiple exist
+      
+      logoFiles = files || [];
+    }
+    
+    // Create a map of listing_id to logo URL (taking the first/most recent one if multiple exist)
+    const logoMap: Record<string, string> = {};
+    logoFiles.forEach(file => {
+      if (file.file_path && file.bucket_name && !logoMap[file.listing_id]) {
+        logoMap[file.listing_id] = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${file.bucket_name}/${file.file_path}`;
+      }
+    });
+
     // Transform data for map pins with enhanced details for Story 8.0
     const mapResults = listings?.map(listing => {
       const location = (listing.listing_locations as any)?.[0];
@@ -227,8 +250,12 @@ export async function GET(request: NextRequest) {
         
         // Additional fields for Story 8.0
         is_nationwide: false, // Not in current schema
-        logo_url: null, // Will use clearbit_logo logic
-        clearbit_logo: listing.clearbit_logo,
+        // Implement correct fallback logic:
+        // 1. If clearbit_logo is true, use company_domain for Clearbit
+        // 2. If clearbit_logo is false, use uploaded logo from file_uploads table
+        // 3. If no uploaded logo exists, fall back to initials
+        logo_url: logoMap[listing.id] || null,
+        clearbit_logo: listing.clearbit_logo || false,
         company_domain: listing.company_domain,
         place_name: location?.place_name || null,
         coordinates: { lat, lng },
