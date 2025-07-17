@@ -112,9 +112,14 @@ export interface EnhancedListingModalContent {
   company: {
     name: string;
     logo_url?: string;
+    sectors: string[];
+    use_classes: string[];
+    // Legacy fields for backward compatibility
     sector: string;
     use_class: string;
     site_size: string;
+    dwelling_count: string;
+    site_acreage: string;
   };
   
   // Enhanced contact information  
@@ -145,6 +150,7 @@ export interface EnhancedListingModalContent {
   title: string;
   description: string;
   created_at: string;
+  listing_type: 'residential' | 'commercial';
 }
 
 export interface ListingModalProps {

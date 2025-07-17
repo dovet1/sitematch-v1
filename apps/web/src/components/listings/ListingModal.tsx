@@ -1,9 +1,9 @@
 'use client';
 
-import { EnhancedListingModal } from './EnhancedListingModal';
+import { SimplifiedListingModal } from './SimplifiedListingModal';
 import { ListingModalProps } from '@/types/search';
 
-// Export the enhanced modal as the main ListingModal for backward compatibility
+// Export the simplified modal as the main ListingModal 
 export function ListingModal(props: ListingModalProps) {
-  return <EnhancedListingModal {...props} />;
+  return <SimplifiedListingModal {...props} />;
 }

@@ -32,9 +32,15 @@ export async function GET(
         contact_title, 
         contact_email, 
         contact_phone, 
+        contact_area,
         created_at,
         sector_id,
-        use_class_id
+        use_class_id,
+        listing_type,
+        dwelling_count_min,
+        dwelling_count_max,
+        site_acreage_min,
+        site_acreage_max
       `)
       .eq('id', id)
       .in('status', ['approved', 'pending'])
@@ -71,7 +77,7 @@ export async function GET(
       supabase.from('listing_locations').select('id, place_name, coordinates, formatted_address').eq('listing_id', id),
       supabase.from('faqs').select('id, question, answer, display_order').eq('listing_id', id),
       supabase.from('file_uploads').select('id, file_path, file_name, file_size, file_type, bucket_name, is_primary, caption, display_order').eq('listing_id', id),
-      supabase.from('listing_contacts').select('id, contact_name, contact_title, contact_email, contact_phone, headshot_url, is_primary_contact').eq('listing_id', id),
+      supabase.from('listing_contacts').select('id, contact_name, contact_title, contact_email, contact_phone, contact_area, headshot_url, is_primary_contact').eq('listing_id', id),
       supabase.from('listing_sectors').select('sector_id, sectors(id, name)').eq('listing_id', id),
       supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id)
     ]);
@@ -129,9 +135,14 @@ export async function GET(
       company: {
         name: listing.company_name,
         logo_url: logoFile ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${logoFile.bucket_name}/${logoFile.file_path}` : generateClearbitUrl(listing.company_domain, listing.company_name),
+        sectors: allSectors.map((s: any) => formatSectorName(s.name)).filter(Boolean),
+        use_classes: allUseClasses.map((uc: any) => `${uc.name} (${uc.code})`).filter(Boolean),
+        // Keep legacy fields for backward compatibility
         sector: allSectors.map((s: any) => formatSectorName(s.name)).join(', ') || 'Not specified',
         use_class: allUseClasses.map((uc: any) => `${uc.name} (${uc.code})`).join(', ') || 'Not specified',
-        site_size: formatSizeRange(listing.site_size_min, listing.site_size_max)
+        site_size: formatSizeRange(listing.site_size_min, listing.site_size_max),
+        dwelling_count: formatDwellingRange(listing.dwelling_count_min, listing.dwelling_count_max),
+        site_acreage: formatAcreageRange(listing.site_acreage_min, listing.site_acreage_max)
       },
       
       // Enhanced contact information  
@@ -141,9 +152,24 @@ export async function GET(
           title: listing.contact_title || '',
           email: listing.contact_email,
           phone: listing.contact_phone || '',
-          headshot_url: files?.find((file: any) => file.file_type === 'headshot' && file.is_primary)?.file_path 
-            ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${files.find((file: any) => file.file_type === 'headshot' && file.is_primary)?.bucket_name}/${files.find((file: any) => file.file_type === 'headshot' && file.is_primary)?.file_path}`
-            : null
+          contact_area: listing.contact_area || '',
+          headshot_url: (() => {
+            // First try to find primary contact in listing_contacts table
+            const primaryFromContacts = contacts?.find((contact: any) => contact.is_primary_contact);
+            if (primaryFromContacts?.headshot_url) {
+              return primaryFromContacts.headshot_url;
+            }
+            
+            // Then try to find headshot file by matching contact name
+            const headshotFile = files?.find((file: any) => 
+              file.file_type === 'headshot' && (
+                file.is_primary || 
+                file.file_name?.toLowerCase().includes(listing.contact_name?.toLowerCase().split(' ')[0] || '')
+              )
+            );
+            
+            return headshotFile ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${headshotFile.bucket_name}/${headshotFile.file_path}` : null;
+          })()
         },
         additional: (contacts || [])
           .filter((contact: any) => !contact.is_primary_contact)
@@ -152,6 +178,7 @@ export async function GET(
             title: contact.contact_title || '',
             email: contact.contact_email,
             phone: contact.contact_phone || '',
+            contact_area: contact.contact_area || '',
             headshot_url: contact.headshot_url || (() => {
               const headshotFile = files?.find((file: any) => 
                 file.file_type === 'headshot' && 
@@ -224,7 +251,8 @@ export async function GET(
       id: listing.id,
       title: listing.title,
       description: listing.description || '',
-      created_at: listing.created_at
+      created_at: listing.created_at,
+      listing_type: listing.listing_type || 'commercial'
     };
 
     return NextResponse.json(enhancedListing);
@@ -244,5 +272,23 @@ function formatSizeRange(min: number | null, max: number | null): string {
   if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} sq ft`;
   if (min) return `From ${min.toLocaleString()} sq ft`;
   if (max) return `Up to ${max.toLocaleString()} sq ft`;
+  return '';
+}
+
+// Helper function to format dwelling count range
+function formatDwellingRange(min: number | null, max: number | null): string {
+  if (!min && !max) return 'Dwelling count flexible';
+  if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} dwellings`;
+  if (min) return `From ${min.toLocaleString()} dwellings`;
+  if (max) return `Up to ${max.toLocaleString()} dwellings`;
+  return '';
+}
+
+// Helper function to format acreage range
+function formatAcreageRange(min: number | null, max: number | null): string {
+  if (!min && !max) return 'Site acreage flexible';
+  if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} acres`;
+  if (min) return `From ${min.toLocaleString()} acres`;
+  if (max) return `Up to ${max.toLocaleString()} acres`;
   return '';
 }
