@@ -21,7 +21,7 @@ export function SimplifiedListingModal({
   const [listing, setListing] = useState<EnhancedListingModalContent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['contacts', 'locations', 'sectors', 'use_classes', 'property_details']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['contacts', 'locations', 'sectors', 'use_classes', 'property_details', 'fit_outs', 'site_plans']));
   const [isClosing, setIsClosing] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const [expandedFAQs, setExpandedFAQs] = useState<Set<string>>(new Set());
@@ -500,7 +500,12 @@ export function SimplifiedListingModal({
                   
                   {expandedSections.has('locations') && (
                     <div className="bg-gray-50 rounded-lg p-4">
-                      {listing.locations?.all?.length > 0 ? (
+                      {listing.locations?.is_nationwide ? (
+                        <Badge variant="outline" className="bg-orange-50 text-orange-800 border-orange-200">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          Nationwide
+                        </Badge>
+                      ) : listing.locations?.all?.length > 0 ? (
                         <div className="space-y-2">
                           <h5 className="font-medium text-foreground">Preferred Locations</h5>
                           <div className="flex flex-wrap gap-2">
@@ -513,7 +518,10 @@ export function SimplifiedListingModal({
                           </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground italic">No specific location preferences specified</p>
+                        <Badge variant="outline" className="bg-orange-50 text-orange-800 border-orange-200">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          Nationwide
+                        </Badge>
                       )}
                     </div>
                   )}
@@ -681,6 +689,106 @@ export function SimplifiedListingModal({
                             </div>
                           </div>
                         ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Collapsible Fit-Out Examples Section */}
+                {listing.files?.fit_outs && listing.files.fit_outs.length > 0 && (
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => toggleSection('fit_outs')}
+                      className="w-full flex items-center justify-between p-0 text-left hover:text-primary-600 transition-colors"
+                    >
+                      <h4 className="heading-4 text-foreground flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-primary-500" />
+                        Fit-Out Examples
+                      </h4>
+                      {expandedSections.has('fit_outs') ? (
+                        <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </button>
+                    
+                    {expandedSections.has('fit_outs') && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                          {listing.files.fit_outs.map((file, index) => (
+                            <div key={file.id} className="group">
+                              <div className="aspect-square bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
+                                {file.url ? (
+                                  <img
+                                    src={file.url}
+                                    alt={file.name || `Fit-out example ${index + 1}`}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                    onClick={() => window.open(file.url, '_blank')}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <ImageIcon className="w-8 h-8 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
+                              {file.caption && (
+                                <p className="text-xs text-muted-foreground mt-2 text-center">
+                                  {file.caption}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Collapsible Site Plan Examples Section */}
+                {listing.files?.site_plans && listing.files.site_plans.length > 0 && (
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => toggleSection('site_plans')}
+                      className="w-full flex items-center justify-between p-0 text-left hover:text-primary-600 transition-colors"
+                    >
+                      <h4 className="heading-4 text-foreground flex items-center gap-2">
+                        <File className="w-4 h-4 text-primary-500" />
+                        Site Plan Examples
+                      </h4>
+                      {expandedSections.has('site_plans') ? (
+                        <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </button>
+                    
+                    {expandedSections.has('site_plans') && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                          {listing.files.site_plans.map((file, index) => (
+                            <div key={file.id} className="group">
+                              <div className="aspect-square bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
+                                {file.url ? (
+                                  <img
+                                    src={file.url}
+                                    alt={file.name || `Site plan example ${index + 1}`}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                    onClick={() => window.open(file.url, '_blank')}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <File className="w-8 h-8 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
+                              {file.caption && (
+                                <p className="text-xs text-muted-foreground mt-2 text-center">
+                                  {file.caption}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

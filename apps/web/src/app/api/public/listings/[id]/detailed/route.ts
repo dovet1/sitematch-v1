@@ -197,8 +197,8 @@ export async function GET(
             place_name: loc.place_name,
             coordinates: loc.coordinates
           })),
-        is_nationwide: (locations || [])
-          .some((loc: any) => loc.place_name?.toLowerCase().includes('nationwide'))
+        is_nationwide: (locations || []).length === 0 || 
+          (locations || []).some((loc: any) => loc.place_name?.toLowerCase().includes('nationwide'))
       },
       
       // FAQs with ordering
