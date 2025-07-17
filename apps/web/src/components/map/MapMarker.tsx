@@ -57,10 +57,10 @@ export const MapMarker = forwardRef<HTMLButtonElement, MapMarkerProps>(
         {/* Count badge for clusters with Story 8.0 styling */}
         {!isSingle && (
           <div className={`
-            absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold
-            rounded-full min-w-[20px] h-5 flex items-center justify-center
+            absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold
+            rounded-full min-w-[18px] h-[18px] flex items-center justify-center
             border-2 border-white
-            md:min-w-[24px] md:h-6 md:text-sm
+            md:-top-2 md:-right-2 md:min-w-[24px] md:h-6 md:text-sm
             ${cluster.count > 99 ? 'px-1' : ''}
           `}
           style={{

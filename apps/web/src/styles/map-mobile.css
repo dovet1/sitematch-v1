@@ -5,14 +5,16 @@
   position: relative;
   z-index: 0;
   overflow: visible;
-  padding: 20px; /* Add padding to allow popup overflow */
-  margin: -20px; /* Negative margin to maintain original size */
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Keep map container clipped for rounded corners */
 .map-container {
   overflow: hidden;
-  margin: 20px; /* Restore margin */
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto; /* Center the map */
 }
 
 /* Ensure popups can overflow the map container */
@@ -39,8 +41,39 @@
   border-top-color: white;
 }
 
-/* Ensure touch targets are at least 44x44px on mobile */
+/* Mobile-specific map optimizations */
 @media (max-width: 768px) {
+  .map-wrapper {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .map-container {
+    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 8px; /* Smaller border radius on mobile */
+    height: 400px !important; /* Adjust height for mobile */
+  }
+  
+  /* Ensure the map parent container has proper spacing */
+  .container .map-wrapper {
+    margin-left: 0;
+    margin-right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  /* Ensure mapbox map fills the container properly */
+  .mapboxgl-map {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  
+  /* Ensure touch targets are at least 44x44px on mobile */
   .map-marker-button {
     min-width: 44px !important;
     min-height: 44px !important;
@@ -116,6 +149,26 @@
 @media (max-width: 768px) and (orientation: landscape) {
   .mapboxgl-popup-content {
     max-height: 80vh !important;
+  }
+}
+
+/* Very small mobile screens */
+@media (max-width: 480px) {
+  .map-container {
+    height: 350px !important; /* Smaller height for very small screens */
+    border-radius: 4px; /* Even smaller border radius */
+  }
+  
+  .map-container .map-stats {
+    font-size: 12px !important;
+    padding: 6px 8px !important;
+    top: 4px !important;
+    left: 4px !important;
+  }
+  
+  .mapboxgl-map {
+    width: 100% !important;
+    height: 100% !important;
   }
 }
 
