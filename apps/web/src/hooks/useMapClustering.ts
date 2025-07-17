@@ -34,8 +34,8 @@ export function useMapClustering(
       listing => listing.coordinates?.lat && listing.coordinates?.lng
     );
 
-    // If clustering is disabled or zoom is too high, return individual markers
-    if (!opts.enabled || zoom >= opts.minZoom || validListings.length <= 1) {
+    // If clustering is disabled or there's only one listing, return individual markers
+    if (!opts.enabled || validListings.length <= 1) {
       return validListings.map(listing => ({
         id: listing.id,
         type: 'single' as const,
@@ -44,6 +44,9 @@ export function useMapClustering(
         listings: [listing]
       }));
     }
+    
+    // If zoom is too high, still cluster exact location matches
+    const shouldClusterOnlyExactMatches = zoom >= opts.minZoom;
 
     // Group listings by proximity
     const clusters: MapCluster[] = [];
@@ -61,7 +64,12 @@ export function useMapClustering(
           other.coordinates!
         );
         
-        // Adjust distance threshold based on zoom level
+        // If zoom is high, only cluster exact location matches (very small threshold for floating point precision)
+        if (shouldClusterOnlyExactMatches) {
+          return distance < 0.1; // Less than 0.1 meters = essentially same location
+        }
+        
+        // Adjust distance threshold based on zoom level for proximity clustering
         const threshold = opts.maxDistance * Math.pow(2, (14 - zoom));
         return distance <= threshold;
       });
