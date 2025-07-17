@@ -1,16 +1,15 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import Map, { Marker, Popup } from 'react-map-gl/mapbox';
+import { Map, Marker } from 'react-map-gl/mapbox';
 import { MapPin } from 'lucide-react';
 import '@/styles/map-mobile.css';
 import { SearchFilters, SearchResult } from '@/types/search';
 import { useMapClustering, MapCluster } from '@/hooks/useMapClustering';
 import { useMapCache } from '@/hooks/useMapCache';
 import { MapMarker } from '@/components/map/MapMarker';
-import { MultiListingPopup } from '@/components/map/MultiListingPopup';
-import { SearchLocationMarker } from '@/components/map/SearchLocationMarker';
 import { MapLoadingSkeleton } from '@/components/map/MapLoadingSkeleton';
+import { MultiListingClusterPopup } from '@/components/map/MultiListingClusterPopup';
 
 interface ListingMapProps {
   filters: SearchFilters;
@@ -51,11 +50,11 @@ function calculateBounds(viewState: MapViewState) {
 export function ListingMap({ filters, onListingClick }: ListingMapProps) {
   const [viewState, setViewState] = useState<MapViewState>(DEFAULT_VIEW_STATE);
   const [listings, setListings] = useState<SearchResult[]>([]);
-  const [selectedCluster, setSelectedCluster] = useState<MapCluster | null>(null);
-  const [hoveredCluster, setHoveredCluster] = useState<MapCluster | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCluster, setSelectedCluster] = useState<MapCluster | null>(null);
+  const [clusterPopupPosition, setClusterPopupPosition] = useState({ x: 0, y: 0 });
 
   // Filter listings that have coordinates
   const mappableListings = useMemo(() => 
@@ -72,6 +71,17 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
     minZoom: 12,
     maxDistance: 60
   });
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Map debug:', {
+      totalListings: listings.length,
+      mappableListings: mappableListings.length,
+      clusters: clusters.length,
+      zoom: viewState.zoom,
+      viewState
+    });
+  }, [listings, mappableListings, clusters, viewState]);
 
   // Navigate map when location coordinates change
   useEffect(() => {
@@ -129,44 +139,55 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
         }
 
         const data = await response.json();
-        const results = data.results || [];
+        const results = data.listings || data.results || []; // Support both new and old API response format
+        console.log('Map API response:', { 
+          total: results.length, 
+          hasCoordinates: results.filter(r => r.coordinates).length,
+          firstFew: results.slice(0, 3).map(r => ({ 
+            id: r.id, 
+            company: r.company_name, 
+            coords: r.coordinates 
+          }))
+        });
         setListings(results);
         
         // Cache the results
         mapCache.setCachedData(cacheKey, results, bounds);
 
-        // Adjust view if we have listings with coordinates
-        const coordListings = data.results?.filter((l: SearchResult) => l.coordinates) || [];
-        if (coordListings.length > 0) {
-          // Calculate bounds to fit all listings
-          const lats = coordListings.map((l: SearchResult) => l.coordinates!.lat);
-          const lngs = coordListings.map((l: SearchResult) => l.coordinates!.lng);
-          
-          const minLat = Math.min(...lats);
-          const maxLat = Math.max(...lats);
-          const minLng = Math.min(...lngs);
-          const maxLng = Math.max(...lngs);
-          
-          const centerLat = (minLat + maxLat) / 2;
-          const centerLng = (minLng + maxLng) / 2;
-          
-          // Calculate zoom level based on bounds
-          const latDiff = maxLat - minLat;
-          const lngDiff = maxLng - minLng;
-          const maxDiff = Math.max(latDiff, lngDiff);
-          
-          let zoom = 10;
-          if (maxDiff > 10) zoom = 5;
-          else if (maxDiff > 5) zoom = 6;
-          else if (maxDiff > 2) zoom = 7;
-          else if (maxDiff > 1) zoom = 8;
-          else if (maxDiff > 0.5) zoom = 9;
-          
-          setViewState({
-            longitude: centerLng,
-            latitude: centerLat,
-            zoom
-          });
+        // Only auto-center on initial load, not on subsequent map movements
+        if (isInitialLoad) {
+          const coordListings = results.filter((l: SearchResult) => l.coordinates) || [];
+          if (coordListings.length > 0) {
+            // Calculate bounds to fit all listings
+            const lats = coordListings.map((l: SearchResult) => l.coordinates!.lat);
+            const lngs = coordListings.map((l: SearchResult) => l.coordinates!.lng);
+            
+            const minLat = Math.min(...lats);
+            const maxLat = Math.max(...lats);
+            const minLng = Math.min(...lngs);
+            const maxLng = Math.max(...lngs);
+            
+            const centerLat = (minLat + maxLat) / 2;
+            const centerLng = (minLng + maxLng) / 2;
+            
+            // Calculate zoom level based on bounds
+            const latDiff = maxLat - minLat;
+            const lngDiff = maxLng - minLng;
+            const maxDiff = Math.max(latDiff, lngDiff);
+            
+            let zoom = 10;
+            if (maxDiff > 10) zoom = 5;
+            else if (maxDiff > 5) zoom = 6;
+            else if (maxDiff > 2) zoom = 7;
+            else if (maxDiff > 1) zoom = 8;
+            else if (maxDiff > 0.5) zoom = 9;
+            
+            setViewState({
+              longitude: centerLng,
+              latitude: centerLat,
+              zoom
+            });
+          }
         }
       } catch (err) {
         console.error('Error fetching map listings:', err);
@@ -233,26 +254,31 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
     return () => clearTimeout(timeoutId);
   }, [filters, viewState.latitude, viewState.longitude, viewState.zoom]);
 
-  const handleClusterClick = (cluster: MapCluster) => {
-    setSelectedCluster(cluster);
+  const handleClusterClick = (cluster: MapCluster, event: React.MouseEvent) => {
+    // If it's a single listing, directly open the listing details
+    if (cluster.type === 'single' && cluster.listings.length === 1) {
+      onListingClick(cluster.listings[0].id);
+    } else {
+      // For multiple listings, show the cluster popup
+      const mapContainer = document.querySelector('.map-container');
+      const mapRect = mapContainer?.getBoundingClientRect();
+      const markerRect = event.currentTarget.getBoundingClientRect();
+      
+      // Calculate position relative to viewport
+      const x = markerRect.left + markerRect.width / 2;
+      const y = markerRect.top;
+      
+      setClusterPopupPosition({ x, y });
+      setSelectedCluster(cluster);
+    }
   };
 
-  const handleListingClick = (listingId: string) => {
+  const handleClusterPopupClose = () => {
     setSelectedCluster(null);
-    onListingClick(listingId);
   };
 
-  const handleClusterHover = (cluster: MapCluster | null) => {
-    setHoveredCluster(cluster);
-  };
 
-  const formatSizeRange = (min: number | null, max: number | null) => {
-    if (!min && !max) return 'Size not specified';
-    if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} sq ft`;
-    if (min) return `From ${min.toLocaleString()} sq ft`;
-    if (max) return `Up to ${max.toLocaleString()} sq ft`;
-    return '';
-  };
+
 
   // Check for missing Mapbox token
   if (!MAPBOX_TOKEN) {
@@ -270,7 +296,7 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
 
   return (
     <div className="map-wrapper relative">
-      <div className="map-container relative h-96 w-full rounded-lg overflow-hidden border border-border">
+      <div className="map-container relative h-[500px] w-full rounded-lg overflow-hidden border border-border" style={{ zIndex: 1 }}>
       {isLoading && !isInitialLoad && (
         <div className="absolute top-4 right-4 z-50">
           <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-lg">
@@ -288,19 +314,6 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
         mapStyle="mapbox://styles/mapbox/light-v11"
         attributionControl={false}
       >
-        {/* Search Location Marker */}
-        {filters.coordinates && filters.location && (
-          <Marker
-            longitude={filters.coordinates.lng}
-            latitude={filters.coordinates.lat}
-            anchor="bottom"
-          >
-            <SearchLocationMarker
-              coordinates={filters.coordinates}
-              locationName={filters.location}
-            />
-          </Marker>
-        )}
 
         {/* Enhanced Clustered Markers */}
         {clusters.map((cluster) => (
@@ -312,43 +325,11 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
           >
             <MapMarker
               cluster={cluster}
-              isSelected={selectedCluster?.id === cluster.id}
-              isHovered={hoveredCluster?.id === cluster.id}
-              onClick={() => handleClusterClick(cluster)}
-              onMouseEnter={() => handleClusterHover(cluster)}
-              onMouseLeave={() => handleClusterHover(null)}
+              onClick={(event) => handleClusterClick(cluster, event)}
             />
           </Marker>
         ))}
 
-        {/* Enhanced Multi-Listing Popup */}
-        {selectedCluster && (
-          <Popup
-            longitude={selectedCluster.coordinates.lng}
-            latitude={selectedCluster.coordinates.lat}
-            anchor="bottom"
-            onClose={() => setSelectedCluster(null)}
-            closeOnClick={false}
-            className="[&_.mapboxgl-popup-content]:p-0 [&_.mapboxgl-popup-content]:rounded-lg [&_.mapboxgl-popup-content]:shadow-lg"
-            offset={{
-              'bottom': [0, -40],
-              'top': [0, 40],
-              'left': [40, 0],
-              'right': [-40, 0],
-              'bottom-left': [20, -20],
-              'bottom-right': [-20, -20],
-              'top-left': [20, 20],
-              'top-right': [-20, 20]
-            }}
-            maxWidth="none"
-          >
-            <MultiListingPopup
-              cluster={selectedCluster}
-              onListingClick={handleListingClick}
-              onClose={() => setSelectedCluster(null)}
-            />
-          </Popup>
-        )}
       </Map>
 
       {/* Map Stats */}
@@ -362,6 +343,17 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
           )}
         </span>
       </div>
+
+      {/* Multi-listing cluster popup */}
+      {selectedCluster && (
+        <MultiListingClusterPopup
+          listings={selectedCluster.listings}
+          isOpen={true}
+          onClose={handleClusterPopupClose}
+          onListingClick={onListingClick}
+          position={clusterPopupPosition}
+        />
+      )}
     </div>
     </div>
   );
