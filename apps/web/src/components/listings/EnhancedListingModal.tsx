@@ -633,9 +633,9 @@ export function EnhancedListingModal({
                             <MapPin className="w-3 h-3 text-white" />
                           </div>
                           <span className="text-foreground font-medium">
-                            {listing.locations.is_nationwide ? 'Nationwide' : 
-                             listing.locations.preferred.length > 0 ? listing.locations.preferred[0].place_name : 
-                             'Location flexible'}
+                            {listing.locations?.is_nationwide ? 'Nationwide' : 
+                             listing.locations?.preferred?.length > 0 ? listing.locations.preferred[0].place_name : 
+                             (listing as any).place_name || 'Location flexible'}
                           </span>
                         </div>
                       </div>
@@ -750,9 +750,9 @@ export function EnhancedListingModal({
                           <div>
                             <p className="font-medium text-foreground">Location Preference</p>
                             <p className="text-sm text-muted-foreground">
-                              {listing.locations.is_nationwide ? 'Nationwide UK' : 
-                               listing.locations.preferred.length > 0 ? listing.locations.preferred[0].place_name : 
-                               'Flexible on location'}
+                              {listing.locations?.is_nationwide ? 'Nationwide UK' : 
+                               listing.locations?.preferred?.length > 0 ? listing.locations.preferred[0].place_name : 
+                               (listing as any).place_name || 'Flexible on location'}
                             </p>
                           </div>
                         </div>
@@ -1012,7 +1012,7 @@ export function EnhancedListingModal({
                   {expandedSections.has('locations') && (
                     <div className="space-y-4">
                       {/* Check if no specific locations and assume nationwide */}
-                      {listing.locations.preferred.length === 0 && listing.locations.acceptable.length === 0 ? (
+                      {(listing.locations?.preferred?.length === 0 || !listing.locations?.preferred) && (listing.locations?.acceptable?.length === 0 || !listing.locations?.acceptable) ? (
                     <div className="bg-primary-50 rounded-lg p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
@@ -1026,10 +1026,10 @@ export function EnhancedListingModal({
                     </div>
                   ) : (
                     <div className="grid md:grid-cols-2 gap-4">
-                      {listing.locations.preferred.length > 0 && (
+                      {listing.locations?.preferred?.length > 0 && (
                         <div className="space-y-2">
                           <h5 className="font-medium text-foreground">Preferred Locations</h5>
-                          {listing.locations.preferred.map((location, index) => (
+                          {listing.locations?.preferred?.map((location, index) => (
                             <div key={index} className="flex items-center gap-2">
                               <div className="w-2 h-2 bg-primary-500 rounded-full" />
                               <span className="text-sm text-muted-foreground">{location.place_name}</span>
@@ -1038,10 +1038,10 @@ export function EnhancedListingModal({
                         </div>
                       )}
                       
-                      {listing.locations.acceptable.length > 0 && (
+                      {listing.locations?.acceptable?.length > 0 && (
                         <div className="space-y-2">
                           <h5 className="font-medium text-foreground">Acceptable Locations</h5>
-                          {listing.locations.acceptable.map((location, index) => (
+                          {listing.locations?.acceptable?.map((location, index) => (
                             <div key={index} className="flex items-center gap-2">
                               <div className="w-2 h-2 bg-gray-400 rounded-full" />
                               <span className="text-sm text-muted-foreground">{location.place_name}</span>
@@ -1053,7 +1053,7 @@ export function EnhancedListingModal({
                   )}
                   
                       {/* Additional nationwide indicator if flag is set */}
-                      {listing.locations.is_nationwide && (listing.locations.preferred.length > 0 || listing.locations.acceptable.length > 0) && (
+                      {listing.locations?.is_nationwide && ((listing.locations?.preferred?.length > 0) || (listing.locations?.acceptable?.length > 0)) && (
                         <div className="bg-primary-50 rounded-lg p-3">
                           <p className="text-sm text-primary-700 font-medium">
                             Also open to nationwide opportunities beyond the locations listed above
