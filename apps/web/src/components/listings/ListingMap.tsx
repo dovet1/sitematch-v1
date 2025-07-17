@@ -128,6 +128,7 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
         if (filters.companyName) params.set('companyName', filters.companyName);
         if (filters.sector.length > 0) params.set('sector', filters.sector.join(','));
         if (filters.useClass.length > 0) params.set('useClass', filters.useClass.join(','));
+        if (filters.listingType.length > 0) params.set('listingType', filters.listingType.join(','));
         if (filters.sizeMin) params.set('sizeMin', filters.sizeMin.toString());
         if (filters.sizeMax) params.set('sizeMax', filters.sizeMax.toString());
         if (filters.isNationwide) params.set('isNationwide', 'true');

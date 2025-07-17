@@ -20,8 +20,13 @@ function SearchPageContent() {
     const nationwide = searchParams.get('nationwide') === 'true';
     const sectors = searchParams.getAll('sectors[]');
     const useClasses = searchParams.getAll('useClasses[]');
+    const listingTypes = searchParams.getAll('listingTypes[]');
     const sizeMin = searchParams.get('minSize');
     const sizeMax = searchParams.get('maxSize');
+    const acreageMin = searchParams.get('minAcreage');
+    const acreageMax = searchParams.get('maxAcreage');
+    const dwellingMin = searchParams.get('minDwelling');
+    const dwellingMax = searchParams.get('maxDwelling');
     const companyName = searchParams.get('companyName') || '';
     
     return {
@@ -30,8 +35,13 @@ function SearchPageContent() {
       companyName,
       sector: sectors,
       useClass: useClasses,
+      listingType: listingTypes,
       sizeMin: sizeMin ? parseInt(sizeMin) : null,
       sizeMax: sizeMax ? parseInt(sizeMax) : null,
+      acreageMin: acreageMin ? parseFloat(acreageMin) : null,
+      acreageMax: acreageMax ? parseFloat(acreageMax) : null,
+      dwellingMin: dwellingMin ? parseInt(dwellingMin) : null,
+      dwellingMax: dwellingMax ? parseInt(dwellingMax) : null,
       isNationwide: nationwide,
     };
   });
@@ -51,10 +61,15 @@ function SearchPageContent() {
     if (filters.companyName) params.set('companyName', filters.companyName);
     if (filters.sizeMin) params.set('minSize', filters.sizeMin.toString());
     if (filters.sizeMax) params.set('maxSize', filters.sizeMax.toString());
+    if (filters.acreageMin) params.set('minAcreage', filters.acreageMin.toString());
+    if (filters.acreageMax) params.set('maxAcreage', filters.acreageMax.toString());
+    if (filters.dwellingMin) params.set('minDwelling', filters.dwellingMin.toString());
+    if (filters.dwellingMax) params.set('maxDwelling', filters.dwellingMax.toString());
     
     // Keep array notation for URL readability, but the API call will use the correct format
     filters.sector.forEach(s => params.append('sectors[]', s));
     filters.useClass.forEach(uc => params.append('useClasses[]', uc));
+    filters.listingType.forEach(lt => params.append('listingTypes[]', lt));
     
     params.set('view', mapView ? 'map' : 'list');
     

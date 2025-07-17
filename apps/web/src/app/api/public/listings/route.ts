@@ -6,6 +6,8 @@ import { calculateDistance } from '@/lib/mapbox';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    console.log('=== API ROUTE CALLED ===');
+    console.log('Full URL:', request.url);
     
     // Parse query parameters
     const location = searchParams.get('location') || '';
@@ -15,8 +17,24 @@ export async function GET(request: NextRequest) {
     const companyName = searchParams.get('companyName') || '';
     const sector = [...searchParams.getAll('sector'), ...searchParams.getAll('sectors[]')];
     const useClass = [...searchParams.getAll('useClass'), ...searchParams.getAll('useClasses[]')];
+    const listingType = [...searchParams.getAll('listingType'), ...searchParams.getAll('listingTypes[]')];
+    
     const sizeMin = searchParams.get('sizeMin') ? Number(searchParams.get('sizeMin')) : null;
     const sizeMax = searchParams.get('sizeMax') ? Number(searchParams.get('sizeMax')) : null;
+    const acreageMin = searchParams.get('minAcreage') ? Number(searchParams.get('minAcreage')) : null;
+    const acreageMax = searchParams.get('maxAcreage') ? Number(searchParams.get('maxAcreage')) : null;
+    const dwellingMin = searchParams.get('minDwelling') ? Number(searchParams.get('minDwelling')) : null;
+    const dwellingMax = searchParams.get('maxDwelling') ? Number(searchParams.get('maxDwelling')) : null;
+    
+    console.log('All URL params:', Object.fromEntries(searchParams.entries()));
+    console.log('Filter params:', { acreageMin, acreageMax, dwellingMin, dwellingMax });
+    console.log('Raw params:', {
+      minAcreage: searchParams.get('minAcreage'),
+      maxAcreage: searchParams.get('maxAcreage'),
+      minDwelling: searchParams.get('minDwelling'),
+      maxDwelling: searchParams.get('maxDwelling')
+    });
+    console.log('=== STARTING FILTER APPLICATION ===');
     const isNationwide = searchParams.get('isNationwide') === 'true' || searchParams.get('nationwide') === 'true';
     const page = Number(searchParams.get('page')) || 1;
     const limit = Math.min(Number(searchParams.get('limit')) || 20, 100); // Max 100 results per page
@@ -24,7 +42,7 @@ export async function GET(request: NextRequest) {
     const supabase = createClient();
     
     
-    // Build the query with listing_locations relationship and junction tables
+    // Build the query with many-to-many junction tables
     let query = supabase
       .from('listings')
       .select(`
@@ -34,6 +52,10 @@ export async function GET(request: NextRequest) {
         description,
         site_size_min, 
         site_size_max,
+        site_acreage_min,
+        site_acreage_max,
+        dwelling_count_min,
+        dwelling_count_max,
         contact_name, 
         contact_title, 
         contact_email, 
@@ -41,13 +63,6 @@ export async function GET(request: NextRequest) {
         clearbit_logo,
         company_domain,
         created_at,
-        listing_locations(
-          place_name,
-          coordinates,
-          formatted_address,
-          region,
-          country
-        ),
         listing_sectors(
           sector:sectors(
             id,
@@ -60,6 +75,11 @@ export async function GET(request: NextRequest) {
             name,
             code
           )
+        ),
+        listing_locations(
+          id,
+          place_name,
+          coordinates
         )
       `)
       .eq('status', 'approved')
@@ -77,48 +97,68 @@ export async function GET(request: NextRequest) {
       query = query.ilike('company_name', `%${companyName}%`);
     }
     
+    // Handle sector and use class filtering with proper intersection logic
+    let validListingIds: string[] | null = null;
+    
     if (sector.length > 0) {
       // Filter by sector names using junction table
-      // Get listings that have any of the selected sectors
       const { data: listingsWithSectors, error: sectorError } = await supabase
         .from('listing_sectors')
         .select(`
           listing_id,
-          sector:sectors(name)
+          sectors!inner(name)
         `)
-        .in('sector.name', sector);
+        .in('sectors.name', sector);
       
       if (sectorError) {
         console.error('Error fetching sector listings:', sectorError);
+        validListingIds = [];
       } else if (listingsWithSectors && listingsWithSectors.length > 0) {
-        const listingIds = listingsWithSectors.map(ls => ls.listing_id);
-        query = query.in('id', listingIds);
+        validListingIds = listingsWithSectors.map(ls => ls.listing_id);
       } else {
-        // No matching sectors found, return no results
-        query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+        validListingIds = [];
       }
     }
     
     if (useClass.length > 0) {
       // Filter by use class names using junction table
-      // Get listings that have any of the selected use classes
       const { data: listingsWithUseClasses, error: useClassError } = await supabase
         .from('listing_use_classes')
         .select(`
           listing_id,
-          use_class:use_classes(name)
+          use_classes!inner(name)
         `)
-        .in('use_class.name', useClass);
+        .in('use_classes.name', useClass);
       
       if (useClassError) {
         console.error('Error fetching use class listings:', useClassError);
+        validListingIds = [];
       } else if (listingsWithUseClasses && listingsWithUseClasses.length > 0) {
-        const listingIds = listingsWithUseClasses.map(luc => luc.listing_id);
-        query = query.in('id', listingIds);
+        const useClassListingIds = listingsWithUseClasses.map(luc => luc.listing_id);
+        
+        // If we already have sector-filtered IDs, find intersection
+        if (validListingIds !== null) {
+          validListingIds = validListingIds.filter(id => useClassListingIds.includes(id));
+        } else {
+          validListingIds = useClassListingIds;
+        }
       } else {
-        // No matching use classes found, return no results
+        validListingIds = [];
+      }
+    }
+    
+    // Apply the filtered listing IDs to the main query
+    if (validListingIds !== null) {
+      if (validListingIds.length > 0) {
+        query = query.in('id', validListingIds);
+      } else {
+        // No valid listings found, return empty result
         query = query.eq('id', '00000000-0000-0000-0000-000000000000');
       }
+    }
+    
+    if (listingType.length > 0) {
+      query = query.in('listing_type', listingType);
     }
     
     if (sizeMin !== null) {
@@ -129,10 +169,58 @@ export async function GET(request: NextRequest) {
       query = query.or(`site_size_min.lte.${sizeMax},site_size_min.is.null`);
     }
     
+    // If acreage or dwelling filters are applied, exclude commercial listings (these are residential-focused filters)
+    const hasResidentialFilters = acreageMin !== null || acreageMax !== null || dwellingMin !== null || dwellingMax !== null;
+    if (hasResidentialFilters) {
+      console.log('Applying residential filters - excluding commercial listings');
+      query = query.neq('listing_type', 'commercial');
+    }
+    
+    // If commercial-focused filters are applied, exclude residential listings
+    const hasCommercialFilters = sector.length > 0 || useClass.length > 0 || sizeMin !== null || sizeMax !== null;
+    if (hasCommercialFilters) {
+      console.log('Applying commercial filters - excluding residential listings');
+      query = query.neq('listing_type', 'residential');
+    }
+    
+    if (acreageMin !== null) {
+      console.log('Applying acreageMin filter:', acreageMin);
+      query = query.not('site_acreage_max', 'is', null);
+      query = query.gte('site_acreage_max', acreageMin);
+    }
+    
+    if (acreageMax !== null) {
+      console.log('Applying acreageMax filter:', acreageMax);
+      query = query.not('site_acreage_min', 'is', null);
+      query = query.lte('site_acreage_min', acreageMax);
+    }
+    
+    if (dwellingMin !== null) {
+      console.log('Applying dwellingMin filter:', dwellingMin);
+      query = query.not('dwelling_count_max', 'is', null);
+      query = query.gte('dwelling_count_max', dwellingMin);
+    }
+    
+    if (dwellingMax !== null) {
+      console.log('Applying dwellingMax filter:', dwellingMax);
+      query = query.not('dwelling_count_min', 'is', null);
+      query = query.lte('dwelling_count_min', dwellingMax);
+    }
+    
     // Note: Nationwide filtering is handled client-side after fetching locations
     // A listing is nationwide if it has no linked listing_locations
 
     const { data: listings, error, count } = await query;
+
+    console.log('Database query result count:', listings?.length);
+    if (acreageMin !== null || acreageMax !== null) {
+      console.log('Sample listing acreage values:', listings?.slice(0, 3).map(l => ({
+        id: l.id.slice(0, 8),
+        company: l.company_name,
+        acreage_min: l.site_acreage_min,
+        acreage_max: l.site_acreage_max
+      })));
+    }
 
     if (error) {
       console.error('Error fetching public listings:', error);
@@ -190,6 +278,10 @@ export async function GET(request: NextRequest) {
         description: listing.description,
         site_size_min: listing.site_size_min,
         site_size_max: listing.site_size_max,
+        site_acreage_min: listing.site_acreage_min,
+        site_acreage_max: listing.site_acreage_max,
+        dwelling_count_min: listing.dwelling_count_min,
+        dwelling_count_max: listing.dwelling_count_max,
         sectors: sectors.map((ls: any) => ls.sector).filter(Boolean),
         use_classes: useClasses.map((luc: any) => luc.use_class).filter(Boolean),
         // Legacy single values for backwards compatibility
