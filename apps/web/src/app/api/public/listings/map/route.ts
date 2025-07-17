@@ -20,13 +20,18 @@ export async function GET(request: NextRequest) {
     const companyName = searchParams.get('companyName') || '';
     const sector = searchParams.getAll('sector');
     const useClass = searchParams.getAll('useClass');
+    const listingType = searchParams.getAll('listingType');
     const sizeMin = searchParams.get('sizeMin') ? Number(searchParams.get('sizeMin')) : null;
     const sizeMax = searchParams.get('sizeMax') ? Number(searchParams.get('sizeMax')) : null;
+    const acreageMin = searchParams.get('minAcreage') ? Number(searchParams.get('minAcreage')) : null;
+    const acreageMax = searchParams.get('maxAcreage') ? Number(searchParams.get('maxAcreage')) : null;
+    const dwellingMin = searchParams.get('minDwelling') ? Number(searchParams.get('minDwelling')) : null;
+    const dwellingMax = searchParams.get('maxDwelling') ? Number(searchParams.get('maxDwelling')) : null;
     const isNationwide = searchParams.get('isNationwide') === 'true';
 
     const supabase = createClient();
     
-    // Build query for map-optimized listing data with correct schema relationships
+    // Build query for map-optimized listing data with many-to-many relationships
     let query = supabase
       .from('listings')
       .select(`
@@ -36,6 +41,10 @@ export async function GET(request: NextRequest) {
         description,
         site_size_min, 
         site_size_max,
+        site_acreage_min,
+        site_acreage_max,
+        dwelling_count_min,
+        dwelling_count_max,
         contact_name,
         contact_title,
         contact_email,
@@ -44,15 +53,18 @@ export async function GET(request: NextRequest) {
         clearbit_logo,
         created_at,
         updated_at,
-        sectors!listings_sector_id_fkey(id, name),
-        use_classes!listings_use_class_id_fkey(id, name, code),
-        listing_locations!listing_locations_listing_id_fkey(
-          id,
-          place_name, 
-          coordinates,
-          formatted_address,
-          region,
-          country
+        listing_sectors(
+          sector:sectors(
+            id,
+            name
+          )
+        ),
+        listing_use_classes(
+          use_class:use_classes(
+            id,
+            name,
+            code
+          )
         )
       `)
       .in('status', ['approved', 'pending', 'draft']) // More lenient for development
@@ -69,12 +81,64 @@ export async function GET(request: NextRequest) {
       query = query.ilike('company_name', `%${companyName}%`);
     }
     
+    // Handle sector and use class filtering with junction tables (same logic as main API)
+    let validListingIds: string[] | null = null;
+    
     if (sector.length > 0) {
-      query = query.in('sectors.name', sector);
+      const { data: listingsWithSectors, error: sectorError } = await supabase
+        .from('listing_sectors')
+        .select(`
+          listing_id,
+          sectors!inner(name)
+        `)
+        .in('sectors.name', sector);
+      
+      if (sectorError) {
+        console.error('Map API - Error fetching sector listings:', sectorError);
+        validListingIds = [];
+      } else if (listingsWithSectors && listingsWithSectors.length > 0) {
+        validListingIds = listingsWithSectors.map(ls => ls.listing_id);
+      } else {
+        validListingIds = [];
+      }
     }
     
     if (useClass.length > 0) {
-      query = query.in('use_classes.name', useClass);
+      const { data: listingsWithUseClasses, error: useClassError } = await supabase
+        .from('listing_use_classes')
+        .select(`
+          listing_id,
+          use_classes!inner(name)
+        `)
+        .in('use_classes.name', useClass);
+      
+      if (useClassError) {
+        console.error('Map API - Error fetching use class listings:', useClassError);
+        validListingIds = [];
+      } else if (listingsWithUseClasses && listingsWithUseClasses.length > 0) {
+        const useClassListingIds = listingsWithUseClasses.map(luc => luc.listing_id);
+        
+        if (validListingIds !== null) {
+          validListingIds = validListingIds.filter(id => useClassListingIds.includes(id));
+        } else {
+          validListingIds = useClassListingIds;
+        }
+      } else {
+        validListingIds = [];
+      }
+    }
+    
+    // Apply the filtered listing IDs to the main query
+    if (validListingIds !== null) {
+      if (validListingIds.length > 0) {
+        query = query.in('id', validListingIds);
+      } else {
+        query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+      }
+    }
+    
+    if (listingType.length > 0) {
+      query = query.in('listing_type', listingType);
     }
     
     if (sizeMin !== null) {
@@ -83,6 +147,40 @@ export async function GET(request: NextRequest) {
     
     if (sizeMax !== null) {
       query = query.or(`site_size_min.lte.${sizeMax},site_size_min.is.null`);
+    }
+    
+    // If acreage or dwelling filters are applied, exclude commercial listings (these are residential-focused filters)
+    const hasResidentialFilters = acreageMin !== null || acreageMax !== null || dwellingMin !== null || dwellingMax !== null;
+    if (hasResidentialFilters) {
+      console.log('Map API - Applying residential filters - excluding commercial listings');
+      query = query.neq('listing_type', 'commercial');
+    }
+    
+    // If commercial-focused filters are applied, exclude residential listings
+    const hasCommercialFilters = sector.length > 0 || useClass.length > 0 || sizeMin !== null || sizeMax !== null;
+    if (hasCommercialFilters) {
+      console.log('Map API - Applying commercial filters - excluding residential listings');
+      query = query.neq('listing_type', 'residential');
+    }
+    
+    if (acreageMin !== null) {
+      query = query.not('site_acreage_max', 'is', null);
+      query = query.gte('site_acreage_max', acreageMin);
+    }
+    
+    if (acreageMax !== null) {
+      query = query.not('site_acreage_min', 'is', null);
+      query = query.lte('site_acreage_min', acreageMax);
+    }
+    
+    if (dwellingMin !== null) {
+      query = query.not('dwelling_count_max', 'is', null);
+      query = query.gte('dwelling_count_max', dwellingMin);
+    }
+    
+    if (dwellingMax !== null) {
+      query = query.not('dwelling_count_min', 'is', null);
+      query = query.lte('dwelling_count_min', dwellingMax);
     }
 
     // Note: is_nationwide column doesn't exist in current schema
@@ -226,6 +324,10 @@ export async function GET(request: NextRequest) {
         description: listing.description || listing.title || 'No description available',
         site_size_min: listing.site_size_min,
         site_size_max: listing.site_size_max,
+        site_acreage_min: listing.site_acreage_min,
+        site_acreage_max: listing.site_acreage_max,
+        dwelling_count_min: listing.dwelling_count_min,
+        dwelling_count_max: listing.dwelling_count_max,
         
         // Enhanced sector and use class data with correct structure
         sectors: listing.sectors ? [{
@@ -394,8 +496,13 @@ export async function GET(request: NextRequest) {
           companyName,
           sector,
           useClass,
+          listingType,
           sizeMin,
           sizeMax,
+          acreageMin,
+          acreageMax,
+          dwellingMin,
+          dwellingMax,
           isNationwide
         }
       }

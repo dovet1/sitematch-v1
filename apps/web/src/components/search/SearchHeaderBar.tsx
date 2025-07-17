@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LocationSearch } from './LocationSearch';
 import { FilterDrawer } from './FilterDrawer';
+import { FilterPill } from './FilterPill';
+import { AnimatedFilterPill, FilterPillsContainer } from './AnimatedFilterPill';
 import { SearchFilters } from '@/types/search';
 import { cn } from '@/lib/utils';
 
@@ -51,7 +53,10 @@ export function SearchHeaderBar({
     searchFilters.companyName,
     searchFilters.sector.length > 0,
     searchFilters.useClass.length > 0,
+    searchFilters.listingType.length > 0,
     searchFilters.sizeMin !== null || searchFilters.sizeMax !== null,
+    searchFilters.acreageMin !== null || searchFilters.acreageMax !== null,
+    searchFilters.dwellingMin !== null || searchFilters.dwellingMax !== null,
   ].filter(Boolean).length;
 
   const handleLocationChange = (location: string) => {
@@ -65,9 +70,63 @@ export function SearchHeaderBar({
       companyName: '',
       sector: [],
       useClass: [],
+      listingType: [],
       sizeMin: null,
       sizeMax: null,
+      acreageMin: null,
+      acreageMax: null,
+      dwellingMin: null,
+      dwellingMax: null,
       isNationwide: false,
+    });
+  };
+
+  const handleRemoveCompanyFilter = () => {
+    onFiltersChange({ ...searchFilters, companyName: '' });
+  };
+
+  const handleRemoveSectorFilter = (sectorToRemove: string) => {
+    onFiltersChange({
+      ...searchFilters,
+      sector: searchFilters.sector.filter(s => s !== sectorToRemove)
+    });
+  };
+
+  const handleRemoveUseClassFilter = (useClassToRemove: string) => {
+    onFiltersChange({
+      ...searchFilters,
+      useClass: searchFilters.useClass.filter(uc => uc !== useClassToRemove)
+    });
+  };
+
+  const handleRemoveListingTypeFilter = (listingTypeToRemove: string) => {
+    onFiltersChange({
+      ...searchFilters,
+      listingType: searchFilters.listingType.filter(lt => lt !== listingTypeToRemove)
+    });
+  };
+
+  const handleRemoveSizeFilter = () => {
+    onFiltersChange({
+      ...searchFilters,
+      sizeMin: null,
+      sizeMax: null
+    });
+  };
+
+  const handleRemoveAcreageFilter = () => {
+    onFiltersChange({
+      ...searchFilters,
+      acreageMin: null,
+      acreageMax: null
+    });
+  };
+
+  const handleRemoveDwellingFilter = () => {
+    onFiltersChange({
+      ...searchFilters,
+      dwellingMin: null,
+      dwellingMax: null
     });
   };
 
@@ -251,28 +310,91 @@ export function SearchHeaderBar({
           <div className="border-t border-gray-100 bg-gray-50/80 backdrop-blur-sm">
             <div className="container mx-auto px-4 py-3">
               <div className="flex flex-wrap items-center gap-2 justify-between">
-                <div className="flex flex-wrap items-center gap-2">
+                <FilterPillsContainer>
+                  {/* Company Name Filter */}
                   {searchFilters.companyName && (
-                    <Badge variant="secondary" className="bg-primary-100 text-primary-700 border-primary-200">
-                      Company: {searchFilters.companyName}
-                    </Badge>
+                    <AnimatedFilterPill id="company">
+                      <FilterPill
+                        type="company"
+                        label={searchFilters.companyName}
+                        value={searchFilters.companyName}
+                        onRemove={handleRemoveCompanyFilter}
+                      />
+                    </AnimatedFilterPill>
                   )}
-                  {searchFilters.sector.length > 0 && (
-                    <Badge variant="secondary" className="bg-primary-100 text-primary-700 border-primary-200">
-                      {searchFilters.sector.length} Sector{searchFilters.sector.length > 1 ? 's' : ''}
-                    </Badge>
-                  )}
-                  {searchFilters.useClass.length > 0 && (
-                    <Badge variant="secondary" className="bg-primary-100 text-primary-700 border-primary-200">
-                      {searchFilters.useClass.length} Use Class{searchFilters.useClass.length > 1 ? 'es' : ''}
-                    </Badge>
-                  )}
+                  
+                  {/* Individual Sector Filters */}
+                  {searchFilters.sector.map((sector) => (
+                    <AnimatedFilterPill key={`sector-${sector}`} id={`sector-${sector}`}>
+                      <FilterPill
+                        type="sector"
+                        label={sector}
+                        value={sector}
+                        onRemove={() => handleRemoveSectorFilter(sector)}
+                      />
+                    </AnimatedFilterPill>
+                  ))}
+                  
+                  {/* Individual Use Class Filters */}
+                  {searchFilters.useClass.map((useClass) => (
+                    <AnimatedFilterPill key={`useClass-${useClass}`} id={`useClass-${useClass}`}>
+                      <FilterPill
+                        type="useClass"
+                        label={useClass}
+                        value={useClass}
+                        onRemove={() => handleRemoveUseClassFilter(useClass)}
+                      />
+                    </AnimatedFilterPill>
+                  ))}
+                  
+                  {/* Individual Listing Type Filters */}
+                  {searchFilters.listingType.map((listingType) => (
+                    <AnimatedFilterPill key={`listingType-${listingType}`} id={`listingType-${listingType}`}>
+                      <FilterPill
+                        type="listingType"
+                        label={listingType}
+                        value={listingType}
+                        onRemove={() => handleRemoveListingTypeFilter(listingType)}
+                      />
+                    </AnimatedFilterPill>
+                  ))}
+                  
+                  {/* Size Range Filter */}
                   {(searchFilters.sizeMin || searchFilters.sizeMax) && (
-                    <Badge variant="secondary" className="bg-primary-100 text-primary-700 border-primary-200">
-                      Size: {searchFilters.sizeMin || '0'} - {searchFilters.sizeMax || '∞'} sq ft
-                    </Badge>
+                    <AnimatedFilterPill id="size">
+                      <FilterPill
+                        type="size"
+                        label={`${searchFilters.sizeMin || '0'} - ${searchFilters.sizeMax || '∞'} sq ft`}
+                        value={`${searchFilters.sizeMin || '0'} - ${searchFilters.sizeMax || '∞'} sq ft`}
+                        onRemove={handleRemoveSizeFilter}
+                      />
+                    </AnimatedFilterPill>
                   )}
-                </div>
+                  
+                  {/* Acreage Range Filter */}
+                  {(searchFilters.acreageMin || searchFilters.acreageMax) && (
+                    <AnimatedFilterPill id="acreage">
+                      <FilterPill
+                        type="acreage"
+                        label={`${searchFilters.acreageMin || '0'} - ${searchFilters.acreageMax || '∞'} acres`}
+                        value={`${searchFilters.acreageMin || '0'} - ${searchFilters.acreageMax || '∞'} acres`}
+                        onRemove={handleRemoveAcreageFilter}
+                      />
+                    </AnimatedFilterPill>
+                  )}
+                  
+                  {/* Dwelling Count Range Filter */}
+                  {(searchFilters.dwellingMin || searchFilters.dwellingMax) && (
+                    <AnimatedFilterPill id="dwelling">
+                      <FilterPill
+                        type="dwelling"
+                        label={`${searchFilters.dwellingMin || '0'} - ${searchFilters.dwellingMax || '∞'} dwellings`}
+                        value={`${searchFilters.dwellingMin || '0'} - ${searchFilters.dwellingMax || '∞'} dwellings`}
+                        onRemove={handleRemoveDwellingFilter}
+                      />
+                    </AnimatedFilterPill>
+                  )}
+                </FilterPillsContainer>
                 
                 <Button
                   variant="ghost"

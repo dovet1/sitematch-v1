@@ -68,7 +68,10 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
     company: false,
     sectors: false,
     useClasses: false,
-    siteSize: false
+    listingType: false,
+    siteSize: false,
+    acreage: false,
+    dwelling: false
   });
 
   useEffect(() => {
@@ -151,6 +154,15 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
     }));
   };
 
+  const handleListingTypeChange = (listingTypeValue: string, checked: boolean) => {
+    setLocalFilters(prev => ({
+      ...prev,
+      listingType: checked
+        ? [...prev.listingType, listingTypeValue]
+        : prev.listingType.filter(lt => lt !== listingTypeValue)
+    }));
+  };
+
   const handleApplyFilters = () => {
     onFiltersChange(localFilters);
     onClose();
@@ -165,7 +177,12 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
       useClass: [],
       sizeMin: null,
       sizeMax: null,
+      acreageMin: null,
+      acreageMax: null,
+      dwellingMin: null,
+      dwellingMax: null,
       isNationwide: false,
+      listingType: [],
     };
     setLocalFilters(clearedFilters);
     setCompanySearchValue('');
@@ -176,8 +193,13 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
   const hasActiveFilters = localFilters.companyName || 
     localFilters.sector.length > 0 || 
     localFilters.useClass.length > 0 || 
+    localFilters.listingType.length > 0 ||
     localFilters.sizeMin !== null || 
-    localFilters.sizeMax !== null;
+    localFilters.sizeMax !== null ||
+    localFilters.acreageMin !== null ||
+    localFilters.acreageMax !== null ||
+    localFilters.dwellingMin !== null ||
+    localFilters.dwellingMax !== null;
 
   return (
     <>
@@ -339,6 +361,39 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
             </div>
           </CollapsibleSection>
 
+          {/* Listing Type */}
+          <CollapsibleSection
+            title="Listing Type"
+            isOpen={expandedSections.listingType}
+            onToggle={() => toggleSection('listingType')}
+            hasActiveFilters={localFilters.listingType.length > 0}
+          >
+            {localFilters.listingType.length > 1 && (
+              <p className="text-xs text-muted-foreground mb-2">Showing listings from any selected type</p>
+            )}
+            <div className="space-y-2">
+              {[
+                { value: 'commercial', label: 'Commercial' },
+                { value: 'residential', label: 'Residential' }
+              ].map((listingType) => (
+                <div key={listingType.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`listing-type-${listingType.value}`}
+                    checked={localFilters.listingType.includes(listingType.value)}
+                    onCheckedChange={(checked) => handleListingTypeChange(listingType.value, checked as boolean)}
+                    className="violet-bloom-checkbox"
+                  />
+                  <Label
+                    htmlFor={`listing-type-${listingType.value}`}
+                    className="text-sm cursor-pointer flex-1"
+                  >
+                    {listingType.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </CollapsibleSection>
+
           {/* Site Size Range */}
           <CollapsibleSection
             title="Site Size (sq ft)"
@@ -376,6 +431,82 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
             </div>
           </CollapsibleSection>
 
+          {/* Site Acreage Range */}
+          <CollapsibleSection
+            title="Site Acreage"
+            isOpen={expandedSections.acreage}
+            onToggle={() => toggleSection('acreage')}
+            hasActiveFilters={localFilters.acreageMin !== null || localFilters.acreageMax !== null}
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="acreage-min" className="text-xs text-muted-foreground">
+                  Minimum
+                </Label>
+                <Input
+                  id="acreage-min"
+                  type="number"
+                  step="0.1"
+                  placeholder="Min"
+                  value={localFilters.acreageMin || ''}
+                  onChange={(e) => handleInputChange('acreageMin', e.target.value ? Number(e.target.value) : null)}
+                  className="violet-bloom-input"
+                />
+              </div>
+              <div>
+                <Label htmlFor="acreage-max" className="text-xs text-muted-foreground">
+                  Maximum
+                </Label>
+                <Input
+                  id="acreage-max"
+                  type="number"
+                  step="0.1"
+                  placeholder="Max"
+                  value={localFilters.acreageMax || ''}
+                  onChange={(e) => handleInputChange('acreageMax', e.target.value ? Number(e.target.value) : null)}
+                  className="violet-bloom-input"
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Dwelling Count Range */}
+          <CollapsibleSection
+            title="Dwelling Count"
+            isOpen={expandedSections.dwelling}
+            onToggle={() => toggleSection('dwelling')}
+            hasActiveFilters={localFilters.dwellingMin !== null || localFilters.dwellingMax !== null}
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="dwelling-min" className="text-xs text-muted-foreground">
+                  Minimum
+                </Label>
+                <Input
+                  id="dwelling-min"
+                  type="number"
+                  placeholder="Min"
+                  value={localFilters.dwellingMin || ''}
+                  onChange={(e) => handleInputChange('dwellingMin', e.target.value ? Number(e.target.value) : null)}
+                  className="violet-bloom-input"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dwelling-max" className="text-xs text-muted-foreground">
+                  Maximum
+                </Label>
+                <Input
+                  id="dwelling-max"
+                  type="number"
+                  placeholder="Max"
+                  value={localFilters.dwellingMax || ''}
+                  onChange={(e) => handleInputChange('dwellingMax', e.target.value ? Number(e.target.value) : null)}
+                  className="violet-bloom-input"
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+
         </div>
 
         {/* Footer */}
@@ -392,7 +523,10 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
                   localFilters.companyName && 'Company',
                   localFilters.sector.length > 0 && `${localFilters.sector.length} Sectors`,
                   localFilters.useClass.length > 0 && `${localFilters.useClass.length} Use Classes`,
-                  (localFilters.sizeMin || localFilters.sizeMax) && 'Size'
+                  localFilters.listingType.length > 0 && `${localFilters.listingType.length} Types`,
+                  (localFilters.sizeMin || localFilters.sizeMax) && 'Size',
+                  (localFilters.acreageMin || localFilters.acreageMax) && 'Acreage',
+                  (localFilters.dwellingMin || localFilters.dwellingMax) && 'Dwellings'
                 ].filter(Boolean).length}
               </span>
             )}

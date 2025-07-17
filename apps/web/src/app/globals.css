@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Enhanced Filter Pills - Responsive Utilities */
+@layer utilities {
+  /* Mobile responsive breakpoints for filter pills */
+  .xs\:max-w-\[120px\] {
+    @media (max-width: 480px) {
+      max-width: 120px;
+    }
+  }
+
+  /* Enhanced touch targets for mobile */
+  @media (hover: none) and (pointer: coarse) {
+    .filter-pill-remove::before {
+      width: 44px;
+      height: 44px;
+      margin: -12px;
+    }
+  }
+}
+
 /* Mapbox GL CSS */
 @import 'mapbox-gl/dist/mapbox-gl.css';
 

@@ -8,7 +8,12 @@ export interface SearchFilters {
   useClass: string[];
   sizeMin: number | null;
   sizeMax: number | null;
+  acreageMin: number | null;
+  acreageMax: number | null;
+  dwellingMin: number | null;
+  dwellingMax: number | null;
   isNationwide: boolean;
+  listingType: string[];
 }
 
 export interface SearchResult {

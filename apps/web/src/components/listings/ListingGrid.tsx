@@ -33,10 +33,15 @@ export function ListingGrid({ filters, onListingClick }: ListingGridProps) {
         if (filters.companyName) params.append('companyName', filters.companyName);
         if (filters.sizeMin !== null) params.append('sizeMin', filters.sizeMin.toString());
         if (filters.sizeMax !== null) params.append('sizeMax', filters.sizeMax.toString());
+        if (filters.acreageMin !== null) params.append('minAcreage', filters.acreageMin.toString());
+        if (filters.acreageMax !== null) params.append('maxAcreage', filters.acreageMax.toString());
+        if (filters.dwellingMin !== null) params.append('minDwelling', filters.dwellingMin.toString());
+        if (filters.dwellingMax !== null) params.append('maxDwelling', filters.dwellingMax.toString());
         if (filters.isNationwide) params.append('isNationwide', 'true');
         
         filters.sector.forEach(s => params.append('sector', s));
         filters.useClass.forEach(uc => params.append('useClass', uc));
+        filters.listingType.forEach(lt => params.append('listingType', lt));
         
         const response = await fetch(`/api/public/listings?${params.toString()}`);
         
