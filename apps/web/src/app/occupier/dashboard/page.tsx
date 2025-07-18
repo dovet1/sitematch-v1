@@ -26,8 +26,21 @@ export default function OccupierDashboard() {
   const router = useRouter();
 
   useEffect(() => {
+    const supabase = createClientClient();
+    
     const fetchData = async () => {
-      const supabase = createClientClient();
+      // First check session to ensure we have fresh auth state
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        // Try to refresh the session
+        const { data: { user: refreshedUser } } = await supabase.auth.getUser();
+        
+        if (!refreshedUser) {
+          router.push('/?login=1');
+          return;
+        }
+      }
       
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -54,7 +67,23 @@ export default function OccupierDashboard() {
       setLoading(false);
     };
 
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id);
+      if (event === 'SIGNED_IN' && session) {
+        fetchData();
+      } else if (event === 'SIGNED_OUT') {
+        router.push('/?login=1');
+      }
+    });
+
+    // Initial fetch
     fetchData();
+
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [router]);
 
   // Format date helper
