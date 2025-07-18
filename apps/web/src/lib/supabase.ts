@@ -76,6 +76,7 @@ export interface Database {
           id: string
           email: string
           role: 'occupier' | 'admin'
+          user_type: 'Commercial Occupier' | 'Housebuilder' | 'Consultant' | 'Landlord/Vendor' | 'Developer' | 'Government' | 'Other'
           org_id: string | null
           created_at: string
           updated_at: string
@@ -84,6 +85,7 @@ export interface Database {
           id: string
           email: string
           role?: 'occupier' | 'admin'
+          user_type: 'Commercial Occupier' | 'Housebuilder' | 'Consultant' | 'Landlord/Vendor' | 'Developer' | 'Government' | 'Other'
           org_id?: string | null
           created_at?: string
           updated_at?: string
@@ -92,6 +94,7 @@ export interface Database {
           id?: string
           email?: string
           role?: 'occupier' | 'admin'
+          user_type?: 'Commercial Occupier' | 'Housebuilder' | 'Consultant' | 'Agent' | 'Landlord/Vendor' | 'Developer' | 'Government' | 'Other'
           org_id?: string | null
           updated_at?: string
         }

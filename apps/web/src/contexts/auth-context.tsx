@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Shorter timeout for better UX - 3 seconds should be plenty
       const profilePromise = supabase
         .from('users')
-        .select('id, email, role, created_at, updated_at')
+        .select('id, email, role, user_type, created_at, updated_at')
         .eq('id', userId)
         .single()
 
@@ -81,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: authUser.id,
               email: authUser.email || '',
               role: 'occupier',
+              user_type: 'Other',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             })
@@ -92,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             id: authUser.id,
             email: authUser.email || '',
             role: 'occupier',
+            user_type: 'Other',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -137,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 id: authUser.id,
                 email: authUser.email || '',
                 role: 'occupier',
+                user_type: 'Other',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               })
@@ -148,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: authUser.id,
               email: authUser.email || '',
               role: 'occupier',
+              user_type: 'Other',
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             })
@@ -177,21 +181,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const signIn = async (email: string, redirectTo?: string) => {
+  const signIn = async (email: string, redirectTo?: string, userType?: string) => {
     // Ensure consistent hostname for callback URL
     const origin = window.location.origin.replace('127.0.0.1', 'localhost')
     // Default redirect to dashboard if not specified
     const defaultRedirect = redirectTo || '/occupier/dashboard'
-    const callbackUrl = `${origin}/auth/callback?next=${encodeURIComponent(defaultRedirect)}`
+    
+    // Use redirect parameter for search intent persistence
+    let callbackUrl = `${origin}/auth/callback`
+    if (redirectTo) {
+      callbackUrl += `?redirect=${encodeURIComponent(redirectTo)}`
+    } else {
+      callbackUrl += `?next=${encodeURIComponent(defaultRedirect)}`
+    }
     
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: callbackUrl
+        emailRedirectTo: callbackUrl,
+        data: userType ? { user_type: userType } : undefined
       }
     })
 
     if (error) {
+      console.error('Supabase auth error:', error)
       throw error
     }
   }
