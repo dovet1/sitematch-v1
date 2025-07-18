@@ -135,8 +135,7 @@ export interface EnhancedListingModalContent {
   
   // Location requirements
   locations: {
-    preferred: Location[];
-    acceptable: Location[];
+    all: Location[];
     is_nationwide: boolean;
   };
   
