@@ -9,17 +9,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase environment variables are not configured')
 }
 
-// Single browser client instance - used for all client-side operations
-export const browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey)
+// Create a new browser client instance each time for fresh auth state
+export const createClientClient = () => createBrowserClient(supabaseUrl, supabaseAnonKey)
 
-// Legacy export for backward compatibility - points to same instance
+// Legacy export for backward compatibility
+export const browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey)
 export const supabase = browserClient
 
-// Export the same instance for consistency
-export const createClientClient = () => browserClient
-
 // Default createClient export for API routes
-export const createClient = () => browserClient
+export const createClient = () => createBrowserClient(supabaseUrl, supabaseAnonKey)
 
 // Server component client (for use in Server Components)
 export const createServerClient = () => {

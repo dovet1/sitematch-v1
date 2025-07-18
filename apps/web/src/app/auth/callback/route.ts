@@ -8,8 +8,23 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/'
   const redirect = searchParams.get('redirect')
+  const error = searchParams.get('error')
+  const errorDescription = searchParams.get('error_description')
 
-  console.log('Auth callback hit:', { hasCode: !!code, next, redirect, origin })
+  console.log('Auth callback hit:', { 
+    hasCode: !!code, 
+    next, 
+    redirect, 
+    origin,
+    error,
+    errorDescription 
+  })
+
+  // Handle auth errors
+  if (error) {
+    console.error('Auth error:', error, errorDescription)
+    return NextResponse.redirect(`${origin}/auth/auth-code-error?error=${error}`)
+  }
 
   if (code) {
     // Use redirect if provided, otherwise fall back to next
