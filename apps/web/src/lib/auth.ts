@@ -1,5 +1,5 @@
 import { createServerClient } from '@/lib/supabase'
-import { UserRole, UserProfile } from '@/types/auth'
+import { UserRole, UserProfile, UserType } from '@/types/auth'
 import { redirect } from 'next/navigation'
 
 export async function getServerUser() {
@@ -34,7 +34,7 @@ export async function getServerUserProfile(): Promise<UserProfile | null> {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, email, role, created_at, updated_at')
+      .select('id, email, role, user_type, created_at, updated_at')
       .eq('id', user.id)
       .single()
 
@@ -116,7 +116,7 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
     // Get the user profile with role information
     const { data: profile, error: profileError } = await supabase
       .from('users')
-      .select('id, email, role, created_at, updated_at')
+      .select('id, email, role, user_type, created_at, updated_at')
       .eq('id', user.id)
       .single()
 
@@ -129,6 +129,7 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
       id: profile.id,
       email: profile.email,
       role: profile.role as UserRole,
+      user_type: profile.user_type as UserType,
       created_at: profile.created_at,
       updated_at: profile.updated_at
     }

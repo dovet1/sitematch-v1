@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus, FileText, Clock, CheckCircle, AlertTriangle, Eye } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '../components/StatusBadge';
+import ConsultantProfileCard from '@/components/consultant/consultant-profile-card';
 import { useState, useEffect } from 'react';
 import type { User } from '@supabase/auth-js';
 
@@ -205,102 +206,114 @@ export default function OccupierDashboard() {
 
       <div className="container mx-auto px-4 py-6 sm:py-8">
         <div className="max-w-4xl mx-auto">
-          {listings.length === 0 ? (
-            <Card className="violet-bloom-card">
-              <CardContent className="p-8 sm:p-12 text-center">
-                <div className="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-10 h-10 text-primary-400" />
-                </div>
-                <h3 className="heading-4 text-foreground mb-2">Start Your Property Search</h3>
-                <p className="body-base text-muted-foreground mb-6 max-w-sm mx-auto">
-                  Create your first listing to connect with agents and find your ideal property.
-                </p>
-                <Button asChild size="lg" className="violet-bloom-button violet-bloom-touch">
-                  <Link href="/occupier/create-listing?fresh=true">
-                    <Plus className="w-5 h-5 mr-2" />
-                    Create Your First Listing
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {listings.map((listing) => {
-                const statusContent = getStatusContent(listing);
-                const StatusIcon = statusContent.icon;
+          <div className="space-y-6">
+            {listings.length === 0 ? (
+              <>
+                <Card className="violet-bloom-card">
+                  <CardContent className="p-8 sm:p-12 text-center">
+                    <div className="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FileText className="w-10 h-10 text-primary-400" />
+                    </div>
+                    <h3 className="heading-4 text-foreground mb-2">Start Your Property Search</h3>
+                    <p className="body-base text-muted-foreground mb-6 max-w-sm mx-auto">
+                      Create your first listing to connect with agents and find your ideal property.
+                    </p>
+                    <Button asChild size="lg" className="violet-bloom-button violet-bloom-touch">
+                      <Link href="/occupier/create-listing?fresh=true">
+                        <Plus className="w-5 h-5 mr-2" />
+                        Create Your First Listing
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
                 
-                return (
-                  <Card 
-                    key={listing.id} 
-                    className={`violet-bloom-card-hover transition-all duration-200 ${
-                      listing.status === 'rejected' ? 'border-destructive/30' : ''
-                    }`}
-                  >
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        {/* Left Side - Listing Info */}
-                        <div className="flex items-start gap-4 flex-1">
-                          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                            listing.status === 'approved' ? 'bg-emerald-50' :
-                            listing.status === 'pending' ? 'bg-amber-50' :
-                            listing.status === 'rejected' ? 'bg-destructive/10' :
-                            'bg-muted'
-                          }`}>
-                            <StatusIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${statusContent.iconColor}`} />
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-foreground truncate">
-                                {listing.company_name}
-                              </h3>
-                              <StatusBadge status={listing.status} />
+                {/* Consultant Profile Card */}
+                <ConsultantProfileCard />
+              </>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  {listings.map((listing) => {
+                  const statusContent = getStatusContent(listing);
+                  const StatusIcon = statusContent.icon;
+                  
+                  return (
+                    <Card 
+                      key={listing.id} 
+                      className={`violet-bloom-card-hover transition-all duration-200 ${
+                        listing.status === 'rejected' ? 'border-destructive/30' : ''
+                      }`}
+                    >
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          {/* Left Side - Listing Info */}
+                          <div className="flex items-start gap-4 flex-1">
+                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                              listing.status === 'approved' ? 'bg-emerald-50' :
+                              listing.status === 'pending' ? 'bg-amber-50' :
+                              listing.status === 'rejected' ? 'bg-destructive/10' :
+                              'bg-muted'
+                            }`}>
+                              <StatusIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${statusContent.iconColor}`} />
                             </div>
                             
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {statusContent.message} • {formatDate(listing.updated_at)}
-                            </p>
-                            
-                            {listing.status === 'rejected' && listing.rejection_reason && (
-                              <p className="text-sm text-destructive mt-2 line-clamp-2">
-                                Feedback: {listing.rejection_reason}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-semibold text-foreground truncate">
+                                  {listing.company_name}
+                                </h3>
+                                <StatusBadge status={listing.status} />
+                              </div>
+                              
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {statusContent.message} • {formatDate(listing.updated_at)}
                               </p>
-                            )}
+                              
+                              {listing.status === 'rejected' && listing.rejection_reason && (
+                                <p className="text-sm text-destructive mt-2 line-clamp-2">
+                                  Feedback: {listing.rejection_reason}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Right Side - Actions */}
+                          <div className="flex items-center gap-2 ml-14 sm:ml-0">
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="sm"
+                              className="hover:bg-muted"
+                            >
+                              <Link href={`/occupier/create-listing?edit=${listing.id}`}>
+                                <Eye className="w-4 h-4" />
+                                <span className="sr-only">View details</span>
+                              </Link>
+                            </Button>
+                            
+                            <Button
+                              asChild
+                              variant={statusContent.action.variant}
+                              size="sm"
+                              className="min-w-[100px]"
+                            >
+                              <Link href={statusContent.action.href}>
+                                {statusContent.action.label}
+                              </Link>
+                            </Button>
                           </div>
                         </div>
-                        
-                        {/* Right Side - Actions */}
-                        <div className="flex items-center gap-2 ml-14 sm:ml-0">
-                          <Button
-                            asChild
-                            variant="ghost"
-                            size="sm"
-                            className="hover:bg-muted"
-                          >
-                            <Link href={`/occupier/create-listing?edit=${listing.id}`}>
-                              <Eye className="w-4 h-4" />
-                              <span className="sr-only">View details</span>
-                            </Link>
-                          </Button>
-                          
-                          <Button
-                            asChild
-                            variant={statusContent.action.variant}
-                            size="sm"
-                            className="min-w-[100px]"
-                          >
-                            <Link href={statusContent.action.href}>
-                              {statusContent.action.label}
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+                </div>
+                
+                {/* Consultant Profile Card */}
+                <ConsultantProfileCard />
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
