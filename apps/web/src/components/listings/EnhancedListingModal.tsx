@@ -163,10 +163,8 @@ export function EnhancedListingModal({
             ]
           },
           locations: {
-            preferred: [
-              { place_name: 'Central London, UK', coordinates: { lat: 51.5074, lng: -0.1278 } }
-            ],
-            acceptable: [
+            all: [
+              { place_name: 'Central London, UK', coordinates: { lat: 51.5074, lng: -0.1278 } },
               { place_name: 'Canary Wharf, London', coordinates: { lat: 51.5045, lng: -0.0199 } }
             ],
             is_nationwide: false
