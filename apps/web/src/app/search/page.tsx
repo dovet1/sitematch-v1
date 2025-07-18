@@ -7,10 +7,15 @@ import { ListingGrid } from '@/components/listings/ListingGrid';
 import { ListingMap } from '@/components/listings/ListingMap';
 import { ListingModal } from '@/components/listings/ListingModal';
 import { SearchFilters } from '@/types/search';
+import { useAuth } from '@/contexts/auth-context';
+import { AuthWall } from '@/components/auth/auth-wall';
+import { SearchContextToast } from '@/components/search/search-context-toast';
+import { UserTypeModal } from '@/components/auth/user-type-modal';
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user, loading } = useAuth();
   
   // Parse URL parameters into SearchFilters
   const [searchFilters, setSearchFilters] = useState<SearchFilters>(() => {
@@ -118,8 +123,51 @@ function SearchPageContent() {
     }, 300);
   };
 
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-pulse">
+            <div className="h-8 w-48 bg-gray-200 rounded mb-4 mx-auto" />
+            <div className="h-4 w-32 bg-gray-200 rounded mx-auto" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth wall if not authenticated
+  if (!user) {
+    const query = searchParams.get('query') || searchFilters.location || searchFilters.companyName;
+    return (
+      <div className="min-h-screen bg-background">
+        <UnifiedHeader
+          searchFilters={searchFilters}
+          onFiltersChange={handleFiltersChange}
+          onLocationSelect={handleLocationSelect}
+          onNationwideSearch={handleNationwideSearch}
+          isMapView={isMapView}
+          onMapViewToggle={handleViewToggle}
+          showViewToggle={false}
+        />
+        <AuthWall 
+          searchQuery={query}
+          // TODO: Get actual result count from API
+          resultCount={undefined}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
+      {/* User Type Modal for existing users without type */}
+      <UserTypeModal />
+      
+      {/* Search Context Toast */}
+      <SearchContextToast />
+      
       {/* Unified Header with Search */}
       <UnifiedHeader
         searchFilters={searchFilters}

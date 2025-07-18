@@ -14,10 +14,13 @@ export interface AuthUser extends User {
   }
 }
 
+export type UserType = 'Commercial Occupier' | 'Housebuilder' | 'Consultant' | 'Landlord/Vendor' | 'Developer' | 'Government' | 'Other'
+
 export interface UserProfile {
   id: string
   email: string
   role: UserRole
+  user_type: UserType
   created_at: string
   updated_at: string
 }
@@ -26,7 +29,7 @@ export interface AuthContextType {
   user: AuthUser | null
   profile: UserProfile | null
   loading: boolean
-  signIn: (email: string, redirectTo?: string) => Promise<void>
+  signIn: (email: string, redirectTo?: string, userType?: UserType) => Promise<void>
   signOut: () => Promise<void>
   hasRole: (role: UserRole | UserRole[]) => boolean
   isAdmin: boolean

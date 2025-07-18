@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/auth/login-modal';
-import { SignUpModal } from '@/components/auth/signup-modal';
+import { SignUpModalEnhanced } from '@/components/auth/signup-modal-enhanced';
 import { UserMenu } from '@/components/auth/user-menu';
 import { useAuth } from '@/contexts/auth-context';
 import { SearchHeaderBar } from './SearchHeaderBar';
@@ -115,11 +115,11 @@ export function UnifiedHeader({
                       Sign In
                     </Button>
                   </LoginModal>
-                  <SignUpModal>
+                  <SignUpModalEnhanced>
                     <Button size="sm" className="font-medium shadow-sm">
                       Sign Up
                     </Button>
-                  </SignUpModal>
+                  </SignUpModalEnhanced>
                 </div>
               )}
             </div>
@@ -198,11 +198,11 @@ export function UnifiedHeader({
                       Sign In
                     </Button>
                   </LoginModal>
-                  <SignUpModal>
+                  <SignUpModalEnhanced>
                     <Button className="w-full font-medium shadow-sm violet-bloom-touch">
                       Sign Up
                     </Button>
-                  </SignUpModal>
+                  </SignUpModalEnhanced>
                 </div>
               )}
             </div>
