@@ -394,8 +394,6 @@ export function ListingWizard({
           headshotUrl: contact.headshot_url
         })) || [],
         
-        siteSizeMin: listing.site_size_min,
-        siteSizeMax: listing.site_size_max,
         locations: listing.locations || [],
         locationSearchNationwide: !listing.locations || listing.locations.length === 0,
         
@@ -716,19 +714,19 @@ export function ListingWizard({
         sanitizedData.brochureFiles = sanitizedData.brochureFiles.map(file => {
           if (file instanceof File) return undefined;
           return file;
-        }).filter(Boolean);
+        }).filter(Boolean) as typeof sanitizedData.brochureFiles;
       }
       if (sanitizedData.sitePlanFiles) {
         sanitizedData.sitePlanFiles = sanitizedData.sitePlanFiles.map(file => {
           if (file instanceof File) return undefined;
           return file;
-        }).filter(Boolean);
+        }).filter(Boolean) as typeof sanitizedData.sitePlanFiles;
       }
       if (sanitizedData.fitOutFiles) {
         sanitizedData.fitOutFiles = sanitizedData.fitOutFiles.map(file => {
           if (file instanceof File) return undefined;
           return file;
-        }).filter(Boolean);
+        }).filter(Boolean) as typeof sanitizedData.fitOutFiles;
       }
 
       const result = await onSubmit(sanitizedData as WizardFormData);

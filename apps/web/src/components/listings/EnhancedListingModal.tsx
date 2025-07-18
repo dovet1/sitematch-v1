@@ -136,9 +136,13 @@ export function EnhancedListingModal({
           company: {
             name: 'Demo Company Ltd',
             logo_url: undefined,
+            sectors: ['Technology'],
+            use_classes: ['Office (B1)'],
             sector: 'Technology',
             use_class: 'Office (B1)',
-            site_size: '5,000 - 10,000 sq ft'
+            site_size: '5,000 - 10,000 sq ft',
+            dwelling_count: 'N/A',
+            site_acreage: '0.5 acres'
           },
           contacts: {
             primary: {
@@ -217,7 +221,8 @@ export function EnhancedListingModal({
           id: listingId,
           title: 'Modern Office Space Required - Central Location',
           description: 'We are seeking a modern, flexible office space in a prime central location. The space should accommodate our growing team of 50+ professionals with room for expansion.',
-          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          listing_type: 'commercial'
         };
         setListing(mockListing);
       } finally {

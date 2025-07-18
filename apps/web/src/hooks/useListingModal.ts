@@ -19,7 +19,12 @@ export function useListingModal(options: UseListingModalOptions = {}) {
       useClass: [],
       sizeMin: null,
       sizeMax: null,
-      isNationwide: false
+      acreageMin: null,
+      acreageMax: null,
+      dwellingMin: null,
+      dwellingMax: null,
+      isNationwide: false,
+      listingType: []
     }
   });
 
