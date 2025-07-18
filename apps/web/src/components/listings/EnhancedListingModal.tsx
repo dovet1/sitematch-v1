@@ -637,7 +637,7 @@ export function EnhancedListingModal({
                           </div>
                           <span className="text-foreground font-medium">
                             {listing.locations?.is_nationwide ? 'Nationwide' : 
-                             listing.locations?.preferred?.length > 0 ? listing.locations.preferred[0].place_name : 
+                             listing.locations?.all?.length > 0 ? listing.locations.all[0].place_name : 
                              (listing as any).place_name || 'Location flexible'}
                           </span>
                         </div>
@@ -754,7 +754,7 @@ export function EnhancedListingModal({
                             <p className="font-medium text-foreground">Location Preference</p>
                             <p className="text-sm text-muted-foreground">
                               {listing.locations?.is_nationwide ? 'Nationwide UK' : 
-                               listing.locations?.preferred?.length > 0 ? listing.locations.preferred[0].place_name : 
+                               listing.locations?.all?.length > 0 ? listing.locations.all[0].place_name : 
                                (listing as any).place_name || 'Flexible on location'}
                             </p>
                           </div>
@@ -1015,7 +1015,7 @@ export function EnhancedListingModal({
                   {expandedSections.has('locations') && (
                     <div className="space-y-4">
                       {/* Check if no specific locations and assume nationwide */}
-                      {(listing.locations?.preferred?.length === 0 || !listing.locations?.preferred) && (listing.locations?.acceptable?.length === 0 || !listing.locations?.acceptable) ? (
+                      {(!listing.locations?.all || listing.locations?.all?.length === 0) ? (
                     <div className="bg-primary-50 rounded-lg p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
@@ -1028,35 +1028,21 @@ export function EnhancedListingModal({
                       </div>
                     </div>
                   ) : (
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {listing.locations?.preferred?.length > 0 && (
-                        <div className="space-y-2">
-                          <h5 className="font-medium text-foreground">Preferred Locations</h5>
-                          {listing.locations?.preferred?.map((location, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-primary-500 rounded-full" />
-                              <span className="text-sm text-muted-foreground">{location.place_name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      
-                      {listing.locations?.acceptable?.length > 0 && (
-                        <div className="space-y-2">
-                          <h5 className="font-medium text-foreground">Acceptable Locations</h5>
-                          {listing.locations?.acceptable?.map((location, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-gray-400 rounded-full" />
-                              <span className="text-sm text-muted-foreground">{location.place_name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <h5 className="font-medium text-foreground">Target Locations</h5>
+                        {listing.locations?.all?.map((location, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-primary-500 rounded-full" />
+                            <span className="text-sm text-muted-foreground">{location.place_name}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   
                       {/* Additional nationwide indicator if flag is set */}
-                      {listing.locations?.is_nationwide && ((listing.locations?.preferred?.length > 0) || (listing.locations?.acceptable?.length > 0)) && (
+                      {listing.locations?.is_nationwide && listing.locations?.all?.length > 0 && (
                         <div className="bg-primary-50 rounded-lg p-3">
                           <p className="text-sm text-primary-700 font-medium">
                             Also open to nationwide opportunities beyond the locations listed above
