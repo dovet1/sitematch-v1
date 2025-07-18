@@ -263,22 +263,22 @@ export function SimplifiedListingModal({
                           <span className="text-sm font-medium">Locations:</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {listing.locations?.is_nationwide ? (
+                          {!Array.isArray(listing.locations?.all) || (listing.locations?.all as any)?.length === 0 ? (
                             <Badge variant="outline" className="bg-orange-50 text-orange-800 border-orange-200 text-xs">
                               <MapPin className="w-3 h-3 mr-1" />
                               Nationwide
                             </Badge>
                           ) : (
                             <>
-                              {listing.locations?.all?.slice(0, 3).map((location, index) => (
+                              {Array.isArray(listing.locations?.all) && (listing.locations?.all as any)?.slice(0, 3).map((location: any, index: number) => (
                                 <Badge key={index} variant="outline" className="bg-purple-50 text-purple-800 border-purple-200 text-xs">
                                   <MapPin className="w-3 h-3 mr-1" />
                                   {location.place_name.split(',').slice(0, 2).join(',').trim()}
                                 </Badge>
                               ))}
-                              {listing.locations?.all && listing.locations.all.length > 3 && (
+                              {Array.isArray(listing.locations?.all) && (listing.locations?.all as any)?.length > 3 && (
                                 <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200 text-xs">
-                                  +{listing.locations.all.length - 3} more
+                                  +{(listing.locations?.all as any).length - 3} more
                                 </Badge>
                               )}
                             </>
@@ -311,22 +311,22 @@ export function SimplifiedListingModal({
                           <span className="text-sm font-medium">Locations:</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {listing.locations?.is_nationwide ? (
+                          {!Array.isArray(listing.locations?.all) || (listing.locations?.all as any)?.length === 0 ? (
                             <Badge variant="outline" className="bg-orange-50 text-orange-800 border-orange-200 text-xs">
                               <MapPin className="w-3 h-3 mr-1" />
                               Nationwide
                             </Badge>
                           ) : (
                             <>
-                              {listing.locations?.all?.slice(0, 3).map((location, index) => (
+                              {Array.isArray(listing.locations?.all) && (listing.locations?.all as any)?.slice(0, 3).map((location: any, index: number) => (
                                 <Badge key={index} variant="outline" className="bg-purple-50 text-purple-800 border-purple-200 text-xs">
                                   <MapPin className="w-3 h-3 mr-1" />
                                   {location.place_name.split(',').slice(0, 2).join(',').trim()}
                                 </Badge>
                               ))}
-                              {listing.locations?.all && listing.locations.all.length > 3 && (
+                              {Array.isArray(listing.locations?.all) && (listing.locations?.all as any)?.length > 3 && (
                                 <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200 text-xs">
-                                  +{listing.locations.all.length - 3} more
+                                  +{(listing.locations?.all as any).length - 3} more
                                 </Badge>
                               )}
                             </>
@@ -500,28 +500,23 @@ export function SimplifiedListingModal({
                   
                   {expandedSections.has('locations') && (
                     <div className="bg-gray-50 rounded-lg p-4">
-                      {listing.locations?.is_nationwide ? (
+                      {!Array.isArray(listing.locations?.all) || (listing.locations?.all as any)?.length === 0 ? (
                         <Badge variant="outline" className="bg-orange-50 text-orange-800 border-orange-200">
                           <MapPin className="w-3 h-3 mr-1" />
                           Nationwide
                         </Badge>
-                      ) : listing.locations?.all?.length > 0 ? (
+                      ) : (
                         <div className="space-y-2">
                           <h5 className="font-medium text-foreground">Preferred Locations</h5>
                           <div className="flex flex-wrap gap-2">
-                            {listing.locations.all.map((location, index) => (
+                            {(listing.locations?.all as any).map((location: any, index: number) => (
                               <Badge key={index} variant="outline" className="bg-primary-50 text-primary-800 border-primary-200">
                                 <MapPin className="w-3 h-3 mr-1" />
-                                {location.place_name}
+                                {location.place_name.split(',').slice(0, 2).join(',').trim()}
                               </Badge>
                             ))}
                           </div>
                         </div>
-                      ) : (
-                        <Badge variant="outline" className="bg-orange-50 text-orange-800 border-orange-200">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          Nationwide
-                        </Badge>
                       )}
                     </div>
                   )}
@@ -731,9 +726,9 @@ export function SimplifiedListingModal({
                                   </div>
                                 )}
                               </div>
-                              {file.caption && (
+                              {(file as any).caption && (
                                 <p className="text-xs text-muted-foreground mt-2 text-center">
-                                  {file.caption}
+                                  {(file as any).caption}
                                 </p>
                               )}
                             </div>
@@ -781,9 +776,9 @@ export function SimplifiedListingModal({
                                   </div>
                                 )}
                               </div>
-                              {file.caption && (
+                              {(file as any).caption && (
                                 <p className="text-xs text-muted-foreground mt-2 text-center">
-                                  {file.caption}
+                                  {(file as any).caption}
                                 </p>
                               )}
                             </div>

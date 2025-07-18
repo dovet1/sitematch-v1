@@ -192,6 +192,11 @@ export interface CreateListingRequest {
   use_class_id: string;
   site_size_min?: number;
   site_size_max?: number;
+  // Residential fields
+  dwelling_count_min?: number;
+  dwelling_count_max?: number;
+  site_acreage_min?: number;
+  site_acreage_max?: number;
   // PRD-required contact fields
   contact_name: string;
   contact_title: string;
@@ -203,6 +208,8 @@ export interface CreateListingRequest {
   // Logo fields
   clearbit_logo?: boolean;
   company_domain?: string;
+  // Property page link
+  property_page_link?: string;
   // Listing type
   listing_type?: 'residential' | 'commercial';
   locations?: Omit<ListingLocation, 'id' | 'listing_id' | 'created_at'>[];

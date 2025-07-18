@@ -65,10 +65,15 @@ export async function GET(request: NextRequest) {
             name,
             code
           )
+        ),
+        listing_locations(
+          id,
+          place_name,
+          coordinates
         )
       `)
       .in('status', ['approved', 'pending', 'draft']) // More lenient for development
-      .limit(200) // Limit results for performance
+      .limit(1000) // Increased limit for better map coverage
 
     // Apply geographic filtering using map bounds
     // Note: Geographic filtering will be done post-query for now since complex PostGIS queries 
@@ -279,8 +284,10 @@ export async function GET(request: NextRequest) {
 
     // Transform data for map pins with enhanced details for Story 8.0
     const mapResults = listings?.map(listing => {
-      const location = (listing.listing_locations as any)?.[0];
-      const coordinates = location?.coordinates;
+      // Get first location with coordinates
+      const locations = (listing.listing_locations as any) || [];
+      const location = locations[0];
+      const coordinates: any = location?.coordinates;
       
       // Contact info is now directly on the listing
       const contact = {
@@ -298,22 +305,27 @@ export async function GET(request: NextRequest) {
       
       // Parse coordinates safely
       let lat, lng;
-      try {
-        if (Array.isArray(coordinates)) {
-          [lng, lat] = coordinates; // GeoJSON format [longitude, latitude]
-        } else if (coordinates.lat && coordinates.lng) {
-          lat = coordinates.lat;
-          lng = coordinates.lng;
-        } else {
-          throw new Error('Invalid coordinate format');
+      if (coordinates) {
+        try {
+          if (Array.isArray(coordinates)) {
+            [lng, lat] = coordinates; // GeoJSON format [longitude, latitude]
+          } else if (coordinates.lat && coordinates.lng) {
+            lat = coordinates.lat;
+            lng = coordinates.lng;
+          } else {
+            throw new Error('Invalid coordinate format');
+          }
+          
+          // Validate coordinate ranges
+          if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            throw new Error('Coordinates out of valid range');
+          }
+        } catch (coordError) {
+          console.warn(`Invalid coordinates for listing ${listing.id}:`, coordError);
+          return null;
         }
-        
-        // Validate coordinate ranges
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-          throw new Error('Coordinates out of valid range');
-        }
-      } catch (coordError) {
-        console.warn(`Invalid coordinates for listing ${listing.id}:`, coordError);
+      } else {
+        // No coordinates available - return null for this listing
         return null;
       }
       
@@ -330,19 +342,19 @@ export async function GET(request: NextRequest) {
         dwelling_count_max: listing.dwelling_count_max,
         
         // Enhanced sector and use class data with correct structure
-        sectors: listing.sectors ? [{
-          id: (listing.sectors as any)?.id || '1',
-          name: (listing.sectors as any)?.name || ''
-        }] : [],
-        use_classes: listing.use_classes ? [{
-          id: (listing.use_classes as any)?.id || '1',
-          name: (listing.use_classes as any)?.name || '',
-          code: (listing.use_classes as any)?.code || ''
-        }] : [],
+        sectors: listing.listing_sectors ? listing.listing_sectors.map((ls: any) => ({
+          id: ls.sector?.id || '1',
+          name: ls.sector?.name || ''
+        })) : [],
+        use_classes: listing.listing_use_classes ? listing.listing_use_classes.map((luc: any) => ({
+          id: luc.use_class?.id || '1',
+          name: luc.use_class?.name || '',
+          code: luc.use_class?.code || ''
+        })) : [],
         
         // Simplified fields for backward compatibility
-        sector: (listing.sectors as any)?.name || null,
-        use_class: (listing.use_classes as any)?.name || null,
+        sector: (listing.listing_sectors as any)?.[0]?.sector?.name || null,
+        use_class: (listing.listing_use_classes as any)?.[0]?.use_class?.name || null,
         
         // Enhanced contact data (now from listing directly)
         contact_name: contact.name || 'Contact Available',
@@ -359,7 +371,7 @@ export async function GET(request: NextRequest) {
         logo_url: logoMap[listing.id] || null,
         clearbit_logo: listing.clearbit_logo || false,
         company_domain: listing.company_domain,
-        place_name: location?.place_name || null,
+        place_name: (location as any)?.place_name || null,
         coordinates: { lat, lng },
         
         // Timestamps

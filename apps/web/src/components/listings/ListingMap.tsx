@@ -143,8 +143,8 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
         const results = data.listings || data.results || []; // Support both new and old API response format
         console.log('Map API response:', { 
           total: results.length, 
-          hasCoordinates: results.filter(r => r.coordinates).length,
-          firstFew: results.slice(0, 3).map(r => ({ 
+          hasCoordinates: results.filter((r: any) => r.coordinates).length,
+          firstFew: results.slice(0, 3).map((r: any) => ({ 
             id: r.id, 
             company: r.company_name, 
             coords: r.coordinates 
