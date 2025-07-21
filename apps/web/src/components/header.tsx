@@ -8,7 +8,7 @@ import { LoginModal } from '@/components/auth/login-modal'
 import { SignUpModalEnhanced } from '@/components/auth/signup-modal-enhanced'
 import { UserMenu } from '@/components/auth/user-menu'
 import { useAuth } from '@/contexts/auth-context'
-import { Menu, X, Sparkles } from 'lucide-react'
+import { Menu, X, Sparkles, LogOut, User, Shield, LayoutDashboard } from 'lucide-react'
 
 export function Header() {
   const { user, loading, isAdmin } = useAuth()
@@ -173,9 +173,7 @@ export function Header() {
                 <div className="h-10 bg-muted animate-pulse rounded-md violet-bloom-loading" />
               </div>
             ) : user ? (
-              <div className="flex items-center justify-between">
-                <UserMenu />
-              </div>
+              <MobileUserSection onClose={closeMobileMenu} />
             ) : (
               <div className="flex flex-col space-y-2">
                 <LoginModal>
@@ -194,5 +192,95 @@ export function Header() {
         </div>
       )}
     </header>
+  )
+}
+
+// Mobile user avatar component
+function MobileUserAvatar({ email }: { email: string }) {
+  const initials = email
+    .split('@')[0]
+    .split('.')
+    .map(part => part.charAt(0).toUpperCase())
+    .join('')
+    .slice(0, 2)
+
+  return (
+    <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+      {initials}
+    </div>
+  )
+}
+
+// Mobile user section - expands profile menu items directly in hamburger menu
+function MobileUserSection({ onClose }: { onClose: () => void }) {
+  const { user, profile, signOut, isAdmin } = useAuth()
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSignOut = async () => {
+    setIsLoading(true)
+    try {
+      await signOut()
+      onClose()
+    } catch (error) {
+      console.error('Error signing out:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (!user || !profile) {
+    return null
+  }
+
+  return (
+    <div className="space-y-1">
+      {/* User Info Header */}
+      <div className="flex items-center gap-3 px-4 py-2 bg-background rounded-lg border">
+        <MobileUserAvatar email={profile.email} />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">
+            {profile.email}
+          </p>
+          <p className="text-xs text-muted-foreground capitalize">
+            {profile.role}
+            {isAdmin && profile.role !== 'admin' && " • Admin"}
+          </p>
+        </div>
+      </div>
+
+      {/* Menu Items */}
+      <div className="space-y-1">
+        <Link
+          href="/occupier/dashboard"
+          onClick={onClose}
+          className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent transition-colors"
+        >
+          <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Dashboard</span>
+        </Link>
+
+        {isAdmin && (
+          <Link
+            href="/admin"
+            onClick={onClose}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent transition-colors"
+          >
+            <Shield className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Admin</span>
+          </Link>
+        )}
+
+        <button
+          onClick={handleSignOut}
+          disabled={isLoading}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-destructive/10 transition-colors text-destructive"
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="text-sm font-medium">
+            {isLoading ? 'Signing out...' : 'Sign out'}
+          </span>
+        </button>
+      </div>
+    </div>
   )
 }
