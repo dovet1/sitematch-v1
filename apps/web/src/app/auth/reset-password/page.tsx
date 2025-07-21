@@ -29,81 +29,26 @@ export default function ResetPasswordPage() {
   } = useForm<ResetPasswordFormData>()
 
   useEffect(() => {
-    const handlePasswordReset = async () => {
-      // Debug logging
-      console.log('Reset password page - Auth state:', { user: !!user, loading, userEmail: user?.email })
-      console.log('URL hash:', window.location.hash)
-      console.log('URL search:', window.location.search)
-      
-      // Check for access token in URL hash (Supabase sometimes uses hash fragments)
-      const hashParams = new URLSearchParams(window.location.hash.substring(1))
-      const searchParams = new URLSearchParams(window.location.search)
-      
-      const accessToken = hashParams.get('access_token') || searchParams.get('access_token')
-      const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token')
-      const code = searchParams.get('code')
-      
-      console.log('Auth params found:', { accessToken: !!accessToken, refreshToken: !!refreshToken, code: !!code })
-      
-      // If we have a code, verify it as a recovery token
-      if (code && !user) {
-        console.log('Verifying recovery code')
-        const { createClientClient } = await import('@/lib/supabase')
-        const supabase = createClientClient()
-        
-        const { data: { user }, error } = await supabase.auth.verifyOtp({
-          token_hash: code,
-          type: 'recovery'
-        })
-        
-        if (error) {
-          console.error('Error verifying recovery code:', error)
-          setError('Invalid reset link. Please request a new password reset.')
-        } else {
-          console.log('Recovery code verified successfully, user:', !!user)
-          setError(null)
-          // Clean up URL
-          window.history.replaceState({}, document.title, window.location.pathname)
-        }
-        return
-      }
-      
-      // If we have tokens in URL, set the session manually
-      if (accessToken && refreshToken && !user) {
-        console.log('Setting session from URL tokens')
-        const { createClientClient } = await import('@/lib/supabase')
-        const supabase = createClientClient()
-        
-        const { error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken
-        })
-        
-        if (error) {
-          console.error('Error setting session:', error)
-          setError('Invalid reset link. Please request a new password reset.')
-        } else {
-          console.log('Session set successfully')
-          setError(null)
-          // Clean up URL
-          window.history.replaceState({}, document.title, window.location.pathname)
-        }
-        return
-      }
-      
-      // Wait for auth to load, then check if user is authenticated
-      if (!loading && !user && !accessToken && !code) {
-        console.log('No user found after loading completed and no auth params in URL')
+    console.log('Reset password page - Auth state:', { user: !!user, loading, userEmail: user?.email })
+    
+    // Give more time for auth to establish session after redirect
+    const checkAuthWithDelay = setTimeout(() => {
+      if (!loading && !user) {
+        console.log('No user found after extended wait')
         setError('Invalid reset link. Please request a new password reset.')
       } else if (!loading && user) {
         console.log('User found, clearing any errors')
         setError(null)
       }
+    }, 2000) // Wait 2 seconds for auth to settle
+    
+    // If user is found immediately, clear timeout and error
+    if (user) {
+      clearTimeout(checkAuthWithDelay)
+      setError(null)
     }
     
-    if (typeof window !== 'undefined') {
-      handlePasswordReset()
-    }
+    return () => clearTimeout(checkAuthWithDelay)
   }, [user, loading])
 
   const onSubmit = async (data: ResetPasswordFormData) => {
