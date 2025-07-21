@@ -40,13 +40,40 @@ export default function ResetPasswordPage() {
       console.log('URL has code parameter:', !!code)
       
       if (code && !hasProcessedAuth && !user) {
-        console.log('Found code parameter, manually refreshing auth session')
+        console.log('Found code parameter, manually establishing session from verification code')
         setHasProcessedAuth(true)
         
-        // Call refresh to force auth context to check for new session
-        await refresh()
+        try {
+          // Import Supabase client
+          const { createClientClient } = await import('@/lib/supabase')
+          const supabase = createClientClient()
+          
+          // Try to verify the recovery code and establish session
+          const { data: { user }, error } = await supabase.auth.verifyOtp({
+            token_hash: code,
+            type: 'recovery'
+          })
+          
+          console.log('Recovery verification result:', { user: !!user, error: error?.message })
+          
+          if (error) {
+            console.error('Failed to verify recovery code:', error)
+            setError('Invalid reset link. Please request a new password reset.')
+            return
+          }
+          
+          if (user) {
+            console.log('Session established successfully')
+            // Force auth context to refresh and pick up new session
+            await refresh()
+          }
+        } catch (error) {
+          console.error('Error establishing session:', error)
+          setError('Unable to establish session. Please try again.')
+          return
+        }
         
-        // Clean up URL after refresh
+        // Clean up URL after processing
         window.history.replaceState({}, document.title, window.location.pathname)
         return
       }
