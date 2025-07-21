@@ -93,9 +93,9 @@ export function LandlordNewsletter() {
 
             <Button 
               asChild 
-              className="bg-white text-violet-700 hover:bg-gray-50 px-8 py-3 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+              className="bg-white text-violet-700 hover:bg-gray-50 px-4 sm:px-6 md:px-8 py-2 sm:py-3 text-sm sm:text-base md:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
             >
-              <a href="/search">
+              <a href="/search" className="block text-center">
                 Start Searching Requirements
               </a>
             </Button>
@@ -274,6 +274,13 @@ export function LandlordNewsletter() {
             padding: 24px 16px;
             margin: 0 !important;
             max-width: 100% !important;
+          }
+          
+          .landlord-section__option button,
+          .landlord-section__option a {
+            max-width: 100% !important;
+            word-wrap: break-word;
+            hyphens: auto;
           }
           
           .landlord-section__content {
