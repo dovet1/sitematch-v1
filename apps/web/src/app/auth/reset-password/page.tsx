@@ -30,100 +30,53 @@ export default function ResetPasswordPage() {
   } = useForm<ResetPasswordFormData>()
 
   useEffect(() => {
-    const handlePasswordResetSession = async () => {
-      console.log('Reset password page - Auth state:', { user: !!user, loading, userEmail: user?.email, hasProcessedAuth })
+    // Simple session check - just like the working test page
+    const checkSession = async () => {
+      const { createClientClient } = await import('@/lib/supabase')
+      const supabase = createClientClient()
       
-      // Check if we have a code parameter (successful verification)
-      const urlParams = new URLSearchParams(window.location.search)
-      const code = urlParams.get('code')
+      console.log('Direct Supabase session check...')
+      const { data: { session }, error } = await supabase.auth.getSession()
       
-      console.log('URL has code parameter:', !!code)
+      console.log('Session result:', { 
+        hasSession: !!session, 
+        hasUser: !!session?.user, 
+        error: error?.message 
+      })
       
-      if (code && !hasProcessedAuth) {
-        console.log('Found code parameter, waiting for Supabase session to establish')
-        setHasProcessedAuth(true)
-        
-        // Supabase should have established a session during verification
-        // Just wait longer and trust the process
-        const waitForSession = async () => {
-          for (let i = 0; i < 10; i++) {
-            console.log(`Checking for session, attempt ${i + 1}/10`)
-            await refresh()
-            
-            // Wait a bit between checks
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            
-            // Check if we now have a user
-            if (user) {
-              console.log('Session found after waiting!')
-              setError(null)
-              break
-            }
-          }
-          
-          if (!user) {
-            console.log('No session found after waiting')
-            setError('Invalid reset link. Please request a new password reset.')
-          }
-        }
-        
-        waitForSession()
-        
-        // Clean up URL
-        window.history.replaceState({}, document.title, window.location.pathname)
-        return
-      }
-      
-      // Only process auth check once to avoid multiple token consumption
-      if (!hasProcessedAuth) {
-        // Give time for Supabase to establish session from URL
-        const checkAuthWithDelay = setTimeout(() => {
-          setHasProcessedAuth(true)
-          if (!loading && !user) {
-            console.log('No user found after extended wait')
-            setError('Invalid reset link. Please request a new password reset.')
-          } else if (!loading && user) {
-            console.log('User found, clearing any errors')
-            setError(null)
-          }
-        }, 2000) // Wait 2 seconds for auth to settle
-        
-        // If user is found immediately, clear timeout and error
-        if (user) {
-          clearTimeout(checkAuthWithDelay)
-          setError(null)
-          setHasProcessedAuth(true)
-        }
-        
-        return () => clearTimeout(checkAuthWithDelay)
+      if (session?.user) {
+        console.log('✅ Session found! User can reset password.')
+        setError(null)
+      } else {
+        console.log('❌ No session found')
+        setError('Invalid reset link. Please request a new password reset.')
       }
     }
     
     if (typeof window !== 'undefined') {
-      handlePasswordResetSession()
+      checkSession()
     }
-  }, [user, loading, hasProcessedAuth])
+  }, [])
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     setIsLoading(true)
     setError(null)
     
     try {
-      console.log('Attempting password update, user state:', { user: !!user, email: user?.email })
+      // Direct Supabase call - just like the working test page
+      const { createClientClient } = await import('@/lib/supabase')
+      const supabase = createClientClient()
       
-      // Double-check we have a valid user session
-      if (!user) {
-        console.log('No user session found, refreshing auth state')
-        await refresh()
-        
-        // Check again after refresh
-        if (!user) {
-          throw new Error('Auth session missing! Please try clicking the reset link again.')
-        }
+      console.log('Updating password directly with Supabase...')
+      const { error } = await supabase.auth.updateUser({
+        password: data.password
+      })
+      
+      if (error) {
+        throw error
       }
       
-      console.log('User session confirmed, updating password')
-      await updatePassword(data.password)
+      console.log('✅ Password updated successfully!')
       setSuccess(true)
       // Redirect after 3 seconds
       setTimeout(() => {
