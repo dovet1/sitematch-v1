@@ -160,6 +160,7 @@ export function CompanyCarousel() {
     return null; // Don't show section if no companies
   }
 
+
   return (
     <section className="company-carousel py-20 bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="company-carousel__container max-w-7xl mx-auto px-6">
@@ -167,7 +168,14 @@ export function CompanyCarousel() {
           Companies We Work With
         </h2>
         
-        <div className="relative overflow-hidden" style={{ touchAction: 'pan-y' }}>
+        <div 
+          className="relative overflow-hidden"
+          style={{ 
+            touchAction: 'pan-y',
+            maxWidth: '100%',
+            width: '100%'
+          }}
+        >
           <div
             ref={carouselRef}
             className={`flex gap-4 md:gap-8 px-6 ${isMobile ? 'mobile-carousel' : 'desktop-carousel'}`}
@@ -177,7 +185,8 @@ export function CompanyCarousel() {
               touchAction: 'none',
               pointerEvents: 'none',
               transform: 'translateZ(0)',
-              width: 'max-content'
+              width: 'max-content',
+              willChange: 'transform'
             } : { 
               // Desktop: Scrollable
               scrollbarWidth: 'none', 
@@ -261,6 +270,8 @@ export function CompanyCarousel() {
             overscroll-behavior-x: none !important;
             -webkit-overflow-scrolling: unset !important;
             touch-action: pan-y !important;
+            max-width: 100vw !important;
+            width: 100% !important;
           }
           
           .company-carousel * {
@@ -274,6 +285,20 @@ export function CompanyCarousel() {
             -webkit-transform: translateZ(0);
             pointer-events: none !important;
             touch-action: none !important;
+          }
+          
+          /* Ensure the parent container doesn't overflow */
+          .company-carousel__container {
+            max-width: 100vw !important;
+            overflow: hidden !important;
+            width: 100% !important;
+          }
+          
+          /* Contain any wide content within the carousel */
+          .mobile-carousel {
+            position: relative !important;
+            left: 0 !important;
+            right: 0 !important;
           }
         }
       `}</style>

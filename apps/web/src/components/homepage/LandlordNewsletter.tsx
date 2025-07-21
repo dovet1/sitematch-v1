@@ -50,8 +50,8 @@ export function LandlordNewsletter() {
   };
 
   return (
-    <section className="landlord-section py-20 bg-white">
-      <div className="landlord-section__container max-w-7xl mx-auto px-6">
+    <section className="landlord-section py-20 bg-white" style={{ overflowX: 'hidden', maxWidth: '100vw', margin: 0, padding: '80px 0' }}>
+      <div className="landlord-section__container w-full max-w-7xl" style={{ margin: '0 auto', paddingLeft: '24px', paddingRight: '24px' }}>
         <div className="text-center mb-16">
           <h2 className="landlord-section__title text-3xl font-bold text-gray-800 mb-4">
             Are You a Landlord?
@@ -62,9 +62,9 @@ export function LandlordNewsletter() {
           </p>
         </div>
 
-        <div className="landlord-section__content grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 max-w-5xl mx-auto">
+        <div className="landlord-section__content flex flex-col lg:flex-row gap-6 lg:gap-8 max-w-4xl items-center justify-center" style={{ margin: '0 auto', width: '100%' }}>
           {/* Search Requirements Option */}
-          <div className="landlord-section__option landlord-section__option--search bg-gradient-to-br from-violet-600 to-purple-700 rounded-3xl p-10 text-center text-white hover:scale-105 transition-all duration-300 shadow-xl">
+          <div className="landlord-section__option landlord-section__option--search bg-gradient-to-br from-violet-600 to-purple-700 rounded-3xl p-10 text-center text-white md:hover:scale-105 transition-all duration-300 shadow-xl">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-2xl mb-6 backdrop-blur-sm">
               <Search className="w-10 h-10 text-white" />
             </div>
@@ -102,7 +102,7 @@ export function LandlordNewsletter() {
           </div>
 
           {/* Newsletter Signup Option */}
-          <div className="landlord-section__option bg-gray-50 rounded-3xl p-10 text-center border-2 border-transparent hover:border-violet-300 hover:shadow-lg transition-all duration-300">
+          <div className="landlord-section__option bg-gray-50 rounded-3xl p-10 text-center border-2 border-transparent md:hover:border-violet-300 md:hover:shadow-lg transition-all duration-300">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-orange-100 rounded-2xl mb-6">
               <Mail className="w-10 h-10 text-orange-600" />
             </div>
@@ -218,10 +218,38 @@ export function LandlordNewsletter() {
       </div>
 
       <style jsx>{`
+        .landlord-section {
+          position: relative;
+          width: 100%;
+        }
+        
+        .landlord-section__container {
+          margin-left: auto;
+          margin-right: auto;
+        }
+        
+        .landlord-section__content {
+          display: flex;
+          margin-left: auto;
+          margin-right: auto;
+          position: relative;
+          left: 0;
+          right: 0;
+        }
+        
+        .landlord-section__option {
+          flex: 1;
+          max-width: 500px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        
         @media (max-width: 1024px) {
           .landlord-section__content {
-            grid-template-columns: 1fr;
-            gap: 32px;
+            flex-direction: column;
+            gap: 24px;
+            max-width: 100% !important;
+            align-items: center;
           }
         }
         
@@ -230,13 +258,32 @@ export function LandlordNewsletter() {
             padding: 48px 0;
           }
           
+          .landlord-section__container {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+            max-width: 100vw !important;
+            overflow-x: hidden !important;
+          }
+          
           .landlord-section__title {
             font-size: 24px;
             margin-bottom: 16px;
           }
           
           .landlord-section__option {
-            padding: 32px 24px;
+            padding: 24px 16px;
+            margin: 0 !important;
+            max-width: 100% !important;
+          }
+          
+          .landlord-section__content {
+            gap: 20px;
+            max-width: 100% !important;
+            width: 100% !important;
+            justify-items: center;
+            align-items: center;
+            margin-left: auto;
+            margin-right: auto;
           }
         }
       `}</style>
