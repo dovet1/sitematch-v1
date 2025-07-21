@@ -30,6 +30,12 @@ export function Header() {
 
   const navigationItems = [
     {
+      href: '/sitesketcher',
+      label: 'SiteSketcher',
+      primary: false,
+      showWhen: 'always'
+    },
+    {
       href: '/occupier/create-listing?fresh=true',
       label: 'Post Requirement',
       primary: true,
