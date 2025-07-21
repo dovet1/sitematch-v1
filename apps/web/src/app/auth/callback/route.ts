@@ -55,6 +55,14 @@ export async function GET(request: NextRequest) {
     console.log('Code exchange result:', { success: !error, error, userId: user?.id })
     
     if (!error && user) {
+      // Set a cross-domain accessible cookie for mobile scenarios
+      response.cookies.set('auth-success', 'true', {
+        path: '/',
+        maxAge: 300, // 5 minutes
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production'
+      })
+
       // Check if user profile exists
       const { data: profile } = await supabase
         .from('users')

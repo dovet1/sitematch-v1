@@ -182,8 +182,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, redirectTo?: string, userType?: string) => {
-    // Ensure consistent hostname for callback URL
-    const origin = window.location.origin.replace('127.0.0.1', 'localhost')
+    // Use environment variable for production URL, fallback to window.location.origin
+    // In production/preview, NEXT_PUBLIC_SITE_URL will be the full URL
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin.replace('127.0.0.1', 'localhost')
     // Default redirect to dashboard if not specified
     const defaultRedirect = redirectTo || '/occupier/dashboard'
     
@@ -194,6 +195,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       callbackUrl += `?next=${encodeURIComponent(defaultRedirect)}`
     }
+    
+    console.log('Auth signIn - callback URL:', callbackUrl)
     
     const { error } = await supabase.auth.signInWithOtp({
       email,

@@ -88,6 +88,9 @@ export function LoginModal({ children, redirectTo }: LoginModalProps) {
             <p className="text-sm text-muted-foreground">
               We've sent a magic link to your email address. Click the link to sign in.
             </p>
+            <p className="text-xs text-muted-foreground mt-3 border-t pt-3">
+              <strong>Mobile users:</strong> For best results, open the link in the same browser where you started sign-in.
+            </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
