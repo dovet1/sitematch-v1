@@ -86,6 +86,20 @@ export default function ResetPasswordPage() {
     setError(null)
     
     try {
+      console.log('Attempting password update, user state:', { user: !!user, email: user?.email })
+      
+      // Double-check we have a valid user session
+      if (!user) {
+        console.log('No user session found, refreshing auth state')
+        await refresh()
+        
+        // Check again after refresh
+        if (!user) {
+          throw new Error('Auth session missing! Please try clicking the reset link again.')
+        }
+      }
+      
+      console.log('User session confirmed, updating password')
       await updatePassword(data.password)
       setSuccess(true)
       // Redirect after 3 seconds
@@ -93,6 +107,7 @@ export default function ResetPasswordPage() {
         router.push('/occupier/dashboard')
       }, 3000)
     } catch (err) {
+      console.error('Password update failed:', err)
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setIsLoading(false)
