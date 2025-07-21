@@ -70,116 +70,74 @@ export function CompanyCarousel() {
     const container = carouselRef.current;
     if (!container) return;
 
-    let animationId: number;
-    let scrollSpeed = isMobile ? 0.3 : 0.5; // Slower speed on mobile for better performance
-    let isAnimationActive = false;
-    
-    const animate = () => {
-      if (!container || !isAnimating || !isAnimationActive) {
-        return;
-      }
+    if (!isMobile) {
+      // Desktop only: Use requestAnimationFrame for scroll-based animation
+      let animationId: number;
+      let scrollSpeed = 0.5;
+      let isAnimationActive = false;
       
-      try {
-        const { scrollLeft, scrollWidth, clientWidth } = container;
-        
-        // Ensure we have content to scroll
-        if (scrollWidth <= clientWidth) {
+      const animate = () => {
+        if (!container || !isAnimating || !isAnimationActive) {
           return;
         }
         
-        // Reset position when we've scrolled past half the content (since we duplicated it)
-        if (scrollLeft >= (scrollWidth - clientWidth) / 2) {
-          container.scrollLeft = 0;
-        } else {
-          container.scrollLeft += scrollSpeed;
+        try {
+          const { scrollLeft, scrollWidth, clientWidth } = container;
+          
+          if (scrollWidth <= clientWidth) {
+            return;
+          }
+          
+          if (scrollLeft >= (scrollWidth - clientWidth) / 2) {
+            container.scrollLeft = 0;
+          } else {
+            container.scrollLeft += scrollSpeed;
+          }
+          
+          animationId = requestAnimationFrame(animate);
+        } catch (error) {
+          console.warn('Animation error:', error);
+          isAnimationActive = false;
         }
-        
-        animationId = requestAnimationFrame(animate);
-      } catch (error) {
-        // Silently handle any errors and stop animation
-        console.warn('Animation error:', error);
-        isAnimationActive = false;
-      }
-    };
+      };
 
-    // Handle mouse events (desktop only)
-    const handleMouseEnter = () => {
-      if (!isMobile) {
+      const handleMouseEnter = () => {
         setIsAnimating(false);
         isAnimationActive = false;
         if (animationId) {
           cancelAnimationFrame(animationId);
         }
-      }
-    };
+      };
 
-    const handleMouseLeave = () => {
-      if (!isMobile) {
+      const handleMouseLeave = () => {
         setIsAnimating(true);
         if (isHydrated && !loading) {
           isAnimationActive = true;
           animationId = requestAnimationFrame(animate);
         }
-      }
-    };
+      };
 
-    // Handle touch events (mobile)
-    const handleTouchStart = () => {
-      if (isMobile) {
-        setIsAnimating(false);
+      const startTimer = setTimeout(() => {
+        if (isAnimating && container && companies.length > 0) {
+          isAnimationActive = true;
+          animationId = requestAnimationFrame(animate);
+        }
+      }, 250);
+
+      container.addEventListener('mouseenter', handleMouseEnter);
+      container.addEventListener('mouseleave', handleMouseLeave);
+
+      return () => {
+        clearTimeout(startTimer);
         isAnimationActive = false;
         if (animationId) {
           cancelAnimationFrame(animationId);
         }
-      }
-    };
-
-    const handleTouchEnd = () => {
-      if (isMobile) {
-        // Resume animation after a delay on mobile
-        setTimeout(() => {
-          setIsAnimating(true);
-          if (isHydrated && !loading && container) {
-            isAnimationActive = true;
-            animationId = requestAnimationFrame(animate);
-          }
-        }, 1500);
-      }
-    };
-
-    // Start animation with device-specific delay
-    const startTimer = setTimeout(() => {
-      if (isAnimating && container && companies.length > 0) {
-        isAnimationActive = true;
-        animationId = requestAnimationFrame(animate);
-      }
-    }, isMobile ? 500 : 250); // Longer delay on mobile
-
-    // Add event listeners
-    container.addEventListener('mouseenter', handleMouseEnter);
-    container.addEventListener('mouseleave', handleMouseLeave);
-    
-    // Add touch event listeners for mobile
-    if (isMobile) {
-      container.addEventListener('touchstart', handleTouchStart, { passive: true });
-      container.addEventListener('touchend', handleTouchEnd, { passive: true });
-    }
-
-    return () => {
-      clearTimeout(startTimer);
-      isAnimationActive = false;
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-      if (container) {
         container.removeEventListener('mouseenter', handleMouseEnter);
         container.removeEventListener('mouseleave', handleMouseLeave);
-        if (isMobile) {
-          container.removeEventListener('touchstart', handleTouchStart);
-          container.removeEventListener('touchend', handleTouchEnd);
-        }
-      }
-    };
+      };
+    }
+    // Mobile: No JavaScript needed, pure CSS animation handles everything
   }, [isAnimating, isHydrated, loading, companies.length, isMobile]);
 
   // Don't render if no companies available
@@ -209,16 +167,22 @@ export function CompanyCarousel() {
           Companies We Work With
         </h2>
         
-        <div className="relative overflow-hidden">
+        <div className="relative overflow-hidden" style={{ touchAction: 'pan-y' }}>
           <div
             ref={carouselRef}
-            className="flex gap-4 md:gap-8 overflow-x-hidden px-6"
-            style={{ 
+            className={`flex gap-4 md:gap-8 px-6 ${isMobile ? 'mobile-carousel' : 'desktop-carousel'}`}
+            style={isMobile ? {
+              // Mobile: Pure CSS animation, no scroll at all
+              animation: companies.length > 0 ? `scroll-left ${companies.length * 4}s linear infinite` : 'none',
+              touchAction: 'none',
+              pointerEvents: 'none',
+              transform: 'translateZ(0)',
+              width: 'max-content'
+            } : { 
+              // Desktop: Scrollable
               scrollbarWidth: 'none', 
               msOverflowStyle: 'none',
-              WebkitOverflowScrolling: 'touch',
-              transform: 'translateZ(0)', // Force hardware acceleration
-              backfaceVisibility: 'hidden', // Prevent flickering on mobile
+              overflowX: 'hidden',
               '::-webkit-scrollbar': {
                 display: 'none'
               }
@@ -228,7 +192,7 @@ export function CompanyCarousel() {
             {[...companies, ...companies].map((company, index) => (
               <div
                 key={`${company.id}-${index}`}
-                className="company-carousel__item group relative flex-shrink-0 w-28 h-16 md:w-36 md:h-20 bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center transition-all duration-300 hover:shadow-md hover:scale-105 cursor-pointer"
+                className={`company-carousel__item group relative flex-shrink-0 w-28 h-16 md:w-36 md:h-20 bg-white rounded-xl md:rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center transition-all duration-300 hover:shadow-md hover:scale-105 ${isMobile ? 'pointer-events-none' : 'cursor-pointer'}`}
               >
                 <div className="company-carousel__logo flex items-center justify-center w-full h-full p-2 md:p-4">
                   <img
@@ -265,6 +229,54 @@ export function CompanyCarousel() {
           </div>
         </div>
       </div>
+      
+      {/* CSS animations for mobile */}
+      <style jsx>{`
+        @keyframes scroll-left {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        
+        .mobile-carousel {
+          /* Mobile: Pure CSS transform animation, no scrolling at all */
+          overflow: visible !important;
+          -webkit-overflow-scrolling: unset !important;
+          touch-action: none !important;
+          pointer-events: none !important;
+        }
+        
+        .desktop-carousel {
+          /* Desktop: Allow scrolling for mouse interaction */
+          overflow-x: hidden;
+        }
+        
+        @media (max-width: 768px) {
+          .company-carousel {
+            /* Completely prevent any horizontal scroll behavior */
+            overflow-x: hidden !important;
+            overscroll-behavior-x: none !important;
+            -webkit-overflow-scrolling: unset !important;
+            touch-action: pan-y !important;
+          }
+          
+          .company-carousel * {
+            /* Ensure no child elements can create horizontal scroll */
+            touch-action: pan-y !important;
+            -webkit-overflow-scrolling: unset !important;
+          }
+          
+          .company-carousel__item {
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            pointer-events: none !important;
+            touch-action: none !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }
