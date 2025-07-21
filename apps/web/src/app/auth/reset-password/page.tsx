@@ -19,6 +19,7 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hasProcessedAuth, setHasProcessedAuth] = useState(false)
   const router = useRouter()
   const { updatePassword, user, loading } = useAuth()
 
@@ -29,27 +30,32 @@ export default function ResetPasswordPage() {
   } = useForm<ResetPasswordFormData>()
 
   useEffect(() => {
-    console.log('Reset password page - Auth state:', { user: !!user, loading, userEmail: user?.email })
+    console.log('Reset password page - Auth state:', { user: !!user, loading, userEmail: user?.email, hasProcessedAuth })
     
-    // Give more time for auth to establish session after redirect
-    const checkAuthWithDelay = setTimeout(() => {
-      if (!loading && !user) {
-        console.log('No user found after extended wait')
-        setError('Invalid reset link. Please request a new password reset.')
-      } else if (!loading && user) {
-        console.log('User found, clearing any errors')
+    // Only process auth check once to avoid multiple token consumption
+    if (!hasProcessedAuth) {
+      // Give time for Supabase to establish session from URL
+      const checkAuthWithDelay = setTimeout(() => {
+        setHasProcessedAuth(true)
+        if (!loading && !user) {
+          console.log('No user found after extended wait')
+          setError('Invalid reset link. Please request a new password reset.')
+        } else if (!loading && user) {
+          console.log('User found, clearing any errors')
+          setError(null)
+        }
+      }, 3000) // Wait 3 seconds for auth to settle
+      
+      // If user is found immediately, clear timeout and error
+      if (user) {
+        clearTimeout(checkAuthWithDelay)
         setError(null)
+        setHasProcessedAuth(true)
       }
-    }, 2000) // Wait 2 seconds for auth to settle
-    
-    // If user is found immediately, clear timeout and error
-    if (user) {
-      clearTimeout(checkAuthWithDelay)
-      setError(null)
+      
+      return () => clearTimeout(checkAuthWithDelay)
     }
-    
-    return () => clearTimeout(checkAuthWithDelay)
-  }, [user, loading])
+  }, [user, loading, hasProcessedAuth])
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     setIsLoading(true)
