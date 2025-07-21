@@ -29,9 +29,16 @@ export default function ResetPasswordPage() {
   } = useForm<ResetPasswordFormData>()
 
   useEffect(() => {
+    // Debug logging
+    console.log('Reset password page - Auth state:', { user: !!user, loading, userEmail: user?.email })
+    
     // Wait for auth to load, then check if user is authenticated
     if (!loading && !user) {
+      console.log('No user found after loading completed')
       setError('Invalid reset link. Please request a new password reset.')
+    } else if (!loading && user) {
+      console.log('User found, clearing any errors')
+      setError(null)
     }
   }, [user, loading])
 
