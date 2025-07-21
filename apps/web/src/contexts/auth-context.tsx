@@ -54,13 +54,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = async () => {
     try {
+      console.log('Auth context refresh called')
       const { data: { user: authUser }, error } = await supabase.auth.getUser()
+      
+      console.log('getUser result:', { user: !!authUser, error: error?.message })
       
       if (error) {
         // Only log errors that aren't "Auth session missing" (which is normal on first load)
         if (error.message !== 'Auth session missing!') {
           console.error('Error getting user:', error)
         }
+        console.log('No user found, checking session')
+        
+        // Also try getSession as backup
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        console.log('getSession result:', { session: !!session, error: sessionError?.message })
+        
+        if (session?.user) {
+          console.log('Found user in session, setting user')
+          const authUserWithMetadata = session.user as AuthUser
+          setUser(authUserWithMetadata)
+          setLoading(false)
+          return
+        }
+        
         setUser(null)
         setProfile(null)
         setLoading(false)
