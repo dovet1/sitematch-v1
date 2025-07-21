@@ -50,6 +50,8 @@ export function Testimonials() {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
 
   const nextTestimonial = () => {
     setCurrentIndex((prev) => (prev + 1) % testimonials.length);
@@ -76,6 +78,42 @@ export function Testimonials() {
   const handleMouseEnter = () => setIsAutoPlaying(false);
   const handleMouseLeave = () => setIsAutoPlaying(true);
 
+  // Touch event handlers for swipe functionality
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX);
+    setTouchEnd(0); // Reset touch end
+    setIsAutoPlaying(false); // Pause auto-play during touch
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+    
+    // If no touchMove occurred, use changedTouches from touchEnd
+    const finalTouchEnd = touchEnd || e.changedTouches[0].clientX;
+    const distance = touchStart - finalTouchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    console.log('Swipe detected:', { touchStart, finalTouchEnd, distance, isLeftSwipe, isRightSwipe });
+
+    if (isLeftSwipe) {
+      nextTestimonial();
+    } else if (isRightSwipe) {
+      prevTestimonial();
+    }
+    
+    // Reset touch values
+    setTouchStart(0);
+    setTouchEnd(0);
+    
+    // Resume auto-play after a delay
+    setTimeout(() => setIsAutoPlaying(true), 3000);
+  };
+
   return (
     <section className="testimonials py-20 bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="testimonials__container max-w-7xl mx-auto px-6">
@@ -89,7 +127,17 @@ export function Testimonials() {
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          <div className="testimonials__card bg-white rounded-2xl p-8 md:p-12 relative shadow-lg border border-gray-100">
+          <div 
+            className="testimonials__card bg-white rounded-2xl p-8 md:p-12 relative shadow-lg border border-gray-100 select-none"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{ 
+              touchAction: 'manipulation',
+              userSelect: 'none',
+              WebkitUserSelect: 'none'
+            }}
+          >
             {/* Quote Icon */}
             <Quote className="w-12 h-12 text-violet-600 mb-6" />
             
@@ -125,12 +173,12 @@ export function Testimonials() {
             </div>
           </div>
 
-          {/* Navigation Buttons */}
+          {/* Navigation Buttons - Hidden on mobile */}
           <Button
             variant="outline"
             size="sm"
             onClick={prevTestimonial}
-            className="absolute -left-2 md:-left-6 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 p-0 rounded-full shadow-lg bg-white hover:bg-gray-50 border-gray-200"
+            className="hidden md:flex absolute -left-2 md:-left-6 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 p-0 rounded-full shadow-lg bg-white hover:bg-gray-50 border-gray-200"
             aria-label="Previous testimonial"
           >
             <ChevronLeft className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
@@ -140,7 +188,7 @@ export function Testimonials() {
             variant="outline"
             size="sm"
             onClick={nextTestimonial}
-            className="absolute -right-2 md:-right-6 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 p-0 rounded-full shadow-lg bg-white hover:bg-gray-50 border-gray-200"
+            className="hidden md:flex absolute -right-2 md:-right-6 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 p-0 rounded-full shadow-lg bg-white hover:bg-gray-50 border-gray-200"
             aria-label="Next testimonial"
           >
             <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
@@ -178,7 +226,19 @@ export function Testimonials() {
           
           .testimonials__card {
             padding: 24px;
+            cursor: grab;
+            transition: transform 0.2s ease;
           }
+          
+          .testimonials__card:active {
+            cursor: grabbing;
+            transform: scale(0.98);
+          }
+        }
+        
+        /* Smooth transition for testimonial changes */
+        .testimonials__card {
+          transition: opacity 0.3s ease, transform 0.2s ease;
         }
       `}</style>
     </section>
