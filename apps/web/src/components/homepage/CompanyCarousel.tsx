@@ -15,6 +15,7 @@ export function CompanyCarousel() {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [isAnimating, setIsAnimating] = useState(true);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Fetch companies from database
   useEffect(() => {
@@ -53,9 +54,14 @@ export function CompanyCarousel() {
     fetchCompanies();
   }, []);
 
-  // Ensure client-side hydration
+  // Ensure client-side hydration and detect mobile
   useEffect(() => {
     setIsHydrated(true);
+    // Detect mobile devices including iOS Safari
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
+                          ('ontouchstart' in window) || 
+                          (navigator.maxTouchPoints > 0);
+    setIsMobile(isMobileDevice);
   }, []);
 
   useEffect(() => {
@@ -65,7 +71,7 @@ export function CompanyCarousel() {
     if (!container) return;
 
     let animationId: number;
-    let scrollSpeed = 0.5; // pixels per frame
+    let scrollSpeed = isMobile ? 0.3 : 0.5; // Slower speed on mobile for better performance
     let isAnimationActive = false;
     
     const animate = () => {
@@ -96,33 +102,68 @@ export function CompanyCarousel() {
       }
     };
 
-    // Pause on hover
+    // Handle mouse events (desktop only)
     const handleMouseEnter = () => {
-      setIsAnimating(false);
-      isAnimationActive = false;
-      if (animationId) {
-        cancelAnimationFrame(animationId);
+      if (!isMobile) {
+        setIsAnimating(false);
+        isAnimationActive = false;
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+        }
       }
     };
 
     const handleMouseLeave = () => {
-      setIsAnimating(true);
-      if (isHydrated && !loading) {
-        isAnimationActive = true;
-        animationId = requestAnimationFrame(animate);
+      if (!isMobile) {
+        setIsAnimating(true);
+        if (isHydrated && !loading) {
+          isAnimationActive = true;
+          animationId = requestAnimationFrame(animate);
+        }
       }
     };
 
-    // Start animation after a delay to ensure DOM is ready
+    // Handle touch events (mobile)
+    const handleTouchStart = () => {
+      if (isMobile) {
+        setIsAnimating(false);
+        isAnimationActive = false;
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (isMobile) {
+        // Resume animation after a delay on mobile
+        setTimeout(() => {
+          setIsAnimating(true);
+          if (isHydrated && !loading && container) {
+            isAnimationActive = true;
+            animationId = requestAnimationFrame(animate);
+          }
+        }, 1500);
+      }
+    };
+
+    // Start animation with device-specific delay
     const startTimer = setTimeout(() => {
       if (isAnimating && container && companies.length > 0) {
         isAnimationActive = true;
         animationId = requestAnimationFrame(animate);
       }
-    }, 250); // Increased delay for production stability
+    }, isMobile ? 500 : 250); // Longer delay on mobile
 
+    // Add event listeners
     container.addEventListener('mouseenter', handleMouseEnter);
     container.addEventListener('mouseleave', handleMouseLeave);
+    
+    // Add touch event listeners for mobile
+    if (isMobile) {
+      container.addEventListener('touchstart', handleTouchStart, { passive: true });
+      container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    }
 
     return () => {
       clearTimeout(startTimer);
@@ -133,9 +174,13 @@ export function CompanyCarousel() {
       if (container) {
         container.removeEventListener('mouseenter', handleMouseEnter);
         container.removeEventListener('mouseleave', handleMouseLeave);
+        if (isMobile) {
+          container.removeEventListener('touchstart', handleTouchStart);
+          container.removeEventListener('touchend', handleTouchEnd);
+        }
       }
     };
-  }, [isAnimating, isHydrated, loading, companies.length]);
+  }, [isAnimating, isHydrated, loading, companies.length, isMobile]);
 
   // Don't render if no companies available
   if (loading) {
@@ -172,6 +217,8 @@ export function CompanyCarousel() {
               scrollbarWidth: 'none', 
               msOverflowStyle: 'none',
               WebkitOverflowScrolling: 'touch',
+              transform: 'translateZ(0)', // Force hardware acceleration
+              backfaceVisibility: 'hidden', // Prevent flickering on mobile
               '::-webkit-scrollbar': {
                 display: 'none'
               }
