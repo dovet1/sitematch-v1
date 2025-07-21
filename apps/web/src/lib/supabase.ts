@@ -146,6 +146,8 @@ export interface Database {
           id: string
           title: string
           company_name: string
+          company_domain: string | null
+          clearbit_logo: boolean | null
           description: string | null
           sector_id: string
           use_class_id: string
@@ -166,6 +168,8 @@ export interface Database {
           id?: string
           title: string
           company_name: string
+          company_domain?: string | null
+          clearbit_logo?: boolean | null
           description?: string | null
           sector_id: string
           use_class_id: string
@@ -186,6 +190,8 @@ export interface Database {
           id?: string
           title?: string
           company_name?: string
+          company_domain?: string | null
+          clearbit_logo?: boolean | null
           description?: string | null
           sector_id?: string
           use_class_id?: string
