@@ -39,41 +39,37 @@ export default function ResetPasswordPage() {
       
       console.log('URL has code parameter:', !!code)
       
-      if (code && !hasProcessedAuth && !user) {
-        console.log('Found code parameter, manually establishing session from verification code')
+      if (code && !hasProcessedAuth) {
+        console.log('Found code parameter, waiting for Supabase session to establish')
         setHasProcessedAuth(true)
         
-        try {
-          // Import Supabase client
-          const { createClientClient } = await import('@/lib/supabase')
-          const supabase = createClientClient()
-          
-          // Try to verify the recovery code and establish session
-          const { data: { user }, error } = await supabase.auth.verifyOtp({
-            token_hash: code,
-            type: 'recovery'
-          })
-          
-          console.log('Recovery verification result:', { user: !!user, error: error?.message })
-          
-          if (error) {
-            console.error('Failed to verify recovery code:', error)
-            setError('Invalid reset link. Please request a new password reset.')
-            return
-          }
-          
-          if (user) {
-            console.log('Session established successfully')
-            // Force auth context to refresh and pick up new session
+        // Supabase should have established a session during verification
+        // Just wait longer and trust the process
+        const waitForSession = async () => {
+          for (let i = 0; i < 10; i++) {
+            console.log(`Checking for session, attempt ${i + 1}/10`)
             await refresh()
+            
+            // Wait a bit between checks
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            
+            // Check if we now have a user
+            if (user) {
+              console.log('Session found after waiting!')
+              setError(null)
+              break
+            }
           }
-        } catch (error) {
-          console.error('Error establishing session:', error)
-          setError('Unable to establish session. Please try again.')
-          return
+          
+          if (!user) {
+            console.log('No session found after waiting')
+            setError('Invalid reset link. Please request a new password reset.')
+          }
         }
         
-        // Clean up URL after processing
+        waitForSession()
+        
+        // Clean up URL
         window.history.replaceState({}, document.title, window.location.pathname)
         return
       }
