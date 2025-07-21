@@ -36,7 +36,7 @@ export default function TestResetPassword() {
     checkSession()
   }, [])
 
-  const handlePasswordUpdate = async (e) => {
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     const supabase = createClientClient()
     
