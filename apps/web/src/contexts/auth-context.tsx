@@ -236,11 +236,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const resetPassword = async (email: string) => {
-    // Get the correct redirect URL based on environment
+    // Get the correct redirect URL dynamically
     let redirectUrl: string
     
     if (process.env.NEXT_PUBLIC_SITE_URL) {
-      // Production or explicitly set environment variable
+      // Fallback to manual override
       redirectUrl = process.env.NEXT_PUBLIC_SITE_URL
     } else if (typeof window !== 'undefined') {
       // Client-side fallback - use current origin
@@ -251,6 +251,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     console.log('Password reset redirect URL:', `${redirectUrl}/auth/reset-password`)
+    console.log('Environment check:', {
+      vercelUrl: process.env.VERCEL_URL,
+      siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+      finalUrl: redirectUrl
+    })
     
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${redirectUrl}/auth/reset-password`
