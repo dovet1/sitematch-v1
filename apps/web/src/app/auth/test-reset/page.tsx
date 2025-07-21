@@ -5,7 +5,7 @@ import { createClientClient } from '@/lib/supabase'
 
 // MINIMAL test page - bypasses our auth context entirely
 export default function TestResetPassword() {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
