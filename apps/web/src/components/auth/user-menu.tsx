@@ -87,7 +87,7 @@ export function UserMenu() {
               <span className="text-sm font-medium">{profile.email}</span>
               <span className="text-xs text-muted-foreground capitalize">
                 {profile.role}
-                {isAdmin && " • Admin"}
+                {isAdmin && profile.role !== 'admin' && " • Admin"}
               </span>
             </div>
           </DropdownMenuLabel>
