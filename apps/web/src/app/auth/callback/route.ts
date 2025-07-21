@@ -6,15 +6,21 @@ import { UserType } from '@/types/auth'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const token = searchParams.get('token')
+  const type = searchParams.get('type')
   const next = searchParams.get('next') ?? '/'
   const redirect = searchParams.get('redirect')
+  const redirectTo = searchParams.get('redirect_to')
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
 
   console.log('Auth callback hit:', { 
     hasCode: !!code, 
+    hasToken: !!token,
+    type,
     next, 
-    redirect, 
+    redirect,
+    redirectTo,
     origin,
     error,
     errorDescription 
@@ -24,6 +30,47 @@ export async function GET(request: NextRequest) {
   if (error) {
     console.error('Auth error:', error, errorDescription)
     return NextResponse.redirect(`${origin}/auth/auth-code-error?error=${error}`)
+  }
+
+  // Handle password recovery flow
+  if (token && type === 'recovery') {
+    const finalRedirect = redirectTo ? decodeURIComponent(redirectTo) : '/auth/reset-password'
+    const response = NextResponse.redirect(`${origin}${finalRedirect}`)
+    
+    const supabase = createSSRServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value
+          },
+          set(name: string, value: string, options: any) {
+            request.cookies.set({ name, value, ...options })
+            response.cookies.set({ name, value, ...options })
+          },
+          remove(name: string, options: any) {
+            request.cookies.set({ name, value: '', ...options })
+            response.cookies.set({ name, value: '', ...options })
+          },
+        },
+      }
+    )
+    
+    const { data: { user }, error } = await supabase.auth.verifyOtp({
+      token_hash: token,
+      type: 'recovery'
+    })
+    
+    console.log('Recovery token verification result:', { success: !error, error, userId: user?.id })
+    
+    if (!error && user) {
+      console.log('Password recovery session established, redirecting to:', `${origin}${finalRedirect}`)
+      return response
+    } else {
+      console.error('Password recovery error:', error)
+      return NextResponse.redirect(`${origin}/auth/auth-code-error?error=recovery_failed`)
+    }
   }
 
   if (code) {
