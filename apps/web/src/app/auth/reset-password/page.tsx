@@ -21,7 +21,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [hasProcessedAuth, setHasProcessedAuth] = useState(false)
   const router = useRouter()
-  const { updatePassword, user, loading } = useAuth()
+  const { updatePassword, user, loading, refresh } = useAuth()
 
   const {
     register,
@@ -30,30 +30,54 @@ export default function ResetPasswordPage() {
   } = useForm<ResetPasswordFormData>()
 
   useEffect(() => {
-    console.log('Reset password page - Auth state:', { user: !!user, loading, userEmail: user?.email, hasProcessedAuth })
-    
-    // Only process auth check once to avoid multiple token consumption
-    if (!hasProcessedAuth) {
-      // Give time for Supabase to establish session from URL
-      const checkAuthWithDelay = setTimeout(() => {
-        setHasProcessedAuth(true)
-        if (!loading && !user) {
-          console.log('No user found after extended wait')
-          setError('Invalid reset link. Please request a new password reset.')
-        } else if (!loading && user) {
-          console.log('User found, clearing any errors')
-          setError(null)
-        }
-      }, 3000) // Wait 3 seconds for auth to settle
+    const handlePasswordResetSession = async () => {
+      console.log('Reset password page - Auth state:', { user: !!user, loading, userEmail: user?.email, hasProcessedAuth })
       
-      // If user is found immediately, clear timeout and error
-      if (user) {
-        clearTimeout(checkAuthWithDelay)
-        setError(null)
+      // Check if we have a code parameter (successful verification)
+      const urlParams = new URLSearchParams(window.location.search)
+      const code = urlParams.get('code')
+      
+      console.log('URL has code parameter:', !!code)
+      
+      if (code && !hasProcessedAuth && !user) {
+        console.log('Found code parameter, manually refreshing auth session')
         setHasProcessedAuth(true)
+        
+        // Call refresh to force auth context to check for new session
+        await refresh()
+        
+        // Clean up URL after refresh
+        window.history.replaceState({}, document.title, window.location.pathname)
+        return
       }
       
-      return () => clearTimeout(checkAuthWithDelay)
+      // Only process auth check once to avoid multiple token consumption
+      if (!hasProcessedAuth) {
+        // Give time for Supabase to establish session from URL
+        const checkAuthWithDelay = setTimeout(() => {
+          setHasProcessedAuth(true)
+          if (!loading && !user) {
+            console.log('No user found after extended wait')
+            setError('Invalid reset link. Please request a new password reset.')
+          } else if (!loading && user) {
+            console.log('User found, clearing any errors')
+            setError(null)
+          }
+        }, 2000) // Wait 2 seconds for auth to settle
+        
+        // If user is found immediately, clear timeout and error
+        if (user) {
+          clearTimeout(checkAuthWithDelay)
+          setError(null)
+          setHasProcessedAuth(true)
+        }
+        
+        return () => clearTimeout(checkAuthWithDelay)
+      }
+    }
+    
+    if (typeof window !== 'undefined') {
+      handlePasswordResetSession()
     }
   }, [user, loading, hasProcessedAuth])
 
