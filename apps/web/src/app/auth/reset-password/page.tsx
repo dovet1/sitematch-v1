@@ -41,8 +41,29 @@ export default function ResetPasswordPage() {
       
       const accessToken = hashParams.get('access_token') || searchParams.get('access_token')
       const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token')
+      const code = searchParams.get('code')
       
-      console.log('Tokens found:', { accessToken: !!accessToken, refreshToken: !!refreshToken })
+      console.log('Auth params found:', { accessToken: !!accessToken, refreshToken: !!refreshToken, code: !!code })
+      
+      // If we have a code, exchange it for a session
+      if (code && !user) {
+        console.log('Exchanging code for session')
+        const { createClientClient } = await import('@/lib/supabase')
+        const supabase = createClientClient()
+        
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        
+        if (error) {
+          console.error('Error exchanging code for session:', error)
+          setError('Invalid reset link. Please request a new password reset.')
+        } else {
+          console.log('Code exchanged successfully')
+          setError(null)
+          // Clean up URL
+          window.history.replaceState({}, document.title, window.location.pathname)
+        }
+        return
+      }
       
       // If we have tokens in URL, set the session manually
       if (accessToken && refreshToken && !user) {
@@ -68,8 +89,8 @@ export default function ResetPasswordPage() {
       }
       
       // Wait for auth to load, then check if user is authenticated
-      if (!loading && !user && !accessToken) {
-        console.log('No user found after loading completed and no tokens in URL')
+      if (!loading && !user && !accessToken && !code) {
+        console.log('No user found after loading completed and no auth params in URL')
         setError('Invalid reset link. Please request a new password reset.')
       } else if (!loading && user) {
         console.log('User found, clearing any errors')
