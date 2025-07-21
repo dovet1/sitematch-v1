@@ -45,19 +45,22 @@ export default function ResetPasswordPage() {
       
       console.log('Auth params found:', { accessToken: !!accessToken, refreshToken: !!refreshToken, code: !!code })
       
-      // If we have a code, exchange it for a session
+      // If we have a code, verify it as a recovery token
       if (code && !user) {
-        console.log('Exchanging code for session')
+        console.log('Verifying recovery code')
         const { createClientClient } = await import('@/lib/supabase')
         const supabase = createClientClient()
         
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        const { data: { user }, error } = await supabase.auth.verifyOtp({
+          token_hash: code,
+          type: 'recovery'
+        })
         
         if (error) {
-          console.error('Error exchanging code for session:', error)
+          console.error('Error verifying recovery code:', error)
           setError('Invalid reset link. Please request a new password reset.')
         } else {
-          console.log('Code exchanged successfully')
+          console.log('Recovery code verified successfully, user:', !!user)
           setError(null)
           // Clean up URL
           window.history.replaceState({}, document.title, window.location.pathname)
