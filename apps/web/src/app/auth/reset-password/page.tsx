@@ -29,16 +29,56 @@ export default function ResetPasswordPage() {
   } = useForm<ResetPasswordFormData>()
 
   useEffect(() => {
-    // Debug logging
-    console.log('Reset password page - Auth state:', { user: !!user, loading, userEmail: user?.email })
+    const handlePasswordReset = async () => {
+      // Debug logging
+      console.log('Reset password page - Auth state:', { user: !!user, loading, userEmail: user?.email })
+      console.log('URL hash:', window.location.hash)
+      console.log('URL search:', window.location.search)
+      
+      // Check for access token in URL hash (Supabase sometimes uses hash fragments)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const searchParams = new URLSearchParams(window.location.search)
+      
+      const accessToken = hashParams.get('access_token') || searchParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token')
+      
+      console.log('Tokens found:', { accessToken: !!accessToken, refreshToken: !!refreshToken })
+      
+      // If we have tokens in URL, set the session manually
+      if (accessToken && refreshToken && !user) {
+        console.log('Setting session from URL tokens')
+        const { createClientClient } = await import('@/lib/supabase')
+        const supabase = createClientClient()
+        
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        })
+        
+        if (error) {
+          console.error('Error setting session:', error)
+          setError('Invalid reset link. Please request a new password reset.')
+        } else {
+          console.log('Session set successfully')
+          setError(null)
+          // Clean up URL
+          window.history.replaceState({}, document.title, window.location.pathname)
+        }
+        return
+      }
+      
+      // Wait for auth to load, then check if user is authenticated
+      if (!loading && !user && !accessToken) {
+        console.log('No user found after loading completed and no tokens in URL')
+        setError('Invalid reset link. Please request a new password reset.')
+      } else if (!loading && user) {
+        console.log('User found, clearing any errors')
+        setError(null)
+      }
+    }
     
-    // Wait for auth to load, then check if user is authenticated
-    if (!loading && !user) {
-      console.log('No user found after loading completed')
-      setError('Invalid reset link. Please request a new password reset.')
-    } else if (!loading && user) {
-      console.log('User found, clearing any errors')
-      setError(null)
+    if (typeof window !== 'undefined') {
+      handlePasswordReset()
     }
   }, [user, loading])
 
