@@ -29,8 +29,11 @@ export interface AuthContextType {
   user: AuthUser | null
   profile: UserProfile | null
   loading: boolean
-  signIn: (email: string, redirectTo?: string, userType?: UserType) => Promise<void>
+  signIn: (email: string, password: string, redirectTo?: string) => Promise<void>
+  signUp: (email: string, password: string, userType?: string, redirectTo?: string) => Promise<void>
   signOut: () => Promise<void>
+  resetPassword: (email: string) => Promise<void>
+  updatePassword: (newPassword: string) => Promise<void>
   hasRole: (role: UserRole | UserRole[]) => boolean
   isAdmin: boolean
   isOccupier: boolean

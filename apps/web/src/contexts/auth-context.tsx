@@ -181,33 +181,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const signIn = async (email: string, redirectTo?: string, userType?: string) => {
-    // Use environment variable for production URL, fallback to window.location.origin
-    // In production/preview, NEXT_PUBLIC_SITE_URL will be the full URL
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin.replace('127.0.0.1', 'localhost')
-    // Default redirect to dashboard if not specified
-    const defaultRedirect = redirectTo || '/occupier/dashboard'
-    
-    // Use redirect parameter for search intent persistence
-    let callbackUrl = `${origin}/auth/callback`
-    if (redirectTo) {
-      callbackUrl += `?redirect=${encodeURIComponent(redirectTo)}`
-    } else {
-      callbackUrl += `?next=${encodeURIComponent(defaultRedirect)}`
-    }
-    
-    console.log('Auth signIn - callback URL:', callbackUrl)
-    
-    const { error } = await supabase.auth.signInWithOtp({
+  const signIn = async (email: string, password: string, redirectTo?: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
       email,
+      password
+    })
+
+    if (error) {
+      console.error('Supabase auth error:', error)
+      throw error
+    }
+
+    // Handle redirect after successful sign in
+    if (redirectTo) {
+      router.push(redirectTo)
+    } else {
+      router.push('/occupier/dashboard')
+    }
+  }
+
+  const signUp = async (email: string, password: string, userType?: string, redirectTo?: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
       options: {
-        emailRedirectTo: callbackUrl,
         data: userType ? { user_type: userType } : undefined
       }
     })
 
     if (error) {
-      console.error('Supabase auth error:', error)
+      console.error('Supabase signup error:', error)
+      throw error
+    }
+
+    // Auto sign in after successful signup
+    await signIn(email, password, redirectTo)
+  }
+
+  const resetPassword = async (email: string) => {
+    // Get the correct redirect URL based on environment
+    let redirectUrl: string
+    
+    if (process.env.NEXT_PUBLIC_SITE_URL) {
+      // Production or explicitly set environment variable
+      redirectUrl = process.env.NEXT_PUBLIC_SITE_URL
+    } else if (typeof window !== 'undefined') {
+      // Client-side fallback - use current origin
+      redirectUrl = window.location.origin.replace('127.0.0.1', 'localhost')
+    } else {
+      // Server-side fallback for local development
+      redirectUrl = 'http://localhost:3000'
+    }
+    
+    console.log('Password reset redirect URL:', `${redirectUrl}/auth/reset-password`)
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${redirectUrl}/auth/reset-password`
+    })
+
+    if (error) {
+      console.error('Password reset error:', error)
+      throw error
+    }
+  }
+
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    })
+
+    if (error) {
+      console.error('Password update error:', error)
       throw error
     }
   }
@@ -239,7 +283,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile,
     loading,
     signIn,
+    signUp,
     signOut,
+    resetPassword,
+    updatePassword,
     hasRole,
     isAdmin,
     isOccupier,
