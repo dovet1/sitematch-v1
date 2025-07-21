@@ -20,7 +20,7 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const { updatePassword } = useAuth()
+  const { updatePassword, user, loading } = useAuth()
 
   const {
     register,
@@ -29,15 +29,11 @@ export default function ResetPasswordPage() {
   } = useForm<ResetPasswordFormData>()
 
   useEffect(() => {
-    // Check if we have the access token from the reset email
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search)
-      const accessToken = urlParams.get('access_token')
-      if (!accessToken) {
-        setError('Invalid reset link. Please request a new password reset.')
-      }
+    // Wait for auth to load, then check if user is authenticated
+    if (!loading && !user) {
+      setError('Invalid reset link. Please request a new password reset.')
     }
-  }, [])
+  }, [user, loading])
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     setIsLoading(true)
