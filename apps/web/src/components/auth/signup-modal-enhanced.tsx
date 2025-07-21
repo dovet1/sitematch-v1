@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Mail, Loader2, UserPlus, ChevronLeft, Check, Building2, Users, Wrench, Home, TreePine, Calculator, Globe, MoreHorizontal, X } from 'lucide-react'
+import { Mail, Loader2, UserPlus, ChevronLeft, Check, Building2, Users, Wrench, Home, TreePine, Calculator, Globe, MoreHorizontal, X, Lock } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,8 @@ import { UserType } from '@/types/auth'
 
 interface SignUpFormData {
   email: string
+  password: string
+  confirmPassword: string
   userType: UserType
 }
 
@@ -84,8 +86,9 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   
-  const { signIn } = useAuth()
+  const { signUp } = useAuth()
   const {
     register,
     handleSubmit,
@@ -97,36 +100,32 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
   } = useForm<SignUpFormData>({
     defaultValues: {
       email: '',
+      password: '',
+      confirmPassword: '',
       userType: undefined
     }
   })
 
   const selectedUserType = watch('userType')
 
-  const onSubmitEmail = async (data: SignUpFormData) => {
+  const onSubmitStep1 = async (data: SignUpFormData) => {
     setEmail(data.email)
+    setPassword(data.password)
     setStep(2)
     setError(null)
   }
 
-  const onSubmitUserType = async (data: SignUpFormData) => {
+  const onSubmitStep2 = async (data: SignUpFormData) => {
     setIsLoading(true)
     setError(null)
     
     try {
-      console.log('Attempting to sign in with:', { email, redirectTo, userType: data.userType })
-      // Send magic link after both steps are complete with user_type in metadata
-      await signIn(email, redirectTo, data.userType)
-      console.log('Sign in successful, storing user type:', data.userType)
-      // Store user type for when they complete signup (backup in case metadata doesn't work)
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('pendingUserType', data.userType)
-      }
-      setSuccess(true)
+      await signUp(email, password, data.userType, redirectTo)
+      // User will be automatically signed in and redirected
       reset()
     } catch (err) {
-      console.error('Sign in error:', err)
-      setError(`Database error saving new user: ${err instanceof Error ? err.message : 'An error occurred'}`)
+      console.error('Sign up error:', err)
+      setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setIsLoading(false)
     }
@@ -140,6 +139,7 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
       setSuccess(false)
       setStep(1)
       setEmail('')
+      setPassword('')
     }
   }
 
@@ -157,226 +157,242 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
       </DialogTrigger>
       <DialogPortal>
         <DialogOverlay className="z-[9998]" />
-        <DialogPrimitive.Content
-          className="fixed left-[50%] top-[50%] z-[9999] grid w-full max-w-[500px] translate-x-[-50%] translate-y-[-50%] gap-6 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] violet-bloom-card"
-        >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            Create Account
-          </DialogTitle>
-          <DialogDescription>
-            {step === 1 ? (
-              <>Enter your email to get started - we'll send you a magic link to complete registration</>
-            ) : (
-              <>Complete your profile to personalize your experience</>
-            )}
-          </DialogDescription>
-        </DialogHeader>
-        
-        {success ? (
-          <div className="text-center py-6" role="status" aria-live="polite">
-            <div className="mb-4">
-              <div className="h-12 w-12 mx-auto rounded-full bg-green-100 flex items-center justify-center">
-                <Check className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Check your email</h3>
-            <p className="text-sm text-muted-foreground">
-              We've sent a sign-in link to <strong>{email}</strong>
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Enhanced Progress Indicator */}
-            <div className="flex items-center justify-center mb-6">
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col items-center gap-2">
-                  <div className={cn(
-                    "h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
-                    step >= 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                  )}>
-                    1
-                  </div>
-                  <span className={cn(
-                    "text-xs font-medium transition-colors",
-                    step >= 1 ? "text-primary" : "text-muted-foreground"
-                  )}>
-                    Email
-                  </span>
-                </div>
+        <DialogContent className="sm:max-w-[500px] z-[9999]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Create Account
+            </DialogTitle>
+            <DialogDescription>
+              {step === 1 ? (
+                <>Enter your email and create a password to get started</>
+              ) : (
+                <>Complete your profile to personalize your experience</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Enhanced Progress Indicator */}
+          <div className="flex items-center justify-center mb-6">
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col items-center gap-2">
                 <div className={cn(
-                  "h-1 w-12 transition-colors mt-[-16px]",
-                  step >= 2 ? "bg-primary" : "bg-muted"
-                )} />
-                <div className="flex flex-col items-center gap-2">
-                  <div className={cn(
-                    "h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
-                    step >= 2 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                  )}>
-                    2
-                  </div>
-                  <span className={cn(
-                    "text-xs font-medium transition-colors",
-                    step >= 2 ? "text-primary" : "text-muted-foreground"
-                  )}>
-                    Profile
-                  </span>
+                  "h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                  step >= 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                )}>
+                  1
                 </div>
+                <span className={cn(
+                  "text-xs font-medium transition-colors",
+                  step >= 1 ? "text-primary" : "text-muted-foreground"
+                )}>
+                  Account
+                </span>
+              </div>
+              <div className={cn(
+                "h-1 w-12 transition-colors mt-[-16px]",
+                step >= 2 ? "bg-primary" : "bg-muted"
+              )} />
+              <div className="flex flex-col items-center gap-2">
+                <div className={cn(
+                  "h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                  step >= 2 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                )}>
+                  2
+                </div>
+                <span className={cn(
+                  "text-xs font-medium transition-colors",
+                  step >= 2 ? "text-primary" : "text-muted-foreground"
+                )}>
+                  Profile
+                </span>
               </div>
             </div>
+          </div>
 
-            {step === 1 ? (
-              <form onSubmit={handleSubmit(onSubmitEmail)} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email address</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    aria-label="Email address"
-                    {...register('email', {
-                      required: 'Email is required',
-                      pattern: {
-                        value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                        message: 'Please enter a valid email address'
-                      }
-                    })}
-                    disabled={isLoading}
-                    autoFocus
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-red-500" role="alert">{errors.email.message}</p>
+          {step === 1 ? (
+            <form onSubmit={handleSubmit(onSubmitStep1)} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-email">Email address</Label>
+                <Input
+                  id="signup-email"
+                  type="email"
+                  placeholder="Enter your email"
+                  aria-label="Email address"
+                  {...register('email', {
+                    required: 'Email is required',
+                    pattern: {
+                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                      message: 'Please enter a valid email address'
+                    }
+                  })}
+                  disabled={isLoading}
+                  autoFocus
+                />
+                {errors.email && (
+                  <p className="text-sm text-red-500" role="alert">{errors.email.message}</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="signup-password">Password</Label>
+                <Input
+                  id="signup-password"
+                  type="password"
+                  placeholder="Create a password"
+                  {...register('password', {
+                    required: 'Password is required',
+                    minLength: {
+                      value: 8,
+                      message: 'Password must be at least 8 characters'
+                    },
+                    pattern: {
+                      value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
+                      message: 'Password must contain uppercase, lowercase, and a number'
+                    }
+                  })}
+                  disabled={isLoading}
+                />
+                {errors.password && (
+                  <p className="text-sm text-red-500" role="alert">{errors.password.message}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Minimum 8 characters with uppercase, lowercase, and a number
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+                <Input
+                  id="signup-confirm-password"
+                  type="password"
+                  placeholder="Confirm your password"
+                  {...register('confirmPassword', {
+                    required: 'Please confirm your password',
+                    validate: (value, formValues) => 
+                      value === formValues.password || 'Passwords do not match'
+                  })}
+                  disabled={isLoading}
+                />
+                {errors.confirmPassword && (
+                  <p className="text-sm text-red-500" role="alert">{errors.confirmPassword.message}</p>
+                )}
+              </div>
+              
+              {error && (
+                <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md" role="alert" aria-live="assertive">
+                  {error}
+                </div>
+              )}
+              
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                Continue
+              </Button>
+            </form>
+          ) : (
+            <div className="space-y-6">
+              {/* Navigation Header */}
+              <div className="flex items-center justify-between">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleBack}
+                  className="flex items-center gap-1 px-2 py-1"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </Button>
+                <span className="text-sm text-muted-foreground">Step 2 of 2</span>
+              </div>
+
+              {/* Email Confirmation */}
+              <div className="p-3 bg-muted rounded-md">
+                <p className="text-sm text-muted-foreground">
+                  Creating account for: <span className="font-medium text-foreground">{email}</span>
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit(onSubmitStep2)} className="space-y-6">
+                <div className="space-y-3">
+                  <Label htmlFor="user-type" className="text-base font-medium">
+                    Which best describes you?
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    This helps us personalize your experience
+                  </p>
+                  
+                  {/* Radio Button Options */}
+                  <div className="space-y-2" role="radiogroup" aria-required="true">
+                    {userTypes.map((type) => (
+                      <label
+                        key={type.value}
+                        htmlFor={`user-type-${type.value}`}
+                        className={cn(
+                          "flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all hover:bg-accent/50",
+                          selectedUserType === type.value
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          id={`user-type-${type.value}`}
+                          value={type.value}
+                          {...register('userType', { required: 'Please select your user type' })}
+                          className="mt-1"
+                          aria-label={type.label}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            {type.icon}
+                            <span className="font-medium">{type.label}</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {type.description}
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  
+                  {errors.userType && (
+                    <p className="text-sm text-red-500" role="alert">{errors.userType.message}</p>
                   )}
                 </div>
-                
+
                 {error && (
                   <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md" role="alert" aria-live="assertive">
                     {error}
                   </div>
                 )}
                 
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isLoading || !selectedUserType}
+                >
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span>Continuing...</span>
+                      <span>Creating account...</span>
                     </>
                   ) : (
-                    'Continue'
+                    <>
+                      <Lock className="mr-2 h-4 w-4" />
+                      <span>Complete Sign Up</span>
+                    </>
                   )}
                 </Button>
               </form>
-            ) : (
-              <div className="space-y-6">
-                {/* Navigation Header */}
-                <div className="flex items-center justify-between">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleBack}
-                    className="flex items-center gap-1 px-2 py-1"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Back
-                  </Button>
-                  <span className="text-sm text-muted-foreground">Step 2 of 2</span>
-                </div>
+            </div>
+          )}
 
-                {/* Email Confirmation */}
-                <div className="p-3 bg-muted rounded-md">
-                  <p className="text-sm text-muted-foreground">
-                    Creating account for: <strong>{email}</strong>
-                  </p>
-                </div>
-                
-                <form onSubmit={handleSubmit(onSubmitUserType)} className="space-y-4">
-                  <div className="space-y-3">
-                    <Label htmlFor="user-type-select" className="text-base font-medium">
-                      Which best describes you?
-                    </Label>
-                    <Select
-                      value={selectedUserType || ''}
-                      onValueChange={(value) => {
-                        setValue('userType', value as UserType)
-                        if (errors.userType) {
-                          clearErrors('userType')
-                        }
-                      }}
-                    >
-                      <SelectTrigger 
-                        id="user-type-select"
-                        className="w-full h-12"
-                        aria-label="Select your user type"
-                      >
-                        <SelectValue placeholder="Choose your user type">
-                          {selectedUserTypeData && (
-                            <div className="flex items-center gap-2">
-                              {selectedUserTypeData.icon}
-                              <span>{selectedUserTypeData.label}</span>
-                            </div>
-                          )}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent 
-                        className="z-[10000] max-h-[300px]" 
-                        position="popper"
-                        side="bottom"
-                        align="start"
-                        sideOffset={4}
-                      >
-                        {userTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value} className="py-3">
-                            <div className="flex items-start gap-3">
-                              <div className="mt-0.5">
-                                {type.icon}
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{type.label}</span>
-                                <span className="text-sm text-muted-foreground">{type.description}</span>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.userType && (
-                      <p className="text-sm text-red-500" role="alert">{errors.userType.message}</p>
-                    )}
-                  </div>
-                  
-                  {error && (
-                    <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md" role="alert" aria-live="assertive">
-                      {error}
-                    </div>
-                  )}
-                  
-                  <Button type="submit" className="w-full" disabled={isLoading || !selectedUserType}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        <span>Creating account...</span>
-                      </>
-                    ) : (
-                      'Complete Sign Up'
-                    )}
-                  </Button>
-                </form>
-              </div>
-            )}
-
-            <p className="text-xs text-muted-foreground text-center mt-4">
-              By creating an account, you agree to our Terms of Service and Privacy Policy.
-            </p>
-          </>
-        )}
-        <DialogPrimitive.Close className="absolute right-4 top-4 opacity-70 ring-offset-background transition-all duration-200 ease-in-out hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground violet-bloom-touch">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      </DialogPrimitive.Content>
-    </DialogPortal>
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            By creating an account, you agree to our Terms of Service and Privacy Policy.
+          </p>
+        </DialogContent>
+      </DialogPortal>
     </Dialog>
   )
 }

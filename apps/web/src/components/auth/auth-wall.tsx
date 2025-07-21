@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SignUpModalEnhanced } from './signup-modal-enhanced'
-import { MagicLinkForm } from '../magic-link-form'
+import { LoginModal } from './login-modal'
 
 interface AuthWallProps {
   resultCount?: number
@@ -15,7 +15,6 @@ interface AuthWallProps {
 export function AuthWall({ resultCount, searchQuery }: AuthWallProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [showSignIn, setShowSignIn] = useState(false)
   
   // Build the redirect URL
   const currentUrl = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '')
@@ -51,22 +50,16 @@ export function AuthWall({ resultCount, searchQuery }: AuthWallProps) {
             </Button>
           </SignUpModalEnhanced>
           
-          <Button 
-            variant="outline" 
-            size="lg" 
-            className="w-full"
-            onClick={() => setShowSignIn(!showSignIn)}
-          >
-            Already have an account? Sign In
-          </Button>
+          <LoginModal redirectTo={currentUrl}>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="w-full"
+            >
+              Already have an account? Sign In
+            </Button>
+          </LoginModal>
         </div>
-        
-        {showSignIn && (
-          <div className="mt-6 p-6 border rounded-lg bg-muted/50">
-            <h3 className="font-medium mb-4">Sign in to your account</h3>
-            <MagicLinkForm redirectTo={currentUrl} />
-          </div>
-        )}
       </div>
     </div>
   )

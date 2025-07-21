@@ -18,6 +18,8 @@ import { useAuth } from '@/contexts/auth-context'
 
 interface SignUpFormData {
   email: string
+  password: string
+  confirmPassword: string
 }
 
 interface SignUpModalProps {
@@ -31,7 +33,7 @@ export function SignUpModal({ children, redirectTo }: SignUpModalProps) {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  const { signIn } = useAuth()
+  const { signUp } = useAuth()
   const {
     register,
     handleSubmit,
@@ -44,8 +46,8 @@ export function SignUpModal({ children, redirectTo }: SignUpModalProps) {
     setError(null)
     
     try {
-      await signIn(data.email, redirectTo)
-      setSuccess(true)
+      await signUp(data.email, data.password, undefined, redirectTo)
+      // User will be automatically signed in and redirected
       reset()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -75,68 +77,100 @@ export function SignUpModal({ children, redirectTo }: SignUpModalProps) {
             Create Account
           </DialogTitle>
           <DialogDescription>
-            Join SiteMatch to start discovering and listing commercial properties. 
-            We'll send you a magic link to get started.
+            Join SiteMatch to start discovering and listing commercial properties.
           </DialogDescription>
         </DialogHeader>
         
-        {success ? (
-          <div className="text-center py-6">
-            <div className="mb-4">
-              <Mail className="h-12 w-12 mx-auto text-green-500" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Check your email</h3>
-            <p className="text-sm text-muted-foreground">
-              We've sent a magic link to create your account. Click the link to get started.
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="signup-email">Email address</Label>
+            <Input
+              id="signup-email"
+              type="email"
+              placeholder="Enter your email"
+              {...register('email', {
+                required: 'Email is required',
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: 'Please enter a valid email address'
+                }
+              })}
+              disabled={isLoading}
+            />
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email.message}</p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="signup-password">Password</Label>
+            <Input
+              id="signup-password"
+              type="password"
+              placeholder="Create a password"
+              {...register('password', {
+                required: 'Password is required',
+                minLength: {
+                  value: 8,
+                  message: 'Password must be at least 8 characters'
+                },
+                pattern: {
+                  value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
+                  message: 'Password must contain uppercase, lowercase, and a number'
+                }
+              })}
+              disabled={isLoading}
+            />
+            {errors.password && (
+              <p className="text-sm text-red-500">{errors.password.message}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Minimum 8 characters with uppercase, lowercase, and a number
             </p>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="signup-email">Email address</Label>
-              <Input
-                id="signup-email"
-                type="email"
-                placeholder="Enter your email"
-                {...register('email', {
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: 'Please enter a valid email address'
-                  }
-                })}
-                disabled={isLoading}
-              />
-              {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
-              )}
-            </div>
-            
-            {error && (
-              <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md">
-                {error}
-              </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+            <Input
+              id="signup-confirm-password"
+              type="password"
+              placeholder="Confirm your password"
+              {...register('confirmPassword', {
+                required: 'Please confirm your password',
+                validate: (value, formValues) => 
+                  value === formValues.password || 'Passwords do not match'
+              })}
+              disabled={isLoading}
+            />
+            {errors.confirmPassword && (
+              <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
             )}
-            
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Create Account
-                </>
-              )}
-            </Button>
+          </div>
+          
+          {error && (
+            <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md">
+              {error}
+            </div>
+          )}
+          
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating account...
+              </>
+            ) : (
+              <>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Sign up
+              </>
+            )}
+          </Button>
 
-            <p className="text-xs text-muted-foreground text-center">
-              By creating an account, you agree to our Terms of Service and Privacy Policy.
-            </p>
-          </form>
-        )}
+          <p className="text-xs text-muted-foreground text-center">
+            By creating an account, you agree to our Terms of Service and Privacy Policy.
+          </p>
+        </form>
       </DialogContent>
     </Dialog>
   )

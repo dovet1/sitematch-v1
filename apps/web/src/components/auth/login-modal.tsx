@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Mail, Loader2 } from 'lucide-react'
+import { Mail, Loader2, Lock } from 'lucide-react'
+import { ForgotPasswordModal } from './forgot-password-modal'
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,7 @@ import { useAuth } from '@/contexts/auth-context'
 
 interface LoginFormData {
   email: string
+  password: string
 }
 
 interface LoginModalProps {
@@ -30,6 +32,7 @@ export function LoginModal({ children, redirectTo }: LoginModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false)
   
   const { signIn } = useAuth()
   const {
@@ -44,11 +47,11 @@ export function LoginModal({ children, redirectTo }: LoginModalProps) {
     setError(null)
     
     try {
-      await signIn(data.email, redirectTo)
-      setSuccess(true)
+      await signIn(data.email, data.password, redirectTo)
+      // No need to show success as user will be redirected
       reset()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : 'Invalid email or password')
     } finally {
       setIsLoading(false)
     }
@@ -75,67 +78,87 @@ export function LoginModal({ children, redirectTo }: LoginModalProps) {
             Sign In
           </DialogTitle>
           <DialogDescription>
-            Enter your email address and we'll send you a magic link to sign in.
+            Enter your email and password to sign in to your account.
           </DialogDescription>
         </DialogHeader>
         
-        {success ? (
-          <div className="text-center py-6">
-            <div className="mb-4">
-              <Mail className="h-12 w-12 mx-auto text-green-500" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Check your email</h3>
-            <p className="text-sm text-muted-foreground">
-              We've sent a magic link to your email address. Click the link to sign in.
-            </p>
-            <p className="text-xs text-muted-foreground mt-3 border-t pt-3">
-              <strong>Mobile users:</strong> For best results, open the link in the same browser where you started sign-in.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                {...register('email', {
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: 'Please enter a valid email address'
-                  }
-                })}
-                disabled={isLoading}
-              />
-              {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
-              )}
-            </div>
-            
-            {error && (
-              <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md">
-                {error}
-              </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email address</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="Enter your email"
+              {...register('email', {
+                required: 'Email is required',
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: 'Please enter a valid email address'
+                }
+              })}
+              disabled={isLoading}
+            />
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email.message}</p>
             )}
-            
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending magic link...
-                </>
-              ) : (
-                <>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Send magic link
-                </>
-              )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              {...register('password', {
+                required: 'Password is required'
+              })}
+              disabled={isLoading}
+            />
+            {errors.password && (
+              <p className="text-sm text-red-500">{errors.password.message}</p>
+            )}
+          </div>
+          
+          {error && (
+            <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md">
+              {error}
+            </div>
+          )}
+          
+          <div className="flex items-center justify-end">
+            <Button
+              type="button"
+              variant="link"
+              className="text-sm text-primary hover:underline p-0"
+              onClick={() => {
+                setOpen(false)
+                setForgotPasswordOpen(true)
+              }}
+            >
+              Forgot password?
             </Button>
-          </form>
-        )}
+          </div>
+          
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              <>
+                <Lock className="mr-2 h-4 w-4" />
+                Log in
+              </>
+            )}
+          </Button>
+        </form>
       </DialogContent>
+      
+      <ForgotPasswordModal 
+        open={forgotPasswordOpen} 
+        onOpenChange={setForgotPasswordOpen}
+      />
     </Dialog>
   )
 }
