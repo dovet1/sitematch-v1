@@ -27,6 +27,7 @@ interface MapboxMapProps {
 
 export interface MapboxMapRef {
   clearAllDrawings: () => void;
+  deletePolygon: (polygonId: string) => void;
   isRotating: () => boolean;
   getOriginalCoordinates: () => number[][] | null;
 }
@@ -92,6 +93,46 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         setPolygonCenter(null);
         originalPolygonRef.current = null;
         totalRotationRef.current = 0;
+      }
+    },
+    deletePolygon: (polygonId: string) => {
+      if (drawRef.current && mapRef.current) {
+        const draw = drawRef.current;
+        
+        console.log('MapboxMap deletePolygon called with ID:', polygonId);
+        console.log('All features before delete:', draw.getAll().features.map(f => ({ id: f.id, properties: f.properties })));
+        
+        // Delete the specific polygon from Mapbox Draw
+        draw.delete(polygonId);
+        
+        // Clear annotations and handles if no polygons remain
+        const allFeatures = draw.getAll();
+        if (allFeatures.features.length === 0) {
+          if (mapRef.current && isMapLoaded) {
+            const sideSource = mapRef.current.getSource('side-annotations') as mapboxgl.GeoJSONSource;
+            if (sideSource) {
+              sideSource.setData({
+                type: 'FeatureCollection',
+                features: []
+              });
+            }
+            
+            const rotationSource = mapRef.current.getSource('polygon-rotation-handles') as mapboxgl.GeoJSONSource;
+            if (rotationSource) {
+              rotationSource.setData({
+                type: 'FeatureCollection',
+                features: []
+              });
+            }
+            
+            setPolygonCenter(null);
+            originalPolygonRef.current = null;
+            totalRotationRef.current = 0;
+          }
+        }
+        
+        // Remain in drawing mode after deletion
+        draw.changeMode('draw_polygon');
       }
     },
     isRotating: () => isRotatingRef.current,

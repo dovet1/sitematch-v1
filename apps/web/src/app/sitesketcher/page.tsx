@@ -133,14 +133,31 @@ export default function SiteSketcherPage() {
   }, []);
 
   const handlePolygonDelete = useCallback((polygonId: string) => {
+    console.log('Attempting to delete polygon with ID:', polygonId);
+    console.log('Current polygons:', state.polygons.map(p => ({ 
+      id: p.id, 
+      propertiesId: p.properties?.id, 
+      polygon: p 
+    })));
+    
+    // Delete from map first
+    mapRef.current?.deletePolygon(polygonId);
+    
+    // Update state - check both polygon.id and polygon.properties.id
     setState(prev => ({
       ...prev,
-      polygons: prev.polygons.filter(p => p.properties?.id !== polygonId),
+      polygons: prev.polygons.filter(p => 
+        String(p.id) !== polygonId && 
+        String(p.properties?.id) !== polygonId
+      ),
       selectedPolygonId: null,
       measurements: null,
       parkingOverlays: [] // Clear parking overlays when polygon is deleted
     }));
-  }, []);
+    
+    // Clear original measurements reference
+    originalMeasurementsRef.current = null;
+  }, [state.polygons]);
 
   const handleParkingOverlayClick = useCallback((overlay: ParkingOverlay) => {
     setState(prev => ({
@@ -262,6 +279,7 @@ export default function SiteSketcherPage() {
               onUnitToggle={handleUnitToggle}
               onClearAll={handleClearAll}
               polygons={state.polygons}
+              onPolygonDelete={handlePolygonDelete}
               parkingOverlays={state.parkingOverlays}
               selectedOverlayId={state.selectedParkingId}
               onAddOverlay={handleAddParkingOverlay}
@@ -303,6 +321,7 @@ export default function SiteSketcherPage() {
             onUnitToggle={handleUnitToggle}
             onClearAll={handleClearAll}
             polygons={state.polygons}
+            onPolygonDelete={handlePolygonDelete}
             parkingOverlays={state.parkingOverlays}
             selectedOverlayId={state.selectedParkingId}
             onAddOverlay={handleAddParkingOverlay}
