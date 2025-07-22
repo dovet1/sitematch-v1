@@ -36,7 +36,7 @@ export function MagicLinkForm({ redirectTo, className }: MagicLinkFormProps) {
     setError(null)
     
     try {
-      await signIn(data.email, redirectTo)
+      await signIn(data.email, redirectTo || '/')
       setSuccess(true)
       reset()
     } catch (err) {
