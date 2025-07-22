@@ -124,11 +124,68 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       if (drawRef.current && mapRef.current) {
         const draw = drawRef.current;
         
+        // Debug: Log what we're trying to delete vs what exists
+        let allFeatures = draw.getAll();
+        console.log('MapboxMap.deletePolygon - Trying to delete:', polygonId);
+        console.log('MapboxMap.deletePolygon - Available features:', allFeatures.features.map(f => ({
+          id: f.id,
+          type: f.geometry.type
+        })));
+        
+        // First deselect any selected features
+        const selectedIds = draw.getSelectedIds();
+        console.log('Selected IDs before delete:', selectedIds);
+        if (selectedIds.length > 0) {
+          draw.changeMode('simple_select');
+        }
+        
         // Delete the specific polygon from Mapbox Draw
-        draw.delete(polygonId);
+        console.log('About to delete polygon:', polygonId);
+        draw.delete([polygonId]);
+        
+        // Clean up custom annotation layers for this polygon
+        if (mapRef.current && isMapLoaded) {
+          const sideSource = mapRef.current.getSource('side-annotations') as mapboxgl.GeoJSONSource;
+          if (sideSource) {
+            const currentData = sideSource._data as any;
+            if (currentData && currentData.features) {
+              // Remove annotations related to the deleted polygon
+              const filteredFeatures = currentData.features.filter((feature: any) => {
+                return feature.properties?.polygonId !== polygonId;
+              });
+              sideSource.setData({
+                type: 'FeatureCollection',
+                features: filteredFeatures
+              });
+            }
+          }
+          
+          const rotationSource = mapRef.current.getSource('polygon-rotation-handles') as mapboxgl.GeoJSONSource;
+          if (rotationSource) {
+            const currentData = rotationSource._data as any;
+            if (currentData && currentData.features) {
+              // Remove rotation handles for the deleted polygon
+              const filteredHandles = currentData.features.filter((feature: any) => {
+                return feature.properties?.polygonId !== polygonId;
+              });
+              rotationSource.setData({
+                type: 'FeatureCollection',
+                features: filteredHandles
+              });
+            }
+          }
+          
+          // Force a redraw/refresh of the map
+          mapRef.current.triggerRepaint();
+        }
+        
+        // Check what's left after deletion
+        const remainingFeatures = draw.getAll();
+        console.log('Features remaining after delete:', remainingFeatures.features.length);
+        console.log('Remaining feature IDs:', remainingFeatures.features.map(f => f.id));
         
         // Clear annotations and handles if no polygons remain
-        const allFeatures = draw.getAll();
+        allFeatures = draw.getAll();
         if (allFeatures.features.length === 0) {
           if (mapRef.current && isMapLoaded) {
             const sideSource = mapRef.current.getSource('side-annotations') as mapboxgl.GeoJSONSource;
@@ -246,8 +303,79 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       });
 
       map.addControl(draw);
-      map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      map.addControl(new mapboxgl.ScaleControl(), 'bottom-left');
+      // Navigation controls removed for cleaner mobile interface
+      
+      // Mobile-specific gesture handling
+      const isMobile = () => window.innerWidth < 768;
+      
+      if (isMobile()) {
+        // Disable map rotation on mobile to prevent conflicts
+        map.touchZoomRotate.disableRotation();
+        
+        // Track touch state for gesture conflict resolution
+        let touchStartTime = 0;
+        let isSingleTouch = false;
+        
+        // Handle touch start
+        map.on('touchstart', (e) => {
+          const touches = (e.originalEvent as TouchEvent).touches;
+          touchStartTime = Date.now();
+          isSingleTouch = touches.length === 1;
+          
+          if (drawingModeRef.current === 'draw' && isSingleTouch) {
+            // Prevent default map panning in draw mode
+            e.preventDefault();
+          }
+        });
+        
+        // Handle touch end for drawing
+        map.on('touchend', (e) => {
+          const touchDuration = Date.now() - touchStartTime;
+          
+          // Only process as drawing tap if:
+          // 1. In draw mode
+          // 2. Was single touch
+          // 3. Quick tap (< 300ms)
+          // 4. Not much movement
+          if (drawingModeRef.current === 'draw' && 
+              isSingleTouch && 
+              touchDuration < 300) {
+            
+            const point = e.point;
+            const lngLat = map.unproject(point);
+            
+            // Show touch indicator
+            const indicator = document.createElement('div');
+            indicator.className = 'touch-indicator';
+            indicator.style.left = `${point.x}px`;
+            indicator.style.top = `${point.y}px`;
+            mapContainer.current?.appendChild(indicator);
+            
+            // Remove indicator after animation
+            setTimeout(() => {
+              indicator.remove();
+            }, 600);
+            
+            // Trigger draw point at this location
+            const features = draw.getAll();
+            if (features.features.length > 0) {
+              const currentFeature = features.features[features.features.length - 1];
+              if (currentFeature.geometry.type === 'Polygon' && 
+                  currentFeature.geometry.coordinates[0].length > 0) {
+                // Drawing in progress - handled by Mapbox Draw
+              }
+            }
+          }
+        });
+        
+        // Disable single-finger pan in draw mode
+        map.on('drag', (e) => {
+          if (drawingModeRef.current === 'draw' && isSingleTouch) {
+            e.preventDefault();
+          }
+        });
+      }
+      // Scale control also removed for minimal mobile interface
 
       mapRef.current = map;
       drawRef.current = draw;
@@ -396,6 +524,46 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           totalRotationRef.current = 0;
           onPolygonCreate(feature);
           
+          // Visual feedback for completed polygon
+          if (isMobile()) {
+            // Flash the polygon to confirm completion
+            const flashFeature = {
+              type: 'Feature' as const,
+              geometry: feature.geometry,
+              properties: {}
+            };
+            
+            // Add temporary flash layer
+            map.addSource('polygon-flash', {
+              type: 'geojson',
+              data: flashFeature
+            });
+            
+            map.addLayer({
+              id: 'polygon-flash',
+              type: 'fill',
+              source: 'polygon-flash',
+              paint: {
+                'fill-color': '#22c55e',
+                'fill-opacity': 0.6
+              }
+            });
+            
+            // Remove flash after animation
+            setTimeout(() => {
+              if (map.getLayer('polygon-flash')) {
+                map.removeLayer('polygon-flash');
+                map.removeSource('polygon-flash');
+              }
+              
+              // Auto-switch to select mode on mobile after completion
+              if (drawingModeRef.current === 'draw') {
+                // This will trigger the parent component to switch modes
+                // The parent should handle this through the polygon create callback
+              }
+            }, 300);
+          }
+          
           // Clear drawing annotation when polygon is completed
           const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
           if (drawingSource) {
@@ -492,7 +660,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       });
 
       // Debounce parent updates to prevent excessive calls during selection
-      let updateTimeout: NodeJS.Timeout | null = null;
+      const updateTimeout: NodeJS.Timeout | null = null;
       
       // Real-time drawing measurements - simple approach
       let lastClickedPoint: [number, number] | null = null;
@@ -730,14 +898,25 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     const draw = drawRef.current;
     const map = mapRef.current;
     
-    // Add all existing polygons to draw instance
+    // Sync polygons bidirectionally
     const currentFeatures = draw.getAll();
-    const currentIds = new Set(currentFeatures.features.map(f => f.id));
+    const currentIds = new Set(currentFeatures.features.map(f => String(f.id)));
+    const stateIds = new Set(polygons.map(p => String(p.id || p.properties?.id || '')));
     
+    // Add missing polygons from state to draw
     polygons.forEach(polygon => {
       const polygonId = String(polygon.id || polygon.properties?.id || '');
       if (!currentIds.has(polygonId) && polygon.id) {
         draw.add(polygon);
+      }
+    });
+    
+    // Remove extra polygons from draw that aren't in state
+    currentFeatures.features.forEach(feature => {
+      const featureId = String(feature.id);
+      if (!stateIds.has(featureId)) {
+        console.log('Removing extra polygon from map:', featureId);
+        draw.delete([featureId]);
       }
     });
     

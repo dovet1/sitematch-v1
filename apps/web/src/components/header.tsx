@@ -15,8 +15,8 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
   
-  // Hide header on search page - the search page will handle its own header
-  if (pathname === '/search') {
+  // Hide header on specific pages that need full-screen experience
+  if (pathname === '/search' || pathname === '/sitesketcher') {
     return null
   }
 

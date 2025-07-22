@@ -19,6 +19,9 @@ import {
 import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode } from '@/types/sitesketcher';
 import { LocationSearch } from './LocationSearch';
 import { formatArea, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
+import { MobileBottomSheet } from './MobileBottomSheet';
+import { TouchOptimizedButton } from './TouchOptimizedButton';
+import { cn } from '@/lib/utils';
 
 interface ResponsiveControlsProps {
   measurement: AreaMeasurement | null;
@@ -68,6 +71,8 @@ export function ResponsiveControls({
   const [parkingOpen, setParkingOpen] = useState(false);
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [showAddParking, setShowAddParking] = useState(false);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(true); // Always open on mobile
+  const [mobileSheetHeight, setMobileSheetHeight] = useState<'collapsed' | 'expanded'>('collapsed');
 
   // Reset selectedPolygonId if the selected polygon no longer exists
   useEffect(() => {
@@ -81,15 +86,31 @@ export function ResponsiveControls({
     }
   }, [polygons, selectedPolygonId]);
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Check if mobile after mount to avoid hydration mismatch
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   if (isMobile) {
     return (
-      <div className={`fixed bottom-0 left-0 right-0 z-50 ${className}`}>
-        <div className="bg-background border-t shadow-2xl p-4 max-h-96 overflow-y-auto">
-          <MobileContent />
-        </div>
-      </div>
+      <MobileBottomSheet
+        isOpen={mobileSheetOpen}
+        onToggle={() => setMobileSheetOpen(!mobileSheetOpen)}
+        height={mobileSheetHeight}
+        onHeightChange={setMobileSheetHeight}
+        className={className}
+      >
+        <MobileContent />
+      </MobileBottomSheet>
     );
   }
 
@@ -110,24 +131,55 @@ export function ResponsiveControls({
   function DesktopSections() {
     return (
       <div className="space-y-4">
-        {/* Mode Toggle */}
-        <Button
-          variant="outline"
-          onClick={onModeToggle}
-          className="w-full"
-        >
-          {drawingMode === 'draw' ? (
-            <>
-              <Pencil className="h-4 w-4 mr-2" />
-              Draw Mode
-            </>
-          ) : (
-            <>
-              <MousePointer className="h-4 w-4 mr-2" />
-              Select Mode
-            </>
-          )}
-        </Button>
+        {/* Mode Toggle Button */}
+        {isMobile ? (
+          <TouchOptimizedButton
+            variant="default"
+            onClick={onModeToggle}
+            className={cn(
+              "w-full bottom-sheet-mode-toggle transition-all duration-200 border-0",
+              drawingMode === 'draw' 
+                ? "!bg-blue-600 hover:!bg-blue-700 !text-white !shadow-md" 
+                : "!bg-green-600 hover:!bg-green-700 !text-white !shadow-md"
+            )}
+            minSize={52}
+            visualFeedback="scale"
+          >
+            {drawingMode === 'draw' ? (
+              <>
+                <Pencil className="h-5 w-5 mr-2" />
+                <span className="font-medium">Draw Mode</span>
+              </>
+            ) : (
+              <>
+                <MousePointer className="h-5 w-5 mr-2" />
+                <span className="font-medium">Select Mode</span>
+              </>
+            )}
+          </TouchOptimizedButton>
+        ) : (
+          <Button
+            onClick={onModeToggle}
+            className={cn(
+              "w-full transition-all duration-200",
+              drawingMode === 'draw' 
+                ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                : "bg-green-600 hover:bg-green-700 text-white"
+            )}
+          >
+            {drawingMode === 'draw' ? (
+              <>
+                <Pencil className="h-4 w-4 mr-2" />
+                <span>Draw Mode</span>
+              </>
+            ) : (
+              <>
+                <MousePointer className="h-4 w-4 mr-2" />
+                <span>Select Mode</span>
+              </>
+            )}
+          </Button>
+        )}
 
         {/* Measurements Section */}
         <Card>
@@ -160,10 +212,10 @@ export function ResponsiveControls({
                     const isSelected = selectedPolygonId === currentPolygonId;
                     
                     return (
-                      <div key={polygon.id || polygon.properties?.id || index} className="border rounded-lg p-3">
+                      <div key={polygon.id || polygon.properties?.id || index} className="polygon-card border rounded-lg">
                         <div className="flex items-center justify-between">
                           <div 
-                            className="flex-1 cursor-pointer"
+                            className="flex-1 cursor-pointer p-3"
                             onClick={() => {
                               setSelectedPolygonId(
                                 isSelected ? null : currentPolygonId
@@ -171,29 +223,51 @@ export function ResponsiveControls({
                             }}
                           >
                             <div className="flex items-center justify-between">
-                              <span className="font-medium">Polygon {index + 1}</span>
+                              <span className="font-medium text-base">Polygon {index + 1}</span>
                               <div className="flex items-center gap-2">
-                                <span className="text-sm text-muted-foreground">
+                                <span className={cn(
+                                  "text-muted-foreground",
+                                  isMobile ? "measurement-text" : "text-sm"
+                                )}>
                                   {formatArea(
                                     measurementUnit === 'metric' ? polygonMeasurement.squareMeters : polygonMeasurement.squareFeet, 
                                     measurementUnit
                                   )}
                                 </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Try both ID sources - Mapbox Draw typically uses feature.id
-                                  const polygonId = polygon.id || polygon.properties?.id;
-                                  if (polygonId) {
-                                    onPolygonDelete(String(polygonId));
-                                  }
-                                }}
-                                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                              {isMobile ? (
+                                <TouchOptimizedButton
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Try both ID sources - Mapbox Draw typically uses feature.id
+                                    const polygonId = polygon.id || polygon.properties?.id;
+                                    if (polygonId) {
+                                      onPolygonDelete(String(polygonId));
+                                    }
+                                  }}
+                                  className="text-destructive hover:text-destructive"
+                                  minSize={44}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </TouchOptimizedButton>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // Try both ID sources - Mapbox Draw typically uses feature.id
+                                    const polygonId = polygon.id || polygon.properties?.id;
+                                    if (polygonId) {
+                                      onPolygonDelete(String(polygonId));
+                                    }
+                                  }}
+                                  className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -300,15 +374,36 @@ export function ResponsiveControls({
           </Collapsible>
         </Card>
 
-        {/* Clear All */}
-        <Button
-          variant="outline"
-          onClick={onClearAll}
-          className="w-full text-destructive hover:text-destructive"
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Clear All
-        </Button>
+        {/* Clear All Button */}
+        {isMobile ? (
+          <TouchOptimizedButton
+            variant="outline"
+            onClick={() => {
+              if (confirm('Clear all drawings? This cannot be undone.')) {
+                onClearAll();
+              }
+            }}
+            className="w-full text-destructive hover:text-destructive"
+            minSize={48}
+            visualFeedback="color"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Clear All
+          </TouchOptimizedButton>
+        ) : (
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (confirm('Clear all drawings? This cannot be undone.')) {
+                onClearAll();
+              }
+            }}
+            className="w-full text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Clear All
+          </Button>
+        )}
       </div>
     );
   }
