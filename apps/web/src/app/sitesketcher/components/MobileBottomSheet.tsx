@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils';
 interface MobileBottomSheetProps {
   isOpen: boolean;
   onToggle: () => void;
-  height: 'collapsed' | 'expanded';
-  onHeightChange: (height: 'collapsed' | 'expanded') => void;
+  height: 'collapsed' | 'halfway' | 'expanded';
+  onHeightChange: (height: 'collapsed' | 'halfway' | 'expanded') => void;
   children: React.ReactNode;
   className?: string;
 }
@@ -27,43 +27,52 @@ export function MobileBottomSheet({
   
   // Height configurations - Optimized for mobile UX
   const COLLAPSED_HEIGHT = 80; // px - Always visible peek
-  const EXPANDED_HEIGHT = 0.75; // 75% of viewport - Better proportions  
-  const DRAG_THRESHOLD = 40; // px to trigger state change - More responsive
+  const HALFWAY_HEIGHT = 0.5; // 50% of viewport - Middle position
+  const EXPANDED_HEIGHT = 0.9; // 90% of viewport - Full screen
+  const DRAG_THRESHOLD = 60; // px to trigger state change
 
   const getTranslateY = () => {
-    // Always show at least the collapsed height (never fully hidden)
     if (height === 'collapsed') return `calc(100% - ${COLLAPSED_HEIGHT}px)`;
+    if (height === 'halfway') return `${(1 - HALFWAY_HEIGHT) * 100}%`;
     return `${(1 - EXPANDED_HEIGHT) * 100}%`;
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleDragStart = (e: React.TouchEvent) => {
     setIsDragging(true);
     setDragStartY(e.touches[0].clientY);
     setCurrentTranslateY(0);
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleDragMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
     
     const deltaY = e.touches[0].clientY - dragStartY;
     setCurrentTranslateY(deltaY);
   };
 
-  const handleTouchEnd = () => {
+  const handleDragEnd = () => {
     if (!isDragging) return;
     
     setIsDragging(false);
     
-    // Determine if we should change state based on drag distance
+    // Determine if we should change state based on drag distance and velocity
     if (Math.abs(currentTranslateY) > DRAG_THRESHOLD) {
       if (currentTranslateY > 0) {
-        // Dragging down - only collapse, never fully close
+        // Dragging down
         if (height === 'expanded') {
+          // Fast swipe down from expanded goes to collapsed, slower goes to halfway
+          const velocity = Math.abs(currentTranslateY) / DRAG_THRESHOLD;
+          onHeightChange(velocity > 2 ? 'collapsed' : 'halfway');
+        } else if (height === 'halfway') {
           onHeightChange('collapsed');
         }
       } else {
         // Dragging up
         if (height === 'collapsed') {
+          // Fast swipe up from collapsed goes to expanded, slower goes to halfway
+          const velocity = Math.abs(currentTranslateY) / DRAG_THRESHOLD;
+          onHeightChange(velocity > 2 ? 'expanded' : 'halfway');
+        } else if (height === 'halfway') {
           onHeightChange('expanded');
         }
       }
@@ -83,7 +92,7 @@ export function MobileBottomSheet({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedHeight = sessionStorage.getItem('sitesketcher-mobile-height');
-      if (savedHeight === 'expanded' || savedHeight === 'collapsed') {
+      if (savedHeight === 'expanded' || savedHeight === 'halfway' || savedHeight === 'collapsed') {
         onHeightChange(savedHeight);
       }
     }
@@ -105,32 +114,35 @@ export function MobileBottomSheet({
         )}
         style={{
           transform: `translateY(${isDragging ? `calc(${getTranslateY()} + ${currentTranslateY}px)` : getTranslateY()})`,
-          height: height === 'expanded' ? '75vh' : 'auto',
+          height: height === 'expanded' ? '90vh' : height === 'halfway' ? '50vh' : 'auto',
           minHeight: `${COLLAPSED_HEIGHT}px`,
-          maxHeight: '85vh',
-          touchAction: 'none'
+          maxHeight: '90vh'
         }}
       >
         {/* Drag Handle - More prominent */}
         <div
-          className="flex justify-center py-3 cursor-grab active:cursor-grabbing"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          className="flex justify-center py-3 cursor-grab active:cursor-grabbing touch-none"
+          onTouchStart={handleDragStart}
+          onTouchMove={handleDragMove}
+          onTouchEnd={handleDragEnd}
+          style={{ touchAction: 'none' }}
         >
           <div className="w-16 h-1.5 bg-gray-400 rounded-full transition-colors duration-200 hover:bg-gray-600" />
         </div>
         
         {/* Content */}
         <div 
-          className="overflow-y-auto px-4 pb-6" // Increased bottom padding
+          className="overflow-y-auto px-4 pb-6 touch-auto"
           style={{ 
-            maxHeight: height === 'expanded' ? 'calc(85vh - 48px)' : `${COLLAPSED_HEIGHT - 48}px` 
+            maxHeight: height === 'expanded' ? 'calc(90vh - 48px)' : 
+                      height === 'halfway' ? 'calc(50vh - 48px)' : 
+                      `${COLLAPSED_HEIGHT - 48}px`,
+            touchAction: 'auto'
           }}
         >
           {height === 'collapsed' && (
             <div className="text-center text-sm text-gray-600 py-2">
-              Drag up to expand
+              Swipe up for more controls
             </div>
           )}
           {children}
