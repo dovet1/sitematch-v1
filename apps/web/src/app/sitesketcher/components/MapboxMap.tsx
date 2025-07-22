@@ -115,6 +115,15 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           });
         }
         
+        // Clear colored polygon overlays
+        const coloredPolygonsSource = mapRef.current.getSource('colored-polygons') as mapboxgl.GeoJSONSource;
+        if (coloredPolygonsSource) {
+          coloredPolygonsSource.setData({
+            type: 'FeatureCollection',
+            features: []
+          });
+        }
+        
         setPolygonCenter(null);
         originalPolygonRef.current = null;
         totalRotationRef.current = 0;
@@ -242,9 +251,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             type: 'fill',
             filter: ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon']],
             paint: {
-              'fill-color': '#2563eb',
-              'fill-outline-color': '#2563eb',
-              'fill-opacity': 0.3
+              'fill-color': 'transparent', // Make completed polygons invisible
+              'fill-opacity': 0
             }
           },
           {
@@ -252,8 +260,12 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             type: 'fill',
             filter: ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
             paint: {
-              'fill-color': '#3b82f6',
-              'fill-outline-color': '#3b82f6',
+              'fill-color': [
+                'case',
+                ['has', 'color'],
+                ['get', 'color'],
+                '#3b82f6'
+              ],
               'fill-opacity': 0.4
             }
           },
@@ -263,8 +275,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             type: 'line',
             filter: ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon']],
             paint: {
-              'line-color': '#2563eb',
-              'line-width': 2
+              'line-color': 'transparent', // Make completed polygon outlines invisible
+              'line-width': 0
             }
           },
           {
@@ -272,7 +284,12 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             type: 'line',
             filter: ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
             paint: {
-              'line-color': '#3b82f6',
+              'line-color': [
+                'case',
+                ['has', 'color'],
+                ['get', 'color'],
+                '#3b82f6'
+              ],
               'line-width': 3
             }
           },
@@ -434,8 +451,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }
         });
 
-        // Add side length annotations source
-        map.addSource('side-annotations', {
+        // Add colored polygon overlay source and layers first
+        map.addSource('colored-polygons', {
           type: 'geojson',
           data: {
             type: 'FeatureCollection',
@@ -443,8 +460,30 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }
         });
 
-        // Add temporary drawing annotation source for real-time measurements
-        map.addSource('drawing-annotation', {
+        // Add colored polygon fill layer
+        map.addLayer({
+          id: 'colored-polygons-fill',
+          type: 'fill',
+          source: 'colored-polygons',
+          paint: {
+            'fill-color': ['get', 'color'],
+            'fill-opacity': 0.3
+          }
+        });
+
+        // Add colored polygon stroke layer
+        map.addLayer({
+          id: 'colored-polygons-stroke',
+          type: 'line',
+          source: 'colored-polygons',
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': 2
+          }
+        });
+
+        // Add side length annotations source and layer AFTER colored polygons
+        map.addSource('side-annotations', {
           type: 'geojson',
           data: {
             type: 'FeatureCollection',
@@ -469,6 +508,15 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             'text-color': '#2563eb',
             'text-halo-color': '#ffffff',
             'text-halo-width': 2
+          }
+        });
+
+        // Add temporary drawing annotation source for real-time measurements
+        map.addSource('drawing-annotation', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: []
           }
         });
 
@@ -513,6 +561,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             'circle-stroke-width': 2
           }
         });
+
+
       });
 
       // Handle draw events
@@ -522,7 +572,10 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           // Reset rotation references for new polygon
           originalPolygonRef.current = null;
           totalRotationRef.current = 0;
+          
           onPolygonCreate(feature);
+          
+          // Note: Colors will be handled by overlay system - no need for immediate updates
           
           // Visual feedback for completed polygon
           if (isMobile()) {
@@ -997,11 +1050,20 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     const currentIds = new Set(currentFeatures.features.map(f => String(f.id)));
     const stateIds = new Set(polygons.map(p => String(p.id || p.properties?.id || '')));
     
-    // Add missing polygons from state to draw
+    // Sync polygons - add missing ones with their properties including colors
     polygons.forEach(polygon => {
       const polygonId = String(polygon.id || polygon.properties?.id || '');
       if (!currentIds.has(polygonId) && polygon.id) {
+        console.log('Adding polygon to draw with color:', polygonId, polygon.properties?.color);
         draw.add(polygon);
+      } else if (currentIds.has(polygonId)) {
+        // Check if existing polygon needs color property update
+        const existingFeature = currentFeatures.features.find(f => String(f.id) === polygonId);
+        if (existingFeature && polygon.properties?.color && !existingFeature.properties?.color) {
+          console.log('Updating existing polygon with color:', polygonId, polygon.properties.color);
+          draw.delete([polygonId]);
+          draw.add(polygon);
+        }
       }
     });
     
@@ -1092,6 +1154,35 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       });
     }
   }, [parkingOverlays, isMapLoaded]);
+
+  // Update colored polygon overlays
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoaded) return;
+
+    const map = mapRef.current;
+    const source = map.getSource('colored-polygons') as mapboxgl.GeoJSONSource;
+    
+    if (source) {
+      console.log('Updating colored polygon overlays:', polygons.length, 'polygons');
+      const features = polygons.map((polygon, index) => {
+        console.log(`Polygon ${index + 1}: color =`, polygon.properties?.color);
+        return {
+          type: 'Feature' as const,
+          geometry: polygon.geometry,
+          properties: {
+            color: polygon.properties?.color || '#2563eb',
+            id: polygon.id || polygon.properties?.id
+          }
+        };
+      });
+
+      source.setData({
+        type: 'FeatureCollection',
+        features
+      });
+    }
+  }, [polygons, isMapLoaded]);
+
 
   // Update side length annotations for all polygons
   useEffect(() => {

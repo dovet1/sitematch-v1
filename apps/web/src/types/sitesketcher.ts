@@ -7,6 +7,7 @@ export interface MapboxDrawPolygon {
   };
   properties: {
     id?: string;
+    color?: string;
     [key: string]: any;
   };
 }

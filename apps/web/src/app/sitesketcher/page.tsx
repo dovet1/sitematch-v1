@@ -16,6 +16,7 @@ import type {
 } from '@/types/sitesketcher';
 import { calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { getMapboxToken } from '@/lib/sitesketcher/mapbox-utils';
+import { getPolygonColor } from '@/lib/sitesketcher/colors';
 import '@/styles/sitesketcher-mobile.css';
 import Link from 'next/link';
 
@@ -130,11 +131,43 @@ export default function SiteSketcherPage() {
   // Remove mode handling - tool is always in draw mode
 
   const handlePolygonCreate = useCallback((polygon: MapboxDrawPolygon) => {
-    setState(prev => ({
-      ...prev,
-      polygons: [...prev.polygons, polygon], // Add new polygon to existing ones
-      selectedPolygonId: String(polygon.id || polygon.properties?.id || '')
-    }));
+    console.log('=== HANDLE POLYGON CREATE DEBUG ===');
+    console.log('handlePolygonCreate - Original polygon:', polygon);
+    console.log('handlePolygonCreate - Original polygon ID:', polygon.id);
+    console.log('handlePolygonCreate - Original polygon properties:', polygon.properties);
+    
+    setState(prev => {
+      // Add color to the polygon
+      const color = getPolygonColor(prev.polygons.length);
+      console.log('handlePolygonCreate - Current polygon count:', prev.polygons.length);
+      console.log('handlePolygonCreate - Assigned color:', color);
+      
+      const polygonWithColor = {
+        ...polygon,
+        properties: {
+          ...polygon.properties,
+          color: color,
+          user_color: color // Use both properties to ensure compatibility
+        }
+      };
+      
+      console.log('handlePolygonCreate - Polygon with color:', polygonWithColor);
+      console.log('handlePolygonCreate - New polygon properties:', polygonWithColor.properties);
+      
+      const newState = {
+        ...prev,
+        polygons: [...prev.polygons, polygonWithColor],
+        selectedPolygonId: String(polygonWithColor.id || polygonWithColor.properties?.id || '')
+      };
+      
+      console.log('handlePolygonCreate - New state polygons:', newState.polygons.map(p => ({ 
+        id: p.id, 
+        color: p.properties?.color 
+      })));
+      console.log('=== END HANDLE POLYGON CREATE DEBUG ===');
+      
+      return newState;
+    });
   }, []);
 
   const handlePolygonUpdate = useCallback((polygon: MapboxDrawPolygon) => {    
