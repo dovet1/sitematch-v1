@@ -36,7 +36,12 @@ export async function searchLocations(query: string, limit = 5): Promise<SearchR
       new URLSearchParams({
         access_token: token,
         limit: limit.toString(),
-        types: 'place,postcode,address,poi'
+        // Prioritize addresses over places for more specific results
+        types: 'address,poi,postcode,place',
+        // Bias results towards UK and Ireland (center of UK coordinates)
+        proximity: '-2.0,54.0',
+        // Restrict to UK and Ireland country codes for better relevance
+        country: 'gb,ie'
       })
     );
     

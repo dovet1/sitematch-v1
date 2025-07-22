@@ -755,6 +755,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       let dragStartAngle = 0;
       let currentCenter: [number, number] | null = null;
 
+      // Mouse events for desktop
       map.on('mousedown', 'polygon-rotation-handles', (e) => {
         if (!e.features || e.features.length === 0) return;
         
@@ -790,6 +791,43 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         map.touchZoomRotate.disable();
       });
 
+      // Touch events for mobile
+      map.on('touchstart', 'polygon-rotation-handles', (e) => {
+        if (!e.features || e.features.length === 0) return;
+        
+        const touch = (e.originalEvent as TouchEvent).touches[0];
+        if (!touch) return;
+        
+        e.preventDefault();
+        isDragging = true;
+        isRotatingRef.current = true;
+        
+        // Get selected polygon from refs
+        if (!selectedPolygonIdRef.current) return;
+        
+        const selectedPolygon = polygonsRef.current.find(p => 
+          String(p.id) === selectedPolygonIdRef.current || 
+          String(p.properties?.id) === selectedPolygonIdRef.current
+        );
+        
+        if (!selectedPolygon || selectedPolygon.geometry.type !== 'Polygon') return;
+        
+        const coordinates = selectedPolygon.geometry.coordinates[0];
+        currentCenter = calculatePolygonCenterLocal(coordinates);
+        
+        const touchPoint = map.unproject([touch.clientX, touch.clientY]);
+        dragStartAngle = Math.atan2(touchPoint.lat - currentCenter[1], touchPoint.lng - currentCenter[0]);
+        
+        // Disable map interactions during rotation
+        map.dragPan.disable();
+        map.doubleClickZoom.disable();
+        map.scrollZoom.disable();
+        map.boxZoom.disable();
+        map.dragRotate.disable();
+        map.keyboard.disable();
+        map.touchZoomRotate.disable();
+      });
+
       map.on('mousemove', (e) => {
         if (!isDragging || !currentCenter || !drawRef.current) return;
         
@@ -797,6 +835,26 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         
         const mousePoint = e.lngLat;
         const currentAngle = Math.atan2(mousePoint.lat - currentCenter[1], mousePoint.lng - currentCenter[0]);
+        const deltaAngle = currentAngle - dragStartAngle;
+        
+        // Rotate the polygon
+        rotatePolygonDirect(currentCenter, deltaAngle);
+        
+        // Update for next iteration
+        dragStartAngle = currentAngle;
+      });
+
+      // Touch move for mobile rotation
+      map.on('touchmove', (e) => {
+        if (!isDragging || !currentCenter || !drawRef.current) return;
+        
+        const touch = (e.originalEvent as TouchEvent).touches[0];
+        if (!touch) return;
+        
+        e.preventDefault();
+        
+        const touchPoint = map.unproject([touch.clientX, touch.clientY]);
+        const currentAngle = Math.atan2(touchPoint.lat - currentCenter[1], touchPoint.lng - currentCenter[0]);
         const deltaAngle = currentAngle - dragStartAngle;
         
         // Rotate the polygon
@@ -829,6 +887,24 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           map.touchZoomRotate.enable();
         }
       });
+
+      // Touch end for mobile
+      map.on('touchend', () => {
+        if (isDragging) {
+          isDragging = false;
+          isRotatingRef.current = false;
+          currentCenter = null;
+          
+          // Re-enable map interactions
+          map.dragPan.enable();
+          map.doubleClickZoom.enable();
+          map.scrollZoom.enable();
+          map.boxZoom.enable();
+          map.dragRotate.enable();
+          map.keyboard.enable();
+          map.touchZoomRotate.enable();
+        }
+      });
       
       // Handle mouse leave to stop dragging
       map.on('mouseleave', () => {
@@ -843,6 +919,24 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           } else {
             map.getCanvas().style.cursor = '';
           }
+          
+          // Re-enable map interactions
+          map.dragPan.enable();
+          map.doubleClickZoom.enable();
+          map.scrollZoom.enable();
+          map.boxZoom.enable();
+          map.dragRotate.enable();
+          map.keyboard.enable();
+          map.touchZoomRotate.enable();
+        }
+      });
+
+      // Handle touch cancel for mobile
+      map.on('touchcancel', () => {
+        if (isDragging) {
+          isDragging = false;
+          isRotatingRef.current = false;
+          currentCenter = null;
           
           // Re-enable map interactions
           map.dragPan.enable();

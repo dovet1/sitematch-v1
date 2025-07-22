@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { 
   Search, 
   MapPin, 
@@ -219,17 +218,14 @@ export function LocationSearch({
                           <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                           <div className="min-w-0 flex-1">
                             <div className="font-medium text-sm truncate">
-                              {result.place_name.split(',')[0]}
+                              {/* For addresses, show more detail; for places show first part only */}
+                              {result.place_type.includes('address') 
+                                ? result.place_name.split(',').slice(0, 2).join(', ')
+                                : result.place_name.split(',')[0]
+                              }
                             </div>
                             <div className="text-xs text-muted-foreground truncate">
                               {result.place_name}
-                            </div>
-                            <div className="flex gap-1 mt-1">
-                              {result.place_type.map(type => (
-                                <Badge key={type} variant="secondary" className="text-xs px-1 py-0">
-                                  {type}
-                                </Badge>
-                              ))}
                             </div>
                           </div>
                           <Navigation className="h-4 w-4 text-primary opacity-60 flex-shrink-0" />
@@ -271,7 +267,11 @@ export function LocationSearch({
                             <Clock className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                             <div className="min-w-0 flex-1">
                               <div className="font-medium text-sm truncate">
-                                {result.place_name.split(',')[0]}
+                                {/* For addresses, show more detail; for places show first part only */}
+                                {result.place_type.includes('address') 
+                                  ? result.place_name.split(',').slice(0, 2).join(', ')
+                                  : result.place_name.split(',')[0]
+                                }
                               </div>
                               <div className="text-xs text-muted-foreground truncate">
                                 {result.place_name}
