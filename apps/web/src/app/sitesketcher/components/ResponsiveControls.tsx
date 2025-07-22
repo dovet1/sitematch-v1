@@ -3,29 +3,34 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   ChevronUp, 
   ChevronDown,
+  ChevronRight,
   Maximize2,
   Search,
-  Trash2
+  Trash2,
+  Car,
+  Plus
 } from 'lucide-react';
-import type { AreaMeasurement, MeasurementUnit } from '@/types/sitesketcher';
-import { MeasurementDisplay } from './MeasurementDisplay';
-import { ParkingOverlay } from './ParkingOverlay';
+import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay } from '@/types/sitesketcher';
 import { LocationSearch } from './LocationSearch';
+import { formatArea } from '@/lib/sitesketcher/measurement-utils';
 
 interface ResponsiveControlsProps {
   measurement: AreaMeasurement | null;
   measurementUnit: MeasurementUnit;
   onUnitToggle: () => void;
   onClearAll: () => void;
+  // Polygon props
+  polygons: MapboxDrawPolygon[];
+  onPolygonDelete: (polygonId: string) => void;
   // Parking props
-  polygons: any[];
-  parkingOverlays: any[];
+  parkingOverlays: ParkingOverlay[];
   selectedOverlayId: string | null;
-  onAddOverlay: (overlay: any) => void;
-  onUpdateOverlay: (overlay: any) => void;
+  onAddOverlay: (overlay: ParkingOverlay) => void;
+  onUpdateOverlay: (overlay: ParkingOverlay) => void;
   onRemoveOverlay: (overlayId: string) => void;
   onSelectOverlay: (overlayId: string | null) => void;
   // Search props
@@ -35,14 +40,13 @@ interface ResponsiveControlsProps {
   className?: string;
 }
 
-type PanelType = 'measurements' | 'parking' | 'search';
-
 export function ResponsiveControls({
   measurement,
   measurementUnit,
   onUnitToggle,
   onClearAll,
   polygons,
+  onPolygonDelete,
   parkingOverlays,
   selectedOverlayId,
   onAddOverlay,
@@ -54,133 +58,218 @@ export function ResponsiveControls({
   onUpdateRecentSearches,
   className = ''
 }: ResponsiveControlsProps) {
-  const [activePanel, setActivePanel] = useState<PanelType>('measurements');
-  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const [measurementsOpen, setMeasurementsOpen] = useState(false);
+  const [parkingOpen, setParkingOpen] = useState(false);
+  const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
+  const [showAddParking, setShowAddParking] = useState(false);
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-  const panels = [
-    { 
-      id: 'measurements' as PanelType, 
-      label: 'Measure', 
-      icon: Maximize2,
-      badge: measurement ? (measurementUnit === 'metric' ? 'm²' : 'ft²') : null
-    },
-    { 
-      id: 'parking' as PanelType, 
-      label: 'Parking', 
-      icon: null,
-      badge: parkingOverlays.length > 0 ? parkingOverlays.length.toString() : null
-    },
-    { 
-      id: 'search' as PanelType, 
-      label: 'Search', 
-      icon: Search,
-      badge: null
-    }
-  ];
 
   if (isMobile) {
     return (
       <div className={`fixed bottom-0 left-0 right-0 z-50 ${className}`}>
-        {/* Bottom Sheet */}
-        <div className="bg-background border-t shadow-2xl">
-          {/* Panel Selector */}
-          <div className="flex border-b">
-            {panels.map((panel) => {
-              const IconComponent = panel.icon;
-              return (
-                <Button
-                  key={panel.id}
-                  variant={activePanel === panel.id ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => {
-                    setActivePanel(panel.id);
-                    setIsBottomSheetOpen(true);
-                  }}
-                  className={`
-                    flex-1 rounded-none h-12 flex flex-col items-center justify-center gap-1 relative
-                    ${activePanel === panel.id ? 'bg-primary text-primary-foreground' : ''}
-                  `}
-                >
-                  {IconComponent && <IconComponent className="h-4 w-4" />}
-                  <span className="text-xs">{panel.label}</span>
-                  {panel.badge && (
-                    <div className="absolute -top-1 -right-1 text-xs h-5 min-w-5 rounded-full bg-red-500 text-white flex items-center justify-center px-1">
-                      {panel.badge}
-                    </div>
-                  )}
-                </Button>
-              );
-            })}
-            
-            {/* Expand/Collapse Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsBottomSheetOpen(!isBottomSheetOpen)}
-              className="w-12 h-12 rounded-none border-l"
-            >
-              {isBottomSheetOpen ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronUp className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+        <div className="bg-background border-t shadow-2xl p-4 max-h-96 overflow-y-auto">
+          <MobileContent />
+        </div>
+      </div>
+    );
+  }
 
-          {/* Panel Content */}
-          {isBottomSheetOpen && (
-            <div className="max-h-96 overflow-y-auto">
-              <Card className="border-0 rounded-none">
-                <CardContent className="p-4">
-                  {activePanel === 'measurements' && (
-                    <div className="space-y-4">
-                      <MeasurementDisplay
-                        measurement={measurement}
-                        unit={measurementUnit}
-                        onUnitToggle={onUnitToggle}
-                        className="border-0"
-                      />
+  function MobileContent() {
+    return (
+      <div className="space-y-4">
+        <LocationSearch
+          onLocationSelect={onLocationSelect}
+          recentSearches={recentSearches}
+          onUpdateRecentSearches={onUpdateRecentSearches}
+          isMobile={true}
+        />
+        <DesktopSections />
+      </div>
+    );
+  }
+
+  function DesktopSections() {
+    return (
+      <div className="space-y-4">
+        {/* Measurements Section */}
+        <Card>
+          <Collapsible open={measurementsOpen} onOpenChange={setMeasurementsOpen}>
+            <CollapsibleTrigger asChild>
+              <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <Maximize2 className="h-4 w-4" />
+                  <span className="font-medium">Measurements</span>
+                  {polygons.length > 0 && (
+                    <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                      {polygons.length}
+                    </span>
+                  )}
+                </div>
+                <ChevronRight className={`h-4 w-4 transition-transform ${measurementsOpen ? 'rotate-90' : ''}`} />
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-4 pb-4 space-y-2">
+                {polygons.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Draw a polygon to see measurements
+                  </p>
+                ) : (
+                  polygons.map((polygon, index) => (
+                    <div key={polygon.id || polygon.properties?.id || index} className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div 
+                          className="flex-1 cursor-pointer"
+                          onClick={() => {
+                            const currentPolygonId = String(polygon.id || polygon.properties?.id || '');
+                            setSelectedPolygonId(
+                              selectedPolygonId === currentPolygonId ? null : currentPolygonId || null
+                            );
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">Polygon {index + 1}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">
+                                {measurement && formatArea(
+                                  measurementUnit === 'metric' ? measurement.squareMeters : measurement.squareFeet, 
+                                  measurementUnit
+                                )}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  console.log('Delete button clicked, polygon:', polygon);
+                                  console.log('polygon.id:', polygon.id);
+                                  console.log('polygon.properties?.id:', polygon.properties?.id);
+                                  
+                                  // Try both ID sources - Mapbox Draw typically uses feature.id
+                                  const polygonId = polygon.id || polygon.properties?.id;
+                                  if (polygonId) {
+                                    onPolygonDelete(String(polygonId));
+                                  }
+                                }}
+                                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {selectedPolygonId === String(polygon.id || polygon.properties?.id || '') && measurement && (
+                        <div className="mt-3 pt-3 border-t space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Unit:</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={onUnitToggle}
+                              className="h-6 text-xs"
+                            >
+                              {measurementUnit === 'metric' ? 'm²/m' : 'ft²/ft'}
+                            </Button>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium mb-1">Side Lengths:</p>
+                            <div className="grid grid-cols-2 gap-1">
+                              {measurement.sideLengths.map((length, sideIndex) => (
+                                <div key={sideIndex} className="text-xs bg-muted rounded p-1 text-center">
+                                  Side {sideIndex + 1}: {length}m
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+
+        {/* Parking Section */}
+        <Card>
+          <Collapsible open={parkingOpen} onOpenChange={setParkingOpen}>
+            <CollapsibleTrigger asChild>
+              <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <Car className="h-4 w-4" />
+                  <span className="font-medium">Parking</span>
+                  {parkingOverlays.length > 0 && (
+                    <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                      {parkingOverlays.length}
+                    </span>
+                  )}
+                </div>
+                <ChevronRight className={`h-4 w-4 transition-transform ${parkingOpen ? 'rotate-90' : ''}`} />
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-4 pb-4 space-y-2">
+                {parkingOverlays.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    No parking bays created
+                  </p>
+                ) : (
+                  parkingOverlays.map((overlay, index) => (
+                    <div key={overlay.id} className="flex items-center justify-between p-2 border rounded">
+                      <div>
+                        <span className="font-medium">Bay {index + 1}</span>
+                        <span className="text-sm text-muted-foreground ml-2">
+                          {/* Calculate spaces based on overlay type */}
+                          {overlay.type === 'single' ? '1 space' : `${Math.floor(overlay.size.width * overlay.size.length / 12)} spaces`}
+                        </span>
+                      </div>
                       <Button
-                        variant="outline"
-                        onClick={onClearAll}
-                        className="w-full text-destructive hover:text-destructive"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onRemoveOverlay(overlay.id)}
+                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Clear All
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
-                  )}
+                  ))
+                )}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddParking(!showAddParking)}
+                  className="w-full"
+                >
+                  <Plus className="h-3 w-3 mr-2" />
+                  Add Parking
+                </Button>
+                
+                {showAddParking && (
+                  <div className="mt-2 p-3 bg-muted rounded-lg">
+                    <p className="text-xs text-muted-foreground">
+                      Click inside a polygon to add parking bay
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
 
-                  {activePanel === 'parking' && (
-                    <ParkingOverlay
-                      polygons={polygons}
-                      parkingOverlays={parkingOverlays}
-                      selectedOverlayId={selectedOverlayId}
-                      onAddOverlay={onAddOverlay}
-                      onUpdateOverlay={onUpdateOverlay}
-                      onRemoveOverlay={onRemoveOverlay}
-                      onSelectOverlay={onSelectOverlay}
-                      isMobile={true}
-                      className="border-0"
-                    />
-                  )}
-
-                  {activePanel === 'search' && (
-                    <LocationSearch
-                      onLocationSelect={onLocationSelect}
-                      recentSearches={recentSearches}
-                      onUpdateRecentSearches={onUpdateRecentSearches}
-                      isMobile={true}
-                      className="border-0"
-                    />
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
+        {/* Clear All */}
+        <Button
+          variant="outline"
+          onClick={onClearAll}
+          className="w-full text-destructive hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Clear All
+        </Button>
       </div>
     );
   }
@@ -195,37 +284,7 @@ export function ResponsiveControls({
         onUpdateRecentSearches={onUpdateRecentSearches}
       />
 
-      {/* Measurements */}
-      <MeasurementDisplay
-        measurement={measurement}
-        unit={measurementUnit}
-        onUnitToggle={onUnitToggle}
-      />
-
-      {/* Parking Controls */}
-      <ParkingOverlay
-        polygons={polygons}
-        parkingOverlays={parkingOverlays}
-        selectedOverlayId={selectedOverlayId}
-        onAddOverlay={onAddOverlay}
-        onUpdateOverlay={onUpdateOverlay}
-        onRemoveOverlay={onRemoveOverlay}
-        onSelectOverlay={onSelectOverlay}
-      />
-
-      {/* Clear All */}
-      <Card>
-        <CardContent className="p-3">
-          <Button
-            variant="outline"
-            onClick={onClearAll}
-            className="w-full text-destructive hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Clear All Drawings
-          </Button>
-        </CardContent>
-      </Card>
+      <DesktopSections />
     </div>
   );
 }

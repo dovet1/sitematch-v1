@@ -1,4 +1,5 @@
 export interface MapboxDrawPolygon {
+  id?: string | number; // Mapbox Draw assigns this ID
   type: 'Feature';
   geometry: {
     type: 'Polygon';
