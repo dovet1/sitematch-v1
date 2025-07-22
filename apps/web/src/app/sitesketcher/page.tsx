@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MapboxMap, type MapboxMapRef } from './components/MapboxMap';
 import { ResponsiveControls } from './components/ResponsiveControls';
@@ -10,7 +9,6 @@ import type {
   MapboxDrawPolygon, 
   ParkingOverlay, 
   AreaMeasurement,
-  MeasurementUnit,
   SearchResult,
   SiteSketcherState
 } from '@/types/sitesketcher';
@@ -28,6 +26,7 @@ export default function SiteSketcherPage() {
     selectedPolygonId: null,
     selectedParkingId: null,
     measurementUnit: 'metric',
+    drawingMode: 'draw',
     recentSearches: [],
     snapToGrid: false,
     gridSize: 10
@@ -84,10 +83,19 @@ export default function SiteSketcherPage() {
     }
   }, [state.polygons, state.parkingOverlays, state.measurementUnit, state.snapToGrid, state.gridSize]);
 
-  // Recalculate measurements when polygons change
+  // Recalculate measurements when polygons or selection changes
   useEffect(() => {
-    if (state.polygons.length > 0) {
-      const polygon = state.polygons[0]; // Use first polygon for measurements
+    if (state.polygons.length > 0 && state.selectedPolygonId) {
+      // Find the selected polygon
+      const polygon = state.polygons.find(p => 
+        String(p.id) === state.selectedPolygonId || 
+        String(p.properties?.id) === state.selectedPolygonId
+      );
+      
+      if (!polygon) {
+        setState(prev => ({ ...prev, measurements: null }));
+        return;
+      }
       
       // Check if we're currently rotating
       if (mapRef.current?.isRotating()) {
@@ -112,34 +120,32 @@ export default function SiteSketcherPage() {
       setState(prev => ({ ...prev, measurements: null }));
       originalMeasurementsRef.current = null;
     }
-  }, [state.polygons]);
+  }, [state.polygons, state.selectedPolygonId]);
 
   // Remove mode handling - tool is always in draw mode
 
   const handlePolygonCreate = useCallback((polygon: MapboxDrawPolygon) => {
     setState(prev => ({
       ...prev,
-      polygons: [polygon], // Replace existing polygon for now (single polygon support)
-      selectedPolygonId: polygon.properties?.id || null
+      polygons: [...prev.polygons, polygon], // Add new polygon to existing ones
+      selectedPolygonId: String(polygon.id || polygon.properties?.id || '')
     }));
   }, []);
 
   const handlePolygonUpdate = useCallback((polygon: MapboxDrawPolygon) => {
     setState(prev => ({
       ...prev,
-      polygons: [polygon], // Replace existing polygon
-      selectedPolygonId: polygon.properties?.id || null
+      polygons: prev.polygons.map(p => 
+        (String(p.id) === String(polygon.id)) || 
+        (String(p.properties?.id) === String(polygon.properties?.id))
+          ? polygon 
+          : p
+      ),
+      selectedPolygonId: String(polygon.id || polygon.properties?.id || '')
     }));
   }, []);
 
   const handlePolygonDelete = useCallback((polygonId: string) => {
-    console.log('Attempting to delete polygon with ID:', polygonId);
-    console.log('Current polygons:', state.polygons.map(p => ({ 
-      id: p.id, 
-      propertiesId: p.properties?.id, 
-      polygon: p 
-    })));
-    
     // Delete from map first
     mapRef.current?.deletePolygon(polygonId);
     
@@ -157,7 +163,7 @@ export default function SiteSketcherPage() {
     
     // Clear original measurements reference
     originalMeasurementsRef.current = null;
-  }, [state.polygons]);
+  }, []);
 
   const handleParkingOverlayClick = useCallback((overlay: ParkingOverlay) => {
     setState(prev => ({
@@ -229,9 +235,13 @@ export default function SiteSketcherPage() {
     }
   }, []);
 
-  const handleSnapToGridToggle = useCallback(() => {
-    setState(prev => ({ ...prev, snapToGrid: !prev.snapToGrid }));
+  const handleModeToggle = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      drawingMode: prev.drawingMode === 'draw' ? 'select' : 'draw'
+    }));
   }, []);
+
 
 
   if (mapboxError) {
@@ -261,7 +271,7 @@ export default function SiteSketcherPage() {
           <div>
             <h1 className="text-xl font-bold text-primary">SiteSketcher</h1>
             <p className="text-sm text-muted-foreground">
-              Free site assessment tool • Draw • Measure • Plan
+              Free site assessment tool
             </p>
           </div>
           
@@ -278,6 +288,8 @@ export default function SiteSketcherPage() {
               measurementUnit={state.measurementUnit}
               onUnitToggle={handleUnitToggle}
               onClearAll={handleClearAll}
+              drawingMode={state.drawingMode}
+              onModeToggle={handleModeToggle}
               polygons={state.polygons}
               onPolygonDelete={handlePolygonDelete}
               parkingOverlays={state.parkingOverlays}
@@ -307,10 +319,29 @@ export default function SiteSketcherPage() {
             snapToGrid={state.snapToGrid}
             gridSize={state.gridSize}
             polygons={state.polygons}
+            selectedPolygonId={state.selectedPolygonId}
             measurements={state.measurements}
             measurementUnit={state.measurementUnit}
+            drawingMode={state.drawingMode}
             className="w-full h-full"
           />
+          
+          {/* Floating Mode Toggle Button */}
+          <button
+            onClick={handleModeToggle}
+            className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow-lg p-3 hover:bg-gray-50 transition-colors"
+            title={state.drawingMode === 'draw' ? 'Switch to Select Mode' : 'Switch to Draw Mode'}
+          >
+            {state.drawingMode === 'draw' ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2z" />
+              </svg>
+            )}
+          </button>
         </div>
 
         {/* Mobile Controls */}
@@ -320,6 +351,8 @@ export default function SiteSketcherPage() {
             measurementUnit={state.measurementUnit}
             onUnitToggle={handleUnitToggle}
             onClearAll={handleClearAll}
+            drawingMode={state.drawingMode}
+            onModeToggle={handleModeToggle}
             polygons={state.polygons}
             onPolygonDelete={handlePolygonDelete}
             parkingOverlays={state.parkingOverlays}

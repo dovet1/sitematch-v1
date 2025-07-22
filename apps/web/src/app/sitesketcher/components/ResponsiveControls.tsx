@@ -12,17 +12,21 @@ import {
   Search,
   Trash2,
   Car,
-  Plus
+  Plus,
+  Pencil,
+  MousePointer
 } from 'lucide-react';
-import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay } from '@/types/sitesketcher';
+import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode } from '@/types/sitesketcher';
 import { LocationSearch } from './LocationSearch';
-import { formatArea } from '@/lib/sitesketcher/measurement-utils';
+import { formatArea, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 
 interface ResponsiveControlsProps {
   measurement: AreaMeasurement | null;
   measurementUnit: MeasurementUnit;
   onUnitToggle: () => void;
   onClearAll: () => void;
+  drawingMode: DrawingMode;
+  onModeToggle: () => void;
   // Polygon props
   polygons: MapboxDrawPolygon[];
   onPolygonDelete: (polygonId: string) => void;
@@ -45,6 +49,8 @@ export function ResponsiveControls({
   measurementUnit,
   onUnitToggle,
   onClearAll,
+  drawingMode,
+  onModeToggle,
   polygons,
   onPolygonDelete,
   parkingOverlays,
@@ -92,6 +98,25 @@ export function ResponsiveControls({
   function DesktopSections() {
     return (
       <div className="space-y-4">
+        {/* Mode Toggle */}
+        <Button
+          variant="outline"
+          onClick={onModeToggle}
+          className="w-full"
+        >
+          {drawingMode === 'draw' ? (
+            <>
+              <Pencil className="h-4 w-4 mr-2" />
+              Draw Mode
+            </>
+          ) : (
+            <>
+              <MousePointer className="h-4 w-4 mr-2" />
+              Select Mode
+            </>
+          )}
+        </Button>
+
         {/* Measurements Section */}
         <Card>
           <Collapsible open={measurementsOpen} onOpenChange={setMeasurementsOpen}>
@@ -116,36 +141,37 @@ export function ResponsiveControls({
                     Draw a polygon to see measurements
                   </p>
                 ) : (
-                  polygons.map((polygon, index) => (
-                    <div key={polygon.id || polygon.properties?.id || index} className="border rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <div 
-                          className="flex-1 cursor-pointer"
-                          onClick={() => {
-                            const currentPolygonId = String(polygon.id || polygon.properties?.id || '');
-                            setSelectedPolygonId(
-                              selectedPolygonId === currentPolygonId ? null : currentPolygonId || null
-                            );
-                          }}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">Polygon {index + 1}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-muted-foreground">
-                                {measurement && formatArea(
-                                  measurementUnit === 'metric' ? measurement.squareMeters : measurement.squareFeet, 
-                                  measurementUnit
-                                )}
-                              </span>
+                  polygons.map((polygon, index) => {
+                    // Calculate area for this specific polygon
+                    const polygonMeasurement = calculatePolygonArea(polygon.geometry.coordinates[0]);
+                    const currentPolygonId = String(polygon.id || polygon.properties?.id || '');
+                    const isSelected = selectedPolygonId === currentPolygonId;
+                    
+                    return (
+                      <div key={polygon.id || polygon.properties?.id || index} className="border rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div 
+                            className="flex-1 cursor-pointer"
+                            onClick={() => {
+                              setSelectedPolygonId(
+                                isSelected ? null : currentPolygonId
+                              );
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">Polygon {index + 1}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">
+                                  {formatArea(
+                                    measurementUnit === 'metric' ? polygonMeasurement.squareMeters : polygonMeasurement.squareFeet, 
+                                    measurementUnit
+                                  )}
+                                </span>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  console.log('Delete button clicked, polygon:', polygon);
-                                  console.log('polygon.id:', polygon.id);
-                                  console.log('polygon.properties?.id:', polygon.properties?.id);
-                                  
                                   // Try both ID sources - Mapbox Draw typically uses feature.id
                                   const polygonId = polygon.id || polygon.properties?.id;
                                   if (polygonId) {
@@ -160,34 +186,35 @@ export function ResponsiveControls({
                           </div>
                         </div>
                       </div>
-                      
-                      {selectedPolygonId === String(polygon.id || polygon.properties?.id || '') && measurement && (
-                        <div className="mt-3 pt-3 border-t space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">Unit:</span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={onUnitToggle}
-                              className="h-6 text-xs"
-                            >
-                              {measurementUnit === 'metric' ? 'm²/m' : 'ft²/ft'}
-                            </Button>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium mb-1">Side Lengths:</p>
-                            <div className="grid grid-cols-2 gap-1">
-                              {measurement.sideLengths.map((length, sideIndex) => (
-                                <div key={sideIndex} className="text-xs bg-muted rounded p-1 text-center">
-                                  Side {sideIndex + 1}: {length}m
-                                </div>
-                              ))}
+                        
+                        {isSelected && (
+                          <div className="mt-3 pt-3 border-t space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">Unit:</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={onUnitToggle}
+                                className="h-6 text-xs"
+                              >
+                                {measurementUnit === 'metric' ? 'm²/m' : 'ft²/ft'}
+                              </Button>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium mb-1">Side Lengths:</p>
+                              <div className="grid grid-cols-2 gap-1">
+                                {polygonMeasurement.sideLengths.map((length, sideIndex) => (
+                                  <div key={sideIndex} className="text-xs bg-muted rounded p-1 text-center">
+                                    Side {sideIndex + 1}: {length}m
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  ))
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </CollapsibleContent>
