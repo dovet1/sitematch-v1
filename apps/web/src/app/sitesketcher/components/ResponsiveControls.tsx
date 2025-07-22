@@ -72,7 +72,7 @@ export function ResponsiveControls({
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [showAddParking, setShowAddParking] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(true); // Always open on mobile
-  const [mobileSheetHeight, setMobileSheetHeight] = useState<'collapsed' | 'expanded'>('collapsed');
+  const [mobileSheetHeight, setMobileSheetHeight] = useState<'collapsed' | 'halfway' | 'expanded'>('collapsed');
 
   // Reset selectedPolygonId if the selected polygon no longer exists
   useEffect(() => {
