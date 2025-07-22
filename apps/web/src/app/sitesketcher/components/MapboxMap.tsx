@@ -371,7 +371,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         // Disable single-finger pan in draw mode
         map.on('drag', (e) => {
           if (drawingModeRef.current === 'draw' && isSingleTouch) {
-            e.preventDefault();
+            e.originalEvent?.preventDefault();
           }
         });
       }
