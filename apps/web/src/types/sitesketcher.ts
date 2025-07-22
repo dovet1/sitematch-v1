@@ -56,7 +56,7 @@ export interface TutorialStep {
   completed: boolean;
 }
 
-// Remove DrawingMode - tool is always in draw mode
+export type DrawingMode = 'draw' | 'select';
 export type MeasurementUnit = 'metric' | 'imperial';
 
 export interface SiteSketcherState {
@@ -66,6 +66,7 @@ export interface SiteSketcherState {
   selectedPolygonId: string | null;
   selectedParkingId: string | null;
   measurementUnit: MeasurementUnit;
+  drawingMode: DrawingMode;
   recentSearches: SearchResult[];
   snapToGrid: boolean;
   gridSize: number; // meters

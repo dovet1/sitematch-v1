@@ -3,6 +3,23 @@ import type { AreaMeasurement, MapboxDrawPolygon } from '@/types/sitesketcher';
 
 export function calculatePolygonArea(coordinates: number[][]): AreaMeasurement {
   try {
+    // Validate minimum number of coordinates for a polygon
+    if (!coordinates || coordinates.length < 4) {
+      return {
+        squareMeters: 0,
+        squareFeet: 0,
+        sideLengths: []
+      };
+    }
+    
+    // Validate coordinate structure
+    for (const coord of coordinates) {
+      if (!Array.isArray(coord) || coord.length < 2 || 
+          typeof coord[0] !== 'number' || typeof coord[1] !== 'number') {
+        throw new Error('Invalid coordinate format');
+      }
+    }
+    
     const polygon = turf.polygon([coordinates]);
     const area = turf.area(polygon); // Returns square meters
     
@@ -31,9 +48,22 @@ export function calculatePolygonArea(coordinates: number[][]): AreaMeasurement {
 }
 
 export function calculateDistance(point1: [number, number], point2: [number, number]): number {
-  const from = turf.point(point1);
-  const to = turf.point(point2);
-  return turf.distance(from, to, { units: 'meters' });
+  try {
+    // Validate coordinates
+    if (!Array.isArray(point1) || !Array.isArray(point2) ||
+        point1.length !== 2 || point2.length !== 2 ||
+        typeof point1[0] !== 'number' || typeof point1[1] !== 'number' ||
+        typeof point2[0] !== 'number' || typeof point2[1] !== 'number') {
+      return 0;
+    }
+    
+    const from = turf.point(point1);
+    const to = turf.point(point2);
+    return turf.distance(from, to, { units: 'meters' });
+  } catch (error) {
+    console.error('Error calculating distance:', error);
+    return 0;
+  }
 }
 
 export function formatArea(area: number, unit: 'metric' | 'imperial'): string {

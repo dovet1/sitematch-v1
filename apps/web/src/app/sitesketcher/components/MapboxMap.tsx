@@ -4,8 +4,8 @@ import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardR
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { createMapboxMap, getMapboxToken, flyToLocation, addGridOverlay, removeGridOverlay } from '@/lib/sitesketcher/mapbox-utils';
-import type { MapboxDrawPolygon, ParkingOverlay, SearchResult, AreaMeasurement, MeasurementUnit } from '@/types/sitesketcher';
-import { calculateDistance, formatDistance } from '@/lib/sitesketcher/measurement-utils';
+import type { MapboxDrawPolygon, ParkingOverlay, SearchResult, AreaMeasurement, MeasurementUnit, DrawingMode } from '@/types/sitesketcher';
+import { calculateDistance, formatDistance, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
@@ -20,8 +20,10 @@ interface MapboxMapProps {
   snapToGrid: boolean;
   gridSize: number;
   polygons: MapboxDrawPolygon[];
+  selectedPolygonId: string | null;
   measurements: AreaMeasurement | null;
   measurementUnit: MeasurementUnit;
+  drawingMode: DrawingMode;
   className?: string;
 }
 
@@ -43,8 +45,10 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   snapToGrid,
   gridSize,
   polygons,
+  selectedPolygonId,
   measurements,
   measurementUnit,
+  drawingMode,
   className = ''
 }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -54,6 +58,11 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   const [isRotating, setIsRotating] = useState(false);
   const [rotationStartAngle, setRotationStartAngle] = useState(0);
   const [polygonCenter, setPolygonCenter] = useState<[number, number] | null>(null);
+  const drawingModeRef = useRef<DrawingMode>(drawingMode);
+  const selectedPolygonIdRef = useRef<string | null>(selectedPolygonId);
+  const polygonsRef = useRef<MapboxDrawPolygon[]>(polygons);
+  const isDrawingRef = useRef<boolean>(false);
+  const drawingPointsRef = useRef<number[][]>([]);
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
@@ -65,14 +74,22 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         // Delete all drawings
         draw.deleteAll();
         
-        // Re-enter polygon drawing mode
-        draw.changeMode('draw_polygon');
+        // Re-enter appropriate mode based on current drawing mode
+        if (drawingModeRef.current === 'draw') {
+          draw.changeMode('draw_polygon');
+        } else {
+          draw.changeMode('simple_select');
+        }
         
-        // Restore crosshair cursor
-        map.getCanvas().style.cursor = 'crosshair';
+        // Restore appropriate cursor
+        if (drawingModeRef.current === 'draw') {
+          map.getCanvas().style.cursor = 'crosshair';
+        } else {
+          map.getCanvas().style.cursor = '';
+        }
       }
       
-      // Also clear side annotations and rotation handles immediately
+      // Also clear side annotations, rotation handles, and drawing annotations immediately
       if (mapRef.current && isMapLoaded) {
         const sideSource = mapRef.current.getSource('side-annotations') as mapboxgl.GeoJSONSource;
         if (sideSource) {
@@ -90,6 +107,14 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           });
         }
         
+        const drawingSource = mapRef.current.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
+        if (drawingSource) {
+          drawingSource.setData({
+            type: 'FeatureCollection',
+            features: []
+          });
+        }
+        
         setPolygonCenter(null);
         originalPolygonRef.current = null;
         totalRotationRef.current = 0;
@@ -98,9 +123,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     deletePolygon: (polygonId: string) => {
       if (drawRef.current && mapRef.current) {
         const draw = drawRef.current;
-        
-        console.log('MapboxMap deletePolygon called with ID:', polygonId);
-        console.log('All features before delete:', draw.getAll().features.map(f => ({ id: f.id, properties: f.properties })));
         
         // Delete the specific polygon from Mapbox Draw
         draw.delete(polygonId);
@@ -131,8 +153,12 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }
         }
         
-        // Remain in drawing mode after deletion
-        draw.changeMode('draw_polygon');
+        // Return to appropriate mode after deletion
+        if (drawingModeRef.current === 'draw') {
+          draw.changeMode('draw_polygon');
+        } else {
+          draw.changeMode('simple_select');
+        }
       }
     },
     isRotating: () => isRotatingRef.current,
@@ -289,6 +315,15 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }
         });
 
+        // Add temporary drawing annotation source for real-time measurements
+        map.addSource('drawing-annotation', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: []
+          }
+        });
+
         map.addLayer({
           id: 'side-annotations',
           type: 'symbol',
@@ -306,6 +341,27 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             'text-color': '#2563eb',
             'text-halo-color': '#ffffff',
             'text-halo-width': 2
+          }
+        });
+
+        // Add drawing annotation layer with different styling
+        map.addLayer({
+          id: 'drawing-annotation',
+          type: 'symbol',
+          source: 'drawing-annotation',
+          layout: {
+            'text-field': ['get', 'label'],
+            'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+            'text-size': 14,
+            'text-anchor': 'center',
+            'text-offset': [0, -1],
+            'text-allow-overlap': true,
+            'text-ignore-placement': true
+          },
+          paint: {
+            'text-color': '#dc2626', // Red color for active drawing
+            'text-halo-color': '#ffffff',
+            'text-halo-width': 3
           }
         });
 
@@ -339,6 +395,44 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           originalPolygonRef.current = null;
           totalRotationRef.current = 0;
           onPolygonCreate(feature);
+          
+          // Clear drawing annotation when polygon is completed
+          const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
+          if (drawingSource) {
+            drawingSource.setData({
+              type: 'FeatureCollection',
+              features: []
+            });
+          }
+          
+          // Reset drawing state
+          isDrawingRef.current = false;
+          drawingPointsRef.current = [];
+        }
+      });
+      
+      // Handle mode changes based on drawing mode state
+      map.on('draw.modechange', (e: any) => {
+        // Don't interfere with mode changes in select mode
+        if (drawingModeRef.current === 'select') return;
+        
+        // In draw mode, always return to draw_polygon
+        if (drawingModeRef.current === 'draw' && e.mode !== 'draw_polygon') {
+          requestAnimationFrame(() => {
+            draw.changeMode('draw_polygon');
+            map.getCanvas().style.cursor = 'crosshair';
+          });
+        }
+        
+        // Handle drawing mode tracking for real-time measurements
+        isDrawingMode = e.mode === 'draw_polygon';
+        if (!isDrawingMode) {
+          lastClickedPoint = null;
+          // Clear annotation when not drawing
+          const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
+          if (drawingSource) {
+            drawingSource.setData({ type: 'FeatureCollection', features: [] });
+          }
         }
       });
 
@@ -365,6 +459,99 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }
         }
       });
+      
+      // Handle selection changes - TEMPORARILY SIMPLIFIED FOR DEBUGGING
+      map.on('draw.selectionchange', (e: any) => {
+        console.log('Selection changed:', e.features.length, 'features selected');
+        
+        if (!e.features || e.features.length === 0) {
+          console.log('Nothing selected - clearing handles');
+          // Nothing is selected - clear rotation state and handles
+          originalPolygonRef.current = null;
+          totalRotationRef.current = 0;
+          updateRotationHandles(); // Clear rotation handles immediately
+          
+          // Only force to draw_polygon if we're in draw mode
+          if (drawingModeRef.current === 'draw') {
+            draw.changeMode('draw_polygon');
+          }
+        } else {
+          // Something is selected
+          const selectedFeature = e.features[0];
+          console.log('Polygon selected:', selectedFeature);
+          
+          if (selectedFeature && selectedFeature.geometry.type === 'Polygon') {
+            // Reset rotation state for newly selected polygon
+            originalPolygonRef.current = null;
+            totalRotationRef.current = 0;
+            
+            // Update rotation handles immediately using the selected feature directly
+            updateRotationHandles(selectedFeature as MapboxDrawPolygon);
+          }
+        }
+      });
+
+      // Debounce parent updates to prevent excessive calls during selection
+      let updateTimeout: NodeJS.Timeout | null = null;
+      
+      // Real-time drawing measurements - simple approach
+      let lastClickedPoint: [number, number] | null = null;
+      let isDrawingMode = false;
+      
+      
+      // Track clicks to update the reference point - TEMPORARILY DISABLED FOR DEBUGGING
+      // map.on('click', (e) => {
+      //   if (drawingModeRef.current === 'draw' && isDrawingMode) {
+      //     // Store the clicked point as our new reference
+      //     lastClickedPoint = [e.lngLat.lng, e.lngLat.lat];
+      //   }
+      // });
+
+      // Show real-time distance on mouse move
+      map.on('mousemove', (e) => {
+        // Only show in draw mode with a reference point
+        if (drawingModeRef.current !== 'draw' || !isDrawingMode || !lastClickedPoint) {
+          return;
+        }
+
+        const currentPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+        
+        // Calculate distance from last clicked point to current mouse position
+        const distance = calculateDistance(lastClickedPoint, currentPoint);
+        const formattedDistance = formatDistance(distance, measurementUnit);
+        
+        // Calculate midpoint for annotation placement
+        const midLng = (lastClickedPoint[0] + currentPoint[0]) / 2;
+        const midLat = (lastClickedPoint[1] + currentPoint[1]) / 2;
+
+        // Update drawing annotation
+        const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
+        if (drawingSource) {
+          drawingSource.setData({
+            type: 'FeatureCollection',
+            features: [{
+              type: 'Feature',
+              geometry: {
+                type: 'Point',
+                coordinates: [midLng, midLat]
+              },
+              properties: {
+                label: formattedDistance
+              }
+            }]
+          });
+        }
+      });
+
+      // Clear drawing annotation when polygon is completed or mode changes
+      map.on('draw.create', () => {
+        const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
+        if (drawingSource) {
+          drawingSource.setData({ type: 'FeatureCollection', features: [] });
+        }
+      });
+      
+
 
       // Handle parking overlay clicks
       map.on('click', 'parking-overlays-fill', (e) => {
@@ -386,6 +573,14 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       map.on('mouseleave', 'parking-overlays-fill', () => {
         map.getCanvas().style.cursor = 'crosshair';
       });
+      
+      // Add keyboard shortcut to force draw mode
+      map.on('keydown', (e: any) => {
+        if (e.keyCode === 68) { // 'D' key
+          draw.changeMode('draw_polygon');
+          map.getCanvas().style.cursor = 'crosshair';
+        }
+      });
 
       // Rotation handle event handlers
       let isDragging = false;
@@ -399,22 +594,32 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         isDragging = true;
         isRotatingRef.current = true;
         
-        // Get current polygon and center
-        const allFeatures = drawRef.current?.getAll();
-        if (!allFeatures || allFeatures.features.length === 0) return;
+        // Get selected polygon from refs
+        if (!selectedPolygonIdRef.current) return;
         
-        const polygon = allFeatures.features[0];
-        if (polygon.geometry.type !== 'Polygon') return;
+        const selectedPolygon = polygonsRef.current.find(p => 
+          String(p.id) === selectedPolygonIdRef.current || 
+          String(p.properties?.id) === selectedPolygonIdRef.current
+        );
         
-        const coordinates = polygon.geometry.coordinates[0];
+        if (!selectedPolygon || selectedPolygon.geometry.type !== 'Polygon') return;
+        
+        const coordinates = selectedPolygon.geometry.coordinates[0];
         currentCenter = calculatePolygonCenterLocal(coordinates);
         
         const mousePoint = e.lngLat;
         dragStartAngle = Math.atan2(mousePoint.lat - currentCenter[1], mousePoint.lng - currentCenter[0]);
         
         map.getCanvas().style.cursor = 'grabbing';
+        
+        // Disable map interactions during rotation
         map.dragPan.disable();
         map.doubleClickZoom.disable();
+        map.scrollZoom.disable();
+        map.boxZoom.disable();
+        map.dragRotate.disable();
+        map.keyboard.disable();
+        map.touchZoomRotate.disable();
       });
 
       map.on('mousemove', (e) => {
@@ -438,9 +643,22 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           isDragging = false;
           isRotatingRef.current = false;
           currentCenter = null;
-          map.getCanvas().style.cursor = 'crosshair';
+          
+          // Restore cursor based on drawing mode
+          if (drawingModeRef.current === 'draw') {
+            map.getCanvas().style.cursor = 'crosshair';
+          } else {
+            map.getCanvas().style.cursor = '';
+          }
+          
+          // Re-enable map interactions
           map.dragPan.enable();
           map.doubleClickZoom.enable();
+          map.scrollZoom.enable();
+          map.boxZoom.enable();
+          map.dragRotate.enable();
+          map.keyboard.enable();
+          map.touchZoomRotate.enable();
         }
       });
       
@@ -450,9 +668,22 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           isDragging = false;
           isRotatingRef.current = false;
           currentCenter = null;
-          map.getCanvas().style.cursor = 'crosshair';
+          
+          // Restore cursor based on drawing mode
+          if (drawingModeRef.current === 'draw') {
+            map.getCanvas().style.cursor = 'crosshair';
+          } else {
+            map.getCanvas().style.cursor = '';
+          }
+          
+          // Re-enable map interactions
           map.dragPan.enable();
           map.doubleClickZoom.enable();
+          map.scrollZoom.enable();
+          map.boxZoom.enable();
+          map.dragRotate.enable();
+          map.keyboard.enable();
+          map.touchZoomRotate.enable();
         }
       });
 
@@ -479,32 +710,66 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     };
   }, []);
 
-  // Keep map always in polygon draw mode
+  // Update refs when props change
+  useEffect(() => {
+    drawingModeRef.current = drawingMode;
+  }, [drawingMode]);
+
+  useEffect(() => {
+    selectedPolygonIdRef.current = selectedPolygonId;
+  }, [selectedPolygonId]);
+
+  useEffect(() => {
+    polygonsRef.current = polygons;
+  }, [polygons]);
+
+  // Manage drawing mode and sync polygons
   useEffect(() => {
     if (!drawRef.current || !isMapLoaded || !mapRef.current) return;
 
     const draw = drawRef.current;
     const map = mapRef.current;
     
-    draw.changeMode('draw_polygon');
+    // Add all existing polygons to draw instance
+    const currentFeatures = draw.getAll();
+    const currentIds = new Set(currentFeatures.features.map(f => f.id));
     
-    // Set crosshairs cursor for drawing
-    map.getCanvas().style.cursor = 'crosshair';
+    polygons.forEach(polygon => {
+      const polygonId = String(polygon.id || polygon.properties?.id || '');
+      if (!currentIds.has(polygonId) && polygon.id) {
+        draw.add(polygon);
+      }
+    });
+    
+    // Set mode based on drawingMode prop
+    if (drawingMode === 'draw') {
+      draw.changeMode('draw_polygon');
+      map.getCanvas().style.cursor = 'crosshair';
+    } else {
+      draw.changeMode('simple_select');
+      map.getCanvas().style.cursor = '';
+    }
     
     // Override cursor for drawing interactions
-    const setCrosshairCursor = () => {
-      map.getCanvas().style.cursor = 'crosshair';
+    const setCursor = () => {
+      if (!isRotatingRef.current) {
+        if (drawingMode === 'draw') {
+          map.getCanvas().style.cursor = 'crosshair';
+        } else {
+          map.getCanvas().style.cursor = '';
+        }
+      }
     };
     
-    // Add event listeners to maintain crosshair cursor during drawing
-    map.on('mousemove', setCrosshairCursor);
-    map.on('mouseenter', setCrosshairCursor);
+    // Add event listeners to maintain proper cursor
+    map.on('mousemove', setCursor);
+    map.on('mouseenter', setCursor);
     
     return () => {
-      map.off('mousemove', setCrosshairCursor);
-      map.off('mouseenter', setCrosshairCursor);
+      map.off('mousemove', setCursor);
+      map.off('mouseenter', setCursor);
     };
-  }, [isMapLoaded]);
+  }, [isMapLoaded, polygons, drawingMode]);
 
   // Handle search result flyto
   useEffect(() => {
@@ -555,18 +820,41 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     }
   }, [parkingOverlays, isMapLoaded]);
 
-  // Update side length annotations
+  // Update side length annotations for all polygons
   useEffect(() => {
-    if (!mapRef.current || !isMapLoaded || !polygons.length || !measurements) return;
+    if (!mapRef.current || !isMapLoaded) return;
 
     const map = mapRef.current;
     const source = map.getSource('side-annotations') as mapboxgl.GeoJSONSource;
     
-    if (source && measurements.sideLengths.length > 0) {
-      const polygon = polygons[0]; // Use first polygon
-      const coordinates = polygon.geometry.coordinates[0];
+    if (!source) return;
+    
+    // Get current polygons from Mapbox Draw to ensure we have the latest coordinates
+    const draw = drawRef.current;
+    if (!draw) return;
+    
+    const currentFeatures = draw.getAll();
+    if (currentFeatures.features.length === 0) {
+      source.setData({
+        type: 'FeatureCollection',
+        features: []
+      });
+      return;
+    }
+    
+    const allFeatures: any[] = [];
+    
+    // Create annotations for each polygon from the draw instance
+    currentFeatures.features.forEach((feature, polygonIndex) => {
+      if (feature.geometry.type !== 'Polygon') return;
       
-      const features = [];
+      const coordinates = feature.geometry.coordinates[0];
+      
+      // Skip if polygon doesn't have enough points (need at least 4 for a closed polygon)
+      if (coordinates.length < 4) return;
+      
+      // Calculate measurements for this polygon
+      const polygonMeasurement = calculatePolygonArea(coordinates);
       
       // Create annotation for each side
       for (let i = 0; i < coordinates.length - 1; i++) {
@@ -578,10 +866,10 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         const midLat = (startPoint[1] + endPoint[1]) / 2;
         
         // Get side length and format it
-        const lengthMeters = measurements.sideLengths[i];
+        const lengthMeters = polygonMeasurement.sideLengths[i];
         const formattedLength = formatDistance(lengthMeters, measurementUnit);
         
-        features.push({
+        allFeatures.push({
           type: 'Feature' as const,
           geometry: {
             type: 'Point' as const,
@@ -589,89 +877,186 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           },
           properties: {
             label: formattedLength,
-            sideIndex: i
+            sideIndex: i,
+            polygonIndex: polygonIndex,
+            polygonId: String(feature.id || '')
           }
         });
       }
+    });
+    
+    source.setData({
+      type: 'FeatureCollection',
+      features: allFeatures
+    });
+  }, [measurementUnit, isMapLoaded]);
+
+  // Update annotations when polygons change or are moved
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoaded || !drawRef.current) return;
+
+    const map = mapRef.current;
+    const draw = drawRef.current;
+    const source = map.getSource('side-annotations') as mapboxgl.GeoJSONSource;
+    
+    if (!source) return;
+    
+    // Function to refresh annotations
+    const refreshAnnotations = () => {
+      const currentFeatures = draw.getAll();
+      const allFeatures: any[] = [];
+      
+      currentFeatures.features.forEach((feature, polygonIndex) => {
+        if (feature.geometry.type !== 'Polygon') return;
+        
+        const coordinates = feature.geometry.coordinates[0];
+        
+        // Skip if polygon doesn't have enough points
+        if (coordinates.length < 4) return;
+        
+        const polygonMeasurement = calculatePolygonArea(coordinates);
+        
+        for (let i = 0; i < coordinates.length - 1; i++) {
+          const startPoint = coordinates[i];
+          const endPoint = coordinates[i + 1];
+          
+          const midLng = (startPoint[0] + endPoint[0]) / 2;
+          const midLat = (startPoint[1] + endPoint[1]) / 2;
+          
+          const lengthMeters = polygonMeasurement.sideLengths[i];
+          const formattedLength = formatDistance(lengthMeters, measurementUnit);
+          
+          allFeatures.push({
+            type: 'Feature' as const,
+            geometry: {
+              type: 'Point' as const,
+              coordinates: [midLng, midLat]
+            },
+            properties: {
+              label: formattedLength,
+              sideIndex: i,
+              polygonIndex: polygonIndex,
+              polygonId: String(feature.id || '')
+            }
+          });
+        }
+      });
       
       source.setData({
         type: 'FeatureCollection',
-        features
+        features: allFeatures
       });
-    } else if (source) {
-      // Clear annotations when no polygon
+    };
+
+    // Initial refresh
+    refreshAnnotations();
+
+    // Listen to draw events to refresh annotations
+    const handleDrawUpdate = () => {
+      // Use setTimeout to ensure coordinates are updated
+      setTimeout(refreshAnnotations, 10);
+    };
+
+    const handleDrawCreate = () => {
+      setTimeout(refreshAnnotations, 10);
+    };
+
+    const handleDrawDelete = () => {
+      setTimeout(refreshAnnotations, 10);
+    };
+
+    map.on('draw.update', handleDrawUpdate);
+    map.on('draw.create', handleDrawCreate);
+    map.on('draw.delete', handleDrawDelete);
+    
+    return () => {
+      map.off('draw.update', handleDrawUpdate);
+      map.off('draw.create', handleDrawCreate);
+      map.off('draw.delete', handleDrawDelete);
+    };
+  }, [polygons.length, measurementUnit, isMapLoaded]);
+
+  // Function to update rotation handles for a specific polygon
+  const updateRotationHandles = useCallback((polygon?: MapboxDrawPolygon) => {
+    if (!mapRef.current || !isMapLoaded) {
+      return;
+    }
+    const map = mapRef.current;
+    const source = map.getSource('polygon-rotation-handles') as mapboxgl.GeoJSONSource;
+    
+    if (!source) {
+      return;
+    }
+    
+    if (!polygon) {
+      // Clear rotation handles when no polygon
       source.setData({
         type: 'FeatureCollection',
         features: []
       });
-    }
-  }, [polygons, measurements, measurementUnit, isMapLoaded]);
-
-  // Update polygon rotation handles
-  useEffect(() => {
-    if (!mapRef.current || !isMapLoaded) return;
-
-    const map = mapRef.current;
-    const source = map.getSource('polygon-rotation-handles') as mapboxgl.GeoJSONSource;
-    
-    if (!polygons.length) {
-      // Clear rotation handles when no polygon
-      if (source) {
-        source.setData({
-          type: 'FeatureCollection',
-          features: []
-        });
-      }
       setPolygonCenter(null);
+      return;
+    }
+    
+    const coordinates = polygon.geometry.coordinates[0];
+      
+    // Calculate polygon center
+    const center = calculatePolygonCenter(coordinates);
+    setPolygonCenter(center);
+    
+    // Calculate bounding box to place rotation handles
+    const lngs = coordinates.map(coord => coord[0]);
+    const lats = coordinates.map(coord => coord[1]);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    
+    // Calculate radius for handle placement
+    const deltaLng = maxLng - minLng;
+    const deltaLat = maxLat - minLat;
+    const radius = Math.max(deltaLng, deltaLat) * 0.7; // Place handles outside polygon
+    
+    // Create rotation handles at cardinal directions
+    const handles = [
+      [center[0], center[1] + radius], // North
+      [center[0] + radius, center[1]], // East
+      [center[0], center[1] - radius], // South
+      [center[0] - radius, center[1]], // West
+    ].map((coord, index) => ({
+      type: 'Feature' as const,
+      geometry: {
+        type: 'Point' as const,
+        coordinates: coord
+      },
+      properties: {
+        handleIndex: index
+      }
+    }));
+    
+    source.setData({
+      type: 'FeatureCollection',
+      features: handles
+    });
+  }, [isMapLoaded]);
+
+  // Update polygon rotation handles for selected polygon
+  useEffect(() => {
+    if (!selectedPolygonId) {
+      updateRotationHandles(); // Clear handles
       originalPolygonRef.current = null;
       totalRotationRef.current = 0;
       return;
     }
     
-    if (source) {
-      const polygon = polygons[0]; // Use first polygon
-      const coordinates = polygon.geometry.coordinates[0];
-      
-      // Calculate polygon center
-      const center = calculatePolygonCenter(coordinates);
-      setPolygonCenter(center);
-      
-      // Calculate bounding box to place rotation handles
-      const lngs = coordinates.map(coord => coord[0]);
-      const lats = coordinates.map(coord => coord[1]);
-      const minLng = Math.min(...lngs);
-      const maxLng = Math.max(...lngs);
-      const minLat = Math.min(...lats);
-      const maxLat = Math.max(...lats);
-      
-      // Calculate radius for handle placement
-      const deltaLng = maxLng - minLng;
-      const deltaLat = maxLat - minLat;
-      const radius = Math.max(deltaLng, deltaLat) * 0.7; // Place handles outside polygon
-      
-      // Create rotation handles at cardinal directions
-      const handles = [
-        [center[0], center[1] + radius], // North
-        [center[0] + radius, center[1]], // East
-        [center[0], center[1] - radius], // South
-        [center[0] - radius, center[1]], // West
-      ].map((coord, index) => ({
-        type: 'Feature' as const,
-        geometry: {
-          type: 'Point' as const,
-          coordinates: coord
-        },
-        properties: {
-          handleIndex: index
-        }
-      }));
-      
-      source.setData({
-        type: 'FeatureCollection',
-        features: handles
-      });
-    }
-  }, [polygons, isMapLoaded]);
+    // Find the selected polygon
+    const selectedPolygon = polygons.find(p => 
+      String(p.id) === selectedPolygonId || 
+      String(p.properties?.id) === selectedPolygonId
+    );
+    
+    updateRotationHandles(selectedPolygon);
+  }, [polygons, selectedPolygonId, updateRotationHandles]);
 
   // Local helper for polygon center calculation  
   const calculatePolygonCenterLocal = (coordinates: number[][]): [number, number] => {
@@ -689,15 +1074,19 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
 
   // Direct rotation function with better precision
   const rotatePolygonDirect = useCallback((center: [number, number], deltaAngle: number) => {
-    if (!drawRef.current) return;
+    if (!drawRef.current || !selectedPolygonIdRef.current) return;
 
     const draw = drawRef.current;
-    const allFeatures = draw.getAll();
     
-    if (allFeatures.features.length === 0) return;
+    // Find the selected polygon from refs
+    const selectedPolygon = polygonsRef.current.find(p => 
+      String(p.id) === selectedPolygonIdRef.current || 
+      String(p.properties?.id) === selectedPolygonIdRef.current
+    );
     
-    const polygon = allFeatures.features[0];
-    if (polygon.geometry.type !== 'Polygon') return;
+    if (!selectedPolygon || selectedPolygon.geometry.type !== 'Polygon') return;
+    
+    const polygon = selectedPolygon;
     
     // Store original coordinates if not already stored
     if (!originalPolygonRef.current) {
@@ -709,25 +1098,50 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     
     const originalCoords = originalPolygonRef.current;
     
-    // Rotate from original coordinates to maintain precision
-    const rotatedCoords = originalCoords.map((coord: number[], index: number) => {
-      // Skip the last coordinate as it's the same as the first
-      if (index === originalCoords.length - 1) {
-        return coord; // Will be updated after the loop
-      }
+    // For geographic coordinates, work in a projected coordinate system for accurate rotation
+    // Convert to Web Mercator (approximately Cartesian for small areas)
+    const toWebMercator = (lng: number, lat: number): [number, number] => {
+      const x = lng * 20037508.34 / 180;
+      let y = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180);
+      y = y * 20037508.34 / 180;
+      return [x, y];
+    };
+    
+    const fromWebMercator = (x: number, y: number): [number, number] => {
+      const lng = (x / 20037508.34) * 180;
+      let lat = (y / 20037508.34) * 180;
+      lat = 180 / Math.PI * (2 * Math.atan(Math.exp(lat * Math.PI / 180)) - Math.PI / 2);
+      return [lng, lat];
+    };
+    
+    // Convert center to Web Mercator
+    const centerMercator = toWebMercator(center[0], center[1]);
+    
+    // Apply rigid body rotation in Cartesian space (preserves all distances and angles)
+    const rotatedCoords = originalCoords.slice(0, -1).map(coord => {
+      const mercatorCoord = toWebMercator(coord[0], coord[1]);
       
-      const dx = coord[0] - center[0];
-      const dy = coord[1] - center[1];
+      // Translate to origin (center becomes 0,0)
+      const translatedX = mercatorCoord[0] - centerMercator[0];
+      const translatedY = mercatorCoord[1] - centerMercator[1];
       
-      const totalAngle = totalRotationRef.current;
-      const rotatedX = dx * Math.cos(totalAngle) - dy * Math.sin(totalAngle);
-      const rotatedY = dx * Math.sin(totalAngle) + dy * Math.cos(totalAngle);
+      // Apply rotation matrix (this is the key - preserves all geometric properties)
+      const cosAngle = Math.cos(totalRotationRef.current);
+      const sinAngle = Math.sin(totalRotationRef.current);
       
-      return [center[0] + rotatedX, center[1] + rotatedY];
+      const rotatedX = translatedX * cosAngle - translatedY * sinAngle;
+      const rotatedY = translatedX * sinAngle + translatedY * cosAngle;
+      
+      // Translate back
+      const finalX = rotatedX + centerMercator[0];
+      const finalY = rotatedY + centerMercator[1];
+      
+      // Convert back to geographic coordinates
+      return fromWebMercator(finalX, finalY);
     });
     
-    // Ensure the polygon is closed
-    rotatedCoords[rotatedCoords.length - 1] = rotatedCoords[0];
+    // Ensure the polygon is closed by duplicating the first coordinate
+    rotatedCoords.push(rotatedCoords[0]);
     
     // Update the polygon coordinates directly
     polygon.geometry.coordinates[0] = rotatedCoords;
@@ -735,6 +1149,57 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     // Remove and re-add to trigger visual update
     draw.delete(String(polygon.id));
     draw.add(polygon);
+    
+    // Refresh side annotations to move them with the rotated polygon
+    // With improved rotation precision, we can now use current measurements
+    if (mapRef.current) {
+      const sideSource = mapRef.current.getSource('side-annotations') as mapboxgl.GeoJSONSource;
+      if (sideSource) {
+        const allFeatures: any[] = [];
+        const currentFeatures = draw.getAll();
+        
+        currentFeatures.features.forEach((feature, polygonIndex) => {
+          if (feature.geometry.type !== 'Polygon') return;
+          
+          const coordinates = feature.geometry.coordinates[0];
+          if (coordinates.length < 4) return;
+          
+          // With proper rigid body rotation, current measurements should equal original
+          const currentMeasurement = calculatePolygonArea(coordinates);
+          
+          for (let i = 0; i < coordinates.length - 1; i++) {
+            const startPoint = coordinates[i];
+            const endPoint = coordinates[i + 1];
+            
+            const midLng = (startPoint[0] + endPoint[0]) / 2;
+            const midLat = (startPoint[1] + endPoint[1]) / 2;
+            
+            // Use current measurements - they should be preserved by proper rotation
+            const lengthMeters = currentMeasurement.sideLengths[i];
+            const formattedLength = formatDistance(lengthMeters, measurementUnit);
+            
+            allFeatures.push({
+              type: 'Feature' as const,
+              geometry: {
+                type: 'Point' as const,
+                coordinates: [midLng, midLat]
+              },
+              properties: {
+                label: formattedLength,
+                sideIndex: i,
+                polygonIndex: polygonIndex,
+                polygonId: String(feature.id || '')
+              }
+            });
+          }
+        });
+        
+        sideSource.setData({
+          type: 'FeatureCollection',
+          features: allFeatures
+        });
+      }
+    }
     
     // Always trigger update callback for visual consistency
     // The parent will handle whether to recalculate measurements
