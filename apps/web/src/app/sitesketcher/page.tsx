@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MapboxMap, type MapboxMapRef } from './components/MapboxMap';
 import { ResponsiveControls } from './components/ResponsiveControls';
-import { AlertTriangle } from 'lucide-react';
+import { ModeIndicator } from './components/ModeIndicator';
+import { MobileFAB } from './components/MobileFAB';
+import { AlertTriangle, Pencil, MousePointer, ArrowLeft } from 'lucide-react';
 import type { 
   MapboxDrawPolygon, 
   ParkingOverlay, 
@@ -14,6 +16,8 @@ import type {
 } from '@/types/sitesketcher';
 import { calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { getMapboxToken } from '@/lib/sitesketcher/mapbox-utils';
+import '@/styles/sitesketcher-mobile.css';
+import Link from 'next/link';
 
 const STORAGE_KEY = 'sitesketcher-state';
 const RECENT_SEARCHES_KEY = 'sitesketcher-recent-searches';
@@ -75,13 +79,14 @@ export default function SiteSketcherPage() {
         parkingOverlays: state.parkingOverlays,
         measurementUnit: state.measurementUnit,
         snapToGrid: state.snapToGrid,
-        gridSize: state.gridSize
+        gridSize: state.gridSize,
+        drawingMode: state.drawingMode // Save drawing mode preference
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
     } catch (error) {
       console.warn('Failed to save state:', error);
     }
-  }, [state.polygons, state.parkingOverlays, state.measurementUnit, state.snapToGrid, state.gridSize]);
+  }, [state.polygons, state.parkingOverlays, state.measurementUnit, state.snapToGrid, state.gridSize, state.drawingMode]);
 
   // Recalculate measurements when polygons or selection changes
   useEffect(() => {
@@ -301,49 +306,111 @@ export default function SiteSketcherPage() {
   }
 
   return (
-    <div className="h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur-sm z-40 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-primary">SiteSketcher</h1>
-            <p className="text-sm text-muted-foreground">
-              Free site assessment tool
-            </p>
+    <div className="h-screen bg-background">
+      {/* Desktop Layout */}
+      <div className="hidden md:flex md:flex-col md:h-full">
+        {/* Header */}
+        <header className="border-b bg-background/95 backdrop-blur-sm z-40 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link 
+                href="/"
+                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted transition-colors"
+                title="Back to SiteMatch"
+              >
+                <ArrowLeft className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+              </Link>
+              <div>
+                <h1 className="text-xl font-bold text-primary">SiteSketcher</h1>
+                <p className="text-sm text-muted-foreground">
+                  Free site assessment tool
+                </p>
+              </div>
+            </div>
           </div>
-          
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex">
-        {/* Desktop Sidebar */}
-        <div className="hidden md:block w-80 border-r bg-background overflow-y-auto">
-          <div className="p-4">
-            <ResponsiveControls
-              measurement={state.measurements}
-              measurementUnit={state.measurementUnit}
-              onUnitToggle={handleUnitToggle}
-              onClearAll={handleClearAll}
-              drawingMode={state.drawingMode}
-              onModeToggle={handleModeToggle}
-              polygons={state.polygons}
+        {/* Desktop Main Content */}
+        <div className="flex-1 flex">
+          {/* Desktop Sidebar */}
+          <div className="w-80 border-r bg-background overflow-y-auto">
+            <div className="p-4">
+              <ResponsiveControls
+                measurement={state.measurements}
+                measurementUnit={state.measurementUnit}
+                onUnitToggle={handleUnitToggle}
+                onClearAll={handleClearAll}
+                drawingMode={state.drawingMode}
+                onModeToggle={handleModeToggle}
+                polygons={state.polygons}
+                onPolygonDelete={handlePolygonDelete}
+                parkingOverlays={state.parkingOverlays}
+                selectedOverlayId={state.selectedParkingId}
+                onAddOverlay={handleAddParkingOverlay}
+                onUpdateOverlay={handleParkingOverlayUpdate}
+                onRemoveOverlay={handleRemoveParkingOverlay}
+                onSelectOverlay={handleSelectParkingOverlay}
+                onLocationSelect={handleLocationSelect}
+                recentSearches={state.recentSearches}
+                onUpdateRecentSearches={handleUpdateRecentSearches}
+              />
+            </div>
+          </div>
+
+          {/* Desktop Map Container */}
+          <div className="flex-1 relative">
+            <MapboxMap
+              ref={mapRef}
+              onPolygonCreate={handlePolygonCreate}
+              onPolygonUpdate={handlePolygonUpdate}
               onPolygonDelete={handlePolygonDelete}
               parkingOverlays={state.parkingOverlays}
-              selectedOverlayId={state.selectedParkingId}
-              onAddOverlay={handleAddParkingOverlay}
-              onUpdateOverlay={handleParkingOverlayUpdate}
-              onRemoveOverlay={handleRemoveParkingOverlay}
-              onSelectOverlay={handleSelectParkingOverlay}
-              onLocationSelect={handleLocationSelect}
-              recentSearches={state.recentSearches}
-              onUpdateRecentSearches={handleUpdateRecentSearches}
+              onParkingOverlayClick={handleParkingOverlayClick}
+              onParkingOverlayUpdate={handleParkingOverlayUpdate}
+              searchResult={searchResult}
+              snapToGrid={state.snapToGrid}
+              gridSize={state.gridSize}
+              polygons={state.polygons}
+              selectedPolygonId={state.selectedPolygonId}
+              measurements={state.measurements}
+              measurementUnit={state.measurementUnit}
+              drawingMode={state.drawingMode}
+              className="w-full h-full"
             />
+            
+            {/* Desktop Mode Toggle Button */}
+            <button
+              onClick={handleModeToggle}
+              className="absolute bottom-6 left-4 z-10 mode-toggle bg-white rounded-full shadow-lg hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center"
+              title={state.drawingMode === 'draw' ? 'Switch to Select Mode' : 'Switch to Draw Mode'}
+            >
+              {state.drawingMode === 'draw' ? (
+                <Pencil className="w-5 h-5 text-blue-600" />
+              ) : (
+                <MousePointer className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Map Container */}
-        <div className="flex-1 relative">
+      {/* Mobile Layout - Full screen */}
+      <div className="md:hidden mobile-layout">
+        {/* Mobile Navigation */}
+        <div className="fixed top-4 left-4 z-50 flex items-center gap-3">
+          <Link 
+            href="/"
+            className="flex items-center justify-center w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+            title="Back to SiteMatch"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-700" />
+          </Link>
+        </div>
+
+        {/* Full Screen Map */}
+        <div className="mobile-map-container">
+          <ModeIndicator mode={state.drawingMode} />
+          <MobileFAB mode={state.drawingMode} onModeToggle={handleModeToggle} />
           <MapboxMap
             ref={mapRef}
             onPolygonCreate={handlePolygonCreate}
@@ -362,27 +429,10 @@ export default function SiteSketcherPage() {
             drawingMode={state.drawingMode}
             className="w-full h-full"
           />
-          
-          {/* Floating Mode Toggle Button */}
-          <button
-            onClick={handleModeToggle}
-            className="absolute top-4 right-4 z-10 bg-white rounded-lg shadow-lg p-3 hover:bg-gray-50 transition-colors"
-            title={state.drawingMode === 'draw' ? 'Switch to Select Mode' : 'Switch to Draw Mode'}
-          >
-            {state.drawingMode === 'draw' ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2z" />
-              </svg>
-            )}
-          </button>
         </div>
 
-        {/* Mobile Controls */}
-        <div className="md:hidden">
+        {/* Mobile Bottom Sheet - Always visible */}
+        <div className="mobile-bottom-sheet-container">
           <ResponsiveControls
             measurement={state.measurements}
             measurementUnit={state.measurementUnit}
