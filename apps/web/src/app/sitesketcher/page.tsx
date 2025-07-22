@@ -132,34 +132,71 @@ export default function SiteSketcherPage() {
     }));
   }, []);
 
-  const handlePolygonUpdate = useCallback((polygon: MapboxDrawPolygon) => {
-    setState(prev => ({
-      ...prev,
-      polygons: prev.polygons.map(p => 
-        (String(p.id) === String(polygon.id)) || 
-        (String(p.properties?.id) === String(polygon.properties?.id))
-          ? polygon 
-          : p
-      ),
-      selectedPolygonId: String(polygon.id || polygon.properties?.id || '')
-    }));
+  const handlePolygonUpdate = useCallback((polygon: MapboxDrawPolygon) => {    
+    setState(prev => {
+      console.log('Updating polygon:', {
+        newPolygon: { id: polygon.id, propsId: polygon.properties?.id },
+        existingPolygons: prev.polygons.map(p => ({ id: p.id, propsId: p.properties?.id }))
+      });
+      
+      return {
+        ...prev,
+        polygons: prev.polygons.map(p => {
+          // Use a more precise matching strategy - prefer exact ID match
+          const exactIdMatch = p.id && polygon.id && String(p.id) === String(polygon.id);
+          const exactPropsMatch = p.properties?.id && polygon.properties?.id && 
+            String(p.properties.id) === String(polygon.properties.id);
+          
+          // Only update if we have a clear match
+          if (exactIdMatch || exactPropsMatch) {
+            console.log('Updating polygon match:', { 
+              existingId: p.id, 
+              existingPropsId: p.properties?.id,
+              newId: polygon.id,
+              newPropsId: polygon.properties?.id
+            });
+            return polygon;
+          }
+          return p;
+        }),
+        selectedPolygonId: String(polygon.id || polygon.properties?.id || '')
+      };
+    });
   }, []);
 
   const handlePolygonDelete = useCallback((polygonId: string) => {
+    console.log('Deleting polygon with ID:', polygonId);
+    
     // Delete from map first
     mapRef.current?.deletePolygon(polygonId);
     
     // Update state - check both polygon.id and polygon.properties.id
-    setState(prev => ({
-      ...prev,
-      polygons: prev.polygons.filter(p => 
-        String(p.id) !== polygonId && 
-        String(p.properties?.id) !== polygonId
-      ),
-      selectedPolygonId: null,
-      measurements: null,
-      parkingOverlays: [] // Clear parking overlays when polygon is deleted
-    }));
+    setState(prev => {
+      console.log('Available polygons before deletion:', prev.polygons.map(p => ({
+        id: p.id,
+        propsId: p.properties?.id,
+        stringId: String(p.id || ''),
+        stringPropsId: String(p.properties?.id || '')
+      })));
+      
+      const filteredPolygons = prev.polygons.filter(p => {
+        const pId = String(p.id || '');
+        const pPropsId = String(p.properties?.id || '');
+        const shouldKeep = pId !== polygonId && pPropsId !== polygonId;
+        console.log(`Polygon ${pId}/${pPropsId}: shouldKeep = ${shouldKeep}`);
+        return shouldKeep;
+      });
+      
+      console.log('Polygons after filter:', filteredPolygons.length);
+      
+      return {
+        ...prev,
+        polygons: filteredPolygons,
+        selectedPolygonId: null,
+        measurements: null,
+        parkingOverlays: [] // Clear parking overlays when polygon is deleted
+      };
+    });
     
     // Clear original measurements reference
     originalMeasurementsRef.current = null;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -68,6 +68,18 @@ export function ResponsiveControls({
   const [parkingOpen, setParkingOpen] = useState(false);
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [showAddParking, setShowAddParking] = useState(false);
+
+  // Reset selectedPolygonId if the selected polygon no longer exists
+  useEffect(() => {
+    if (selectedPolygonId) {
+      const polygonExists = polygons.some(p => 
+        String(p.id || p.properties?.id || '') === selectedPolygonId
+      );
+      if (!polygonExists) {
+        setSelectedPolygonId(null);
+      }
+    }
+  }, [polygons, selectedPolygonId]);
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
