@@ -21,6 +21,7 @@ import { LocationSearch } from './LocationSearch';
 import { formatArea, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { MobileBottomSheet } from './MobileBottomSheet';
 import { TouchOptimizedButton } from './TouchOptimizedButton';
+import { ParkingOverlay as ParkingOverlayComponent } from './ParkingOverlay';
 import { cn } from '@/lib/utils';
 
 interface ResponsiveControlsProps {
@@ -43,6 +44,7 @@ interface ResponsiveControlsProps {
   onUpdateOverlay: (overlay: ParkingOverlay) => void;
   onRemoveOverlay: (overlayId: string) => void;
   onSelectOverlay: (overlayId: string | null) => void;
+  onClearAllParking: () => void;
   // Search props
   onLocationSelect: (location: any) => void;
   recentSearches: any[];
@@ -67,15 +69,14 @@ export function ResponsiveControls({
   onUpdateOverlay,
   onRemoveOverlay,
   onSelectOverlay,
+  onClearAllParking,
   onLocationSelect,
   recentSearches,
   onUpdateRecentSearches,
   className = ''
 }: ResponsiveControlsProps) {
   const [measurementsOpen, setMeasurementsOpen] = useState(false);
-  const [parkingOpen, setParkingOpen] = useState(false);
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
-  const [showAddParking, setShowAddParking] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(true); // Always open on mobile
   const [mobileSheetHeight, setMobileSheetHeight] = useState<'collapsed' | 'halfway' | 'expanded'>('collapsed');
 
@@ -378,71 +379,17 @@ export function ResponsiveControls({
         </Card>
 
         {/* Parking Section */}
-        <Card>
-          <Collapsible open={parkingOpen} onOpenChange={setParkingOpen}>
-            <CollapsibleTrigger asChild>
-              <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <Car className="h-4 w-4" />
-                  <span className="font-medium">Parking</span>
-                  {parkingOverlays.length > 0 && (
-                    <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
-                      {parkingOverlays.length}
-                    </span>
-                  )}
-                </div>
-                <ChevronRight className={`h-4 w-4 transition-transform ${parkingOpen ? 'rotate-90' : ''}`} />
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="px-4 pb-4 space-y-2">
-                {parkingOverlays.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-2">
-                    No parking bays created
-                  </p>
-                ) : (
-                  parkingOverlays.map((overlay, index) => (
-                    <div key={overlay.id} className="flex items-center justify-between p-2 border rounded">
-                      <div>
-                        <span className="font-medium">Bay {index + 1}</span>
-                        <span className="text-sm text-muted-foreground ml-2">
-                          {/* Calculate spaces based on overlay type */}
-                          {overlay.type === 'single' ? '1 space' : `${Math.floor(overlay.size.width * overlay.size.length / 12)} spaces`}
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemoveOverlay(overlay.id)}
-                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))
-                )}
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAddParking(!showAddParking)}
-                  className="w-full"
-                >
-                  <Plus className="h-3 w-3 mr-2" />
-                  Add Parking
-                </Button>
-                
-                {showAddParking && (
-                  <div className="mt-2 p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-muted-foreground">
-                      Click inside a polygon to add parking bay
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </Card>
+        <ParkingOverlayComponent
+          polygons={polygons}
+          parkingOverlays={parkingOverlays}
+          selectedOverlayId={selectedOverlayId}
+          onAddOverlay={onAddOverlay}
+          onUpdateOverlay={onUpdateOverlay}
+          onRemoveOverlay={onRemoveOverlay}
+          onSelectOverlay={onSelectOverlay}
+          onClearAllParking={onClearAllParking}
+          isMobile={isMobile}
+        />
 
         {/* Settings Card */}
         <Card>

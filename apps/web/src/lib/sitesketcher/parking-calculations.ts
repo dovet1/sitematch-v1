@@ -31,12 +31,27 @@ export function isNearSnapAngle(angle: number, snapIncrement = 15, tolerance = 7
 export function calculateParkingSpaceCoordinates(
   overlay: ParkingOverlay
 ): number[][] {
-  const { position, rotation, size } = overlay;
+  const { position, rotation, size } = overlay;  
   const [centerLng, centerLat] = position;
   
-  // Convert size from meters to approximate degrees (rough conversion for display)
-  const metersToLng = size.width / 111320; // Approximate meters per degree longitude
-  const metersToLat = size.length / 110540; // Approximate meters per degree latitude
+  // The size parameter contains the TOTAL dimensions of the parking grid
+  // Convert total size from meters to degrees
+  // Latitude conversion is constant, longitude varies by latitude
+  const metersToLat = size.length / 111320; // ~111km per degree latitude  
+  // Longitude conversion needs to account for latitude
+  const metersToLng = size.width / (111320 * Math.cos(centerLat * Math.PI / 180));
+  
+  // Debug: log the coordinate conversion 
+  console.log('Rectangle coordinate conversion:', {
+    overlayId: overlay.id,
+    inputSize: size,
+    centerLat,
+    cosLat: Math.cos(centerLat * Math.PI / 180),
+    metersToLng,
+    metersToLat,
+    expectedWidthDeg: metersToLng,
+    expectedHeightDeg: metersToLat
+  });
   
   // Create rectangle corners relative to center
   const halfWidth = metersToLng / 2;
@@ -90,46 +105,37 @@ export function generateParkingLayout(
 ): ParkingOverlay[] {
   try {
     const polygon = turf.polygon([polygonCoordinates]);
-    const bbox = turf.bbox(polygon);
-    const [minLng, minLat, maxLng, maxLat] = bbox;
+    const center = turf.centroid(polygon);
+    const [centerLng, centerLat] = center.geometry.coordinates;
     
     const { width, length } = parkingConfig.dimensions;
-    const overlays: ParkingOverlay[] = [];
+    const { quantity, type } = parkingConfig;
     
-    // Convert meters to degrees (approximate)
-    const spacingLng = width / 111320;
-    const spacingLat = length / 110540;
+    // Calculate the number of spaces per row based on type
+    const spacesPerRow = type === 'double' ? Math.ceil(quantity / 2) : quantity;
+    const numRows = type === 'double' ? 2 : 1;
     
-    // Add some spacing between parking spaces
-    const buffer = 1.2; // 20% buffer for maneuvering
+    // Calculate total grid dimensions
+    const totalWidth = width * spacesPerRow;
+    const totalLength = length * numRows;
     
-    let id = 1;
-    for (let lat = minLat + spacingLat/2; lat < maxLat - spacingLat/2; lat += spacingLat * buffer) {
-      for (let lng = minLng + spacingLng/2; lng < maxLng - spacingLng/2; lng += spacingLng * buffer) {
-        const point = turf.point([lng, lat]);
-        
-        // Only place parking spaces inside the polygon
-        if (turf.booleanPointInPolygon(point, polygon)) {
-          overlays.push({
-            id: `parking-${id++}`,
-            position: [lng, lat],
-            rotation: 0,
-            type: parkingConfig.type,
-            size: parkingConfig.dimensions,
-            quantity: 1
-          });
-          
-          if (overlays.length >= parkingConfig.quantity) {
-            break;
-          }
-        }
-      }
-      if (overlays.length >= parkingConfig.quantity) {
-        break;
-      }
-    }
+    // Create a single parking overlay that represents the entire grid
+    const overlaySize = {
+      width: totalWidth,
+      length: totalLength
+    };
     
-    return overlays;
+    const timestamp = Date.now();
+    const overlay: ParkingOverlay = {
+      id: `parking-grid-${timestamp}`,
+      position: [centerLng, centerLat],
+      rotation: 0,
+      type: type,
+      size: overlaySize,
+      quantity: quantity
+    };
+    
+    return [overlay];
   } catch (error) {
     console.error('Error generating parking layout:', error);
     return [];

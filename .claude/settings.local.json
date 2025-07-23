@@ -44,7 +44,9 @@
       "Bash(npm run:*)",
       "Bash(npm ls:*)",
       "mcp__ide__executeCode",
-      "Bash(npx next lint:*)"
+      "Bash(npx next lint:*)",
+      "Bash(bmad create-story:*)",
+      "Bash(timeout 30 npm run build)"
     ],
     "deny": []
   }
