@@ -63,6 +63,9 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   const polygonsRef = useRef<MapboxDrawPolygon[]>(polygons);
   const isDrawingRef = useRef<boolean>(false);
   const drawingPointsRef = useRef<number[][]>([]);
+  const measurementUnitRef = useRef<MeasurementUnit>(measurementUnit);
+  const lastClickedPointRef = useRef<[number, number] | null>(null);
+  const isDrawingModeRef = useRef<boolean>(false);
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
@@ -527,17 +530,20 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           source: 'drawing-annotation',
           layout: {
             'text-field': ['get', 'label'],
-            'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
-            'text-size': 14,
+            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+            'text-size': 16,
             'text-anchor': 'center',
-            'text-offset': [0, -1],
+            'text-offset': [0, -1.5],
             'text-allow-overlap': true,
-            'text-ignore-placement': true
+            'text-ignore-placement': true,
+            'text-rotation-alignment': 'map',
+            'text-pitch-alignment': 'viewport'
           },
           paint: {
             'text-color': '#dc2626', // Red color for active drawing
             'text-halo-color': '#ffffff',
-            'text-halo-width': 3
+            'text-halo-width': 3,
+            'text-halo-blur': 1
           }
         });
 
@@ -629,6 +635,23 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           // Reset drawing state
           isDrawingRef.current = false;
           drawingPointsRef.current = [];
+          
+          // If still in draw mode, immediately prepare for next polygon
+          if (drawingModeRef.current === 'draw') {
+            // Force re-enter draw mode to ensure clean state
+            setTimeout(() => {
+              // Reset the tracking variables using refs
+              lastClickedPointRef.current = null;
+              drawingPointsRef.current = [];
+              isDrawingModeRef.current = true; // Re-enable drawing mode tracking
+              
+              // Ensure we're in the right mode
+              if (draw.getMode() !== 'draw_polygon') {
+                draw.changeMode('draw_polygon');
+              }
+              console.log('Ready for next polygon drawing');
+            }, 100);
+          }
         }
       });
       
@@ -643,17 +666,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             draw.changeMode('draw_polygon');
             map.getCanvas().style.cursor = 'crosshair';
           });
-        }
-        
-        // Handle drawing mode tracking for real-time measurements
-        isDrawingMode = e.mode === 'draw_polygon';
-        if (!isDrawingMode) {
-          lastClickedPoint = null;
-          // Clear annotation when not drawing
-          const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
-          if (drawingSource) {
-            drawingSource.setData({ type: 'FeatureCollection', features: [] });
-          }
         }
       });
 
@@ -715,46 +727,77 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       // Debounce parent updates to prevent excessive calls during selection
       const updateTimeout: NodeJS.Timeout | null = null;
       
-      // Real-time drawing measurements - simple approach
-      let lastClickedPoint: [number, number] | null = null;
-      let isDrawingMode = false;
+      // Real-time drawing measurements (desktop only - mobile has no hover)
+      isDrawingModeRef.current = drawingModeRef.current === 'draw'; // Initialize based on current mode
       
+      // Track drawing state changes
+      map.on('draw.modechange', (e: any) => {
+        console.log('Draw mode change:', e.mode, 'Previous isDrawingMode:', isDrawingModeRef.current);
+        isDrawingModeRef.current = e.mode === 'draw_polygon';
+        
+        if (!isDrawingModeRef.current) {
+          lastClickedPointRef.current = null;
+          drawingPointsRef.current = [];
+          // Clear annotation when not drawing
+          const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
+          if (drawingSource) {
+            drawingSource.setData({ type: 'FeatureCollection', features: [] });
+          }
+        } else {
+          // Entering draw mode - reset state for new polygon
+          console.log('Entering draw_polygon mode - ready for new polygon');
+          lastClickedPointRef.current = null;
+          drawingPointsRef.current = [];
+        }
+      });
       
-      // Track clicks to update the reference point - TEMPORARILY DISABLED FOR DEBUGGING
-      // map.on('click', (e) => {
-      //   if (drawingModeRef.current === 'draw' && isDrawingMode) {
-      //     // Store the clicked point as our new reference
-      //     lastClickedPoint = [e.lngLat.lng, e.lngLat.lat];
-      //   }
-      // });
+      // Track clicks during drawing - capture with higher priority
+      map.on('mousedown', (e) => {
+        // Check if we're in draw polygon mode
+        const currentMode = draw.getMode();
+        
+        if (currentMode === 'draw_polygon' && drawingModeRef.current === 'draw') {
+          // Store the clicked point as our new reference
+          const clickedPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+          lastClickedPointRef.current = clickedPoint;
+          drawingPointsRef.current.push(clickedPoint);
+          isDrawingModeRef.current = true; // Ensure drawing mode is active
+          console.log('Drawing mousedown - reference point set:', clickedPoint);
+          
+          // Clear annotation momentarily after click
+          setTimeout(() => {
+            const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
+            if (drawingSource) {
+              drawingSource.setData({ type: 'FeatureCollection', features: [] });
+            }
+          }, 50);
+        }
+      });
 
       // Show real-time distance on mouse move
       map.on('mousemove', (e) => {
         // Only show in draw mode with a reference point
-        if (drawingModeRef.current !== 'draw' || !isDrawingMode || !lastClickedPoint) {
+        if (drawingModeRef.current !== 'draw' || !isDrawingModeRef.current || !lastClickedPointRef.current) {
           return;
         }
 
         const currentPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
         
         // Calculate distance from last clicked point to current mouse position
-        const distance = calculateDistance(lastClickedPoint, currentPoint);
-        const formattedDistance = formatDistance(distance, measurementUnit);
+        const distance = calculateDistance(lastClickedPointRef.current, currentPoint);
+        const formattedDistance = formatDistance(distance, measurementUnitRef.current);
         
-        // Calculate midpoint for annotation placement
-        const midLng = (lastClickedPoint[0] + currentPoint[0]) / 2;
-        const midLat = (lastClickedPoint[1] + currentPoint[1]) / 2;
-
-        // Update drawing annotation
+        // Place annotation at the mouse position with slight offset
         const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
         if (drawingSource) {
+          // Remove spam log - console.log('Updating drawing annotation:', formattedDistance);
           drawingSource.setData({
             type: 'FeatureCollection',
             features: [{
               type: 'Feature',
               geometry: {
                 type: 'Point',
-                coordinates: [midLng, midLat]
+                coordinates: currentPoint
               },
               properties: {
                 label: formattedDistance
@@ -764,8 +807,13 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         }
       });
 
-      // Clear drawing annotation when polygon is completed or mode changes
+      // Much simpler: just track clicks and check if we're in draw_polygon mode
+      // Remove the complex render tracking and go back to basics
+
+      // Clear drawing annotation when polygon is completed
       map.on('draw.create', () => {
+        lastClickedPointRef.current = null;
+        drawingPointsRef.current = [];
         const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
         if (drawingSource) {
           drawingSource.setData({ type: 'FeatureCollection', features: [] });
@@ -1037,6 +1085,10 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   useEffect(() => {
     polygonsRef.current = polygons;
   }, [polygons]);
+
+  useEffect(() => {
+    measurementUnitRef.current = measurementUnit;
+  }, [measurementUnit]);
 
   // Manage drawing mode and sync polygons
   useEffect(() => {
