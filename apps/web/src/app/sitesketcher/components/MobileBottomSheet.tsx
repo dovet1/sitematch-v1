@@ -116,7 +116,8 @@ export function MobileBottomSheet({
           transform: `translateY(${isDragging ? `calc(${getTranslateY()} + ${currentTranslateY}px)` : getTranslateY()})`,
           height: height === 'expanded' ? '90vh' : height === 'halfway' ? '50vh' : 'auto',
           minHeight: `${COLLAPSED_HEIGHT}px`,
-          maxHeight: '90vh'
+          maxHeight: '90vh',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)'
         }}
       >
         {/* Drag Handle - More prominent */}
@@ -132,12 +133,11 @@ export function MobileBottomSheet({
         
         {/* Content */}
         <div 
-          className="overflow-y-auto px-4 pb-6 touch-auto"
+          className="mobile-bottom-sheet-content px-4"
           style={{ 
-            maxHeight: height === 'expanded' ? 'calc(90vh - 48px)' : 
-                      height === 'halfway' ? 'calc(50vh - 48px)' : 
-                      `${COLLAPSED_HEIGHT - 48}px`,
-            touchAction: 'auto'
+            height: height === 'expanded' ? 'calc(90vh - 60px)' : 
+                   height === 'halfway' ? 'calc(50vh - 60px)' : 
+                   `${COLLAPSED_HEIGHT - 60}px`
           }}
         >
           {height === 'collapsed' && (

@@ -24,6 +24,7 @@ interface MapboxMapProps {
   measurements: AreaMeasurement | null;
   measurementUnit: MeasurementUnit;
   drawingMode: DrawingMode;
+  showSideLengths: boolean;
   className?: string;
 }
 
@@ -49,6 +50,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   measurements,
   measurementUnit,
   drawingMode,
+  showSideLengths,
   className = ''
 }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -66,6 +68,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   const measurementUnitRef = useRef<MeasurementUnit>(measurementUnit);
   const lastClickedPointRef = useRef<[number, number] | null>(null);
   const isDrawingModeRef = useRef<boolean>(false);
+  const showSideLengthsRef = useRef<boolean>(showSideLengths);
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
@@ -1090,6 +1093,10 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     measurementUnitRef.current = measurementUnit;
   }, [measurementUnit]);
 
+  useEffect(() => {
+    showSideLengthsRef.current = showSideLengths;
+  }, [showSideLengths]);
+
   // Manage drawing mode and sync polygons
   useEffect(() => {
     if (!drawRef.current || !isMapLoaded || !mapRef.current) return;
@@ -1245,6 +1252,15 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     
     if (!source) return;
     
+    // If side lengths are hidden, clear the annotations
+    if (!showSideLengths) {
+      source.setData({
+        type: 'FeatureCollection',
+        features: []
+      });
+      return;
+    }
+    
     // Get current polygons from Mapbox Draw to ensure we have the latest coordinates
     const draw = drawRef.current;
     if (!draw) return;
@@ -1305,7 +1321,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       type: 'FeatureCollection',
       features: allFeatures
     });
-  }, [measurementUnit, isMapLoaded]);
+  }, [measurementUnit, isMapLoaded, showSideLengths]);
 
   // Update annotations when polygons change or are moved
   useEffect(() => {
@@ -1319,6 +1335,15 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     
     // Function to refresh annotations
     const refreshAnnotations = () => {
+      // If side lengths are hidden, clear and return
+      if (!showSideLengthsRef.current) {
+        source.setData({
+          type: 'FeatureCollection',
+          features: []
+        });
+        return;
+      }
+      
       const currentFeatures = draw.getAll();
       const allFeatures: any[] = [];
       
@@ -1568,7 +1593,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     
     // Refresh side annotations to move them with the rotated polygon
     // With improved rotation precision, we can now use current measurements
-    if (mapRef.current) {
+    if (mapRef.current && showSideLengthsRef.current) {
       const sideSource = mapRef.current.getSource('side-annotations') as mapboxgl.GeoJSONSource;
       if (sideSource) {
         const allFeatures: any[] = [];

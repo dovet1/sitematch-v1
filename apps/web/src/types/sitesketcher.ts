@@ -71,6 +71,7 @@ export interface SiteSketcherState {
   recentSearches: SearchResult[];
   snapToGrid: boolean;
   gridSize: number; // meters
+  showSideLengths: boolean;
 }
 
 export interface ParkingConfiguration {
