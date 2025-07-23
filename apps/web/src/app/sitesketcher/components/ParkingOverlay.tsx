@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -12,15 +11,12 @@ import {
   Car, 
   Plus, 
   Minus, 
-  RotateCw, 
-  Move,
   Trash2,
   Settings2
 } from 'lucide-react';
 import type { ParkingOverlay, ParkingConfiguration, MapboxDrawPolygon } from '@/types/sitesketcher';
 import { PARKING_SIZES, PARKING_COLORS } from '@/types/sitesketcher';
 import { 
-  calculateParkingCapacity, 
   generateParkingLayout,
   snapToAngle,
   isNearSnapAngle
@@ -64,11 +60,6 @@ export function ParkingOverlay({
 
   const selectedOverlay = parkingOverlays.find(o => o.id === selectedOverlayId);
   const hasPolygons = polygons.length > 0;
-  
-  // Calculate estimated capacity for current polygon
-  const estimatedCapacity = hasPolygons && polygons[0] 
-    ? calculateParkingCapacity(polygons[0].geometry.coordinates[0], config)
-    : 0;
 
   // Update dimensions when size changes
   useEffect(() => {
@@ -91,30 +82,6 @@ export function ParkingOverlay({
     });
   };
 
-  const handleAddSingleOverlay = () => {
-    if (!hasPolygons) return;
-    
-    console.log('Single overlay (+) button clicked');
-    // Add a single overlay at the center of the first polygon
-    const polygon = polygons[0];
-    const coordinates = polygon.geometry.coordinates[0];
-    
-    // Calculate polygon center
-    const centerLng = coordinates.reduce((sum, coord) => sum + coord[0], 0) / coordinates.length;
-    const centerLat = coordinates.reduce((sum, coord) => sum + coord[1], 0) / coordinates.length;
-    
-    const newOverlay: ParkingOverlay = {
-      id: `parking-${Date.now()}`,
-      position: [centerLng, centerLat],
-      rotation: 0,
-      type: config.type,
-      size: config.dimensions,
-      quantity: 1
-    };
-    
-    console.log('Created single overlay:', newOverlay);
-    onAddOverlay(newOverlay);
-  };
 
   const handleRotationStart = (e: React.MouseEvent | React.TouchEvent, overlay: ParkingOverlay) => {
     if (!selectedOverlay) return;
@@ -142,10 +109,8 @@ export function ParkingOverlay({
     if (!isRotating || !rotationStart || !selectedOverlay) return;
     
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     
     const deltaX = clientX - rotationStart.x;
-    const deltaY = clientY - rotationStart.y;
     
     // Convert mouse movement to rotation angle
     const rotationSensitivity = 2; // degrees per pixel
@@ -187,9 +152,9 @@ export function ParkingOverlay({
           <Car className="h-5 w-5" />
           Parking Overlays
           {parkingOverlays.length > 0 && (
-            <Badge variant="secondary" className="ml-auto">
-              {parkingOverlays.length}
-            </Badge>
+            <span className="ml-auto text-sm font-normal text-muted-foreground">
+              ({parkingOverlays.length})
+            </span>
           )}
         </CardTitle>
       </CardHeader>
@@ -210,6 +175,44 @@ export function ParkingOverlay({
             <div className="space-y-3">
               <Label className="text-sm font-medium">Parking Configuration</Label>
               
+              {/* Quantity Control */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Number of Spaces
+                </Label>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuantityChange(-1)}
+                    disabled={config.quantity <= 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={config.quantity}
+                    onChange={(e) => setConfig(prev => ({ 
+                      ...prev, 
+                      quantity: Math.max(1, Math.min(100, parseInt(e.target.value) || 1))
+                    }))}
+                    className="h-8 text-center flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuantityChange(1)}
+                    disabled={config.quantity >= 100}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+
               {/* Type Selection */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Type</Label>
@@ -253,44 +256,6 @@ export function ParkingOverlay({
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Quantity Control */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Quantity (Est. capacity: {estimatedCapacity})
-                </Label>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleQuantityChange(-1)}
-                    disabled={config.quantity <= 1}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={config.quantity}
-                    onChange={(e) => setConfig(prev => ({ 
-                      ...prev, 
-                      quantity: Math.max(1, Math.min(100, parseInt(e.target.value) || 1))
-                    }))}
-                    className="h-8 text-center flex-1"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleQuantityChange(1)}
-                    disabled={config.quantity >= 100}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
             </div>
 
             {/* Action Buttons */}
@@ -301,14 +266,7 @@ export function ParkingOverlay({
                 size={isMobile ? 'lg' : 'default'}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Auto Layout
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleAddSingleOverlay}
-                size={isMobile ? 'lg' : 'default'}
-              >
-                <Plus className="h-4 w-4" />
+                Add Parking
               </Button>
             </div>
           </>
@@ -352,33 +310,9 @@ export function ParkingOverlay({
                     <span className="text-sm">
                       {overlay.type.charAt(0).toUpperCase() + overlay.type.slice(1)}
                     </span>
-                    <Badge variant="outline" className="text-xs">
-                      {Math.round(overlay.rotation)}°
-                    </Badge>
                   </div>
                   
                   <div className="flex items-center gap-1">
-                    {selectedOverlayId === overlay.id && (
-                      <>
-                        {/* Rotation Control */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onMouseDown={(e) => handleRotationStart(e, overlay)}
-                          onTouchStart={(e) => handleRotationStart(e, overlay)}
-                          title="Drag to rotate"
-                        >
-                          <RotateCw className="h-3 w-3" />
-                        </Button>
-                        
-                        {/* Move Indicator */}
-                        <div className="text-muted-foreground">
-                          <Move className="h-3 w-3" />
-                        </div>
-                      </>
-                    )}
-                    
                     {/* Delete */}
                     <Button
                       variant="ghost"
