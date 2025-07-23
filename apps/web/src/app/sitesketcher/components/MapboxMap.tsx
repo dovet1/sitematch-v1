@@ -862,10 +862,13 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
 
       // Handle parking overlay selection (individual spaces)
       const handleParkingOverlaySelection = (e: any) => {
+        console.log('handleParkingOverlaySelection called', e);
         if (e.features && e.features.length > 0) {
           const feature = e.features[0];
           const overlayId = feature.properties?.overlayId || feature.properties?.id;
           const overlay = parkingOverlaysRef.current.find(o => o.id === overlayId);
+          
+          console.log('Selection details:', { overlayId, overlay, features: e.features });
           
           if (overlay) {
             // Prevent event from bubbling to polygon selection
@@ -883,6 +886,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
               }
             }
             
+            console.log('Calling onParkingOverlayClick with overlay:', overlay);
             onParkingOverlayClick(overlay);
             
             // Clear flag after a longer delay to prevent interference
@@ -904,6 +908,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         let touchStartOverlayId: string | null = null;
         
         map.on('touchstart', 'parking-overlays-fill', (e) => {
+          console.log('Mobile parking touchstart triggered', e);
           const touches = (e.originalEvent as TouchEvent).touches;
           
           if (touches.length === 1 && e.features && e.features.length > 0) {
@@ -913,10 +918,12 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             
             const feature = e.features[0];
             touchStartOverlayId = feature.properties?.overlayId || feature.properties?.id;
+            console.log('Touch start overlay ID:', touchStartOverlayId, 'Features:', e.features);
           }
         });
         
         map.on('touchend', 'parking-overlays-fill', (e) => {
+          console.log('Mobile parking touchend triggered', e);
           const touches = (e.originalEvent as TouchEvent).changedTouches;
           const touch = Array.from(touches).find(t => t.identifier === parkingTouchId);
           
@@ -930,12 +937,16 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
               Math.pow(touchEndPoint.y - parkingTouchStartPoint.y, 2)
             );
             
+            console.log('Touch end - duration:', touchDuration, 'distance:', distance, 'overlayId:', touchStartOverlayId);
+            
             // If touch was quick and didn't move much, treat as selection
             if (touchDuration < 300 && distance < 10) {
               const currentSelectedId = selectedParkingIdRef.current;
+              console.log('Attempting selection - current:', currentSelectedId, 'target:', touchStartOverlayId);
               
               // If this overlay is not selected, select it
               if (currentSelectedId !== touchStartOverlayId) {
+                console.log('Calling handleParkingOverlaySelection');
                 handleParkingOverlaySelection(e);
               }
               // If already selected, do nothing (allow drag handler to take over on next touch)
@@ -1870,8 +1881,10 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     const [centerLng, centerLat] = position;
     
     // Calculate total bounds of the parking overlay
-    const totalWidthDeg = size.width / (111320 * Math.cos(centerLat * Math.PI / 180));
-    const totalLengthDeg = size.length / 111320;
+    const spacesPerRow = type === 'double' ? Math.ceil(quantity / 2) : quantity;
+    const numRows = type === 'double' ? 2 : 1;
+    const totalWidthDeg = (size.width * spacesPerRow) / (111320 * Math.cos(centerLat * Math.PI / 180));
+    const totalLengthDeg = (size.length * numRows) / 111320;
     
     // Create handle positions at the corners of the total overlay area
     const halfWidth = totalWidthDeg / 2;
@@ -1926,16 +1939,16 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         const numRows = type === 'double' ? 2 : 1;
         
         // Individual space dimensions (standard: 2.7m × 5m, compact: 2.4m × 4.8m)
-        const spaceWidth = overlay.size.width / spacesPerRow; // Individual space width
-        const spaceLength = overlay.size.length / numRows;    // Individual space length
+        const spaceWidth = overlay.size.width;  // Individual space width in meters
+        const spaceLength = overlay.size.length; // Individual space length in meters
         
         // Convert individual space size to degrees
         const spaceWidthDeg = spaceWidth / (111320 * Math.cos(centerLat * Math.PI / 180));
         const spaceLengthDeg = spaceLength / 111320;
         
         // Calculate total grid dimensions for positioning
-        const totalWidthDeg = overlay.size.width / (111320 * Math.cos(centerLat * Math.PI / 180));
-        const totalLengthDeg = overlay.size.length / 111320;
+        const totalWidthDeg = (overlay.size.width * spacesPerRow) / (111320 * Math.cos(centerLat * Math.PI / 180));
+        const totalLengthDeg = (overlay.size.length * numRows) / 111320;
         
         
         // Generate individual parking space rectangles

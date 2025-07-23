@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -16,11 +16,6 @@ import {
 } from 'lucide-react';
 import type { ParkingOverlay, ParkingConfiguration, MapboxDrawPolygon } from '@/types/sitesketcher';
 import { PARKING_SIZES, PARKING_COLORS } from '@/types/sitesketcher';
-import { 
-  generateParkingLayout,
-  snapToAngle,
-  isNearSnapAngle
-} from '@/lib/sitesketcher/parking-calculations';
 
 interface ParkingOverlayProps {
   polygons: MapboxDrawPolygon[];
@@ -54,10 +49,6 @@ export function ParkingOverlay({
     quantity: 10
   });
   
-  const [isRotating, setIsRotating] = useState(false);
-  const [rotationStart, setRotationStart] = useState<{ x: number; y: number; angle: number } | null>(null);
-  const rotationRef = useRef<HTMLDivElement>(null);
-
   const selectedOverlay = parkingOverlays.find(o => o.id === selectedOverlayId);
   const hasPolygons = polygons.length > 0;
 
@@ -72,71 +63,27 @@ export function ParkingOverlay({
   const handleAddParking = () => {
     if (!hasPolygons) return;
     
-    console.log('Auto Layout button clicked with config:', config);
+    console.log('Add Parking button clicked with config:', config);
     const polygon = polygons[0]; // Use first polygon for now
-    const layouts = generateParkingLayout(polygon.geometry.coordinates[0], config);
+    const coordinates = polygon.geometry.coordinates[0];
     
-    console.log('Generated layouts:', layouts);
-    layouts.forEach(overlay => {
-      onAddOverlay(overlay);
-    });
+    // Calculate polygon center
+    const centerLng = coordinates.reduce((sum, coord) => sum + coord[0], 0) / coordinates.length;
+    const centerLat = coordinates.reduce((sum, coord) => sum + coord[1], 0) / coordinates.length;
+    
+    const newOverlay: ParkingOverlay = {
+      id: `parking-${Date.now()}`,
+      position: [centerLng, centerLat],
+      rotation: 0,
+      type: config.type,
+      size: config.dimensions,
+      quantity: config.quantity
+    };
+    
+    console.log('Created parking overlay:', newOverlay);
+    onAddOverlay(newOverlay);
   };
 
-
-  const handleRotationStart = (e: React.MouseEvent | React.TouchEvent, overlay: ParkingOverlay) => {
-    if (!selectedOverlay) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    
-    setIsRotating(true);
-    setRotationStart({
-      x: clientX,
-      y: clientY,
-      angle: overlay.rotation
-    });
-    
-    document.addEventListener('mousemove', handleRotationMove);
-    document.addEventListener('mouseup', handleRotationEnd);
-    document.addEventListener('touchmove', handleRotationMove);
-    document.addEventListener('touchend', handleRotationEnd);
-  };
-
-  const handleRotationMove = (e: MouseEvent | TouchEvent) => {
-    if (!isRotating || !rotationStart || !selectedOverlay) return;
-    
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    
-    const deltaX = clientX - rotationStart.x;
-    
-    // Convert mouse movement to rotation angle
-    const rotationSensitivity = 2; // degrees per pixel
-    const deltaAngle = deltaX * rotationSensitivity;
-    let newAngle = (rotationStart.angle + deltaAngle) % 360;
-    if (newAngle < 0) newAngle += 360;
-    
-    // Snap to 15-degree increments
-    const snapAngle = snapToAngle(newAngle, 15);
-    const finalAngle = isNearSnapAngle(newAngle, 15, 7.5) ? snapAngle : newAngle;
-    
-    onUpdateOverlay({
-      ...selectedOverlay,
-      rotation: finalAngle
-    });
-  };
-
-  const handleRotationEnd = () => {
-    setIsRotating(false);
-    setRotationStart(null);
-    
-    document.removeEventListener('mousemove', handleRotationMove);
-    document.removeEventListener('mouseup', handleRotationEnd);
-    document.removeEventListener('touchmove', handleRotationMove);
-    document.removeEventListener('touchend', handleRotationEnd);
-  };
 
   const handleQuantityChange = (delta: number) => {
     setConfig(prev => ({
