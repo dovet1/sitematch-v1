@@ -860,8 +860,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       
 
 
-      // Handle parking overlay clicks (individual spaces)
-      map.on('click', 'parking-overlays-fill', (e) => {
+      // Handle parking overlay selection (individual spaces)
+      const handleParkingOverlaySelection = (e: any) => {
         if (e.features && e.features.length > 0) {
           const feature = e.features[0];
           const overlayId = feature.properties?.overlayId || feature.properties?.id;
@@ -888,10 +888,65 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             // Clear flag after a longer delay to prevent interference
             setTimeout(() => {
               parkingClickedRef.current = false;
-            }, 200);
+            }, 300); // Increased timeout for mobile
           }
         }
-      });
+      };
+
+      // Handle parking overlay clicks for desktop
+      map.on('click', 'parking-overlays-fill', handleParkingOverlaySelection);
+
+      // Handle parking overlay touch events for mobile
+      if (isMobile()) {
+        let parkingTouchStartTime = 0;
+        let parkingTouchStartPoint: {x: number, y: number} | null = null;
+        let parkingTouchId: number | null = null;
+        let touchStartOverlayId: string | null = null;
+        
+        map.on('touchstart', 'parking-overlays-fill', (e) => {
+          const touches = (e.originalEvent as TouchEvent).touches;
+          
+          if (touches.length === 1 && e.features && e.features.length > 0) {
+            parkingTouchStartTime = Date.now();
+            parkingTouchStartPoint = e.point;
+            parkingTouchId = touches[0].identifier;
+            
+            const feature = e.features[0];
+            touchStartOverlayId = feature.properties?.overlayId || feature.properties?.id;
+          }
+        });
+        
+        map.on('touchend', 'parking-overlays-fill', (e) => {
+          const touches = (e.originalEvent as TouchEvent).changedTouches;
+          const touch = Array.from(touches).find(t => t.identifier === parkingTouchId);
+          
+          if (touch && parkingTouchStartPoint && touchStartOverlayId) {
+            const touchDuration = Date.now() - parkingTouchStartTime;
+            const touchEndPoint = e.point;
+            
+            // Calculate distance moved
+            const distance = Math.sqrt(
+              Math.pow(touchEndPoint.x - parkingTouchStartPoint.x, 2) + 
+              Math.pow(touchEndPoint.y - parkingTouchStartPoint.y, 2)
+            );
+            
+            // If touch was quick and didn't move much, treat as selection
+            if (touchDuration < 300 && distance < 10) {
+              const currentSelectedId = selectedParkingIdRef.current;
+              
+              // If this overlay is not selected, select it
+              if (currentSelectedId !== touchStartOverlayId) {
+                handleParkingOverlaySelection(e);
+              }
+              // If already selected, do nothing (allow drag handler to take over on next touch)
+            }
+          }
+          
+          parkingTouchStartPoint = null;
+          parkingTouchId = null;
+          touchStartOverlayId = null;
+        });
+      }
 
       // Change cursor on hover over parking overlays
       map.on('mouseenter', 'parking-overlays-fill', () => {
@@ -1426,7 +1481,145 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         }
       });
 
+      // Add touch support for parking rotation handles
+      if (isMobile()) {
+        let parkingRotationTouchId: number | null = null;
+        
+        map.on('touchstart', 'parking-rotation-handles', (e) => {
+          if (!e.features || e.features.length === 0) return;
+          
+          const touches = (e.originalEvent as TouchEvent).touches;
+          if (touches.length === 1) {
+            e.preventDefault();
+            isParkingRotating = true;
+            isRotatingRef.current = true;
+            
+            const feature = e.features[0];
+            const overlayId = feature.properties?.overlayId;
+            const selectedOverlay = parkingOverlaysRef.current.find(o => o.id === overlayId);
+            
+            if (!selectedOverlay) return;
+            
+            parkingCurrentCenter = selectedOverlay.position as [number, number];
+            const touch = touches[0];
+            const point = map.unproject([touch.clientX, touch.clientY]);
+            parkingDragStartAngle = Math.atan2(point.lat - parkingCurrentCenter[1], point.lng - parkingCurrentCenter[0]);
+            
+            // Store the original drag start angle for stable rotation calculation
+            originalDragStartAngleRef.current = parkingDragStartAngle;
+            parkingRotationTouchId = touch.identifier;
+            
+            map.getCanvas().style.cursor = 'grabbing';
+            
+            // Store original overlay for rotation
+            originalOverlayRef.current = { ...selectedOverlay };
+            
+            // Disable map interactions during parking rotation
+            map.dragPan.disable();
+            map.doubleClickZoom.disable();
+            map.scrollZoom.disable();
+            map.boxZoom.disable();
+            map.dragRotate.disable();
+            map.keyboard.disable();
+            map.touchZoomRotate.disable();
+          }
+        });
+        
+        // Handle touch move for parking rotation
+        map.on('touchmove', (e) => {
+          if (isParkingRotating && parkingRotationTouchId !== null && parkingCurrentCenter && originalOverlayRef.current) {
+            const touches = (e.originalEvent as TouchEvent).touches;
+            const touch = Array.from(touches).find(t => t.identifier === parkingRotationTouchId);
+            
+            if (touch) {
+              e.preventDefault();
+              
+              const point = map.unproject([touch.clientX, touch.clientY]);
+              const currentAngle = Math.atan2(point.lat - parkingCurrentCenter[1], point.lng - parkingCurrentCenter[0]);
+              const angleDiff = currentAngle - originalDragStartAngleRef.current;
+              
+              // Convert radians to degrees
+              const rotationDegrees = angleDiff * (180 / Math.PI);
+              let newRotation = (originalOverlayRef.current.rotation + rotationDegrees) % 360;
+              if (newRotation < 0) newRotation += 360;
+              
+              const updatedOverlay = {
+                ...originalOverlayRef.current,
+                rotation: newRotation
+              };
+              
+              onParkingOverlayUpdate(updatedOverlay);
+            }
+          }
+        });
+        
+        // Handle touch end for parking rotation
+        map.on('touchend', (e) => {
+          if (isParkingRotating && parkingRotationTouchId !== null) {
+            const touches = (e.originalEvent as TouchEvent).changedTouches;
+            const touch = Array.from(touches).find(t => t.identifier === parkingRotationTouchId);
+            
+            if (touch) {
+              isParkingRotating = false;
+              isRotatingRef.current = false;
+              parkingCurrentCenter = null;
+              originalOverlayRef.current = null;
+              parkingRotationTouchId = null;
+              
+              // Clear the parking clicked flag after a delay
+              setTimeout(() => {
+                parkingClickedRef.current = false;
+              }, 200);
+              
+              // Re-enable map interactions
+              map.dragPan.enable();
+              map.doubleClickZoom.enable();
+              map.scrollZoom.enable();
+              map.boxZoom.enable();
+              map.dragRotate.enable();
+              map.keyboard.enable();
+              map.touchZoomRotate.enable();
+              
+              map.getCanvas().style.cursor = '';
+            }
+          }
+        });
+      }
+
       // Add parking overlay dragging functionality
+      const startParkingDrag = (overlayId: string, overlay: any) => {
+        isDraggingParkingRef.current = true;
+        draggedParkingIdRef.current = overlayId;
+        originalOverlayRef.current = { ...overlay };
+        
+        // Set flag to prevent polygon interactions
+        parkingClickedRef.current = true;
+        
+        const overlayCenter = overlay.position;
+        currentCenter = overlayCenter as [number, number];
+        
+        map.getCanvas().style.cursor = 'move';
+        
+        // Disable map interactions during drag
+        map.dragPan.disable();
+        map.doubleClickZoom.disable();
+        map.scrollZoom.disable();
+        map.boxZoom.disable();
+        map.dragRotate.disable();
+        map.keyboard.disable();
+        map.touchZoomRotate.disable();
+        
+        // Temporarily disable draw interactions by switching to simple_select
+        if (drawRef.current) {
+          drawRef.current.changeMode('simple_select');
+          // Clear any current selection to prevent interference
+          const selected = drawRef.current.getSelectedIds();
+          if (selected.length > 0) {
+            drawRef.current.changeMode('simple_select');
+          }
+        }
+      };
+
       map.on('mousedown', 'parking-overlays-fill', (e) => {
         const currentSelectedId = selectedParkingIdRef.current;
         
@@ -1436,43 +1629,120 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           const overlay = parkingOverlaysRef.current.find(o => o.id === overlayId);
           
           if (overlay && currentSelectedId === overlayId) {
-            isDraggingParkingRef.current = true;
-            draggedParkingIdRef.current = overlayId;
-            originalOverlayRef.current = { ...overlay };
-            
-            // Set flag to prevent polygon interactions
-            parkingClickedRef.current = true;
-            
-            // Store the initial mouse position relative to overlay center
-            const mousePoint = e.lngLat;
-            const overlayCenter = overlay.position;
-            currentCenter = overlayCenter as [number, number];
-            
-            map.getCanvas().style.cursor = 'move';
-            
-            // Disable map interactions during drag
-            map.dragPan.disable();
-            map.doubleClickZoom.disable();
-            map.scrollZoom.disable();
-            map.boxZoom.disable();
-            map.dragRotate.disable();
-            map.keyboard.disable();
-            map.touchZoomRotate.disable();
-            
-            // Temporarily disable draw interactions by switching to simple_select
-            if (drawRef.current) {
-              drawRef.current.changeMode('simple_select');
-              // Clear any current selection to prevent interference
-              const selected = drawRef.current.getSelectedIds();
-              if (selected.length > 0) {
-                drawRef.current.changeMode('simple_select');
-              }
-            }
-            
+            startParkingDrag(overlayId, overlay);
             e.preventDefault();
           }
         }
       });
+
+      // Add touch support for parking overlay dragging
+      if (isMobile()) {
+        let parkingDragTouchId: number | null = null;
+        let dragStartTime = 0;
+        let dragStartPoint: {x: number, y: number} | null = null;
+        
+        // Use a delayed touch start for dragging to distinguish from selection
+        map.on('touchstart', 'parking-overlays-fill', (e) => {
+          const currentSelectedId = selectedParkingIdRef.current;
+          const touches = (e.originalEvent as TouchEvent).touches;
+          
+          if (touches.length === 1 && e.features && e.features.length > 0 && currentSelectedId) {
+            const feature = e.features[0];
+            const overlayId = feature.properties?.overlayId || feature.properties?.id;
+            
+            // Only prepare for drag if touching the already selected overlay
+            if (currentSelectedId === overlayId) {
+              dragStartTime = Date.now();
+              dragStartPoint = e.point;
+              parkingDragTouchId = touches[0].identifier;
+              
+              // Start drag after a delay or movement
+              setTimeout(() => {
+                if (dragStartPoint && !isDraggingParkingRef.current) {
+                  const overlay = parkingOverlaysRef.current.find(o => o.id === overlayId);
+                  if (overlay && parkingDragTouchId !== null) {
+                    startParkingDrag(overlayId, overlay);
+                  }
+                }
+              }, 150); // Small delay to distinguish from tap
+            }
+          }
+        });
+        
+        // Handle touch move for parking overlay dragging
+        map.on('touchmove', (e) => {
+          const touches = (e.originalEvent as TouchEvent).touches;
+          const touch = Array.from(touches).find(t => t.identifier === parkingDragTouchId);
+          
+          if (touch && dragStartPoint && !isDraggingParkingRef.current) {
+            // Check if we've moved enough to start dragging
+            const currentPoint = { x: touch.clientX, y: touch.clientY };
+            const distance = Math.sqrt(
+              Math.pow(currentPoint.x - dragStartPoint.x, 2) + 
+              Math.pow(currentPoint.y - dragStartPoint.y, 2)
+            );
+            
+            if (distance > 5) { // Start drag if moved more than 5 pixels
+              const overlayId = draggedParkingIdRef.current || selectedParkingIdRef.current;
+              const overlay = parkingOverlaysRef.current.find(o => o.id === overlayId);
+              if (overlay) {
+                startParkingDrag(overlayId, overlay);
+              }
+            }
+          }
+          
+          if (isDraggingParkingRef.current && parkingDragTouchId !== null && draggedParkingIdRef.current && originalOverlayRef.current) {
+            if (touch) {
+              const point = map.project([e.lngLat.lng, e.lngLat.lat]);
+              const lngLat = map.unproject([touch.clientX, touch.clientY]);
+              
+              const updatedOverlay = {
+                ...originalOverlayRef.current,
+                position: [lngLat.lng, lngLat.lat] as [number, number]
+              };
+              
+              onParkingOverlayUpdate(updatedOverlay);
+              e.preventDefault();
+            }
+          }
+        });
+        
+        // Handle touch end for parking overlay dragging
+        map.on('touchend', (e) => {
+          const touches = (e.originalEvent as TouchEvent).changedTouches;
+          const touch = Array.from(touches).find(t => t.identifier === parkingDragTouchId);
+          
+          if (touch) {
+            // Clear drag-related state
+            if (isDraggingParkingRef.current) {
+              isDraggingParkingRef.current = false;
+              draggedParkingIdRef.current = null;
+              originalOverlayRef.current = null;
+              
+              // Clear the parking clicked flag after a delay
+              setTimeout(() => {
+                parkingClickedRef.current = false;
+              }, 300);
+              
+              // Re-enable map interactions
+              map.dragPan.enable();
+              map.doubleClickZoom.enable();
+              map.scrollZoom.enable();
+              map.boxZoom.enable();
+              map.dragRotate.enable();
+              map.keyboard.enable();
+              map.touchZoomRotate.enable();
+              
+              map.getCanvas().style.cursor = '';
+            }
+            
+            // Always clear touch tracking state
+            parkingDragTouchId = null;
+            dragStartPoint = null;
+            dragStartTime = 0;
+          }
+        });
+      }
 
     } catch (error) {
       console.error('Error initializing map:', error);
