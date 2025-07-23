@@ -1620,14 +1620,43 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
               [spaceX - halfWidth, spaceY - halfLength] // Close polygon
             ];
             
-            // Apply rotation if needed
+            // Apply rotation if needed using Web Mercator projection for accurate rotation
             const rotatedCorners = rotation !== 0 ? corners.map(([lng, lat]) => {
-              const dx = lng - centerLng;
-              const dy = lat - centerLat;
+              // Convert to Web Mercator (approximately Cartesian for small areas)
+              const toWebMercator = (lng: number, lat: number): [number, number] => {
+                const x = lng * 20037508.34 / 180;
+                let y = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180);
+                y = y * 20037508.34 / 180;
+                return [x, y];
+              };
+              
+              const fromWebMercator = (x: number, y: number): [number, number] => {
+                const lng = (x / 20037508.34) * 180;
+                let lat = (y / 20037508.34) * 180;
+                lat = 180 / Math.PI * (2 * Math.atan(Math.exp(lat * Math.PI / 180)) - Math.PI / 2);
+                return [lng, lat];
+              };
+              
+              // Convert to Web Mercator for accurate rotation
+              const mercatorCoord = toWebMercator(lng, lat);
+              const centerMercator = toWebMercator(centerLng, centerLat);
+              
+              // Translate to origin (center becomes 0,0)
+              const dx = mercatorCoord[0] - centerMercator[0];
+              const dy = mercatorCoord[1] - centerMercator[1];
+              
+              // Apply rotation in Cartesian space
               const rotRad = (rotation * Math.PI) / 180;
               const rotatedX = dx * Math.cos(rotRad) - dy * Math.sin(rotRad);
               const rotatedY = dx * Math.sin(rotRad) + dy * Math.cos(rotRad);
-              return [centerLng + rotatedX, centerLat + rotatedY];
+              
+              // Translate back and convert back to geographic coordinates
+              const rotatedMercator: [number, number] = [
+                centerMercator[0] + rotatedX,
+                centerMercator[1] + rotatedY
+              ];
+              
+              return fromWebMercator(rotatedMercator[0], rotatedMercator[1]);
             }) : corners;
             
             // Add individual parking space rectangle
