@@ -34,7 +34,8 @@ export default function SiteSketcherPage() {
     drawingMode: 'draw',
     recentSearches: [],
     snapToGrid: false,
-    gridSize: 10
+    gridSize: 10,
+    showSideLengths: true
   });
 
   const [mapboxError, setMapboxError] = useState<string | null>(null);
@@ -81,13 +82,14 @@ export default function SiteSketcherPage() {
         measurementUnit: state.measurementUnit,
         snapToGrid: state.snapToGrid,
         gridSize: state.gridSize,
-        drawingMode: state.drawingMode // Save drawing mode preference
+        drawingMode: state.drawingMode, // Save drawing mode preference
+        showSideLengths: state.showSideLengths
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
     } catch (error) {
       console.warn('Failed to save state:', error);
     }
-  }, [state.polygons, state.parkingOverlays, state.measurementUnit, state.snapToGrid, state.gridSize, state.drawingMode]);
+  }, [state.polygons, state.parkingOverlays, state.measurementUnit, state.snapToGrid, state.gridSize, state.drawingMode, state.showSideLengths]);
 
   // Recalculate measurements when polygons or selection changes
   useEffect(() => {
@@ -317,6 +319,13 @@ export default function SiteSketcherPage() {
     }));
   }, []);
 
+  const handleToggleSideLengths = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      showSideLengths: !prev.showSideLengths
+    }));
+  }, []);
+
 
 
   if (mapboxError) {
@@ -364,10 +373,10 @@ export default function SiteSketcherPage() {
         </header>
 
         {/* Desktop Main Content */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex overflow-hidden">
           {/* Desktop Sidebar */}
-          <div className="w-80 border-r bg-background overflow-y-auto">
-            <div className="p-4">
+          <div className="w-80 border-r bg-background flex flex-col">
+            <div className="flex-1 overflow-y-auto desktop-sidebar-scroll p-4">
               <ResponsiveControls
                 measurement={state.measurements}
                 measurementUnit={state.measurementUnit}
@@ -386,12 +395,14 @@ export default function SiteSketcherPage() {
                 onLocationSelect={handleLocationSelect}
                 recentSearches={state.recentSearches}
                 onUpdateRecentSearches={handleUpdateRecentSearches}
+                showSideLengths={state.showSideLengths}
+                onToggleSideLengths={handleToggleSideLengths}
               />
             </div>
           </div>
 
           {/* Desktop Map Container */}
-          <div className="flex-1 relative">
+          <div className="flex-1 relative overflow-hidden">
             <MapboxMap
               ref={mapRef}
               onPolygonCreate={handlePolygonCreate}
@@ -408,6 +419,7 @@ export default function SiteSketcherPage() {
               measurements={state.measurements}
               measurementUnit={state.measurementUnit}
               drawingMode={state.drawingMode}
+              showSideLengths={state.showSideLengths}
               className="w-full h-full"
             />
             
@@ -460,6 +472,7 @@ export default function SiteSketcherPage() {
             measurements={state.measurements}
             measurementUnit={state.measurementUnit}
             drawingMode={state.drawingMode}
+            showSideLengths={state.showSideLengths}
             className="w-full h-full"
           />
         </div>
@@ -484,6 +497,8 @@ export default function SiteSketcherPage() {
             onLocationSelect={handleLocationSelect}
             recentSearches={state.recentSearches}
             onUpdateRecentSearches={handleUpdateRecentSearches}
+            showSideLengths={state.showSideLengths}
+            onToggleSideLengths={handleToggleSideLengths}
           />
         </div>
       </div>

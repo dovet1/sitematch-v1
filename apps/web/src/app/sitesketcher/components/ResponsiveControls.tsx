@@ -33,6 +33,9 @@ interface ResponsiveControlsProps {
   // Polygon props
   polygons: MapboxDrawPolygon[];
   onPolygonDelete: (polygonId: string) => void;
+  // Side lengths toggle
+  showSideLengths: boolean;
+  onToggleSideLengths: () => void;
   // Parking props
   parkingOverlays: ParkingOverlay[];
   selectedOverlayId: string | null;
@@ -56,6 +59,8 @@ export function ResponsiveControls({
   onModeToggle,
   polygons,
   onPolygonDelete,
+  showSideLengths,
+  onToggleSideLengths,
   parkingOverlays,
   selectedOverlayId,
   onAddOverlay,
@@ -343,29 +348,20 @@ export function ResponsiveControls({
                           </div>
                         </div>
                         
-                        {isSelected && (
+                        {isSelected && showSideLengths && (
                           <div className={cn(
                             "border-t border-muted/60 bg-muted/20 space-y-4 rounded-b-xl relative",
                             isMobile ? "mt-3 pt-4 px-3 pb-3" : "mt-4 pt-4 px-4 pb-4"
                           )}>
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">Measurement Unit</span>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={onUnitToggle}
-                                className="h-7 text-xs bg-background hover:bg-muted border-muted"
-                              >
-                                {measurementUnit === 'metric' ? 'm²/m' : 'ft²/ft'}
-                              </Button>
-                            </div>
                             <div>
                               <p className="text-xs font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Side Measurements</p>
                               <div className="grid grid-cols-2 gap-2">
                                 {polygonMeasurement.sideLengths.map((length, sideIndex) => (
                                   <div key={sideIndex} className="bg-background/80 border border-muted/60 rounded-lg p-2 text-center shadow-sm">
                                     <div className="text-xs text-muted-foreground font-medium">Side {sideIndex + 1}</div>
-                                    <div className="text-sm font-bold font-mono text-foreground">{length}m</div>
+                                    <div className="text-sm font-bold font-mono text-foreground">
+                                      {measurementUnit === 'metric' ? `${length}m` : `${(length * 3.28084).toFixed(1)}ft`}
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -446,6 +442,48 @@ export function ResponsiveControls({
               </div>
             </CollapsibleContent>
           </Collapsible>
+        </Card>
+
+        {/* Settings Card */}
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            {/* Measurement Unit Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm">Measurement Unit</h3>
+                <p className="text-xs text-muted-foreground">Choose between metric (m²/m) or imperial (ft²/ft)</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onUnitToggle}
+                className="h-8 text-xs font-medium bg-background hover:bg-muted border-muted"
+              >
+                {measurementUnit === 'metric' ? 'Metric' : 'Imperial'}
+              </Button>
+            </div>
+            
+            {/* Side Lengths Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm">Side Length Annotations</h3>
+                <p className="text-xs text-muted-foreground">Show distance measurements on polygon sides</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onToggleSideLengths}
+                className={cn(
+                  "h-8 text-xs font-medium transition-colors",
+                  showSideLengths 
+                    ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" 
+                    : "bg-background hover:bg-muted border-muted"
+                )}
+              >
+                {showSideLengths ? 'ON' : 'OFF'}
+              </Button>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Clear All Button */}
