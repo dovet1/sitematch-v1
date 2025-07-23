@@ -206,8 +206,8 @@ export default function SiteSketcherPage() {
         ...prev,
         polygons: filteredPolygons,
         selectedPolygonId: null,
-        measurements: null,
-        parkingOverlays: [] // Clear parking overlays when polygon is deleted
+        measurements: null
+        // Keep parking overlays - they are independent of polygons
       };
     });
     
