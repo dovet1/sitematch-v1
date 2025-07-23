@@ -862,34 +862,33 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
 
       // Handle parking overlay clicks (individual spaces)
       map.on('click', 'parking-overlays-fill', (e) => {
-        console.log('🚗 Parking click triggered:', {
-          features: e.features?.length || 0,
-          currentOverlays: parkingOverlaysRef.current.length
-        });
-        
         if (e.features && e.features.length > 0) {
           const feature = e.features[0];
           const overlayId = feature.properties?.overlayId || feature.properties?.id;
           const overlay = parkingOverlaysRef.current.find(o => o.id === overlayId);
           
-          console.log('🎯 Found overlay:', {
-            overlayId,
-            foundOverlay: !!overlay,
-            overlayPosition: overlay?.position
-          });
-          
           if (overlay) {
-            console.log('✅ Calling onParkingOverlayClick');
+            // Prevent event from bubbling to polygon selection
+            e.preventDefault();
             
             // Set flag to indicate parking was clicked
             parkingClickedRef.current = true;
             
+            // Clear any polygon selection when parking is clicked
+            if (drawRef.current) {
+              drawRef.current.changeMode('simple_select');
+              const selectedIds = drawRef.current.getSelectedIds();
+              if (selectedIds.length > 0) {
+                drawRef.current.changeMode('simple_select'); // This deselects
+              }
+            }
+            
             onParkingOverlayClick(overlay);
             
-            // Clear flag after a short delay
+            // Clear flag after a longer delay to prevent interference
             setTimeout(() => {
               parkingClickedRef.current = false;
-            }, 100);
+            }, 200);
           }
         }
       });
@@ -915,6 +914,11 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       let isDragging = false;
       let dragStartAngle = 0;
       let currentCenter: [number, number] | null = null;
+      
+      // Separate variables for parking rotation to avoid conflicts
+      let isParkingRotating = false;
+      let parkingDragStartAngle = 0;
+      let parkingCurrentCenter: [number, number] | null = null;
 
       // Mouse events for desktop
       map.on('mousedown', 'polygon-rotation-handles', (e) => {
@@ -1018,28 +1022,24 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           return;
         }
         
-        // Handle rotation (existing logic)
-        if (!isDragging || !currentCenter) return;
-        
-        e.preventDefault();
-        
-        const currentAngle = Math.atan2(mousePoint.lat - currentCenter[1], mousePoint.lng - currentCenter[0]);
-        const deltaAngle = currentAngle - dragStartAngle;
-        
-        // Check if we're rotating a parking overlay or polygon
-        if (originalOverlayRef.current && !isDraggingParkingRef.current) {
+        // Handle parking rotation first (higher priority)
+        if (isParkingRotating && parkingCurrentCenter && originalOverlayRef.current && !isDraggingParkingRef.current) {
+          e.preventDefault();
+          
+          // Ensure polygon is not selected during parking rotation
+          if (drawRef.current) {
+            const selectedIds = drawRef.current.getSelectedIds();
+            if (selectedIds.length > 0) {
+              drawRef.current.changeMode('simple_select'); // Deselect any polygons
+            }
+          }
+          
+          const currentAngle = Math.atan2(mousePoint.lat - parkingCurrentCenter[1], mousePoint.lng - parkingCurrentCenter[0]);
+          
           // Calculate total rotation from the original drag start angle
           const totalDeltaAngle = currentAngle - originalDragStartAngleRef.current;
           const rotationDegrees = (totalDeltaAngle * 180) / Math.PI;
           const newRotation = (originalOverlayRef.current.rotation + rotationDegrees) % 360;
-          
-          console.log('🔄 Parking rotation:', {
-            totalDelta: rotationDegrees,
-            originalRotation: originalOverlayRef.current.rotation,
-            newRotation: newRotation < 0 ? newRotation + 360 : newRotation,
-            mouseAngle: currentAngle * 180 / Math.PI,
-            originalStartAngle: originalDragStartAngleRef.current * 180 / Math.PI
-          });
           
           const updatedOverlay = {
             ...originalOverlayRef.current,
@@ -1047,7 +1047,16 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           };
           
           onParkingOverlayUpdate(updatedOverlay);
-        } else if (drawRef.current && selectedPolygonIdRef.current) {
+          return; // Exit early to prevent any polygon interactions
+        }
+        
+        // Handle polygon rotation (existing logic)
+        if (isDragging && currentCenter && drawRef.current && selectedPolygonIdRef.current) {          
+          e.preventDefault();
+          
+          const currentAngle = Math.atan2(mousePoint.lat - currentCenter[1], mousePoint.lng - currentCenter[0]);
+          const deltaAngle = currentAngle - dragStartAngle;
+          
           // Rotate the polygon (keep original behavior)
           rotatePolygonDirect(currentCenter, deltaAngle);
           
@@ -1111,7 +1120,35 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           return;
         }
         
-        // Handle rotation end
+        // Handle parking rotation end
+        if (isParkingRotating) {
+          isParkingRotating = false;
+          isRotatingRef.current = false;
+          parkingCurrentCenter = null;
+          
+          // Clear rotation references
+          originalOverlayRef.current = null;
+          
+          // Restore cursor based on drawing mode
+          if (drawingModeRef.current === 'draw') {
+            map.getCanvas().style.cursor = 'crosshair';
+          } else {
+            map.getCanvas().style.cursor = '';
+          }
+          
+          // Re-enable map interactions
+          map.dragPan.enable();
+          map.doubleClickZoom.enable();
+          map.scrollZoom.enable();
+          map.boxZoom.enable();
+          map.dragRotate.enable();
+          map.keyboard.enable();
+          map.touchZoomRotate.enable();
+          
+          return;
+        }
+        
+        // Handle polygon rotation end
         if (isDragging) {
           isDragging = false;
           isRotatingRef.current = false;
@@ -1136,13 +1173,26 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           map.keyboard.enable();
           map.touchZoomRotate.enable();
           
-          console.log('Rotation ended');
         }
       });
 
       // Touch end for mobile
       map.on('touchend', () => {
-        if (isDragging) {
+        if (isParkingRotating) {
+          isParkingRotating = false;
+          isRotatingRef.current = false;
+          parkingCurrentCenter = null;
+          originalOverlayRef.current = null;
+          
+          // Re-enable map interactions
+          map.dragPan.enable();
+          map.doubleClickZoom.enable();
+          map.scrollZoom.enable();
+          map.boxZoom.enable();
+          map.dragRotate.enable();
+          map.keyboard.enable();
+          map.touchZoomRotate.enable();
+        } else if (isDragging) {
           isDragging = false;
           isRotatingRef.current = false;
           currentCenter = null;
@@ -1160,7 +1210,28 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       
       // Handle mouse leave to stop dragging
       map.on('mouseleave', () => {
-        if (isDragging) {
+        if (isParkingRotating) {
+          isParkingRotating = false;
+          isRotatingRef.current = false;
+          parkingCurrentCenter = null;
+          originalOverlayRef.current = null;
+          
+          // Restore cursor based on drawing mode
+          if (drawingModeRef.current === 'draw') {
+            map.getCanvas().style.cursor = 'crosshair';
+          } else {
+            map.getCanvas().style.cursor = '';
+          }
+          
+          // Re-enable map interactions
+          map.dragPan.enable();
+          map.doubleClickZoom.enable();
+          map.scrollZoom.enable();
+          map.boxZoom.enable();
+          map.dragRotate.enable();
+          map.keyboard.enable();
+          map.touchZoomRotate.enable();
+        } else if (isDragging) {
           isDragging = false;
           isRotatingRef.current = false;
           currentCenter = null;
@@ -1185,7 +1256,21 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
 
       // Handle touch cancel for mobile
       map.on('touchcancel', () => {
-        if (isDragging) {
+        if (isParkingRotating) {
+          isParkingRotating = false;
+          isRotatingRef.current = false;
+          parkingCurrentCenter = null;
+          originalOverlayRef.current = null;
+          
+          // Re-enable map interactions
+          map.dragPan.enable();
+          map.doubleClickZoom.enable();
+          map.scrollZoom.enable();
+          map.boxZoom.enable();
+          map.dragRotate.enable();
+          map.keyboard.enable();
+          map.touchZoomRotate.enable();
+        } else if (isDragging) {
           isDragging = false;
           isRotatingRef.current = false;
           currentCenter = null;
@@ -1216,8 +1301,17 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         if (!e.features || e.features.length === 0) return;
         
         e.preventDefault();
-        isDragging = true;
+        isParkingRotating = true;
         isRotatingRef.current = true;
+        
+        // Immediately clear any polygon selection to prevent interference
+        if (drawRef.current) {
+          drawRef.current.changeMode('simple_select');
+          const selectedIds = drawRef.current.getSelectedIds();
+          if (selectedIds.length > 0) {
+            drawRef.current.changeMode('simple_select'); // This deselects
+          }
+        }
         
         const feature = e.features[0];
         const overlayId = feature.properties?.overlayId;
@@ -1225,25 +1319,27 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         
         if (!selectedOverlay) return;
         
-        currentCenter = selectedOverlay.position as [number, number];
+        parkingCurrentCenter = selectedOverlay.position as [number, number];
         const mousePoint = e.lngLat;
-        dragStartAngle = Math.atan2(mousePoint.lat - currentCenter[1], mousePoint.lng - currentCenter[0]);
+        parkingDragStartAngle = Math.atan2(mousePoint.lat - parkingCurrentCenter[1], mousePoint.lng - parkingCurrentCenter[0]);
         
         // Store the original drag start angle for stable rotation calculation
-        originalDragStartAngleRef.current = dragStartAngle;
+        originalDragStartAngleRef.current = parkingDragStartAngle;
         
-        console.log('🎯 Starting parking rotation:', {
-          overlayId,
-          center: currentCenter,
-          mousePoint: [mousePoint.lng, mousePoint.lat],
-          startAngle: dragStartAngle * 180 / Math.PI,
-          initialRotation: selectedOverlay.rotation
-        });
         
         map.getCanvas().style.cursor = 'grabbing';
         
         // Store original overlay for rotation
         originalOverlayRef.current = { ...selectedOverlay };
+        
+        // Disable map interactions during parking rotation
+        map.dragPan.disable();
+        map.doubleClickZoom.disable();
+        map.scrollZoom.disable();
+        map.boxZoom.disable();
+        map.dragRotate.disable();
+        map.keyboard.disable();
+        map.touchZoomRotate.disable();
       });
 
       map.on('mouseenter', 'parking-rotation-handles', () => {
@@ -1251,8 +1347,12 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       });
 
       map.on('mouseleave', 'parking-rotation-handles', () => {
-        if (!isRotating) {
-          map.getCanvas().style.cursor = 'crosshair';
+        if (!isParkingRotating && !isDragging) {
+          if (drawingModeRef.current === 'draw') {
+            map.getCanvas().style.cursor = 'crosshair';
+          } else {
+            map.getCanvas().style.cursor = '';
+          }
         }
       });
 
@@ -1497,16 +1597,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         const totalWidthDeg = overlay.size.width / (111320 * Math.cos(centerLat * Math.PI / 180));
         const totalLengthDeg = overlay.size.length / 111320;
         
-        console.log('Simple parking spaces:', {
-          overlayId: overlay.id,
-          quantity,
-          spacesPerRow,
-          numRows,
-          spaceWidth,
-          spaceLength,
-          spaceWidthDeg,
-          spaceLengthDeg
-        });
         
         // Generate individual parking space rectangles
         for (let row = 0; row < numRows; row++) {
@@ -1559,45 +1649,11 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         }
       });
 
-      // Debug: log the features being set
-      const polygonFeatures = features.filter(f => f.geometry?.type === 'Polygon');
-      
-      console.log('Setting parking overlay data:', {
-        totalFeatures: features.length,
-        polygonFeatures: polygonFeatures.length,
-        sampleFeature: features[0] ? {
-          type: features[0].type,
-          geometry: features[0].geometry?.type,
-          properties: features[0].properties
-        } : null,
-        allFeatureIds: features.map(f => f.properties?.id || f.properties?.overlayId)
-      });
-
       source.setData({
         type: 'FeatureCollection',
         features
       });
 
-      // Debug: Check if the parking-grid-lines layer exists and is visible
-      setTimeout(() => {
-        const map = mapRef.current;
-        if (map) {
-          const layer = map.getLayer('parking-grid-lines');
-          const source = map.getSource('parking-overlays') as mapboxgl.GeoJSONSource;
-          console.log('Layer debug:', {
-            layerExists: !!layer,
-            layerType: layer?.type,
-            layerVisible: layer ? map.getLayoutProperty('parking-grid-lines', 'visibility') : 'not found',
-            sourceData: source ? source._data : 'no source'
-          });
-          
-          // Query rendered features to see what's actually being rendered
-          const renderedFeatures = map.queryRenderedFeatures({
-            layers: ['parking-grid-lines']
-          });
-          console.log('Rendered grid line features:', renderedFeatures.length);
-        }
-      }, 100);
     }
   }, [parkingOverlays, isMapLoaded]);
 
@@ -1609,9 +1665,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     const source = map.getSource('colored-polygons') as mapboxgl.GeoJSONSource;
     
     if (source) {
-      console.log('Updating colored polygon overlays:', polygons.length, 'polygons');
       const features = polygons.map((polygon, index) => {
-        console.log(`Polygon ${index + 1}: color =`, polygon.properties?.color);
         return {
           type: 'Feature' as const,
           geometry: polygon.geometry,
@@ -1870,26 +1924,17 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
 
   // Function to update rotation handles for parking overlays
   const updateParkingRotationHandles = useCallback((selectedParkingId?: string | null) => {
-    console.log('🔧 updateParkingRotationHandles called:', {
-      selectedParkingId,
-      isMapLoaded,
-      parkingOverlaysCount: parkingOverlays.length
-    });
-    
     if (!mapRef.current || !isMapLoaded) {
-      console.log('❌ Map not ready');
       return;
     }
     const map = mapRef.current;
     const source = map.getSource('rotation-handles') as mapboxgl.GeoJSONSource;
     
     if (!source) {
-      console.log('❌ rotation-handles source not found');
       return;
     }
 
     if (!selectedParkingId) {
-      console.log('🧹 Clearing parking handles');
       // Clear parking handles
       source.setData({
         type: 'FeatureCollection',
@@ -1900,21 +1945,14 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
 
     // Find the selected parking overlay
     const selectedOverlay = parkingOverlays.find(o => o.id === selectedParkingId);
-    console.log('🔍 Looking for overlay:', {
-      selectedParkingId,
-      foundOverlay: !!selectedOverlay,
-      overlayIds: parkingOverlays.map(o => o.id)
-    });
     
     if (!selectedOverlay) {
-      console.log('❌ Selected overlay not found');
       return;
     }
 
     try {
       // Generate parking rotation handles
       const parkingHandles = generateParkingRotationHandles(selectedOverlay);
-      console.log('✅ Generated handles:', parkingHandles.length);
       
       source.setData({
         type: 'FeatureCollection',
@@ -1922,7 +1960,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       });
       
     } catch (error) {
-      console.error('❌ Error updating parking rotation handles:', error);
+      console.error('Error updating parking rotation handles:', error);
     }
   }, [parkingOverlays, isMapLoaded]);
 
@@ -1955,11 +1993,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     
     const map = mapRef.current;
     
-    console.log('🎨 Updating parking selection styling:', {
-      selectedParkingId,
-      isMapLoaded,
-      layerExists: !!map.getLayer('parking-overlays-fill')
-    });
     
     // Update fill color to highlight selected parking overlay
     map.setPaintProperty('parking-overlays-fill', 'fill-color', [

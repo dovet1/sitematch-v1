@@ -195,13 +195,15 @@ export function ParkingOverlay({
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {!hasPolygons && (
+        {/* Show message only if no polygons AND no existing parking overlays */}
+        {!hasPolygons && parkingOverlays.length === 0 && (
           <div className="text-center text-muted-foreground p-4 border border-dashed rounded-lg">
             <Car className="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">Draw a polygon first to add parking overlays</p>
           </div>
         )}
 
+        {/* Show parking configuration only if there are polygons to add parking to */}
         {hasPolygons && (
           <>
             {/* Parking Configuration */}
@@ -309,92 +311,100 @@ export function ParkingOverlay({
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
+          </>
+        )}
 
-            {/* Existing Overlays */}
-            {parkingOverlays.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Manage Overlays</Label>
-                <div className="max-h-32 overflow-y-auto space-y-1">
-                  {parkingOverlays.map((overlay) => (
-                    <div
-                      key={overlay.id}
-                      className={`
-                        flex items-center justify-between p-2 rounded border
-                        ${selectedOverlayId === overlay.id 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-border hover:bg-muted/50'}
-                        cursor-pointer transition-colors
-                      `}
-                      onClick={() => onSelectOverlay(
-                        selectedOverlayId === overlay.id ? null : overlay.id
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-sm"
-                          style={{ 
-                            backgroundColor: PARKING_COLORS[overlay.type],
-                            opacity: 0.8 
-                          }}
-                        />
-                        <span className="text-sm">
-                          {overlay.type.charAt(0).toUpperCase() + overlay.type.slice(1)}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          {Math.round(overlay.rotation)}°
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center gap-1">
-                        {selectedOverlayId === overlay.id && (
-                          <>
-                            {/* Rotation Control */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onMouseDown={(e) => handleRotationStart(e, overlay)}
-                              onTouchStart={(e) => handleRotationStart(e, overlay)}
-                              title="Drag to rotate"
-                            >
-                              <RotateCw className="h-3 w-3" />
-                            </Button>
-                            
-                            {/* Move Indicator */}
-                            <div className="text-muted-foreground">
-                              <Move className="h-3 w-3" />
-                            </div>
-                          </>
-                        )}
-                        
-                        {/* Delete */}
+        {/* Show helpful message when parking exists but no polygons for adding new ones */}
+        {!hasPolygons && parkingOverlays.length > 0 && (
+          <div className="text-center text-muted-foreground p-3 border border-dashed rounded-lg bg-blue-50/50">
+            <Car className="h-6 w-6 mx-auto mb-1 opacity-70" />
+            <p className="text-xs">Draw a polygon to add more parking overlays</p>
+          </div>
+        )}
+
+        {/* Always show existing overlays if they exist */}
+        {parkingOverlays.length > 0 && (
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Manage Overlays</Label>
+            <div className="max-h-32 overflow-y-auto space-y-1">
+              {parkingOverlays.map((overlay) => (
+                <div
+                  key={overlay.id}
+                  className={`
+                    flex items-center justify-between p-2 rounded border
+                    ${selectedOverlayId === overlay.id 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-border hover:bg-muted/50'}
+                    cursor-pointer transition-colors
+                  `}
+                  onClick={() => onSelectOverlay(
+                    selectedOverlayId === overlay.id ? null : overlay.id
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-sm"
+                      style={{ 
+                        backgroundColor: PARKING_COLORS[overlay.type],
+                        opacity: 0.8 
+                      }}
+                    />
+                    <span className="text-sm">
+                      {overlay.type.charAt(0).toUpperCase() + overlay.type.slice(1)}
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {Math.round(overlay.rotation)}°
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex items-center gap-1">
+                    {selectedOverlayId === overlay.id && (
+                      <>
+                        {/* Rotation Control */}
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRemoveOverlay(overlay.id);
-                          }}
-                          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                          className="h-6 w-6 p-0"
+                          onMouseDown={(e) => handleRotationStart(e, overlay)}
+                          onTouchStart={(e) => handleRotationStart(e, overlay)}
+                          title="Drag to rotate"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <RotateCw className="h-3 w-3" />
                         </Button>
-                      </div>
-                    </div>
-                  ))}
+                        
+                        {/* Move Indicator */}
+                        <div className="text-muted-foreground">
+                          <Move className="h-3 w-3" />
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Delete */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveOverlay(overlay.id);
+                      }}
+                      className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
-                {onClearAllParking && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onClearAllParking}
-                    className="w-full text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive mt-2"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Clear All Parking
-                  </Button>
-                )}
-              </div>
+              ))}
+            </div>
+            {onClearAllParking && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClearAllParking}
+                className="w-full text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive mt-2"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear All Parking
+              </Button>
             )}
 
             {/* Selected Overlay Details (Phase 2) */}
@@ -426,7 +436,7 @@ export function ParkingOverlay({
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </CardContent>
     </Card>
