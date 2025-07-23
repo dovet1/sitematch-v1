@@ -901,6 +901,76 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       map.on('mouseleave', 'parking-overlays-fill', () => {
         map.getCanvas().style.cursor = 'crosshair';
       });
+
+      // Handle clicks on empty map areas to deselect all shapes
+      map.on('click', (e) => {
+        // Only handle deselection in select mode
+        if (drawingModeRef.current !== 'select') {
+          return;
+        }
+        
+        // Query for features at the clicked point
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: ['parking-overlays-fill', 'polygon-rotation-handles', 'parking-rotation-handles']
+        });
+        
+        // Also check for Mapbox Draw features (polygons)
+        const drawFeatures = map.queryRenderedFeatures(e.point, {
+          filter: ['==', '$type', 'Polygon']
+        });
+        
+        console.log('Click deselect check:', {
+          drawingMode: drawingModeRef.current,
+          featuresFound: features.length,
+          drawFeaturesFound: drawFeatures.length,
+          point: e.point
+        });
+        
+        // If no features were clicked (empty area), deselect everything
+        if (features.length === 0 && drawFeatures.length === 0) {
+          console.log('Deselecting all shapes - empty area clicked');
+          
+          // Deselect polygons - force clear any selection
+          if (drawRef.current) {
+            const selectedIds = drawRef.current.getSelectedIds();
+            console.log('Current selected polygon IDs:', selectedIds);
+            
+            // Force deselection by changing to simple_select mode
+            drawRef.current.changeMode('simple_select');
+            
+            // Manually trigger the selection change event to clear rotation handles
+            setTimeout(() => {
+              // Clear parking flags to ensure draw.selectionchange can run
+              parkingClickedRef.current = false;
+              isDraggingParkingRef.current = false;
+              
+              // Force deselection by switching modes and back
+              if (drawRef.current) {
+                drawRef.current.changeMode('simple_select');
+              }
+              
+              // Manually execute the draw.selectionchange logic for empty selection
+              // Clear parking selection when nothing is selected
+              if (selectedParkingIdRef.current && onClearParkingSelection) {
+                onClearParkingSelection();
+              }
+              
+              // Clear rotation state and handles
+              originalPolygonRef.current = null;
+              totalRotationRef.current = 0;
+              updateRotationHandles(); // Clear rotation handles immediately
+              
+              console.log('Manually cleared rotation handles and selection');
+            }, 0);
+          }
+          
+          // Deselect parking overlays
+          if (onClearParkingSelection) {
+            console.log('Clearing parking selection');
+            onClearParkingSelection();
+          }
+        }
+      });
       
       // Add keyboard shortcut to force draw mode
       map.on('keydown', (e: any) => {
