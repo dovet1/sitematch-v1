@@ -1696,7 +1696,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             if (distance > 5) { // Start drag if moved more than 5 pixels
               const overlayId = draggedParkingIdRef.current || selectedParkingIdRef.current;
               const overlay = parkingOverlaysRef.current.find(o => o.id === overlayId);
-              if (overlay) {
+              if (overlay && overlayId) {
                 startParkingDrag(overlayId, overlay);
               }
             }
