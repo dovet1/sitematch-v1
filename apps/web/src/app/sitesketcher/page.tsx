@@ -133,16 +133,9 @@ export default function SiteSketcherPage() {
   // Remove mode handling - tool is always in draw mode
 
   const handlePolygonCreate = useCallback((polygon: MapboxDrawPolygon) => {
-    console.log('=== HANDLE POLYGON CREATE DEBUG ===');
-    console.log('handlePolygonCreate - Original polygon:', polygon);
-    console.log('handlePolygonCreate - Original polygon ID:', polygon.id);
-    console.log('handlePolygonCreate - Original polygon properties:', polygon.properties);
-    
     setState(prev => {
       // Add color to the polygon
       const color = getPolygonColor(prev.polygons.length);
-      console.log('handlePolygonCreate - Current polygon count:', prev.polygons.length);
-      console.log('handlePolygonCreate - Assigned color:', color);
       
       const polygonWithColor = {
         ...polygon,
@@ -153,20 +146,11 @@ export default function SiteSketcherPage() {
         }
       };
       
-      console.log('handlePolygonCreate - Polygon with color:', polygonWithColor);
-      console.log('handlePolygonCreate - New polygon properties:', polygonWithColor.properties);
-      
       const newState = {
         ...prev,
         polygons: [...prev.polygons, polygonWithColor],
         selectedPolygonId: String(polygonWithColor.id || polygonWithColor.properties?.id || '')
       };
-      
-      console.log('handlePolygonCreate - New state polygons:', newState.polygons.map(p => ({ 
-        id: p.id, 
-        color: p.properties?.color 
-      })));
-      console.log('=== END HANDLE POLYGON CREATE DEBUG ===');
       
       return newState;
     });
@@ -174,11 +158,6 @@ export default function SiteSketcherPage() {
 
   const handlePolygonUpdate = useCallback((polygon: MapboxDrawPolygon) => {    
     setState(prev => {
-      console.log('Updating polygon:', {
-        newPolygon: { id: polygon.id, propsId: polygon.properties?.id },
-        existingPolygons: prev.polygons.map(p => ({ id: p.id, propsId: p.properties?.id }))
-      });
-      
       return {
         ...prev,
         polygons: prev.polygons.map(p => {
@@ -189,12 +168,6 @@ export default function SiteSketcherPage() {
           
           // Only update if we have a clear match
           if (exactIdMatch || exactPropsMatch) {
-            console.log('Updating polygon match:', { 
-              existingId: p.id, 
-              existingPropsId: p.properties?.id,
-              newId: polygon.id,
-              newPropsId: polygon.properties?.id
-            });
             return polygon;
           }
           return p;
@@ -277,6 +250,10 @@ export default function SiteSketcherPage() {
     setState(prev => ({ ...prev, selectedParkingId: overlayId }));
   }, []);
 
+  const handleClearParkingSelection = useCallback(() => {
+    setState(prev => ({ ...prev, selectedParkingId: null }));
+  }, []);
+
   const handleLocationSelect = useCallback((location: SearchResult) => {
     setSearchResult(location);
   }, []);
@@ -309,6 +286,16 @@ export default function SiteSketcherPage() {
       
       // Clear original measurements reference
       originalMeasurementsRef.current = null;
+    }
+  }, []);
+
+  const handleClearAllParking = useCallback(() => {
+    if (confirm('Clear all parking overlays? This cannot be undone.')) {
+      setState(prev => ({
+        ...prev,
+        parkingOverlays: [],
+        selectedParkingId: null
+      }));
     }
   }, []);
 
@@ -392,6 +379,7 @@ export default function SiteSketcherPage() {
                 onUpdateOverlay={handleParkingOverlayUpdate}
                 onRemoveOverlay={handleRemoveParkingOverlay}
                 onSelectOverlay={handleSelectParkingOverlay}
+                onClearAllParking={handleClearAllParking}
                 onLocationSelect={handleLocationSelect}
                 recentSearches={state.recentSearches}
                 onUpdateRecentSearches={handleUpdateRecentSearches}
@@ -411,11 +399,13 @@ export default function SiteSketcherPage() {
               parkingOverlays={state.parkingOverlays}
               onParkingOverlayClick={handleParkingOverlayClick}
               onParkingOverlayUpdate={handleParkingOverlayUpdate}
+              onClearParkingSelection={handleClearParkingSelection}
               searchResult={searchResult}
               snapToGrid={state.snapToGrid}
               gridSize={state.gridSize}
               polygons={state.polygons}
               selectedPolygonId={state.selectedPolygonId}
+              selectedParkingId={state.selectedParkingId}
               measurements={state.measurements}
               measurementUnit={state.measurementUnit}
               drawingMode={state.drawingMode}
@@ -464,11 +454,13 @@ export default function SiteSketcherPage() {
             parkingOverlays={state.parkingOverlays}
             onParkingOverlayClick={handleParkingOverlayClick}
             onParkingOverlayUpdate={handleParkingOverlayUpdate}
+            onClearParkingSelection={handleClearParkingSelection}
             searchResult={searchResult}
             snapToGrid={state.snapToGrid}
             gridSize={state.gridSize}
             polygons={state.polygons}
             selectedPolygonId={state.selectedPolygonId}
+            selectedParkingId={state.selectedParkingId}
             measurements={state.measurements}
             measurementUnit={state.measurementUnit}
             drawingMode={state.drawingMode}
@@ -494,6 +486,7 @@ export default function SiteSketcherPage() {
             onUpdateOverlay={handleParkingOverlayUpdate}
             onRemoveOverlay={handleRemoveParkingOverlay}
             onSelectOverlay={handleSelectParkingOverlay}
+            onClearAllParking={handleClearAllParking}
             onLocationSelect={handleLocationSelect}
             recentSearches={state.recentSearches}
             onUpdateRecentSearches={handleUpdateRecentSearches}

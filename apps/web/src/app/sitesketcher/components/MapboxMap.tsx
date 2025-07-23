@@ -16,11 +16,13 @@ interface MapboxMapProps {
   parkingOverlays: ParkingOverlay[];
   onParkingOverlayClick: (overlay: ParkingOverlay) => void;
   onParkingOverlayUpdate: (overlay: ParkingOverlay) => void;
+  onClearParkingSelection?: () => void;
   searchResult?: SearchResult | null;
   snapToGrid: boolean;
   gridSize: number;
   polygons: MapboxDrawPolygon[];
   selectedPolygonId: string | null;
+  selectedParkingId: string | null;
   measurements: AreaMeasurement | null;
   measurementUnit: MeasurementUnit;
   drawingMode: DrawingMode;
@@ -42,11 +44,13 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   parkingOverlays,
   onParkingOverlayClick,
   onParkingOverlayUpdate,
+  onClearParkingSelection,
   searchResult,
   snapToGrid,
   gridSize,
   polygons,
   selectedPolygonId,
+  selectedParkingId,
   measurements,
   measurementUnit,
   drawingMode,
@@ -420,19 +424,24 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           id: 'parking-overlays-fill',
           type: 'fill',
           source: 'parking-overlays',
+          filter: ['==', ['geometry-type'], 'Polygon'],
           paint: {
-            'fill-color': ['get', 'color'],
-            'fill-opacity': 0.6
+            'fill-color': '#4a5568', // Gray for parking surface
+            'fill-opacity': 0.7
           }
         });
+
+        // Individual parking spaces no longer need grid lines - each space has its own border
 
         map.addLayer({
           id: 'parking-overlays-stroke',
           type: 'line',
           source: 'parking-overlays',
+          filter: ['==', ['geometry-type'], 'Polygon'],
           paint: {
-            'line-color': ['get', 'color'],
-            'line-width': 2
+            'line-color': '#1f2937', // Dark gray border
+            'line-width': 3,
+            'line-opacity': 1
           }
         });
 
@@ -449,10 +458,25 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           id: 'rotation-handles',
           type: 'circle',
           source: 'rotation-handles',
+          filter: ['==', ['get', 'type'], 'rotation-handle'],
           paint: {
             'circle-radius': 6,
             'circle-color': '#ffffff',
             'circle-stroke-color': '#2563eb',
+            'circle-stroke-width': 2
+          }
+        });
+
+        // Add parking rotation handles layer
+        map.addLayer({
+          id: 'parking-rotation-handles',
+          type: 'circle',
+          source: 'rotation-handles',
+          filter: ['==', ['get', 'type'], 'parking-rotation-handle'],
+          paint: {
+            'circle-radius': 6,
+            'circle-color': '#f59e0b', // Orange for parking handles
+            'circle-stroke-color': '#ffffff',
             'circle-stroke-width': 2
           }
         });
@@ -698,10 +722,17 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       
       // Handle selection changes - TEMPORARILY SIMPLIFIED FOR DEBUGGING
       map.on('draw.selectionchange', (e: any) => {
-        console.log('Selection changed:', e.features.length, 'features selected');
+        // Skip processing if parking overlay was clicked recently or is being dragged
+        if (parkingClickedRef.current || isDraggingParkingRef.current) {
+          return;
+        }
         
         if (!e.features || e.features.length === 0) {
-          console.log('Nothing selected - clearing handles');
+          // Clear parking selection when nothing is selected
+          if (selectedParkingIdRef.current && onClearParkingSelection) {
+            onClearParkingSelection();
+          }
+          
           // Nothing is selected - clear rotation state and handles
           originalPolygonRef.current = null;
           totalRotationRef.current = 0;
@@ -714,9 +745,13 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         } else {
           // Something is selected
           const selectedFeature = e.features[0];
-          console.log('Polygon selected:', selectedFeature);
           
           if (selectedFeature && selectedFeature.geometry.type === 'Polygon') {
+            // Clear parking selection when polygon is selected
+            if (selectedParkingIdRef.current && onClearParkingSelection) {
+              onClearParkingSelection();
+            }
+            
             // Reset rotation state for newly selected polygon
             originalPolygonRef.current = null;
             totalRotationRef.current = 0;
@@ -825,14 +860,36 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       
 
 
-      // Handle parking overlay clicks
+      // Handle parking overlay clicks (individual spaces)
       map.on('click', 'parking-overlays-fill', (e) => {
+        console.log('🚗 Parking click triggered:', {
+          features: e.features?.length || 0,
+          currentOverlays: parkingOverlaysRef.current.length
+        });
+        
         if (e.features && e.features.length > 0) {
           const feature = e.features[0];
-          const overlayId = feature.properties?.id;
-          const overlay = parkingOverlays.find(o => o.id === overlayId);
+          const overlayId = feature.properties?.overlayId || feature.properties?.id;
+          const overlay = parkingOverlaysRef.current.find(o => o.id === overlayId);
+          
+          console.log('🎯 Found overlay:', {
+            overlayId,
+            foundOverlay: !!overlay,
+            overlayPosition: overlay?.position
+          });
+          
           if (overlay) {
+            console.log('✅ Calling onParkingOverlayClick');
+            
+            // Set flag to indicate parking was clicked
+            parkingClickedRef.current = true;
+            
             onParkingOverlayClick(overlay);
+            
+            // Clear flag after a short delay
+            setTimeout(() => {
+              parkingClickedRef.current = false;
+            }, 100);
           }
         }
       });
@@ -862,6 +919,11 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       // Mouse events for desktop
       map.on('mousedown', 'polygon-rotation-handles', (e) => {
         if (!e.features || e.features.length === 0) return;
+        
+        // Don't allow polygon rotation if parking is being interacted with
+        if (parkingClickedRef.current || isDraggingParkingRef.current) {
+          return;
+        }
         
         e.preventDefault();
         isDragging = true;
@@ -899,6 +961,11 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       map.on('touchstart', 'polygon-rotation-handles', (e) => {
         if (!e.features || e.features.length === 0) return;
         
+        // Don't allow polygon rotation if parking is being interacted with
+        if (parkingClickedRef.current || isDraggingParkingRef.current) {
+          return;
+        }
+        
         const touch = (e.originalEvent as TouchEvent).touches[0];
         if (!touch) return;
         
@@ -933,19 +1000,60 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       });
 
       map.on('mousemove', (e) => {
-        if (!isDragging || !currentCenter || !drawRef.current) return;
+        const mousePoint = e.lngLat;
+        
+        // Check if we're dragging a parking overlay - this takes priority
+        if (isDraggingParkingRef.current && draggedParkingIdRef.current && originalOverlayRef.current) {          
+          const updatedOverlay = {
+            ...originalOverlayRef.current,
+            position: [mousePoint.lng, mousePoint.lat] as [number, number]
+          };
+          
+          onParkingOverlayUpdate(updatedOverlay);
+          return; // Exit early to prevent polygon interactions
+        }
+        
+        // Don't handle polygon rotation if parking is being interacted with
+        if (parkingClickedRef.current) {
+          return;
+        }
+        
+        // Handle rotation (existing logic)
+        if (!isDragging || !currentCenter) return;
         
         e.preventDefault();
         
-        const mousePoint = e.lngLat;
         const currentAngle = Math.atan2(mousePoint.lat - currentCenter[1], mousePoint.lng - currentCenter[0]);
         const deltaAngle = currentAngle - dragStartAngle;
         
-        // Rotate the polygon
-        rotatePolygonDirect(currentCenter, deltaAngle);
-        
-        // Update for next iteration
-        dragStartAngle = currentAngle;
+        // Check if we're rotating a parking overlay or polygon
+        if (originalOverlayRef.current && !isDraggingParkingRef.current) {
+          // Calculate total rotation from the original drag start angle
+          const totalDeltaAngle = currentAngle - originalDragStartAngleRef.current;
+          const rotationDegrees = (totalDeltaAngle * 180) / Math.PI;
+          const newRotation = (originalOverlayRef.current.rotation + rotationDegrees) % 360;
+          
+          console.log('🔄 Parking rotation:', {
+            totalDelta: rotationDegrees,
+            originalRotation: originalOverlayRef.current.rotation,
+            newRotation: newRotation < 0 ? newRotation + 360 : newRotation,
+            mouseAngle: currentAngle * 180 / Math.PI,
+            originalStartAngle: originalDragStartAngleRef.current * 180 / Math.PI
+          });
+          
+          const updatedOverlay = {
+            ...originalOverlayRef.current,
+            rotation: newRotation < 0 ? newRotation + 360 : newRotation
+          };
+          
+          onParkingOverlayUpdate(updatedOverlay);
+        } else if (drawRef.current && selectedPolygonIdRef.current) {
+          // Rotate the polygon (keep original behavior)
+          rotatePolygonDirect(currentCenter, deltaAngle);
+          
+          // Update for next iteration (only for polygons)
+          dragStartAngle = currentAngle;
+        }
       });
 
       // Touch move for mobile rotation
@@ -969,10 +1077,48 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       });
 
       map.on('mouseup', () => {
+        // Handle parking drag end
+        if (isDraggingParkingRef.current) {
+          isDraggingParkingRef.current = false;
+          draggedParkingIdRef.current = null;
+          originalOverlayRef.current = null;
+          
+          // Clear parking click flag after a short delay
+          setTimeout(() => {
+            parkingClickedRef.current = false;
+          }, 100);
+          
+          // Restore cursor
+          map.getCanvas().style.cursor = drawingModeRef.current === 'draw' ? 'crosshair' : '';
+          
+          // Re-enable all map interactions
+          map.dragPan.enable();
+          map.doubleClickZoom.enable();
+          map.scrollZoom.enable();
+          map.boxZoom.enable();
+          map.dragRotate.enable();
+          map.keyboard.enable();
+          map.touchZoomRotate.enable();
+          
+          // Restore proper draw mode
+          if (drawRef.current) {
+            if (drawingModeRef.current === 'draw') {
+              drawRef.current.changeMode('draw_polygon');
+            } else {
+              drawRef.current.changeMode('simple_select');
+            }
+          }
+          return;
+        }
+        
+        // Handle rotation end
         if (isDragging) {
           isDragging = false;
           isRotatingRef.current = false;
           currentCenter = null;
+          
+          // Clear rotation references
+          originalOverlayRef.current = null;
           
           // Restore cursor based on drawing mode
           if (drawingModeRef.current === 'draw') {
@@ -989,6 +1135,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           map.dragRotate.enable();
           map.keyboard.enable();
           map.touchZoomRotate.enable();
+          
+          console.log('Rotation ended');
         }
       });
 
@@ -1060,6 +1208,99 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       map.on('mouseleave', 'polygon-rotation-handles', () => {
         if (!isRotating) {
           map.getCanvas().style.cursor = 'crosshair';
+        }
+      });
+
+      // Parking rotation handle mouse events
+      map.on('mousedown', 'parking-rotation-handles', (e) => {
+        if (!e.features || e.features.length === 0) return;
+        
+        e.preventDefault();
+        isDragging = true;
+        isRotatingRef.current = true;
+        
+        const feature = e.features[0];
+        const overlayId = feature.properties?.overlayId;
+        const selectedOverlay = parkingOverlaysRef.current.find(o => o.id === overlayId);
+        
+        if (!selectedOverlay) return;
+        
+        currentCenter = selectedOverlay.position as [number, number];
+        const mousePoint = e.lngLat;
+        dragStartAngle = Math.atan2(mousePoint.lat - currentCenter[1], mousePoint.lng - currentCenter[0]);
+        
+        // Store the original drag start angle for stable rotation calculation
+        originalDragStartAngleRef.current = dragStartAngle;
+        
+        console.log('🎯 Starting parking rotation:', {
+          overlayId,
+          center: currentCenter,
+          mousePoint: [mousePoint.lng, mousePoint.lat],
+          startAngle: dragStartAngle * 180 / Math.PI,
+          initialRotation: selectedOverlay.rotation
+        });
+        
+        map.getCanvas().style.cursor = 'grabbing';
+        
+        // Store original overlay for rotation
+        originalOverlayRef.current = { ...selectedOverlay };
+      });
+
+      map.on('mouseenter', 'parking-rotation-handles', () => {
+        map.getCanvas().style.cursor = 'grab';
+      });
+
+      map.on('mouseleave', 'parking-rotation-handles', () => {
+        if (!isRotating) {
+          map.getCanvas().style.cursor = 'crosshair';
+        }
+      });
+
+      // Add parking overlay dragging functionality
+      map.on('mousedown', 'parking-overlays-fill', (e) => {
+        const currentSelectedId = selectedParkingIdRef.current;
+        
+        if (e.features && e.features.length > 0 && currentSelectedId) {
+          const feature = e.features[0];
+          const overlayId = feature.properties?.overlayId || feature.properties?.id;
+          const overlay = parkingOverlaysRef.current.find(o => o.id === overlayId);
+          
+          if (overlay && currentSelectedId === overlayId) {
+            isDraggingParkingRef.current = true;
+            draggedParkingIdRef.current = overlayId;
+            originalOverlayRef.current = { ...overlay };
+            
+            // Set flag to prevent polygon interactions
+            parkingClickedRef.current = true;
+            
+            // Store the initial mouse position relative to overlay center
+            const mousePoint = e.lngLat;
+            const overlayCenter = overlay.position;
+            currentCenter = overlayCenter as [number, number];
+            
+            map.getCanvas().style.cursor = 'move';
+            
+            // Disable map interactions during drag
+            map.dragPan.disable();
+            map.doubleClickZoom.disable();
+            map.scrollZoom.disable();
+            map.boxZoom.disable();
+            map.dragRotate.disable();
+            map.keyboard.disable();
+            map.touchZoomRotate.disable();
+            
+            // Temporarily disable draw interactions by switching to simple_select
+            if (drawRef.current) {
+              drawRef.current.changeMode('simple_select');
+              // Clear any current selection to prevent interference
+              const selected = drawRef.current.getSelectedIds();
+              if (selected.length > 0) {
+                drawRef.current.changeMode('simple_select');
+              }
+            }
+            
+            e.preventDefault();
+          }
         }
       });
 
@@ -1183,6 +1424,48 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     }
   }, [snapToGrid, gridSize, isMapLoaded]);
 
+  // Helper function to generate rotation handles for parking overlays
+  const generateParkingRotationHandles = (overlay: ParkingOverlay): any[] => {
+    const { position, rotation, size, type, quantity } = overlay;
+    const [centerLng, centerLat] = position;
+    
+    // Calculate total bounds of the parking overlay
+    const totalWidthDeg = size.width / (111320 * Math.cos(centerLat * Math.PI / 180));
+    const totalLengthDeg = size.length / 111320;
+    
+    // Create handle positions at the corners of the total overlay area
+    const halfWidth = totalWidthDeg / 2;
+    const halfLength = totalLengthDeg / 2;
+    
+    const corners = [
+      [-halfWidth, -halfLength], // top-left
+      [halfWidth, -halfLength],  // top-right  
+      [halfWidth, halfLength],   // bottom-right
+      [-halfWidth, halfLength]   // bottom-left
+    ];
+    
+    // Apply rotation to corner positions
+    const rotationRad = (rotation * Math.PI) / 180;
+    const rotatedCorners = corners.map(([x, y]) => {
+      const rotatedX = x * Math.cos(rotationRad) - y * Math.sin(rotationRad);
+      const rotatedY = x * Math.sin(rotationRad) + y * Math.cos(rotationRad);
+      return [centerLng + rotatedX, centerLat + rotatedY];
+    });
+    
+    return rotatedCorners.map((corner, index) => ({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: corner
+      },
+      properties: {
+        type: 'parking-rotation-handle',
+        overlayId: overlay.id,
+        handleIndex: index
+      }
+    }));
+  };
+
   // Update parking overlays
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded) return;
@@ -1191,26 +1474,130 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     const source = map.getSource('parking-overlays') as mapboxgl.GeoJSONSource;
     
     if (source) {
-      const features = parkingOverlays.map(overlay => {
-        const coordinates = calculateParkingSpaceCoordinates(overlay);
-        return {
-          type: 'Feature' as const,
-          geometry: {
-            type: 'Polygon' as const,
-            coordinates: [coordinates]
-          },
-          properties: {
-            id: overlay.id,
-            type: overlay.type,
-            color: overlay.type === 'single' ? '#3b82f6' : '#1e40af'
+      const features: any[] = [];
+      
+      parkingOverlays.forEach(overlay => {
+        // Simple approach: Create individual rectangles for each parking space
+        const { position, rotation, type, quantity } = overlay;
+        const [centerLng, centerLat] = position;
+        
+        // Calculate grid layout
+        const spacesPerRow = type === 'double' ? Math.ceil(quantity / 2) : quantity;
+        const numRows = type === 'double' ? 2 : 1;
+        
+        // Individual space dimensions (standard: 2.7m × 5m, compact: 2.4m × 4.8m)
+        const spaceWidth = overlay.size.width / spacesPerRow; // Individual space width
+        const spaceLength = overlay.size.length / numRows;    // Individual space length
+        
+        // Convert individual space size to degrees
+        const spaceWidthDeg = spaceWidth / (111320 * Math.cos(centerLat * Math.PI / 180));
+        const spaceLengthDeg = spaceLength / 111320;
+        
+        // Calculate total grid dimensions for positioning
+        const totalWidthDeg = overlay.size.width / (111320 * Math.cos(centerLat * Math.PI / 180));
+        const totalLengthDeg = overlay.size.length / 111320;
+        
+        console.log('Simple parking spaces:', {
+          overlayId: overlay.id,
+          quantity,
+          spacesPerRow,
+          numRows,
+          spaceWidth,
+          spaceLength,
+          spaceWidthDeg,
+          spaceLengthDeg
+        });
+        
+        // Generate individual parking space rectangles
+        for (let row = 0; row < numRows; row++) {
+          for (let col = 0; col < spacesPerRow; col++) {
+            // Skip if we've created all the spaces we need
+            if (row * spacesPerRow + col >= quantity) break;
+            
+            // Calculate position for this space
+            const spaceX = centerLng + (col - (spacesPerRow - 1) / 2) * spaceWidthDeg;
+            const spaceY = centerLat + (row - (numRows - 1) / 2) * spaceLengthDeg;
+            
+            // Create rectangle corners for this individual space
+            const halfWidth = spaceWidthDeg / 2;
+            const halfLength = spaceLengthDeg / 2;
+            
+            const corners = [
+              [spaceX - halfWidth, spaceY - halfLength],
+              [spaceX + halfWidth, spaceY - halfLength],
+              [spaceX + halfWidth, spaceY + halfLength],
+              [spaceX - halfWidth, spaceY + halfLength],
+              [spaceX - halfWidth, spaceY - halfLength] // Close polygon
+            ];
+            
+            // Apply rotation if needed
+            const rotatedCorners = rotation !== 0 ? corners.map(([lng, lat]) => {
+              const dx = lng - centerLng;
+              const dy = lat - centerLat;
+              const rotRad = (rotation * Math.PI) / 180;
+              const rotatedX = dx * Math.cos(rotRad) - dy * Math.sin(rotRad);
+              const rotatedY = dx * Math.sin(rotRad) + dy * Math.cos(rotRad);
+              return [centerLng + rotatedX, centerLat + rotatedY];
+            }) : corners;
+            
+            // Add individual parking space rectangle
+            features.push({
+              type: 'Feature' as const,
+              geometry: {
+                type: 'Polygon' as const,
+                coordinates: [rotatedCorners]
+              },
+              properties: {
+                id: `${overlay.id}-space-${row}-${col}`,
+                overlayId: overlay.id,
+                type: overlay.type,
+                spaceNumber: row * spacesPerRow + col + 1,
+                color: overlay.type === 'single' ? '#4a5568' : '#374151' // Gray for parking spaces
+              }
+            });
           }
-        };
+        }
+      });
+
+      // Debug: log the features being set
+      const polygonFeatures = features.filter(f => f.geometry?.type === 'Polygon');
+      
+      console.log('Setting parking overlay data:', {
+        totalFeatures: features.length,
+        polygonFeatures: polygonFeatures.length,
+        sampleFeature: features[0] ? {
+          type: features[0].type,
+          geometry: features[0].geometry?.type,
+          properties: features[0].properties
+        } : null,
+        allFeatureIds: features.map(f => f.properties?.id || f.properties?.overlayId)
       });
 
       source.setData({
         type: 'FeatureCollection',
         features
       });
+
+      // Debug: Check if the parking-grid-lines layer exists and is visible
+      setTimeout(() => {
+        const map = mapRef.current;
+        if (map) {
+          const layer = map.getLayer('parking-grid-lines');
+          const source = map.getSource('parking-overlays') as mapboxgl.GeoJSONSource;
+          console.log('Layer debug:', {
+            layerExists: !!layer,
+            layerType: layer?.type,
+            layerVisible: layer ? map.getLayoutProperty('parking-grid-lines', 'visibility') : 'not found',
+            sourceData: source ? source._data : 'no source'
+          });
+          
+          // Query rendered features to see what's actually being rendered
+          const renderedFeatures = map.queryRenderedFeatures({
+            layers: ['parking-grid-lines']
+          });
+          console.log('Rendered grid line features:', renderedFeatures.length);
+        }
+      }, 100);
     }
   }, [parkingOverlays, isMapLoaded]);
 
@@ -1481,6 +1868,64 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     });
   }, [isMapLoaded]);
 
+  // Function to update rotation handles for parking overlays
+  const updateParkingRotationHandles = useCallback((selectedParkingId?: string | null) => {
+    console.log('🔧 updateParkingRotationHandles called:', {
+      selectedParkingId,
+      isMapLoaded,
+      parkingOverlaysCount: parkingOverlays.length
+    });
+    
+    if (!mapRef.current || !isMapLoaded) {
+      console.log('❌ Map not ready');
+      return;
+    }
+    const map = mapRef.current;
+    const source = map.getSource('rotation-handles') as mapboxgl.GeoJSONSource;
+    
+    if (!source) {
+      console.log('❌ rotation-handles source not found');
+      return;
+    }
+
+    if (!selectedParkingId) {
+      console.log('🧹 Clearing parking handles');
+      // Clear parking handles
+      source.setData({
+        type: 'FeatureCollection',
+        features: []
+      });
+      return;
+    }
+
+    // Find the selected parking overlay
+    const selectedOverlay = parkingOverlays.find(o => o.id === selectedParkingId);
+    console.log('🔍 Looking for overlay:', {
+      selectedParkingId,
+      foundOverlay: !!selectedOverlay,
+      overlayIds: parkingOverlays.map(o => o.id)
+    });
+    
+    if (!selectedOverlay) {
+      console.log('❌ Selected overlay not found');
+      return;
+    }
+
+    try {
+      // Generate parking rotation handles
+      const parkingHandles = generateParkingRotationHandles(selectedOverlay);
+      console.log('✅ Generated handles:', parkingHandles.length);
+      
+      source.setData({
+        type: 'FeatureCollection',
+        features: parkingHandles
+      });
+      
+    } catch (error) {
+      console.error('❌ Error updating parking rotation handles:', error);
+    }
+  }, [parkingOverlays, isMapLoaded]);
+
   // Update polygon rotation handles for selected polygon
   useEffect(() => {
     if (!selectedPolygonId) {
@@ -1499,6 +1944,33 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     updateRotationHandles(selectedPolygon);
   }, [polygons, selectedPolygonId, updateRotationHandles]);
 
+  // Update parking rotation handles for selected parking overlay
+  useEffect(() => {
+    updateParkingRotationHandles(selectedParkingId);
+  }, [selectedParkingId, parkingOverlays, updateParkingRotationHandles]);
+
+  // Update parking overlay visual selection
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoaded) return;
+    
+    const map = mapRef.current;
+    
+    console.log('🎨 Updating parking selection styling:', {
+      selectedParkingId,
+      isMapLoaded,
+      layerExists: !!map.getLayer('parking-overlays-fill')
+    });
+    
+    // Update fill color to highlight selected parking overlay
+    map.setPaintProperty('parking-overlays-fill', 'fill-color', [
+      'case',
+      ['==', ['get', 'overlayId'], selectedParkingId || ''],
+      '#fbbf24', // Yellow for selected parking spaces
+      '#4a5568'  // Gray for unselected parking spaces
+    ]);
+    
+  }, [selectedParkingId, isMapLoaded]);
+
   // Local helper for polygon center calculation  
   const calculatePolygonCenterLocal = (coordinates: number[][]): [number, number] => {
     const lngs = coordinates.map(coord => coord[0]);
@@ -1510,7 +1982,23 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
 
   // Store original polygon for rotation reference
   const originalPolygonRef = useRef<number[][] | null>(null);
+  const originalOverlayRef = useRef<ParkingOverlay | null>(null);
+  const parkingOverlaysRef = useRef<ParkingOverlay[]>(parkingOverlays);
+  const selectedParkingIdRef = useRef<string | null>(selectedParkingId);
+  const parkingClickedRef = useRef<boolean>(false);
+  const isDraggingParkingRef = useRef<boolean>(false);
+  const draggedParkingIdRef = useRef<string | null>(null);
+  
+  // Update refs when props change
+  useEffect(() => {
+    parkingOverlaysRef.current = parkingOverlays;
+  }, [parkingOverlays]);
+  
+  useEffect(() => {
+    selectedParkingIdRef.current = selectedParkingId;
+  }, [selectedParkingId]);
   const totalRotationRef = useRef<number>(0);
+  const originalDragStartAngleRef = useRef<number>(0);
   const isRotatingRef = useRef<boolean>(false);
 
   // Direct rotation function with better precision

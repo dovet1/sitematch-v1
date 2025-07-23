@@ -34,6 +34,7 @@ interface ParkingOverlayProps {
   onUpdateOverlay: (overlay: ParkingOverlay) => void;
   onRemoveOverlay: (overlayId: string) => void;
   onSelectOverlay: (overlayId: string | null) => void;
+  onClearAllParking?: () => void;
   className?: string;
   isMobile?: boolean;
 }
@@ -46,6 +47,7 @@ export function ParkingOverlay({
   onUpdateOverlay,
   onRemoveOverlay,
   onSelectOverlay,
+  onClearAllParking,
   className = '',
   isMobile = false
 }: ParkingOverlayProps) {
@@ -79,9 +81,11 @@ export function ParkingOverlay({
   const handleAddParking = () => {
     if (!hasPolygons) return;
     
+    console.log('Auto Layout button clicked with config:', config);
     const polygon = polygons[0]; // Use first polygon for now
     const layouts = generateParkingLayout(polygon.geometry.coordinates[0], config);
     
+    console.log('Generated layouts:', layouts);
     layouts.forEach(overlay => {
       onAddOverlay(overlay);
     });
@@ -90,6 +94,7 @@ export function ParkingOverlay({
   const handleAddSingleOverlay = () => {
     if (!hasPolygons) return;
     
+    console.log('Single overlay (+) button clicked');
     // Add a single overlay at the center of the first polygon
     const polygon = polygons[0];
     const coordinates = polygon.geometry.coordinates[0];
@@ -107,6 +112,7 @@ export function ParkingOverlay({
       quantity: 1
     };
     
+    console.log('Created single overlay:', newOverlay);
     onAddOverlay(newOverlay);
   };
 
@@ -377,6 +383,17 @@ export function ParkingOverlay({
                     </div>
                   ))}
                 </div>
+                {onClearAllParking && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onClearAllParking}
+                    className="w-full text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive mt-2"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear All Parking
+                  </Button>
+                )}
               </div>
             )}
 
