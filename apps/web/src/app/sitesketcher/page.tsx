@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { MapboxMap, type MapboxMapRef } from './components/MapboxMap';
@@ -27,7 +27,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 const STORAGE_KEY = 'sitesketcher-state';
 const RECENT_SEARCHES_KEY = 'sitesketcher-recent-searches';
 
-export default function SiteSketcherPage() {
+function SiteSketcherContent() {
   const { user, loading, profile } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -565,5 +565,18 @@ export default function SiteSketcherPage() {
         userProfile={profile}
       />
     </div>
+  );
+}
+
+export default function SiteSketcherPage() {
+  return (
+    <Suspense fallback={<div className="h-screen bg-background flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-muted-foreground">Loading SiteSketcher...</p>
+      </div>
+    </div>}>
+      <SiteSketcherContent />
+    </Suspense>
   );
 }
