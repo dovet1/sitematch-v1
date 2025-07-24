@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { LoginModal } from '@/components/auth/login-modal'
 import { SignUpModalEnhanced } from '@/components/auth/signup-modal-enhanced'
+import { AuthChoiceModal } from '@/components/auth/auth-choice-modal'
 import { UserMenu } from '@/components/auth/user-menu'
 import { useAuth } from '@/contexts/auth-context'
 import { Menu, X, Sparkles, LogOut, User, Shield, LayoutDashboard } from 'lucide-react'
@@ -33,13 +34,15 @@ export function Header() {
       href: '/sitesketcher',
       label: 'SiteSketcher',
       primary: false,
-      showWhen: 'always'
+      showWhen: 'always',
+      requiresAuth: false
     },
     {
       href: '/occupier/create-listing?fresh=true',
       label: 'Post Requirement',
       primary: true,
-      showWhen: 'always'
+      showWhen: 'always',
+      requiresAuth: true
     }
   ]
 
@@ -72,20 +75,42 @@ export function Header() {
           <nav className="hidden md:flex items-center space-x-1" aria-label="Main navigation">
             {navigationItems.map((item) => (
               shouldShowNavItem(item) && (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`
-                    px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
-                    ${item.primary 
-                      ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                    }
-                    focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
-                  `}
-                >
-                  {item.label}
-                </Link>
+                item.requiresAuth && !user ? (
+                  <AuthChoiceModal 
+                    key={item.href} 
+                    redirectTo={item.href}
+                    title="Sign in to post requirements"
+                    description="Access your account to create and manage property listings"
+                  >
+                    <button
+                      className={`
+                        px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
+                        ${item.primary 
+                          ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800' 
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }
+                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
+                      `}
+                    >
+                      {item.label}
+                    </button>
+                  </AuthChoiceModal>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`
+                      px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
+                      ${item.primary 
+                        ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800' 
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      }
+                      focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
+                    `}
+                  >
+                    {item.label}
+                  </Link>
+                )
               )
             ))}
           </nav>
@@ -152,21 +177,44 @@ export function Header() {
           <div className="px-4 py-3 space-y-1">
             {navigationItems.map((item) => (
               shouldShowNavItem(item) && (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={closeMobileMenu}
-                  className={`
-                    block px-4 py-3 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
-                    ${item.primary 
-                      ? 'bg-primary-50 text-primary-700 hover:bg-primary-100' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                    }
-                    focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
-                  `}
-                >
-                  {item.label}
-                </Link>
+                item.requiresAuth && !user ? (
+                  <AuthChoiceModal 
+                    key={item.href} 
+                    redirectTo={item.href}
+                    title="Sign in to post requirements"
+                    description="Access your account to create and manage property listings"
+                  >
+                    <button
+                      onClick={closeMobileMenu}
+                      className={`
+                        w-full text-left block px-4 py-3 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
+                        ${item.primary 
+                          ? 'bg-primary-50 text-primary-700 hover:bg-primary-100' 
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }
+                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
+                      `}
+                    >
+                      {item.label}
+                    </button>
+                  </AuthChoiceModal>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={closeMobileMenu}
+                    className={`
+                      block px-4 py-3 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
+                      ${item.primary 
+                        ? 'bg-primary-50 text-primary-700 hover:bg-primary-100' 
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      }
+                      focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
+                    `}
+                  >
+                    {item.label}
+                  </Link>
+                )
               )
             ))}
           </div>
