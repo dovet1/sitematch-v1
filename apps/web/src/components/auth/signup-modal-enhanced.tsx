@@ -115,12 +115,17 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
     setError(null)
   }
 
-  const onSubmitStep2 = async (data: SignUpFormData) => {
+  const onSubmitStep2 = async () => {
+    if (!selectedUserType) {
+      setError('Please select your user type')
+      return
+    }
+    
     setIsLoading(true)
     setError(null)
     
     try {
-      await signUp(email, password, data.userType, redirectTo)
+      await signUp(email, password, selectedUserType, redirectTo)
       // User will be automatically signed in and redirected
       reset()
     } catch (err) {
@@ -313,7 +318,7 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit(onSubmitStep2)} className="space-y-6">
+              <form onSubmit={(e) => { e.preventDefault(); onSubmitStep2(); }} className="space-y-6">
                 <div className="space-y-3">
                   <Label htmlFor="user-type" className="text-base font-medium">
                     Which best describes you?
@@ -322,39 +327,29 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
                     This helps us personalize your experience
                   </p>
                   
-                  {/* Radio Button Options */}
-                  <div className="space-y-2" role="radiogroup" aria-required="true">
-                    {userTypes.map((type) => (
-                      <label
-                        key={type.value}
-                        htmlFor={`user-type-${type.value}`}
-                        className={cn(
-                          "flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all hover:bg-accent/50",
-                          selectedUserType === type.value
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          id={`user-type-${type.value}`}
-                          value={type.value}
-                          {...register('userType', { required: 'Please select your user type' })}
-                          className="mt-1"
-                          aria-label={type.label}
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            {type.icon}
-                            <span className="font-medium">{type.label}</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {type.description}
-                          </p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
+                  {/* Dropdown Selection */}
+                  <Select 
+                    onValueChange={(value: UserType) => {
+                      setValue('userType', value);
+                      clearErrors('userType');
+                    }}
+                    value={selectedUserType}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select your role..." />
+                    </SelectTrigger>
+                    <SelectContent 
+                      className="z-[10000]" 
+                      position="popper"
+                      sideOffset={4}
+                    >
+                      {userTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   
                   {errors.userType && (
                     <p className="text-sm text-red-500" role="alert">{errors.userType.message}</p>
