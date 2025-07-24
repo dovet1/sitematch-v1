@@ -191,11 +191,8 @@ export function CompanyCarousel() {
               // Desktop: Scrollable
               scrollbarWidth: 'none', 
               msOverflowStyle: 'none',
-              overflowX: 'hidden',
-              '::-webkit-scrollbar': {
-                display: 'none'
-              }
-            } as any}
+              overflowX: 'hidden'
+            }}
           >
             {/* Duplicate companies for seamless infinite scroll */}
             {[...companies, ...companies].map((company, index) => (
@@ -261,6 +258,10 @@ export function CompanyCarousel() {
         .desktop-carousel {
           /* Desktop: Allow scrolling for mouse interaction */
           overflow-x: hidden;
+        }
+        
+        .desktop-carousel::-webkit-scrollbar {
+          display: none;
         }
         
         @media (max-width: 768px) {
