@@ -697,6 +697,11 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       });
 
       map.on('draw.update', (e: any) => {
+        // Don't process polygon updates during parking rotation
+        if (isParkingRotating || isRotatingRef.current) {
+          return;
+        }
+        
         if (e.features && e.features.length > 0) {
           const feature = e.features[0] as MapboxDrawPolygon;
           // If this is a manual update (not from rotation), reset references
@@ -1102,7 +1107,9 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         if (!e.features || e.features.length === 0) return;
         
         // Don't allow polygon rotation if parking is being interacted with
-        if (parkingClickedRef.current || isDraggingParkingRef.current) {
+        if (parkingClickedRef.current || isDraggingParkingRef.current || isParkingRotating) {
+          e.preventDefault();
+          e.originalEvent?.stopPropagation();
           return;
         }
         
@@ -1502,8 +1509,18 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           const touches = (e.originalEvent as TouchEvent).touches;
           if (touches.length === 1) {
             e.preventDefault();
+            e.originalEvent?.stopPropagation();
             isParkingRotating = true;
             isRotatingRef.current = true;
+            
+            // Immediately clear any polygon selection to prevent interference
+            if (drawRef.current) {
+              drawRef.current.changeMode('simple_select');
+              const selectedIds = drawRef.current.getSelectedIds();
+              if (selectedIds.length > 0) {
+                drawRef.current.changeMode('simple_select', { featureIds: [] });
+              }
+            }
             
             const feature = e.features[0];
             const overlayId = feature.properties?.overlayId;
@@ -1533,6 +1550,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             map.dragRotate.disable();
             map.keyboard.disable();
             map.touchZoomRotate.disable();
+            map.touchPitch.disable();
           }
         });
         
@@ -1544,6 +1562,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             
             if (touch) {
               e.preventDefault();
+              e.originalEvent?.stopPropagation();
               
               const point = map.unproject([touch.clientX, touch.clientY]);
               const currentAngle = Math.atan2(point.lat - parkingCurrentCenter[1], point.lng - parkingCurrentCenter[0]);
@@ -1590,6 +1609,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
               map.dragRotate.enable();
               map.keyboard.enable();
               map.touchZoomRotate.enable();
+              map.touchPitch.enable();
               
               map.getCanvas().style.cursor = '';
             }
