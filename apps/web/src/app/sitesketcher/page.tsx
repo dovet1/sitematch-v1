@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { MapboxMap, type MapboxMapRef } from './components/MapboxMap';
 import { ResponsiveControls } from './components/ResponsiveControls';
 import { ModeIndicator } from './components/ModeIndicator';
 import { MobileFAB } from './components/MobileFAB';
+import WelcomeOnboarding from './components/WelcomeOnboarding';
 import { AlertTriangle, Pencil, MousePointer, ArrowLeft } from 'lucide-react';
 import type { 
   MapboxDrawPolygon, 
@@ -19,11 +21,18 @@ import { getMapboxToken } from '@/lib/sitesketcher/mapbox-utils';
 import { getPolygonColor } from '@/lib/sitesketcher/colors';
 import '@/styles/sitesketcher-mobile.css';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const STORAGE_KEY = 'sitesketcher-state';
 const RECENT_SEARCHES_KEY = 'sitesketcher-recent-searches';
 
 export default function SiteSketcherPage() {
+  const { user, loading, profile } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const showWelcome = searchParams.get('welcome') === 'true';
+  
   const [state, setState] = useState<SiteSketcherState>({
     polygons: [],
     parkingOverlays: [],
@@ -40,8 +49,20 @@ export default function SiteSketcherPage() {
 
   const [mapboxError, setMapboxError] = useState<string | null>(null);
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(showWelcome);
   const mapRef = useRef<MapboxMapRef>(null);
   const originalMeasurementsRef = useRef<AreaMeasurement | null>(null);
+
+  // Authentication guard - redirect to landing if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      // Add a small delay to prevent flash
+      const timer = setTimeout(() => {
+        router.push('/sitesketcher/landing');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [user, loading, router]);
 
   // Load state from localStorage on mount
   useEffect(() => {
@@ -313,12 +334,35 @@ export default function SiteSketcherPage() {
     }));
   }, []);
 
+  const handleWelcomeClose = useCallback(() => {
+    setShowWelcomeModal(false);
+    // Remove the welcome parameter from URL without triggering a reload
+    const url = new URL(window.location.href);
+    url.searchParams.delete('welcome');
+    window.history.replaceState({}, '', url.toString());
+  }, []);
 
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading SiteSketcher...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated (redirect will happen)
+  if (!user) {
+    return null;
+  }
 
   if (mapboxError) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
+        <div className="max-w-md w-full space-y-4">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription className="mt-2">
@@ -329,6 +373,24 @@ export default function SiteSketcherPage() {
               </p>
             </AlertDescription>
           </Alert>
+          
+          {/* Recovery actions */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.reload()}
+              className="flex-1"
+            >
+              Reload Page
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/sitesketcher/landing')}
+              className="flex-1"
+            >
+              Back to Landing
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -495,6 +557,13 @@ export default function SiteSketcherPage() {
           />
         </div>
       </div>
+
+      {/* Welcome Onboarding Modal */}
+      <WelcomeOnboarding
+        isOpen={showWelcomeModal}
+        onClose={handleWelcomeClose}
+        userProfile={profile}
+      />
     </div>
   );
 }
