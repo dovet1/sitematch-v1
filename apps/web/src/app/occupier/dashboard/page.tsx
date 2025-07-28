@@ -177,7 +177,7 @@ export default function OccupierDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="heading-3 sm:heading-2 text-foreground flex items-center gap-2">
-                  Welcome back{user?.email ? `, ${user.email.split('@')[0]}` : ''}
+                  Welcome back!
                 </h1>
                 <p className="body-base text-muted-foreground mt-1">
                   {listings.length === 0 
