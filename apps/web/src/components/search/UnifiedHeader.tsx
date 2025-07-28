@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/auth/login-modal';
@@ -10,12 +10,12 @@ import { useAuth } from '@/contexts/auth-context';
 import { SearchHeaderBar } from './SearchHeaderBar';
 import { Menu, X, Sparkles } from 'lucide-react';
 import { SearchFilters } from '@/types/search';
+import { cn } from '@/lib/utils';
 
 interface UnifiedHeaderProps {
   searchFilters: SearchFilters;
   onFiltersChange: (filters: SearchFilters) => void;
   onLocationSelect: (locationData: { name: string; coordinates: { lat: number; lng: number } }) => void;
-  onNationwideSearch: () => void;
   isMapView?: boolean;
   onMapViewToggle?: (isMapView: boolean) => void;
   showViewToggle?: boolean;
@@ -25,13 +25,44 @@ export function UnifiedHeader({
   searchFilters,
   onFiltersChange,
   onLocationSelect,
-  onNationwideSearch,
   isMapView = false,
   onMapViewToggle,
   showViewToggle = false
 }: UnifiedHeaderProps) {
   const { user, loading, isAdmin } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  
+  // Track scroll for navbar collapse
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    let ticking = false;
+    
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const shouldCollapse = window.scrollY > 120;
+          
+          // Use longer debounce on mobile for smoother scrolling
+          const debounceTime = window.innerWidth < 768 ? 100 : 30;
+          
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            setIsScrolled(shouldCollapse);
+          }, debounceTime);
+          
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timeoutId);
+    };
+  }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -60,9 +91,12 @@ export function UnifiedHeader({
   return (
     <div className="sticky top-0 z-sticky">
       {/* Navigation Header */}
-      <header className="w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+      <header className="w-full bg-background border-b border-border">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className={cn(
+            "flex items-center justify-between transition-all duration-300",
+            isScrolled ? "h-12" : "h-14"
+          )}>
             {/* Logo */}
             <div className="flex items-center">
               <Link 
@@ -77,27 +111,29 @@ export function UnifiedHeader({
               </Link>
             </div>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center space-x-1" aria-label="Main navigation">
-              {navigationItems.map((item) => (
-                shouldShowNavItem(item) && (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`
-                      px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
-                      ${item.primary 
-                        ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800' 
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                      }
-                      focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
-                    `}
-                  >
-                    {item.label}
-                  </Link>
-                )
-              ))}
-            </nav>
+            {/* Desktop Navigation - Hide when scrolled */}
+            {!isScrolled && (
+              <nav className="hidden md:flex items-center space-x-1" aria-label="Main navigation">
+                {navigationItems.map((item) => (
+                  shouldShowNavItem(item) && (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`
+                        px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
+                        ${item.primary 
+                          ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800' 
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }
+                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
+                      `}
+                    >
+                      {item.label}
+                    </Link>
+                  )
+                ))}
+              </nav>
+            )}
 
             {/* Desktop Auth Section */}
             <div className="hidden md:flex items-center space-x-3">
@@ -215,7 +251,6 @@ export function UnifiedHeader({
         searchFilters={searchFilters}
         onFiltersChange={onFiltersChange}
         onLocationSelect={onLocationSelect}
-        onNationwideSearch={onNationwideSearch}
         isMapView={isMapView}
         onMapViewToggle={onMapViewToggle}
         showViewToggle={showViewToggle}
