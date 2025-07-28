@@ -19,7 +19,8 @@ import { getClearbitLogoUrl } from '@/lib/clearbit-logo';
 export function getSearchResultLogoUrl(listing: SearchResult): string | null {
   // 1. Check if listing uses Clearbit logo and has a domain
   if (listing.clearbit_logo && listing.company_domain) {
-    return getClearbitLogoUrl(listing.company_domain);
+    // Request high-quality 512px PNG logos from Clearbit
+    return getClearbitLogoUrl(listing.company_domain, 512, 'png');
   }
   
   // 2. If clearbit_logo is false, use uploaded logo URL if available

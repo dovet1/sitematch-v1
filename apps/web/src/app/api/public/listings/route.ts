@@ -79,7 +79,10 @@ export async function GET(request: NextRequest) {
         listing_locations(
           id,
           place_name,
-          coordinates
+          coordinates,
+          formatted_address,
+          region,
+          country
         )
       `)
       .eq('status', 'approved')
@@ -292,6 +295,18 @@ export async function GET(request: NextRequest) {
         contact_email: listing.contact_email,
         contact_phone: listing.contact_phone,
         is_nationwide: locations.length === 0, // Treat as nationwide if no locations
+        // Multiple locations support
+        locations: locations.map((loc: any) => ({
+          id: loc.id,
+          place_name: loc.place_name,
+          coordinates: loc.coordinates,
+          formatted_address: loc.formatted_address,
+          region: loc.region,
+          country: loc.country
+        })),
+        // Legacy single location fields for backwards compatibility
+        place_name: primaryLocation?.place_name || null,
+        coordinates: primaryLocation?.coordinates || null,
         // Implement correct fallback logic:
         // 1. If clearbit_logo is true, use company_domain for Clearbit
         // 2. If clearbit_logo is false, use uploaded logo from file_uploads table
@@ -299,8 +314,6 @@ export async function GET(request: NextRequest) {
         logo_url: uploadedLogoUrl,
         clearbit_logo: listing.clearbit_logo || false,
         company_domain: listing.company_domain,
-        place_name: primaryLocation?.place_name || null,
-        coordinates: primaryLocation?.coordinates || null,
         created_at: listing.created_at
       };
     }) || [];
