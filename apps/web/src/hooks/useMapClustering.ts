@@ -86,7 +86,7 @@ export function useMapClustering(
         const center = calculateCenterPoint(clusterListings);
         
         // Get unique listing IDs for cluster naming
-        const uniqueListingIds = [...new Set(clusterListings.map(l => l.id))];
+        const uniqueListingIds = Array.from(new Set(clusterListings.map(l => l.id)));
         
         clusters.push({
           id: `cluster-${uniqueListingIds.join('-')}-${i}`,
