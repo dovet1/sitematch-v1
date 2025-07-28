@@ -22,11 +22,11 @@ interface MapViewState {
   zoom: number;
 }
 
-// Default view centered on UK
+// Default view showing whole UK
 const DEFAULT_VIEW_STATE: MapViewState = {
-  longitude: -2.0,
-  latitude: 54.5,
-  zoom: 5.5
+  longitude: -3.5,
+  latitude: 54.8,
+  zoom: 5.2
 };
 
 // Mapbox token must be provided via environment variables
@@ -156,7 +156,8 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
         mapCache.setCachedData(cacheKey, results, bounds);
 
         // Only auto-center on initial load, not on subsequent map movements
-        if (isInitialLoad) {
+        // But only if a specific location was searched for
+        if (isInitialLoad && filters.coordinates) {
           const coordListings = results.filter((l: SearchResult) => l.coordinates) || [];
           if (coordListings.length > 0) {
             // Calculate bounds to fit all listings
@@ -306,8 +307,8 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
   }
 
   return (
-    <div className="map-wrapper relative">
-      <div className="map-container relative h-[500px] w-full rounded-lg overflow-hidden border border-border" style={{ zIndex: 1 }}>
+    <div className="map-wrapper relative h-full">
+      <div className="map-container relative h-[calc(100vh-120px)] md:h-[calc(100vh-100px)] w-full md:rounded-lg overflow-hidden md:border md:border-border" style={{ zIndex: 1 }}>
       {isLoading && !isInitialLoad && (
         <div className="absolute top-4 right-4 z-50">
           <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-lg">
@@ -343,17 +344,6 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
 
       </Map>
 
-      {/* Map Stats */}
-      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm border border-border rounded-lg px-3 py-2 text-sm">
-        <span className="text-muted-foreground">
-          {mappableListings.length} listing{mappableListings.length !== 1 ? 's' : ''} shown
-          {clusters.length !== mappableListings.length && (
-            <span className="ml-2 text-xs">
-              ({clusters.length} marker{clusters.length !== 1 ? 's' : ''})
-            </span>
-          )}
-        </span>
-      </div>
 
       {/* Multi-listing cluster popup */}
       {selectedCluster && (
