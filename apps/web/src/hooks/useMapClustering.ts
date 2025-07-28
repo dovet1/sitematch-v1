@@ -37,7 +37,7 @@ export function useMapClustering(
     // If clustering is disabled or there's only one listing, return individual markers
     if (!opts.enabled || validListings.length <= 1) {
       return validListings.map(listing => ({
-        id: listing.id,
+        id: `${listing.id}-${(listing as any).location_id || 'default'}`,
         type: 'single' as const,
         coordinates: listing.coordinates!,
         count: 1,
@@ -52,12 +52,18 @@ export function useMapClustering(
     const clusters: MapCluster[] = [];
     const processed = new Set<string>();
 
-    for (const listing of validListings) {
-      if (processed.has(listing.id)) continue;
+    for (let i = 0; i < validListings.length; i++) {
+      const listing = validListings[i];
+      const uniqueKey = `${listing.id}-${(listing as any).location_id || 'default'}`;
+      
+      if (processed.has(uniqueKey)) continue;
 
       // Find nearby listings
-      const nearby = validListings.filter(other => {
-        if (processed.has(other.id) || other.id === listing.id) return false;
+      const nearby = validListings.filter((other, j) => {
+        if (i === j) return false;
+        
+        const otherKey = `${other.id}-${(other as any).location_id || 'default'}`;
+        if (processed.has(otherKey)) return false;
         
         const distance = calculateDistance(
           listing.coordinates!,
@@ -79,8 +85,11 @@ export function useMapClustering(
         const clusterListings = [listing, ...nearby];
         const center = calculateCenterPoint(clusterListings);
         
+        // Get unique listing IDs for cluster naming
+        const uniqueListingIds = [...new Set(clusterListings.map(l => l.id))];
+        
         clusters.push({
-          id: `cluster-${listing.id}`,
+          id: `cluster-${uniqueListingIds.join('-')}-${i}`,
           type: 'cluster',
           coordinates: center,
           count: clusterListings.length,
@@ -88,17 +97,18 @@ export function useMapClustering(
         });
 
         // Mark all listings as processed
-        clusterListings.forEach(l => processed.add(l.id));
+        processed.add(uniqueKey);
+        nearby.forEach(l => processed.add(`${l.id}-${(l as any).location_id || 'default'}`));
       } else {
         // Single listing
         clusters.push({
-          id: listing.id,
+          id: uniqueKey,
           type: 'single',
           coordinates: listing.coordinates!,
           count: 1,
           listings: [listing]
         });
-        processed.add(listing.id);
+        processed.add(uniqueKey);
       }
     }
 
