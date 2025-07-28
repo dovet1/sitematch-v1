@@ -215,6 +215,11 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
             logo_url: null,
             clearbit_logo: false,
             company_domain: null,
+            locations: [{
+              id: '1',
+              place_name: 'London, UK',
+              coordinates: { lat: 51.5074, lng: -0.1278 }
+            }],
             place_name: 'London, UK',
             coordinates: { lat: 51.5074, lng: -0.1278 },
             created_at: new Date().toISOString()
@@ -238,6 +243,11 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
             logo_url: null,
             clearbit_logo: false,
             company_domain: null,
+            locations: [{
+              id: '2',
+              place_name: 'Manchester, UK',
+              coordinates: { lat: 53.4808, lng: -2.2426 }
+            }],
             place_name: 'Manchester, UK',
             coordinates: { lat: 53.4808, lng: -2.2426 },
             created_at: new Date().toISOString()

@@ -120,8 +120,8 @@ export async function fetchCompanyLogo(domain: string): Promise<string | null> {
   await rateLimit();
   
   try {
-    // Clearbit Logo API endpoint
-    const logoUrl = `https://logo.clearbit.com/${normalizedDomain}`;
+    // Clearbit Logo API endpoint with high quality parameters
+    const logoUrl = `https://logo.clearbit.com/${normalizedDomain}?size=512&format=png`;
     
     // Use HEAD request to check if logo exists without downloading
     const response = await fetch(logoUrl, {
@@ -163,15 +163,20 @@ export async function fetchCompanyLogo(domain: string): Promise<string | null> {
  * Gets the full logo URL for display purposes
  * This method always returns the full URL, even for cached entries
  * @param domain - Company domain
+ * @param size - Logo size (optional, defaults to 512 for high quality)
+ * @param format - Image format (optional, defaults to png)
  * @returns Full Clearbit logo URL or null
  */
-export function getClearbitLogoUrl(domain: string): string | null {
+export function getClearbitLogoUrl(domain: string, size: number = 512, format: string = 'png'): string | null {
   if (!validateDomain(domain)) {
     return null;
   }
   
   const normalizedDomain = normalizeDomain(domain);
-  return `https://logo.clearbit.com/${normalizedDomain}`;
+  // Clearbit supports size parameter and format
+  // Size can be any value but common ones are 128, 256, 512
+  // Format can be png, jpg, or svg
+  return `https://logo.clearbit.com/${normalizedDomain}?size=${size}&format=${format}`;
 }
 
 /**

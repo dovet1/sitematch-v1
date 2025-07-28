@@ -24,6 +24,24 @@
 /* Mapbox GL CSS */
 @import 'mapbox-gl/dist/mapbox-gl.css';
 
+/* Listing Card Styles */
+@layer components {
+  .listing-card {
+    border: 1px solid #e5e7eb;
+  }
+  
+  .listing-card:hover {
+    border-color: #d1d5db;
+  }
+  
+  /* Ensure logos render smoothly */
+  .listing-card img {
+    image-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
 /* Violet Bloom Design System - Typography */
 
 @layer base {
