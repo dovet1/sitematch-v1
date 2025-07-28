@@ -1193,6 +1193,136 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }
         }
       });
+
+      // Handle touches on empty map areas to deselect all shapes (mobile equivalent)
+      if (isMobile()) {
+        let clearSelectionTouchStartTime = 0;
+        let clearSelectionTouchStartPoint: {x: number, y: number} | null = null;
+        
+        map.on('touchstart', (e) => {
+          // Only handle deselection in select mode
+          if (drawingModeRef.current !== 'select') {
+            return;
+          }
+          
+          const touches = (e.originalEvent as TouchEvent).touches;
+          if (touches.length === 1) {
+            clearSelectionTouchStartTime = Date.now();
+            clearSelectionTouchStartPoint = { x: e.point.x, y: e.point.y };
+          }
+        });
+        
+        map.on('touchend', (e) => {
+          // Only handle deselection in select mode
+          if (drawingModeRef.current !== 'select') {
+            return;
+          }
+          
+          // Don't handle clearing if any drag/rotation operations are in progress
+          if (isDraggingParkingRef.current || isRotatingRef.current || parkingClickedRef.current) {
+            clearSelectionTouchStartPoint = null;
+            return;
+          }
+          
+          const touches = (e.originalEvent as TouchEvent).changedTouches;
+          if (touches.length === 1 && clearSelectionTouchStartPoint) {
+            const touchDuration = Date.now() - clearSelectionTouchStartTime;
+            const touchEndPoint = e.point;
+            
+            // Calculate distance moved during touch
+            const distance = Math.sqrt(
+              Math.pow(touchEndPoint.x - clearSelectionTouchStartPoint.x, 2) + 
+              Math.pow(touchEndPoint.y - clearSelectionTouchStartPoint.y, 2)
+            );
+            
+            // Only treat as tap if quick touch with minimal movement and no other interactions
+            if (touchDuration < 300 && distance < 10) {
+              // Query for features at the touched point
+              const features = map.queryRenderedFeatures([clearSelectionTouchStartPoint.x, clearSelectionTouchStartPoint.y], {
+                layers: ['parking-overlays-fill', 'polygon-rotation-handles', 'parking-rotation-handles']
+              });
+              
+              // Also check for Mapbox Draw features (polygons)
+              const drawFeatures = map.queryRenderedFeatures([clearSelectionTouchStartPoint.x, clearSelectionTouchStartPoint.y], {
+                filter: ['==', '$type', 'Polygon']
+              });
+              
+              console.log('Touch deselect check:', {
+                drawingMode: drawingModeRef.current,
+                featuresFound: features.length,
+                drawFeaturesFound: drawFeatures.length,
+                point: clearSelectionTouchStartPoint,
+                touchDuration,
+                distance
+              });
+              
+              // If no features were touched (empty area), deselect everything
+              if (features.length === 0 && drawFeatures.length === 0) {
+                console.log('Deselecting all shapes - empty area touched');
+                
+                // Immediately clear rotation handles
+                updateRotationHandles(); // Clear polygon rotation handles
+                updateParkingRotationHandles(null); // Clear parking rotation handles
+                
+                // Clear polygon selection in parent component
+                if (onClearPolygonSelection) {
+                  onClearPolygonSelection();
+                }
+                
+                // Deselect polygons - force clear any selection
+                if (drawRef.current) {
+                  const selectedIds = drawRef.current.getSelectedIds();
+                  console.log('Current selected polygon IDs (touch):', selectedIds);
+                  
+                  // Force deselection by changing to simple_select mode
+                  drawRef.current.changeMode('simple_select');
+                  
+                  // Manually trigger the selection change event to clear rotation handles
+                  setTimeout(() => {
+                    // Clear parking flags to ensure draw.selectionchange can run
+                    parkingClickedRef.current = false;
+                    isDraggingParkingRef.current = false;
+                    
+                    // Force clear any polygon selection using the same method as desktop
+                    if (drawRef.current) {
+                      const selectedIds = drawRef.current.getSelectedIds();
+                      if (selectedIds.length > 0) {
+                        // Clear selection by changing mode to simple_select with no features selected
+                        drawRef.current.changeMode('simple_select', {
+                          featureIds: []
+                        });
+                      }
+                    }
+                    
+                    // Manually execute the draw.selectionchange logic for empty selection
+                    // Clear parking selection when nothing is selected
+                    if (selectedParkingIdRef.current && onClearParkingSelection) {
+                      onClearParkingSelection();
+                    }
+                    
+                    // Clear rotation state and handles
+                    originalPolygonRef.current = null;
+                    totalRotationRef.current = 0;
+                    updateRotationHandles(); // Clear polygon rotation handles immediately
+                    updateParkingRotationHandles(null); // Clear parking rotation handles immediately
+                    
+                    console.log('Manually cleared rotation handles and selection (touch)');
+                  }, 0);
+                }
+                
+                // Deselect parking overlays
+                if (onClearParkingSelection) {
+                  console.log('Clearing parking selection (touch)');
+                  onClearParkingSelection();
+                }
+              }
+            }
+            
+            // Reset touch tracking
+            clearSelectionTouchStartPoint = null;
+          }
+        });
+      }
       
       // Add keyboard shortcut to force draw mode
       map.on('keydown', (e: any) => {
@@ -2011,7 +2141,16 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       draw.changeMode('draw_polygon');
       map.getCanvas().style.cursor = 'crosshair';
     } else {
-      draw.changeMode('simple_select');
+      // Preserve current selection when changing to select mode
+      const currentSelectedIds = draw.getSelectedIds();
+      if (currentSelectedIds.length > 0) {
+        // Change mode while preserving selection
+        draw.changeMode('simple_select', {
+          featureIds: currentSelectedIds
+        });
+      } else {
+        draw.changeMode('simple_select');
+      }
       map.getCanvas().style.cursor = '';
     }
     
