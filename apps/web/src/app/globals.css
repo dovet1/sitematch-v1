@@ -19,6 +19,18 @@
       margin: -12px;
     }
   }
+
+  /* Mobile scroll optimization */
+  @media (max-width: 768px) {
+    html {
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+    
+    body {
+      overscroll-behavior: contain;
+    }
+  }
 }
 
 /* Mapbox GL CSS */

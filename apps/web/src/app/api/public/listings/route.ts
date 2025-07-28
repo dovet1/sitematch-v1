@@ -89,12 +89,12 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .range((page - 1) * limit, page * limit - 1);
 
-    // Apply filters
-    // TODO: Re-enable location filtering when relationships are fixed
-    // if (location && !isNationwide) {
-    //   // Filter by location - in production, this would use PostGIS for proper geographic search
-    //   query = query.or(`listing_locations.place_name.ilike.%${location}%,is_nationwide.eq.true`);
-    // }
+    // Apply location filtering
+    if (location && !isNationwide) {
+      // Since location filtering with relationships is complex, we'll filter after fetching
+      // This is a temporary solution - in production, this should use PostGIS for proper geographic search
+      console.log('Location filtering will be applied client-side for:', location);
+    }
     
     if (companyName) {
       query = query.ilike('company_name', `%${companyName}%`);
@@ -318,6 +318,35 @@ export async function GET(request: NextRequest) {
       };
     }) || [];
 
+    // Apply location filtering if location is provided and not nationwide
+    if (location && !isNationwide) {
+      console.log('Applying location filter for:', location);
+      const locationLower = location.toLowerCase();
+      results = results.filter(listing => {
+        // Include nationwide listings (they match all locations)
+        if (listing.is_nationwide) {
+          return true;
+        }
+        
+        // Check if any of the listing's locations match the search location
+        return listing.locations.some(loc => {
+          if (!loc.place_name) return false;
+          
+          const placeName = loc.place_name.toLowerCase();
+          const formattedAddress = (loc.formatted_address || '').toLowerCase();
+          const region = (loc.region || '').toLowerCase();
+          const country = (loc.country || '').toLowerCase();
+          
+          // Check if location text appears in any of the location fields
+          return placeName.includes(locationLower) ||
+                 formattedAddress.includes(locationLower) ||
+                 region.includes(locationLower) ||
+                 country.includes(locationLower);
+        });
+      });
+      console.log('After location filtering:', results.length, 'results');
+    }
+    
     // Apply nationwide filtering if requested
     if (isNationwide) {
       results = results.filter(listing => listing.is_nationwide);
