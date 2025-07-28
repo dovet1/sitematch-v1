@@ -180,17 +180,19 @@ function SearchPageContent() {
       />
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
-        {/* Results Header */}
-        <div className="mb-6">
-          <h1 className="heading-3">
-            {searchFilters.isNationwide 
-              ? "Nationwide Requirements" 
-              : searchFilters.location 
-                ? `Requirements in ${searchFilters.location}`
-                : "All Requirements"}
-          </h1>
-        </div>
+      <div className={isMapView ? "map-view-container" : "container mx-auto px-4 py-6"}>
+        {/* Results Header - Only show in list view */}
+        {!isMapView && (
+          <div className="mb-6">
+            <h1 className="heading-3">
+              {searchFilters.isNationwide 
+                ? "Nationwide Requirements" 
+                : searchFilters.location 
+                  ? `Requirements in ${searchFilters.location}`
+                  : "All Requirements"}
+            </h1>
+          </div>
+        )}
 
         {/* Results Display */}
         <div className="relative">

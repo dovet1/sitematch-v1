@@ -713,3 +713,21 @@
     }
   }
 }
+
+/* Map View Container - Full viewport for desktop */
+@layer components {
+  .map-view-container {
+    height: calc(100vh - 80px); /* Account for header height */
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+  
+  /* On mobile, maintain some padding and reasonable height */
+  @media (max-width: 768px) {
+    .map-view-container {
+      height: calc(100vh - 100px); /* Account for mobile header */
+      padding: 0 16px;
+    }
+  }
+}

@@ -55,7 +55,7 @@
     width: 100%;
     max-width: 100%;
     border-radius: 8px; /* Smaller border radius on mobile */
-    height: 400px !important; /* Adjust height for mobile */
+    /* Height is now controlled by viewport calc in globals.css */
   }
   
   /* Ensure the map parent container has proper spacing */
@@ -155,7 +155,7 @@
 /* Very small mobile screens */
 @media (max-width: 480px) {
   .map-container {
-    height: 350px !important; /* Smaller height for very small screens */
+    /* Height is now controlled by viewport calc in globals.css */
     border-radius: 4px; /* Even smaller border radius */
   }
   
