@@ -275,6 +275,14 @@ function SiteSketcherContent() {
     setState(prev => ({ ...prev, selectedParkingId: null }));
   }, []);
 
+  const handleClearPolygonSelection = useCallback(() => {
+    setState(prev => ({ ...prev, selectedPolygonId: null }));
+  }, []);
+
+  const handlePolygonSelect = useCallback((polygonId: string) => {
+    setState(prev => ({ ...prev, selectedPolygonId: polygonId }));
+  }, []);
+
   const handleLocationSelect = useCallback((location: SearchResult) => {
     setSearchResult(location);
   }, []);
@@ -458,6 +466,8 @@ function SiteSketcherContent() {
               onPolygonCreate={handlePolygonCreate}
               onPolygonUpdate={handlePolygonUpdate}
               onPolygonDelete={handlePolygonDelete}
+              onPolygonSelect={handlePolygonSelect}
+              onClearPolygonSelection={handleClearPolygonSelection}
               parkingOverlays={state.parkingOverlays}
               onParkingOverlayClick={handleParkingOverlayClick}
               onParkingOverlayUpdate={handleParkingOverlayUpdate}
@@ -513,6 +523,8 @@ function SiteSketcherContent() {
             onPolygonCreate={handlePolygonCreate}
             onPolygonUpdate={handlePolygonUpdate}
             onPolygonDelete={handlePolygonDelete}
+            onPolygonSelect={handlePolygonSelect}
+            onClearPolygonSelection={handleClearPolygonSelection}
             parkingOverlays={state.parkingOverlays}
             onParkingOverlayClick={handleParkingOverlayClick}
             onParkingOverlayUpdate={handleParkingOverlayUpdate}

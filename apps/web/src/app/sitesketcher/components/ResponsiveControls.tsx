@@ -437,11 +437,7 @@ export function ResponsiveControls({
         {isMobile ? (
           <TouchOptimizedButton
             variant="outline"
-            onClick={() => {
-              if (confirm('Clear all drawings? This cannot be undone.')) {
-                onClearAll();
-              }
-            }}
+            onClick={onClearAll}
             className="w-full text-destructive hover:text-destructive"
             minSize={48}
             visualFeedback="color"
@@ -452,11 +448,7 @@ export function ResponsiveControls({
         ) : (
           <Button
             variant="outline"
-            onClick={() => {
-              if (confirm('Clear all drawings? This cannot be undone.')) {
-                onClearAll();
-              }
-            }}
+            onClick={onClearAll}
             className="w-full text-destructive hover:text-destructive"
           >
             <Trash2 className="h-4 w-4 mr-2" />

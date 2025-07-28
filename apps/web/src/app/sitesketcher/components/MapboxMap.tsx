@@ -13,6 +13,8 @@ interface MapboxMapProps {
   onPolygonCreate: (polygon: MapboxDrawPolygon) => void;
   onPolygonUpdate: (polygon: MapboxDrawPolygon) => void;
   onPolygonDelete: (polygonId: string) => void;
+  onPolygonSelect?: (polygonId: string) => void;
+  onClearPolygonSelection?: () => void;
   parkingOverlays: ParkingOverlay[];
   onParkingOverlayClick: (overlay: ParkingOverlay) => void;
   onParkingOverlayUpdate: (overlay: ParkingOverlay) => void;
@@ -41,6 +43,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   onPolygonCreate,
   onPolygonUpdate,
   onPolygonDelete,
+  onPolygonSelect,
+  onClearPolygonSelection,
   parkingOverlays,
   onParkingOverlayClick,
   onParkingOverlayUpdate,
@@ -72,7 +76,10 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   const measurementUnitRef = useRef<MeasurementUnit>(measurementUnit);
   const lastClickedPointRef = useRef<[number, number] | null>(null);
   const isDrawingModeRef = useRef<boolean>(false);
+  const isShiftPressedRef = useRef<boolean>(false);
   const showSideLengthsRef = useRef<boolean>(showSideLengths);
+  const keydownHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
+  const keyupHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
@@ -550,11 +557,26 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }
         });
 
+        // Add drawing annotation line layer for preview
+        map.addLayer({
+          id: 'drawing-annotation-line',
+          type: 'line',
+          source: 'drawing-annotation',
+          filter: ['==', ['geometry-type'], 'LineString'],
+          paint: {
+            'line-color': '#dc2626',
+            'line-width': 2,
+            'line-dasharray': [2, 2],
+            'line-opacity': 0.8
+          }
+        });
+
         // Add drawing annotation layer with different styling
         map.addLayer({
           id: 'drawing-annotation',
           type: 'symbol',
           source: 'drawing-annotation',
+          filter: ['==', ['geometry-type'], 'Point'],
           layout: {
             'text-field': ['get', 'label'],
             'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
@@ -757,6 +779,12 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
               onClearParkingSelection();
             }
             
+            // Notify parent about polygon selection
+            if (onPolygonSelect) {
+              const polygonId = String(selectedFeature.id || selectedFeature.properties?.id || '');
+              onPolygonSelect(polygonId);
+            }
+            
             // Reset rotation state for newly selected polygon
             originalPolygonRef.current = null;
             totalRotationRef.current = 0;
@@ -781,6 +809,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         if (!isDrawingModeRef.current) {
           lastClickedPointRef.current = null;
           drawingPointsRef.current = [];
+          
           // Clear annotation when not drawing
           const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
           if (drawingSource) {
@@ -794,17 +823,89 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         }
       });
       
+      // Simple shift+click handler for right angles
+      const canvas = map.getCanvas();
+      
+      // Add keydown/keyup listeners to track shift state
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Shift') {
+          isShiftPressedRef.current = true;
+        }
+      };
+      
+      const handleKeyUp = (e: KeyboardEvent) => {
+        if (e.key === 'Shift') {
+          isShiftPressedRef.current = false;
+        }
+      };
+      
+      // Store handlers in refs for cleanup
+      keydownHandlerRef.current = handleKeyDown;
+      keyupHandlerRef.current = handleKeyUp;
+      
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keyup', handleKeyUp);
+      
+      // Handle click events on the canvas
+      const handleCanvasClick = (e: MouseEvent) => {
+        const currentMode = draw.getMode();
+        
+        if (currentMode === 'draw_polygon' && drawingModeRef.current === 'draw' && isShiftPressedRef.current && drawingPointsRef.current.length > 0) {
+          // Prevent the default click
+          e.stopPropagation();
+          e.preventDefault();
+          
+          // Get click coordinates
+          const rect = canvas.getBoundingClientRect();
+          const clickPoint = map.unproject([e.clientX - rect.left, e.clientY - rect.top]);
+          let snappedPoint: [number, number] = [clickPoint.lng, clickPoint.lat];
+          
+          // Get the last point from our tracking
+          const lastPoint = drawingPointsRef.current[drawingPointsRef.current.length - 1];
+          
+          // Calculate which direction to snap to
+          const deltaX = Math.abs(snappedPoint[0] - lastPoint[0]);
+          const deltaY = Math.abs(snappedPoint[1] - lastPoint[1]);
+          
+          if (deltaX > deltaY) {
+            snappedPoint = [snappedPoint[0], lastPoint[1]];
+          } else {
+            snappedPoint = [lastPoint[0], snappedPoint[1]];
+          }
+          
+          // Manually add the point to the current polygon
+          const allFeatures = draw.getAll();
+          if (allFeatures.features.length > 0) {
+            const currentFeature = allFeatures.features[allFeatures.features.length - 1];
+            if (currentFeature.geometry.type === 'Polygon') {
+              // Add the snapped point
+              currentFeature.geometry.coordinates[0].splice(-1, 0, snappedPoint);
+              
+              // Update the feature
+              draw.add(currentFeature);
+              
+              // Update our tracking
+              lastClickedPointRef.current = snappedPoint;
+              drawingPointsRef.current.push(snappedPoint);
+            }
+          }
+        }
+      };
+      
+      canvas.addEventListener('click', handleCanvasClick, true);
+      
       // Track clicks during drawing - capture with higher priority
       map.on('mousedown', (e) => {
         // Check if we're in draw polygon mode
         const currentMode = draw.getMode();
         
-        if (currentMode === 'draw_polygon' && drawingModeRef.current === 'draw') {
-          // Store the clicked point as our new reference
+        if (currentMode === 'draw_polygon' && drawingModeRef.current === 'draw' && !e.originalEvent.shiftKey) {
+          // Store the clicked point as our new reference (only for non-shift clicks)
           const clickedPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
           lastClickedPointRef.current = clickedPoint;
           drawingPointsRef.current.push(clickedPoint);
           isDrawingModeRef.current = true; // Ensure drawing mode is active
+          
           console.log('Drawing mousedown - reference point set:', clickedPoint);
           
           // Clear annotation momentarily after click
@@ -817,35 +918,68 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         }
       });
 
-      // Show real-time distance on mouse move
+      // Simpler approach: just show preview and handle clicks
       map.on('mousemove', (e) => {
         // Only show in draw mode with a reference point
         if (drawingModeRef.current !== 'draw' || !isDrawingModeRef.current || !lastClickedPointRef.current) {
           return;
         }
 
-        const currentPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+        let currentPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+        let snapIndicator = null;
         
-        // Calculate distance from last clicked point to current mouse position
+        // If shift is pressed and we have points, show snap preview
+        if (isShiftPressedRef.current && drawingPointsRef.current.length > 0) {
+          const lastPoint = drawingPointsRef.current[drawingPointsRef.current.length - 1];
+          const deltaX = Math.abs(currentPoint[0] - lastPoint[0]);
+          const deltaY = Math.abs(currentPoint[1] - lastPoint[1]);
+          
+          if (deltaX > deltaY) {
+            // Would snap horizontally
+            currentPoint = [currentPoint[0], lastPoint[1]];
+            snapIndicator = 'horizontal';
+          } else {
+            // Would snap vertically
+            currentPoint = [lastPoint[0], currentPoint[1]];
+            snapIndicator = 'vertical';
+          }
+        }
+        
+        // Calculate distance from last clicked point to current position
         const distance = calculateDistance(lastClickedPointRef.current, currentPoint);
         const formattedDistance = formatDistance(distance, measurementUnitRef.current);
         
         // Place annotation at the mouse position with slight offset
         const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
         if (drawingSource) {
-          // Remove spam log - console.log('Updating drawing annotation:', formattedDistance);
-          drawingSource.setData({
-            type: 'FeatureCollection',
-            features: [{
+          const features: any[] = [{
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: currentPoint
+            },
+            properties: {
+              label: formattedDistance + (snapIndicator ? ` (90° ${snapIndicator})` : '')
+            }
+          }];
+          
+          // Add a line preview if shift is held
+          if (isShiftPressedRef.current && lastClickedPointRef.current) {
+            features.push({
               type: 'Feature',
               geometry: {
-                type: 'Point',
-                coordinates: currentPoint
+                type: 'LineString',
+                coordinates: [lastClickedPointRef.current, currentPoint]
               },
               properties: {
-                label: formattedDistance
+                isPreview: true
               }
-            }]
+            });
+          }
+          
+          drawingSource.setData({
+            type: 'FeatureCollection',
+            features
           });
         }
       });
@@ -857,6 +991,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       map.on('draw.create', () => {
         lastClickedPointRef.current = null;
         drawingPointsRef.current = [];
+        
         const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
         if (drawingSource) {
           drawingSource.setData({ type: 'FeatureCollection', features: [] });
@@ -1001,6 +1136,15 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         if (features.length === 0 && drawFeatures.length === 0) {
           console.log('Deselecting all shapes - empty area clicked');
           
+          // Immediately clear rotation handles
+          updateRotationHandles(); // Clear polygon rotation handles
+          updateParkingRotationHandles(null); // Clear parking rotation handles
+          
+          // Clear polygon selection in parent component
+          if (onClearPolygonSelection) {
+            onClearPolygonSelection();
+          }
+          
           // Deselect polygons - force clear any selection
           if (drawRef.current) {
             const selectedIds = drawRef.current.getSelectedIds();
@@ -1015,9 +1159,15 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
               parkingClickedRef.current = false;
               isDraggingParkingRef.current = false;
               
-              // Force deselection by switching modes and back
+              // Force clear any polygon selection
               if (drawRef.current) {
-                drawRef.current.changeMode('simple_select');
+                const selectedIds = drawRef.current.getSelectedIds();
+                if (selectedIds.length > 0) {
+                  // Clear selection by changing mode to simple_select with no features selected
+                  drawRef.current.changeMode('simple_select', {
+                    featureIds: []
+                  });
+                }
               }
               
               // Manually execute the draw.selectionchange logic for empty selection
@@ -1029,7 +1179,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
               // Clear rotation state and handles
               originalPolygonRef.current = null;
               totalRotationRef.current = 0;
-              updateRotationHandles(); // Clear rotation handles immediately
+              updateRotationHandles(); // Clear polygon rotation handles immediately
+              updateParkingRotationHandles(null); // Clear parking rotation handles immediately
               
               console.log('Manually cleared rotation handles and selection');
             }, 0);
@@ -1781,6 +1932,14 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
 
     return () => {
       if (mapRef.current) {
+        // Clean up keyboard event listeners
+        if (keydownHandlerRef.current) {
+          document.removeEventListener('keydown', keydownHandlerRef.current);
+        }
+        if (keyupHandlerRef.current) {
+          document.removeEventListener('keyup', keyupHandlerRef.current);
+        }
+        
         mapRef.current.remove();
         mapRef.current = null;
         drawRef.current = null;
