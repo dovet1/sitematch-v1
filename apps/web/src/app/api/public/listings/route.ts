@@ -329,7 +329,7 @@ export async function GET(request: NextRequest) {
         }
         
         // Check if any of the listing's locations match the search location
-        return listing.locations.some(loc => {
+        return listing.locations.some((loc: any) => {
           if (!loc.place_name) return false;
           
           const placeName = loc.place_name.toLowerCase();
