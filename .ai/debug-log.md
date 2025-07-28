@@ -28,3 +28,5 @@ This file tracks development agent failures and debugging information.
 | Fix headshot upload missing URLs | step1-company-info.tsx, step4-additional-contacts.tsx | Added file upload to /api/upload to get URLs for headshots | No |
 | Fix is_nationwide schema error | draft-listings.ts, create-listing/page.tsx, ListingReview.tsx | Removed is_nationwide field, determine nationwide by lack of locations | No |
 | Implement mobile UX for SiteSketcher | Multiple files | Added MobileBottomSheet, TouchOptimizedButton, gesture handling, visual feedback | No |
+| Fix map to show all listing_locations | map/route.ts, useMapClustering.ts | Modified API to return one pin per location, updated clustering to handle location_id | No |
+| Display company logos as map pins | MapMarker.tsx | Modified single listing pins to show company logo with fallback to initials | No |

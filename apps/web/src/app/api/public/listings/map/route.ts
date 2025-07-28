@@ -282,12 +282,17 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Transform data for map pins with enhanced details for Story 8.0
-    const mapResults = listings?.map(listing => {
-      // Get first location with coordinates
+    // Transform data for map pins - create one pin per listing_location
+    const mapResults: any[] = [];
+    
+    listings?.forEach(listing => {
       const locations = (listing.listing_locations as any) || [];
-      const location = locations[0];
-      const coordinates: any = location?.coordinates;
+      
+      // If no locations, skip this listing
+      if (locations.length === 0) {
+        console.warn(`Listing ${listing.id} has no locations, skipping`);
+        return;
+      }
       
       // Contact info is now directly on the listing
       const contact = {
@@ -297,15 +302,18 @@ export async function GET(request: NextRequest) {
         phone: listing.contact_phone
       };
       
-      // Validate coordinates
-      if (!coordinates) {
-        console.warn(`Listing ${listing.id} missing coordinates, skipping`);
-        return null;
-      }
-      
-      // Parse coordinates safely
-      let lat, lng;
-      if (coordinates) {
+      // Create a map result for each location
+      locations.forEach((location: any) => {
+        const coordinates: any = location?.coordinates;
+        
+        // Validate coordinates
+        if (!coordinates) {
+          console.warn(`Location ${location.id} for listing ${listing.id} missing coordinates, skipping`);
+          return;
+        }
+        
+        // Parse coordinates safely
+        let lat, lng;
         try {
           if (Array.isArray(coordinates)) {
             [lng, lat] = coordinates; // GeoJSON format [longitude, latitude]
@@ -321,69 +329,74 @@ export async function GET(request: NextRequest) {
             throw new Error('Coordinates out of valid range');
           }
         } catch (coordError) {
-          console.warn(`Invalid coordinates for listing ${listing.id}:`, coordError);
-          return null;
+          console.warn(`Invalid coordinates for location ${location.id}:`, coordError);
+          return;
         }
-      } else {
-        // No coordinates available - return null for this listing
-        return null;
-      }
-      
-      return {
-        id: listing.id,
-        company_name: listing.company_name || 'Unknown Company',
-        title: listing.title || 'Untitled Listing',
-        description: listing.description || listing.title || 'No description available',
-        site_size_min: listing.site_size_min,
-        site_size_max: listing.site_size_max,
-        site_acreage_min: listing.site_acreage_min,
-        site_acreage_max: listing.site_acreage_max,
-        dwelling_count_min: listing.dwelling_count_min,
-        dwelling_count_max: listing.dwelling_count_max,
         
-        // Enhanced sector and use class data with correct structure
-        sectors: listing.listing_sectors ? listing.listing_sectors.map((ls: any) => ({
-          id: ls.sector?.id || '1',
-          name: ls.sector?.name || ''
-        })) : [],
-        use_classes: listing.listing_use_classes ? listing.listing_use_classes.map((luc: any) => ({
-          id: luc.use_class?.id || '1',
-          name: luc.use_class?.name || '',
-          code: luc.use_class?.code || ''
-        })) : [],
-        
-        // Simplified fields for backward compatibility
-        sector: (listing.listing_sectors as any)?.[0]?.sector?.name || null,
-        use_class: (listing.listing_use_classes as any)?.[0]?.use_class?.name || null,
-        
-        // Enhanced contact data (now from listing directly)
-        contact_name: contact.name || 'Contact Available',
-        contact_title: contact.title || null,
-        contact_email: contact.email || null,
-        contact_phone: contact.phone || null,
-        
-        // Additional fields for Story 8.0
-        is_nationwide: false, // Not in current schema
-        // Implement correct fallback logic:
-        // 1. If clearbit_logo is true, use company_domain for Clearbit
-        // 2. If clearbit_logo is false, use uploaded logo from file_uploads table
-        // 3. If no uploaded logo exists, fall back to initials
-        logo_url: logoMap[listing.id] || null,
-        clearbit_logo: listing.clearbit_logo || false,
-        company_domain: listing.company_domain,
-        place_name: (location as any)?.place_name || null,
-        coordinates: { lat, lng },
-        
-        // Timestamps
-        created_at: listing.created_at || new Date().toISOString(),
-        updated_at: listing.updated_at || new Date().toISOString(),
-        
-        // Calculated fields
-        price: 'Price on application', // Placeholder for future price data
-        availability: 'Available', // Placeholder for availability status
-        features: [] // Placeholder for property features
-      };
-    }).filter(Boolean) || []; // Filter out null values from invalid listings
+        mapResults.push({
+          id: listing.id,
+          location_id: location.id, // Track which location this pin represents
+          company_name: listing.company_name || 'Unknown Company',
+          title: listing.title || 'Untitled Listing',
+          description: listing.description || listing.title || 'No description available',
+          site_size_min: listing.site_size_min,
+          site_size_max: listing.site_size_max,
+          site_acreage_min: listing.site_acreage_min,
+          site_acreage_max: listing.site_acreage_max,
+          dwelling_count_min: listing.dwelling_count_min,
+          dwelling_count_max: listing.dwelling_count_max,
+          
+          // Enhanced sector and use class data with correct structure
+          sectors: listing.listing_sectors ? listing.listing_sectors.map((ls: any) => ({
+            id: ls.sector?.id || '1',
+            name: ls.sector?.name || ''
+          })) : [],
+          use_classes: listing.listing_use_classes ? listing.listing_use_classes.map((luc: any) => ({
+            id: luc.use_class?.id || '1',
+            name: luc.use_class?.name || '',
+            code: luc.use_class?.code || ''
+          })) : [],
+          
+          // Simplified fields for backward compatibility
+          sector: (listing.listing_sectors as any)?.[0]?.sector?.name || null,
+          use_class: (listing.listing_use_classes as any)?.[0]?.use_class?.name || null,
+          
+          // Enhanced contact data (now from listing directly)
+          contact_name: contact.name || 'Contact Available',
+          contact_title: contact.title || null,
+          contact_email: contact.email || null,
+          contact_phone: contact.phone || null,
+          
+          // Additional fields for Story 8.0
+          is_nationwide: false, // Not in current schema
+          // Implement correct fallback logic:
+          // 1. If clearbit_logo is true, use company_domain for Clearbit
+          // 2. If clearbit_logo is false, use uploaded logo from file_uploads table
+          // 3. If no uploaded logo exists, fall back to initials
+          logo_url: logoMap[listing.id] || null,
+          clearbit_logo: listing.clearbit_logo || false,
+          company_domain: listing.company_domain,
+          place_name: location?.place_name || null,
+          coordinates: { lat, lng },
+          
+          // All locations for this listing (for reference)
+          locations: locations.map((loc: any) => ({
+            id: loc.id,
+            place_name: loc.place_name,
+            coordinates: loc.coordinates
+          })),
+          
+          // Timestamps
+          created_at: listing.created_at || new Date().toISOString(),
+          updated_at: listing.updated_at || new Date().toISOString(),
+          
+          // Calculated fields
+          price: 'Price on application', // Placeholder for future price data
+          availability: 'Available', // Placeholder for availability status
+          features: [] // Placeholder for property features
+        });
+      });
+    });
 
     // If no results from database, return mock data for development
     if (mapResults.length === 0) {
