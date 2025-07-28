@@ -38,6 +38,16 @@ export interface SearchResult {
   // Logo management fields - Story 9.0
   clearbit_logo: boolean;
   company_domain: string | null;
+  // Multiple locations support
+  locations: Array<{
+    id: string;
+    place_name: string;
+    coordinates: { lat: number; lng: number } | null;
+    formatted_address?: string;
+    region?: string;
+    country?: string;
+  }>;
+  // Legacy single location fields for backwards compatibility
   place_name: string | null;
   coordinates: { lat: number; lng: number } | null;
   created_at: string;
