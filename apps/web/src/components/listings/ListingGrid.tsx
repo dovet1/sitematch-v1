@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react';
 import { SearchFilters, SearchResult } from '@/types/search';
 import { ListingCard } from './ListingCard';
 import { LoadingGrid } from './LoadingGrid';
+import { SearchEmptyState } from './SearchEmptyState';
 
 interface ListingGridProps {
   filters: SearchFilters;
   onListingClick: (listingId: string) => void;
+  onFiltersChange?: (filters: SearchFilters) => void;
 }
 
-export function ListingGrid({ filters, onListingClick }: ListingGridProps) {
+export function ListingGrid({ filters, onListingClick, onFiltersChange }: ListingGridProps) {
   const [listings, setListings] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,13 +87,43 @@ export function ListingGrid({ filters, onListingClick }: ListingGridProps) {
   }
 
   if (listings.length === 0) {
+    const handleBrowseAll = () => {
+      if (onFiltersChange) {
+        onFiltersChange({
+          ...filters,
+          location: '',
+          coordinates: null,
+          isNationwide: true
+        });
+      }
+    };
+
+    const handleClearFilters = () => {
+      if (onFiltersChange) {
+        onFiltersChange({
+          location: '',
+          coordinates: null,
+          companyName: '',
+          sector: [],
+          useClass: [],
+          listingType: [],
+          sizeMin: null,
+          sizeMax: null,
+          acreageMin: null,
+          acreageMax: null,
+          dwellingMin: null,
+          dwellingMax: null,
+          isNationwide: false,
+        });
+      }
+    };
+
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground mb-4">No listings found matching your criteria.</p>
-        <p className="text-sm text-muted-foreground">
-          Try adjusting your filters or search location.
-        </p>
-      </div>
+      <SearchEmptyState 
+        filters={filters}
+        onBrowseAll={handleBrowseAll}
+        onClearFilters={handleClearFilters}
+      />
     );
   }
 
