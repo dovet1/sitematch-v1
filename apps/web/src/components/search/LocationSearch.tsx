@@ -11,6 +11,7 @@ interface LocationSearchProps {
   value: string;
   onChange: (value: string) => void;
   onLocationSelect?: (location: { name: string; coordinates: { lat: number; lng: number } }) => void;
+  onEnterKey?: () => void;
   onFocus?: () => void;
   onBlur?: () => void;
   placeholder?: string;
@@ -19,7 +20,7 @@ interface LocationSearchProps {
   hideIcon?: boolean;
 }
 
-export function LocationSearch({ value, onChange, onLocationSelect, onFocus, onBlur, placeholder = "Enter location", className, autoFocus = false, hideIcon = false }: LocationSearchProps) {
+export function LocationSearch({ value, onChange, onLocationSelect, onEnterKey, onFocus, onBlur, placeholder = "Enter location", className, autoFocus = false, hideIcon = false }: LocationSearchProps) {
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -138,8 +139,10 @@ export function LocationSearch({ value, onChange, onLocationSelect, onFocus, onB
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showSuggestions) {
       if (e.key === 'Enter') {
-        // Form submission will be handled by parent
         e.preventDefault();
+        if (onEnterKey) {
+          onEnterKey();
+        }
       }
       return;
     }

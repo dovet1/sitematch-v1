@@ -15,7 +15,6 @@ interface SearchHeaderBarProps {
   searchFilters: SearchFilters;
   onFiltersChange: (filters: SearchFilters) => void;
   onLocationSelect: (locationData: { name: string; coordinates: { lat: number; lng: number } }) => void;
-  onNationwideSearch: () => void;
   isMapView?: boolean;
   onMapViewToggle?: (isMapView: boolean) => void;
   showViewToggle?: boolean;
@@ -26,7 +25,6 @@ export function SearchHeaderBar({
   searchFilters,
   onFiltersChange,
   onLocationSelect,
-  onNationwideSearch,
   isMapView = false,
   onMapViewToggle,
   showViewToggle = false,
@@ -35,18 +33,41 @@ export function SearchHeaderBar({
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isLocationFocused, setIsLocationFocused] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [forceExpanded, setForceExpanded] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
 
-  // Track scroll position for styling changes
+  // Track scroll position for styling changes and collapse behavior
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const handleScroll = () => {
       const scrolled = window.scrollY > 10;
+      const shouldCollapse = window.scrollY > 120; // Slightly higher threshold
+      
       setIsScrolled(scrolled);
+      
+      // Debounce collapse changes to prevent flutter
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        // Reset forceExpanded if user scrolls past the threshold after interaction
+        if (forceExpanded && shouldCollapse && !isLocationFocused) {
+          setForceExpanded(false);
+        }
+        
+        // Don't collapse if force expanded or if user is interacting with search
+        if (!forceExpanded && !isLocationFocused) {
+          setIsCollapsed(shouldCollapse);
+        }
+      }, 50); // 50ms delay to smooth out rapid scroll changes
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timeoutId);
+    };
+  }, [forceExpanded, isLocationFocused]);
 
   // Calculate active filters count
   const activeFiltersCount = [
@@ -59,8 +80,17 @@ export function SearchHeaderBar({
     searchFilters.dwellingMin !== null || searchFilters.dwellingMax !== null,
   ].filter(Boolean).length;
 
+  // Track local location state without triggering search
+  const [localLocation, setLocalLocation] = useState(searchFilters.location);
+  
+  // Update local state when location changes from parent
+  useEffect(() => {
+    setLocalLocation(searchFilters.location);
+  }, [searchFilters.location]);
+  
   const handleLocationChange = (location: string) => {
-    onFiltersChange({ ...searchFilters, location });
+    // Only update local state, don't trigger search
+    setLocalLocation(location);
   };
 
   const handleClearFilters = () => {
@@ -143,28 +173,69 @@ export function SearchHeaderBar({
           className
         )}
       >
-        <div className="container mx-auto px-4 py-3">
+        <div className={cn(
+          "container mx-auto px-4 transition-all duration-300",
+          isCollapsed ? "py-1" : "py-2"
+        )}>
           {/* Desktop Layout */}
-          <div className="hidden md:flex items-center gap-4">
-            {/* Location Search Section */}
-            <div className="flex-1 relative">
-              <div 
-                className={cn(
-                  "flex items-center bg-white rounded-full border-2 transition-all duration-200",
-                  isLocationFocused 
-                    ? "border-primary-300 shadow-lg ring-4 ring-primary-100" 
-                    : "border-gray-200 hover:border-gray-300 shadow-sm"
-                )}
+          <div className={cn(
+            "hidden md:flex items-center gap-4 transition-all duration-300",
+            isCollapsed && "justify-center"
+          )}>
+            {/* Location Search Section - Responsive to Collapse */}
+            {isCollapsed ? (
+              /* Collapsed Search - Compact Button */
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Scroll to top and restore full interface
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  // Force restore collapsed state immediately and prevent re-collapse
+                  setIsCollapsed(false);
+                  setForceExpanded(true);
+                  // After scroll completes, focus the search input
+                  setTimeout(() => {
+                    setIsLocationFocused(true);
+                  }, 300);
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-full border-gray-200 hover:border-primary-300 transition-all duration-200"
               >
+                <Search className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  {searchFilters.location || "Search location..."}
+                </span>
+              </Button>
+            ) : (
+              /* Full Search Bar */
+              <div className="flex-1 relative">
+                <div 
+                  className={cn(
+                    "flex items-center gap-4 bg-white rounded-full border-2 transition-all duration-200",
+                    isLocationFocused 
+                      ? "border-primary-300 shadow-lg ring-4 ring-primary-100" 
+                      : "border-gray-200 hover:border-gray-300 shadow-sm"
+                  )}
+                >
                 <div className="flex-1 px-4 py-3">
                   <div className="relative">
                     <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <LocationSearch
-                      value={searchFilters.location}
+                      value={localLocation}
                       onChange={handleLocationChange}
                       onLocationSelect={onLocationSelect}
+                      onEnterKey={() => {
+                        if (localLocation.trim()) {
+                          onFiltersChange({ ...searchFilters, location: localLocation.trim() });
+                        }
+                      }}
                       onFocus={() => setIsLocationFocused(true)}
-                      onBlur={() => setIsLocationFocused(false)}
+                      onBlur={() => {
+                        setIsLocationFocused(false);
+                        // Allow normal collapse behavior after user finishes interaction
+                        if (forceExpanded) {
+                          setTimeout(() => setForceExpanded(false), 1000);
+                        }
+                      }}
                       placeholder="Where are you looking?"
                       className="w-full border-0 outline-none bg-transparent text-gray-700 placeholder-gray-400 font-medium pl-12 pr-4"
                       hideIcon={true}
@@ -172,49 +243,61 @@ export function SearchHeaderBar({
                   </div>
                 </div>
                 
-                {/* Divider */}
-                <div className="w-px h-8 bg-gray-200" />
-                
-                {/* Nationwide Toggle */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onNationwideSearch}
-                  className={cn(
-                    "px-4 py-3 h-auto rounded-none rounded-r-full font-medium transition-colors",
-                    searchFilters.isNationwide 
-                      ? "bg-primary-50 text-primary-700 hover:bg-primary-100" 
-                      : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
-                  )}
+                {/* Search Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (localLocation.trim()) {
+                      // Trigger search with the current local location
+                      onFiltersChange({ ...searchFilters, location: localLocation.trim() });
+                    }
+                  }}
+                  className="violet-bloom-touch flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 hover:bg-primary-700 transition-colors shrink-0 mr-2"
+                  aria-label="Search"
                 >
-                  <Globe className="w-4 h-4 mr-2" />
-                  Nationwide
-                </Button>
+                  <Search className="w-5 h-5 text-white" />
+                </button>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Filters Button */}
-            <Button
-              variant="outline"
-              onClick={() => setIsFilterDrawerOpen(true)}
-              className={cn(
-                "px-6 py-3 h-auto rounded-full font-medium transition-all duration-200 relative",
-                activeFiltersCount > 0 
-                  ? "bg-primary-50 border-primary-200 text-primary-700 shadow-sm" 
-                  : "border-gray-200 hover:border-gray-300 shadow-sm"
-              )}
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Filters
-              {activeFiltersCount > 0 && (
-                <Badge 
-                  variant="secondary" 
-                  className="ml-2 bg-primary-100 text-primary-700 border-primary-200"
+            {/* Filters Button - Responsive to Collapse */}
+            {isCollapsed ? (
+              /* Collapsed Filters - Show count only */
+              activeFiltersCount > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsFilterDrawerOpen(true)}
+                  className="px-3 py-2 rounded-full border-primary-200 bg-primary-50 text-primary-700"
                 >
+                  <Filter className="w-4 h-4 mr-1" />
                   {activeFiltersCount}
-                </Badge>
-              )}
-            </Button>
+                </Button>
+              )
+            ) : (
+              /* Full Filters Button */
+              <Button
+                variant="outline"
+                onClick={() => setIsFilterDrawerOpen(true)}
+                className={cn(
+                  "px-6 py-3 h-auto rounded-full font-medium transition-all duration-200 relative",
+                  activeFiltersCount > 0 
+                    ? "bg-primary-50 border-primary-200 text-primary-700 shadow-sm" 
+                    : "border-gray-200 hover:border-gray-300 shadow-sm"
+                )}
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Filters
+                {activeFiltersCount > 0 && (
+                  <Badge 
+                    variant="secondary" 
+                    className="ml-2 bg-primary-100 text-primary-700 border-primary-200"
+                  >
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+              </Button>
+            )}
 
             {/* View Toggle */}
             {showViewToggle && onMapViewToggle && (
@@ -264,7 +347,7 @@ export function SearchHeaderBar({
                 <span className="text-left text-gray-600 font-medium truncate">
                   {searchFilters.isNationwide 
                     ? "Nationwide search" 
-                    : searchFilters.location || "Where are you looking?"}
+                    : localLocation || searchFilters.location || "Where are you looking?"}
                 </span>
               </Button>
 
@@ -305,10 +388,17 @@ export function SearchHeaderBar({
           </div>
         </div>
 
-        {/* Active Filters Display */}
-        {activeFiltersCount > 0 && (
-          <div className="border-t border-gray-100 bg-gray-50/80 backdrop-blur-sm">
-            <div className="container mx-auto px-4 py-3">
+        {/* Active Filters Display - Smooth Collapsible - Hidden on Map View */}
+        {activeFiltersCount > 0 && !isMapView && (
+          <div className={cn(
+            "border-t border-gray-100 bg-gray-50/50 backdrop-blur-sm transition-all duration-300 ease-in-out overflow-hidden",
+            isCollapsed 
+              ? "max-h-0 py-0 opacity-0" 
+              : isScrolled 
+                ? "max-h-20 py-1 opacity-100" 
+                : "max-h-20 py-2 opacity-100"
+          )}>
+            <div className="container mx-auto px-4">
               <div className="flex flex-wrap items-center gap-2 justify-between">
                 <FilterPillsContainer>
                   {/* Company Name Filter */}
@@ -429,32 +519,54 @@ export function SearchHeaderBar({
             
             {/* Search Content */}
             <div className="flex-1 p-4 space-y-4">
-              <LocationSearch
-                value={searchFilters.location}
-                onChange={handleLocationChange}
-                onLocationSelect={(location) => {
-                  onLocationSelect(location);
-                  setIsLocationFocused(false);
-                }}
-                placeholder="Enter location"
-                className="w-full pl-12 pr-10 py-4 border border-gray-200 rounded-lg text-lg"
-                autoFocus
-              />
-              
-              <Button
-                variant="outline"
-                onClick={() => {
-                  onNationwideSearch();
-                  setIsLocationFocused(false);
-                }}
-                className={cn(
-                  "w-full p-4 justify-start rounded-lg font-medium",
-                  searchFilters.isNationwide && "bg-primary-50 border-primary-200 text-primary-700"
+              <div className="space-y-3">
+                <LocationSearch
+                  value={localLocation}
+                  onChange={handleLocationChange}
+                  onLocationSelect={(location) => {
+                    onLocationSelect(location);
+                    setIsLocationFocused(false);
+                  }}
+                  onEnterKey={() => {
+                    if (localLocation.trim()) {
+                      onFiltersChange({ ...searchFilters, location: localLocation.trim() });
+                      setIsLocationFocused(false);
+                    }
+                  }}
+                  placeholder="Enter location"
+                  className="w-full pl-12 pr-10 py-4 border border-gray-200 rounded-lg text-lg"
+                  autoFocus
+                />
+                
+                {/* Search Button for typed location */}
+                {localLocation.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onFiltersChange({ ...searchFilters, location: localLocation.trim() });
+                      setIsLocationFocused(false);
+                    }}
+                    className="w-full p-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    Search in {localLocation}
+                  </button>
                 )}
+              </div>
+              
+              {/* Browse All Option */}
+              <button
+                type="button"
+                onClick={() => {
+                  onFiltersChange({ ...searchFilters, isNationwide: true });
+                  setIsLocationFocused(false);
+                }}
+                className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <Globe className="w-5 h-5 mr-3" />
-                Search nationwide
-              </Button>
+                <div className="flex items-center">
+                  <Search className="w-5 h-5 mr-3 text-gray-400" />
+                  <span className="text-gray-700 font-medium">View all listings nationwide</span>
+                </div>
+              </button>
             </div>
           </div>
         </div>

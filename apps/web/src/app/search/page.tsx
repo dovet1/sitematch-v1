@@ -23,6 +23,7 @@ function SearchPageContent() {
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
     const nationwide = searchParams.get('nationwide') === 'true';
+    const viewAll = searchParams.get('viewAll') === 'true';
     const sectors = searchParams.getAll('sectors[]');
     const useClasses = searchParams.getAll('useClasses[]');
     const listingTypes = searchParams.getAll('listingTypes[]');
@@ -47,7 +48,7 @@ function SearchPageContent() {
       acreageMax: acreageMax ? parseFloat(acreageMax) : null,
       dwellingMin: dwellingMin ? parseInt(dwellingMin) : null,
       dwellingMax: dwellingMax ? parseInt(dwellingMax) : null,
-      isNationwide: nationwide,
+      isNationwide: nationwide || viewAll, // Handle both nationwide and viewAll parameters
     };
   });
 
@@ -101,15 +102,6 @@ function SearchPageContent() {
     handleFiltersChange(newFilters);
   };
 
-  const handleNationwideSearch = () => {
-    const newFilters = {
-      ...searchFilters,
-      location: searchFilters.isNationwide ? searchFilters.location : '',
-      coordinates: searchFilters.isNationwide ? searchFilters.coordinates : null,
-      isNationwide: !searchFilters.isNationwide,
-    };
-    handleFiltersChange(newFilters);
-  };
 
   const handleListingClick = (listingId: string) => {
     setPreviousScrollPosition(window.scrollY);
@@ -146,7 +138,6 @@ function SearchPageContent() {
           searchFilters={searchFilters}
           onFiltersChange={handleFiltersChange}
           onLocationSelect={handleLocationSelect}
-          onNationwideSearch={handleNationwideSearch}
           isMapView={isMapView}
           onMapViewToggle={handleViewToggle}
           showViewToggle={false}
@@ -173,7 +164,6 @@ function SearchPageContent() {
         searchFilters={searchFilters}
         onFiltersChange={handleFiltersChange}
         onLocationSelect={handleLocationSelect}
-        onNationwideSearch={handleNationwideSearch}
         isMapView={isMapView}
         onMapViewToggle={handleViewToggle}
         showViewToggle={true}
@@ -183,14 +173,29 @@ function SearchPageContent() {
       <div className={isMapView ? "map-view-container" : "container mx-auto px-4 py-6"}>
         {/* Results Header - Only show in list view */}
         {!isMapView && (
-          <div className="mb-6">
-            <h1 className="heading-3">
-              {searchFilters.isNationwide 
-                ? "Nationwide Requirements" 
-                : searchFilters.location 
-                  ? `Requirements in ${searchFilters.location}`
-                  : "All Requirements"}
-            </h1>
+          <div className="mb-6 space-y-4">
+            {/* Search State Breadcrumb */}
+            <div className="flex items-center gap-1 sm:gap-2 text-sm text-muted-foreground overflow-hidden">
+              {searchFilters.location || searchFilters.isNationwide ? (
+                <>
+                  <button
+                    onClick={() => handleFiltersChange({ ...searchFilters, location: '', coordinates: null, isNationwide: false })}
+                    className="text-primary-600 hover:text-primary-700 hover:underline transition-colors flex-shrink-0"
+                  >
+                    All Requirements
+                  </button>
+                  <span className="flex-shrink-0">›</span>
+                  <span className="text-foreground font-medium truncate min-w-0">
+                    {searchFilters.isNationwide 
+                      ? "Nationwide" 
+                      : `Search: "${searchFilters.location}"`}
+                  </span>
+                </>
+              ) : (
+                <span className="text-foreground font-medium">All Requirements</span>
+              )}
+            </div>
+            
           </div>
         )}
 
@@ -205,6 +210,7 @@ function SearchPageContent() {
             <ListingGrid
               filters={searchFilters}
               onListingClick={handleListingClick}
+              onFiltersChange={handleFiltersChange}
             />
           )}
         </div>

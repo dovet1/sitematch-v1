@@ -295,10 +295,6 @@ function MobileUserSection({ onClose }: { onClose: () => void }) {
           <p className="text-sm font-medium text-foreground truncate">
             {profile.email}
           </p>
-          <p className="text-xs text-muted-foreground capitalize">
-            {profile.role}
-            {isAdmin && profile.role !== 'admin' && " • Admin"}
-          </p>
         </div>
       </div>
 

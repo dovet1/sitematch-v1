@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Globe } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { LocationSearch } from './LocationSearch';
@@ -33,11 +33,6 @@ export function HeroSearch({ searchFilters }: HeroSearchProps) {
     router.push(`/search?${params.toString()}`);
   };
 
-  const handleNationwideSearch = () => {
-    // Navigate to search page with nationwide parameter
-    // For the home page, always enable nationwide since we're starting fresh
-    router.push('/search?nationwide=true');
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +41,11 @@ export function HeroSearch({ searchFilters }: HeroSearchProps) {
       const params = new URLSearchParams({ location: localLocation });
       router.push(`/search?${params.toString()}`);
     }
+  };
+
+  const handleBrowseAll = () => {
+    // Navigate to search page to browse all listings
+    router.push('/search?viewAll=true');
   };
 
   return (
@@ -67,36 +67,46 @@ export function HeroSearch({ searchFilters }: HeroSearchProps) {
           </p>
           
           {/* Search Form */}
-          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Location Search with Nationwide Button */}
-              <div className="flex flex-col sm:flex-row gap-4 p-2 bg-white rounded-2xl shadow-lg border border-border flex-1">
+          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-4">
+            <div className="flex gap-4">
+              {/* Location Search */}
+              <div className="flex items-center gap-4 p-2 bg-white rounded-2xl shadow-lg border border-border flex-1">
                 <div className="flex-1">
                   <LocationSearch
                     value={localLocation}
                     onChange={handleLocationChange}
                     onLocationSelect={handleLocationSelect}
+                    onEnterKey={() => {
+                      if (localLocation.trim()) {
+                        const params = new URLSearchParams({ location: localLocation.trim() });
+                        router.push(`/search?${params.toString()}`);
+                      }
+                    }}
                     placeholder="Enter location"
                     className="search-bar w-full h-14 border-0 bg-transparent text-lg placeholder:text-muted-foreground focus:ring-0"
                   />
                 </div>
                 
-                {/* Divider */}
-                <div className="hidden sm:block w-px h-14 bg-border self-center" />
-                <div className="sm:hidden h-px w-full bg-border" />
-                
-                {/* Nationwide Button */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="lg"
-                  onClick={handleNationwideSearch}
-                  className="violet-bloom-touch flex items-center gap-2 h-14 px-6 hover:bg-primary-50 transition-colors"
+                {/* Search Button */}
+                <button
+                  type="submit"
+                  className="violet-bloom-touch flex items-center justify-center h-14 w-14 rounded-xl bg-primary-600 hover:bg-primary-700 transition-colors shrink-0 border-0"
+                  aria-label="Search"
                 >
-                  <Globe className="w-5 h-5" />
-                  <span>Search Nationwide</span>
-                </Button>
+                  <Search className="w-5 h-5 text-white" />
+                </button>
               </div>
+            </div>
+            
+            {/* Browse All Option */}
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={handleBrowseAll}
+                className="violet-bloom-touch text-primary-600 hover:text-primary-700 font-medium text-lg underline decoration-2 underline-offset-4 hover:decoration-primary-700 transition-colors"
+              >
+                or browse all listings nationwide
+              </button>
             </div>
           </form>
           
