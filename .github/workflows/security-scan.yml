@@ -17,8 +17,8 @@ jobs:
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
-        base: main
-        head: HEAD
+        base: ${{ github.event.before }}
+        head: ${{ github.sha }}
     
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
