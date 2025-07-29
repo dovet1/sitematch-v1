@@ -7,7 +7,6 @@ import { MapboxMap, type MapboxMapRef } from './components/MapboxMap';
 import { ResponsiveControls } from './components/ResponsiveControls';
 import { ModeIndicator } from './components/ModeIndicator';
 import { MobileFAB } from './components/MobileFAB';
-import { FloatingModeIndicator } from './components/FloatingModeIndicator';
 import WelcomeOnboarding from './components/WelcomeOnboarding';
 import { AlertTriangle, Pencil, MousePointer, ArrowLeft } from 'lucide-react';
 import type { 
@@ -21,7 +20,6 @@ import { calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { getMapboxToken } from '@/lib/sitesketcher/mapbox-utils';
 import { getPolygonColor } from '@/lib/sitesketcher/colors';
 import '@/styles/sitesketcher-mobile.css';
-import '@/styles/sitesketcher-toggle.css';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -277,14 +275,6 @@ function SiteSketcherContent() {
     setState(prev => ({ ...prev, selectedParkingId: null }));
   }, []);
 
-  const handleClearPolygonSelection = useCallback(() => {
-    setState(prev => ({ ...prev, selectedPolygonId: null }));
-  }, []);
-
-  const handlePolygonSelect = useCallback((polygonId: string) => {
-    setState(prev => ({ ...prev, selectedPolygonId: polygonId }));
-  }, []);
-
   const handleLocationSelect = useCallback((location: SearchResult) => {
     setSearchResult(location);
   }, []);
@@ -468,8 +458,6 @@ function SiteSketcherContent() {
               onPolygonCreate={handlePolygonCreate}
               onPolygonUpdate={handlePolygonUpdate}
               onPolygonDelete={handlePolygonDelete}
-              onPolygonSelect={handlePolygonSelect}
-              onClearPolygonSelection={handleClearPolygonSelection}
               parkingOverlays={state.parkingOverlays}
               onParkingOverlayClick={handleParkingOverlayClick}
               onParkingOverlayUpdate={handleParkingOverlayUpdate}
@@ -488,12 +476,17 @@ function SiteSketcherContent() {
             />
             
             {/* Desktop Mode Toggle Button */}
-            {/* Floating Mode Indicator for Desktop */}
-            <FloatingModeIndicator 
-              mode={state.drawingMode}
-              onToggle={handleModeToggle}
-              position="bottom-right"
-            />
+            <button
+              onClick={handleModeToggle}
+              className="absolute bottom-6 left-4 z-10 mode-toggle bg-white rounded-full shadow-lg hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center"
+              title={state.drawingMode === 'draw' ? 'Switch to Select Mode' : 'Switch to Draw Mode'}
+            >
+              {state.drawingMode === 'draw' ? (
+                <Pencil className="w-5 h-5 text-blue-600" />
+              ) : (
+                <MousePointer className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -520,8 +513,6 @@ function SiteSketcherContent() {
             onPolygonCreate={handlePolygonCreate}
             onPolygonUpdate={handlePolygonUpdate}
             onPolygonDelete={handlePolygonDelete}
-            onPolygonSelect={handlePolygonSelect}
-            onClearPolygonSelection={handleClearPolygonSelection}
             parkingOverlays={state.parkingOverlays}
             onParkingOverlayClick={handleParkingOverlayClick}
             onParkingOverlayUpdate={handleParkingOverlayUpdate}

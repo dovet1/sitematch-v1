@@ -22,9 +22,7 @@ export function MobileControls({
   className
 }: MobileControlsProps) {
   const handleClearAll = () => {
-    if (confirm('Clear all drawings? This cannot be undone.')) {
-      onClearAll();
-    }
+    onClearAll();
   };
 
   return (
