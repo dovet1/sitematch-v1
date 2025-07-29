@@ -835,7 +835,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           const currentMousePos: [number, number] = [e.clientX - rect.left, e.clientY - rect.top];
           
           // Store the real mouse position
-          lastRealMousePos = map.unproject(currentMousePos);
+          const unprojected = map.unproject(currentMousePos);
+          lastRealMousePos = [unprojected.lng, unprojected.lat];
           
           // If constraint isn't active yet, activate it and determine direction
           if (!isConstraintActive) {
@@ -848,7 +849,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             // Only activate constraint after meaningful movement
             if (deltaX > 0.0001 || deltaY > 0.0001) {
               isConstraintActive = true;
-              constraintStartPoint = lastPoint;
+              constraintStartPoint = [lastPoint[0], lastPoint[1]];
               constraintDirection = deltaX > deltaY ? 'horizontal' : 'vertical';
             }
           }
