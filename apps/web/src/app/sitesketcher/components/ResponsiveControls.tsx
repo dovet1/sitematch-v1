@@ -16,6 +16,7 @@ import {
   Pencil,
   MousePointer
 } from 'lucide-react';
+import { ModeToggleSwitch } from './ModeToggleSwitch';
 import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode } from '@/types/sitesketcher';
 import { LocationSearch } from './LocationSearch';
 import { formatArea, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
@@ -123,55 +124,15 @@ export function ResponsiveControls({
   function DesktopSections() {
     return (
       <div className="space-y-4">
-        {/* Mode Toggle Button */}
-        {isMobile ? (
-          <TouchOptimizedButton
-            variant="default"
-            onClick={onModeToggle}
-            className={cn(
-              "w-full bottom-sheet-mode-toggle transition-all duration-200 border-0",
-              drawingMode === 'draw' 
-                ? "!bg-blue-600 hover:!bg-blue-700 !text-white !shadow-md" 
-                : "!bg-green-600 hover:!bg-green-700 !text-white !shadow-md"
-            )}
-            minSize={52}
-            visualFeedback="scale"
-          >
-            {drawingMode === 'draw' ? (
-              <>
-                <Pencil className="h-5 w-5 mr-2" />
-                <span className="font-medium">Draw Mode</span>
-              </>
-            ) : (
-              <>
-                <MousePointer className="h-5 w-5 mr-2" />
-                <span className="font-medium">Select Mode</span>
-              </>
-            )}
-          </TouchOptimizedButton>
-        ) : (
-          <Button
-            onClick={onModeToggle}
-            className={cn(
-              "w-full transition-all duration-200",
-              drawingMode === 'draw' 
-                ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                : "bg-green-600 hover:bg-green-700 text-white"
-            )}
-          >
-            {drawingMode === 'draw' ? (
-              <>
-                <Pencil className="h-4 w-4 mr-2" />
-                <span>Draw Mode</span>
-              </>
-            ) : (
-              <>
-                <MousePointer className="h-4 w-4 mr-2" />
-                <span>Select Mode</span>
-              </>
-            )}
-          </Button>
-        )}
+        {/* Mode Toggle Switch */}
+        <div className="flex justify-center overflow-visible">
+          <ModeToggleSwitch 
+            mode={drawingMode}
+            onToggle={onModeToggle}
+            size={isMobile ? "large" : "default"}
+            className="w-full max-w-xs"
+          />
+        </div>
 
         {/* Measurements Section */}
         <Card>
