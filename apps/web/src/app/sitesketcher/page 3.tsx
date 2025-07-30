@@ -342,6 +342,46 @@ function SiteSketcherContent() {
     }));
   }, []);
 
+  const handlePolygonUnitToggle = useCallback((polygonId: string) => {
+    setState(prev => {
+      const polygon = prev.polygons.find(p => p.id === polygonId);
+      if (!polygon) return prev;
+
+      const updatedPolygon = {
+        ...polygon,
+        properties: {
+          ...polygon.properties,
+          measurementUnit: polygon.properties?.measurementUnit === 'metric' ? 'imperial' : 'metric'
+        }
+      };
+
+      return {
+        ...prev,
+        polygons: prev.polygons.map(p => p.id === polygonId ? updatedPolygon : p)
+      };
+    });
+  }, []);
+
+  const handlePolygonSideLengthToggle = useCallback((polygonId: string) => {
+    setState(prev => {
+      const polygon = prev.polygons.find(p => p.id === polygonId);
+      if (!polygon) return prev;
+
+      const updatedPolygon = {
+        ...polygon,
+        properties: {
+          ...polygon.properties,
+          showSideLengths: !polygon.properties?.showSideLengths
+        }
+      };
+
+      return {
+        ...prev,
+        polygons: prev.polygons.map(p => p.id === polygonId ? updatedPolygon : p)
+      };
+    });
+  }, []);
+
   const handleWelcomeClose = useCallback(() => {
     setShowWelcomeModal(false);
     // Remove the welcome parameter from URL without triggering a reload
@@ -455,6 +495,8 @@ function SiteSketcherContent() {
                 onUpdateRecentSearches={handleUpdateRecentSearches}
                 showSideLengths={state.showSideLengths}
                 onToggleSideLengths={handleToggleSideLengths}
+                onPolygonUnitToggle={handlePolygonUnitToggle}
+                onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
               />
             </div>
           </div>
@@ -566,6 +608,8 @@ function SiteSketcherContent() {
             onUpdateRecentSearches={handleUpdateRecentSearches}
             showSideLengths={state.showSideLengths}
             onToggleSideLengths={handleToggleSideLengths}
+            onPolygonUnitToggle={handlePolygonUnitToggle}
+            onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
           />
         </div>
       </div>
