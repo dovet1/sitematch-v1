@@ -8,6 +8,8 @@ export interface MapboxDrawPolygon {
   properties: {
     id?: string;
     color?: string;
+    measurementUnit?: MeasurementUnit;
+    showSideLengths?: boolean;
     [key: string]: any;
   };
 }

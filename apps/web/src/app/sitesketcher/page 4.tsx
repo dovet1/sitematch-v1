@@ -7,6 +7,7 @@ import { MapboxMap, type MapboxMapRef } from './components/MapboxMap';
 import { ResponsiveControls } from './components/ResponsiveControls';
 import { ModeIndicator } from './components/ModeIndicator';
 import { MobileFAB } from './components/MobileFAB';
+import { FloatingModeIndicator } from './components/FloatingModeIndicator';
 import WelcomeOnboarding from './components/WelcomeOnboarding';
 import { AlertTriangle, Pencil, MousePointer, ArrowLeft } from 'lucide-react';
 import type { 
@@ -14,14 +15,13 @@ import type {
   ParkingOverlay, 
   AreaMeasurement,
   SearchResult,
-  SiteSketcherState,
-  MeasurementUnit
-
+  SiteSketcherState
 } from '@/types/sitesketcher';
 import { calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { getMapboxToken } from '@/lib/sitesketcher/mapbox-utils';
 import { getPolygonColor } from '@/lib/sitesketcher/colors';
 import '@/styles/sitesketcher-mobile.css';
+import '@/styles/sitesketcher-toggle.css';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -345,43 +345,48 @@ function SiteSketcherContent() {
   }, []);
 
   const handlePolygonUnitToggle = useCallback((polygonId: string) => {
-    setState(prev => {
-      const polygon = prev.polygons.find(p => p.id === polygonId);
-      if (!polygon) return prev;
-
-      const updatedPolygon = {
-        ...polygon,
-        properties: {
-          ...polygon.properties,
-          measurementUnit: (polygon.properties?.measurementUnit === 'metric' ? 'imperial' : 'metric') as MeasurementUnit
+    setState(prev => ({
+      ...prev,
+      polygons: prev.polygons.map(polygon => {
+        const id = String(polygon.id || polygon.properties?.id || '');
+        if (id === polygonId) {
+          const currentUnit = polygon.properties?.measurementUnit ?? prev.measurementUnit;
+          return {
+            ...polygon,
+            properties: {
+              ...polygon.properties,
+              measurementUnit: currentUnit === 'metric' ? 'imperial' : 'metric'
+            }
+          };
         }
-      };
-
-      return {
-        ...prev,
-        polygons: prev.polygons.map(p => p.id === polygonId ? updatedPolygon : p)
-      };
-    });
+        return polygon;
+      })
+    }));
   }, []);
 
   const handlePolygonSideLengthToggle = useCallback((polygonId: string) => {
-    setState(prev => {
-      const polygon = prev.polygons.find(p => p.id === polygonId);
-      if (!polygon) return prev;
-
-      const updatedPolygon = {
-        ...polygon,
-        properties: {
-          ...polygon.properties,
-          showSideLengths: !polygon.properties?.showSideLengths
+    setState(prev => ({
+      ...prev,
+      polygons: prev.polygons.map(polygon => {
+        const id = String(polygon.id || polygon.properties?.id || '');
+        if (id === polygonId) {
+          // Determine current effective value using same logic as display
+          const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
+          const currentShow = hasIndividualSetting 
+            ? polygon.properties.showSideLengths 
+            : prev.showSideLengths;
+          
+          return {
+            ...polygon,
+            properties: {
+              ...polygon.properties,
+              showSideLengths: !currentShow
+            }
+          };
         }
-      };
-
-      return {
-        ...prev,
-        polygons: prev.polygons.map(p => p.id === polygonId ? updatedPolygon : p)
-      };
-    });
+        return polygon;
+      })
+    }));
   }, []);
 
   const handleWelcomeClose = useCallback(() => {
@@ -530,17 +535,12 @@ function SiteSketcherContent() {
             />
             
             {/* Desktop Mode Toggle Button */}
-            <button
-              onClick={handleModeToggle}
-              className="absolute bottom-6 left-4 z-10 mode-toggle bg-white rounded-full shadow-lg hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center"
-              title={state.drawingMode === 'draw' ? 'Switch to Select Mode' : 'Switch to Draw Mode'}
-            >
-              {state.drawingMode === 'draw' ? (
-                <Pencil className="w-5 h-5 text-blue-600" />
-              ) : (
-                <MousePointer className="w-5 h-5 text-gray-600" />
-              )}
-            </button>
+            {/* Floating Mode Indicator for Desktop */}
+            <FloatingModeIndicator 
+              mode={state.drawingMode}
+              onToggle={handleModeToggle}
+              position="bottom-right"
+            />
           </div>
         </div>
       </div>

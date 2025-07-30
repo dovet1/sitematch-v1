@@ -14,7 +14,8 @@ import type {
   ParkingOverlay, 
   AreaMeasurement,
   SearchResult,
-  SiteSketcherState
+  SiteSketcherState,
+  MeasurementUnit
 } from '@/types/sitesketcher';
 import { calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { getMapboxToken } from '@/lib/sitesketcher/mapbox-utils';
@@ -286,7 +287,7 @@ function SiteSketcherContent() {
   const handleUnitToggle = useCallback(() => {
     setState(prev => ({
       ...prev,
-      measurementUnit: prev.measurementUnit === 'metric' ? 'imperial' : 'metric'
+      measurementUnit: (prev.measurementUnit === 'metric' ? 'imperial' : 'metric') as MeasurementUnit
     }));
   }, []);
 
@@ -331,6 +332,51 @@ function SiteSketcherContent() {
     setState(prev => ({
       ...prev,
       showSideLengths: !prev.showSideLengths
+    }));
+  }, []);
+
+  const handlePolygonUnitToggle = useCallback((polygonId: string) => {
+    setState(prev => ({
+      ...prev,
+      polygons: prev.polygons.map(polygon => {
+        const id = String(polygon.id || polygon.properties?.id || '');
+        if (id === polygonId) {
+          const currentUnit = polygon.properties?.measurementUnit ?? prev.measurementUnit;
+          return {
+            ...polygon,
+            properties: {
+              ...polygon.properties,
+              measurementUnit: (currentUnit === 'metric' ? 'imperial' : 'metric') as MeasurementUnit
+            }
+          };
+        }
+        return polygon;
+      })
+    }));
+  }, []);
+
+  const handlePolygonSideLengthToggle = useCallback((polygonId: string) => {
+    setState(prev => ({
+      ...prev,
+      polygons: prev.polygons.map(polygon => {
+        const id = String(polygon.id || polygon.properties?.id || '');
+        if (id === polygonId) {
+          // Determine current effective value using same logic as display
+          const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
+          const currentShow = hasIndividualSetting 
+            ? polygon.properties.showSideLengths 
+            : prev.showSideLengths;
+          
+          return {
+            ...polygon,
+            properties: {
+              ...polygon.properties,
+              showSideLengths: !currentShow
+            }
+          };
+        }
+        return polygon;
+      })
     }));
   }, []);
 
@@ -435,6 +481,8 @@ function SiteSketcherContent() {
                 onModeToggle={handleModeToggle}
                 polygons={state.polygons}
                 onPolygonDelete={handlePolygonDelete}
+                onPolygonUnitToggle={handlePolygonUnitToggle}
+                onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
                 parkingOverlays={state.parkingOverlays}
                 selectedOverlayId={state.selectedParkingId}
                 onAddOverlay={handleAddParkingOverlay}
@@ -542,6 +590,8 @@ function SiteSketcherContent() {
             onModeToggle={handleModeToggle}
             polygons={state.polygons}
             onPolygonDelete={handlePolygonDelete}
+            onPolygonUnitToggle={handlePolygonUnitToggle}
+            onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
             parkingOverlays={state.parkingOverlays}
             selectedOverlayId={state.selectedParkingId}
             onAddOverlay={handleAddParkingOverlay}
