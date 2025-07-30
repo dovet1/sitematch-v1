@@ -14,7 +14,8 @@ import {
   Car,
   Plus,
   Pencil,
-  MousePointer
+  MousePointer,
+  Settings
 } from 'lucide-react';
 import { ModeToggleSwitch } from './ModeToggleSwitch';
 import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode } from '@/types/sitesketcher';
@@ -38,6 +39,9 @@ interface ResponsiveControlsProps {
   // Side lengths toggle
   showSideLengths: boolean;
   onToggleSideLengths: () => void;
+  // Polygon-specific toggles
+  onPolygonUnitToggle: (polygonId: string) => void;
+  onPolygonSideLengthToggle: (polygonId: string) => void;
   // Parking props
   parkingOverlays: ParkingOverlay[];
   selectedOverlayId: string | null;
@@ -64,6 +68,8 @@ export function ResponsiveControls({
   onPolygonDelete,
   showSideLengths,
   onToggleSideLengths,
+  onPolygonUnitToggle,
+  onPolygonSideLengthToggle,
   parkingOverlays,
   selectedOverlayId,
   onAddOverlay,
@@ -77,6 +83,7 @@ export function ResponsiveControls({
   className = ''
 }: ResponsiveControlsProps) {
   const [measurementsOpen, setMeasurementsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(true); // Always open on mobile
   const [mobileSheetHeight, setMobileSheetHeight] = useState<'collapsed' | 'halfway' | 'expanded'>('collapsed');
@@ -211,46 +218,86 @@ export function ResponsiveControls({
                           >
                             {isMobile ? (
                               // Mobile: single row, compact
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  {polygon.properties?.color && (
-                                    <div 
-                                      className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-                                      style={{ backgroundColor: polygon.properties.color }}
-                                    />
-                                  )}
-                                  <div>
-                                    <span className="font-semibold text-foreground text-base">
-                                      Polygon {index + 1}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <div className="text-right">
-                                    <div className="font-bold tabular-nums text-foreground text-lg">
-                                      {formatArea(
-                                        measurementUnit === 'metric' ? polygonMeasurement.squareMeters : polygonMeasurement.squareFeet, 
-                                        measurementUnit
-                                      )}
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    {polygon.properties?.color && (
+                                      <div 
+                                        className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                                        style={{ backgroundColor: polygon.properties.color }}
+                                      />
+                                    )}
+                                    <div>
+                                      <span className="font-semibold text-foreground text-base">
+                                        Polygon {index + 1}
+                                      </span>
                                     </div>
                                   </div>
-                                  <TouchOptimizedButton
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const polygonId = polygon.id || polygon.properties?.id;
-                                      if (polygonId) {
-                                        onPolygonDelete(String(polygonId));
-                                      }
-                                    }}
-                                    className="text-muted-foreground/60 hover:text-destructive"
-                                    minSize={44}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </TouchOptimizedButton>
+                                  <div className="flex items-center gap-3">
+                                    <div className="text-right">
+                                      <div className="font-bold tabular-nums text-foreground text-lg">
+                                        {formatArea(
+                                          (polygon.properties?.measurementUnit || measurementUnit) === 'metric' ? polygonMeasurement.squareMeters : polygonMeasurement.squareFeet, 
+                                          polygon.properties?.measurementUnit || measurementUnit
+                                        )}
+                                      </div>
+                                    </div>
+                                    <TouchOptimizedButton
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const polygonId = polygon.id || polygon.properties?.id;
+                                        if (polygonId) {
+                                          onPolygonDelete(String(polygonId));
+                                        }
+                                      }}
+                                      className="text-muted-foreground/60 hover:text-destructive"
+                                      minSize={44}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </TouchOptimizedButton>
+                                  </div>
                                 </div>
-                              </div>
+                                <div className="border-t border-muted/60 mt-3 pt-3 pb-1">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <TouchOptimizedButton
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onPolygonUnitToggle(currentPolygonId);
+                                      }}
+                                      className="text-xs font-medium"
+                                      minSize={44}
+                                    >
+                                      {(polygon.properties?.measurementUnit || measurementUnit) === 'metric' ? 'Metric' : 'Imperial'}
+                                    </TouchOptimizedButton>
+                                    <TouchOptimizedButton
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onPolygonSideLengthToggle(currentPolygonId);
+                                      }}
+                                      className={cn(
+                                        "text-xs font-medium transition-colors",
+                                        (() => {
+                                          const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
+                                          const currentValue = hasIndividualSetting ? polygon.properties.showSideLengths : showSideLengths;
+                                          return currentValue ? "bg-blue-50 text-blue-700 border-blue-200" : "";
+                                        })()
+                                      )}
+                                      minSize={44}
+                                    >
+                                      Sides: {(() => {
+                                        const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
+                                        return (hasIndividualSetting ? polygon.properties.showSideLengths : showSideLengths) ? 'ON' : 'OFF';
+                                      })()}
+                                    </TouchOptimizedButton>
+                                  </div>
+                                </div>
+                              </>
                             ) : (
                               // Desktop: two rows, premium styling
                               <div className="space-y-2">
@@ -278,39 +325,80 @@ export function ResponsiveControls({
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                  <div className="relative bg-muted/40 rounded-lg px-3 py-2 border border-muted min-w-[120px]">
-                                    <div className="font-bold tabular-nums text-foreground text-base">
-                                      {formatArea(
-                                        measurementUnit === 'metric' ? polygonMeasurement.squareMeters : polygonMeasurement.squareFeet, 
-                                        measurementUnit
-                                      )}
+                                <div className="space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="relative bg-muted/40 rounded-lg px-3 py-2 border border-muted flex-1 mr-2">
+                                      <div className="font-bold tabular-nums text-foreground text-base">
+                                        {formatArea(
+                                          (polygon.properties?.measurementUnit || measurementUnit) === 'metric' ? polygonMeasurement.squareMeters : polygonMeasurement.squareFeet, 
+                                          polygon.properties?.measurementUnit || measurementUnit
+                                        )}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground/60 font-medium">
+                                        Total Area
+                                      </div>
                                     </div>
-                                    <div className="text-xs text-muted-foreground/60 font-medium">
-                                      Total Area
-                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const polygonId = polygon.id || polygon.properties?.id;
+                                        if (polygonId) {
+                                          onPolygonDelete(String(polygonId));
+                                        }
+                                      }}
+                                      className="text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg flex-shrink-0"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
                                   </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const polygonId = polygon.id || polygon.properties?.id;
-                                      if (polygonId) {
-                                        onPolygonDelete(String(polygonId));
-                                      }
-                                    }}
-                                    className="text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-lg"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onPolygonUnitToggle(currentPolygonId);
+                                      }}
+                                      className="h-7 text-xs font-medium bg-background hover:bg-muted border-muted"
+                                    >
+                                      {(polygon.properties?.measurementUnit || measurementUnit) === 'metric' ? 'Metric' : 'Imperial'}
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onPolygonSideLengthToggle(currentPolygonId);
+                                      }}
+                                      className={cn(
+                                        "h-7 text-xs font-medium transition-colors",
+                                        (() => {
+                                          const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
+                                          const currentValue = hasIndividualSetting ? polygon.properties.showSideLengths : showSideLengths;
+                                          return currentValue 
+                                            ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" 
+                                            : "bg-background hover:bg-muted border-muted";
+                                        })()
+                                      )}
+                                    >
+                                      Sides: {(() => {
+                                        const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
+                                        return (hasIndividualSetting ? polygon.properties.showSideLengths : showSideLengths) ? 'ON' : 'OFF';
+                                      })()}
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
                             )}
                           </div>
                         </div>
                         
-                        {isSelected && showSideLengths && (
+                        {isSelected && (() => {
+                          const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
+                          return hasIndividualSetting ? polygon.properties.showSideLengths : showSideLengths;
+                        })() && (
                           <div className={cn(
                             "border-t border-muted/60 bg-muted/20 space-y-4 rounded-b-xl relative",
                             isMobile ? "mt-3 pt-4 px-3 pb-3" : "mt-4 pt-4 px-4 pb-4"
@@ -322,7 +410,7 @@ export function ResponsiveControls({
                                   <div key={sideIndex} className="bg-background/80 border border-muted/60 rounded-lg p-2 text-center shadow-sm">
                                     <div className="text-xs text-muted-foreground font-medium">Side {sideIndex + 1}</div>
                                     <div className="text-sm font-bold font-mono text-foreground">
-                                      {measurementUnit === 'metric' ? `${length}m` : `${(length * 3.28084).toFixed(1)}ft`}
+                                      {(polygon.properties?.measurementUnit || measurementUnit) === 'metric' ? `${length}m` : `${(length * 3.28084).toFixed(1)}ft`}
                                     </div>
                                   </div>
                                 ))}
@@ -352,46 +440,59 @@ export function ResponsiveControls({
           isMobile={isMobile}
         />
 
-        {/* Settings Card */}
+        {/* Default Settings Card */}
         <Card>
-          <CardContent className="p-4 space-y-4">
-            {/* Measurement Unit Toggle */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-sm">Measurement Unit</h3>
-                <p className="text-xs text-muted-foreground">Choose between metric (m²/m) or imperial (ft²/ft)</p>
+          <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
+            <CollapsibleTrigger asChild>
+              <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  <span className="font-medium">Default Settings</span>
+                </div>
+                <ChevronRight className={`h-4 w-4 transition-transform ${settingsOpen ? 'rotate-90' : ''}`} />
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onUnitToggle}
-                className="h-8 text-xs font-medium bg-background hover:bg-muted border-muted"
-              >
-                {measurementUnit === 'metric' ? 'Metric' : 'Imperial'}
-              </Button>
-            </div>
-            
-            {/* Side Lengths Toggle */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-sm">Side Length Annotations</h3>
-                <p className="text-xs text-muted-foreground">Show distance measurements on polygon sides</p>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-4 pb-4 space-y-4">
+                <p className="text-xs text-muted-foreground -mt-2">These settings apply to new polygons only</p>
+                
+                {/* Measurement Unit Toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm">Measurement Unit</h3>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onUnitToggle}
+                    className="h-8 text-xs font-medium bg-background hover:bg-muted border-muted"
+                  >
+                    {measurementUnit === 'metric' ? 'Metric' : 'Imperial'}
+                  </Button>
+                </div>
+                
+                {/* Side Lengths Toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm">Side Length Annotations</h3>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onToggleSideLengths}
+                    className={cn(
+                      "h-8 text-xs font-medium transition-colors",
+                      showSideLengths 
+                        ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" 
+                        : "bg-background hover:bg-muted border-muted"
+                    )}
+                  >
+                    {showSideLengths ? 'ON' : 'OFF'}
+                  </Button>
+                </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onToggleSideLengths}
-                className={cn(
-                  "h-8 text-xs font-medium transition-colors",
-                  showSideLengths 
-                    ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" 
-                    : "bg-background hover:bg-muted border-muted"
-                )}
-              >
-                {showSideLengths ? 'ON' : 'OFF'}
-              </Button>
-            </div>
-          </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
         </Card>
 
         {/* Clear All Button */}

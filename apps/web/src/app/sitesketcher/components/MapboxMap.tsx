@@ -947,7 +947,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         
         // Calculate distance from last clicked point to current position
         const distance = calculateDistance(lastClickedPointRef.current, currentPoint);
-        const formattedDistance = formatDistance(distance, measurementUnitRef.current);
+        const formattedDistance = formatDistance(distance, measurementUnit);
         
         // Place annotation at the mouse position with slight offset
         const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
@@ -2421,6 +2421,19 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     currentFeatures.features.forEach((feature, polygonIndex) => {
       if (feature.geometry.type !== 'Polygon') return;
       
+      // Get polygon-specific showSideLengths setting
+      const polygonId = String(feature.id || '');
+      const matchingPolygon = polygons.find(p => String(p.id || p.properties?.id || '') === polygonId);
+      
+      // If polygon has individual setting, use it; otherwise use global default
+      const hasIndividualSetting = matchingPolygon?.properties && 'showSideLengths' in matchingPolygon.properties;
+      const polygonShowSides = hasIndividualSetting 
+        ? matchingPolygon.properties.showSideLengths 
+        : showSideLengths;
+      
+      // Skip this polygon if side lengths should not be shown
+      if (!polygonShowSides) return;
+      
       const coordinates = feature.geometry.coordinates[0];
       
       // Skip if polygon doesn't have enough points (need at least 4 for a closed polygon)
@@ -2438,9 +2451,13 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         const midLng = (startPoint[0] + endPoint[0]) / 2;
         const midLat = (startPoint[1] + endPoint[1]) / 2;
         
-        // Get side length and format it
+        // Get side length and format it using polygon-specific settings
+        const polygonId = String(feature.id || '');
+        const matchingPolygon = polygons.find(p => String(p.id || p.properties?.id || '') === polygonId);
+        const polygonUnit = matchingPolygon?.properties?.measurementUnit ?? measurementUnit;
+        
         const lengthMeters = polygonMeasurement.sideLengths[i];
-        const formattedLength = formatDistance(lengthMeters, measurementUnit);
+        const formattedLength = formatDistance(lengthMeters, polygonUnit);
         
         allFeatures.push({
           type: 'Feature' as const,
@@ -2462,7 +2479,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       type: 'FeatureCollection',
       features: allFeatures
     });
-  }, [measurementUnit, isMapLoaded, showSideLengths]);
+  }, [polygons, measurementUnit, isMapLoaded, showSideLengths]);
 
   // Update annotations when polygons change or are moved
   useEffect(() => {
@@ -2491,6 +2508,19 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       currentFeatures.features.forEach((feature, polygonIndex) => {
         if (feature.geometry.type !== 'Polygon') return;
         
+        // Get polygon-specific showSideLengths setting
+        const polygonId = String(feature.id || '');
+        const matchingPolygon = polygons.find(p => String(p.id || p.properties?.id || '') === polygonId);
+        
+        // If polygon has individual setting, use it; otherwise use global default
+        const hasIndividualSetting = matchingPolygon?.properties && 'showSideLengths' in matchingPolygon.properties;
+        const polygonShowSides = hasIndividualSetting 
+          ? matchingPolygon.properties.showSideLengths 
+          : showSideLengths;
+        
+        // Skip this polygon if side lengths should not be shown
+        if (!polygonShowSides) return;
+        
         const coordinates = feature.geometry.coordinates[0];
         
         // Skip if polygon doesn't have enough points
@@ -2505,8 +2535,13 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           const midLng = (startPoint[0] + endPoint[0]) / 2;
           const midLat = (startPoint[1] + endPoint[1]) / 2;
           
+          // Get polygon-specific settings
+          const polygonId = String(feature.id || '');
+          const matchingPolygon = polygons.find(p => String(p.id || p.properties?.id || '') === polygonId);
+          const polygonUnit = matchingPolygon?.properties?.measurementUnit ?? measurementUnit;
+          
           const lengthMeters = polygonMeasurement.sideLengths[i];
-          const formattedLength = formatDistance(lengthMeters, measurementUnit);
+          const formattedLength = formatDistance(lengthMeters, polygonUnit);
           
           allFeatures.push({
             type: 'Feature' as const,
@@ -2556,7 +2591,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       map.off('draw.create', handleDrawCreate);
       map.off('draw.delete', handleDrawDelete);
     };
-  }, [polygons.length, measurementUnit, isMapLoaded]);
+  }, [polygons, measurementUnit, showSideLengths, isMapLoaded]);
 
   // Function to update rotation handles for a specific polygon
   const updateRotationHandles = useCallback((polygon?: MapboxDrawPolygon) => {
@@ -2823,6 +2858,20 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         currentFeatures.features.forEach((feature, polygonIndex) => {
           if (feature.geometry.type !== 'Polygon') return;
           
+          // Get polygon-specific settings
+          const polygonId = String(feature.id || '');
+          const matchingPolygon = polygons.find(p => String(p.id || p.properties?.id || '') === polygonId);
+          
+          // If polygon has individual setting, use it; otherwise use global default
+          const hasIndividualSetting = matchingPolygon?.properties && 'showSideLengths' in matchingPolygon.properties;
+          const polygonShowSides = hasIndividualSetting 
+            ? matchingPolygon.properties.showSideLengths 
+            : showSideLengths;
+          const polygonUnit = matchingPolygon?.properties?.measurementUnit ?? measurementUnit;
+          
+          // Skip this polygon if side lengths should not be shown
+          if (!polygonShowSides) return;
+          
           const coordinates = feature.geometry.coordinates[0];
           if (coordinates.length < 4) return;
           
@@ -2838,7 +2887,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             
             // Use current measurements - they should be preserved by proper rotation
             const lengthMeters = currentMeasurement.sideLengths[i];
-            const formattedLength = formatDistance(lengthMeters, measurementUnit);
+            const formattedLength = formatDistance(lengthMeters, polygonUnit);
             
             allFeatures.push({
               type: 'Feature' as const,

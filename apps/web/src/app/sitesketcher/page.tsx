@@ -344,6 +344,51 @@ function SiteSketcherContent() {
     }));
   }, []);
 
+  const handlePolygonUnitToggle = useCallback((polygonId: string) => {
+    setState(prev => ({
+      ...prev,
+      polygons: prev.polygons.map(polygon => {
+        const id = String(polygon.id || polygon.properties?.id || '');
+        if (id === polygonId) {
+          const currentUnit = polygon.properties?.measurementUnit ?? prev.measurementUnit;
+          return {
+            ...polygon,
+            properties: {
+              ...polygon.properties,
+              measurementUnit: currentUnit === 'metric' ? 'imperial' : 'metric'
+            }
+          };
+        }
+        return polygon;
+      })
+    }));
+  }, []);
+
+  const handlePolygonSideLengthToggle = useCallback((polygonId: string) => {
+    setState(prev => ({
+      ...prev,
+      polygons: prev.polygons.map(polygon => {
+        const id = String(polygon.id || polygon.properties?.id || '');
+        if (id === polygonId) {
+          // Determine current effective value using same logic as display
+          const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
+          const currentShow = hasIndividualSetting 
+            ? polygon.properties.showSideLengths 
+            : prev.showSideLengths;
+          
+          return {
+            ...polygon,
+            properties: {
+              ...polygon.properties,
+              showSideLengths: !currentShow
+            }
+          };
+        }
+        return polygon;
+      })
+    }));
+  }, []);
+
   const handleWelcomeClose = useCallback(() => {
     setShowWelcomeModal(false);
     // Remove the welcome parameter from URL without triggering a reload
@@ -457,6 +502,8 @@ function SiteSketcherContent() {
                 onUpdateRecentSearches={handleUpdateRecentSearches}
                 showSideLengths={state.showSideLengths}
                 onToggleSideLengths={handleToggleSideLengths}
+                onPolygonUnitToggle={handlePolygonUnitToggle}
+                onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
               />
             </div>
           </div>
@@ -563,6 +610,8 @@ function SiteSketcherContent() {
             onUpdateRecentSearches={handleUpdateRecentSearches}
             showSideLengths={state.showSideLengths}
             onToggleSideLengths={handleToggleSideLengths}
+            onPolygonUnitToggle={handlePolygonUnitToggle}
+            onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
           />
         </div>
       </div>

@@ -30,3 +30,6 @@ This file tracks development agent failures and debugging information.
 | Implement mobile UX for SiteSketcher | Multiple files | Added MobileBottomSheet, TouchOptimizedButton, gesture handling, visual feedback | No |
 | Fix map to show all listing_locations | map/route.ts, useMapClustering.ts | Modified API to return one pin per location, updated clustering to handle location_id | No |
 | Display company logos as map pins | MapMarker.tsx | Modified single listing pins to show company logo with fallback to initials | No |
+| Fix map measurements | MapboxMap.tsx | Update map annotations to use polygon-specific settings | No |
+| Fix desktop layout | ResponsiveControls.tsx | Improve button layout for desktop sidebar | No |
+| Fix toggle precedence logic | MapboxMap.tsx, ResponsiveControls.tsx, page.tsx | Fixed individual settings to always override global defaults | No |
