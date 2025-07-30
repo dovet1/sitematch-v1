@@ -14,7 +14,8 @@ import type {
   ParkingOverlay, 
   AreaMeasurement,
   SearchResult,
-  SiteSketcherState
+  SiteSketcherState,
+  MeasurementUnit
 } from '@/types/sitesketcher';
 import { calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { getMapboxToken } from '@/lib/sitesketcher/mapbox-utils';
@@ -286,7 +287,7 @@ function SiteSketcherContent() {
   const handleUnitToggle = useCallback(() => {
     setState(prev => ({
       ...prev,
-      measurementUnit: prev.measurementUnit === 'metric' ? 'imperial' : 'metric'
+      measurementUnit: (prev.measurementUnit === 'metric' ? 'imperial' : 'metric') as MeasurementUnit
     }));
   }, []);
 
@@ -345,7 +346,7 @@ function SiteSketcherContent() {
             ...polygon,
             properties: {
               ...polygon.properties,
-              measurementUnit: currentUnit === 'metric' ? 'imperial' : 'metric'
+              measurementUnit: (currentUnit === 'metric' ? 'imperial' : 'metric') as MeasurementUnit
             }
           };
         }
