@@ -298,6 +298,7 @@ export function ResponsiveControls({
                                   </div>
                                 </div>
                               </>
+
                             ) : (
                               // Desktop: two rows, premium styling
                               <div className="space-y-2">
