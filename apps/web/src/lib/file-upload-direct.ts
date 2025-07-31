@@ -37,6 +37,16 @@ export async function uploadFileDirect({
   try {
     const supabase = createClientClient()
     
+    // Log upload attempt details
+    console.log('Direct upload attempt:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileSizeMB: (file.size / (1024 * 1024)).toFixed(2),
+      fileType: file.type,
+      uploadType: fileType,
+      bucket: BUCKET_MAP[fileType]
+    })
+    
     // Check auth
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -64,7 +74,26 @@ export async function uploadFileDirect({
       })
 
     if (uploadError) {
-      console.error('Storage upload error:', uploadError)
+      console.error('Storage upload error:', {
+        error: uploadError,
+        message: uploadError.message,
+        statusCode: (uploadError as any).statusCode,
+        details: (uploadError as any).details,
+        hint: (uploadError as any).hint,
+        code: (uploadError as any).code
+      })
+      
+      // Check if it's a 413 error (payload too large)
+      if (uploadError.message?.includes('413') || 
+          uploadError.message?.toLowerCase().includes('payload too large') ||
+          (uploadError as any).statusCode === 413) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(1)
+        return { 
+          success: false, 
+          error: `File size (${sizeMB}MB) exceeds server limits. Please try a smaller file or contact support.` 
+        }
+      }
+      
       return { success: false, error: uploadError.message }
     }
 

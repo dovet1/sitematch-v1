@@ -58,6 +58,23 @@ export function DocumentUpload({
   // =====================================================
 
   const handleFileValidation = useCallback((files: File[]): FileValidationResult => {
+    // Pre-check for oversized files with clearer error message
+    for (const file of files) {
+      const sizeMB = file.size / (1024 * 1024);
+      if (sizeMB > 40) {
+        setValidationError(`File "${file.name}" is ${sizeMB.toFixed(1)}MB. Maximum size is 40MB.`);
+        return {
+          isValid: false,
+          errors: [{
+            code: 'FILE_TOO_LARGE',
+            message: `File size ${sizeMB.toFixed(1)}MB exceeds 40MB limit`,
+            file: file.name
+          }],
+          warnings: []
+        };
+      }
+    }
+    
     const validation = validateFiles(files, type);
     setValidationError(validation.isValid ? null : validation.errors[0]?.message || 'Invalid files');
     return validation;
