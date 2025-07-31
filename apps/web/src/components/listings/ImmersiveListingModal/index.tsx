@@ -180,7 +180,9 @@ export function ImmersiveListingModal({
                             activeTab === tab && styles.tabButtonActive
                           )}
                         >
-                          {tab === 'faqs' ? 'FAQs' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                          {tab === 'overview' ? `From ${listing?.company?.name || 'Company'}` :
+                           tab === 'faqs' ? 'FAQs' : 
+                           tab.charAt(0).toUpperCase() + tab.slice(1)}
                         </button>
                       ))}
                     </div>
@@ -189,19 +191,195 @@ export function ImmersiveListingModal({
                     <div className={styles.tabContent}>
                       <div className="p-6">
                         {activeTab === 'overview' && (
-                          <div className="space-y-4">
-                            <h3 className="text-lg font-semibold">Overview</h3>
-                            <p className="text-gray-600">
-                              Company overview and key details will be displayed here.
-                            </p>
+                          <div className="space-y-6">
+                            <h3 className="text-lg font-semibold">Requirements In {listing?.company?.name || 'Company'}'s Own Words</h3>
+
+                            {/* Requirements Brochure */}
+                            {listing.company.brochure_url && (
+                              <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                  <span className="text-blue-500">📋</span>
+                                  Requirements Brochure
+                                </h4>
+                                <a
+                                  href={listing.company.brochure_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 p-3 rounded-lg bg-white border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
+                                >
+                                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
+                                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 2v8h8V6H6z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900">
+                                      Download Requirements Brochure
+                                    </p>
+                                    <p className="text-xs text-gray-500 truncate">
+                                      View detailed property requirements
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-blue-600 group-hover:text-blue-700">
+                                    <span className="text-xs font-medium">Download</span>
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
+                                </a>
+                              </div>
+                            )}
+
+                            {/* Property Page Link */}
+                            {listing.company.property_page_link && (
+                              <div className="p-4 rounded-lg bg-violet-50 border border-violet-200">
+                                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                  <span className="text-violet-500">🔗</span>
+                                  Property Page
+                                </h4>
+                                <a
+                                  href={listing.company.property_page_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 p-3 rounded-lg bg-white border border-violet-200 hover:border-violet-300 hover:bg-violet-50 transition-all duration-200 group"
+                                >
+                                  <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-200 transition-colors">
+                                    <svg className="w-5 h-5 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5a2 2 0 012.828 0z" clipRule="evenodd" />
+                                      <path fillRule="evenodd" d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 005.656 5.656l1.5-1.5a1 1 0 00-1.414-1.414l-1.5 1.5z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900">
+                                      View Requirement Details
+                                    </p>
+                                    <p className="text-xs text-gray-500 truncate">
+                                      {listing.company.property_page_link}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-violet-600 group-hover:text-violet-700">
+                                    <span className="text-xs font-medium">Visit</span>
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
+                                </a>
+                              </div>
+                            )}
+
+                            {/* Empty state if no overview content */}
+                            {!listing.company.brochure_url && !listing.company.property_page_link && (
+                              <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
+                                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                  <svg className="w-8 h-8 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                                <h4 className="font-semibold text-gray-900 mb-2">Overview Coming Soon</h4>
+                                <p className="text-gray-600 text-sm max-w-sm mx-auto">
+                                  Additional property details and resources will be available here shortly.
+                                </p>
+                              </div>
+                            )}
                           </div>
                         )}
                         {activeTab === 'requirements' && (
-                          <div className="space-y-4">
+                          <div className="space-y-6">
                             <h3 className="text-lg font-semibold">Requirements</h3>
-                            <p className="text-gray-600">
-                              Property requirements and specifications.
-                            </p>
+                            
+                            {/* Site Size Requirements */}
+                            {listing.company.site_size && (
+                              <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                                <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                                  <span className="text-violet-500">📐</span>
+                                  Site Size
+                                </h4>
+                                <p className="text-gray-700">{listing.company.site_size}</p>
+                              </div>
+                            )}
+
+                            {/* Dwelling Count (for residential) */}
+                            {listing.listing_type === 'residential' && listing.company.dwelling_count && (
+                              <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                                <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                                  <span className="text-violet-500">🏠</span>
+                                  Dwelling Count
+                                </h4>
+                                <p className="text-gray-700">{listing.company.dwelling_count}</p>
+                              </div>
+                            )}
+
+                            {/* Site Acreage (for residential) */}
+                            {listing.listing_type === 'residential' && listing.company.site_acreage && (
+                              <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                                <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                                  <span className="text-violet-500">🌾</span>
+                                  Site Acreage
+                                </h4>
+                                <p className="text-gray-700">{listing.company.site_acreage}</p>
+                              </div>
+                            )}
+
+                            {/* Sectors */}
+                            {listing.company.sectors && listing.company.sectors.length > 0 && (
+                              <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                  <span className="text-blue-500">🏢</span>
+                                  Sectors
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {listing.company.sectors.map((sector, index) => (
+                                    <span
+                                      key={index}
+                                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                                    >
+                                      {sector}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Use Classes */}
+                            {listing.company.use_classes && listing.company.use_classes.length > 0 && (
+                              <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                  <span className="text-green-500">🏗️</span>
+                                  Use Classes
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {listing.company.use_classes.map((useClass, index) => (
+                                    <span
+                                      key={index}
+                                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200"
+                                    >
+                                      {useClass}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+
+                            {/* Empty state */}
+                            {!listing.company.site_size && 
+                             !listing.company.dwelling_count && 
+                             !listing.company.site_acreage && 
+                             (!listing.company.sectors || listing.company.sectors.length === 0) && 
+                             (!listing.company.use_classes || listing.company.use_classes.length === 0) && (
+                              <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
+                                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                  <svg className="w-8 h-8 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 1h6v4H7V5zm8 8v2a1 1 0 01-1 1H6a1 1 0 01-1-1v-2h8z" clipRule="evenodd"/>
+                                  </svg>
+                                </div>
+                                <h4 className="font-semibold text-gray-900 mb-2">Requirements Not Specified</h4>
+                                <p className="text-gray-600 text-sm max-w-sm mx-auto">
+                                  This listing hasn't specified detailed requirements yet. 
+                                  <br />Please contact the team directly for more information.
+                                </p>
+                              </div>
+                            )}
                           </div>
                         )}
                         {activeTab === 'locations' && (

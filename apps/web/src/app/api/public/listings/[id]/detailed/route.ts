@@ -40,7 +40,9 @@ export async function GET(
         dwelling_count_min,
         dwelling_count_max,
         site_acreage_min,
-        site_acreage_max
+        site_acreage_max,
+        brochure_url,
+        property_page_link
       `)
       .eq('id', id)
       .in('status', ['approved', 'pending'])
@@ -142,7 +144,9 @@ export async function GET(
         use_class: allUseClasses.map((uc: any) => `${uc.name} (${uc.code})`).join(', ') || 'Not specified',
         site_size: formatSizeRange(listing.site_size_min, listing.site_size_max),
         dwelling_count: formatDwellingRange(listing.dwelling_count_min, listing.dwelling_count_max),
-        site_acreage: formatAcreageRange(listing.site_acreage_min, listing.site_acreage_max)
+        site_acreage: formatAcreageRange(listing.site_acreage_min, listing.site_acreage_max),
+        brochure_url: listing.brochure_url,
+        property_page_link: listing.property_page_link
       },
       
       // Enhanced contact information  
