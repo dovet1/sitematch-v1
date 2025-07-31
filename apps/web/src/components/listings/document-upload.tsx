@@ -13,8 +13,9 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-import { uploadMultipleFilesViaApi } from '@/lib/file-upload-api';
-import { validateFiles, deleteFile } from '@/lib/file-upload';
+import { uploadFileDirect, deleteFileDirect } from '@/lib/file-upload-direct';
+import { validateFiles } from '@/lib/file-upload';
+import { useAuth } from '@/hooks/use-auth';
 import { formatFileSize, isDocumentFile, isImageFile } from '@/types/uploads';
 import type { 
   MultiFileUploadProps, 
@@ -48,7 +49,8 @@ export function DocumentUpload({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
-
+  
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // =====================================================
@@ -62,7 +64,7 @@ export function DocumentUpload({
   }, [type]);
 
   const handleFileSelect = useCallback(async (files: File[]) => {
-    if (disabled || files.length === 0) return;
+    if (disabled || files.length === 0 || !user) return;
 
     // Validate files
     const validation = handleFileValidation(files);
@@ -74,17 +76,31 @@ export function DocumentUpload({
     setUploadProgress(0);
 
     try {
-      // Upload files via API
-      const uploadedFiles = await uploadMultipleFilesViaApi(
-        files,
-        type,
-        organizationId,
-        (progress) => {
-          setUploadProgress(progress);
-          onProgress?.(progress);
-        },
-        listingId
-      );
+      const uploadedFiles: UploadedFile[] = [];
+      let totalProgress = 0;
+      
+      // Upload files one by one using direct upload
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const result = await uploadFileDirect({
+          file,
+          fileType: type,
+          listingId,
+          userId: user.id,
+          onProgress: (fileProgress) => {
+            // Calculate overall progress
+            totalProgress = ((i * 100) + fileProgress) / files.length;
+            setUploadProgress(totalProgress);
+            onProgress?.(totalProgress);
+          }
+        });
+        
+        if (result.success && result.file) {
+          uploadedFiles.push(result.file);
+        } else {
+          throw new Error(result.error || 'Upload failed');
+        }
+      }
 
       // Add to existing files
       const updatedFiles = [...value, ...uploadedFiles];
@@ -103,18 +119,32 @@ export function DocumentUpload({
       setIsUploading(false);
       setUploadProgress(0);
     }
-  }, [disabled, type, organizationId, onChange, onProgress, value, handleFileValidation]);
+  }, [disabled, type, onChange, onProgress, value, handleFileValidation, listingId, user]);
 
   const handleFileRemove = useCallback(async (fileToRemove: UploadedFile) => {
     if (disabled) return;
 
     try {
-      // Delete from storage
-      await deleteFile(fileToRemove.path, type);
+      // Determine bucket from file type
+      const bucketMap = {
+        'logo': 'logos',
+        'brochure': 'brochures',
+        'sitePlan': 'site-plans',
+        'fitOut': 'fit-outs',
+        'headshot': 'headshots'
+      };
+      const bucket = bucketMap[type as keyof typeof bucketMap] || 'brochures';
       
-      // Remove from local state
-      const updatedFiles = value.filter(file => file.id !== fileToRemove.id);
-      onChange(updatedFiles);
+      // Delete from storage and database
+      const result = await deleteFileDirect(fileToRemove.id, fileToRemove.path, bucket);
+      
+      if (result.success) {
+        // Remove from local state
+        const updatedFiles = value.filter(file => file.id !== fileToRemove.id);
+        onChange(updatedFiles);
+      } else {
+        throw new Error(result.error || 'Failed to delete file');
+      }
       
     } catch (error) {
       console.error('File deletion error:', error);

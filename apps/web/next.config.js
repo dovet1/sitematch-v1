@@ -14,9 +14,11 @@ const nextConfig = {
   },
   // Enable standalone output for better deployment
   output: 'standalone',
-  // Increase body size limit for file uploads (40MB for brochures)
+  // Increase body size limit for file uploads (50MB for brochures)
   experimental: {
-    bodySizeLimit: '50mb',
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
   },
   // Configure for Supabase
   async redirects() {
