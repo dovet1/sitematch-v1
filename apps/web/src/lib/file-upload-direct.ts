@@ -65,13 +65,68 @@ export async function uploadFileDirect({
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
     const filePath = `${folderName}/${timestamp}-${sanitizedFileName}`
 
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, file, {
-        contentType: file.type,
-        upsert: false
+    // Upload to Supabase Storage with progress tracking
+    let uploadData: any = null
+    let uploadError: any = null
+    
+    try {
+      // Get session for authorization
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        throw new Error('No active session')
+      }
+
+      // Create upload URL
+      const uploadUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${bucket}/${filePath}`
+      
+      // Create XMLHttpRequest for progress tracking
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const progress = Math.round((event.loaded / event.total) * 100)
+            onProgress?.(progress)
+          }
+        })
+        
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText)
+              uploadData = { path: filePath, id: response.id || filePath }
+              resolve()
+            } catch (e) {
+              // If response isn't JSON, assume success with basic data
+              uploadData = { path: filePath, id: filePath }
+              resolve()
+            }
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`))
+          }
+        })
+        
+        xhr.addEventListener('error', () => {
+          reject(new Error('Upload failed - network error'))
+        })
+        
+        xhr.addEventListener('timeout', () => {
+          reject(new Error('Upload failed - timeout'))
+        })
+        
+        xhr.open('POST', uploadUrl)
+        xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`)
+        xhr.setRequestHeader('Content-Type', file.type)
+        xhr.setRequestHeader('Cache-Control', 'max-age=3600')
+        xhr.timeout = 5 * 60 * 1000 // 5 minute timeout
+        
+        xhr.send(file)
       })
+    } catch (error) {
+      uploadError = {
+        message: error instanceof Error ? error.message : 'Upload failed'
+      }
+    }
 
     if (uploadError) {
       console.error('Storage upload error:', {
