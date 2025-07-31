@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin } from 'lucide-react';
+import styles from './InteractiveMapView.module.css';
 
 // Dynamically import mapbox-gl to avoid SSR issues
 let mapboxgl: any;
@@ -158,12 +159,23 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
                 attributionControl: false
               });
 
+              // Ensure map fills container
+              map.current.getContainer().style.width = '100%';
+              map.current.getContainer().style.height = '100%';
+
               console.log('Map created successfully');
 
               map.current.on('load', () => {
                 console.log('Map loaded successfully');
                 setMapLoaded(true);
                 setUseMapbox(true);
+                
+                // Force map to resize to fill container
+                setTimeout(() => {
+                  if (map.current) {
+                    map.current.resize();
+                  }
+                }, 100);
 
               // Add custom markers for each valid location
               validLocations.forEach((location, index) => {
@@ -262,9 +274,9 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
   return (
     <div className="relative h-full w-full">
       {/* Map Container */}
-      <div ref={mapContainer} className="absolute inset-0">
+      <div ref={mapContainer} className={styles.mapContainer}>
         {!mapLoaded ? (
-          <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-violet-800 to-violet-900">
+          <div className={styles.loadingState}>
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -273,7 +285,7 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
           </div>
         ) : !useMapbox ? (
           // Fallback placeholder when Mapbox is not available
-          <div className="h-full w-full bg-gradient-to-br from-violet-800 to-violet-900 relative overflow-hidden">
+          <div className={styles.placeholderState}>
             {/* Simulated map background */}
             <div className="absolute inset-0 opacity-30">
               <div className="w-full h-full bg-gradient-to-br from-blue-900/20 to-green-900/20" />
