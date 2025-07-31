@@ -161,8 +161,11 @@ export function ImmersiveListingModal({
                           <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
                             <span>{listing.listing_type === 'residential' ? 'Residential' : 'Commercial'}</span>
                             <span>📍 {listing.locations?.all && listing.locations.all.length > 0 ? `${listing.locations.all.length} Locations` : 'Nationwide'}</span>
-                            {listing.company.site_size && (
+                            {listing.listing_type === 'commercial' && listing.company.site_size && (
                               <span>📐 {listing.company.site_size}</span>
+                            )}
+                            {listing.listing_type === 'residential' && listing.company.site_acreage && (
+                              <span>🌾 {listing.company.site_acreage}</span>
                             )}
                           </div>
                         </div>
@@ -288,7 +291,7 @@ export function ImmersiveListingModal({
                             <h3 className="text-lg font-semibold">Requirements</h3>
                             
                             {/* Site Size Requirements */}
-                            {listing.company.site_size && (
+                            {listing.listing_type === 'commercial' && listing.company.site_size && (
                               <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
                                 <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                                   <span className="text-violet-500">📐</span>
@@ -321,7 +324,7 @@ export function ImmersiveListingModal({
                             )}
 
                             {/* Sectors */}
-                            {listing.company.sectors && listing.company.sectors.length > 0 && (
+                            {listing.listing_type === 'commercial' && listing.company.sectors && listing.company.sectors.length > 0 && (
                               <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
                                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                                   <span className="text-blue-500">🏢</span>
@@ -341,7 +344,7 @@ export function ImmersiveListingModal({
                             )}
 
                             {/* Use Classes */}
-                            {listing.company.use_classes && listing.company.use_classes.length > 0 && (
+                            {listing.listing_type === 'commercial' && listing.company.use_classes && listing.company.use_classes.length > 0 && (
                               <div className="p-4 rounded-lg bg-green-50 border border-green-200">
                                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                                   <span className="text-green-500">🏗️</span>
@@ -362,11 +365,13 @@ export function ImmersiveListingModal({
 
 
                             {/* Empty state */}
-                            {!listing.company.site_size && 
-                             !listing.company.dwelling_count && 
-                             !listing.company.site_acreage && 
-                             (!listing.company.sectors || listing.company.sectors.length === 0) && 
-                             (!listing.company.use_classes || listing.company.use_classes.length === 0) && (
+                            {((listing.listing_type === 'commercial' && 
+                               !listing.company.site_size && 
+                               (!listing.company.sectors || listing.company.sectors.length === 0) && 
+                               (!listing.company.use_classes || listing.company.use_classes.length === 0)) ||
+                              (listing.listing_type === 'residential' && 
+                               !listing.company.dwelling_count && 
+                               !listing.company.site_acreage)) && (
                               <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
                                 <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                   <svg className="w-8 h-8 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
@@ -506,7 +511,7 @@ export function ImmersiveListingModal({
                             <h3 className="text-lg font-semibold">Frequently Asked Questions</h3>
                             
                             <div className="space-y-3">
-                              {(listing.faqs || []).map((faq, index) => (
+                              {(listing.faqs || []).map((faq) => (
                                 <div
                                   key={faq.id}
                                   className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:border-violet-200 transition-colors"
