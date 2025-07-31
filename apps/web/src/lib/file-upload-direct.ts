@@ -1,4 +1,4 @@
-import { createBrowserClient } from '@/lib/supabase'
+import { createClientClient } from '@/lib/supabase'
 import type { UploadedFile } from '@/types/uploads'
 
 export interface DirectUploadOptions {
@@ -35,7 +35,7 @@ export async function uploadFileDirect({
   onProgress
 }: DirectUploadOptions): Promise<DirectUploadResult> {
   try {
-    const supabase = createBrowserClient()
+    const supabase = createClientClient()
     
     // Check auth
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -60,13 +60,7 @@ export async function uploadFileDirect({
       .from(bucket)
       .upload(filePath, file, {
         contentType: file.type,
-        upsert: false,
-        onUploadProgress: (progress) => {
-          if (onProgress) {
-            const percentage = (progress.loaded / progress.total) * 100
-            onProgress(percentage)
-          }
-        }
+        upsert: false
       })
 
     if (uploadError) {
@@ -142,7 +136,7 @@ export async function deleteFileDirect(
   bucket: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = createBrowserClient()
+    const supabase = createClientClient()
 
     // Delete from storage
     const { error: storageError } = await supabase.storage
