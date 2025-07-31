@@ -195,14 +195,14 @@ export function ImmersiveListingModal({
                             <h3 className="text-lg font-semibold">Requirements In {listing?.company?.name || 'Company'}'s Own Words</h3>
 
                             {/* Requirements Brochure */}
-                            {listing.company.brochure_url && (
+                            {listing.company?.brochure_url && (
                               <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
                                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                                   <span className="text-blue-500">📋</span>
                                   Requirements Brochure
                                 </h4>
                                 <a
-                                  href={listing.company.brochure_url}
+                                  href={listing.company?.brochure_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="flex items-center gap-3 p-3 rounded-lg bg-white border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
@@ -268,7 +268,7 @@ export function ImmersiveListingModal({
                             )}
 
                             {/* Empty state if no overview content */}
-                            {!listing.company.brochure_url && !listing.company.property_page_link && (
+                            {!listing.company?.brochure_url && !listing.company?.property_page_link && (
                               <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
                                 <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                   <svg className="w-8 h-8 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
@@ -399,7 +399,7 @@ export function ImmersiveListingModal({
                                       </svg>
                                     </div>
                                     <span className="text-gray-700">
-                                      {location.place_name || location.name || 'Unknown location'}
+                                      {location.place_name || 'Unknown location'}
                                     </span>
                                   </div>
                                 ))}
