@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     
     // Parse geographic parameters for map bounds
     const north = searchParams.get('north') ? Number(searchParams.get('north')) : null;

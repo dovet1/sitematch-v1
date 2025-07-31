@@ -26,6 +26,11 @@ export function SimplifiedListingModal({
   const [logoError, setLogoError] = useState(false);
   const [expandedFAQs, setExpandedFAQs] = useState<Set<string>>(new Set());
   
+  // Mobile swipe state
+  const [startY, setStartY] = useState<number>(0);
+  const [currentY, setCurrentY] = useState<number>(0);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -59,6 +64,37 @@ export function SimplifiedListingModal({
       onClose();
       setIsClosing(false);
     }, 300);
+  };
+
+  // Mobile swipe handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.innerWidth >= 768) return; // Only on mobile
+    const touch = e.touches[0];
+    setStartY(touch.clientY);
+    setCurrentY(0);
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || window.innerWidth >= 768) return;
+    const touch = e.touches[0];
+    const deltaY = touch.clientY - startY;
+    if (deltaY > 0) { // Only allow downward swipe
+      setCurrentY(deltaY);
+      e.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging || window.innerWidth >= 768) return;
+    setIsDragging(false);
+    
+    // Close if swiped down more than 100px
+    if (currentY > 100) {
+      handleClose();
+    } else {
+      setCurrentY(0);
+    }
   };
 
   // Fetch listing data
@@ -97,7 +133,7 @@ export function SimplifiedListingModal({
       {/* Backdrop */}
       <div
         className={cn(
-          "fixed inset-0 bg-black/50 backdrop-blur-sm z-[1060] transition-opacity duration-300",
+          "premium-modal-backdrop z-modal-backdrop transition-opacity duration-300",
           isOpen && !isClosing ? "opacity-100" : "opacity-0"
         )}
         onClick={handleClose}
@@ -116,10 +152,15 @@ export function SimplifiedListingModal({
         <div
           ref={modalRef}
           className={cn(
-            "w-full max-w-4xl max-h-[100vh] md:max-h-[90vh] bg-white overflow-hidden focus:outline-none",
-            "rounded-t-2xl md:rounded-2xl shadow-xl",
-            "flex flex-col"
+            "premium-modal-container max-h-[100vh] md:max-h-[90vh] bg-white overflow-hidden focus:outline-none",
+            "flex flex-col transition-transform duration-200 ease-out"
           )}
+          style={{
+            transform: isDragging && window.innerWidth < 768 ? `translateY(${currentY}px)` : undefined
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
@@ -140,12 +181,14 @@ export function SimplifiedListingModal({
                   />
                 </div>
               ) : (
-                <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-primary-600" />
+                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-md">
+                  <span className="text-white font-semibold text-sm">
+                    {listing?.company.name?.charAt(0).toUpperCase() || 'C'}
+                  </span>
                 </div>
               )}
               <div>
-                <h2 id="modal-title" className="heading-4 text-foreground">
+                <h2 id="modal-title" className="premium-modal-title">
                   {listing?.company.name || 'Loading...'}
                 </h2>
                 <p className="text-sm text-muted-foreground">
@@ -157,7 +200,7 @@ export function SimplifiedListingModal({
               variant="ghost"
               size="sm"
               onClick={handleClose}
-              className="flex-shrink-0"
+              className="flex-shrink-0 premium-touch-target"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -169,9 +212,9 @@ export function SimplifiedListingModal({
             {isLoading ? (
               <div className="p-4 md:p-6 space-y-8">
                 <div className="space-y-4">
-                  <div className="h-8 bg-gray-200 rounded-md animate-pulse" />
-                  <div className="h-4 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-4/5" />
+                  <div className="h-8 bg-gray-200 rounded-md premium-loading-shimmer relative overflow-hidden" />
+                  <div className="h-4 bg-gray-200 rounded premium-loading-shimmer relative overflow-hidden" />
+                  <div className="h-4 bg-gray-200 rounded premium-loading-shimmer relative overflow-hidden w-4/5" />
                 </div>
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full" />
@@ -179,9 +222,29 @@ export function SimplifiedListingModal({
               </div>
             ) : error && !listing ? (
               <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-                <Building2 className="w-12 h-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-2">{error}</p>
-                <p className="text-sm text-muted-foreground">There was a problem loading this listing</p>
+                <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center mb-4">
+                  <Building2 className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">Unable to Load Listing</h3>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <div className="space-y-2">
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={() => window.location.reload()}
+                    className="premium-button-elevation"
+                  >
+                    Try Again
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleClose}
+                    className="ml-2"
+                  >
+                    Close Modal
+                  </Button>
+                </div>
               </div>
             ) : listing ? (
               <div className="p-4 md:p-6 space-y-8">
@@ -197,7 +260,7 @@ export function SimplifiedListingModal({
                         <span className="text-sm font-medium">Listing Type:</span>
                       </div>
                       <div>
-                        <Badge variant="outline" className={`text-xs font-medium ${listing.listing_type === 'residential' ? 'bg-white text-emerald-700 border-emerald-300 shadow-sm' : 'bg-white text-red-700 border-red-300 shadow-sm'}`}>
+                        <Badge variant="outline" className={`text-xs font-medium premium-badge-gradient transition-all duration-300 hover:scale-105 ${listing.listing_type === 'residential' ? 'bg-white text-emerald-700 border-emerald-300 shadow-sm' : 'bg-white text-red-700 border-red-300 shadow-sm'}`}>
                           {listing.listing_type === 'residential' ? (
                             <>
                               <Home className="w-3 h-3 mr-1" />
@@ -225,7 +288,7 @@ export function SimplifiedListingModal({
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {listing.company.sectors.slice(0, 3).map((sector, index) => (
-                              <Badge key={index} variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 text-xs">
+                              <Badge key={index} variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 text-xs premium-card-hover transition-all duration-300">
                                 {sector}
                               </Badge>
                             ))}
@@ -245,7 +308,7 @@ export function SimplifiedListingModal({
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {listing.company.use_classes.slice(0, 3).map((useClass, index) => (
-                              <Badge key={index} variant="outline" className="bg-green-50 text-green-800 border-green-200 text-xs">
+                              <Badge key={index} variant="outline" className="bg-green-50 text-green-800 border-green-200 text-xs premium-card-hover transition-all duration-300">
                                 {useClass}
                               </Badge>
                             ))}
@@ -348,9 +411,9 @@ export function SimplifiedListingModal({
                 <div className="space-y-4">
                   <button
                     onClick={() => toggleSection('contacts')}
-                    className="w-full flex items-center justify-between p-0 text-left hover:text-primary-600 transition-colors"
+                    className="w-full flex items-center justify-between p-2 text-left hover:text-primary-600 transition-colors premium-touch-target"
                   >
-                    <h4 className="heading-4 text-foreground flex items-center gap-2">
+                    <h4 className="heading-4 text-foreground flex items-center gap-2 premium-border-accent">
                       <Users className="w-4 h-4 text-primary-500" />
                       Contact Information
                     </h4>
@@ -378,8 +441,10 @@ export function SimplifiedListingModal({
                               }}
                             />
                           ) : null}
-                          <div className={`w-full h-full bg-primary-100 rounded-full flex items-center justify-center ${listing.contacts.primary.headshot_url ? 'hidden' : ''}`}>
-                            <User className="w-6 h-6 text-primary-600" />
+                          <div className={`w-full h-full bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center ${listing.contacts.primary.headshot_url ? 'hidden' : ''}`}>
+                            <span className="text-white font-semibold text-sm">
+                              {listing.contacts.primary.name?.charAt(0).toUpperCase() || 'U'}
+                            </span>
                           </div>
                         </div>
                         <div className="flex-1">
@@ -436,8 +501,10 @@ export function SimplifiedListingModal({
                                         }}
                                       />
                                     ) : null}
-                                    <div className={`w-full h-full bg-gray-100 rounded-full flex items-center justify-center ${contact.headshot_url ? 'hidden' : ''}`}>
-                                      <User className="w-6 h-6 text-gray-600" />
+                                    <div className={`w-full h-full bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center ${contact.headshot_url ? 'hidden' : ''}`}>
+                                      <span className="text-white font-semibold text-sm">
+                                        {contact.name?.charAt(0).toUpperCase() || 'U'}
+                                      </span>
                                     </div>
                                   </div>
                                   <div className="flex-1">
@@ -485,9 +552,9 @@ export function SimplifiedListingModal({
                 <div className="space-y-4">
                   <button
                     onClick={() => toggleSection('locations')}
-                    className="w-full flex items-center justify-between p-0 text-left hover:text-primary-600 transition-colors"
+                    className="w-full flex items-center justify-between p-2 text-left hover:text-primary-600 transition-colors premium-touch-target"
                   >
-                    <h4 className="heading-4 text-foreground flex items-center gap-2">
+                    <h4 className="heading-4 text-foreground flex items-center gap-2 premium-border-accent">
                       <MapPin className="w-4 h-4 text-primary-500" />
                       Location Requirements
                     </h4>
@@ -510,7 +577,7 @@ export function SimplifiedListingModal({
                           <h5 className="font-medium text-foreground">Preferred Locations</h5>
                           <div className="flex flex-wrap gap-2">
                             {(listing.locations?.all as any).map((location: any, index: number) => (
-                              <Badge key={index} variant="outline" className="bg-primary-50 text-primary-800 border-primary-200">
+                              <Badge key={index} variant="outline" className="bg-primary-50 text-primary-800 border-primary-200 premium-card-hover transition-all duration-300">
                                 <MapPin className="w-3 h-3 mr-1" />
                                 {location.place_name.split(',').slice(0, 2).join(',').trim()}
                               </Badge>
@@ -527,9 +594,9 @@ export function SimplifiedListingModal({
                   <div className="space-y-4">
                     <button
                       onClick={() => toggleSection('sectors')}
-                      className="w-full flex items-center justify-between p-0 text-left hover:text-primary-600 transition-colors"
+                      className="w-full flex items-center justify-between p-2 text-left hover:text-primary-600 transition-colors premium-touch-target"
                     >
-                      <h4 className="heading-4 text-foreground flex items-center gap-2">
+                      <h4 className="heading-4 text-foreground flex items-center gap-2 premium-border-accent">
                         <Building2 className="w-4 h-4 text-primary-500" />
                         Sectors of Interest
                       </h4>
@@ -544,7 +611,7 @@ export function SimplifiedListingModal({
                       <div className="bg-gray-50 rounded-lg p-4">
                         <div className="flex flex-wrap gap-2">
                           {listing.company.sectors.map((sector, index) => (
-                            <Badge key={index} variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
+                            <Badge key={index} variant="outline" className="bg-blue-50 text-blue-800 border-blue-200 premium-card-hover transition-all duration-300">
                               <Building2 className="w-3 h-3 mr-1" />
                               {sector}
                             </Badge>
@@ -560,9 +627,9 @@ export function SimplifiedListingModal({
                   <div className="space-y-4">
                     <button
                       onClick={() => toggleSection('use_classes')}
-                      className="w-full flex items-center justify-between p-0 text-left hover:text-primary-600 transition-colors"
+                      className="w-full flex items-center justify-between p-2 text-left hover:text-primary-600 transition-colors premium-touch-target"
                     >
-                      <h4 className="heading-4 text-foreground flex items-center gap-2">
+                      <h4 className="heading-4 text-foreground flex items-center gap-2 premium-border-accent">
                         <Zap className="w-4 h-4 text-primary-500" />
                         Use Classes
                       </h4>
@@ -577,7 +644,7 @@ export function SimplifiedListingModal({
                       <div className="bg-gray-50 rounded-lg p-4">
                         <div className="flex flex-wrap gap-2">
                           {listing.company.use_classes.map((useClass, index) => (
-                            <Badge key={index} variant="outline" className="bg-green-50 text-green-800 border-green-200">
+                            <Badge key={index} variant="outline" className="bg-green-50 text-green-800 border-green-200 premium-card-hover transition-all duration-300">
                               <Zap className="w-3 h-3 mr-1" />
                               {useClass}
                             </Badge>
@@ -592,9 +659,9 @@ export function SimplifiedListingModal({
                 <div className="space-y-4">
                   <button
                     onClick={() => toggleSection('property_details')}
-                    className="w-full flex items-center justify-between p-0 text-left hover:text-primary-600 transition-colors"
+                    className="w-full flex items-center justify-between p-2 text-left hover:text-primary-600 transition-colors premium-touch-target"
                   >
-                    <h4 className="heading-4 text-foreground flex items-center gap-2">
+                    <h4 className="heading-4 text-foreground flex items-center gap-2 premium-border-accent">
                       <Square className="w-4 h-4 text-primary-500" />
                       {listing.listing_type === 'commercial' ? 'Size Requirements' : 'Property Details'}
                     </h4>
@@ -638,9 +705,9 @@ export function SimplifiedListingModal({
                   <div className="space-y-4">
                     <button
                       onClick={() => toggleSection('faqs')}
-                      className="w-full flex items-center justify-between p-0 text-left hover:text-primary-600 transition-colors"
+                      className="w-full flex items-center justify-between p-2 text-left hover:text-primary-600 transition-colors premium-touch-target"
                     >
-                      <h4 className="heading-4 text-foreground">
+                      <h4 className="heading-4 text-foreground premium-border-accent">
                         Frequently Asked Questions
                       </h4>
                       {expandedSections.has('faqs') ? (
@@ -694,9 +761,9 @@ export function SimplifiedListingModal({
                   <div className="space-y-4">
                     <button
                       onClick={() => toggleSection('fit_outs')}
-                      className="w-full flex items-center justify-between p-0 text-left hover:text-primary-600 transition-colors"
+                      className="w-full flex items-center justify-between p-2 text-left hover:text-primary-600 transition-colors premium-touch-target"
                     >
-                      <h4 className="heading-4 text-foreground flex items-center gap-2">
+                      <h4 className="heading-4 text-foreground flex items-center gap-2 premium-border-accent">
                         <ImageIcon className="w-4 h-4 text-primary-500" />
                         Fit-Out Examples
                       </h4>
@@ -744,9 +811,9 @@ export function SimplifiedListingModal({
                   <div className="space-y-4">
                     <button
                       onClick={() => toggleSection('site_plans')}
-                      className="w-full flex items-center justify-between p-0 text-left hover:text-primary-600 transition-colors"
+                      className="w-full flex items-center justify-between p-2 text-left hover:text-primary-600 transition-colors premium-touch-target"
                     >
-                      <h4 className="heading-4 text-foreground flex items-center gap-2">
+                      <h4 className="heading-4 text-foreground flex items-center gap-2 premium-border-accent">
                         <File className="w-4 h-4 text-primary-500" />
                         Site Plan Examples
                       </h4>
@@ -786,6 +853,61 @@ export function SimplifiedListingModal({
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Requirements Brochure Section - Graceful degradation */}
+                {listing.brochure_files && listing.brochure_files.length > 0 && (
+                  <div className="premium-section">
+                    <h4 className="heading-4 text-foreground flex items-center gap-2 premium-border-accent mb-4">
+                      <FileText className="w-4 h-4 text-primary-500" />
+                      Requirements Brochure
+                    </h4>
+                    <div className="space-y-3">
+                      {listing.brochure_files.map((file) => (
+                        <div key={file.id} className="premium-file-download">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                              <FileText className="w-4 h-4 text-primary-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">
+                                {file.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {(file.file_size / 1024 / 1024).toFixed(1)}MB • PDF
+                              </p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="premium-button-elevation premium-touch-target"
+                              onClick={() => window.open(file.url, '_blank')}
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              Download
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Property Page Link Section - Graceful degradation */}
+                {listing.property_page_link && (
+                  <div className="premium-section">
+                    <h4 className="heading-4 text-foreground premium-border-accent mb-4">
+                      Property Information
+                    </h4>
+                    <Button 
+                      variant="outline" 
+                      className="premium-button-elevation premium-touch-target"
+                      onClick={() => window.open(listing.property_page_link, '_blank', 'noopener,noreferrer')}
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      View Property Details
+                    </Button>
                   </div>
                 )}
               </div>

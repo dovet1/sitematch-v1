@@ -92,6 +92,7 @@ export interface ModalState {
 
 // Enhanced modal content interfaces for LDM story
 export interface ContactDetails {
+  id?: string;
   name: string;
   title: string;
   email: string;
@@ -103,6 +104,7 @@ export interface ContactDetails {
 export interface Location {
   id?: string;
   place_name: string;
+  name?: string;
   coordinates?: { lat: number; lng: number };
 }
 
@@ -127,6 +129,8 @@ export interface EnhancedListingModalContent {
   company: {
     name: string;
     logo_url?: string;
+    brochure_url?: string;
+    property_page_link?: string;
     sectors: string[];
     use_classes: string[];
     // Legacy fields for backward compatibility
@@ -158,6 +162,17 @@ export interface EnhancedListingModalContent {
     fit_outs: FileAttachment[];
     site_plans: FileAttachment[];
   };
+
+  // Missing data elements from create form
+  property_page_link?: string; // External website link
+  brochure_files?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    file_size: number;
+    mime_type: string;
+    uploaded_at: string;
+  }>;
 
   // Metadata
   id: string;

@@ -1,0 +1,132 @@
+/* Container */
+.container {
+  @apply relative h-full w-full overflow-hidden;
+  background: linear-gradient(135deg, var(--violet-900, #4c1d95), var(--violet-700, #6d28d9));
+}
+
+/* Content Area */
+.contentArea {
+  @apply absolute inset-0;
+}
+
+/* Loading State */
+.loadingSkeleton {
+  @apply h-full w-full flex flex-col items-center justify-center;
+}
+
+/* Error State */
+.errorState {
+  @apply h-full w-full flex flex-col items-center justify-center;
+}
+
+/* Content Indicators */
+.indicators {
+  @apply absolute bottom-6 left-6 flex gap-2;
+  @apply z-20;
+}
+
+.indicator {
+  @apply flex items-center gap-2 px-3 py-2;
+  @apply rounded-full text-sm font-medium;
+  @apply transition-all duration-200;
+  min-height: 44px; /* Touch target */
+  /* Default styling - will be overridden by conditional classes */
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.indicator:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.indicatorActive {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced styling when map is active */
+.indicatorMapActive {
+  background: rgba(139, 92, 246, 0.9) !important; /* violet-600/90 */
+  backdrop-filter: blur(12px) !important;
+  color: white !important;
+  border: 2px solid rgba(167, 139, 250, 0.8) !important; /* violet-400/80 - stronger border */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.indicatorMapInactive {
+  background: rgba(139, 92, 246, 0.7) !important; /* violet-500/70 */
+  backdrop-filter: blur(12px) !important;
+  color: white !important;
+  border: 1px solid rgba(167, 139, 250, 0.5) !important; /* violet-400/50 */
+}
+
+.indicatorMapInactive:hover {
+  background: rgba(139, 92, 246, 0.8) !important; /* violet-600/80 */
+  border: 1px solid rgba(167, 139, 250, 0.7) !important; /* violet-400/70 */
+}
+
+.indicatorLabel {
+  @apply hidden md:inline;
+}
+
+/* Company Overlay */
+.companyOverlay {
+  @apply absolute top-6 left-6 right-6;
+  @apply z-20;
+}
+
+.companyName {
+  @apply text-2xl md:text-3xl font-bold text-white;
+  @apply drop-shadow-lg;
+}
+
+.companySubtitle {
+  @apply text-violet-200 text-sm md:text-base;
+  @apply drop-shadow-md;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+  .indicators {
+    @apply bottom-4 left-4 right-4;
+    @apply justify-center;
+  }
+  
+  .indicator {
+    @apply flex-1 justify-center;
+  }
+  
+  .companyOverlay {
+    @apply top-4 left-4 right-4;
+  }
+  
+  .companyName {
+    @apply text-xl;
+  }
+}
+
+/* Animation enhancement for indicators */
+.indicator:hover .indicatorLabel {
+  @apply scale-105;
+}
+
+/* Focus states for accessibility */
+.indicator:focus {
+  @apply outline-none ring-2 ring-white/50 ring-offset-2 ring-offset-transparent;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .indicator {
+    transition: none;
+  }
+  
+  .indicator:hover .indicatorLabel {
+    transform: none;
+  }
+}
