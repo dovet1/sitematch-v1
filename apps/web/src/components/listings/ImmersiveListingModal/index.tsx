@@ -171,7 +171,7 @@ export function ImmersiveListingModal({
 
                     {/* Tab Navigation */}
                     <div className={styles.tabNavigation}>
-                      {['overview', 'requirements', 'locations', 'documents', 'contact'].map((tab) => (
+                      {['overview', 'requirements', 'locations', 'contact', 'faqs'].map((tab) => (
                         <button
                           key={tab}
                           onClick={() => setActiveTab(tab)}
@@ -180,20 +180,14 @@ export function ImmersiveListingModal({
                             activeTab === tab && styles.tabButtonActive
                           )}
                         >
-                          {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                          {tab === 'faqs' ? 'FAQs' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                         </button>
                       ))}
                     </div>
 
                     {/* Tab Content */}
                     <div className={styles.tabContent}>
-                      <motion.div
-                        key={activeTab}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="p-6"
-                      >
+                      <div className="p-6">
                         {activeTab === 'overview' && (
                           <div className="space-y-4">
                             <h3 className="text-lg font-semibold">Overview</h3>
@@ -217,7 +211,10 @@ export function ImmersiveListingModal({
                             {listing.locations?.all && listing.locations.all.length > 0 ? (
                               <div className="space-y-2">
                                 {listing.locations.all.map((location, index) => (
-                                  <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                                  <div 
+                                    key={index} 
+                                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                                  >
                                     <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
                                       <svg className="w-4 h-4 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
@@ -241,14 +238,6 @@ export function ImmersiveListingModal({
                             )}
                           </div>
                         )}
-                        {activeTab === 'documents' && (
-                          <div className="space-y-4">
-                            <h3 className="text-lg font-semibold">Documents</h3>
-                            <p className="text-gray-600">
-                              Brochures, site plans, and other documents.
-                            </p>
-                          </div>
-                        )}
                         {activeTab === 'contact' && (
                           <div className="space-y-4">
                             <h3 className="text-lg font-semibold">Contact</h3>
@@ -260,7 +249,10 @@ export function ImmersiveListingModal({
                                   ...(listing.contacts.primary ? [listing.contacts.primary] : []),
                                   ...(listing.contacts.additional || [])
                                 ].map((contact, index) => (
-                                  <div key={contact.id || index} className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-200 transition-all duration-200">
+                                  <div 
+                                    key={contact.id || index} 
+                                    className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-200 transition-all duration-200"
+                                  >
                                     <div className="flex items-start gap-4">
                                       {contact.headshot_url ? (
                                         <img
@@ -331,7 +323,60 @@ export function ImmersiveListingModal({
                             )}
                           </div>
                         )}
-                      </motion.div>
+                        {activeTab === 'faqs' && (
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-semibold">Frequently Asked Questions</h3>
+                            
+                            <div className="space-y-3">
+                              {(listing.faqs || []).map((faq, index) => (
+                                <div
+                                  key={faq.id}
+                                  className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:border-violet-200 transition-colors"
+                                >
+                                  <h4 className="font-semibold text-gray-900 mb-2 flex items-start gap-2">
+                                    <span className="text-violet-500 font-bold text-lg">Q:</span>
+                                    {faq.question}
+                                  </h4>
+                                  <p className="text-gray-600 text-sm leading-relaxed pl-6">
+                                    <span className="text-violet-500 font-bold mr-1">A:</span>
+                                    {faq.answer}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+
+                            {(!listing.faqs || listing.faqs.length === 0) && (
+                              <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
+                                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                  <svg className="w-8 h-8 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                                <h4 className="font-semibold text-gray-900 mb-2">No FAQs Available</h4>
+                                <p className="text-gray-600 text-sm max-w-sm mx-auto">
+                                  No frequently asked questions have been added for this listing yet. 
+                                  <br />Please contact our team directly for any specific questions.
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="mt-6 p-4 rounded-lg bg-violet-50 border border-violet-200">
+                              <h4 className="font-semibold text-violet-900 mb-2 flex items-center gap-2">
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                </svg>
+                                Still have questions?
+                              </h4>
+                              <button
+                                onClick={() => setActiveTab('contact')}
+                                className="text-violet-700 text-sm hover:text-violet-800 underline transition-colors"
+                              >
+                                Contact {listing.company.name}'s team to find out more
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ) : null}
