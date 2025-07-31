@@ -1,0 +1,28 @@
+/* Ensure Mapbox map fills container completely */
+.mapContainer {
+  @apply absolute inset-0 h-full w-full;
+}
+
+/* Force Mapbox canvas to fill container */
+.mapContainer :global(.mapboxgl-map) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.mapContainer :global(.mapboxgl-canvas) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.mapContainer :global(.mapboxgl-canvas-container) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.loadingState {
+  @apply absolute inset-0 h-full w-full flex items-center justify-center bg-gradient-to-br from-violet-800 to-violet-900;
+}
+
+.placeholderState {
+  @apply absolute inset-0 h-full w-full bg-gradient-to-br from-violet-800 to-violet-900 relative overflow-hidden;
+}
