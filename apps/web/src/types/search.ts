@@ -159,6 +159,17 @@ export interface EnhancedListingModalContent {
     site_plans: FileAttachment[];
   };
 
+  // Missing data elements from create form
+  property_page_link?: string; // External website link
+  brochure_files?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    file_size: number;
+    mime_type: string;
+    uploaded_at: string;
+  }>;
+
   // Metadata
   id: string;
   title: string;

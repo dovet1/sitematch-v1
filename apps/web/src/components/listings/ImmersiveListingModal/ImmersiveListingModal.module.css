@@ -1,0 +1,175 @@
+/* Backdrop */
+.backdrop {
+  @apply fixed inset-0 z-[9999];
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+/* Modal Container */
+.modalContainer {
+  @apply fixed inset-0 z-[10000] flex flex-col;
+  @apply bg-white;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Header Bar */
+.headerBar {
+  @apply flex items-center justify-between px-6 py-4;
+  @apply bg-white/95 backdrop-blur-md border-b border-gray-200;
+  @apply absolute top-0 left-0 right-0 z-10;
+}
+
+.closeButton {
+  @apply p-2 hover:bg-gray-100 rounded-lg transition-colors;
+  @apply flex items-center justify-center;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.headerActions {
+  @apply flex items-center gap-3;
+}
+
+.actionButton {
+  @apply transition-all duration-200 hover:scale-105;
+}
+
+.primaryButton {
+  @apply bg-violet-600 hover:bg-violet-700 text-white;
+  @apply transition-all duration-200 hover:scale-105;
+}
+
+/* Split Layout - Desktop */
+@media (min-width: 768px) {
+  .splitLayout {
+    @apply flex h-full pt-16; /* Account for header */
+  }
+
+  .visualHero {
+    @apply w-2/5 relative overflow-hidden;
+    background: linear-gradient(135deg, var(--violet-900, #4c1d95), var(--violet-700, #6d28d9));
+  }
+
+  .informationPanel {
+    @apply w-3/5 overflow-hidden;
+    @apply bg-white;
+  }
+}
+
+/* Mobile Layout */
+@media (max-width: 767px) {
+  .splitLayout {
+    @apply flex flex-col h-full pt-16; /* Account for header on mobile too */
+  }
+
+  .visualHero {
+    @apply h-[40vh] relative;
+    background: linear-gradient(135deg, var(--violet-900, #4c1d95), var(--violet-700, #6d28d9));
+  }
+
+  .informationPanel {
+    @apply flex-1 overflow-hidden bg-white;
+  }
+}
+
+/* Hero Content */
+.heroSkeleton {
+  @apply h-full w-full flex items-center justify-center;
+}
+
+.heroError {
+  @apply h-full w-full flex items-center justify-center text-white;
+}
+
+.heroPlaceholder {
+  @apply h-full w-full flex flex-col items-center justify-center text-center px-6;
+}
+
+/* Company Hero Card */
+.companyHero {
+  @apply p-6 border-b border-gray-200 bg-gradient-to-r from-violet-50 to-violet-100;
+}
+
+/* Tab Navigation */
+.tabNavigation {
+  @apply flex border-b border-gray-200;
+  @apply overflow-x-auto md:overflow-visible;
+}
+
+.tabButton {
+  @apply px-4 py-4 font-medium text-gray-600;
+  @apply border-b-2 border-transparent;
+  @apply transition-all duration-200;
+  @apply hover:text-violet-600;
+  @apply whitespace-nowrap;
+  @apply text-sm md:text-base;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.tabButtonActive {
+  @apply text-violet-600 border-violet-600;
+}
+
+/* Tab Content */
+.tabContent {
+  @apply flex-1 overflow-y-auto;
+}
+
+/* Animations */
+@keyframes gradientShift {
+  0%, 100% { 
+    background-position: 0% 50%; 
+  }
+  50% { 
+    background-position: 100% 50%; 
+  }
+}
+
+.visualHero {
+  background-size: 200% 200%;
+  animation: gradientShift 10s ease infinite;
+}
+
+/* Responsive adjustments */
+@media (min-width: 1024px) {
+  .visualHero {
+    @apply w-2/5;
+  }
+  
+  .informationPanel {
+    @apply w-3/5;
+  }
+}
+
+/* Remove the constrained layout for truly full-screen experience */
+@media (min-width: 1280px) {
+  .modalContainer {
+    @apply px-0; /* Remove padding for full-screen */
+  }
+  
+  .splitLayout {
+    @apply rounded-none overflow-hidden; /* Remove border radius for full-screen */
+    height: 100vh;
+    margin: 0;
+    max-width: none;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .visualHero {
+    animation: none;
+  }
+  
+  .actionButton,
+  .primaryButton {
+    transition: none;
+  }
+  
+  .actionButton:hover,
+  .primaryButton:hover {
+    transform: none;
+  }
+}
