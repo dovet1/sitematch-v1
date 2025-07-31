@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Image as ImageIcon, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Image as ImageIcon, FileText, Maximize2, X } from 'lucide-react';
 
 interface ImageFile {
   id: string;
@@ -17,6 +17,7 @@ interface ImageGalleryProps {
 export function ImageGallery({ images, type }: ImageGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imageLoaded, setImageLoaded] = useState<{ [key: string]: boolean }>({});
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const nextImage = () => {
     setCurrentIndex((prev) => (prev + 1) % images.length);
@@ -29,6 +30,35 @@ export function ImageGallery({ images, type }: ImageGalleryProps) {
   const handleImageLoad = (imageId: string) => {
     setImageLoaded(prev => ({ ...prev, [imageId]: true }));
   };
+
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
+  };
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullScreen) {
+        setIsFullScreen(false);
+      } else if (e.key === 'ArrowLeft') {
+        prevImage();
+      } else if (e.key === 'ArrowRight') {
+        nextImage();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    
+    if (isFullScreen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+      document.body.style.overflow = '';
+    };
+  }, [isFullScreen]);
 
   if (!images || images.length === 0) {
     return (
@@ -112,52 +142,29 @@ export function ImageGallery({ images, type }: ImageGalleryProps) {
         </>
       )}
 
-      {/* Image Info Overlay */}
+
+      {/* Image Counter and Full Screen Button */}
       <motion.div
-        className="absolute bottom-6 left-6 right-6 z-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        className="absolute top-6 right-6 z-10 flex gap-2"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
       >
-        <div className="bg-white/20 backdrop-blur-md rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            {type === 'fit-outs' ? (
-              <ImageIcon className="w-4 h-4 text-white" />
-            ) : (
-              <FileText className="w-4 h-4 text-white" />
-            )}
+        {images.length > 1 && (
+          <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-full">
             <span className="text-white text-sm font-medium">
-              {type === 'fit-outs' ? 'Fit-Out Example' : 'Site Plan'}
+              {currentIndex + 1} / {images.length}
             </span>
           </div>
-          
-          {currentImage.name && (
-            <h4 className="text-white font-medium mb-1">
-              {currentImage.name}
-            </h4>
-          )}
-          
-          {currentImage.caption && (
-            <p className="text-white/80 text-sm">
-              {currentImage.caption}
-            </p>
-          )}
-        </div>
-      </motion.div>
-
-      {/* Image Counter */}
-      {images.length > 1 && (
-        <motion.div
-          className="absolute top-6 right-6 z-10 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
+        )}
+        <button
+          onClick={toggleFullScreen}
+          className="bg-black/40 backdrop-blur-md p-2 rounded-full hover:bg-black/60 transition-colors"
+          aria-label="Toggle full screen"
         >
-          <span className="text-white text-sm font-medium">
-            {currentIndex + 1} / {images.length}
-          </span>
-        </motion.div>
-      )}
+          <Maximize2 className="w-4 h-4 text-white" />
+        </button>
+      </motion.div>
 
       {/* Thumbnail Strip (for desktop) */}
       {images.length > 1 && (
@@ -183,6 +190,75 @@ export function ImageGallery({ images, type }: ImageGalleryProps) {
           </div>
         </div>
       )}
+
+      {/* Full Screen Overlay */}
+      <AnimatePresence>
+        {isFullScreen && (
+          <motion.div
+            className="fixed inset-0 z-50 bg-black"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {/* Close Button */}
+            <button
+              onClick={toggleFullScreen}
+              className="absolute top-6 right-6 z-50 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full p-3 text-white transition-all duration-200"
+              aria-label="Exit full screen"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Full Screen Image */}
+            <div className="relative h-full w-full flex items-center justify-center">
+              <img
+                src={currentImage.url}
+                alt={currentImage.name || `${type} ${currentIndex + 1}`}
+                className="max-h-full max-w-full object-contain"
+              />
+
+              {/* Navigation Controls */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full p-4 text-white transition-all duration-200"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full p-4 text-white transition-all duration-200"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </>
+              )}
+
+              {/* Image Info */}
+              <div className="absolute bottom-6 left-6 right-6 text-center">
+                {currentImage.name && (
+                  <h3 className="text-white text-xl font-medium mb-2">
+                    {currentImage.name}
+                  </h3>
+                )}
+                {currentImage.caption && (
+                  <p className="text-white/80">
+                    {currentImage.caption}
+                  </p>
+                )}
+                {images.length > 1 && (
+                  <p className="text-white/60 mt-4">
+                    {currentIndex + 1} of {images.length}
+                  </p>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
