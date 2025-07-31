@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 
+// Configure route segment to handle larger file uploads
+export const runtime = 'nodejs' // Use Node.js runtime
+export const maxDuration = 30 // 30 seconds timeout
+
 export async function POST(request: NextRequest) {
   try {
     console.log('Upload API: Request received')
