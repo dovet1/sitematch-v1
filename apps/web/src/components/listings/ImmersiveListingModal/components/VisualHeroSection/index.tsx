@@ -184,7 +184,7 @@ export function VisualHeroSection({ listing, isLoading }: VisualHeroSectionProps
           animate={{ scale: 1 }}
           transition={{ delay: 0.1, type: 'spring', duration: 0.4 }}
         >
-          {listing.locations?.all?.length || 0} {(listing.locations?.all?.length || 0) === 1 ? 'Location' : 'Locations'}
+{listing.locations?.all && listing.locations.all.length > 0 ? `${listing.locations.all.length} ${listing.locations.all.length === 1 ? 'Location' : 'Locations'}` : 'Nationwide'}
         </motion.div>
       )}
     </motion.div>
