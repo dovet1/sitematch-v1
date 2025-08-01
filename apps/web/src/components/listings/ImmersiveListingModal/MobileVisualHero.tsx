@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { EnhancedListingModalContent } from '@/types/search';
-import { VisualHeroSection } from './components/VisualHeroSection';
+import { MobileMediaViewer } from './MobileMediaViewer';
 import { cn } from '@/lib/utils';
 import styles from './MobileVisualHero.module.css';
 
@@ -14,8 +14,10 @@ interface MobileVisualHeroProps {
 
 export function MobileVisualHero({ listing, isLoading, className }: MobileVisualHeroProps) {
   return (
-    <div className={cn(styles.container, className)}>
-      <VisualHeroSection listing={listing} isLoading={isLoading} />
-    </div>
+    <MobileMediaViewer 
+      listing={listing} 
+      isLoading={isLoading} 
+      className={cn("h-full", className)}
+    />
   );
 }
