@@ -605,47 +605,26 @@ export function ImmersiveListingModal({
               {/* Mobile Bottom Sheet */}
               <SimpleMobileBottomSheet
                 onDismiss={handleClose}
-              >
-                {listing && (
-                  <>
-                    {/* Company Info Card - Compact for mobile */}
-                    <div className="px-4 py-2 bg-gradient-to-r from-violet-50 to-purple-50 border-b border-gray-200">
-                      <div className="flex items-center gap-3 text-xs text-gray-600">
-                        <span className="font-medium text-gray-900">
-                          {listing.listing_type === 'residential' ? 'Residential' : 'Commercial'}
-                        </span>
-                        <span>•</span>
-                        <span>{listing.locations?.all && listing.locations.all.length > 0 ? `${listing.locations.all.length} Locations` : 'Nationwide'}</span>
-                        {listing.listing_type === 'commercial' && listing.company.site_size && (
-                          <>
-                            <span>•</span>
-                            <span>{listing.company.site_size}</span>
-                          </>
-                        )}
-                        {listing.listing_type === 'residential' && listing.company.site_acreage && (
-                          <>
-                            <span>•</span>
-                            <span>{listing.company.site_acreage}</span>
-                          </>
-                        )}
+                peekContent={null}
+                fullContent={
+                  listing && (
+                    <>
+                      {/* Mobile Tab Navigation */}
+                      <MobileTabNavigation
+                        tabs={tabs}
+                        activeTab={activeTab}
+                        onTabChange={handleTabChange}
+                        companyName={listing.company.name}
+                      />
+
+                      {/* Tab Content */}
+                      <div className="flex-1 overflow-y-auto">
+                        {renderTabContent()}
                       </div>
-                    </div>
-
-                    {/* Mobile Tab Navigation */}
-                    <MobileTabNavigation
-                      tabs={tabs}
-                      activeTab={activeTab}
-                      onTabChange={handleTabChange}
-                      companyName={listing.company.name}
-                    />
-
-                    {/* Tab Content */}
-                    <div className="flex-1 overflow-y-auto">
-                      {renderTabContent()}
-                    </div>
-                  </>
-                )}
-              </SimpleMobileBottomSheet>
+                    </>
+                  )
+                }
+              />
             </div>
           </>
         )}

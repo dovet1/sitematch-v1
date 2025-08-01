@@ -4,20 +4,24 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface SimpleMobileBottomSheetProps {
-  children: React.ReactNode;
+  peekContent: React.ReactNode;
+  fullContent: React.ReactNode;
   onDismiss?: () => void;
 }
 
-export function SimpleMobileBottomSheet({ children, onDismiss }: SimpleMobileBottomSheetProps) {
+export function SimpleMobileBottomSheet({ peekContent, fullContent, onDismiss }: SimpleMobileBottomSheetProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className={cn(
       "fixed left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-[10001] transition-all duration-300 flex flex-col",
-      isExpanded ? "bottom-0 top-[10vh]" : "bottom-0 h-[25vh]"
+      isExpanded ? "bottom-0 top-[10vh]" : "bottom-0 h-[80px]"
     )}>
       {/* Handle */}
-      <div className="flex justify-center p-3 border-b border-gray-100 flex-shrink-0">
+      <div className={cn(
+        "flex justify-center p-3 flex-shrink-0",
+        isExpanded && "border-b border-gray-100"
+      )}>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-50 transition-colors"
@@ -32,7 +36,7 @@ export function SimpleMobileBottomSheet({ children, onDismiss }: SimpleMobileBot
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-        {children}
+        {isExpanded ? fullContent : peekContent}
       </div>
     </div>
   );
