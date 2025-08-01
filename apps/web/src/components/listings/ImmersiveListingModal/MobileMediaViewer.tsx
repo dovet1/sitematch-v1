@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, MapPin, FileText, Home } from 'lucide-react';
+import { ChevronLeft, MapPin, FileText, Home, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSwipeable } from 'react-swipeable';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import { InteractiveMapView } from './components/VisualHeroSection/InteractiveMapView';
 import { NationwideHeroVisual } from './components/VisualHeroSection/NationwideHeroVisual';
 import { SimpleImageGallery } from './components/VisualHeroSection/SimpleImageGallery';
@@ -20,6 +21,7 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenImageIndex, setFullscreenImageIndex] = useState(0);
+  const [fullscreenImages, setFullscreenImages] = useState<any[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Determine if we should show map or nationwide view
@@ -120,6 +122,7 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
             images={sitePlans}
             type="site-plans"
             onImageClick={(index) => {
+              setFullscreenImages(sitePlans);
               setFullscreenImageIndex(index);
               setIsFullscreen(true);
             }}
@@ -139,6 +142,7 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
             images={fitOuts}
             type="fit-outs"
             onImageClick={(index) => {
+              setFullscreenImages(fitOuts);
               setFullscreenImageIndex(index);
               setIsFullscreen(true);
             }}
@@ -163,81 +167,6 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
       ref={containerRef}
       className={cn("relative w-full h-full overflow-hidden", className)}
     >
-      {/* True Fullscreen Overlay */}
-      <AnimatePresence>
-        {isFullscreen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[10020] bg-black"
-          >
-            {/* Close Button */}
-            <button
-              onClick={() => setIsFullscreen(false)}
-              className="absolute top-4 right-4 z-[10021] w-12 h-12 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
-              aria-label="Close fullscreen"
-            >
-              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            {/* Fullscreen Content */}
-            <div className="w-full h-full flex items-center justify-center">
-              {(() => {
-                const currentType = mediaItems[activeIndex]?.type;
-                
-                if (currentType === 'site-plan') {
-                  const sitePlans = listing.files?.site_plans?.map((file: any, index: number) => ({
-                    id: file.id || `site-plan-${index}`,
-                    name: file.name || 'Site Plan',
-                    url: file.url,
-                    caption: file.name
-                  })) || [];
-                  
-                  return (
-                    <FullscreenImageGallery
-                      images={sitePlans}
-                      currentIndex={fullscreenImageIndex}
-                      onNavigate={setFullscreenImageIndex}
-                    />
-                  );
-                } else if (currentType === 'fit-out') {
-                  const fitOuts = listing.files?.fit_outs?.map((file: any, index: number) => ({
-                    id: file.id || `fit-out-${index}`,
-                    name: file.name || 'Fit-out Image',
-                    url: file.url,
-                    caption: file.name
-                  })) || [];
-                  
-                  return (
-                    <FullscreenImageGallery
-                      images={fitOuts}
-                      currentIndex={fullscreenImageIndex}
-                      onNavigate={setFullscreenImageIndex}
-                    />
-                  );
-                }
-                
-                return null;
-              })()}
-            </div>
-
-            {/* Media Counter */}
-            {mediaItems.length > 1 && (
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-                <div className="bg-black/50 backdrop-blur-sm rounded-full px-4 py-2">
-                  <span className="text-white text-sm">
-                    {activeIndex + 1} / {mediaItems.length}
-                  </span>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Main Content Area */}
       <div className="h-full flex flex-col bg-white">
@@ -318,6 +247,42 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
           )}
         </div>
       </div>
+
+      {/* Portal-based Fullscreen Overlay */}
+      {typeof window !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {isFullscreen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 bg-black"
+              style={{ zIndex: 99999 }}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setIsFullscreen(false)}
+                className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
+                style={{ zIndex: 100000 }}
+                aria-label="Close fullscreen"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
+
+              {/* Fullscreen Image Gallery */}
+              <div className="w-full h-full">
+                <FullscreenImageGallery
+                  images={fullscreenImages}
+                  currentIndex={fullscreenImageIndex}
+                  onNavigate={setFullscreenImageIndex}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }

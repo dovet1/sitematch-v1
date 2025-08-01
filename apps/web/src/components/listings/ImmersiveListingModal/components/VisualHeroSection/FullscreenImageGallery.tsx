@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useSwipeable } from 'react-swipeable';
 
 interface ImageFile {
   id: string;
@@ -32,8 +33,27 @@ export function FullscreenImageGallery({
     onNavigate((currentIndex + 1) % images.length);
   };
 
+  // Handle swipe gestures
+  const handlers = useSwipeable({
+    onSwipedLeft: () => {
+      if (images.length > 1) {
+        goToNext();
+      }
+    },
+    onSwipedRight: () => {
+      if (images.length > 1) {
+        goToPrevious();
+      }
+    },
+    trackMouse: false,
+    trackTouch: true,
+  });
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-black">
+    <div 
+      {...handlers}
+      className="absolute inset-0 flex items-center justify-center bg-black"
+    >
       {/* Main Image */}
       <motion.img
         key={currentImage.id}
@@ -52,32 +72,6 @@ export function FullscreenImageGallery({
         transition={{ duration: 0.2 }}
       />
 
-      {/* Navigation Arrows */}
-      {images.length > 1 && (
-        <>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              goToPrevious();
-            }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
-            aria-label="Previous image"
-          >
-            <ChevronLeft className="w-6 h-6 text-white" />
-          </button>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              goToNext();
-            }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
-            aria-label="Next image"
-          >
-            <ChevronRight className="w-6 h-6 text-white" />
-          </button>
-        </>
-      )}
 
       {/* Image Caption */}
       {currentImage.name && (
