@@ -1,0 +1,101 @@
+/* Tab Navigation Container */
+.container {
+  @apply relative bg-white border-b border-gray-200;
+  @apply overflow-hidden;
+}
+
+/* Scrollable Container */
+.scrollContainer {
+  @apply flex overflow-x-auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  /* Hide scrollbar for webkit browsers */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for webkit browsers */
+.scrollContainer::-webkit-scrollbar {
+  display: none;
+}
+
+/* Individual Tab */
+.tab {
+  @apply relative flex items-center gap-2;
+  @apply px-4 py-3;
+  @apply text-gray-600 font-medium text-sm;
+  @apply whitespace-nowrap;
+  @apply transition-all duration-200;
+  @apply focus:outline-none focus:bg-gray-50;
+  @apply hover:text-violet-600 hover:bg-gray-50;
+  min-width: fit-content;
+  min-height: 44px; /* Smaller but still touch-friendly */
+  scroll-snap-align: center;
+}
+
+/* Active Tab */
+.tabActive {
+  @apply text-violet-600;
+}
+
+/* Tab Icon */
+.tabIcon {
+  @apply w-4 h-4;
+}
+
+/* Tab Label */
+.tabLabel {
+  @apply font-medium;
+}
+
+/* Active Indicator */
+.activeIndicator {
+  @apply absolute bottom-0 left-0 right-0;
+  @apply h-0.5 bg-violet-600;
+}
+
+/* Gradient Indicators */
+.gradientLeft,
+.gradientRight {
+  @apply absolute top-0 bottom-0 w-8 pointer-events-none;
+  @apply opacity-0 transition-opacity duration-200;
+  z-index: 1;
+}
+
+.gradientLeft {
+  @apply left-0;
+  background: linear-gradient(to right, white, transparent);
+}
+
+.gradientRight {
+  @apply right-0;
+  background: linear-gradient(to left, white, transparent);
+}
+
+.gradientVisible {
+  @apply opacity-100;
+}
+
+/* Touch feedback */
+@media (hover: none) {
+  .tab:active {
+    @apply bg-gray-100 scale-95;
+  }
+}
+
+/* Keyboard navigation */
+.tab:focus-visible {
+  @apply outline-2 outline-offset-2 outline-violet-600;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .tab {
+    @apply transition-none;
+  }
+  
+  .activeIndicator {
+    @apply transition-none;
+  }
+}
