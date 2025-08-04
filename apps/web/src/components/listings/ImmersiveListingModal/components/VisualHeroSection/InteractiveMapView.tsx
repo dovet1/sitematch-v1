@@ -155,7 +155,7 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
                 container: mapContainer.current,
                 style: 'mapbox://styles/mapbox/light-v11',
                 center: [firstCoords.lng, firstCoords.lat],
-                zoom: validLocations.length === 1 ? 12 : 10,
+                zoom: validLocations.length === 1 ? 8 : 8,  // Consistent zoom level to show surrounding pins
                 attributionControl: false
               });
 
@@ -214,7 +214,8 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
               // Fit map to show all markers if multiple locations
               if (validLocations.length > 1 && bounds) {
                 map.current.fitBounds(bounds, {
-                  padding: { top: 50, bottom: 50, left: 50, right: 50 }
+                  padding: { top: 80, bottom: 80, left: 80, right: 80 },  // More padding to zoom out further
+                  maxZoom: 8  // Limit maximum zoom to ensure more area is visible
                 });
               }
             });

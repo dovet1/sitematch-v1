@@ -72,9 +72,15 @@ export function SimpleMobileBottomSheet({ peekContent, fullContent, onDismiss }:
 
       {/* Content Area */}
       <div className={cn(
-        "flex-1 overflow-hidden bg-gray-50",
+        "flex-1 overflow-y-auto overflow-x-hidden bg-gray-50",
+        "-webkit-overflow-scrolling-touch",
+        "overscroll-behavior-contain",
         isExpanded ? "opacity-100" : "opacity-0"
-      )}>
+      )}
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain'
+      }}>
         {isExpanded ? fullContent : peekContent}
       </div>
 

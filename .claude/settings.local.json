@@ -47,7 +47,8 @@
       "Bash(npx next lint:*)",
       "Bash(bmad create-story:*)",
       "Bash(timeout 30 npm run build)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(timeout 30 npm run dev)"
     ],
     "deny": []
   }
