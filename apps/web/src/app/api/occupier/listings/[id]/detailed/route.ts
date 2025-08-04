@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createAdminClient } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
@@ -15,10 +15,19 @@ export async function GET(
       );
     }
 
-    const supabase = createClient();
-    const adminSupabase = createAdminClient();
+    const supabase = createServerClient();
     
-    // Get basic listing information first
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Get basic listing information and verify ownership
     const { data: listing, error: listingError } = await supabase
       .from('listings')
       .select(`
@@ -43,10 +52,10 @@ export async function GET(
         site_acreage_min,
         site_acreage_max,
         brochure_url,
-        property_page_link
+        property_page_link,
+        created_by
       `)
       .eq('id', id)
-      .in('status', ['approved', 'pending', 'draft'])
       .single();
 
     if (listingError) {
@@ -57,21 +66,30 @@ export async function GET(
         );
       }
       
-      console.error('Error fetching basic listing:', listingError);
+      console.error('Error fetching listing:', listingError);
       return NextResponse.json(
         { error: 'Failed to fetch listing' },
         { status: 500 }
       );
     }
 
-    // Get related data separately
+    // Verify the user owns this listing
+    if (listing.created_by !== user.id) {
+      return NextResponse.json(
+        { error: 'Access denied - you can only preview your own listings' },
+        { status: 403 }
+      );
+    }
+
+    // Get related data - since user is authenticated and owns the listing, 
+    // they can access all files regardless of listing status
     const [
-      { data: locations, error: locationsError },
-      { data: faqs, error: faqsError },
-      { data: files, error: filesError },
-      { data: contacts, error: contactsError },
-      { data: listingSectors, error: sectorsError },
-      { data: listingUseClasses, error: useClassesError }
+      { data: locations },
+      { data: faqs },
+      { data: files },
+      { data: contacts },
+      { data: listingSectors },
+      { data: listingUseClasses }
     ] = await Promise.all([
       supabase.from('listing_locations').select('id, place_name, coordinates, formatted_address').eq('listing_id', id),
       supabase.from('faqs').select('id, question, answer, display_order').eq('listing_id', id),
@@ -81,36 +99,28 @@ export async function GET(
       supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id)
     ]);
 
-    // Debug logging for files query
-    console.log(`Files query for listing ${id}:`);
-    console.log(`Files error:`, filesError);
-    console.log(`Files data:`, files);
-
-    // Debug logging (remove in production)
+    // Debug logging
     if (files && files.length > 0) {
-      console.log(`Files found for listing ${id}:`, files.map(f => `${f.file_type}:${f.file_name}`));
+      console.log(`Owner preview - Files found for listing ${id}:`, files.map(f => `${f.file_type}:${f.file_name}`));
       console.log(`All unique file types:`, [...new Set(files.map(f => f.file_type))]);
-      console.log(`Filtered site plans:`, files.filter(f => f.file_type === 'sitePlan' || f.file_type === 'site_plan'));
       console.log(`Filtered fit outs:`, files.filter(f => f.file_type === 'fitOut' || f.file_type === 'fit_out'));
-      console.log(`All files raw:`, files);
+      console.log(`Filtered site plans:`, files.filter(f => f.file_type === 'sitePlan' || f.file_type === 'site_plan'));
     } else {
-      console.log(`No files found for listing ${id}`);
+      console.log(`Owner preview - No files found for listing ${id}`);
     }
 
-    // Get sectors and use classes only from junction tables
+    // Get sectors and use classes
     const allSectors = (listingSectors?.map((ls: any) => ls.sectors).filter(Boolean) || []);
     const allUseClasses = (listingUseClasses?.map((luc: any) => luc.use_classes).filter(Boolean) || []);
 
     // Get logo file or generate Clearbit URL
     const logoFile = files?.find((file: any) => file.file_type === 'logo' && file.is_primary);
     
-    // Generate Clearbit logo URL from company domain
     const generateClearbitUrl = (companyDomain: string | null, companyName: string) => {
       if (companyDomain) {
         return `https://logo.clearbit.com/${companyDomain}`;
       }
       
-      // Fallback: Convert company name to domain-like format
       const domain = companyName
         .toLowerCase()
         .replace(/\s+/g, '')
@@ -120,7 +130,6 @@ export async function GET(
       return `https://logo.clearbit.com/${domain}.com`;
     };
 
-    // Format sector names to be more readable
     const formatSectorName = (name: string) => {
       return name
         .split('_')
@@ -128,15 +137,38 @@ export async function GET(
         .join(' & ');
     };
 
-    // Transform comprehensive data for enhanced modal
+    // Helper functions
+    const formatSizeRange = (min: number | null, max: number | null): string => {
+      if (!min && !max) return 'Size flexible';
+      if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} sq ft`;
+      if (min) return `From ${min.toLocaleString()} sq ft`;
+      if (max) return `Up to ${max.toLocaleString()} sq ft`;
+      return '';
+    };
+
+    const formatDwellingRange = (min: number | null, max: number | null): string => {
+      if (!min && !max) return 'Dwelling count flexible';
+      if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} dwellings`;
+      if (min) return `From ${min.toLocaleString()} dwellings`;
+      if (max) return `Up to ${max.toLocaleString()} dwellings`;
+      return '';
+    };
+
+    const formatAcreageRange = (min: number | null, max: number | null): string => {
+      if (!min && !max) return 'Site acreage flexible';
+      if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} acres`;
+      if (min) return `From ${min.toLocaleString()} acres`;
+      if (max) return `Up to ${max.toLocaleString()} acres`;
+      return '';
+    };
+
+    // Transform data for the modal (same format as public API)
     const enhancedListing = {
-      // Core company information
       company: {
         name: listing.company_name,
         logo_url: logoFile ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${logoFile.bucket_name}/${logoFile.file_path}` : generateClearbitUrl(listing.company_domain, listing.company_name),
         sectors: allSectors.map((s: any) => formatSectorName(s.name)).filter(Boolean),
         use_classes: allUseClasses.map((uc: any) => `${uc.name} (${uc.code})`).filter(Boolean),
-        // Keep legacy fields for backward compatibility
         sector: allSectors.map((s: any) => formatSectorName(s.name)).join(', ') || 'Not specified',
         use_class: allUseClasses.map((uc: any) => `${uc.name} (${uc.code})`).join(', ') || 'Not specified',
         site_size: formatSizeRange(listing.site_size_min, listing.site_size_max),
@@ -146,7 +178,6 @@ export async function GET(
         property_page_link: listing.property_page_link
       },
       
-      // Enhanced contact information  
       contacts: {
         primary: {
           name: listing.contact_name,
@@ -155,13 +186,11 @@ export async function GET(
           phone: listing.contact_phone || '',
           contact_area: listing.contact_area || '',
           headshot_url: (() => {
-            // First try to find primary contact in listing_contacts table
             const primaryFromContacts = contacts?.find((contact: any) => contact.is_primary_contact);
             if (primaryFromContacts?.headshot_url) {
               return primaryFromContacts.headshot_url;
             }
             
-            // Then try to find headshot file by matching contact name
             const headshotFile = files?.find((file: any) => 
               file.file_type === 'headshot' && (
                 file.is_primary || 
@@ -190,7 +219,6 @@ export async function GET(
           }))
       },
       
-      // Location requirements
       locations: {
         all: (locations || [])
           .map((loc: any) => ({
@@ -202,7 +230,6 @@ export async function GET(
           (locations || []).some((loc: any) => loc.place_name?.toLowerCase().includes('nationwide'))
       },
       
-      // FAQs with ordering
       faqs: (faqs || [])
         .sort((a: any, b: any) => a.display_order - b.display_order)
         .map((faq: any) => ({
@@ -211,7 +238,6 @@ export async function GET(
           answer: faq.answer
         })),
       
-      // File attachments organized by type
       files: {
         brochures: (files || [])
           .filter((file: any) => file.file_type === 'brochure')
@@ -248,7 +274,6 @@ export async function GET(
           }))
       },
       
-      // Metadata
       id: listing.id,
       title: listing.title,
       description: listing.description || '',
@@ -259,37 +284,10 @@ export async function GET(
     return NextResponse.json(enhancedListing);
     
   } catch (error) {
-    console.error('Unexpected error in detailed listing API:', error);
+    console.error('Unexpected error in owner listing preview API:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }
-}
-
-// Helper function to format size range
-function formatSizeRange(min: number | null, max: number | null): string {
-  if (!min && !max) return 'Size flexible';
-  if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} sq ft`;
-  if (min) return `From ${min.toLocaleString()} sq ft`;
-  if (max) return `Up to ${max.toLocaleString()} sq ft`;
-  return '';
-}
-
-// Helper function to format dwelling count range
-function formatDwellingRange(min: number | null, max: number | null): string {
-  if (!min && !max) return 'Dwelling count flexible';
-  if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} dwellings`;
-  if (min) return `From ${min.toLocaleString()} dwellings`;
-  if (max) return `Up to ${max.toLocaleString()} dwellings`;
-  return '';
-}
-
-// Helper function to format acreage range
-function formatAcreageRange(min: number | null, max: number | null): string {
-  if (!min && !max) return 'Site acreage flexible';
-  if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} acres`;
-  if (min) return `From ${min.toLocaleString()} acres`;
-  if (max) return `Up to ${max.toLocaleString()} acres`;
-  return '';
 }

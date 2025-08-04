@@ -264,7 +264,8 @@ async function generateVideoThumbnail(file: File, size: number): Promise<string>
 export async function uploadFile(
   file: File,
   type: FileUploadType,
-  organizationId: string,
+  userId: string,
+  listingId?: string,
   onProgress?: UploadProgressCallback
 ): Promise<UploadedFile> {
   
@@ -293,7 +294,7 @@ export async function uploadFile(
     const fileExt = file.name.split('.').pop() || 'bin';
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substring(2, 9);
-    const fileName = `${organizationId}/${timestamp}-${randomId}.${fileExt}`;
+    const fileName = `${userId}/${timestamp}-${randomId}.${fileExt}`;
 
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -312,33 +313,12 @@ export async function uploadFile(
       .from(config.bucket)
       .getPublicUrl(uploadData.path);
 
-    // Handle organization creation if needed
-    let finalOrgId = organizationId;
-    if (organizationId === '00000000-0000-0000-0000-000000000000') {
-      // This is a placeholder - we need to create an organization first
-      const { getOrCreateOrganizationForUser } = await import('@/lib/auto-organization');
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-      
-      // Use a default company name for file uploads
-      const defaultCompanyName = `${user.email?.split('@')[0] || 'User'} Company`;
-      const orgResult = await getOrCreateOrganizationForUser(user.id, defaultCompanyName);
-      
-      if (orgResult.error) {
-        throw new Error(`Failed to create organization: ${orgResult.error}`);
-      }
-      
-      finalOrgId = orgResult.organizationId;
-    }
-
     // Create upload record in database
     const { data: fileRecord, error: dbError } = await supabase
       .from('file_uploads')
       .insert({
-        org_id: finalOrgId,
-        user_id: (await supabase.auth.getUser()).data.user?.id,
+        listing_id: listingId || null,
+        user_id: userId,
         file_path: uploadData.path,
         file_name: file.name,
         file_size: processedFile.size,
@@ -385,7 +365,8 @@ export async function uploadFile(
 export async function uploadFiles(
   files: File[],
   type: FileUploadType,
-  organizationId: string,
+  userId: string,
+  listingId?: string,
   onProgress?: UploadProgressCallback
 ): Promise<UploadedFile[]> {
   const config = FILE_UPLOAD_CONFIGS[type];
@@ -402,7 +383,7 @@ export async function uploadFiles(
   try {
     // Upload files sequentially to avoid overwhelming the server
     for (const file of files) {
-      const uploadedFile = await uploadFile(file, type, organizationId);
+      const uploadedFile = await uploadFile(file, type, userId, listingId);
       uploadedFiles.push(uploadedFile);
       
       completedUploads++;
@@ -461,10 +442,10 @@ export async function deleteFile(
 }
 
 /**
- * Get files for organization
+ * Get files for user
  */
-export async function getOrganizationFiles(
-  organizationId: string,
+export async function getUserFiles(
+  userId: string,
   type?: FileUploadType
 ): Promise<UploadedFile[]> {
   const supabase = browserClient;
@@ -472,7 +453,7 @@ export async function getOrganizationFiles(
   let query = supabase
     .from('file_uploads')
     .select('*')
-    .eq('org_id', organizationId);
+    .eq('user_id', userId);
 
   if (type) {
     query = query.eq('file_type', type);
@@ -513,14 +494,14 @@ export function formatFileSize(bytes: number): string {
  * Check storage quota usage
  */
 export async function checkStorageQuota(
-  organizationId: string
+  userId: string
 ): Promise<{ used: number; limit: number; percentage: number }> {
   const supabase = browserClient;
 
   const { data, error } = await supabase
     .from('file_uploads')
     .select('file_size')
-    .eq('org_id', organizationId);
+    .eq('user_id', userId);
 
   if (error) {
     throw new Error(`Failed to check storage quota: ${error.message}`);

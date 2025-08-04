@@ -193,7 +193,7 @@ export default function OccupierDashboard() {
                   size="lg"
                   className="violet-bloom-button violet-bloom-touch shadow-sm hover:shadow-md transition-all"
                 >
-                  <Link href="/occupier/create-listing?fresh=true">
+                  <Link href="/occupier/create-listing-quick">
                     <Plus className="w-5 h-5 mr-2" />
                     Create New Listing
                   </Link>
@@ -219,7 +219,7 @@ export default function OccupierDashboard() {
                       Create your first listing to connect with agents and find your ideal property.
                     </p>
                     <Button asChild size="lg" className="violet-bloom-button violet-bloom-touch">
-                      <Link href="/occupier/create-listing?fresh=true">
+                      <Link href="/occupier/create-listing-quick">
                         <Plus className="w-5 h-5 mr-2" />
                         Create Your First Listing
                       </Link>

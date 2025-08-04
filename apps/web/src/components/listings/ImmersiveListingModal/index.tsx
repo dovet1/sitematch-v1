@@ -18,6 +18,7 @@ interface ImmersiveListingModalProps {
   onClose: () => void;
   searchState?: any;
   scrollPosition?: number;
+  apiEndpoint?: string; // Allow custom API endpoint for owner preview
 }
 
 export function ImmersiveListingModal({
@@ -25,7 +26,8 @@ export function ImmersiveListingModal({
   isOpen,
   onClose,
   searchState,
-  scrollPosition
+  scrollPosition,
+  apiEndpoint
 }: ImmersiveListingModalProps) {
   const [listing, setListing] = useState<EnhancedListingModalContent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -116,7 +118,8 @@ export function ImmersiveListingModal({
       setError(null);
       
       try {
-        const response = await fetch(`/api/public/listings/${listingId}/detailed`);
+        const endpoint = apiEndpoint || `/api/public/listings/${listingId}/detailed`;
+        const response = await fetch(endpoint);
         
         if (!response.ok) {
           throw new Error('Failed to fetch listing details');
@@ -133,7 +136,7 @@ export function ImmersiveListingModal({
     };
 
     fetchListing();
-  }, [isOpen, listingId]);
+  }, [isOpen, listingId, apiEndpoint]);
 
   if (!isOpen) return null;
 
