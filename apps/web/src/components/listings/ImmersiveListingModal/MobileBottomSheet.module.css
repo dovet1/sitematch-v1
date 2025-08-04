@@ -1,0 +1,107 @@
+/* Mobile Bottom Sheet */
+.bottomSheet {
+  @apply fixed left-0 right-0 z-[10001];
+  @apply bg-white rounded-t-3xl shadow-2xl;
+  @apply flex flex-col;
+  height: 100vh; /* Full viewport height */
+  top: 0; /* Position from top, will be transformed */  
+  touch-action: pan-y;
+  will-change: transform;
+  /* Ensure touch events are captured */
+  pointer-events: auto;
+  user-select: none;
+  /* Prevent pull-to-refresh and overscroll */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Pull Handle Area */
+.handleArea {
+  @apply flex flex-col items-center justify-center py-3;
+  @apply bg-white border-b border-gray-100;
+  min-height: 60px;
+  position: relative;
+}
+
+/* Handle Label */
+.handleLabel {
+  @apply text-xs text-gray-500 mt-1;
+  @apply select-none;
+  font-size: 10px;
+}
+
+/* Visual Handle */
+.handle {
+  @apply w-12 h-1.5 bg-gray-400 rounded-full;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Content Area */
+.content {
+  @apply flex-1 overflow-y-auto overflow-x-hidden;
+  @apply overscroll-contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  touch-action: pan-y; /* Allow vertical scrolling but not horizontal */
+  pointer-events: auto;
+}
+
+/* Prevent content interaction while dragging */
+.content.dragging {
+  @apply pointer-events-none select-none;
+}
+
+/* Smooth scrollbar for webkit browsers */
+.content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.content::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.content::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* Handle Button - Only the handle area is clickable */
+.handleButton {
+  @apply flex flex-col items-center justify-center;
+  @apply bg-transparent border-none outline-none;
+  @apply cursor-pointer transition-colors duration-200;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500/50;
+  @apply rounded-lg mx-auto;
+  width: 120px; /* Limit width to just around the handle */
+  height: 50px; /* Smaller than full handle area */
+  margin-top: 5px;
+}
+
+.handleButton:hover {
+  @apply bg-gray-50/50;
+}
+
+.handleButton:active {
+  @apply bg-gray-100/50;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .bottomSheet {
+    transition: none !important;
+  }
+  
+  .handle {
+    transition: none !important;
+  }
+}
+
+/* Ensure proper stacking context */
+@supports (backdrop-filter: blur(12px)) {
+  .bottomSheet {
+    backdrop-filter: blur(12px);
+  }
+}

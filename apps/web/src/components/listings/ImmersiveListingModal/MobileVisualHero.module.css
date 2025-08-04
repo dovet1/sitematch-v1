@@ -1,0 +1,6 @@
+/* Mobile Visual Hero Container */
+.container {
+  @apply h-full w-full relative overflow-hidden;
+  @apply bg-gradient-to-br from-violet-900 to-violet-700;
+  min-height: 400px; /* Ensure map has minimum height to render */
+}
