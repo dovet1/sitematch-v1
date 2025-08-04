@@ -26,7 +26,7 @@ interface MapViewState {
 const DEFAULT_VIEW_STATE: MapViewState = {
   longitude: -3.5,
   latitude: 54.8,
-  zoom: 5.2
+  zoom: 4.8  // Slightly zoomed out to ensure all pins are visible
 };
 
 // Mapbox token must be provided via environment variables
@@ -89,7 +89,7 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
       const newViewState = {
         longitude: filters.coordinates.lng,
         latitude: filters.coordinates.lat,
-        zoom: Math.max(viewState.zoom, 10) // Ensure reasonable zoom level for location search
+        zoom: Math.max(viewState.zoom, 8.5) // More zoomed out to show surrounding pins
       };
       setViewState(newViewState);
     }
@@ -172,17 +172,18 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
             const centerLat = (minLat + maxLat) / 2;
             const centerLng = (minLng + maxLng) / 2;
             
-            // Calculate zoom level based on bounds
+            // Calculate zoom level based on bounds with padding
             const latDiff = maxLat - minLat;
             const lngDiff = maxLng - minLng;
             const maxDiff = Math.max(latDiff, lngDiff);
             
-            let zoom = 10;
-            if (maxDiff > 10) zoom = 5;
-            else if (maxDiff > 5) zoom = 6;
-            else if (maxDiff > 2) zoom = 7;
-            else if (maxDiff > 1) zoom = 8;
-            else if (maxDiff > 0.5) zoom = 9;
+            // Add padding to ensure all pins are visible
+            let zoom = 9;
+            if (maxDiff > 10) zoom = 4.5;
+            else if (maxDiff > 5) zoom = 5.5;
+            else if (maxDiff > 2) zoom = 6.5;
+            else if (maxDiff > 1) zoom = 7.5;
+            else if (maxDiff > 0.5) zoom = 8.5;
             
             setViewState({
               longitude: centerLng,
