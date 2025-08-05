@@ -103,6 +103,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     contacts: false,
     faqs: false
   });
+
+  const [editingContactData, setEditingContactData] = useState<any>(null);
   
   // Quick Add Modal states
   const [quickAddModals, setQuickAddModals] = useState({
@@ -199,16 +201,27 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         updated_at: listing.updated_at,
         completion_percentage: listing.completion_percentage || 20,
         
-        // Primary contact from listings table
-        primaryContact: {
-          contactName: listing.contact_name || '',
-          contactTitle: listing.contact_title || '',
-          contactEmail: listing.contact_email || '',
-          contactPhone: listing.contact_phone || '',
-          contactArea: listing.contact_area || '',
-          isPrimaryContact: true,
-          headshotUrl: contacts?.find(c => c.is_primary_contact)?.headshot_url || ''
-        },
+        // Primary contact from listing_contacts table
+        primaryContact: (() => {
+          const primaryContact = contacts?.find(c => c.is_primary_contact);
+          return primaryContact ? {
+            contactName: primaryContact.contact_name || '',
+            contactTitle: primaryContact.contact_title || '',
+            contactEmail: primaryContact.contact_email || '',
+            contactPhone: primaryContact.contact_phone || '',
+            contactArea: primaryContact.contact_area || '',
+            isPrimaryContact: true,
+            headshotUrl: primaryContact.headshot_url || ''
+          } : {
+            contactName: '',
+            contactTitle: '',
+            contactEmail: '',
+            contactPhone: '',
+            contactArea: '',
+            isPrimaryContact: true,
+            headshotUrl: ''
+          };
+        })(),
 
         // Logo information
         logoMethod: listing.clearbit_logo ? 'clearbit' : 'upload',
@@ -353,11 +366,18 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   // Modal helper functions
   const openModal = (modalType: keyof typeof modalStates) => {
+    if (modalType === 'contacts') {
+      // Clear editing contact data when opening in add mode
+      setEditingContactData(null);
+    }
     setModalStates(prev => ({ ...prev, [modalType]: true }));
   };
 
   const closeModal = (modalType: keyof typeof modalStates) => {
     setModalStates(prev => ({ ...prev, [modalType]: false }));
+    if (modalType === 'contacts') {
+      setEditingContactData(null);
+    }
   };
 
   // CRUD functions for each section
@@ -565,53 +585,171 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     }
   };
 
-  const handleContactsSave = async (data: { primaryContact?: any; additionalContacts: any[] }) => {
+  const handleContactsSave = async (data: { contacts: any[] }) => {
     try {
       const supabase = createClientClient();
       
-      // Update primary contact if provided
-      if (data.primaryContact) {
-        const { error: primaryError } = await supabase
-          .from('listing_contacts')
-          .upsert({
-            listing_id: listingId,
-            ...data.primaryContact,
-            is_primary: true
-          });
-
-        if (primaryError) throw primaryError;
-      }
-
-      // Handle additional contacts
-      // Delete existing additional contacts and insert new ones
-      const { error: deleteError } = await supabase
-        .from('listing_contacts')
-        .delete()
-        .eq('listing_id', listingId)
-        .eq('is_primary', false);
-
-      if (deleteError) throw deleteError;
-
-      if (data.additionalContacts.length > 0) {
-        const { error: insertError } = await supabase
-          .from('listing_contacts')
-          .insert(
-            data.additionalContacts.map(contact => ({
+      if (data.contacts.length === 1) {
+        const contact = data.contacts[0];
+        
+        if (!contact.id) {
+          // This is a new contact being added
+          const { error: insertError } = await supabase
+            .from('listing_contacts')
+            .insert({
               listing_id: listingId,
-              ...contact,
-              is_primary: false
-            }))
-          );
+              contact_name: contact.name,
+              contact_title: contact.title,
+              contact_email: contact.email,
+              contact_phone: contact.phone || null,
+              contact_area: contact.area || null,
+              headshot_url: contact.headshotUrl || null,
+              is_primary_contact: contact.isPrimary || false
+            });
 
-        if (insertError) throw insertError;
+          if (insertError) throw insertError;
+        } else {
+          // This is editing an existing contact - update only this contact
+          const updateData: any = {
+            contact_name: contact.name,
+            contact_title: contact.title,
+            contact_email: contact.email,
+            contact_phone: contact.phone || null,
+            contact_area: contact.area || null,
+            headshot_url: contact.headshotUrl || null,
+            is_primary_contact: contact.isPrimary || false
+          };
+
+          let updateQuery;
+          if (contact.id === 'primary') {
+            // Update primary contact
+            updateQuery = supabase
+              .from('listing_contacts')
+              .update(updateData)
+              .eq('listing_id', listingId)
+              .eq('is_primary_contact', true);
+          } else {
+            // Update specific contact by ID
+            updateQuery = supabase
+              .from('listing_contacts')
+              .update(updateData)
+              .eq('listing_id', listingId)
+              .eq('id', contact.id);
+          }
+
+          const { error: updateError } = await updateQuery;
+          if (updateError) throw updateError;
+        }
+      } else {
+        // This is a full replacement (bulk editing mode) - delete all and replace
+        const { error: deleteError } = await supabase
+          .from('listing_contacts')
+          .delete()
+          .eq('listing_id', listingId);
+
+        if (deleteError) throw deleteError;
+
+        if (data.contacts.length > 0) {
+          const { error: insertError } = await supabase
+            .from('listing_contacts')
+            .insert(
+              data.contacts.map(contact => ({
+                listing_id: listingId,
+                contact_name: contact.name,
+                contact_title: contact.title,
+                contact_email: contact.email,
+                contact_phone: contact.phone || null,
+                contact_area: contact.area || null,
+                headshot_url: contact.headshotUrl || null,
+                is_primary_contact: contact.isPrimary || false
+              }))
+            );
+
+          if (insertError) throw insertError;
+        }
       }
 
       // Refresh listing data
       await fetchListingData();
-      toast.success('Contacts updated successfully');
+      toast.success('Contact saved successfully');
     } catch (error) {
-      console.error('Error updating contacts:', error);
-      toast.error('Failed to update contacts');
+      console.error('Error saving contact:', error);
+      toast.error('Failed to save contact');
+      throw error;
+    }
+  };
+
+  const handleEditContact = async (contactId: string, contactData: any) => {
+    // Open the contacts modal with the specific contact data for editing
+    setEditingContactData({
+      id: contactId,
+      name: contactData.contactName || '',
+      title: contactData.contactTitle || '',
+      email: contactData.contactEmail || '',
+      phone: contactData.contactPhone || '',
+      area: contactData.contactArea || '',
+      headshotUrl: contactData.headshotUrl || '',
+      isPrimary: contactId === 'primary'
+    });
+    setModalStates(prev => ({ ...prev, contacts: true }));
+  };
+
+  const handleDeleteContact = async (contactId: string) => {
+    console.log('handleDeleteContact called with contactId:', contactId);
+    try {
+      const supabase = createClientClient();
+      
+      // First, check how many contacts exist for this listing
+      const { data: existingContacts, error: countError } = await supabase
+        .from('listing_contacts')
+        .select('id')
+        .eq('listing_id', listingId);
+
+      if (countError) throw countError;
+      
+      console.log('Existing contacts count:', existingContacts?.length);
+
+      // Prevent deletion if this is the only contact
+      if (existingContacts && existingContacts.length <= 1) {
+        console.log('Preventing deletion - only one contact remaining');
+        
+        // Show toast message
+        toast.error('You must have at least one contact. Please add another contact before deleting this one.', {
+          duration: 5000,
+        });
+        
+        // Also show alert as backup to ensure user sees the message
+        alert('You must have at least one contact. Please add another contact before deleting this one.');
+        
+        return;
+      }
+      
+      if (contactId === 'primary') {
+        // Delete primary contact
+        const { error: deleteError } = await supabase
+          .from('listing_contacts')
+          .delete()
+          .eq('listing_id', listingId)
+          .eq('is_primary_contact', true);
+
+        if (deleteError) throw deleteError;
+      } else {
+        // Delete additional contact by ID
+        const { error: deleteError } = await supabase
+          .from('listing_contacts')
+          .delete()
+          .eq('listing_id', listingId)
+          .eq('id', contactId);
+
+        if (deleteError) throw deleteError;
+      }
+
+      // Refresh listing data
+      await fetchListingData();
+      toast.success('Contact removed successfully');
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      toast.error('Failed to remove contact');
       throw error;
     }
   };
@@ -2729,82 +2867,15 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       className="bg-violet-600 hover:bg-violet-700 text-white"
                       onClick={() => openModal('contacts')}
                     >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit Contacts
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Contact
                     </Button>
                   </div>
                   
                   <div className="space-y-4">
-                    {/* Primary Contact */}
-                    {listingData.primaryContact && (
-                      <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-200 transition-all duration-200">
-                        <div className="flex items-start gap-4">
-                          {listingData.primaryContact.headshotUrl ? (
-                            <img
-                              src={listingData.primaryContact.headshotUrl}
-                              alt={listingData.primaryContact.contactName || 'Contact'}
-                              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
-                              <span className="text-violet-600 text-lg font-medium">
-                                {listingData.primaryContact.contactName ? listingData.primaryContact.contactName.charAt(0).toUpperCase() : 'C'}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-semibold text-gray-900">{listingData.primaryContact.contactName || 'Contact Name'}</h4>
-                              <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="sm">
-                                  <Edit className="w-3 h-3 mr-1" />
-                                  Edit
-                                </Button>
-                              </div>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1">{listingData.primaryContact.contactTitle || 'Contact Title'}</p>
-                            {listingData.primaryContact.contactArea && (
-                              <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full mt-1">
-                                {listingData.primaryContact.contactArea}
-                              </span>
-                            )}
-                            <div className="mt-3 space-y-2">
-                              <div className="flex items-center gap-2 text-sm">
-                                <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                <a 
-                                  href={`mailto:${listingData.primaryContact.contactEmail}`} 
-                                  className="text-violet-600 hover:text-violet-700 transition-colors duration-200 font-medium"
-                                >
-                                  {listingData.primaryContact.contactEmail}
-                                </a>
-                              </div>
-                              {listingData.primaryContact.contactPhone && (
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                  <a 
-                                    href={`tel:${listingData.primaryContact.contactPhone}`} 
-                                    className="text-violet-600 hover:text-violet-700 transition-colors duration-200 font-medium"
-                                  >
-                                    {listingData.primaryContact.contactPhone}
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Additional Contacts */}
-                    {listingData.additionalContacts && listingData.additionalContacts.length > 0 && (
+                    {/* All Contacts from listing_contacts table */}
+                    {listingData.additionalContacts && listingData.additionalContacts.length > 0 ? (
                       <>
-                        <div className="flex items-center justify-between pt-4">
-                          <h4 className="font-medium text-gray-900">Additional Team Members</h4>
-                          <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white">
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add Team Member
-                          </Button>
-                        </div>
                         {listingData.additionalContacts.map((contact, index) => (
                           <div 
                             key={contact.id || index} 
@@ -2828,11 +2899,20 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 <div className="flex items-center justify-between">
                                   <h4 className="font-semibold text-gray-900">{contact.contactName}</h4>
                                   <div className="flex items-center gap-2">
-                                    <Button variant="ghost" size="sm">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => handleEditContact(contact.id, contact)}
+                                    >
                                       <Edit className="w-3 h-3 mr-1" />
                                       Edit
                                     </Button>
-                                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="text-red-600 hover:text-red-700"
+                                      onClick={() => handleDeleteContact(contact.id)}
+                                    >
                                       <Trash2 className="w-3 h-3 mr-1" />
                                       Remove
                                     </Button>
@@ -2871,24 +2951,14 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           </div>
                         ))}
                       </>
-                    )}
-
-                    {/* Add Team Members Option */}
-                    {(!listingData.additionalContacts || listingData.additionalContacts.length === 0) && (
-                      <div className="p-6 rounded-lg bg-gray-50 text-center border border-gray-200 border-dashed">
-                        <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Users className="w-8 h-8 text-violet-500" />
-                        </div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Add Team Members</h4>
-                        <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
-                          Showcase additional contacts who will be involved in the property search process.
-                        </p>
-                        <Button className="bg-violet-600 hover:bg-violet-700 text-white">
-                          <Plus className="w-4 h-4 mr-1" />
-                          Add Team Members
-                        </Button>
+                    ) : (
+                      <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200 border-dashed">
+                        <Users className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600">No contacts added yet</p>
+                        <p className="text-xs text-gray-500 mt-1">Add a contact to help agents reach the right person</p>
                       </div>
                     )}
+
                   </div>
                 </div>
               )}
@@ -3165,10 +3235,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         onClose={() => closeModal('contacts')}
         listingId={listingId}
         currentData={{
-          primaryContact: listingData?.primaryContact,
-          additionalContacts: listingData?.additionalContacts || []
+          contacts: editingContactData ? [editingContactData] : [] // Pass the editing contact if available
         }}
         onSave={handleContactsSave}
+        addOnlyMode={!editingContactData} // Only use add-only mode when not editing
+        editingContact={editingContactData}
       />
 
       <FAQsModal

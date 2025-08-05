@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { BaseCrudModal } from './base-crud-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,10 +25,11 @@ interface ContactsModalProps {
   onClose: () => void;
   listingId: string;
   currentData?: {
-    primaryContact?: Contact;
-    additionalContacts?: Contact[];
+    contacts?: Contact[];
   };
-  onSave: (data: { primaryContact?: Contact; additionalContacts: Contact[] }) => void;
+  onSave: (data: { contacts: Contact[] }) => void;
+  addOnlyMode?: boolean;
+  editingContact?: Contact | null;
 }
 
 export function ContactsModal({ 
@@ -36,15 +37,49 @@ export function ContactsModal({
   onClose, 
   listingId,
   currentData,
-  onSave 
+  onSave,
+  addOnlyMode = false,
+  editingContact
 }: ContactsModalProps) {
   const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
-  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [internalEditingContact, setInternalEditingContact] = useState<Contact | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   
-  const [primaryContact, setPrimaryContact] = useState<Contact | undefined>(currentData?.primaryContact);
-  const [additionalContacts, setAdditionalContacts] = useState<Contact[]>(currentData?.additionalContacts || []);
+  const [contacts, setContacts] = useState<Contact[]>(currentData?.contacts || []);
+
+  // Auto-start adding mode when addOnlyMode is true, or editing mode when editingContact is provided
+  useEffect(() => {
+    if (isOpen) {
+      if (editingContact) {
+        // Start editing mode with the provided contact
+        setInternalEditingContact(editingContact);
+        setIsAddingNew(false);
+        setFormData({
+          name: editingContact.name || '',
+          title: editingContact.title || '',
+          email: editingContact.email || '',
+          phone: editingContact.phone || '',
+          area: editingContact.area || '',
+          headshotUrl: editingContact.headshotUrl || ''
+        });
+      } else if (addOnlyMode && !isAddingNew && !internalEditingContact) {
+        handleStartAdd();
+      }
+    } else {
+      // Clear state when modal closes
+      setInternalEditingContact(null);
+      setIsAddingNew(false);
+      setFormData({
+        name: '',
+        title: '',
+        email: '',
+        phone: '',
+        area: '',
+        headshotUrl: ''
+      });
+    }
+  }, [addOnlyMode, isOpen, editingContact]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -56,7 +91,7 @@ export function ContactsModal({
   });
 
   const handleStartEdit = (contact: Contact) => {
-    setEditingContact(contact);
+    setInternalEditingContact(contact);
     setFormData({
       name: contact.name,
       title: contact.title,
@@ -69,7 +104,7 @@ export function ContactsModal({
   };
 
   const handleStartAdd = () => {
-    setEditingContact(null);
+    setInternalEditingContact(null);
     setFormData({
       name: '',
       title: '',
@@ -82,7 +117,7 @@ export function ContactsModal({
   };
 
   const handleCancelEdit = () => {
-    setEditingContact(null);
+    setInternalEditingContact(null);
     setIsAddingNew(false);
     setFormData({
       name: '',
@@ -94,32 +129,54 @@ export function ContactsModal({
     });
   };
 
-  const handleSaveContact = () => {
+  const handleSaveContact = async () => {
     if (!formData.name.trim() || !formData.title.trim() || !formData.email.trim()) {
       return; // Basic validation
     }
 
     const contactData: Contact = {
-      id: editingContact?.id || `contact_${Date.now()}`,
+      id: (internalEditingContact?.id || editingContact?.id) || undefined,
       name: formData.name.trim(),
       title: formData.title.trim(),
       email: formData.email.trim(),
       phone: formData.phone.trim() || undefined,
       area: formData.area.trim() || undefined,
       headshotUrl: formData.headshotUrl || undefined,
-      isPrimary: editingContact?.isPrimary || false
+      isPrimary: internalEditingContact?.isPrimary || editingContact?.isPrimary || false
     };
 
-    if (isAddingNew) {
+    if (isAddingNew || addOnlyMode) {
       // Add new contact
-      setAdditionalContacts(prev => [...prev, contactData]);
-    } else if (editingContact) {
-      // Update existing contact
-      if (editingContact.isPrimary) {
-        setPrimaryContact(contactData);
+      if (addOnlyMode && !editingContact) {
+        // In add-only mode, directly save the single contact
+        try {
+          await onSave({ contacts: [contactData] });
+          onClose();
+          return;
+        } catch (error) {
+          console.error('Error saving contact:', error);
+          return;
+        }
       } else {
-        setAdditionalContacts(prev => 
-          prev.map(contact => contact.id === editingContact.id ? contactData : contact)
+        setContacts(prev => [...prev, contactData]);
+      }
+    } else if (internalEditingContact || editingContact) {
+      // Update existing contact (either from internal state or external prop)
+      const contactToUpdate = internalEditingContact || editingContact;
+      if (editingContact) {
+        // If editing from external prop, save directly
+        try {
+          await onSave({ contacts: [contactData] });
+          onClose();
+          return;
+        } catch (error) {
+          console.error('Error saving contact:', error);
+          return;
+        }
+      } else {
+        // Internal editing mode
+        setContacts(prev => 
+          prev.map(contact => contact.id === contactToUpdate.id ? contactData : contact)
         );
       }
     }
@@ -128,7 +185,7 @@ export function ContactsModal({
   };
 
   const handleDeleteContact = (contactId: string) => {
-    setAdditionalContacts(prev => prev.filter(contact => contact.id !== contactId));
+    setContacts(prev => prev.filter(contact => contact.id !== contactId));
   };
 
   const handleHeadshotUpload = async (file: File) => {
@@ -146,8 +203,7 @@ export function ContactsModal({
     setIsSaving(true);
     try {
       await onSave({
-        primaryContact,
-        additionalContacts
+        contacts
       });
       onClose();
     } catch (error) {
@@ -158,6 +214,9 @@ export function ContactsModal({
   };
 
   const getContactInitials = (name: string) => {
+    if (!name || typeof name !== 'string') {
+      return '??';
+    }
     return name
       .split(' ')
       .map(part => part.charAt(0).toUpperCase())
@@ -188,11 +247,6 @@ export function ContactsModal({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <h4 className="font-medium text-gray-900">{contact.name}</h4>
-          {contact.isPrimary && (
-            <span className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full font-medium">
-              Primary
-            </span>
-          )}
         </div>
         <p className="text-sm text-gray-600">{contact.title}</p>
         <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
@@ -225,16 +279,14 @@ export function ContactsModal({
           >
             <Edit className="w-4 h-4" />
           </Button>
-          {!contact.isPrimary && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDeleteContact(contact.id)}
-              className="text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDeleteContact(contact.id)}
+            className="text-red-600 hover:text-red-700"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       )}
     </div>
@@ -244,33 +296,34 @@ export function ContactsModal({
     <BaseCrudModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Edit Contact Information"
+      title={addOnlyMode || isAddingNew ? "Add New Contact" : (editingContact || internalEditingContact ? "Edit Contact Information" : "Contact")}
       onSave={handleSave}
       isSaving={isSaving}
+      showActions={!internalEditingContact && !editingContact && !isAddingNew && !addOnlyMode}
       className="max-w-4xl"
     >
-      <div className="p-6 space-y-8">
-        {(editingContact || isAddingNew) ? (
+      <div className="p-6 space-y-6">
+        {(internalEditingContact || editingContact || isAddingNew || addOnlyMode) ? (
           /* Edit/Add Form */
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">
-                {isAddingNew ? 'Add New Contact' : `Edit ${editingContact?.name}`}
-              </h3>
-              <Button variant="outline" onClick={handleCancelEdit}>
-                Cancel
-              </Button>
-            </div>
 
             {/* Headshot Upload */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">Profile Photo</label>
               <ImageUpload
-                onUpload={handleHeadshotUpload}
-                currentImageUrl={formData.headshotUrl}
-                accept="image/*"
+                value={formData.headshotUrl}
+                onChange={(file) => {
+                  if (file) {
+                    handleHeadshotUpload(file);
+                  } else {
+                    // Handle removal - clear the headshot URL
+                    setFormData(prev => ({ ...prev, headshotUrl: '' }));
+                  }
+                }}
+                acceptedTypes={["image/png", "image/jpeg", "image/jpg"]}
                 maxSize={5 * 1024 * 1024} // 5MB
-                className="w-24 h-24 rounded-full"
+                placeholder="Upload profile photo"
+                className="max-w-sm"
               />
             </div>
 
@@ -346,66 +399,27 @@ export function ContactsModal({
                 disabled={!formData.name.trim() || !formData.title.trim() || !formData.email.trim()}
                 className="bg-violet-600 hover:bg-violet-700 text-white"
               >
-                {isAddingNew ? 'Add Contact' : 'Save Changes'}
+                {isAddingNew || addOnlyMode ? 'Add Contact' : 'Save Changes'}
               </Button>
             </div>
           </div>
         ) : (
           /* Contact List View */
-          <>
-            {/* Primary Contact */}
-            {primaryContact && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">Primary Contact</h3>
-                <ContactCard contact={primaryContact} />
+          <div className="space-y-4">
+            {contacts.length > 0 ? (
+              <div className="space-y-3">
+                {contacts.map((contact) => (
+                  <ContactCard key={contact.id} contact={contact} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-8 bg-gray-50 rounded-lg border border-gray-200 border-dashed">
+                <User className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">No contacts added yet</p>
+                <p className="text-xs text-gray-500 mt-1">Add team members to help agents reach the right person</p>
               </div>
             )}
-
-            {/* Additional Contacts */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Additional Contacts ({additionalContacts.length})
-                </h3>
-                <Button onClick={handleStartAdd} className="bg-violet-600 hover:bg-violet-700 text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Contact
-                </Button>
-              </div>
-
-              {additionalContacts.length > 0 ? (
-                <div className="space-y-3">
-                  {additionalContacts.map((contact) => (
-                    <ContactCard key={contact.id} contact={contact} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center p-8 bg-gray-50 rounded-lg border border-gray-200 border-dashed">
-                  <User className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">No additional contacts added yet</p>
-                  <p className="text-xs text-gray-500 mt-1">Add team members to help agents reach the right person</p>
-                </div>
-              )}
-            </div>
-
-            {/* Preview Section */}
-            <div className="border-t pt-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Preview</h4>
-              <div className="text-xs text-gray-500 mb-3">This is how your contacts will appear to agents:</div>
-              
-              <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                {primaryContact && (
-                  <ContactCard contact={primaryContact} showActions={false} />
-                )}
-                {additionalContacts.map((contact) => (
-                  <ContactCard key={contact.id} contact={contact} showActions={false} />
-                ))}
-                {!primaryContact && additionalContacts.length === 0 && (
-                  <div className="text-sm text-gray-500 italic">No contacts configured</div>
-                )}
-              </div>
-            </div>
-          </>
+          </div>
         )}
       </div>
     </BaseCrudModal>
