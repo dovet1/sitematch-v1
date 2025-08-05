@@ -1230,35 +1230,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   );
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Portal action buttons to breadcrumb bar */}
-      {typeof window !== 'undefined' && document.getElementById('listing-action-buttons') && 
-        createPortal(<ActionButtons />, document.getElementById('listing-action-buttons')!)
-      }
-
-      {/* Header Bar (optional) */}
-      {showHeaderBar && (
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-6xl mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => router.push('/occupier/dashboard')}>
-                  ← Back to Dashboard
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <ActionButtons />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Container (matching modal layout) */}
-      <div className="max-w-6xl mx-auto bg-white">
-        <div className="flex h-[calc(100vh-64px)]">
-          {/* Visual Hero Section - 40% width (matching modal exactly) */}
-          <div className="w-2/5 bg-gradient-to-br from-violet-900 to-violet-700 relative overflow-hidden">
+    <>
+      {/* Fixed Layout Container - Below navbar */}
+      <div className="fixed top-16 left-0 right-0 bottom-0 flex">
+        {/* Visual Hero Section - Fixed, no scroll */}
+        <div className="w-2/5 xl:w-[35%] 2xl:w-[30%] h-full bg-gradient-to-br from-violet-900 to-violet-700 overflow-hidden flex-shrink-0 relative">
             <div className="absolute inset-0 bg-black/20" />
             <div className="relative h-full flex flex-col">
 
@@ -1267,18 +1243,30 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 {visualView === 'map' && (
                   <div className="h-full flex items-center justify-center p-8">
                     <div className="text-center">
-                      <div className="w-32 h-32 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-8">
-                        {listingData.locations && listingData.locations.length > 0 ? (
-                          <MapPin className="w-16 h-16 text-white" />
-                        ) : (
-                          <div className="text-center">
-                            <div className="w-12 h-12 bg-violet-400/30 rounded-full flex items-center justify-center mx-auto mb-2">
-                              <MapPin className="w-6 h-6 text-white" />
+                      {/* Enhanced Visual Icon with Animation */}
+                      <div className="relative">
+                        <div className="w-32 h-32 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse">
+                          {listingData.locations && listingData.locations.length > 0 ? (
+                            <MapPin className="w-16 h-16 text-white drop-shadow-lg" />
+                          ) : (
+                            <div className="text-center">
+                              <div className="w-12 h-12 bg-violet-400/30 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <MapPin className="w-6 h-6 text-white" />
+                              </div>
+                              <div className="text-xs text-violet-200">UK & Ireland</div>
                             </div>
-                            <div className="text-xs text-violet-200">UK & Ireland</div>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                        {/* Quick Edit Badge */}
+                        <button
+                          onClick={() => setEditingSection('locations')}
+                          className="absolute -top-2 -right-2 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all duration-200 group"
+                          title="Edit locations"
+                        >
+                          <Edit className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
+                        </button>
                       </div>
+                      
                       <h3 className="text-2xl font-bold text-white mb-3">
                         {listingData.locations && listingData.locations.length > 0 
                           ? `${listingData.locations.length} Location${listingData.locations.length > 1 ? 's' : ''}`
@@ -1291,13 +1279,30 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           : 'Open to opportunities across the UK & Ireland'
                         }
                       </p>
-                      <Button 
-                        variant="ghost" 
-                        className="text-white hover:bg-white/10 border border-white/20 px-6 py-2" 
-                        onClick={() => setActiveTab('locations')}
-                      >
-                        {listingData.locations && listingData.locations.length > 0 ? 'View Details' : 'Add Locations'}
-                      </Button>
+                      
+                      {/* Enhanced Action Buttons */}
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <Button 
+                          variant="ghost" 
+                          className="text-white hover:bg-white/10 border border-white/20 px-6 py-2 backdrop-blur-sm" 
+                          onClick={() => setActiveTab('locations')}
+                        >
+                          {listingData.locations && listingData.locations.length > 0 ? 'View Details' : 'Add Locations'}
+                        </Button>
+                        {listingData.locations && listingData.locations.length > 0 && (
+                          <Button 
+                            variant="ghost" 
+                            className="text-white hover:bg-white/10 border border-white/20 px-6 py-2 backdrop-blur-sm" 
+                            onClick={() => {
+                              setEditingSection('locations');
+                              setActiveTab('locations');
+                            }}
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add More
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1305,7 +1310,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 {visualView === 'siteplans' && (
                   <div className="h-full">
                     {listingData.sitePlanFiles && listingData.sitePlanFiles.length > 0 ? (
-                      <div className="h-full overflow-y-auto p-6">
+                      <div className="h-full overflow-hidden p-6">
                         <div className="flex items-center justify-between mb-6">
                           <h3 className="text-white font-semibold text-xl">Site Plans</h3>
                           <div className="flex items-center gap-2">
@@ -1402,7 +1407,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 {visualView === 'fitouts' && (
                   <div className="h-full">
                     {listingData.fitOutFiles && listingData.fitOutFiles.length > 0 ? (
-                      <div className="h-full overflow-y-auto p-6">
+                      <div className="h-full overflow-hidden p-6">
                         <div className="flex items-center justify-between mb-6">
                           <h3 className="text-white font-semibold text-xl">Fit-Out Examples</h3>
                           <div className="flex items-center gap-2">
@@ -1529,7 +1534,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   )}
                 </div>
 
-              {/* Content Type Indicators (matching public modal exactly) */}
+              {/* Enhanced Content Type Indicators with Better Visual Feedback */}
               <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
                 <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md rounded-full p-2">
                   <button
@@ -1593,22 +1598,67 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 </div>
               </div>
 
-              {/* Location Count Badge (like public modal) */}
-              {visualView === 'map' && (
-                <div className="absolute top-6 left-6 px-3 py-2 rounded-full text-sm font-medium bg-white/20 backdrop-blur-md text-white">
-                  {listingData.locations && listingData.locations.length > 0 
-                    ? `${listingData.locations.length} ${listingData.locations.length === 1 ? 'Location' : 'Locations'}`
-                    : 'Nationwide'
-                  }
-                </div>
-              )}
+              {/* Navigation and Status Indicators */}
+              <div className="absolute top-6 left-6 right-6 flex items-start justify-between">
+                {/* Back to Dashboard Button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push('/occupier/dashboard')}
+                  className="text-white hover:bg-white/10 border border-white/20 backdrop-blur-sm"
+                >
+                  ← Dashboard
+                </Button>
+                {/* Location Count Badge */}
+                {visualView === 'map' && (
+                  <div className="px-3 py-2 rounded-full text-sm font-medium bg-white/20 backdrop-blur-md text-white">
+                    {listingData.locations && listingData.locations.length > 0 
+                      ? `${listingData.locations.length} ${listingData.locations.length === 1 ? 'Location' : 'Locations'}`
+                      : 'Nationwide'
+                    }
+                  </div>
+                )}
+                {/* File Count Badges for other views */}
+                {visualView === 'siteplans' && listingData.sitePlanFiles && listingData.sitePlanFiles.length > 0 && (
+                  <div className="px-3 py-2 rounded-full text-sm font-medium bg-white/20 backdrop-blur-md text-white">
+                    {listingData.sitePlanFiles.length} Site Plan{listingData.sitePlanFiles.length > 1 ? 's' : ''}
+                  </div>
+                )}
+                {visualView === 'fitouts' && listingData.fitOutFiles && listingData.fitOutFiles.length > 0 && (
+                  <div className="px-3 py-2 rounded-full text-sm font-medium bg-white/20 backdrop-blur-md text-white">
+                    {listingData.fitOutFiles.length} Fit-Out{listingData.fitOutFiles.length > 1 ? 's' : ''}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Information Panel - 60% width (matching modal) */}
-          <div className="w-3/5 h-full overflow-y-auto">
+        {/* Information Panel - Scrollable */}
+        <div className="flex-1 h-full overflow-y-auto bg-white relative z-10">
+          {/* Action Buttons - Fixed in top right */}
+          <div className="absolute top-6 right-6 z-30 flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/occupier/listing/${listingId}/preview`)}
+              className="bg-white/95 backdrop-blur-sm shadow-sm"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Preview
+            </Button>
+            
+            {listingData?.status === 'draft' && (
+              <Button
+                size="sm"
+                onClick={handleSubmitForReview}
+                className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
+              >
+                Submit for Review
+              </Button>
+            )}
+          </div>
             {/* Company Hero Card (matching modal) */}
-            <div className="p-6 border-b border-gray-200 bg-white">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-violet-50 to-purple-50">
               <div className="flex items-center gap-4">
                 {listingData.logoPreview ? (
                   <img
@@ -1647,7 +1697,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
             </div>
 
             {/* Tab Navigation with Completion Indicators */}
-            <div className="border-b border-gray-200 bg-white sticky top-0 z-10">
+            <div className="border-b border-gray-200 bg-white sticky top-0 z-30">
               <div className="flex">
                 {tabs.map((tab) => (
                   <button
@@ -1681,12 +1731,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               </div>
             </div>
 
-            {/* Tab Content */}
-            <div className="flex-1" role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+            {/* Tab Content Container */}
+            <div className="max-w-4xl mx-auto px-6 lg:px-8 py-6 lg:py-8" role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
           
               {/* Overview Tab Content (matching modal exactly) */}
               {activeTab === 'overview' && (
-                <div className="p-6 space-y-6">
+                <div className="space-y-6">
                   <h3 className="text-lg font-semibold">Requirements In {companyName}'s Own Words</h3>
 
                   {/* Requirements Brochure */}
@@ -2519,7 +2569,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               )}
 
             </div>
-          </div>
         </div>
       </div>
       
@@ -2544,7 +2593,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         onUpload={(files) => handleQuickUpload(files, 'fitouts')}
       />
 
-    </div>
+    </>
   );
 }
 

@@ -27,35 +27,11 @@ export default async function ListingDetailRoute({ params }: ListingDetailRouteP
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Breadcrumb Navigation with Action Buttons */}
-      <div className="bg-background border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <nav className="flex items-center space-x-4 body-small">
-              <Link href="/occupier/dashboard" className="text-muted-foreground hover:text-foreground violet-bloom-nav-item">
-                Dashboard
-              </Link>
-              <span className="text-muted-foreground">/</span>
-              <span className="text-foreground font-medium">
-                Listing Details
-              </span>
-            </nav>
-            <div className="flex items-center gap-2">
-              {/* These will be dynamically controlled by the listing component */}
-              <div id="listing-action-buttons"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <ListingDetailPage 
-        listingId={params.id}
-        userId={user.id}
-        showHeaderBar={false}
-      />
-    </div>
+    <ListingDetailPage 
+      listingId={params.id}
+      userId={user.id}
+      showHeaderBar={false}
+    />
   );
 }
 
