@@ -31,7 +31,9 @@ import {
   X,
   Phone,
   Mail,
-  Trash2
+  Trash2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -76,6 +78,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   
   // Visual hero view state (matching public modal)
   const [visualView, setVisualView] = useState<'map' | 'fitouts' | 'siteplans'>('map');
+  
+  // Carousel state for site-plans and fit-outs
+  const [sitePlansIndex, setSitePlansIndex] = useState(0);
+  const [fitOutsIndex, setFitOutsIndex] = useState(0);
   
   // Quick Add Modal states
   const [quickAddModals, setQuickAddModals] = useState({
@@ -285,6 +291,31 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
     fetchListingData();
   }, [listingId, userId]);
+
+  // Carousel navigation functions
+  const nextSitePlan = () => {
+    if (listingData?.sitePlanFiles) {
+      setSitePlansIndex((prev) => (prev + 1) % listingData.sitePlanFiles.length);
+    }
+  };
+
+  const prevSitePlan = () => {
+    if (listingData?.sitePlanFiles) {
+      setSitePlansIndex((prev) => (prev - 1 + listingData.sitePlanFiles.length) % listingData.sitePlanFiles.length);
+    }
+  };
+
+  const nextFitOut = () => {
+    if (listingData?.fitOutFiles) {
+      setFitOutsIndex((prev) => (prev + 1) % listingData.fitOutFiles.length);
+    }
+  };
+
+  const prevFitOut = () => {
+    if (listingData?.fitOutFiles) {
+      setFitOutsIndex((prev) => (prev - 1 + listingData.fitOutFiles.length) % listingData.fitOutFiles.length);
+    }
+  };
 
   const handleSubmitForReview = async () => {
     if (!listingData) return;
@@ -1300,202 +1331,324 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 )}
 
                 {visualView === 'siteplans' && (
-                  <div className="h-full">
+                  <div className="relative h-full w-full overflow-hidden">
                     {listingData.sitePlanFiles && listingData.sitePlanFiles.length > 0 ? (
-                      <div className="h-full overflow-hidden p-6">
-                          <div className="grid grid-cols-1 gap-4">
-                            {listingData.sitePlanFiles.map((file) => (
-                              <div key={file.id} className="bg-white/10 backdrop-blur-sm rounded-lg overflow-hidden hover:bg-white/20 transition-colors group">
-                                {file.mimeType?.startsWith('image/') ? (
-                                  <div className="relative">
-                                    <img
-                                      src={file.url}
-                                      alt={file.name}
-                                      className="w-full h-48 object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                      <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        className="text-white hover:bg-white/20"
-                                        onClick={() => handleViewFile(file)}
-                                      >
-                                        <Eye className="w-4 h-4 mr-1" />
-                                        View
-                                      </Button>
-                                      <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        className="text-red-300 hover:bg-red-500/20"
-                                        onClick={() => handleDeleteFile(file, 'siteplans')}
-                                      >
-                                        <Trash2 className="w-4 h-4 mr-1" />
-                                        Delete
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="p-4">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                                        <FileText className="w-6 h-6 text-white" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-white font-medium text-sm truncate">{file.name}</p>
-                                        <p className="text-violet-200 text-xs">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
-                                      </div>
-                                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                                        <Button 
-                                          size="sm" 
-                                          variant="ghost" 
-                                          className="text-red-300 hover:bg-red-500/20 h-8 w-8 p-0"
-                                          onClick={() => handleDeleteFile(file, 'siteplans')}
-                                        >
-                                          <Trash2 className="w-3 h-3" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="p-3">
-                                  <p className="text-white text-sm font-medium truncate">{file.name}</p>
+                      <>
+                        {/* Main Carousel Image */}
+                        <div className="relative h-full w-full">
+                          {(() => {
+                            const currentFile = listingData.sitePlanFiles[sitePlansIndex];
+                            return currentFile.mimeType?.startsWith('image/') ? (
+                              <img
+                                src={currentFile.url}
+                                alt={currentFile.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full flex items-center justify-center bg-violet-800">
+                                <div className="text-center p-8">
+                                  <FileText className="w-16 h-16 text-white mx-auto mb-4" />
+                                  <p className="text-white font-medium">{currentFile.name}</p>
+                                  <p className="text-violet-200 text-sm mt-2">
+                                    {(currentFile.size / 1024 / 1024).toFixed(1)} MB
+                                  </p>
                                 </div>
                               </div>
-                            ))}
+                            );
+                          })()}
+
+                          {/* Overlay controls */}
+                          <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-white hover:bg-white/20 backdrop-blur-sm"
+                              onClick={() => handleViewFile(listingData.sitePlanFiles[sitePlansIndex])}
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              View
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-red-300 hover:bg-red-500/20 backdrop-blur-sm"
+                              onClick={() => handleDeleteFile(listingData.sitePlanFiles[sitePlansIndex], 'siteplans')}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </Button>
                           </div>
                         </div>
-                      ) : (
-                        <div className="h-full flex items-center justify-center p-4">
-                          <SophisticatedEmptyState
-                            icon={FileText}
-                            title="Site Plans"
-                            description="Upload floor plans, site layouts, or property plans to help agents understand your space requirements."
-                            benefit="Detailed plans help agents assess whether available properties match your spatial needs and layout preferences."
-                            actionText="Upload Site Plans"
-                            onAction={() => openQuickAddModal('uploadSitePlans')}
-                            examples={["Floor plans", "Site layout", "Building sections", "CAD drawings"]}
-                            showBenefits={false}
-                            showExamples={false}
-                          />
+
+                        {/* Navigation arrows */}
+                        {listingData.sitePlanFiles.length > 1 && (
+                          <>
+                            <button
+                              onClick={prevSitePlan}
+                              className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20
+                                       bg-white/90 hover:bg-white backdrop-blur-md rounded-full p-4
+                                       text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
+                                       border-2 border-white/50 hover:border-white 
+                                       transition-all duration-200 hover:scale-110"
+                            >
+                              <ChevronLeft className="w-6 h-6" />
+                            </button>
+                            
+                            <button
+                              onClick={nextSitePlan}
+                              className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20
+                                       bg-white/90 hover:bg-white backdrop-blur-md rounded-full p-4
+                                       text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
+                                       border-2 border-white/50 hover:border-white 
+                                       transition-all duration-200 hover:scale-110"
+                            >
+                              <ChevronRight className="w-6 h-6" />
+                            </button>
+                          </>
+                        )}
+
+                        {/* Image counter and add button */}
+                        <div className="absolute top-6 right-6 z-10 flex gap-2">
+                          {listingData.sitePlanFiles.length > 1 && (
+                            <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-full">
+                              <span className="text-white text-sm font-medium">
+                                {sitePlansIndex + 1} / {listingData.sitePlanFiles.length}
+                              </span>
+                            </div>
+                          )}
+                          <Button
+                            size="md"
+                            variant="ghost"
+                            className="bg-violet-600/80 hover:bg-violet-700/90 backdrop-blur-md text-white border-2 border-white/50 hover:border-white/70 shadow-lg hover:shadow-xl rounded-full p-3 transition-all duration-200 hover:scale-110"
+                            onClick={() => openQuickAddModal('uploadSitePlans')}
+                            title="Add more site plans"
+                          >
+                            <Plus className="w-5 h-5" />
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                  )}
+
+                        {/* Thumbnail strip (for multiple images) */}
+                        {listingData.sitePlanFiles.length > 1 && (
+                          <div className="absolute bottom-6 left-6 right-6 z-10">
+                            <div className="flex gap-2 justify-center">
+                              {listingData.sitePlanFiles.map((file, index) => (
+                                <button
+                                  key={file.id}
+                                  onClick={() => setSitePlansIndex(index)}
+                                  className={`w-16 h-12 rounded overflow-hidden transition-all duration-200 ${
+                                    index === sitePlansIndex 
+                                      ? 'ring-2 ring-white scale-110' 
+                                      : 'opacity-60 hover:opacity-80'
+                                  }`}
+                                >
+                                  {file.mimeType?.startsWith('image/') ? (
+                                    <img
+                                      src={file.url}
+                                      alt={`Site plan ${index + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full bg-violet-600 flex items-center justify-center">
+                                      <FileText className="w-4 h-4 text-white" />
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="h-full flex items-center justify-center p-4">
+                        <SophisticatedEmptyState
+                          icon={FileText}
+                          title="Site Plans"
+                          description="Upload floor plans, site layouts, or property plans to help agents understand your space requirements."
+                          benefit="Detailed plans help agents assess whether available properties match your spatial needs and layout preferences."
+                          actionText="Upload Site Plans"
+                          onAction={() => openQuickAddModal('uploadSitePlans')}
+                          examples={["Floor plans", "Site layout", "Building sections", "CAD drawings"]}
+                          showBenefits={false}
+                          showExamples={false}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {visualView === 'fitouts' && (
-                  <div className="h-full">
+                  <div className="relative h-full w-full overflow-hidden">
                     {listingData.fitOutFiles && listingData.fitOutFiles.length > 0 ? (
-                      <div className="h-full overflow-hidden p-6">
-                          <div className="grid grid-cols-1 gap-4">
-                            {listingData.fitOutFiles.map((file) => (
-                              <div key={file.id} className="bg-white/10 backdrop-blur-sm rounded-lg overflow-hidden hover:bg-white/20 transition-colors group">
-                                {file.mimeType?.startsWith('image/') ? (
-                                  <div className="relative">
-                                    <img
-                                      src={file.url}
-                                      alt={file.name}
-                                      className="w-full h-48 object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                      <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        className="text-white hover:bg-white/20"
-                                        onClick={() => handleViewFile(file)}
-                                      >
-                                        <Eye className="w-4 h-4 mr-1" />
-                                        View
-                                      </Button>
-                                      <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        className="text-red-300 hover:bg-red-500/20"
-                                        onClick={() => handleDeleteFile(file, 'fitouts')}
-                                      >
-                                        <Trash2 className="w-4 h-4 mr-1" />
-                                        Delete
-                                      </Button>
-                                    </div>
+                      <>
+                        {/* Main Carousel Image/Video */}
+                        <div className="relative h-full w-full">
+                          {(() => {
+                            const currentFile = listingData.fitOutFiles[fitOutsIndex];
+                            if (currentFile.mimeType?.startsWith('image/')) {
+                              return (
+                                <img
+                                  src={currentFile.url}
+                                  alt={currentFile.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              );
+                            } else if (currentFile.isVideo) {
+                              return (
+                                <video 
+                                  src={currentFile.url}
+                                  className="w-full h-full object-cover"
+                                  controls={false}
+                                  poster={currentFile.thumbnail}
+                                  loop
+                                  muted
+                                />
+                              );
+                            } else {
+                              return (
+                                <div className="h-full flex items-center justify-center bg-violet-800">
+                                  <div className="text-center p-8">
+                                    <FileText className="w-16 h-16 text-white mx-auto mb-4" />
+                                    <p className="text-white font-medium">{currentFile.name}</p>
+                                    <p className="text-violet-200 text-sm mt-2">
+                                      {(currentFile.size / 1024 / 1024).toFixed(1)} MB
+                                    </p>
                                   </div>
-                                ) : file.isVideo ? (
-                                  <div className="relative">
-                                    <video 
-                                      src={file.url}
-                                      className="w-full h-48 object-cover"
-                                      controls={false}
-                                      poster={file.thumbnail}
-                                    />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                      <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        className="text-white hover:bg-white/20"
-                                        onClick={() => handleViewFile(file)}
-                                      >
-                                        <Eye className="w-4 h-4 mr-1" />
-                                        Play
-                                      </Button>
-                                      <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        className="text-red-300 hover:bg-red-500/20"
-                                        onClick={() => handleDeleteFile(file, 'fitouts')}
-                                      >
-                                        <Trash2 className="w-4 h-4 mr-1" />
-                                        Delete
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="p-4">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                                        <FileText className="w-6 h-6 text-white" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-white font-medium text-sm truncate">{file.name}</p>
-                                        <p className="text-violet-200 text-xs">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
-                                      </div>
-                                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                                        <Button 
-                                          size="sm" 
-                                          variant="ghost" 
-                                          className="text-red-300 hover:bg-red-500/20 h-8 w-8 p-0"
-                                          onClick={() => handleDeleteFile(file, 'siteplans')}
-                                        >
-                                          <Trash2 className="w-3 h-3" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="p-3">
-                                  <p className="text-white text-sm font-medium truncate">{file.name}</p>
-                                  {file.caption && (
-                                    <p className="text-violet-200 text-xs mt-1">{file.caption}</p>
-                                  )}
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            }
+                          })()}
+
+                          {/* Overlay controls */}
+                          <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-white hover:bg-white/20 backdrop-blur-sm"
+                              onClick={() => handleViewFile(listingData.fitOutFiles[fitOutsIndex])}
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              {listingData.fitOutFiles[fitOutsIndex].isVideo ? 'Play' : 'View'}
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="text-red-300 hover:bg-red-500/20 backdrop-blur-sm"
+                              onClick={() => handleDeleteFile(listingData.fitOutFiles[fitOutsIndex], 'fitouts')}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </Button>
                           </div>
                         </div>
-                      ) : (
-                        <div className="h-full flex items-center justify-center p-4">
-                          <SophisticatedEmptyState
-                            icon={Building2}
-                            title="Fit-Out Examples"
-                            description="Upload images or videos of your ideal space design to help agents understand your style preferences."
-                            benefit="Agents can better match your requirements and present more relevant opportunities when they understand your aesthetic preferences."
-                            actionText="Upload Fit-Out Examples"
-                            onAction={() => openQuickAddModal('uploadFitOuts')}
-                            examples={["Modern office", "Industrial style", "Traditional workspace", "Creative space"]}
-                            showBenefits={false}
-                            showExamples={false}
-                          />
+
+                        {/* Navigation arrows */}
+                        {listingData.fitOutFiles.length > 1 && (
+                          <>
+                            <button
+                              onClick={prevFitOut}
+                              className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20
+                                       bg-white/90 hover:bg-white backdrop-blur-md rounded-full p-4
+                                       text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
+                                       border-2 border-white/50 hover:border-white 
+                                       transition-all duration-200 hover:scale-110"
+                            >
+                              <ChevronLeft className="w-6 h-6" />
+                            </button>
+                            
+                            <button
+                              onClick={nextFitOut}
+                              className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20
+                                       bg-white/90 hover:bg-white backdrop-blur-md rounded-full p-4
+                                       text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
+                                       border-2 border-white/50 hover:border-white 
+                                       transition-all duration-200 hover:scale-110"
+                            >
+                              <ChevronRight className="w-6 h-6" />
+                            </button>
+                          </>
+                        )}
+
+                        {/* Image counter and add button */}
+                        <div className="absolute top-6 right-6 z-10 flex gap-2">
+                          {listingData.fitOutFiles.length > 1 && (
+                            <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-full">
+                              <span className="text-white text-sm font-medium">
+                                {fitOutsIndex + 1} / {listingData.fitOutFiles.length}
+                              </span>
+                            </div>
+                          )}
+                          <Button
+                            size="md"
+                            variant="ghost"
+                            className="bg-violet-600/80 hover:bg-violet-700/90 backdrop-blur-md text-white border-2 border-white/50 hover:border-white/70 shadow-lg hover:shadow-xl rounded-full p-3 transition-all duration-200 hover:scale-110"
+                            onClick={() => openQuickAddModal('uploadFitOuts')}
+                            title="Add more fit-out examples"
+                          >
+                            <Plus className="w-5 h-5" />
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                  )}
+
+                        {/* Thumbnail strip (for multiple images) */}
+                        {listingData.fitOutFiles.length > 1 && (
+                          <div className="absolute bottom-6 left-6 right-6 z-10">
+                            <div className="flex gap-2 justify-center">
+                              {listingData.fitOutFiles.map((file, index) => (
+                                <button
+                                  key={file.id}
+                                  onClick={() => setFitOutsIndex(index)}
+                                  className={`w-16 h-12 rounded overflow-hidden transition-all duration-200 ${
+                                    index === fitOutsIndex 
+                                      ? 'ring-2 ring-white scale-110' 
+                                      : 'opacity-60 hover:opacity-80'
+                                  }`}
+                                >
+                                  {file.mimeType?.startsWith('image/') ? (
+                                    <img
+                                      src={file.url}
+                                      alt={`Fit-out ${index + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : file.isVideo ? (
+                                    <div className="relative w-full h-full">
+                                      <video
+                                        src={file.url}
+                                        className="w-full h-full object-cover"
+                                        poster={file.thumbnail}
+                                      />
+                                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                        <div className="w-4 h-4 bg-white/80 rounded-full flex items-center justify-center">
+                                          <div className="w-0 h-0 border-l-2 border-l-black border-y-transparent border-y-[1px] ml-0.5"></div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="w-full h-full bg-violet-600 flex items-center justify-center">
+                                      <FileText className="w-4 h-4 text-white" />
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="h-full flex items-center justify-center p-4">
+                        <SophisticatedEmptyState
+                          icon={Building2}
+                          title="Fit-Out Examples"
+                          description="Upload images or videos of your ideal space design to help agents understand your style preferences."
+                          benefit="Agents can better match your requirements and present more relevant opportunities when they understand your aesthetic preferences."
+                          actionText="Upload Fit-Out Examples"
+                          onAction={() => openQuickAddModal('uploadFitOuts')}
+                          examples={["Modern office", "Industrial style", "Traditional workspace", "Creative space"]}
+                          showBenefits={false}
+                          showExamples={false}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
                 </div>
 
               {/* Enhanced Content Type Indicators with Better Visual Feedback */}
@@ -1567,23 +1720,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 {/* Back to Dashboard Button */}
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="md"
                   onClick={() => router.push('/occupier/dashboard')}
-                  className="text-white hover:bg-white/10 border border-white/20 backdrop-blur-sm"
+                  className="text-black/80 hover:text-black/90 font-semibold bg-white/80 hover:bg-white/90 border-2 border-white/90 hover:border-white backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-200 px-4 py-2"
                 >
                   ← Dashboard
                 </Button>
-                {/* File Count Badges for other views */}
-                {visualView === 'siteplans' && listingData.sitePlanFiles && listingData.sitePlanFiles.length > 0 && (
-                  <div className="px-3 py-2 rounded-full text-sm font-medium bg-white/20 backdrop-blur-md text-white">
-                    {listingData.sitePlanFiles.length} Site Plan{listingData.sitePlanFiles.length > 1 ? 's' : ''}
-                  </div>
-                )}
-                {visualView === 'fitouts' && listingData.fitOutFiles && listingData.fitOutFiles.length > 0 && (
-                  <div className="px-3 py-2 rounded-full text-sm font-medium bg-white/20 backdrop-blur-md text-white">
-                    {listingData.fitOutFiles.length} Fit-Out{listingData.fitOutFiles.length > 1 ? 's' : ''}
-                  </div>
-                )}
               </div>
             </div>
           </div>
