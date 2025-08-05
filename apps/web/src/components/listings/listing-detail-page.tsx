@@ -317,6 +317,33 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     }
   };
 
+  // Keyboard navigation for carousels
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Only handle keyboard navigation in visual hero sections
+      if (visualView === 'siteplans' && listingData?.sitePlanFiles && listingData.sitePlanFiles.length > 1) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          prevSitePlan();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          nextSitePlan();
+        }
+      } else if (visualView === 'fitouts' && listingData?.fitOutFiles && listingData.fitOutFiles.length > 1) {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          prevFitOut();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          nextFitOut();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [visualView, listingData?.sitePlanFiles, listingData?.fitOutFiles]);
+
   const handleSubmitForReview = async () => {
     if (!listingData) return;
 
@@ -1331,7 +1358,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 )}
 
                 {visualView === 'siteplans' && (
-                  <div className="relative h-full w-full overflow-hidden">
+                  <div className="relative h-full w-full overflow-hidden group">
                     {listingData.sitePlanFiles && listingData.sitePlanFiles.length > 0 ? (
                       <>
                         {/* Main Carousel Image */}
@@ -1380,65 +1407,76 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           </div>
                         </div>
 
-                        {/* Navigation arrows */}
-                        {listingData.sitePlanFiles.length > 1 && (
-                          <>
-                            <button
-                              onClick={prevSitePlan}
-                              className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20
-                                       bg-white/90 hover:bg-white backdrop-blur-md rounded-full p-4
-                                       text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
-                                       border-2 border-white/50 hover:border-white 
-                                       transition-all duration-200 hover:scale-110"
-                            >
-                              <ChevronLeft className="w-6 h-6" />
-                            </button>
-                            
-                            <button
-                              onClick={nextSitePlan}
-                              className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20
-                                       bg-white/90 hover:bg-white backdrop-blur-md rounded-full p-4
-                                       text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
-                                       border-2 border-white/50 hover:border-white 
-                                       transition-all duration-200 hover:scale-110"
-                            >
-                              <ChevronRight className="w-6 h-6" />
-                            </button>
-                          </>
-                        )}
-
-                        {/* Image counter and add button */}
-                        <div className="absolute top-6 right-6 z-10 flex gap-2">
+                        {/* Contextual Content Controls */}
+                        <div className="absolute inset-0 pointer-events-none">
+                          {/* Navigation arrows - only show on hover */}
                           {listingData.sitePlanFiles.length > 1 && (
-                            <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-full">
-                              <span className="text-white text-sm font-medium">
-                                {sitePlansIndex + 1} / {listingData.sitePlanFiles.length}
-                              </span>
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto">
+                              <button
+                                onClick={prevSitePlan}
+                                className="absolute left-6 top-1/2 transform -translate-y-1/2 z-20
+                                         bg-white/95 hover:bg-white backdrop-blur-sm rounded-full p-3
+                                         text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
+                                         border border-violet-200 hover:border-violet-300
+                                         transition-all duration-200 hover:scale-105"
+                                aria-label="Previous site plan"
+                              >
+                                <ChevronLeft className="w-5 h-5" />
+                              </button>
+                              
+                              <button
+                                onClick={nextSitePlan}
+                                className="absolute right-6 top-1/2 transform -translate-y-1/2 z-20
+                                         bg-white/95 hover:bg-white backdrop-blur-sm rounded-full p-3
+                                         text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
+                                         border border-violet-200 hover:border-violet-300
+                                         transition-all duration-200 hover:scale-105"
+                                aria-label="Next site plan"
+                              >
+                                <ChevronRight className="w-5 h-5" />
+                              </button>
                             </div>
                           )}
-                          <Button
-                            size="md"
-                            variant="ghost"
-                            className="bg-violet-600/80 hover:bg-violet-700/90 backdrop-blur-md text-white border-2 border-white/50 hover:border-white/70 shadow-lg hover:shadow-xl rounded-full p-3 transition-all duration-200 hover:scale-110"
-                            onClick={() => openQuickAddModal('uploadSitePlans')}
-                            title="Add more site plans"
-                          >
-                            <Plus className="w-5 h-5" />
-                          </Button>
+
+                          {/* Content Management Controls - Top Right */}
+                          <div className="absolute top-6 right-6 z-20 pointer-events-auto">
+                            <div className="flex items-center gap-3">
+                              {/* Counter integrated with controls */}
+                              {listingData.sitePlanFiles.length > 1 && (
+                                <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full">
+                                  <span className="text-white text-sm font-medium">
+                                    {sitePlansIndex + 1} of {listingData.sitePlanFiles.length}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {/* Add Content Button */}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="bg-violet-600 hover:bg-violet-700 text-white shadow-lg hover:shadow-xl rounded-lg px-3 py-2 transition-all duration-200 hover:scale-105"
+                                onClick={() => openQuickAddModal('uploadSitePlans')}
+                                title="Add site plans"
+                              >
+                                <Plus className="w-4 h-4 mr-1" />
+                                <span className="text-sm font-medium">Add</span>
+                              </Button>
+                            </div>
+                          </div>
                         </div>
 
-                        {/* Thumbnail strip (for multiple images) */}
+                        {/* Progressive Disclosure: Thumbnail strip (shows on hover when multiple images) */}
                         {listingData.sitePlanFiles.length > 1 && (
-                          <div className="absolute bottom-6 left-6 right-6 z-10">
+                          <div className="absolute bottom-6 left-6 right-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <div className="flex gap-2 justify-center">
                               {listingData.sitePlanFiles.map((file, index) => (
                                 <button
                                   key={file.id}
                                   onClick={() => setSitePlansIndex(index)}
-                                  className={`w-16 h-12 rounded overflow-hidden transition-all duration-200 ${
+                                  className={`w-16 h-12 rounded-lg overflow-hidden transition-all duration-200 backdrop-blur-sm ${
                                     index === sitePlansIndex 
-                                      ? 'ring-2 ring-white scale-110' 
-                                      : 'opacity-60 hover:opacity-80'
+                                      ? 'ring-2 ring-white/90 scale-110 shadow-lg' 
+                                      : 'ring-1 ring-white/20 opacity-70 hover:opacity-90 hover:scale-105'
                                   }`}
                                 >
                                   {file.mimeType?.startsWith('image/') ? (
@@ -1448,7 +1486,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                       className="w-full h-full object-cover"
                                     />
                                   ) : (
-                                    <div className="w-full h-full bg-violet-600 flex items-center justify-center">
+                                    <div className="w-full h-full bg-violet-600/80 backdrop-blur-sm flex items-center justify-center">
                                       <FileText className="w-4 h-4 text-white" />
                                     </div>
                                   )}
@@ -1477,7 +1515,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 )}
 
                 {visualView === 'fitouts' && (
-                  <div className="relative h-full w-full overflow-hidden">
+                  <div className="relative h-full w-full overflow-hidden group">
                     {listingData.fitOutFiles && listingData.fitOutFiles.length > 0 ? (
                       <>
                         {/* Main Carousel Image/Video */}
@@ -1541,65 +1579,76 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           </div>
                         </div>
 
-                        {/* Navigation arrows */}
-                        {listingData.fitOutFiles.length > 1 && (
-                          <>
-                            <button
-                              onClick={prevFitOut}
-                              className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20
-                                       bg-white/90 hover:bg-white backdrop-blur-md rounded-full p-4
-                                       text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
-                                       border-2 border-white/50 hover:border-white 
-                                       transition-all duration-200 hover:scale-110"
-                            >
-                              <ChevronLeft className="w-6 h-6" />
-                            </button>
-                            
-                            <button
-                              onClick={nextFitOut}
-                              className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20
-                                       bg-white/90 hover:bg-white backdrop-blur-md rounded-full p-4
-                                       text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
-                                       border-2 border-white/50 hover:border-white 
-                                       transition-all duration-200 hover:scale-110"
-                            >
-                              <ChevronRight className="w-6 h-6" />
-                            </button>
-                          </>
-                        )}
-
-                        {/* Image counter and add button */}
-                        <div className="absolute top-6 right-6 z-10 flex gap-2">
+                        {/* Contextual Content Controls */}
+                        <div className="absolute inset-0 pointer-events-none">
+                          {/* Navigation arrows - only show on hover */}
                           {listingData.fitOutFiles.length > 1 && (
-                            <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-full">
-                              <span className="text-white text-sm font-medium">
-                                {fitOutsIndex + 1} / {listingData.fitOutFiles.length}
-                              </span>
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto">
+                              <button
+                                onClick={prevFitOut}
+                                className="absolute left-6 top-1/2 transform -translate-y-1/2 z-20
+                                         bg-white/95 hover:bg-white backdrop-blur-sm rounded-full p-3
+                                         text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
+                                         border border-violet-200 hover:border-violet-300
+                                         transition-all duration-200 hover:scale-105"
+                                aria-label="Previous fit-out"
+                              >
+                                <ChevronLeft className="w-5 h-5" />
+                              </button>
+                              
+                              <button
+                                onClick={nextFitOut}
+                                className="absolute right-6 top-1/2 transform -translate-y-1/2 z-20
+                                         bg-white/95 hover:bg-white backdrop-blur-sm rounded-full p-3
+                                         text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
+                                         border border-violet-200 hover:border-violet-300
+                                         transition-all duration-200 hover:scale-105"
+                                aria-label="Next fit-out"
+                              >
+                                <ChevronRight className="w-5 h-5" />
+                              </button>
                             </div>
                           )}
-                          <Button
-                            size="md"
-                            variant="ghost"
-                            className="bg-violet-600/80 hover:bg-violet-700/90 backdrop-blur-md text-white border-2 border-white/50 hover:border-white/70 shadow-lg hover:shadow-xl rounded-full p-3 transition-all duration-200 hover:scale-110"
-                            onClick={() => openQuickAddModal('uploadFitOuts')}
-                            title="Add more fit-out examples"
-                          >
-                            <Plus className="w-5 h-5" />
-                          </Button>
+
+                          {/* Content Management Controls - Top Right */}
+                          <div className="absolute top-6 right-6 z-20 pointer-events-auto">
+                            <div className="flex items-center gap-3">
+                              {/* Counter integrated with controls */}
+                              {listingData.fitOutFiles.length > 1 && (
+                                <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full">
+                                  <span className="text-white text-sm font-medium">
+                                    {fitOutsIndex + 1} of {listingData.fitOutFiles.length}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {/* Add Content Button */}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="bg-violet-600 hover:bg-violet-700 text-white shadow-lg hover:shadow-xl rounded-lg px-3 py-2 transition-all duration-200 hover:scale-105"
+                                onClick={() => openQuickAddModal('uploadFitOuts')}
+                                title="Add fit-out examples"
+                              >
+                                <Plus className="w-4 h-4 mr-1" />
+                                <span className="text-sm font-medium">Add</span>
+                              </Button>
+                            </div>
+                          </div>
                         </div>
 
-                        {/* Thumbnail strip (for multiple images) */}
+                        {/* Progressive Disclosure: Thumbnail strip (shows on hover when multiple images) */}
                         {listingData.fitOutFiles.length > 1 && (
-                          <div className="absolute bottom-6 left-6 right-6 z-10">
+                          <div className="absolute bottom-6 left-6 right-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <div className="flex gap-2 justify-center">
                               {listingData.fitOutFiles.map((file, index) => (
                                 <button
                                   key={file.id}
                                   onClick={() => setFitOutsIndex(index)}
-                                  className={`w-16 h-12 rounded overflow-hidden transition-all duration-200 ${
+                                  className={`w-16 h-12 rounded-lg overflow-hidden transition-all duration-200 backdrop-blur-sm ${
                                     index === fitOutsIndex 
-                                      ? 'ring-2 ring-white scale-110' 
-                                      : 'opacity-60 hover:opacity-80'
+                                      ? 'ring-2 ring-white/90 scale-110 shadow-lg' 
+                                      : 'ring-1 ring-white/20 opacity-70 hover:opacity-90 hover:scale-105'
                                   }`}
                                 >
                                   {file.mimeType?.startsWith('image/') ? (
@@ -1622,7 +1671,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                       </div>
                                     </div>
                                   ) : (
-                                    <div className="w-full h-full bg-violet-600 flex items-center justify-center">
+                                    <div className="w-full h-full bg-violet-600/80 backdrop-blur-sm flex items-center justify-center">
                                       <FileText className="w-4 h-4 text-white" />
                                     </div>
                                   )}
@@ -1715,14 +1764,13 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 </div>
               </div>
 
-              {/* Navigation and Status Indicators */}
-              <div className="absolute top-6 left-6 right-6 flex items-start justify-between">
-                {/* Back to Dashboard Button */}
+              {/* Global Navigation - Fixed Position */}
+              <div className="absolute top-6 left-6 z-30">
                 <Button
                   variant="ghost"
                   size="md"
                   onClick={() => router.push('/occupier/dashboard')}
-                  className="text-black/80 hover:text-black/90 font-semibold bg-white/80 hover:bg-white/90 border-2 border-white/90 hover:border-white backdrop-blur-md shadow-lg hover:shadow-xl transition-all duration-200 px-4 py-2"
+                  className="text-black/80 hover:text-black/90 font-semibold bg-white/90 hover:bg-white border-2 border-white shadow-lg hover:shadow-xl transition-all duration-200 px-4 py-2"
                 >
                   ← Dashboard
                 </Button>
