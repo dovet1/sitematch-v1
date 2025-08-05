@@ -1361,107 +1361,104 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   <div className="relative h-full w-full overflow-hidden group">
                     {listingData.sitePlanFiles && listingData.sitePlanFiles.length > 0 ? (
                       <>
-                        {/* Main Carousel Image */}
-                        <div className="relative h-full w-full">
-                          {(() => {
-                            const currentFile = listingData.sitePlanFiles[sitePlansIndex];
-                            return currentFile.mimeType?.startsWith('image/') ? (
-                              <img
-                                src={currentFile.url}
-                                alt={currentFile.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="h-full flex items-center justify-center bg-violet-800">
-                                <div className="text-center p-8">
-                                  <FileText className="w-16 h-16 text-white mx-auto mb-4" />
-                                  <p className="text-white font-medium">{currentFile.name}</p>
-                                  <p className="text-violet-200 text-sm mt-2">
-                                    {(currentFile.size / 1024 / 1024).toFixed(1)} MB
-                                  </p>
+                        {/* Main Carousel Image with Proper Aspect Ratio */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="relative w-full h-full max-h-full">
+                            {(() => {
+                              const currentFile = listingData.sitePlanFiles[sitePlansIndex];
+                              return currentFile.mimeType?.startsWith('image/') ? (
+                                <img
+                                  src={currentFile.url}
+                                  alt={currentFile.name}
+                                  className="w-full h-full object-contain"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-violet-800">
+                                  <div className="text-center p-8">
+                                    <FileText className="w-16 h-16 text-white mx-auto mb-4" />
+                                    <p className="text-white font-medium">{currentFile.name}</p>
+                                    <p className="text-violet-200 text-sm mt-2">
+                                      {(currentFile.size / 1024 / 1024).toFixed(1)} MB
+                                    </p>
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })()}
+                              );
+                            })()}
 
-                          {/* Overlay controls */}
-                          <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-white hover:bg-white/20 backdrop-blur-sm"
-                              onClick={() => handleViewFile(listingData.sitePlanFiles[sitePlansIndex])}
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              View
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-red-300 hover:bg-red-500/20 backdrop-blur-sm"
-                              onClick={() => handleDeleteFile(listingData.sitePlanFiles[sitePlansIndex], 'siteplans')}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </Button>
+                            {/* Overlay controls - Preview Modal Style */}
+                            <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="text-gray-900 bg-white/95 hover:bg-white backdrop-blur-sm rounded-lg shadow-lg font-medium"
+                                onClick={() => handleViewFile(listingData.sitePlanFiles[sitePlansIndex])}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="text-red-600 bg-white/95 hover:bg-white backdrop-blur-sm rounded-lg shadow-lg font-medium"
+                                onClick={() => handleDeleteFile(listingData.sitePlanFiles[sitePlansIndex], 'siteplans')}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </Button>
+                            </div>
+
+                            {/* Navigation arrows positioned relative to image */}
+                            {listingData.sitePlanFiles.length > 1 && (
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <button
+                                  onClick={prevSitePlan}
+                                  className="absolute left-6 top-1/2 transform -translate-y-1/2 z-20
+                                           bg-white/95 hover:bg-white backdrop-blur-sm rounded-full p-3
+                                           text-gray-700 hover:text-gray-900 shadow-lg hover:shadow-xl 
+                                           border border-white/20 hover:border-white/40
+                                           transition-all duration-200 hover:scale-105"
+                                  aria-label="Previous site plan"
+                                >
+                                  <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                
+                                <button
+                                  onClick={nextSitePlan}
+                                  className="absolute right-6 top-1/2 transform -translate-y-1/2 z-20
+                                           bg-white/95 hover:bg-white backdrop-blur-sm rounded-full p-3
+                                           text-gray-700 hover:text-gray-900 shadow-lg hover:shadow-xl 
+                                           border border-white/20 hover:border-white/40
+                                           transition-all duration-200 hover:scale-105"
+                                  aria-label="Next site plan"
+                                >
+                                  <ChevronRight className="w-5 h-5" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        {/* Contextual Content Controls */}
-                        <div className="absolute inset-0 pointer-events-none">
-                          {/* Navigation arrows - only show on hover */}
-                          {listingData.sitePlanFiles.length > 1 && (
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto">
-                              <button
-                                onClick={prevSitePlan}
-                                className="absolute left-6 top-1/2 transform -translate-y-1/2 z-20
-                                         bg-white/95 hover:bg-white backdrop-blur-sm rounded-full p-3
-                                         text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
-                                         border border-violet-200 hover:border-violet-300
-                                         transition-all duration-200 hover:scale-105"
-                                aria-label="Previous site plan"
-                              >
-                                <ChevronLeft className="w-5 h-5" />
-                              </button>
-                              
-                              <button
-                                onClick={nextSitePlan}
-                                className="absolute right-6 top-1/2 transform -translate-y-1/2 z-20
-                                         bg-white/95 hover:bg-white backdrop-blur-sm rounded-full p-3
-                                         text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
-                                         border border-violet-200 hover:border-violet-300
-                                         transition-all duration-200 hover:scale-105"
-                                aria-label="Next site plan"
-                              >
-                                <ChevronRight className="w-5 h-5" />
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Content Management Controls - Top Right */}
-                          <div className="absolute top-6 right-6 z-20 pointer-events-auto">
-                            <div className="flex items-center gap-3">
-                              {/* Counter integrated with controls */}
-                              {listingData.sitePlanFiles.length > 1 && (
-                                <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full">
-                                  <span className="text-white text-sm font-medium">
-                                    {sitePlansIndex + 1} of {listingData.sitePlanFiles.length}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {/* Add Content Button */}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="bg-violet-600 hover:bg-violet-700 text-white shadow-lg hover:shadow-xl rounded-lg px-3 py-2 transition-all duration-200 hover:scale-105"
-                                onClick={() => openQuickAddModal('uploadSitePlans')}
-                                title="Add site plans"
-                              >
-                                <Plus className="w-4 h-4 mr-1" />
-                                <span className="text-sm font-medium">Add</span>
-                              </Button>
-                            </div>
+                        {/* Content Management Controls - Top Right */}
+                        <div className="absolute top-6 right-6 z-20">
+                          <div className="flex items-center gap-3">
+                            {/* Counter styled like preview modal */}
+                            {listingData.sitePlanFiles.length > 1 && (
+                              <div className="bg-black/70 backdrop-blur-sm px-2.5 py-1 rounded text-white text-sm font-medium shadow-lg">
+                                {sitePlansIndex + 1}/{listingData.sitePlanFiles.length}
+                              </div>
+                            )}
+                            
+                            {/* Add Content Button - Preview Modal Style */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="bg-white/95 hover:bg-white text-gray-900 hover:text-gray-900 shadow-lg hover:shadow-xl rounded-lg px-3 py-2 transition-all duration-200 hover:scale-105 font-medium"
+                              onClick={() => openQuickAddModal('uploadSitePlans')}
+                              title="Add site plans"
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              <span className="text-sm font-medium">Add</span>
+                            </Button>
                           </div>
                         </div>
 
@@ -1518,122 +1515,119 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   <div className="relative h-full w-full overflow-hidden group">
                     {listingData.fitOutFiles && listingData.fitOutFiles.length > 0 ? (
                       <>
-                        {/* Main Carousel Image/Video */}
-                        <div className="relative h-full w-full">
-                          {(() => {
-                            const currentFile = listingData.fitOutFiles[fitOutsIndex];
-                            if (currentFile.mimeType?.startsWith('image/')) {
-                              return (
-                                <img
-                                  src={currentFile.url}
-                                  alt={currentFile.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              );
-                            } else if (currentFile.isVideo) {
-                              return (
-                                <video 
-                                  src={currentFile.url}
-                                  className="w-full h-full object-cover"
-                                  controls={false}
-                                  poster={currentFile.thumbnail}
-                                  loop
-                                  muted
-                                />
-                              );
-                            } else {
-                              return (
-                                <div className="h-full flex items-center justify-center bg-violet-800">
-                                  <div className="text-center p-8">
-                                    <FileText className="w-16 h-16 text-white mx-auto mb-4" />
-                                    <p className="text-white font-medium">{currentFile.name}</p>
-                                    <p className="text-violet-200 text-sm mt-2">
-                                      {(currentFile.size / 1024 / 1024).toFixed(1)} MB
-                                    </p>
+                        {/* Main Carousel Image/Video with Proper Aspect Ratio */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="relative w-full h-full max-h-full">
+                            {(() => {
+                              const currentFile = listingData.fitOutFiles[fitOutsIndex];
+                              if (currentFile.mimeType?.startsWith('image/')) {
+                                return (
+                                  <img
+                                    src={currentFile.url}
+                                    alt={currentFile.name}
+                                    className="w-full h-full object-contain"
+                                  />
+                                );
+                              } else if (currentFile.isVideo) {
+                                return (
+                                  <video 
+                                    src={currentFile.url}
+                                    className="w-full h-full object-contain"
+                                    controls={false}
+                                    poster={currentFile.thumbnail}
+                                    loop
+                                    muted
+                                  />
+                                );
+                              } else {
+                                return (
+                                  <div className="w-full h-full flex items-center justify-center bg-violet-800">
+                                    <div className="text-center p-8">
+                                      <FileText className="w-16 h-16 text-white mx-auto mb-4" />
+                                      <p className="text-white font-medium">{currentFile.name}</p>
+                                      <p className="text-violet-200 text-sm mt-2">
+                                        {(currentFile.size / 1024 / 1024).toFixed(1)} MB
+                                      </p>
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            }
-                          })()}
+                                );
+                              }
+                            })()}
 
-                          {/* Overlay controls */}
-                          <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-white hover:bg-white/20 backdrop-blur-sm"
-                              onClick={() => handleViewFile(listingData.fitOutFiles[fitOutsIndex])}
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              {listingData.fitOutFiles[fitOutsIndex].isVideo ? 'Play' : 'View'}
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-red-300 hover:bg-red-500/20 backdrop-blur-sm"
-                              onClick={() => handleDeleteFile(listingData.fitOutFiles[fitOutsIndex], 'fitouts')}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </Button>
+                            {/* Overlay controls - Preview Modal Style */}
+                            <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="text-gray-900 bg-white/95 hover:bg-white backdrop-blur-sm rounded-lg shadow-lg font-medium"
+                                onClick={() => handleViewFile(listingData.fitOutFiles[fitOutsIndex])}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                {listingData.fitOutFiles[fitOutsIndex].isVideo ? 'Play' : 'View'}
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="text-red-600 bg-white/95 hover:bg-white backdrop-blur-sm rounded-lg shadow-lg font-medium"
+                                onClick={() => handleDeleteFile(listingData.fitOutFiles[fitOutsIndex], 'fitouts')}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </Button>
+                            </div>
+
+                            {/* Navigation arrows positioned relative to image */}
+                            {listingData.fitOutFiles.length > 1 && (
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <button
+                                  onClick={prevFitOut}
+                                  className="absolute left-6 top-1/2 transform -translate-y-1/2 z-20
+                                           bg-white/95 hover:bg-white backdrop-blur-sm rounded-full p-3
+                                           text-gray-700 hover:text-gray-900 shadow-lg hover:shadow-xl 
+                                           border border-white/20 hover:border-white/40
+                                           transition-all duration-200 hover:scale-105"
+                                  aria-label="Previous fit-out"
+                                >
+                                  <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                
+                                <button
+                                  onClick={nextFitOut}
+                                  className="absolute right-6 top-1/2 transform -translate-y-1/2 z-20
+                                           bg-white/95 hover:bg-white backdrop-blur-sm rounded-full p-3
+                                           text-gray-700 hover:text-gray-900 shadow-lg hover:shadow-xl 
+                                           border border-white/20 hover:border-white/40
+                                           transition-all duration-200 hover:scale-105"
+                                  aria-label="Next fit-out"
+                                >
+                                  <ChevronRight className="w-5 h-5" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        {/* Contextual Content Controls */}
-                        <div className="absolute inset-0 pointer-events-none">
-                          {/* Navigation arrows - only show on hover */}
-                          {listingData.fitOutFiles.length > 1 && (
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto">
-                              <button
-                                onClick={prevFitOut}
-                                className="absolute left-6 top-1/2 transform -translate-y-1/2 z-20
-                                         bg-white/95 hover:bg-white backdrop-blur-sm rounded-full p-3
-                                         text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
-                                         border border-violet-200 hover:border-violet-300
-                                         transition-all duration-200 hover:scale-105"
-                                aria-label="Previous fit-out"
-                              >
-                                <ChevronLeft className="w-5 h-5" />
-                              </button>
-                              
-                              <button
-                                onClick={nextFitOut}
-                                className="absolute right-6 top-1/2 transform -translate-y-1/2 z-20
-                                         bg-white/95 hover:bg-white backdrop-blur-sm rounded-full p-3
-                                         text-violet-600 hover:text-violet-700 shadow-lg hover:shadow-xl 
-                                         border border-violet-200 hover:border-violet-300
-                                         transition-all duration-200 hover:scale-105"
-                                aria-label="Next fit-out"
-                              >
-                                <ChevronRight className="w-5 h-5" />
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Content Management Controls - Top Right */}
-                          <div className="absolute top-6 right-6 z-20 pointer-events-auto">
-                            <div className="flex items-center gap-3">
-                              {/* Counter integrated with controls */}
-                              {listingData.fitOutFiles.length > 1 && (
-                                <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full">
-                                  <span className="text-white text-sm font-medium">
-                                    {fitOutsIndex + 1} of {listingData.fitOutFiles.length}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {/* Add Content Button */}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="bg-violet-600 hover:bg-violet-700 text-white shadow-lg hover:shadow-xl rounded-lg px-3 py-2 transition-all duration-200 hover:scale-105"
-                                onClick={() => openQuickAddModal('uploadFitOuts')}
-                                title="Add fit-out examples"
-                              >
-                                <Plus className="w-4 h-4 mr-1" />
-                                <span className="text-sm font-medium">Add</span>
-                              </Button>
-                            </div>
+                        {/* Content Management Controls - Top Right */}
+                        <div className="absolute top-6 right-6 z-20">
+                          <div className="flex items-center gap-3">
+                            {/* Counter styled like preview modal */}
+                            {listingData.fitOutFiles.length > 1 && (
+                              <div className="bg-black/70 backdrop-blur-sm px-2.5 py-1 rounded text-white text-sm font-medium shadow-lg">
+                                {fitOutsIndex + 1}/{listingData.fitOutFiles.length}
+                              </div>
+                            )}
+                            
+                            {/* Add Content Button - Preview Modal Style */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="bg-white/95 hover:bg-white text-gray-900 hover:text-gray-900 shadow-lg hover:shadow-xl rounded-lg px-3 py-2 transition-all duration-200 hover:scale-105 font-medium"
+                              onClick={() => openQuickAddModal('uploadFitOuts')}
+                              title="Add fit-out examples"
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              <span className="text-sm font-medium">Add</span>
+                            </Button>
                           </div>
                         </div>
 
@@ -1700,9 +1694,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 )}
                 </div>
 
-              {/* Enhanced Content Type Indicators with Better Visual Feedback */}
-              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
-                <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md rounded-full p-2">
+              {/* Bottom Navigation - Styled like Preview Modal */}
+              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-20">
+                <div className="flex items-center gap-1 p-1.5 bg-black/60 backdrop-blur-lg rounded-lg border border-white/10 shadow-2xl">
                   <button
                     onClick={() => setVisualView('map')}
                     onKeyDown={(e) => {
@@ -1711,43 +1705,24 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         setVisualView('map');
                       }
                     }}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium transition-all duration-200 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-1 focus:ring-offset-transparent ${
                       visualView === 'map'
-                        ? 'bg-white/20 text-white border-2 border-white/60 shadow-lg'
-                        : 'text-white/70 hover:bg-white/10 hover:text-white border border-white/20'
+                        ? 'bg-white text-gray-900 shadow-md'
+                        : 'text-white/90 hover:bg-white/15 hover:text-white'
                     }`}
                     title="Switch to map view"
                     aria-pressed={visualView === 'map'}
                     aria-label="Map view toggle"
                   >
                     <MapPin className="w-4 h-4" />
-                    <span className="whitespace-nowrap">Map</span>
-                  </button>
-                  <button
-                    onClick={() => setVisualView('siteplans')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium transition-all duration-200 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent ${
-                      visualView === 'siteplans'
-                        ? 'bg-white/20 text-white border-2 border-white/60 shadow-lg'
-                        : 'text-white/70 hover:bg-white/10 hover:text-white border border-white/20'
-                    }`}
-                    title="Switch to site plans view"
-                    aria-pressed={visualView === 'siteplans'}
-                    aria-label="Site plans view toggle"
-                  >
-                    <FileText className="w-4 h-4" />
-                    <span className="whitespace-nowrap">Site-Plans</span>
-                    {listingData.sitePlanFiles && listingData.sitePlanFiles.length > 0 && (
-                      <span className="bg-violet-600 text-white text-xs px-2 py-0.5 rounded-full ml-1">
-                        {listingData.sitePlanFiles.length}
-                      </span>
-                    )}
+                    <span className="whitespace-nowrap">Coverage</span>
                   </button>
                   <button
                     onClick={() => setVisualView('fitouts')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium transition-all duration-200 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent ${
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-1 focus:ring-offset-transparent ${
                       visualView === 'fitouts'
-                        ? 'bg-white/20 text-white border-2 border-white/60 shadow-lg'
-                        : 'text-white/70 hover:bg-white/10 hover:text-white border border-white/20'
+                        ? 'bg-white text-gray-900 shadow-md'
+                        : 'text-white/90 hover:bg-white/15 hover:text-white'
                     }`}
                     title="Switch to fit-out examples view"
                     aria-pressed={visualView === 'fitouts'}
@@ -1756,21 +1731,40 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                     <Building2 className="w-4 h-4" />
                     <span className="whitespace-nowrap">Fit-Outs</span>
                     {listingData.fitOutFiles && listingData.fitOutFiles.length > 0 && (
-                      <span className="bg-violet-600 text-white text-xs px-2 py-0.5 rounded-full ml-1">
+                      <span className="bg-gray-800 text-white text-xs px-1.5 py-0.5 rounded ml-1.5 font-semibold">
                         {listingData.fitOutFiles.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setVisualView('siteplans')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-1 focus:ring-offset-transparent ${
+                      visualView === 'siteplans'
+                        ? 'bg-white text-gray-900 shadow-md'
+                        : 'text-white/90 hover:bg-white/15 hover:text-white'
+                    }`}
+                    title="Switch to site plans view"
+                    aria-pressed={visualView === 'siteplans'}
+                    aria-label="Site plans view toggle"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span className="whitespace-nowrap">Site-Plans</span>
+                    {listingData.sitePlanFiles && listingData.sitePlanFiles.length > 0 && (
+                      <span className="bg-gray-800 text-white text-xs px-1.5 py-0.5 rounded ml-1.5 font-semibold">
+                        {listingData.sitePlanFiles.length}
                       </span>
                     )}
                   </button>
                 </div>
               </div>
 
-              {/* Global Navigation - Fixed Position */}
+              {/* Global Navigation - Preview Modal Style */}
               <div className="absolute top-6 left-6 z-30">
                 <Button
                   variant="ghost"
                   size="md"
                   onClick={() => router.push('/occupier/dashboard')}
-                  className="text-black/80 hover:text-black/90 font-semibold bg-white/90 hover:bg-white border-2 border-white shadow-lg hover:shadow-xl transition-all duration-200 px-4 py-2"
+                  className="text-gray-900 hover:text-gray-900 font-medium bg-white/95 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 px-4 py-2.5 rounded-lg border border-white/20"
                 >
                   ← Dashboard
                 </Button>
