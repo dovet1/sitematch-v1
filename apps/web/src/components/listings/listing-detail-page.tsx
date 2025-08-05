@@ -1257,14 +1257,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                             </div>
                           )}
                         </div>
-                        {/* Quick Edit Badge */}
-                        <button
-                          onClick={() => setEditingSection('locations')}
-                          className="absolute -top-2 -right-2 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-all duration-200 group"
-                          title="Edit locations"
-                        >
-                          <Edit className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
-                        </button>
                       </div>
                       
                       <h3 className="text-2xl font-bold text-white mb-3">
@@ -1311,20 +1303,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   <div className="h-full">
                     {listingData.sitePlanFiles && listingData.sitePlanFiles.length > 0 ? (
                       <div className="h-full overflow-hidden p-6">
-                        <div className="flex items-center justify-between mb-6">
-                          <h3 className="text-white font-semibold text-xl">Site Plans</h3>
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-white hover:bg-white/10"
-                              onClick={() => openQuickAddModal('uploadSitePlans')}
-                            >
-                              <Plus className="w-4 h-4 mr-1" />
-                              Add
-                            </Button>
-                          </div>
-                        </div>
                           <div className="grid grid-cols-1 gap-4">
                             {listingData.sitePlanFiles.map((file) => (
                               <div key={file.id} className="bg-white/10 backdrop-blur-sm rounded-lg overflow-hidden hover:bg-white/20 transition-colors group">
@@ -1408,20 +1386,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   <div className="h-full">
                     {listingData.fitOutFiles && listingData.fitOutFiles.length > 0 ? (
                       <div className="h-full overflow-hidden p-6">
-                        <div className="flex items-center justify-between mb-6">
-                          <h3 className="text-white font-semibold text-xl">Fit-Out Examples</h3>
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="text-white hover:bg-white/10"
-                              onClick={() => openQuickAddModal('uploadFitOuts')}
-                            >
-                              <Plus className="w-4 h-4 mr-1" />
-                              Add
-                            </Button>
-                          </div>
-                        </div>
                           <div className="grid grid-cols-1 gap-4">
                             {listingData.fitOutFiles.map((file) => (
                               <div key={file.id} className="bg-white/10 backdrop-blur-sm rounded-lg overflow-hidden hover:bg-white/20 transition-colors group">
@@ -1609,15 +1573,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 >
                   ← Dashboard
                 </Button>
-                {/* Location Count Badge */}
-                {visualView === 'map' && (
-                  <div className="px-3 py-2 rounded-full text-sm font-medium bg-white/20 backdrop-blur-md text-white">
-                    {listingData.locations && listingData.locations.length > 0 
-                      ? `${listingData.locations.length} ${listingData.locations.length === 1 ? 'Location' : 'Locations'}`
-                      : 'Nationwide'
-                    }
-                  </div>
-                )}
                 {/* File Count Badges for other views */}
                 {visualView === 'siteplans' && listingData.sitePlanFiles && listingData.sitePlanFiles.length > 0 && (
                   <div className="px-3 py-2 rounded-full text-sm font-medium bg-white/20 backdrop-blur-md text-white">
