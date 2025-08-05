@@ -502,22 +502,35 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     }
   };
 
-  const handleLocationsSave = async (data: { isNationwide: boolean; locations: any[] }) => {
+  const handleLocationsSave = async (locations: any[]) => {
     try {
       const supabase = createClientClient();
       
-      // Update listing with location data
-      const updates = {
-        is_nationwide: data.isNationwide,
-        locations: data.locations
-      };
+      // Clear existing locations
+      const { error: deleteError } = await supabase
+        .from('listing_locations')
+        .delete()
+        .eq('listing_id', listingId);
 
-      const { error } = await supabase
-        .from('listings')
-        .update(updates)
-        .eq('id', listingId);
+      if (deleteError) throw deleteError;
 
-      if (error) throw error;
+      // Insert new locations if any
+      if (locations.length > 0) {
+        const { error: insertError } = await supabase
+          .from('listing_locations')
+          .insert(
+            locations.map(location => ({
+              listing_id: listingId,
+              place_name: location.name,
+              coordinates: location.coordinates,
+              formatted_address: location.name,
+              region: location.region || '',
+              country: location.country || 'UK'
+            }))
+          );
+
+        if (insertError) throw insertError;
+      }
 
       // Refresh listing data
       await fetchListingData();
@@ -525,6 +538,29 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     } catch (error) {
       console.error('Error updating locations:', error);
       toast.error('Failed to update locations');
+      throw error;
+    }
+  };
+
+  const handleLocationDelete = async (locationId: string) => {
+    try {
+      const supabase = createClientClient();
+      
+      // Delete the specific location from listing_locations
+      const { error: deleteError } = await supabase
+        .from('listing_locations')
+        .delete()
+        .eq('listing_id', listingId)
+        .eq('id', locationId);
+
+      if (deleteError) throw deleteError;
+
+      // Refresh listing data
+      await fetchListingData();
+      toast.success('Location removed successfully');
+    } catch (error) {
+      console.error('Error deleting location:', error);
+      toast.error('Failed to remove location');
       throw error;
     }
   };
@@ -2637,25 +2673,24 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       className="bg-violet-600 hover:bg-violet-700 text-white"
                       onClick={() => openModal('locations')}
                     >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit Locations
+                      {!listingData.locations || listingData.locations.length === 0 ? (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Locations
+                        </>
+                      ) : (
+                        <>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Manage Locations
+                        </>
+                      )}
                     </Button>
                   </div>
                   
                   {listingData.locations && listingData.locations.length > 0 ? (
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between mb-4">
+                      <div className="mb-4">
                         <span className="text-sm text-gray-600">{listingData.locations.length} location(s) specified</span>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add Location
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="w-3 h-3 mr-1" />
-                            Edit All
-                          </Button>
-                        </div>
                       </div>
                       {listingData.locations.map((location, index) => (
                         <div 
@@ -2668,50 +2703,18 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           <span className="text-gray-700 flex-1">
                             {location.place_name || location.formatted_address || 'Unknown location'}
                           </span>
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                            <Button variant="ghost" size="sm">
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <>
-                      <div className="p-4 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="font-medium text-gray-800 flex items-center gap-2">
-                            <span className="text-xl">🌍</span> Nationwide Coverage
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white">
-                              <Plus className="w-3 h-3 mr-1" />
-                              Add Specific Locations
-                            </Button>
-                          </div>
-                        </div>
-                        <p className="text-gray-600 text-sm">
-                          This listing is open to opportunities across the UK & Ireland
-                        </p>
-                      </div>
-                      
-                      <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200 border-dashed">
-                        <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <MapPin className="w-8 h-8 text-violet-500" />
-                        </div>
-                        <h4 className="font-semibold text-gray-900 mb-2">Add Preferred Locations</h4>
-                        <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
-                          Specify particular areas or regions where you're looking for properties.
-                        </p>
-                        <Button className="bg-violet-600 hover:bg-violet-700 text-white">
-                          <Plus className="w-4 h-4 mr-1" />
-                          Add Locations
-                        </Button>
-                      </div>
-                    </>
+                    <div className="p-4 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100">
+                      <p className="font-medium text-gray-800 flex items-center gap-2 mb-2">
+                        <span className="text-xl">🌍</span> Nationwide Coverage
+                      </p>
+                      <p className="text-gray-600 text-sm">
+                        This listing is open to opportunities across the UK & Ireland
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
@@ -3147,8 +3150,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         isOpen={modalStates.locations}
         onClose={() => closeModal('locations')}
         currentData={{
-          isNationwide: listingData?.isNationwide || false,
-          locations: listingData?.locations || []
+          locations: listingData?.locations?.map(loc => ({
+            id: loc.id,
+            name: loc.place_name || loc.formatted_address || 'Unknown location',
+            coordinates: loc.coordinates,
+            type: loc.type
+          })) || []
         }}
         onSave={handleLocationsSave}
       />

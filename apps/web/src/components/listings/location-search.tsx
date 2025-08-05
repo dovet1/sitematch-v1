@@ -6,11 +6,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, MapPin, X, Globe } from 'lucide-react';
+import { Search, MapPin, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -29,17 +28,30 @@ import type {
 } from '@/types/locations';
 import { DEFAULT_LOCATION_RULES } from '@/types/locations';
 
+// Simplified props - nationwide is automatic when no locations selected
+interface SimpleLocationSearchProps {
+  value?: LocationSelection[];
+  onChange?: (locations: LocationSelection[]) => void;
+  onLocationSelect?: (location: any) => void;
+  onValidationChange?: (validation: LocationValidation) => void;
+  maxLocations?: number;
+  placeholder?: string;
+  disabled?: boolean;
+  error?: string;
+  className?: string;
+}
+
 export function LocationSearch({
-  value,
+  value = [],
   onChange,
   onValidationChange,
-  isNationwide,
-  onNationwideChange,
+  onLocationSelect,
   maxLocations = DEFAULT_LOCATION_RULES.maxTotal,
   placeholder = "Search for UK/Ireland locations...",
   disabled = false,
-  error
-}: LocationSearchProps) {
+  error,
+  className
+}: SimpleLocationSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<LocationResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -103,20 +115,14 @@ export function LocationSearch({
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    // Check if locations are required but none selected
-    if (DEFAULT_LOCATION_RULES.requiresAtLeastOne && value.length === 0 && !isNationwide) {
-      errors.push('Please select at least one location or choose nationwide');
-    }
-
     // Check maximum locations
-    if (value.length > maxLocations) {
+    if (value && value.length > maxLocations) {
       errors.push(`Maximum ${maxLocations} locations allowed`);
     }
 
-
     // Check for duplicates (shouldn't happen but good to validate)
-    const uniqueIds = new Set(value.map(loc => loc.id));
-    if (uniqueIds.size !== value.length) {
+    const uniqueIds = new Set(value?.map(loc => loc.id) || []);
+    if (value && uniqueIds.size !== value.length) {
       errors.push('Duplicate locations detected');
     }
 
@@ -127,7 +133,7 @@ export function LocationSearch({
     };
 
     return validation;
-  }, [value, isNationwide, maxLocations]);
+  }, [value, maxLocations]);
 
   // Validate on changes with debouncing to prevent infinite loops
   useEffect(() => {
@@ -137,14 +143,14 @@ export function LocationSearch({
     }, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [value, isNationwide, maxLocations, onValidationChange]);
+  }, [value, maxLocations, onValidationChange, validateLocations]);
 
   // =====================================================
   // EVENT HANDLERS
   // =====================================================
 
   const handleLocationSelect = (location: LocationResult) => {
-    if (value.length >= maxLocations) {
+    if (value && value.length >= maxLocations) {
       setSearchError(`Maximum ${maxLocations} locations allowed`);
       return;
     }
@@ -159,8 +165,21 @@ export function LocationSearch({
       country: location.context?.find(ctx => ctx.id.startsWith('country'))?.text
     };
 
-    const updatedLocations = [...value, newLocation];
-    onChange(updatedLocations);
+    // Support both interfaces
+    if (onLocationSelect) {
+      // Simple callback interface (used by modal)
+      onLocationSelect({
+        id: location.id,
+        name: location.place_name,
+        coordinates: location.center,
+        region: location.context?.find(ctx => ctx.id.startsWith('region'))?.text,
+        country: location.context?.find(ctx => ctx.id.startsWith('country'))?.text
+      });
+    } else if (onChange) {
+      // Full interface (used by other components)
+      const updatedLocations = [...value, newLocation];
+      onChange(updatedLocations);
+    }
 
     // Clear search
     setQuery('');
@@ -175,18 +194,6 @@ export function LocationSearch({
   };
 
 
-  const lastToggleRef = useRef<boolean | null>(null);
-  
-  const handleNationwideToggle = useCallback((checked: boolean) => {
-    // Prevent rapid successive calls with the same value
-    if (lastToggleRef.current === checked) {
-      return;
-    }
-    
-    lastToggleRef.current = checked;
-    onNationwideChange(checked);
-    setSearchError(null);
-  }, [onNationwideChange]);
 
   // =====================================================
   // KEYBOARD NAVIGATION
@@ -284,74 +291,14 @@ export function LocationSearch({
   // =====================================================
 
   return (
-    <div className="space-y-4">
-      {/* Instructions */}
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-sm text-blue-800">
-          <strong>Choose your search approach:</strong> Select "Nationwide Coverage" for opportunities across the UK and Ireland, 
-          or turn it off and specify individual locations below.
-        </p>
-      </div>
-
-      {/* Nationwide Toggle */}
-      <div 
-        className={cn(
-          "flex items-center justify-between p-4 border rounded-lg transition-all duration-200",
-          isNationwide 
-            ? "bg-violet-50 border-violet-200 shadow-sm" 
-            : "bg-gray-50 border-gray-200"
-        )}
-      >
-        <div 
-          className="flex items-center gap-3 flex-1 cursor-pointer"
-          onClick={() => !disabled && handleNationwideToggle(!isNationwide)}
-        >
-          <Globe className={cn(
-            "w-5 h-5", 
-            isNationwide ? "text-violet-600" : "text-gray-600"
-          )} />
-          <div>
-            <Label className={cn(
-              "font-medium cursor-pointer",
-              isNationwide ? "text-violet-900" : "text-gray-900"
-            )}>
-              Nationwide Coverage
-            </Label>
-            <p className={cn(
-              "text-sm",
-              isNationwide ? "text-violet-700" : "text-gray-600"
-            )}>
-              Open to opportunities across the UK and Ireland
-            </p>
-          </div>
-        </div>
-        <Switch
-          checked={isNationwide}
-          onCheckedChange={handleNationwideToggle}
-          disabled={disabled}
-        />
-      </div>
-
-      {/* Alternative Option Label */}
-      {!isNationwide && (
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">OR specify individual locations</span>
-          </div>
-        </div>
-      )}
-
+    <div className={cn("space-y-4", className)}>
       {/* Location Search */}
-      {!isNationwide && (
-        <div className="space-y-3">
-          <div className="relative">
-            <Label className="font-medium">Locations</Label>
-            <p className="text-sm text-gray-600 mb-2">
-              Search and select specific locations where you'd like to operate
-            </p>
+      <div className="space-y-3">
+        <div className="relative">
+          <Label className="font-medium">Locations</Label>
+          <p className="text-sm text-gray-600 mb-2">
+            Search and select specific locations where you'd like to operate
+          </p>
             
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -394,12 +341,12 @@ export function LocationSearch({
           )}
 
           {/* Selected Locations */}
-          {value.length > 0 && (
+          {value && value.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="font-medium">Selected Locations</Label>
                 <Badge variant="secondary" className="text-xs">
-                  {value.length} / {maxLocations}
+                  {value?.length || 0} / {maxLocations}
                 </Badge>
               </div>
               
@@ -410,26 +357,7 @@ export function LocationSearch({
             </div>
           )}
 
-          {/* Empty State */}
-          {!isNationwide && value.length === 0 && !query && (
-            <div className="text-center py-8 text-gray-500">
-              <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">Start typing to search for locations</p>
-            </div>
-          )}
         </div>
-      )}
-
-      {/* Nationwide State */}
-      {isNationwide && (
-        <div className="text-center py-8 bg-purple-50 rounded-lg border border-purple-200">
-          <Globe className="w-8 h-8 mx-auto mb-2 text-purple-600" />
-          <p className="font-medium text-purple-900">Nationwide Coverage Selected</p>
-          <p className="text-sm text-purple-700">
-            You're open to opportunities across the UK and Ireland
-          </p>
-        </div>
-      )}
     </div>
   );
 }
