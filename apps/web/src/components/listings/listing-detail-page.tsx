@@ -45,6 +45,16 @@ import { uploadFiles, validateFiles } from '@/lib/file-upload';
 import type { FileUploadType, UploadedFile } from '@/types/uploads';
 import { ImmersiveListingModal } from '@/components/listings/ImmersiveListingModal';
 
+// Import CRUD modals
+import { OverviewModal } from '@/components/listings/modals/overview-modal';
+import { LocationsModal } from '@/components/listings/modals/locations-modal';
+import { ContactsModal } from '@/components/listings/modals/contacts-modal';
+import { FAQsModal } from '@/components/listings/modals/faqs-modal';
+// Import separate requirements modals
+import { SectorsModal } from '@/components/listings/modals/sectors-modal';  
+import { UseClassesModal } from '@/components/listings/modals/use-classes-modal';
+import { SiteSizeModal } from '@/components/listings/modals/site-size-modal';
+
 interface ListingDetailPageProps {
   listingId: string;
   userId: string;
@@ -82,6 +92,17 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   // Carousel state for site-plans and fit-outs
   const [sitePlansIndex, setSitePlansIndex] = useState(0);
   const [fitOutsIndex, setFitOutsIndex] = useState(0);
+
+  // CRUD Modal states
+  const [modalStates, setModalStates] = useState({
+    overview: false,
+    sectors: false,
+    useClasses: false,
+    siteSize: false,
+    locations: false,
+    contacts: false,
+    faqs: false
+  });
   
   // Quick Add Modal states
   const [quickAddModals, setQuickAddModals] = useState({
@@ -104,6 +125,14 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   // Get company name for tab display
   const companyName = listingData?.companyName || 'Company';
 
+  // Format names for human readability
+  const formatName = (name: string): string => {
+    return name
+      .split(/[\s_-]+/) // Split on spaces, underscores, hyphens
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   // Fetch reference data
   useEffect(() => {
     const fetchReferenceData = async () => {
@@ -122,173 +151,178 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     fetchReferenceData();
   }, []);
 
-  // Fetch listing data
-  useEffect(() => {
-    const fetchListingData = async () => {
-      try {
-        const supabase = createClientClient();
-        
-        // Fetch main listing data
-        const { data: listing, error: listingError } = await supabase
-          .from('listings')
-          .select('*')
-          .eq('id', listingId)
-          .eq('created_by', userId)
-          .single();
+  // Fetch listing data function
+  const fetchListingData = async () => {
+    try {
+      const supabase = createClientClient();
+      
+      // Fetch main listing data
+      const { data: listing, error: listingError } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('id', listingId)
+        .eq('created_by', userId)
+        .single();
 
-        if (listingError) {
-          throw new Error(listingError.message);
-        }
-
-        if (!listing) {
-          throw new Error('Listing not found');
-        }
-
-        // Fetch related data
-        const [
-          { data: contacts },
-          { data: locations },
-          { data: faqs },
-          { data: files }
-        ] = await Promise.all([
-          supabase.from('listing_contacts').select('*').eq('listing_id', listingId),
-          supabase.from('listing_locations').select('*').eq('listing_id', listingId),
-          supabase.from('faqs').select('*').eq('listing_id', listingId).order('display_order'),
-          supabase.from('file_uploads').select('*').eq('listing_id', listingId)
-        ]);
-
-        // Transform data to match WizardFormData structure
-        const transformedData: ListingData = {
-          id: listing.id,
-          companyName: listing.company_name,
-          listingType: listing.listing_type as 'commercial' | 'residential',
-          status: listing.status,
-          created_at: listing.created_at,
-          updated_at: listing.updated_at,
-          completion_percentage: listing.completion_percentage || 20,
-          
-          // Primary contact from listings table
-          primaryContact: {
-            contactName: listing.contact_name || '',
-            contactTitle: listing.contact_title || '',
-            contactEmail: listing.contact_email || '',
-            contactPhone: listing.contact_phone || '',
-            contactArea: listing.contact_area || '',
-            isPrimaryContact: true,
-            headshotUrl: contacts?.find(c => c.is_primary_contact)?.headshot_url || ''
-          },
-
-          // Logo information
-          logoMethod: listing.clearbit_logo ? 'clearbit' : 'upload',
-          clearbitLogo: listing.clearbit_logo || false,
-          companyDomain: listing.company_domain || '',
-          logoUrl: listing.logo_url || '',
-          logoPreview: listing.logo_url || '',
-
-          // Property page link
-          propertyPageLink: listing.property_page_link || '',
-
-          // Requirements
-          siteSizeMin: listing.site_size_min,
-          siteSizeMax: listing.site_size_max,
-          dwellingCountMin: listing.dwelling_count_min,
-          dwellingCountMax: listing.dwelling_count_max,
-          siteAcreageMin: listing.site_acreage_min,
-          siteAcreageMax: listing.site_acreage_max,
-          sectors: listing.sectors || [],
-          useClassIds: listing.use_class_ids || [],
-
-          // Locations
-          locations: locations?.map(loc => ({
-            id: loc.id,
-            place_name: loc.place_name,
-            coordinates: loc.coordinates,
-            type: 'preferred' as const,
-            formatted_address: loc.formatted_address,
-            region: loc.region,
-            country: loc.country
-          })) || [],
-
-          // Additional contacts
-          additionalContacts: contacts?.filter(c => !c.is_primary_contact).map(contact => ({
-            id: contact.id,
-            contactName: contact.contact_name,
-            contactTitle: contact.contact_title,
-            contactEmail: contact.contact_email,
-            contactPhone: contact.contact_phone,
-            contactArea: contact.contact_area,
-            isPrimaryContact: false,
-            headshotUrl: contact.headshot_url
-          })) || [],
-
-          // FAQs
-          faqs: faqs?.map(faq => ({
-            id: faq.id,
-            question: faq.question,
-            answer: faq.answer,
-            displayOrder: faq.display_order
-          })) || [],
-
-          // Files - Generate proper Supabase public URLs
-          brochureFiles: files?.filter(f => f.file_type === 'brochure').map(file => {
-            const { data: urlData } = supabase.storage
-              .from('brochures')
-              .getPublicUrl(file.file_path);
-            return {
-              id: file.id,
-              name: file.file_name,
-              url: urlData.publicUrl,
-              path: file.file_path,
-              type: 'brochure' as const,
-              size: file.file_size,
-              mimeType: file.mime_type,
-              uploadedAt: new Date(file.created_at)
-            };
-          }) || [],
-
-          sitePlanFiles: files?.filter(f => f.file_type === 'sitePlan').map(file => {
-            const { data: urlData } = supabase.storage
-              .from('site-plans')
-              .getPublicUrl(file.file_path);
-            return {
-              id: file.id,
-              name: file.file_name,
-              url: urlData.publicUrl,
-              path: file.file_path,
-              type: 'sitePlan' as const,
-              size: file.file_size,
-              mimeType: file.mime_type,
-              uploadedAt: new Date(file.created_at)
-            };
-          }) || [],
-
-          fitOutFiles: files?.filter(f => f.file_type === 'fitOut').map(file => {
-            const { data: urlData } = supabase.storage
-              .from('fit-outs')
-              .getPublicUrl(file.file_path);
-            return {
-              id: file.id,
-              name: file.file_name,
-              url: urlData.publicUrl,
-              path: file.file_path,
-              type: 'fitOut' as const,
-              size: file.file_size,
-              mimeType: file.mime_type,
-              uploadedAt: new Date(file.created_at),
-              displayOrder: file.display_order || 0
-            };
-          }) || []
-        };
-
-        setListingData(transformedData);
-      } catch (err) {
-        console.error('Error fetching listing:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load listing');
-      } finally {
-        setLoading(false);
+      if (listingError) {
+        throw new Error(listingError.message);
       }
-    };
 
+      if (!listing) {
+        throw new Error('Listing not found');
+      }
+
+      // Fetch related data
+      const [
+        { data: contacts },
+        { data: locations },
+        { data: faqs },
+        { data: files },
+        { data: listingSectors },
+        { data: listingUseClasses }
+      ] = await Promise.all([
+        supabase.from('listing_contacts').select('*').eq('listing_id', listingId),
+        supabase.from('listing_locations').select('*').eq('listing_id', listingId),
+        supabase.from('faqs').select('*').eq('listing_id', listingId).order('display_order'),
+        supabase.from('file_uploads').select('*').eq('listing_id', listingId),
+        supabase.from('listing_sectors').select('sector_id').eq('listing_id', listingId),
+        supabase.from('listing_use_classes').select('use_class_id').eq('listing_id', listingId)
+      ]);
+
+      // Transform data to match WizardFormData structure
+      const transformedData: ListingData = {
+        id: listing.id,
+        companyName: listing.company_name,
+        listingType: listing.listing_type as 'commercial' | 'residential',
+        status: listing.status,
+        created_at: listing.created_at,
+        updated_at: listing.updated_at,
+        completion_percentage: listing.completion_percentage || 20,
+        
+        // Primary contact from listings table
+        primaryContact: {
+          contactName: listing.contact_name || '',
+          contactTitle: listing.contact_title || '',
+          contactEmail: listing.contact_email || '',
+          contactPhone: listing.contact_phone || '',
+          contactArea: listing.contact_area || '',
+          isPrimaryContact: true,
+          headshotUrl: contacts?.find(c => c.is_primary_contact)?.headshot_url || ''
+        },
+
+        // Logo information
+        logoMethod: listing.clearbit_logo ? 'clearbit' : 'upload',
+        clearbitLogo: listing.clearbit_logo || false,
+        companyDomain: listing.company_domain || '',
+        logoUrl: listing.logo_url || '',
+        logoPreview: listing.logo_url || '',
+
+        // Property page link
+        propertyPageLink: listing.property_page_link || '',
+
+        // Requirements
+        siteSizeMin: listing.site_size_min,
+        siteSizeMax: listing.site_size_max,
+        dwellingCountMin: listing.dwelling_count_min,
+        dwellingCountMax: listing.dwelling_count_max,
+        siteAcreageMin: listing.site_acreage_min,
+        siteAcreageMax: listing.site_acreage_max,
+        sectors: listingSectors?.map(ls => ls.sector_id) || [],
+        useClassIds: listingUseClasses?.map(luc => luc.use_class_id) || [],
+
+        // Locations
+        locations: locations?.map(loc => ({
+          id: loc.id,
+          place_name: loc.place_name,
+          coordinates: loc.coordinates,
+          type: 'preferred' as const,
+          formatted_address: loc.formatted_address,
+          region: loc.region,
+          country: loc.country
+        })) || [],
+
+        // Additional contacts
+        additionalContacts: contacts?.filter(c => !c.is_primary_contact).map(contact => ({
+          id: contact.id,
+          contactName: contact.contact_name,
+          contactTitle: contact.contact_title,
+          contactEmail: contact.contact_email,
+          contactPhone: contact.contact_phone,
+          contactArea: contact.contact_area,
+          isPrimaryContact: false,
+          headshotUrl: contact.headshot_url
+        })) || [],
+
+        // FAQs
+        faqs: faqs?.map(faq => ({
+          id: faq.id,
+          question: faq.question,
+          answer: faq.answer,
+          displayOrder: faq.display_order
+        })) || [],
+
+        // Files - Generate proper Supabase public URLs
+        brochureFiles: files?.filter(f => f.file_type === 'brochure').map(file => {
+          const { data: urlData } = supabase.storage
+            .from('brochures')
+            .getPublicUrl(file.file_path);
+          return {
+            id: file.id,
+            name: file.file_name,
+            url: urlData.publicUrl,
+            path: file.file_path,
+            type: 'brochure' as const,
+            size: file.file_size,
+            mimeType: file.mime_type,
+            uploadedAt: new Date(file.created_at)
+          };
+        }) || [],
+
+        sitePlanFiles: files?.filter(f => f.file_type === 'sitePlan').map(file => {
+          const { data: urlData } = supabase.storage
+            .from('site-plans')
+            .getPublicUrl(file.file_path);
+          return {
+            id: file.id,
+            name: file.file_name,
+            url: urlData.publicUrl,
+            path: file.file_path,
+            type: 'sitePlan' as const,
+            size: file.file_size,
+            mimeType: file.mime_type,
+            uploadedAt: new Date(file.created_at)
+          };
+        }) || [],
+
+        fitOutFiles: files?.filter(f => f.file_type === 'fitOut').map(file => {
+          const { data: urlData } = supabase.storage
+            .from('fit-outs')
+            .getPublicUrl(file.file_path);
+          return {
+            id: file.id,
+            name: file.file_name,
+            url: urlData.publicUrl,
+            path: file.file_path,
+            type: 'fitOut' as const,
+            size: file.file_size,
+            mimeType: file.mime_type,
+            uploadedAt: new Date(file.created_at),
+            displayOrder: file.display_order || 0
+          };
+        }) || []
+      };
+
+      setListingData(transformedData);
+    } catch (err) {
+      console.error('Error fetching listing:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load listing');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch listing data on component mount
+  useEffect(() => {
     fetchListingData();
   }, [listingId, userId]);
 
@@ -316,6 +350,273 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       setFitOutsIndex((prev) => (prev - 1 + listingData.fitOutFiles.length) % listingData.fitOutFiles.length);
     }
   };
+
+  // Modal helper functions
+  const openModal = (modalType: keyof typeof modalStates) => {
+    setModalStates(prev => ({ ...prev, [modalType]: true }));
+  };
+
+  const closeModal = (modalType: keyof typeof modalStates) => {
+    setModalStates(prev => ({ ...prev, [modalType]: false }));
+  };
+
+  // CRUD functions for each section
+  const handleOverviewSave = async (data: { brochureFiles?: any[]; propertyPageLink?: string }) => {
+    try {
+      const supabase = createClientClient();
+      
+      // Update listing with overview data
+      const updates: any = {};
+      if (data.propertyPageLink !== undefined) {
+        updates.property_page_link = data.propertyPageLink;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        const { error } = await supabase
+          .from('listings')
+          .update(updates)
+          .eq('id', listingId);
+
+        if (error) throw error;
+      }
+
+      // Handle brochure files if provided
+      if (data.brochureFiles) {
+        // Update brochure files in the database
+        // This would typically involve file upload handling
+      }
+
+      // Refresh listing data
+      await fetchListingData();
+      toast.success('Overview updated successfully');
+    } catch (error) {
+      console.error('Error updating overview:', error);
+      toast.error('Failed to update overview');
+      throw error;
+    }
+  };
+
+  const handleSectorsSave = async (sectors: string[]) => {
+    try {
+      const supabase = createClientClient();
+      
+      // First, delete existing sectors for this listing
+      const { error: deleteError } = await supabase
+        .from('listing_sectors')
+        .delete()
+        .eq('listing_id', listingId);
+
+      if (deleteError) throw deleteError;
+
+      // Then, insert the new sectors
+      if (sectors.length > 0) {
+        const { error: insertError } = await supabase
+          .from('listing_sectors')
+          .insert(
+            sectors.map(sectorId => ({
+              listing_id: listingId,
+              sector_id: sectorId
+            }))
+          );
+
+        if (insertError) throw insertError;
+      }
+
+      // Refresh listing data
+      await fetchListingData();
+      toast.success('Sectors updated successfully');
+    } catch (error) {
+      console.error('Error updating sectors:', error);
+      toast.error('Failed to update sectors');
+      throw error;
+    }
+  };
+
+  const handleUseClassesSave = async (useClasses: string[]) => {
+    try {
+      const supabase = createClientClient();
+      
+      // First, delete existing use classes for this listing
+      const { error: deleteError } = await supabase
+        .from('listing_use_classes')
+        .delete()
+        .eq('listing_id', listingId);
+
+      if (deleteError) throw deleteError;
+
+      // Then, insert the new use classes
+      if (useClasses.length > 0) {
+        const { error: insertError } = await supabase
+          .from('listing_use_classes')
+          .insert(
+            useClasses.map(useClassId => ({
+              listing_id: listingId,
+              use_class_id: useClassId
+            }))
+          );
+
+        if (insertError) throw insertError;
+      }
+
+      // Refresh listing data
+      await fetchListingData();
+      toast.success('Use classes updated successfully');
+    } catch (error) {
+      console.error('Error updating use classes:', error);
+      toast.error('Failed to update use classes');
+      throw error;
+    }
+  };
+
+  const handleSiteSizeSave = async (data: any) => {
+    try {
+      const supabase = createClientClient();
+      
+      // Build updates based on listing type
+      const updates: any = {};
+      
+      if (listingData?.listingType === 'commercial') {
+        if (data.siteSizeMin !== undefined) updates.site_size_min = data.siteSizeMin;
+        if (data.siteSizeMax !== undefined) updates.site_size_max = data.siteSizeMax;
+      } else {
+        if (data.dwellingCountMin !== undefined) updates.dwelling_count_min = data.dwellingCountMin;
+        if (data.dwellingCountMax !== undefined) updates.dwelling_count_max = data.dwellingCountMax;
+        if (data.siteAcreageMin !== undefined) updates.site_acreage_min = data.siteAcreageMin;
+        if (data.siteAcreageMax !== undefined) updates.site_acreage_max = data.siteAcreageMax;
+      }
+
+      const { error } = await supabase
+        .from('listings')
+        .update(updates)
+        .eq('id', listingId);
+
+      if (error) throw error;
+
+      // Refresh listing data
+      await fetchListingData();
+      toast.success('Property size updated successfully');
+    } catch (error) {
+      console.error('Error updating property size:', error);
+      toast.error('Failed to update property size');
+      throw error;
+    }
+  };
+
+  const handleLocationsSave = async (data: { isNationwide: boolean; locations: any[] }) => {
+    try {
+      const supabase = createClientClient();
+      
+      // Update listing with location data
+      const updates = {
+        is_nationwide: data.isNationwide,
+        locations: data.locations
+      };
+
+      const { error } = await supabase
+        .from('listings')
+        .update(updates)
+        .eq('id', listingId);
+
+      if (error) throw error;
+
+      // Refresh listing data
+      await fetchListingData();
+      toast.success('Locations updated successfully');
+    } catch (error) {
+      console.error('Error updating locations:', error);
+      toast.error('Failed to update locations');
+      throw error;
+    }
+  };
+
+  const handleContactsSave = async (data: { primaryContact?: any; additionalContacts: any[] }) => {
+    try {
+      const supabase = createClientClient();
+      
+      // Update primary contact if provided
+      if (data.primaryContact) {
+        const { error: primaryError } = await supabase
+          .from('listing_contacts')
+          .upsert({
+            listing_id: listingId,
+            ...data.primaryContact,
+            is_primary: true
+          });
+
+        if (primaryError) throw primaryError;
+      }
+
+      // Handle additional contacts
+      // Delete existing additional contacts and insert new ones
+      const { error: deleteError } = await supabase
+        .from('listing_contacts')
+        .delete()
+        .eq('listing_id', listingId)
+        .eq('is_primary', false);
+
+      if (deleteError) throw deleteError;
+
+      if (data.additionalContacts.length > 0) {
+        const { error: insertError } = await supabase
+          .from('listing_contacts')
+          .insert(
+            data.additionalContacts.map(contact => ({
+              listing_id: listingId,
+              ...contact,
+              is_primary: false
+            }))
+          );
+
+        if (insertError) throw insertError;
+      }
+
+      // Refresh listing data
+      await fetchListingData();
+      toast.success('Contacts updated successfully');
+    } catch (error) {
+      console.error('Error updating contacts:', error);
+      toast.error('Failed to update contacts');
+      throw error;
+    }
+  };
+
+  const handleFAQsSave = async (data: { faqs: any[] }) => {
+    try {
+      const supabase = createClientClient();
+      
+      // Delete existing FAQs and insert new ones
+      const { error: deleteError } = await supabase
+        .from('listing_faqs')
+        .delete()
+        .eq('listing_id', listingId);
+
+      if (deleteError) throw deleteError;
+
+      if (data.faqs.length > 0) {
+        const { error: insertError } = await supabase
+          .from('listing_faqs')
+          .insert(
+            data.faqs.map(faq => ({
+              listing_id: listingId,
+              question: faq.question,
+              answer: faq.answer,
+              order_index: faq.order
+            }))
+          );
+
+        if (insertError) throw insertError;
+      }
+
+      // Refresh listing data
+      await fetchListingData();
+      toast.success('FAQs updated successfully');
+    } catch (error) {
+      console.error('Error updating FAQs:', error);
+      toast.error('Failed to update FAQs');
+      throw error;
+    }
+  };
+
 
   // Keyboard navigation for carousels
   useEffect(() => {
@@ -1887,7 +2188,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           Requirements Brochure
                         </h4>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => openModal('overview')}
+                          >
                             <Edit className="w-3 h-3 mr-1" />
                             Edit
                           </Button>
@@ -1930,7 +2235,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           <span className="text-blue-500">📋</span>
                           Requirements Brochure
                         </h4>
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <Button 
+                          size="sm" 
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={() => openModal('overview')}
+                        >
                           <Plus className="w-3 h-3 mr-1" />
                           Add Brochure
                         </Button>
@@ -1948,7 +2257,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           Property Page
                         </h4>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => openModal('overview')}
+                          >
                             <Edit className="w-3 h-3 mr-1" />
                             Edit
                           </Button>
@@ -1988,7 +2301,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           <span className="text-violet-500">🔗</span>
                           Property Page
                         </h4>
-                        <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white">
+                        <Button 
+                          size="sm" 
+                          className="bg-violet-600 hover:bg-violet-700 text-white"
+                          onClick={() => openModal('overview')}
+                        >
                           <Plus className="w-3 h-3 mr-1" />
                           Add Link
                         </Button>
@@ -2008,11 +2325,19 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         Upload a brochure or link to your property page to help agents understand your requirements.
                       </p>
                       <div className="flex justify-center gap-2">
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <Button 
+                          size="sm" 
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={() => openModal('overview')}
+                        >
                           <Plus className="w-3 h-3 mr-1" />
                           Add Brochure
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => openModal('overview')}
+                        >
                           <Plus className="w-3 h-3 mr-1" />
                           Add Link
                         </Button>
@@ -2025,7 +2350,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               {/* Requirements Tab Content (matching modal exactly) */}
               {activeTab === 'requirements' && (
                 <div className="p-6 space-y-6">
-                  <h3 className="text-lg font-semibold">Requirements</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Requirements</h3>
+                  </div>
                   
                   {editingSection === 'requirements' ? (
                     // Editing Mode
@@ -2076,7 +2403,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               Site Size
                             </h4>
                             <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm" onClick={() => startEditing('requirements', { siteSizeMin: listingData.siteSizeMin, siteSizeMax: listingData.siteSizeMax })}>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => openModal('siteSize')}
+                              >
                                 <Edit className="w-3 h-3 mr-1" />
                                 Edit
                               </Button>
@@ -2102,7 +2433,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               <span className="text-violet-500">📐</span>
                               Site Size
                             </h4>
-                            <Button size="sm" onClick={() => startEditing('requirements', {})} className="bg-violet-600 hover:bg-violet-700 text-white">
+                            <Button size="sm" onClick={() => openModal('siteSize')} className="bg-violet-600 hover:bg-violet-700 text-white">
                               <Plus className="w-3 h-3 mr-1" />
                               Add Size Requirements
                             </Button>
@@ -2180,7 +2511,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               Sectors
                             </h4>
                             <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" onClick={() => openModal('sectors')}>
                                 <Edit className="w-3 h-3 mr-1" />
                                 Edit
                               </Button>
@@ -2198,7 +2529,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                   key={index}
                                   className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200"
                                 >
-                                  {sector?.name || sectorId}
+                                  {sector?.name ? formatName(sector.name) : sectorId}
                                 </span>
                               );
                             })}
@@ -2211,7 +2542,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               <span className="text-blue-500">🏢</span>
                               Sectors
                             </h4>
-                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                            <Button size="sm" onClick={() => openModal('sectors')} className="bg-blue-600 hover:bg-blue-700 text-white">
                               <Plus className="w-3 h-3 mr-1" />
                               Add Sectors
                             </Button>
@@ -2229,7 +2560,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               Use Classes
                             </h4>
                             <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" onClick={() => openModal('useClasses')}>
                                 <Edit className="w-3 h-3 mr-1" />
                                 Edit
                               </Button>
@@ -2247,7 +2578,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                   key={index}
                                   className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200"
                                 >
-                                  {useClass?.name || useClassId}
+                                  {useClass?.name ? formatName(useClass.name) : useClassId}
                                 </span>
                               );
                             })}
@@ -2260,7 +2591,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               <span className="text-green-500">🏗️</span>
                               Use Classes
                             </h4>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                            <Button size="sm" onClick={() => openModal('useClasses')} className="bg-green-600 hover:bg-green-700 text-white">
                               <Plus className="w-3 h-3 mr-1" />
                               Add Use Classes
                             </Button>
@@ -2299,7 +2630,17 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               {/* Locations Tab Content (matching modal exactly) */}
               {activeTab === 'locations' && (
                 <div className="p-6 space-y-4">
-                  <h3 className="text-lg font-semibold">Locations</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Locations</h3>
+                    <Button 
+                      size="sm" 
+                      className="bg-violet-600 hover:bg-violet-700 text-white"
+                      onClick={() => openModal('locations')}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Locations
+                    </Button>
+                  </div>
                   
                   {listingData.locations && listingData.locations.length > 0 ? (
                     <div className="space-y-2">
@@ -2378,7 +2719,17 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               {/* Contact Tab Content (matching modal exactly) */}
               {activeTab === 'contact' && (
                 <div className="p-6 space-y-4">
-                  <h3 className="text-lg font-semibold">Contact</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Contact</h3>
+                    <Button 
+                      size="sm" 
+                      className="bg-violet-600 hover:bg-violet-700 text-white"
+                      onClick={() => openModal('contacts')}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Contacts
+                    </Button>
+                  </div>
                   
                   <div className="space-y-4">
                     {/* Primary Contact */}
@@ -2542,7 +2893,17 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               {/* FAQs Tab Content (matching modal exactly) */}
               {activeTab === 'faqs' && (
                 <div className="p-6 space-y-4">
-                  <h3 className="text-lg font-semibold">Frequently Asked Questions</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Frequently Asked Questions</h3>
+                    <Button 
+                      size="sm" 
+                      className="bg-violet-600 hover:bg-violet-700 text-white"
+                      onClick={() => openModal('faqs')}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit FAQs
+                    </Button>
+                  </div>
                   
                   {editingSection === 'faqs' ? (
                     // Editing Mode
@@ -2730,6 +3091,86 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         onClose={() => closeQuickAddModal('uploadFitOuts')}
         type="fitouts"
         onUpload={(files) => handleQuickUpload(files, 'fitouts')}
+      />
+
+      {/* CRUD Modals */}
+      <OverviewModal
+        isOpen={modalStates.overview}
+        onClose={() => closeModal('overview')}
+        listingId={listingId}
+        currentData={{
+          brochureFiles: listingData?.brochureFiles || [],
+          propertyPageLink: listingData?.propertyPageLink
+        }}
+        onSave={handleOverviewSave}
+      />
+
+      {/* Separate Requirements Modals */}
+      <SectorsModal
+        isOpen={modalStates.sectors}
+        onClose={() => closeModal('sectors')}
+        currentData={listingData?.sectors || []}
+        onSave={handleSectorsSave}
+        sectorsOptions={sectors.map(s => ({ 
+          value: s.id, 
+          label: formatName(s.name)
+        }))}
+      />
+
+      <UseClassesModal
+        isOpen={modalStates.useClasses}
+        onClose={() => closeModal('useClasses')}
+        currentData={listingData?.useClassIds || []}
+        onSave={handleUseClassesSave}
+        useClassesOptions={useClasses.map(uc => ({ 
+          value: uc.id, 
+          label: formatName(uc.name)
+        }))}
+      />
+
+      <SiteSizeModal
+        isOpen={modalStates.siteSize}
+        onClose={() => closeModal('siteSize')}
+        listingType={listingData?.listingType || 'commercial'}
+        currentData={{
+          siteSizeMin: listingData?.siteSizeMin,
+          siteSizeMax: listingData?.siteSizeMax,
+          dwellingCountMin: listingData?.dwellingCountMin,
+          dwellingCountMax: listingData?.dwellingCountMax,
+          siteAcreageMin: listingData?.siteAcreageMin,
+          siteAcreageMax: listingData?.siteAcreageMax
+        }}
+        onSave={handleSiteSizeSave}
+      />
+
+      <LocationsModal
+        isOpen={modalStates.locations}
+        onClose={() => closeModal('locations')}
+        currentData={{
+          isNationwide: listingData?.isNationwide || false,
+          locations: listingData?.locations || []
+        }}
+        onSave={handleLocationsSave}
+      />
+
+      <ContactsModal
+        isOpen={modalStates.contacts}
+        onClose={() => closeModal('contacts')}
+        listingId={listingId}
+        currentData={{
+          primaryContact: listingData?.primaryContact,
+          additionalContacts: listingData?.additionalContacts || []
+        }}
+        onSave={handleContactsSave}
+      />
+
+      <FAQsModal
+        isOpen={modalStates.faqs}
+        onClose={() => closeModal('faqs')}
+        currentData={{
+          faqs: listingData?.faqs || []
+        }}
+        onSave={handleFAQsSave}
       />
 
     </>
