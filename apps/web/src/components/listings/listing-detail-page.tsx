@@ -387,25 +387,25 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   // Carousel navigation functions
   const nextSitePlan = () => {
-    if (listingData?.sitePlanFiles) {
+    if (listingData?.sitePlanFiles && listingData.sitePlanFiles.length > 0) {
       setSitePlansIndex((prev) => (prev + 1) % listingData.sitePlanFiles.length);
     }
   };
 
   const prevSitePlan = () => {
-    if (listingData?.sitePlanFiles) {
+    if (listingData?.sitePlanFiles && listingData.sitePlanFiles.length > 0) {
       setSitePlansIndex((prev) => (prev - 1 + listingData.sitePlanFiles.length) % listingData.sitePlanFiles.length);
     }
   };
 
   const nextFitOut = () => {
-    if (listingData?.fitOutFiles) {
+    if (listingData?.fitOutFiles && listingData.fitOutFiles.length > 0) {
       setFitOutsIndex((prev) => (prev + 1) % listingData.fitOutFiles.length);
     }
   };
 
   const prevFitOut = () => {
-    if (listingData?.fitOutFiles) {
+    if (listingData?.fitOutFiles && listingData.fitOutFiles.length > 0) {
       setFitOutsIndex((prev) => (prev - 1 + listingData.fitOutFiles.length) % listingData.fitOutFiles.length);
     }
   };
