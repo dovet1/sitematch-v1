@@ -178,29 +178,30 @@ export async function GET(
         property_page_link: listing.property_page_link
       },
       
+      // Contact information from listing_contacts table only
       contacts: {
-        primary: {
-          name: listing.contact_name,
-          title: listing.contact_title || '',
-          email: listing.contact_email,
-          phone: listing.contact_phone || '',
-          contact_area: listing.contact_area || '',
-          headshot_url: (() => {
-            const primaryFromContacts = contacts?.find((contact: any) => contact.is_primary_contact);
-            if (primaryFromContacts?.headshot_url) {
-              return primaryFromContacts.headshot_url;
-            }
-            
-            const headshotFile = files?.find((file: any) => 
-              file.file_type === 'headshot' && (
-                file.is_primary || 
-                file.file_name?.toLowerCase().includes(listing.contact_name?.toLowerCase().split(' ')[0] || '')
-              )
-            );
-            
-            return headshotFile ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${headshotFile.bucket_name}/${headshotFile.file_path}` : null;
-          })()
-        },
+        primary: (() => {
+          // Find the primary contact from listing_contacts table
+          const primaryContact = contacts?.find((contact: any) => contact.is_primary_contact);
+          if (primaryContact) {
+            return {
+              name: primaryContact.contact_name,
+              title: primaryContact.contact_title || '',
+              email: primaryContact.contact_email,
+              phone: primaryContact.contact_phone || '',
+              contact_area: primaryContact.contact_area || '',
+              headshot_url: primaryContact.headshot_url || (() => {
+                const headshotFile = files?.find((file: any) => 
+                  file.file_type === 'headshot' && 
+                  file.file_name?.toLowerCase().includes(primaryContact.contact_name?.toLowerCase().split(' ')[0])
+                );
+                return headshotFile ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${headshotFile.bucket_name}/${headshotFile.file_path}` : null;
+              })()
+            };
+          }
+          // Return null if no primary contact exists
+          return null;
+        })(),
         additional: (contacts || [])
           .filter((contact: any) => !contact.is_primary_contact)
           .map((contact: any) => ({

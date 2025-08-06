@@ -3013,36 +3013,39 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               </Button>
             )}
           </div>
-            {/* Company Hero Card (matching modal) */}
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-violet-50 to-purple-50">
-              <div className="flex items-center gap-4">
+            {/* Company Hero Card - Redesigned for better visual hierarchy */}
+            <div className="py-4 px-6 border-b border-gray-200 bg-gradient-to-r from-violet-50 to-purple-50">
+              <div className="flex items-center gap-5">
+                {/* Larger logo for better brand presence */}
                 {listingData.logoPreview ? (
                   <img
                     src={listingData.logoPreview}
                     alt={`${companyName} logo`}
-                    className="w-12 h-12 object-contain"
+                    className="w-16 h-16 object-contain rounded-lg shadow-sm bg-white p-1"
                   />
                 ) : (
-                  <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-semibold">
+                  <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center shadow-sm">
+                    <span className="text-white font-bold text-xl">
                       {companyName.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {companyName}
-                  </h2>
-                  <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                    <span>{listingData.listingType === 'residential' ? 'Residential' : 'Commercial'}</span>
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-md ${statusInfo.bgColor}`}>
-                      <StatusIcon className={`w-3 h-3 ${statusInfo.color}`} />
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900 leading-tight">
+                        {companyName}
+                      </h2>
+                      <p className="text-sm text-gray-600 mt-0.5">
+                        Manage and edit your property listing
+                      </p>
+                    </div>
+                    <div className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${statusInfo.bgColor}`}>
+                      <StatusIcon className={`w-3.5 h-3.5 ${statusInfo.color}`} />
                       <span className={`text-xs font-medium ${statusInfo.color}`}>
                         {statusInfo.label}
                       </span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
                   </div>
                 </div>
               </div>
@@ -3539,9 +3542,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               <p className="text-sm text-gray-600">
                                 {listingData.listingType === 'residential' ? 'Residential' : 'Commercial'} Listing
                               </p>
-                              {listingData.companyDomain && (
-                                <p className="text-sm text-violet-600">{listingData.companyDomain}</p>
-                              )}
                             </div>
                           </div>
 
@@ -3631,26 +3631,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-2">Min Size (sq ft)</label>
-                          <Input
-                            type="number"
-                            placeholder="e.g. 1000"
-                            value={editingData.siteSizeMin || ''}
-                            onChange={(e) => setEditingData((prev: any) => ({ ...prev, siteSizeMin: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">Max Size (sq ft)</label>
-                          <Input
-                            type="number"
-                            placeholder="e.g. 5000"
-                            value={editingData.siteSizeMax || ''}
-                            onChange={(e) => setEditingData((prev: any) => ({ ...prev, siteSizeMax: e.target.value }))}
-                          />
-                        </div>
-                      </div>
                     </div>
                   ) : (
                     <>
@@ -3711,7 +3691,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               Dwelling Count
                             </h4>
                             <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => openModal('siteSize')}
+                              >
                                 <Edit className="w-3 h-3 mr-1" />
                                 Edit
                               </Button>
@@ -3730,6 +3714,20 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                             }
                           </p>
                         </div>
+                      ) : listingData.listingType === 'residential' && (!listingData.dwellingCountMin && !listingData.dwellingCountMax) ? (
+                        <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 border-dashed">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                              <span className="text-violet-500">🏠</span>
+                              Dwelling Count
+                            </h4>
+                            <Button size="sm" onClick={() => openModal('siteSize')} className="bg-violet-600 hover:bg-violet-700 text-white">
+                              <Plus className="w-3 h-3 mr-1" />
+                              Add Dwelling Range
+                            </Button>
+                          </div>
+                          <p className="text-gray-600 text-sm">Specify the number of residential units you require.</p>
+                        </div>
                       ) : null}
 
                       {/* Site Acreage (for residential) */}
@@ -3741,7 +3739,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               Site Acreage
                             </h4>
                             <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => openModal('siteSize')}
+                              >
                                 <Edit className="w-3 h-3 mr-1" />
                                 Edit
                               </Button>
@@ -3759,6 +3761,20 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 : `Up to ${listingData.siteAcreageMax} acres`
                             }
                           </p>
+                        </div>
+                      ) : listingData.listingType === 'residential' && (!listingData.siteAcreageMin && !listingData.siteAcreageMax) ? (
+                        <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 border-dashed">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                              <span className="text-violet-500">🌾</span>
+                              Site Acreage
+                            </h4>
+                            <Button size="sm" onClick={() => openModal('siteSize')} className="bg-violet-600 hover:bg-violet-700 text-white">
+                              <Plus className="w-3 h-3 mr-1" />
+                              Add Acreage Range
+                            </Button>
+                          </div>
+                          <p className="text-gray-600 text-sm">Specify the land area requirements for your development.</p>
                         </div>
                       ) : null}
 
@@ -3876,7 +3892,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
                             Specify your property requirements to help agents find the right opportunities.
                           </p>
-                          <Button onClick={() => startEditing('requirements', {})} className="bg-violet-600 hover:bg-violet-700 text-white">
+                          <Button onClick={() => openModal('siteSize')} className="bg-violet-600 hover:bg-violet-700 text-white">
                             <Plus className="w-4 h-4 mr-1" />
                             Add Requirements
                           </Button>

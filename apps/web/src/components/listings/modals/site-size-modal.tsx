@@ -102,8 +102,8 @@ export function SiteSizeModal({
                 max={50000}
                 step={100}
                 value={siteSize}
-                onValueChange={setSiteSize}
-                formatLabel={formatSiteSize}
+                onChange={setSiteSize}
+                formatValue={formatSiteSize}
               />
             </div>
 
@@ -131,8 +131,9 @@ export function SiteSizeModal({
                   max={500}
                   step={1}
                   value={dwellingCount}
-                  onValueChange={setDwellingCount}
-                  formatLabel={(value) => value.toString()}
+                  onChange={setDwellingCount}
+                  formatValue={(value) => value.toString()}
+                  unit="dwellings"
                 />
               </div>
 
@@ -155,8 +156,9 @@ export function SiteSizeModal({
                   max={50}
                   step={0.1}
                   value={siteAcreage}
-                  onValueChange={setSiteAcreage}
-                  formatLabel={formatAcreage}
+                  onChange={setSiteAcreage}
+                  formatValue={formatAcreage}
+                  unit="acres"
                 />
               </div>
 
