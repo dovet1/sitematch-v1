@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 import type { WizardStepProps, CompanyInfoData, ListingContact } from '@/types/wizard';
 import { validateStep } from '@/lib/wizard-utils';
 import { cn } from '@/lib/utils';
-import { fetchCompanyLogo, validateDomain, normalizeDomain } from '@/lib/clearbit-logo';
+import { fetchCompanyLogo, validateDomain, normalizeDomain, formatDomainWithProtocol } from '@/lib/clearbit-logo';
 
 interface Step1FormData extends CompanyInfoData {}
 
@@ -524,6 +524,20 @@ export function Step1ImmediateCreation({
                   id="companyDomain"
                   value={watchedValues.companyDomain || ''}
                   onChange={(e) => handleDomainInput(e.target.value)}
+                  onBlur={(e) => {
+                    // Auto-format and clean the domain when user finishes editing
+                    const rawDomain = e.target.value.trim();
+                    if (rawDomain) {
+                      const normalizedDomain = normalizeDomain(rawDomain);
+                      const formattedDomain = formatDomainWithProtocol(rawDomain);
+                      
+                      // Update the input field to show the cleaned domain (without protocol for Clearbit)
+                      setValue('companyDomain', normalizedDomain);
+                      
+                      // Store the formatted version for other uses if needed
+                      console.log('Domain normalized:', normalizedDomain, 'Formatted:', formattedDomain);
+                    }
+                  }}
                   placeholder="e.g., apple.com"
                   className={cn(
                     domainError ? 'border-red-500 focus:ring-red-500' : '',
