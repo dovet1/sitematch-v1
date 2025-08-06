@@ -49,8 +49,9 @@ export function validateDomain(domain: string): boolean {
 
 /**
  * Normalizes domain string for consistent processing
+ * Removes protocols, www., paths, and other URL components
  * @param domain - Raw domain input
- * @returns Normalized domain string
+ * @returns Normalized domain string (e.g., "apple.com")
  */
 export function normalizeDomain(domain: string): string {
   if (!domain || typeof domain !== 'string') {
@@ -65,10 +66,34 @@ export function normalizeDomain(domain: string): string {
   // Remove www. if present
   normalized = normalized.replace(/^www\./, '');
   
-  // Remove trailing slash
+  // Remove any path, query parameters, or fragments
+  // This handles cases like "boots.com/abc" -> "boots.com"
+  normalized = normalized.split('/')[0];
+  normalized = normalized.split('?')[0];
+  normalized = normalized.split('#')[0];
+  
+  // Remove trailing slash (in case it wasn't caught by split)
   normalized = normalized.replace(/\/$/, '');
   
   return normalized;
+}
+
+/**
+ * Formats domain with https:// prefix for display or storage
+ * @param domain - Raw domain input
+ * @returns Domain with https:// prefix (e.g., "https://apple.com")
+ */
+export function formatDomainWithProtocol(domain: string): string {
+  if (!domain || typeof domain !== 'string') {
+    return '';
+  }
+  
+  const normalized = normalizeDomain(domain);
+  if (!normalized) {
+    return '';
+  }
+  
+  return `https://${normalized}`;
 }
 
 /**

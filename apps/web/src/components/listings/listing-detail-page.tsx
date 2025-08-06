@@ -13,6 +13,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ImageUpload } from '@/components/ui/image-upload';
+import { DocumentUpload } from '@/components/listings/document-upload';
 import { cn } from '@/lib/utils';
 import { 
   Building2, 
@@ -47,6 +51,7 @@ import type { Sector, UseClass } from '@/types/listings';
 import { uploadFiles, validateFiles } from '@/lib/file-upload';
 import type { FileUploadType, UploadedFile } from '@/types/uploads';
 import { ImmersiveListingModal } from '@/components/listings/ImmersiveListingModal';
+import { fetchCompanyLogo, validateDomain, normalizeDomain, formatDomainWithProtocol } from '@/lib/clearbit-logo';
 
 // Import CRUD modals
 import { OverviewModal } from '@/components/listings/modals/overview-modal';
@@ -58,6 +63,7 @@ import { InteractiveMapView } from '@/components/listings/ImmersiveListingModal/
 import { SectorsModal } from '@/components/listings/modals/sectors-modal';  
 import { UseClassesModal } from '@/components/listings/modals/use-classes-modal';
 import { SiteSizeModal } from '@/components/listings/modals/site-size-modal';
+
 
 interface ListingDetailPageProps {
   listingId: string;
@@ -122,8 +128,22 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     contact: false,
     uploadSitePlans: false,
     uploadFitOuts: false,
+    uploadLogo: false,
+    uploadBrochure: false,
     requirements: false
   });
+
+  // Logo method state for company profile
+  const [logoLoading, setLogoLoading] = useState(false);
+  const [domainError, setDomainError] = useState<string>('');
+  
+  // Form validation state
+  const [formErrors, setFormErrors] = useState<{
+    companyName?: string;
+    companyDomain?: string;
+    propertyPageLink?: string;
+  }>({});
+
 
 
   const tabs = [
@@ -233,12 +253,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           };
         })(),
 
-        // Logo information
+        // Logo information - will be set after async logo fetch
         logoMethod: listing.clearbit_logo ? 'clearbit' : 'upload',
         clearbitLogo: listing.clearbit_logo || false,
         companyDomain: listing.company_domain || '',
-        logoUrl: listing.logo_url || '',
-        logoPreview: listing.logo_url || '',
+        logoUrl: '', // Will be fetched async
+        logoPreview: '', // Will be fetched async
 
         // Property page link
         propertyPageLink: listing.property_page_link || '',
@@ -336,6 +356,22 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       };
 
       setListingData(transformedData);
+
+      // Fetch logo URL based on the new logic
+      try {
+        const logoUrl = await getLogoUrl(listing);
+        if (logoUrl) {
+          setListingData(prev => prev ? {
+            ...prev,
+            logoUrl,
+            logoPreview: logoUrl
+          } : null);
+        }
+      } catch (logoError) {
+        console.error('Error fetching logo:', logoError);
+        // Don't fail the whole page load if logo fails
+      }
+
     } catch (err) {
       console.error('Error fetching listing:', err);
       setError(err instanceof Error ? err.message : 'Failed to load listing');
@@ -1092,73 +1128,542 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     setEditingData({});
   };
 
-  const saveSection = async (section: string, data: any) => {
+  // This function will be defined later with proper validation
+
+  // Quick Add Modal functions
+  const openQuickAddModal = (type: keyof typeof quickAddModals) => {
+    setQuickAddModals(prev => ({ ...prev, [type]: true }));
+  };
+
+  const closeQuickAddModal = (type: keyof typeof quickAddModals) => {
+    setQuickAddModals(prev => ({ ...prev, [type]: false }));
+  };
+
+  // Handle logo update from logo modal
+  const handleLogoUpdate = async (logoUrl: string, clearbitLogo: boolean = false) => {
     try {
+      // Update listing with logo URL
       const supabase = createClientClient();
+      const { error } = await supabase
+        .from('listings')
+        .update({ 
+          logo_url: logoUrl,
+          clearbit_logo: clearbitLogo,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', listingId);
+
+      if (error) throw error;
+
+      // Update local state
+      setListingData(prev => prev ? {
+        ...prev,
+        logoPreview: logoUrl,
+        clearbitLogo: clearbitLogo
+      } : null);
+
+      toast.success('Logo updated successfully!');
+      closeQuickAddModal('uploadLogo');
+    } catch (error) {
+      console.error('Error updating logo:', error);
+      toast.error('Failed to update logo');
+    }
+  };
+
+  // Handle file uploads
+  const handleFileUpload = async (files: File[], type: 'logo' | 'brochure') => {
+    try {
+      const uploadedFiles = [];
       
-      if (section === 'requirements') {
-        // Update listings table with requirements data
+      // Upload files one by one using the same API as step1 component
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', type);
+        formData.append('is_primary', 'true');
+        formData.append('listingId', listingId);
+        
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Failed to upload file:', errorText);
+          throw new Error(`Upload failed: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        uploadedFiles.push(result.file);
+      }
+      
+      if (type === 'logo' && uploadedFiles.length > 0) {
+        // Update listing with logo URL
+        const supabase = createClientClient();
         const { error } = await supabase
           .from('listings')
-          .update({
-            site_size_min: data.siteSizeMin ? parseInt(data.siteSizeMin) : null,
-            site_size_max: data.siteSizeMax ? parseInt(data.siteSizeMax) : null,
-            updated_at: new Date().toISOString()
+          .update({ 
+            logo_url: uploadedFiles[0].url,
+            updated_at: new Date().toISOString() 
           })
           .eq('id', listingId);
 
         if (error) throw error;
 
-        // Update local state optimistically
+        // Update local state
         setListingData(prev => prev ? {
           ...prev,
-          siteSizeMin: data.siteSizeMin ? parseInt(data.siteSizeMin) : undefined,
-          siteSizeMax: data.siteSizeMax ? parseInt(data.siteSizeMax) : undefined
+          logoPreview: uploadedFiles[0].url
         } : null);
 
-      } else if (section === 'faqs') {
-        // Delete existing FAQs
-        await supabase
-          .from('faqs')
-          .delete()
-          .eq('listing_id', listingId);
-
-        // Insert new FAQs
-        if (data.faqs && data.faqs.length > 0) {
-          const faqsToInsert = data.faqs
-            .filter((faq: any) => faq.question.trim() && faq.answer.trim())
-            .map((faq: any, index: number) => ({
-              listing_id: listingId,
-              question: faq.question.trim(),
-              answer: faq.answer.trim(),
-              display_order: index
-            }));
-
-          if (faqsToInsert.length > 0) {
-            const { error } = await supabase
-              .from('faqs')
-              .insert(faqsToInsert);
-
-            if (error) throw error;
+        toast.success('Logo uploaded successfully!');
+      } else if (type === 'brochure') {
+        // First, delete existing brochure files to implement replacement logic
+        const supabase = createClientClient();
+        const existingBrochures = listingData?.brochureFiles || [];
+        
+        if (existingBrochures.length > 0) {
+          // Delete old brochure files from storage and database
+          for (const brochure of existingBrochures) {
+            try {
+              // Delete from storage
+              await supabase.storage.from('brochures').remove([brochure.path]);
+              
+              // Delete from database
+              await supabase
+                .from('file_uploads')
+                .delete()
+                .eq('id', brochure.id);
+            } catch (error) {
+              console.error('Error deleting old brochure:', error);
+              // Continue with upload even if deletion fails
+            }
           }
         }
 
-        // Update local state optimistically
+        // Update local state with new brochure files (replacement, not append)
         setListingData(prev => prev ? {
           ...prev,
-          faqs: data.faqs?.filter((faq: any) => faq.question.trim() && faq.answer.trim()) || []
+          brochureFiles: uploadedFiles.map(file => ({
+            id: file.id,
+            name: file.name,
+            url: file.url,
+            path: file.path,
+            type: 'brochure' as const,
+            size: file.size,
+            mimeType: file.mimeType,
+            uploadedAt: new Date(file.uploadedAt)
+          }))
+        } : null);
+
+        toast.success(`Brochure${uploadedFiles.length > 1 ? 's' : ''} replaced successfully!`);
+      }
+
+      // Close the upload modal
+      closeQuickAddModal(type === 'logo' ? 'uploadLogo' : 'uploadBrochure');
+
+    } catch (error) {
+      console.error(`Error uploading ${type}:`, error);
+      toast.error(`Failed to upload ${type}`);
+    }
+  };
+
+  // Clearbit logo fetching for company profile
+  const fetchLogoForDomain = async (domain: string) => {
+    if (!domain.trim()) return;
+
+    // Only validate and fetch if it looks like a complete domain
+    if (!validateDomain(domain)) {
+      return;
+    }
+
+    setLogoLoading(true);
+    setDomainError('');
+    
+    try {
+      const logoUrl = await fetchCompanyLogo(domain);
+      if (logoUrl) {
+        // Update editing data immediately for form preview
+        setEditingData(prev => ({
+          ...prev,
+          logoPreview: logoUrl,
+          clearbitLogo: true
+        }));
+
+        // Save Clearbit logo preference to database
+        const supabase = createClientClient();
+        
+        // Delete any existing uploaded logo files since we're using Clearbit
+        const { data: existingLogos } = await supabase
+          .from('file_uploads')
+          .select('id, file_path, bucket_name')
+          .eq('listing_id', listingId)
+          .eq('file_type', 'logo');
+
+        if (existingLogos && existingLogos.length > 0) {
+          // Delete logo files from storage
+          for (const logo of existingLogos) {
+            await supabase.storage.from(logo.bucket_name).remove([logo.file_path]);
+          }
+          
+          // Delete logo records from file_uploads table
+          await supabase
+            .from('file_uploads')
+            .delete()
+            .eq('listing_id', listingId)
+            .eq('file_type', 'logo');
+        }
+
+        const { error: dbError } = await supabase
+          .from('listings')
+          .update({ 
+            clearbit_logo: true,
+            updated_at: new Date().toISOString() 
+          })
+          .eq('id', listingId);
+
+        if (dbError) {
+          console.error('Database update error:', dbError);
+          toast.error('Failed to save logo to listing');
+          return;
+        }
+
+        // Update listing data state too
+        setListingData(prev => prev ? {
+          ...prev,
+          logoPreview: logoUrl,
+          clearbitLogo: true
+        } : null);
+
+        setDomainError('');
+        toast.success('Logo found and saved!');
+      } else {
+        setEditingData(prev => ({
+          ...prev,
+          logoPreview: '',
+          clearbitLogo: false
+        }));
+        setDomainError('No logo found for this domain. Try uploading your own logo instead.');
+      }
+    } catch (error) {
+      setEditingData(prev => ({
+        ...prev,
+        logoPreview: '',
+        clearbitLogo: false
+      }));
+      if (error instanceof Error) {
+        setDomainError(error.message);
+      } else {
+        setDomainError('Failed to fetch logo. Please try again or upload your own logo.');
+      }
+    } finally {
+      setLogoLoading(false);
+    }
+  };
+
+  // Debounced logo fetching effect
+  useEffect(() => {
+    const domain = editingData.companyDomain;
+    if (!domain || editingData.logoMethod !== 'clearbit') return;
+
+    const timeoutId = setTimeout(() => {
+      fetchLogoForDomain(domain);
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [editingData.companyDomain, editingData.logoMethod]);
+
+  // Logo upload handlers for the form
+  const handleLogoFileUpload = async (file: File | null) => {
+    if (!file) {
+      setEditingData(prev => ({ ...prev, logoPreview: '' }));
+      return;
+    }
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'logo');
+      formData.append('is_primary', 'true');
+      formData.append('listingId', listingId);
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      const result = await response.json();
+      
+      // Update editing data immediately for form preview
+      setEditingData(prev => ({
+        ...prev,
+        logoPreview: result.file.url,
+        clearbitLogo: false
+      }));
+
+      // Clean up old logo files and update database
+      const supabase = createClientClient();
+      
+      // First, get all existing logo files for this listing to delete them
+      const { data: existingLogos, error: fetchError } = await supabase
+        .from('file_uploads')
+        .select('id, file_path, bucket_name')
+        .eq('listing_id', listingId)
+        .eq('file_type', 'logo')
+        .neq('id', result.file.id); // Don't delete the new one
+
+      if (fetchError) {
+        console.error('Error fetching existing logos:', fetchError);
+      } else if (existingLogos && existingLogos.length > 0) {
+        // Delete old logo files from storage
+        for (const logo of existingLogos) {
+          await supabase.storage.from(logo.bucket_name).remove([logo.file_path]);
+        }
+        
+        // Delete old logo records from file_uploads table
+        await supabase
+          .from('file_uploads')
+          .delete()
+          .eq('listing_id', listingId)
+          .eq('file_type', 'logo')
+          .neq('id', result.file.id);
+      }
+
+      // Update listings table to mark as non-Clearbit logo
+      const { error: dbError } = await supabase
+        .from('listings')
+        .update({ 
+          clearbit_logo: false,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', listingId);
+
+      if (dbError) {
+        console.error('Database update error:', dbError);
+        toast.error('Failed to save logo to listing');
+        return;
+      }
+
+      // Update listing data state too (logo URL will be fetched from file_uploads)
+      setListingData(prev => prev ? {
+        ...prev,
+        logoPreview: result.file.url,
+        clearbitLogo: false
+      } : null);
+
+      toast.success('Logo uploaded successfully!');
+      
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast.error('Failed to upload logo');
+    }
+  };
+
+  const handleLogoPreviewChange = (preview: string | null) => {
+    setEditingData(prev => ({
+      ...prev,
+      logoPreview: preview || ''
+    }));
+  };
+
+  // Helper function to get logo URL based on the logic
+  const getLogoUrl = async (listing: any) => {
+    if (listing.clearbit_logo && listing.company_domain) {
+      // Use Clearbit API to get logo
+      try {
+        const logoUrl = await fetchCompanyLogo(listing.company_domain);
+        return logoUrl || '';
+      } catch (error) {
+        console.error('Error fetching Clearbit logo:', error);
+        return '';
+      }
+    } else {
+      // Find the most recent uploaded logo from file_uploads table
+      try {
+        const supabase = createClientClient();
+        const { data: logoFile, error } = await supabase
+          .from('file_uploads')
+          .select('*')
+          .eq('listing_id', listing.id)
+          .eq('file_type', 'logo')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error || !logoFile) {
+          return '';
+        }
+
+        // Get public URL for the logo file
+        const { data: urlData } = supabase.storage
+          .from(logoFile.bucket_name)
+          .getPublicUrl(logoFile.file_path);
+
+        return urlData.publicUrl;
+      } catch (error) {
+        console.error('Error fetching uploaded logo:', error);
+        return '';
+      }
+    }
+  };
+
+  // Form validation function
+  const validateCompanyProfile = (data: any) => {
+    const errors: { companyName?: string; companyDomain?: string; propertyPageLink?: string } = {};
+    
+    // Company name validation
+    if (!data.companyName?.trim()) {
+      errors.companyName = 'Company name is required';
+    } else if (data.companyName.trim().length < 2) {
+      errors.companyName = 'Company name must be at least 2 characters';
+    } else if (data.companyName.trim().length > 100) {
+      errors.companyName = 'Company name must be no more than 100 characters';
+    }
+    
+    // Company domain validation (only required for Clearbit method)
+    if (data.logoMethod === 'clearbit' && !data.companyDomain?.trim()) {
+      errors.companyDomain = 'Company domain is required when using automatic logo detection';
+    } else if (data.companyDomain?.trim() && !validateDomain(data.companyDomain.trim())) {
+      errors.companyDomain = 'Please enter a valid domain like "company.com" (without www or https://)';
+    }
+    
+    // Property page link validation
+    if (data.propertyPageLink?.trim()) {
+      const urlPattern = /^https?:\/\/[^\s/$.?#].[^\s]*$/;
+      if (!urlPattern.test(data.propertyPageLink.trim())) {
+        errors.propertyPageLink = 'Please enter a valid URL starting with http:// or https://';
+      }
+    }
+    
+    return errors;
+  };
+
+  // Clear specific field error
+  const clearFieldError = (fieldName: string) => {
+    setFormErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[fieldName as keyof typeof newErrors];
+      return newErrors;
+    });
+  };
+
+  // Save section handler with validation
+  const saveSection = async (section: string, data: any) => {
+    if (section === 'companyProfile') {
+      // Run validation
+      const errors = validateCompanyProfile(data);
+      setFormErrors(errors);
+      
+      // If there are validation errors, don't save
+      if (Object.keys(errors).length > 0) {
+        const errorMessages = Object.values(errors);
+        toast.error(errorMessages[0]); // Show first error in toast
+        return;
+      }
+
+      try {
+        const supabase = createClientClient();
+        
+        // Prepare the update data
+        const updateData: any = {
+          company_name: data.companyName?.trim(),
+          listing_type: data.listingType,
+          property_page_link: data.propertyPageLink?.trim() || null,
+          updated_at: new Date().toISOString()
+        };
+
+        // Only save domain if using Clearbit
+        if (data.logoMethod === 'clearbit') {
+          updateData.company_domain = data.companyDomain?.trim() || null;
+          updateData.clearbit_logo = true;
+        } else {
+          // If switching from Clearbit to upload, clear domain and set flag
+          updateData.company_domain = null;
+          updateData.clearbit_logo = false;
+        }
+
+        const { error } = await supabase
+          .from('listings')
+          .update(updateData)
+          .eq('id', listingId);
+
+        if (error) throw error;
+
+        // Update local state
+        setListingData(prev => prev ? {
+          ...prev,
+          companyName: data.companyName?.trim(),
+          listingType: data.listingType,
+          companyDomain: data.logoMethod === 'clearbit' ? data.companyDomain?.trim() || null : null,
+          propertyPageLink: data.propertyPageLink?.trim() || null,
+          logoMethod: data.logoMethod,
+          clearbitLogo: data.logoMethod === 'clearbit'
+        } : null);
+
+        // Close editing mode and clear validation errors
+        setEditingSection(null);
+        setEditingData({});
+        setFormErrors({});
+        
+        toast.success('Company profile updated successfully!');
+      } catch (error) {
+        console.error('Error saving company profile:', error);
+        toast.error('Failed to save company profile');
+      }
+    }
+  };
+
+  // Delete file function
+  const deleteFile = async (fileId: string, fileType: 'brochure' | 'logo') => {
+    try {
+      const supabase = createClientClient();
+      
+      // First get the file info to delete from storage
+      const { data: fileInfo, error: fetchError } = await supabase
+        .from('file_uploads')
+        .select('file_path, bucket_name')
+        .eq('id', fileId)
+        .single();
+
+      if (fetchError || !fileInfo) {
+        throw new Error('File not found');
+      }
+
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from(fileInfo.bucket_name)
+        .remove([fileInfo.file_path]);
+
+      if (storageError) {
+        console.error('Storage deletion error:', storageError);
+        // Continue anyway - remove from database even if storage fails
+      }
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('file_uploads')
+        .delete()
+        .eq('id', fileId);
+
+      if (dbError) throw dbError;
+
+      // Update local state
+      if (fileType === 'brochure') {
+        setListingData(prev => prev ? {
+          ...prev,
+          brochureFiles: prev.brochureFiles?.filter(f => f.id !== fileId) || []
         } : null);
       }
 
-      toast.success('Section saved successfully!');
-      
-      // Update local state and exit editing mode
-      setEditingSection(null);
-      setEditingData({});
-      
+      toast.success(`${fileType === 'brochure' ? 'Brochure' : 'File'} deleted successfully!`);
     } catch (error) {
-      console.error('Error saving section:', error);
-      toast.error('Failed to save section');
+      console.error('Error deleting file:', error);
+      toast.error(`Failed to delete ${fileType}`);
     }
   };
 
@@ -1797,15 +2302,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         </div>
       </div>
     );
-  };
-
-
-  const openQuickAddModal = (type: keyof typeof quickAddModals) => {
-    setQuickAddModals(prev => ({ ...prev, [type]: true }));
-  };
-
-  const closeQuickAddModal = (type: keyof typeof quickAddModals) => {
-    setQuickAddModals(prev => ({ ...prev, [type]: false }));
   };
 
   const handleQuickAddFAQ = async (faq: { question: string; answer: string }) => {
@@ -2539,18 +3035,14 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   </h2>
                   <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
                     <span>{listingData.listingType === 'residential' ? 'Residential' : 'Commercial'}</span>
-                    <span>📍 {listingData.locations && listingData.locations.length > 0 ? `${listingData.locations.length} Locations` : 'Nationwide'}</span>
-                    {listingData.siteSizeMin && listingData.siteSizeMax && (
-                      <span>📐 {listingData.siteSizeMin} - {listingData.siteSizeMax} sq ft</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
                     <div className={`flex items-center gap-1 px-2 py-1 rounded-md ${statusInfo.bgColor}`}>
                       <StatusIcon className={`w-3 h-3 ${statusInfo.color}`} />
                       <span className={`text-xs font-medium ${statusInfo.color}`}>
                         {statusInfo.label}
                       </span>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
                   </div>
                 </div>
               </div>
@@ -2594,174 +3086,522 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
             {/* Tab Content Container */}
             <div className="max-w-4xl mx-auto px-6 lg:px-8 py-6 lg:py-8" role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
           
-              {/* Overview Tab Content (matching modal exactly) */}
+              {/* Company Profile Tab Content */}
               {activeTab === 'overview' && (
                 <div className="space-y-6">
-                  <h3 className="text-lg font-semibold">Requirements In {companyName}'s Own Words</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Company Profile</h3>
+                    <Button 
+                      onClick={() => {
+                        setEditingSection('companyProfile');
+                        setEditingData({
+                          companyName: listingData.companyName || '',
+                          listingType: listingData.listingType || 'commercial',
+                          companyDomain: listingData.companyDomain || '',
+                          propertyPageLink: listingData.propertyPageLink || '',
+                          logoMethod: listingData.logoMethod || (listingData.companyDomain ? 'clearbit' : 'upload'),
+                          logoPreview: listingData.logoPreview || '',
+                          clearbitLogo: listingData.clearbitLogo || false
+                        });
+                      }} 
+                      className="bg-violet-600 hover:bg-violet-700 text-white"
+                      disabled={editingSection === 'companyProfile'}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      {editingSection === 'companyProfile' ? 'Editing...' : 'Edit Profile'}
+                    </Button>
+                  </div>
 
-                  {/* Requirements Brochure */}
-                  {listingData.brochureFiles && listingData.brochureFiles.length > 0 ? (
-                    <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                          <span className="text-blue-500">📋</span>
-                          Requirements Brochure
-                        </h4>
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => openModal('overview')}
-                          >
-                            <Edit className="w-3 h-3 mr-1" />
-                            Edit
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                            <Trash2 className="w-3 h-3 mr-1" />
-                            Remove
-                          </Button>
-                        </div>
-                      </div>
-                      {listingData.brochureFiles.map((file) => (
-                        <a
-                          key={file.id}
-                          href={file.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-3 rounded-lg bg-white border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
-                        >
-                          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
-                            <FileText className="w-5 h-5 text-blue-600" />
+                  {editingSection === 'companyProfile' ? (
+                    <div className="space-y-6">
+                      {/* Listing Type Section */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg">Listing Type</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Select listing type *</label>
+                            <div className="space-y-3">
+                              {/* Commercial Option */}
+                              <div className="flex items-start space-x-3 p-3 sm:p-4 rounded-lg border border-muted hover:bg-muted/30 transition-colors">
+                                <input
+                                  type="radio"
+                                  id="commercial-edit"
+                                  name="listingType"
+                                  value="commercial"
+                                  checked={editingData.listingType === 'commercial'}
+                                  onChange={() => setEditingData(prev => ({ ...prev, listingType: 'commercial' }))}
+                                  className="mt-0.5"
+                                />
+                                <div className="flex-1 space-y-1">
+                                  <label htmlFor="commercial-edit" className="text-sm font-medium cursor-pointer">
+                                    Commercial
+                                  </label>
+                                  <p className="text-xs text-muted-foreground leading-relaxed">
+                                    Office spaces, retail units, industrial sites, and other business properties
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {/* Residential Option */}
+                              <div className="flex items-start space-x-3 p-3 sm:p-4 rounded-lg border border-muted hover:bg-muted/30 transition-colors">
+                                <input
+                                  type="radio"
+                                  id="residential-edit"
+                                  name="listingType"
+                                  value="residential"
+                                  checked={editingData.listingType === 'residential'}
+                                  onChange={() => setEditingData(prev => ({ ...prev, listingType: 'residential' }))}
+                                  className="mt-0.5"
+                                />
+                                <div className="flex-1 space-y-1">
+                                  <label htmlFor="residential-edit" className="text-sm font-medium cursor-pointer">
+                                    Residential
+                                  </label>
+                                  <p className="text-xs text-muted-foreground leading-relaxed">
+                                    Houses, apartments, condos, and other living spaces
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900">
-                              {file.name}
+                        </CardContent>
+                      </Card>
+
+                      {/* Company Details Section */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg">Company Details</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {/* Company Name */}
+                          <div className="space-y-2">
+                            <label htmlFor="companyName" className="text-sm font-medium">
+                              Company Name *
+                            </label>
+                            <Input
+                              id="companyName"
+                              value={editingData.companyName || ''}
+                              onChange={(e) => {
+                                setEditingData(prev => ({ ...prev, companyName: e.target.value }));
+                                clearFieldError('companyName');
+                              }}
+                              placeholder="Enter your company name"
+                              className={cn(
+                                "w-full",
+                                formErrors.companyName ? "border-red-500 focus:ring-red-500" : ""
+                              )}
+                            />
+                            {formErrors.companyName && (
+                              <p className="text-sm text-red-600 mt-1">{formErrors.companyName}</p>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Company Logo Section */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Company Logo</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {/* Enhanced Logo Method Selection */}
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium leading-relaxed">How would you like to add your logo?</label>
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                We can automatically find your logo, or you can upload your own
+                              </p>
+                            </div>
+                            
+                            <RadioGroup
+                              value={editingData.logoMethod || 'clearbit'}
+                              onValueChange={(value) => setEditingData(prev => ({ ...prev, logoMethod: value as 'clearbit' | 'upload' }))}
+                              className="space-y-3"
+                            >
+                              {/* Clearbit Method Card */}
+                              <div className="flex items-start space-x-3 p-3 sm:p-4 rounded-lg border border-muted hover:bg-muted/30 transition-colors">
+                                <RadioGroupItem value="clearbit" id="clearbit-edit" className="mt-0.5" />
+                                <div className="flex-1 space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <Label htmlFor="clearbit-edit" className="text-sm font-medium cursor-pointer">
+                                      Find logo automatically
+                                    </Label>
+                                    <Badge variant="secondary" className="text-xs ml-2 sm:ml-0">Recommended</Badge>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground leading-relaxed">
+                                    We'll search for your company's logo using your domain • Usually instant
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {/* Upload Method Card */}
+                              <div className="flex items-start space-x-3 p-3 sm:p-4 rounded-lg border border-muted hover:bg-muted/30 transition-colors">
+                                <RadioGroupItem value="upload" id="upload-edit" className="mt-0.5" />
+                                <div className="flex-1 space-y-1">
+                                  <Label htmlFor="upload-edit" className="text-sm font-medium cursor-pointer">
+                                    Upload your own logo
+                                  </Label>
+                                  <p className="text-xs text-muted-foreground leading-relaxed">
+                                    Choose a custom logo file • PNG, JPG, or SVG up to 2MB
+                                  </p>
+                                </div>
+                              </div>
+                            </RadioGroup>
+                          </div>
+
+                          {/* Clearbit Domain Method */}
+                          {editingData.logoMethod === 'clearbit' && (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <label htmlFor="companyDomain" className="text-sm font-medium leading-relaxed">
+                                  Company Domain
+                                </label>
+                                <Input
+                                  id="companyDomain"
+                                  value={editingData.companyDomain || ''}
+                                  onChange={(e) => {
+                                    setEditingData(prev => ({ ...prev, companyDomain: e.target.value }));
+                                    clearFieldError('companyDomain');
+                                    if (domainError) setDomainError('');
+                                  }}
+                                  onBlur={(e) => {
+                                    // Auto-format and clean the domain when user finishes editing
+                                    const rawDomain = e.target.value.trim();
+                                    if (rawDomain) {
+                                      const normalizedDomain = normalizeDomain(rawDomain);
+                                      const formattedDomain = formatDomainWithProtocol(rawDomain);
+                                      
+                                      // Update the input field to show the cleaned domain (without protocol for Clearbit)
+                                      setEditingData(prev => ({ 
+                                        ...prev, 
+                                        companyDomain: normalizedDomain,
+                                        // Store the formatted version for other uses if needed
+                                        formattedDomain: formattedDomain
+                                      }));
+                                      
+                                      // Clear any existing errors since we've cleaned the domain
+                                      if (domainError) setDomainError('');
+                                      clearFieldError('companyDomain');
+                                    }
+                                  }}
+                                  placeholder="e.g., apple.com or https://www.boots.com/products"
+                                  className={cn(
+                                    'placeholder:text-muted-foreground',
+                                    domainError || formErrors.companyDomain ? 'border-red-500 focus:ring-red-500' : ''
+                                  )}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  Enter any URL format - we'll automatically extract and format the domain for logo lookup
+                                </p>
+                                {domainError && (
+                                  <div className="p-3 sm:p-4 bg-red-50 rounded-lg border border-red-200">
+                                    <div className="flex flex-col space-y-2 sm:flex-row sm:items-start sm:space-y-0 sm:space-x-2">
+                                      <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0 sm:mt-0.5" />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-red-900 break-words">
+                                          {domainError.includes('No logo found') ? 
+                                            'Logo not found' : 
+                                            'Invalid domain format'
+                                          }
+                                        </p>
+                                        <p className="text-xs text-red-600 mt-1 leading-relaxed break-words">
+                                          {domainError.includes('No logo found') ? 
+                                            'Try uploading your own logo instead, or check if the domain is correct.' :
+                                            'Please enter a valid domain like "company.com" (without www or https://)'
+                                          }
+                                        </p>
+                                        {domainError.includes('No logo found') && (
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setEditingData(prev => ({ ...prev, logoMethod: 'upload' }))}
+                                            className="mt-2 text-xs w-full sm:w-auto"
+                                          >
+                                            Upload logo instead
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                {/* Form-level domain validation error (separate from Clearbit-specific errors) */}
+                                {formErrors.companyDomain && !domainError && (
+                                  <p className="text-sm text-red-600 mt-1">{formErrors.companyDomain}</p>
+                                )}
+                                {logoLoading && (
+                                  <p className="text-sm text-blue-600 flex items-center gap-2">
+                                    <span className="animate-spin h-3 w-3 border border-blue-500 border-t-transparent rounded-full"></span>
+                                    Looking for logo...
+                                  </p>
+                                )}
+                              </div>
+                              
+                              {/* Enhanced Logo Preview for Clearbit */}
+                              {editingData.companyDomain && editingData.logoPreview && editingData.clearbitLogo && (
+                                <div className="p-3 sm:p-4 bg-green-50 rounded-lg border border-green-200">
+                                  <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
+                                    <div className="flex items-center space-x-3 sm:space-x-3">
+                                      <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-lg border border-green-300 flex items-center justify-center">
+                                        <img
+                                          src={editingData.logoPreview}
+                                          alt="Company logo"
+                                          className="w-8 h-8 sm:w-12 sm:h-12 object-contain"
+                                        />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center space-x-2">
+                                          <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                          <p className="text-sm font-medium text-green-900">Logo found!</p>
+                                        </div>
+                                        <p className="text-xs text-green-600 break-words leading-relaxed">
+                                          We found your logo automatically from {editingData.companyDomain}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setEditingData(prev => ({ ...prev, logoMethod: 'upload' }))}
+                                      className="text-xs w-full sm:w-auto sm:flex-shrink-0"
+                                    >
+                                      Use different logo
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* File Upload Method */}
+                          {editingData.logoMethod === 'upload' && (
+                            <ImageUpload
+                              value={editingData.logoPreview}
+                              onChange={handleLogoFileUpload}
+                              onPreviewChange={handleLogoPreviewChange}
+                              placeholder="Upload your company logo"
+                              maxSize={2 * 1024 * 1024} // 2MB
+                              acceptedTypes={["image/png", "image/jpeg", "image/jpg", "image/svg+xml"]}
+                            />
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      {/* Requirements Material Section */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Requirements Material</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          {/* Requirements Brochure Upload */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">
+                              Requirements Brochure
+                              <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+                            </label>
+                            <DocumentUpload
+                              type="brochure"
+                              value={listingData.brochureFiles || []}
+                              onChange={(files) => {
+                                // Transform UploadedFile[] to the expected format
+                                const brochureFiles = files.map(file => ({
+                                  id: file.id,
+                                  name: file.name,
+                                  url: file.url,
+                                  path: file.path,
+                                  type: 'brochure' as const,
+                                  size: file.size,
+                                  mimeType: file.mimeType,
+                                  uploadedAt: file.uploadedAt
+                                }));
+                                
+                                // Update local state
+                                setListingData(prev => prev ? {
+                                  ...prev,
+                                  brochureFiles
+                                } : null);
+                              }}
+                              acceptedTypes={['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']}
+                              maxFileSize={10 * 1024 * 1024} // 10MB
+                              organizationId=""
+                              listingId={listingId}
+                            />
+                            <p className="text-xs text-gray-500">
+                              Upload a PDF, DOC, or DOCX file with your property requirements (max 10MB)
                             </p>
-                            <p className="text-xs text-gray-500 truncate">
-                              View detailed property requirements
+                          </div>
+                          
+                          {/* Property Page Link */}
+                          <div className="space-y-2">
+                            <label htmlFor="propertyPageLink" className="text-sm font-medium">
+                              Property Page Link
+                              <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+                            </label>
+                            <Input
+                              id="propertyPageLink"
+                              type="url"
+                              value={editingData.propertyPageLink || ''}
+                              onChange={(e) => {
+                                setEditingData(prev => ({ ...prev, propertyPageLink: e.target.value }));
+                                clearFieldError('propertyPageLink');
+                              }}
+                              onBlur={async (e) => {
+                                // Save property page link immediately when user finishes editing
+                                const newValue = e.target.value.trim();
+                                if (newValue !== (listingData.propertyPageLink || '').trim()) {
+                                  try {
+                                    const supabase = createClientClient();
+                                    const { error } = await supabase
+                                      .from('listings')
+                                      .update({
+                                        property_page_link: newValue || null,
+                                        updated_at: new Date().toISOString()
+                                      })
+                                      .eq('id', listingId);
+                                    
+                                    if (error) throw error;
+                                    
+                                    // Update local state
+                                    setListingData(prev => prev ? {
+                                      ...prev,
+                                      propertyPageLink: newValue || null
+                                    } : null);
+                                    
+                                    if (newValue) {
+                                      toast.success('Property page link saved!');
+                                    }
+                                  } catch (error) {
+                                    console.error('Error saving property page link:', error);
+                                    toast.error('Failed to save property page link');
+                                  }
+                                }
+                              }}
+                              placeholder="https://example.com/property-page"
+                              className={cn(
+                                "placeholder:text-muted-foreground",
+                                formErrors.propertyPageLink ? "border-red-500 focus:ring-red-500" : ""
+                              )}
+                            />
+                            {formErrors.propertyPageLink && (
+                              <p className="text-sm text-red-600 mt-1">{formErrors.propertyPageLink}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              Link to the occupier's property page or additional information
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 text-blue-600 group-hover:text-blue-700">
-                            <span className="text-xs font-medium">Download</span>
-                            <ExternalLink className="w-4 h-4" />
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 border-dashed">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                          <span className="text-blue-500">📋</span>
-                          Requirements Brochure
-                        </h4>
+                        </CardContent>
+                      </Card>
+
+                      {/* Action Buttons */}
+                      <div className="flex justify-end gap-2 pt-4">
                         <Button 
-                          size="sm" 
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={() => openModal('overview')}
+                          variant="outline" 
+                          onClick={() => {
+                            setEditingSection(null);
+                            setEditingData({});
+                          }}
                         >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add Brochure
+                          Cancel
                         </Button>
-                      </div>
-                      <p className="text-sm text-gray-600">Upload your property requirements brochure to help agents understand your needs.</p>
-                    </div>
-                  )}
-
-                  {/* Property Page Link */}
-                  {listingData.propertyPageLink ? (
-                    <div className="p-4 rounded-lg bg-violet-50 border border-violet-200">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                          <span className="text-violet-500">🔗</span>
-                          Property Page
-                        </h4>
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => openModal('overview')}
-                          >
-                            <Edit className="w-3 h-3 mr-1" />
-                            Edit
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                            <Trash2 className="w-3 h-3 mr-1" />
-                            Remove
-                          </Button>
-                        </div>
-                      </div>
-                      <a
-                        href={listingData.propertyPageLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-3 rounded-lg bg-white border border-violet-200 hover:border-violet-300 hover:bg-violet-50 transition-all duration-200 group"
-                      >
-                        <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-200 transition-colors">
-                          <ExternalLink className="w-5 h-5 text-violet-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">
-                            View Requirement Details
-                          </p>
-                          <p className="text-xs text-gray-500 truncate">
-                            {listingData.propertyPageLink}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 text-violet-600 group-hover:text-violet-700">
-                          <span className="text-xs font-medium">Visit</span>
-                          <ExternalLink className="w-4 h-4" />
-                        </div>
-                      </a>
-                    </div>
-                  ) : (
-                    <div className="p-4 rounded-lg bg-violet-50 border border-violet-200 border-dashed">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                          <span className="text-violet-500">🔗</span>
-                          Property Page
-                        </h4>
                         <Button 
-                          size="sm" 
+                          onClick={() => saveSection('companyProfile', editingData)}
                           className="bg-violet-600 hover:bg-violet-700 text-white"
-                          onClick={() => openModal('overview')}
                         >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add Link
+                          Save Changes
                         </Button>
                       </div>
-                      <p className="text-sm text-gray-600">Link to your existing property details page or requirements document.</p>
                     </div>
-                  )}
+                  ) : (
+                    /* Display Mode */
+                    <div className="space-y-4">
+                      {/* Company Details Card */}
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center gap-4 mb-4">
+                            {listingData.logoPreview ? (
+                              <img
+                                src={listingData.logoPreview}
+                                alt={`${companyName} logo`}
+                                className="w-16 h-16 object-contain border rounded-lg"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center">
+                                <span className="text-white font-semibold text-xl">
+                                  {companyName.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <h4 className="text-xl font-semibold text-gray-900">{companyName}</h4>
+                              <p className="text-sm text-gray-600">
+                                {listingData.listingType === 'residential' ? 'Residential' : 'Commercial'} Listing
+                              </p>
+                              {listingData.companyDomain && (
+                                <p className="text-sm text-violet-600">{listingData.companyDomain}</p>
+                              )}
+                            </div>
+                          </div>
 
-                  {/* Empty state if no overview content */}
-                  {!listingData.brochureFiles?.length && !listingData.propertyPageLink && (
-                    <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
-                      <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <FileText className="w-8 h-8 text-violet-500" />
-                      </div>
-                      <h4 className="font-semibold text-gray-900 mb-2">Add Your Requirements Overview</h4>
-                      <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
-                        Upload a brochure or link to your property page to help agents understand your requirements.
-                      </p>
-                      <div className="flex justify-center gap-2">
-                        <Button 
-                          size="sm" 
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={() => openModal('overview')}
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add Brochure
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => openModal('overview')}
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add Link
-                        </Button>
-                      </div>
+                          {/* Property Page Link */}
+                          {listingData.propertyPageLink && (
+                            <div className="p-4 rounded-lg bg-violet-50 border border-violet-200">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+                                  <ExternalLink className="w-5 h-5 text-violet-600" />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">Property Details Page</p>
+                                  <a 
+                                    href={listingData.propertyPageLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer" 
+                                    className="text-xs text-violet-600 hover:text-violet-700 underline truncate block"
+                                  >
+                                    {listingData.propertyPageLink}
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Requirements Brochure */}
+                          {listingData.brochureFiles && listingData.brochureFiles.length > 0 && (
+                            <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 mt-4">
+                              <h5 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-blue-600" />
+                                Requirements Brochure
+                              </h5>
+                              {listingData.brochureFiles.map((file) => (
+                                <a
+                                  key={file.id}
+                                  href={file.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 p-3 rounded-lg bg-white border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
+                                >
+                                  <FileText className="w-5 h-5 text-blue-600" />
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                                      <span>Property requirements document</span>
+                                      {file.size && (
+                                        <span>• {(file.size / (1024 * 1024)).toFixed(1)}MB</span>
+                                      )}
+                                      {file.uploadedAt && (
+                                        <span>• Uploaded {new Date(file.uploadedAt).toLocaleDateString()}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <ExternalLink className="w-4 h-4 text-blue-600" />
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
                     </div>
                   )}
                 </div>
@@ -3494,6 +4334,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         }}
         onSave={handleFAQsSave}
       />
+
+
 
     </>
   );
