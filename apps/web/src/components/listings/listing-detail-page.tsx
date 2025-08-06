@@ -33,7 +33,10 @@ import {
   Mail,
   Trash2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  GripVertical
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -105,6 +108,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   });
 
   const [editingContactData, setEditingContactData] = useState<any>(null);
+
+  // FAQ accordion state
+  const [expandedFAQs, setExpandedFAQs] = useState<Set<string>>(new Set());
+  const [draggedFAQ, setDraggedFAQ] = useState<string | null>(null);
+  const [editingFAQ, setEditingFAQ] = useState<string | null>(null);
+  const [editingFAQData, setEditingFAQData] = useState<{question: string; answer: string}>({question: '', answer: ''});
   
   // Quick Add Modal states
   const [quickAddModals, setQuickAddModals] = useState({
@@ -377,6 +386,229 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     setModalStates(prev => ({ ...prev, [modalType]: false }));
     if (modalType === 'contacts') {
       setEditingContactData(null);
+    }
+  };
+
+  // FAQ accordion toggle function
+  const toggleFAQ = (faqId: string) => {
+    setExpandedFAQs(prev => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(faqId)) {
+        newExpanded.delete(faqId);
+      } else {
+        newExpanded.add(faqId);
+      }
+      return newExpanded;
+    });
+  };
+
+  // FAQ reordering functions
+  const moveFAQ = async (fromIndex: number, toIndex: number) => {
+    if (!listingData?.faqs) return;
+
+    const newFaqs = [...listingData.faqs];
+    const [movedFaq] = newFaqs.splice(fromIndex, 1);
+    newFaqs.splice(toIndex, 0, movedFaq);
+
+    // Update the display order in the database
+    try {
+      const supabase = createClientClient();
+      
+      // Update each FAQ with its new display order
+      const updates = newFaqs.map((faq, index) => ({
+        id: faq.id,
+        display_order: index
+      }));
+
+      for (const update of updates) {
+        await supabase
+          .from('faqs')
+          .update({ display_order: update.display_order })
+          .eq('id', update.id);
+      }
+
+      // Update local state
+      setListingData(prev => prev ? { ...prev, faqs: newFaqs } : null);
+      toast.success('FAQ order updated');
+    } catch (error) {
+      console.error('Error reordering FAQs:', error);
+      toast.error('Failed to reorder FAQs');
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, faqId: string) => {
+    setDraggedFAQ(faqId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetFaqId: string) => {
+    e.preventDefault();
+    
+    if (!draggedFAQ || !listingData?.faqs) return;
+    
+    const fromIndex = listingData.faqs.findIndex(faq => faq.id === draggedFAQ);
+    const toIndex = listingData.faqs.findIndex(faq => faq.id === targetFaqId);
+    
+    if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+      moveFAQ(fromIndex, toIndex);
+    }
+    
+    setDraggedFAQ(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedFAQ(null);
+  };
+
+  // FAQ editing functions
+  const startEditingFAQ = (faq: any) => {
+    setEditingFAQ(faq.id);
+    setEditingFAQData({
+      question: faq.question || '',
+      answer: faq.answer || ''
+    });
+    // Expand the FAQ when editing
+    setExpandedFAQs(prev => new Set([...prev, faq.id]));
+  };
+
+  const cancelEditingFAQ = () => {
+    setEditingFAQ(null);
+    setEditingFAQData({question: '', answer: ''});
+  };
+
+  const saveEditingFAQ = async () => {
+    if (!editingFAQ || !editingFAQData.question.trim() || !editingFAQData.answer.trim()) {
+      toast.error('Please fill in both question and answer');
+      return;
+    }
+
+    try {
+      const supabase = createClientClient();
+      
+      const { error } = await supabase
+        .from('faqs')
+        .update({
+          question: editingFAQData.question.trim(),
+          answer: editingFAQData.answer.trim()
+        })
+        .eq('id', editingFAQ);
+
+      if (error) throw error;
+
+      // Update local state
+      setListingData(prev => {
+        if (!prev?.faqs) return prev;
+        const updatedFaqs = prev.faqs.map(faq => 
+          faq.id === editingFAQ 
+            ? { ...faq, question: editingFAQData.question.trim(), answer: editingFAQData.answer.trim() }
+            : faq
+        );
+        return { ...prev, faqs: updatedFaqs };
+      });
+
+      setEditingFAQ(null);
+      setEditingFAQData({question: '', answer: ''});
+      toast.success('FAQ updated successfully');
+    } catch (error) {
+      console.error('Error updating FAQ:', error);
+      toast.error('Failed to update FAQ');
+    }
+  };
+
+  const addNewFAQ = async () => {
+    try {
+      const supabase = createClientClient();
+      
+      // Create a new FAQ with empty values
+      const newFAQ = {
+        listing_id: listingId,
+        question: '',
+        answer: '',
+        display_order: listingData?.faqs?.length || 0
+      };
+      
+      const { data, error } = await supabase
+        .from('faqs')
+        .insert(newFAQ)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Update local state with the new FAQ
+      setListingData(prev => {
+        if (!prev) return prev;
+        const updatedFaqs = [...(prev.faqs || []), {
+          id: data.id,
+          question: data.question,
+          answer: data.answer,
+          displayOrder: data.display_order
+        }];
+        return { ...prev, faqs: updatedFaqs };
+      });
+      
+      // Automatically start editing the new FAQ
+      setEditingFAQ(data.id);
+      setEditingFAQData({
+        question: '',
+        answer: ''
+      });
+      
+      // Expand the new FAQ
+      setExpandedFAQs(prev => new Set([...prev, data.id]));
+      
+      // Scroll to the new FAQ
+      setTimeout(() => {
+        const element = document.querySelector(`[data-faq-id="${data.id}"]`);
+        element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      
+    } catch (error) {
+      console.error('Error adding FAQ:', error);
+      toast.error('Failed to add FAQ');
+    }
+  };
+
+  const deleteFAQ = async (faqId: string) => {
+    if (!confirm('Are you sure you want to delete this FAQ?')) return;
+
+    try {
+      const supabase = createClientClient();
+      
+      const { error } = await supabase
+        .from('faqs')
+        .delete()
+        .eq('id', faqId);
+
+      if (error) throw error;
+
+      // Update local state
+      setListingData(prev => {
+        if (!prev?.faqs) return prev;
+        const updatedFaqs = prev.faqs.filter(faq => faq.id !== faqId);
+        return { ...prev, faqs: updatedFaqs };
+      });
+
+      // Clean up any related state
+      setExpandedFAQs(prev => {
+        const newExpanded = new Set(prev);
+        newExpanded.delete(faqId);
+        return newExpanded;
+      });
+
+      if (editingFAQ === faqId) {
+        cancelEditingFAQ();
+      }
+
+      toast.success('FAQ deleted successfully');
+    } catch (error) {
+      console.error('Error deleting FAQ:', error);
+      toast.error('Failed to delete FAQ');
     }
   };
 
@@ -760,7 +992,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       
       // Delete existing FAQs and insert new ones
       const { error: deleteError } = await supabase
-        .from('listing_faqs')
+        .from('faqs')
         .delete()
         .eq('listing_id', listingId);
 
@@ -768,13 +1000,13 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
       if (data.faqs.length > 0) {
         const { error: insertError } = await supabase
-          .from('listing_faqs')
+          .from('faqs')
           .insert(
             data.faqs.map(faq => ({
               listing_id: listingId,
               question: faq.question,
               answer: faq.answer,
-              order_index: faq.order
+              display_order: faq.order || faq.displayOrder
             }))
           );
 
@@ -2963,180 +3195,178 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 </div>
               )}
 
-              {/* FAQs Tab Content (matching modal exactly) */}
+              {/* FAQs Tab Content (accordion style) */}
               {activeTab === 'faqs' && (
-                <div className="p-6 space-y-4">
+                <div className="p-6 space-y-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Frequently Asked Questions</h3>
+                    <div>
+                      <h3 className="text-lg font-semibold">Frequently Asked Questions ({listingData?.faqs?.length || 0})</h3>
+                      <p className="text-sm text-gray-600 mt-1">Help agents understand your requirements by answering common questions</p>
+                    </div>
                     <Button 
                       size="sm" 
                       className="bg-violet-600 hover:bg-violet-700 text-white"
-                      onClick={() => openModal('faqs')}
+                      onClick={addNewFAQ}
                     >
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit FAQs
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add FAQ
                     </Button>
                   </div>
                   
-                  {editingSection === 'faqs' ? (
-                    // Editing Mode
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-gray-900">Edit FAQs</h4>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={cancelEditing}>
-                            <X className="w-4 h-4 mr-1" />
-                            Cancel
-                          </Button>
-                          <Button size="sm" onClick={() => saveSection('faqs', editingData)} className="bg-violet-600 hover:bg-violet-700 text-white">
-                            <Save className="w-4 h-4 mr-1" />
-                            Save
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        {(editingData.faqs || []).map((faq: any, index: number) => (
-                          <div key={index} className="border rounded-lg p-4 space-y-3">
-                            <div>
-                              <label className="block text-sm font-medium mb-2">Question</label>
-                              <Input
-                                placeholder="e.g. What parking is available?"
-                                value={faq.question || ''}
-                                onChange={(e) => {
-                                  const newFaqs = [...(editingData.faqs || [])];
-                                  newFaqs[index] = { ...faq, question: e.target.value };
-                                  setEditingData((prev: any) => ({ ...prev, faqs: newFaqs }));
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium mb-2">Answer</label>
-                              <Textarea
-                                placeholder="Provide a helpful answer..."
-                                value={faq.answer || ''}
-                                onChange={(e) => {
-                                  const newFaqs = [...(editingData.faqs || [])];
-                                  newFaqs[index] = { ...faq, answer: e.target.value };
-                                  setEditingData((prev: any) => ({ ...prev, faqs: newFaqs }));
-                                }}
-                                rows={2}
-                              />
-                            </div>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => {
-                                const newFaqs = editingData.faqs.filter((_: any, i: number) => i !== index);
-                                setEditingData((prev: any) => ({ ...prev, faqs: newFaqs }));
-                              }}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4 mr-1" />
-                              Remove
-                            </Button>
-                          </div>
-                        ))}
-                        <Button
-                          variant="outline"
-                          onClick={() => openQuickAddModal('faq')}
-                          className="w-full"
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          Add Another FAQ
-                        </Button>
-                        {(editingData.faqs || []).length === 0 && (
-                          <TabEmptyState
-                            icon={MessageSquare}
-                            title="No FAQs Added Yet"
-                            description="Add frequently asked questions to address common queries from agents and prospective tenants."
-                            benefit="FAQs help filter qualified inquiries and demonstrate professionalism to potential partners."
-                            actionText="Add First FAQ"
-                            onAction={() => openQuickAddModal('faq')}
-                            examples={["What's the lease length?", "Parking availability?", "Move-in timeline?", "Nearby amenities?"]}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  ) : (
+                  {listingData?.faqs && listingData.faqs.length > 0 ? (
                     <>
-                      <div className="space-y-3">
-                        {listingData.faqs && listingData.faqs.length > 0 ? (
-                          <>
-                            <div className="flex items-center justify-between mb-4">
-                              <span className="text-sm text-gray-600">{listingData.faqs.length} FAQ(s)</span>
-                              <div className="flex items-center gap-2">
-                                <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white">
-                                  <Plus className="w-3 h-3 mr-1" />
-                                  Add FAQ
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => startEditing('faqs', { faqs: listingData.faqs })}>
-                                  <Edit className="w-3 h-3 mr-1" />
-                                  Edit All
-                                </Button>
+                      <div className="space-y-2">
+                        {listingData.faqs.map((faq) => (
+                          <div
+                            key={faq.id}
+                            data-faq-id={faq.id}
+                            className={cn(
+                              "border border-gray-200 rounded-lg bg-white transition-all",
+                              draggedFAQ === faq.id && "opacity-50 scale-95",
+                              "hover:shadow-sm"
+                            )}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, faq.id)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, faq.id)}
+                            onDragEnd={handleDragEnd}
+                          >
+                            {/* FAQ Header */}
+                            <div className="flex items-center">
+                              {/* Drag Handle */}
+                              <div className="px-2 py-3 cursor-grab active:cursor-grabbing">
+                                <GripVertical className="w-4 h-4 text-gray-400" />
                               </div>
-                            </div>
-                            {listingData.faqs.map((faq) => (
-                              <div
-                                key={faq.id}
-                                className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:border-violet-200 transition-colors group"
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-gray-900 mb-2 flex items-start gap-2">
-                                      <span className="text-violet-500 font-bold text-lg">Q:</span>
-                                      {faq.question}
-                                    </h4>
-                                    <p className="text-gray-600 text-sm leading-relaxed pl-6">
-                                      <span className="text-violet-500 font-bold mr-1">A:</span>
-                                      {faq.answer}
-                                    </p>
-                                  </div>
-                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 ml-4">
-                                    <Button variant="ghost" size="sm">
-                                      <Edit className="w-3 h-3" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
+                              
+                              {/* FAQ Content */}
+                              {editingFAQ === faq.id ? (
+                                // Editing mode - show question field only in header
+                                <div className="flex-1 px-2 py-3">
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Question</label>
+                                    <Input
+                                      value={editingFAQData.question}
+                                      onChange={(e) => setEditingFAQData(prev => ({ ...prev, question: e.target.value }))}
+                                      placeholder="Enter your question..."
+                                      className="w-full"
+                                    />
                                   </div>
                                 </div>
-                              </div>
-                            ))}
-                          </>
-                        ) : (
-                          <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
-                            <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                              <MessageSquare className="w-8 h-8 text-violet-500" />
+                              ) : (
+                                // Display mode
+                                <button
+                                  onClick={() => toggleFAQ(faq.id)}
+                                  className="flex-1 px-2 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                                >
+                                  <span className="font-medium text-gray-900">{faq.question}</span>
+                                  <div className="flex items-center gap-2">
+                                    {/* Only show action buttons when not editing any FAQ */}
+                                    {!editingFAQ && (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            startEditingFAQ(faq);
+                                          }}
+                                          className="text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteFAQ(faq.id);
+                                          }}
+                                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </>
+                                    )}
+                                    {expandedFAQs.has(faq.id) ? (
+                                      <ChevronUp className="w-4 h-4 text-gray-400" />
+                                    ) : (
+                                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                                    )}
+                                  </div>
+                                </button>
+                              )}
                             </div>
-                            <h4 className="font-semibold text-gray-900 mb-2">No FAQs Available</h4>
-                            <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
-                              Add frequently asked questions to help agents understand your requirements better.
-                            </p>
-                            <Button 
-                              onClick={() => startEditing('faqs', { faqs: [] })}
-                              className="bg-violet-600 hover:bg-violet-700 text-white"
-                            >
-                              <Plus className="w-4 h-4 mr-1" />
-                              Add FAQs
-                            </Button>
+                            
+                            {/* FAQ Answer - always visible when editing, collapsible otherwise */}
+                            {(expandedFAQs.has(faq.id) || editingFAQ === faq.id) && (
+                              <div className="px-4 pb-3 border-t border-gray-100 ml-6">
+                                {editingFAQ === faq.id ? (
+                                  <div className="pt-3 space-y-3">
+                                    <div>
+                                      <label className="block text-sm font-medium text-gray-700 mb-1">Answer</label>
+                                      <Textarea
+                                        value={editingFAQData.answer}
+                                        onChange={(e) => setEditingFAQData(prev => ({ ...prev, answer: e.target.value }))}
+                                        placeholder="Enter your answer..."
+                                        rows={3}
+                                        className="w-full"
+                                      />
+                                    </div>
+                                    {/* Save/Cancel buttons at the bottom after both fields */}
+                                    <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={cancelEditingFAQ}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={saveEditingFAQ}
+                                        disabled={!editingFAQData.question.trim() || !editingFAQData.answer.trim()}
+                                        className="bg-violet-600 hover:bg-violet-700 text-white"
+                                      >
+                                        Save
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-gray-600 text-sm leading-relaxed pt-3">
+                                    {faq.answer}
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        )}
+                        ))}
                       </div>
-
-                      <div className="mt-6 p-4 rounded-lg bg-violet-50 border border-violet-200">
-                        <h4 className="font-semibold text-violet-900 mb-2 flex items-center gap-2">
-                          <MessageSquare className="w-5 h-5" />
-                          Still have questions?
-                        </h4>
-                        <button
-                          onClick={() => setActiveTab('contact')}
-                          className="text-violet-700 text-sm hover:text-violet-800 underline transition-colors"
-                        >
-                          Contact {companyName}'s team to find out more
-                        </button>
+                      
+                      {/* Reorder tip */}
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-700">
+                          <strong>Tip:</strong> Use the drag handle (⋮⋮) to reorder your FAQs. The first FAQ will appear at the top when agents view your listing.
+                        </p>
                       </div>
                     </>
+                  ) : (
+                    <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
+                      <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <MessageSquare className="w-8 h-8 text-violet-500" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900 mb-2">No FAQs Available</h4>
+                      <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
+                        Add frequently asked questions to help agents understand your requirements better.
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        className="text-violet-600 border-violet-600 hover:bg-violet-50"
+                        onClick={addNewFAQ}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Your First FAQ
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}
