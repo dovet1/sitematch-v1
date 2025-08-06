@@ -89,7 +89,7 @@ export async function GET(
     // Debug logging (remove in production)
     if (files && files.length > 0) {
       console.log(`Files found for listing ${id}:`, files.map(f => `${f.file_type}:${f.file_name}`));
-      console.log(`All unique file types:`, [...new Set(files.map(f => f.file_type))]);
+      console.log(`All unique file types:`, Array.from(new Set(files.map(f => f.file_type))));
       console.log(`Filtered site plans:`, files.filter(f => f.file_type === 'sitePlan' || f.file_type === 'site_plan'));
       console.log(`Filtered fit outs:`, files.filter(f => f.file_type === 'fitOut' || f.file_type === 'fit_out'));
       console.log(`All files raw:`, files);
