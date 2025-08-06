@@ -53,6 +53,7 @@ import { OverviewModal } from '@/components/listings/modals/overview-modal';
 import { LocationsModal } from '@/components/listings/modals/locations-modal';
 import { ContactsModal } from '@/components/listings/modals/contacts-modal';
 import { FAQsModal } from '@/components/listings/modals/faqs-modal';
+import { InteractiveMapView } from '@/components/listings/ImmersiveListingModal/components/VisualHeroSection/InteractiveMapView';
 // Import separate requirements modals
 import { SectorsModal } from '@/components/listings/modals/sectors-modal';  
 import { UseClassesModal } from '@/components/listings/modals/use-classes-modal';
@@ -2006,47 +2007,29 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               {/* Main Visual Content Area (matching modal structure) */}
               <div className="flex-1 relative">
                 {visualView === 'map' && (
-                  <div className="h-full flex items-center justify-center p-8">
-                    <div className="text-center">
-                      {/* Enhanced Visual Icon with Animation */}
-                      <div className="relative">
-                        <div className="w-32 h-32 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse">
-                          {listingData.locations && listingData.locations.length > 0 ? (
-                            <MapPin className="w-16 h-16 text-white drop-shadow-lg" />
-                          ) : (
-                            <div className="text-center">
-                              <div className="w-12 h-12 bg-violet-400/30 rounded-full flex items-center justify-center mx-auto mb-2">
-                                <MapPin className="w-6 h-6 text-white" />
-                              </div>
-                              <div className="text-xs text-violet-200">UK & Ireland</div>
-                            </div>
-                          )}
+                  <div className="h-full p-6">
+                    {listingData.locations && listingData.locations.length > 0 ? (
+                      <div className="h-full flex flex-col">
+                        {/* Map container */}
+                        <div className="flex-1 rounded-lg overflow-hidden shadow-lg">
+                          <InteractiveMapView 
+                            locations={listingData.locations.map(loc => ({
+                              id: loc.id,
+                              place_name: loc.place_name || loc.formatted_address || 'Unknown location',
+                              coordinates: loc.coordinates
+                            }))}
+                          />
                         </div>
-                      </div>
-                      
-                      <h3 className="text-2xl font-bold text-white mb-3">
-                        {listingData.locations && listingData.locations.length > 0 
-                          ? `${listingData.locations.length} Location${listingData.locations.length > 1 ? 's' : ''}`
-                          : 'Nationwide Coverage'
-                        }
-                      </h3>
-                      <p className="text-violet-200 text-lg mb-6 max-w-sm mx-auto leading-relaxed">
-                        {listingData.locations && listingData.locations.length > 0 
-                          ? 'Specific locations have been selected for this property requirement.'
-                          : 'Open to opportunities across the UK & Ireland'
-                        }
-                      </p>
-                      
-                      {/* Enhanced Action Buttons */}
-                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                        <Button 
-                          variant="ghost" 
-                          className="text-white hover:bg-white/10 border border-white/20 px-6 py-2 backdrop-blur-sm" 
-                          onClick={() => setActiveTab('locations')}
-                        >
-                          {listingData.locations && listingData.locations.length > 0 ? 'View Details' : 'Add Locations'}
-                        </Button>
-                        {listingData.locations && listingData.locations.length > 0 && (
+                        
+                        {/* Action buttons */}
+                        <div className="flex gap-3 justify-center mt-4">
+                          <Button 
+                            variant="ghost" 
+                            className="text-white hover:bg-white/10 border border-white/20 px-6 py-2 backdrop-blur-sm" 
+                            onClick={() => setActiveTab('locations')}
+                          >
+                            View Details
+                          </Button>
                           <Button 
                             variant="ghost" 
                             className="text-white hover:bg-white/10 border border-white/20 px-6 py-2 backdrop-blur-sm" 
@@ -2058,9 +2041,40 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                             <Plus className="w-4 h-4 mr-2" />
                             Add More
                           </Button>
-                        )}
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      /* Nationwide coverage display */
+                      <div className="h-full flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="relative">
+                            <div className="w-32 h-32 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse">
+                              <div className="text-center">
+                                <div className="w-12 h-12 bg-violet-400/30 rounded-full flex items-center justify-center mx-auto mb-2">
+                                  <MapPin className="w-6 h-6 text-white" />
+                                </div>
+                                <div className="text-xs text-violet-200">UK & Ireland</div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <h3 className="text-2xl font-bold text-white mb-3">
+                            Nationwide Coverage
+                          </h3>
+                          <p className="text-violet-200 text-lg mb-6 max-w-sm mx-auto leading-relaxed">
+                            Open to opportunities across the UK & Ireland
+                          </p>
+                          
+                          <Button 
+                            variant="ghost" 
+                            className="text-white hover:bg-white/10 border border-white/20 px-6 py-2 backdrop-blur-sm" 
+                            onClick={() => setActiveTab('locations')}
+                          >
+                            Add Locations
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
