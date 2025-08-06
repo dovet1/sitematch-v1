@@ -387,26 +387,30 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   // Carousel navigation functions
   const nextSitePlan = () => {
-    if (listingData?.sitePlanFiles && listingData.sitePlanFiles.length > 0) {
-      setSitePlansIndex((prev) => (prev + 1) % listingData.sitePlanFiles.length);
+    const sitePlanFiles = listingData?.sitePlanFiles;
+    if (sitePlanFiles && sitePlanFiles.length > 0) {
+      setSitePlansIndex((prev) => (prev + 1) % sitePlanFiles.length);
     }
   };
 
   const prevSitePlan = () => {
-    if (listingData?.sitePlanFiles && listingData.sitePlanFiles.length > 0) {
-      setSitePlansIndex((prev) => (prev - 1 + listingData.sitePlanFiles.length) % listingData.sitePlanFiles.length);
+    const sitePlanFiles = listingData?.sitePlanFiles;
+    if (sitePlanFiles && sitePlanFiles.length > 0) {
+      setSitePlansIndex((prev) => (prev - 1 + sitePlanFiles.length) % sitePlanFiles.length);
     }
   };
 
   const nextFitOut = () => {
-    if (listingData?.fitOutFiles && listingData.fitOutFiles.length > 0) {
-      setFitOutsIndex((prev) => (prev + 1) % listingData.fitOutFiles.length);
+    const fitOutFiles = listingData?.fitOutFiles;
+    if (fitOutFiles && fitOutFiles.length > 0) {
+      setFitOutsIndex((prev) => (prev + 1) % fitOutFiles.length);
     }
   };
 
   const prevFitOut = () => {
-    if (listingData?.fitOutFiles && listingData.fitOutFiles.length > 0) {
-      setFitOutsIndex((prev) => (prev - 1 + listingData.fitOutFiles.length) % listingData.fitOutFiles.length);
+    const fitOutFiles = listingData?.fitOutFiles;
+    if (fitOutFiles && fitOutFiles.length > 0) {
+      setFitOutsIndex((prev) => (prev - 1 + fitOutFiles.length) % fitOutFiles.length);
     }
   };
 
@@ -510,7 +514,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       answer: faq.answer || ''
     });
     // Expand the FAQ when editing
-    setExpandedFAQs(prev => new Set([...prev, faq.id]));
+    setExpandedFAQs(prev => new Set([...Array.from(prev), faq.id]));
   };
 
   const cancelEditingFAQ = () => {
@@ -597,7 +601,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       });
       
       // Expand the new FAQ
-      setExpandedFAQs(prev => new Set([...prev, data.id]));
+      setExpandedFAQs(prev => new Set([...Array.from(prev), data.id]));
       
       // Scroll to the new FAQ
       setTimeout(() => {
@@ -1173,7 +1177,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   // Handle file uploads
   const handleFileUpload = async (files: File[], type: 'logo' | 'brochure') => {
     try {
-      const uploadedFiles = [];
+      const uploadedFiles: any[] = [];
       
       // Upload files one by one using the same API as step1 component
       for (const file of files) {
@@ -1285,7 +1289,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       const logoUrl = await fetchCompanyLogo(domain);
       if (logoUrl) {
         // Update editing data immediately for form preview
-        setEditingData(prev => ({
+        setEditingData((prev: any) => ({
           ...prev,
           logoPreview: logoUrl,
           clearbitLogo: true
@@ -1339,7 +1343,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         setDomainError('');
         toast.success('Logo found and saved!');
       } else {
-        setEditingData(prev => ({
+        setEditingData((prev: any) => ({
           ...prev,
           logoPreview: '',
           clearbitLogo: false
@@ -1347,7 +1351,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         setDomainError('No logo found for this domain. Try uploading your own logo instead.');
       }
     } catch (error) {
-      setEditingData(prev => ({
+      setEditingData((prev: any) => ({
         ...prev,
         logoPreview: '',
         clearbitLogo: false
@@ -1377,7 +1381,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   // Logo upload handlers for the form
   const handleLogoFileUpload = async (file: File | null) => {
     if (!file) {
-      setEditingData(prev => ({ ...prev, logoPreview: '' }));
+      setEditingData((prev: any) => ({ ...prev, logoPreview: '' }));
       return;
     }
     
@@ -1400,7 +1404,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       const result = await response.json();
       
       // Update editing data immediately for form preview
-      setEditingData(prev => ({
+      setEditingData((prev: any) => ({
         ...prev,
         logoPreview: result.file.url,
         clearbitLogo: false
@@ -1465,7 +1469,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   };
 
   const handleLogoPreviewChange = (preview: string | null) => {
-    setEditingData(prev => ({
+    setEditingData((prev: any) => ({
       ...prev,
       logoPreview: preview || ''
     }));
@@ -2582,8 +2586,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="relative w-full h-full max-h-full">
                             {(() => {
-                              const currentFile = listingData.sitePlanFiles[sitePlansIndex];
-                              return currentFile.mimeType?.startsWith('image/') ? (
+                              const currentFile = listingData.sitePlanFiles?.[sitePlansIndex];
+                              return currentFile && currentFile.mimeType?.startsWith('image/') ? (
                                 <img
                                   src={currentFile.url}
                                   alt={currentFile.name}
@@ -2608,7 +2612,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 size="sm" 
                                 variant="ghost" 
                                 className="text-gray-900 bg-white/95 hover:bg-white backdrop-blur-sm rounded-lg shadow-lg font-medium"
-                                onClick={() => handleViewFile(listingData.sitePlanFiles[sitePlansIndex])}
+                                onClick={() => handleViewFile(listingData.sitePlanFiles?.[sitePlansIndex])}
                               >
                                 <Eye className="w-4 h-4 mr-2" />
                                 View
@@ -2617,7 +2621,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 size="sm" 
                                 variant="ghost" 
                                 className="text-red-600 bg-white/95 hover:bg-white backdrop-blur-sm rounded-lg shadow-lg font-medium"
-                                onClick={() => handleDeleteFile(listingData.sitePlanFiles[sitePlansIndex], 'siteplans')}
+                                onClick={() => handleDeleteFile(listingData.sitePlanFiles?.[sitePlansIndex], 'siteplans')}
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Delete
@@ -2736,8 +2740,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="relative w-full h-full max-h-full">
                             {(() => {
-                              const currentFile = listingData.fitOutFiles[fitOutsIndex];
-                              if (currentFile.mimeType?.startsWith('image/')) {
+                              const currentFile = listingData.fitOutFiles?.[fitOutsIndex];
+                              if (currentFile && currentFile.mimeType?.startsWith('image/')) {
                                 return (
                                   <img
                                     src={currentFile.url}
@@ -2777,16 +2781,16 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 size="sm" 
                                 variant="ghost" 
                                 className="text-gray-900 bg-white/95 hover:bg-white backdrop-blur-sm rounded-lg shadow-lg font-medium"
-                                onClick={() => handleViewFile(listingData.fitOutFiles[fitOutsIndex])}
+                                onClick={() => handleViewFile(listingData.fitOutFiles?.[fitOutsIndex])}
                               >
                                 <Eye className="w-4 h-4 mr-2" />
-                                {listingData.fitOutFiles[fitOutsIndex].isVideo ? 'Play' : 'View'}
+                                {listingData.fitOutFiles?.[fitOutsIndex]?.isVideo ? 'Play' : 'View'}
                               </Button>
                               <Button 
                                 size="sm" 
                                 variant="ghost" 
                                 className="text-red-600 bg-white/95 hover:bg-white backdrop-blur-sm rounded-lg shadow-lg font-medium"
-                                onClick={() => handleDeleteFile(listingData.fitOutFiles[fitOutsIndex], 'fitouts')}
+                                onClick={() => handleDeleteFile(listingData.fitOutFiles?.[fitOutsIndex], 'fitouts')}
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Delete
@@ -2979,7 +2983,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               <div className="absolute top-6 left-6 z-30">
                 <Button
                   variant="ghost"
-                  size="md"
+                  size="default"
                   onClick={() => router.push('/occupier/dashboard')}
                   className="text-gray-900 hover:text-gray-900 font-medium bg-white/95 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 px-4 py-2.5 rounded-lg border border-white/20"
                 >
@@ -3134,7 +3138,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                   name="listingType"
                                   value="commercial"
                                   checked={editingData.listingType === 'commercial'}
-                                  onChange={() => setEditingData(prev => ({ ...prev, listingType: 'commercial' }))}
+                                  onChange={() => setEditingData((prev: any) => ({ ...prev, listingType: 'commercial' }))}
                                   className="mt-0.5"
                                 />
                                 <div className="flex-1 space-y-1">
@@ -3155,7 +3159,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                   name="listingType"
                                   value="residential"
                                   checked={editingData.listingType === 'residential'}
-                                  onChange={() => setEditingData(prev => ({ ...prev, listingType: 'residential' }))}
+                                  onChange={() => setEditingData((prev: any) => ({ ...prev, listingType: 'residential' }))}
                                   className="mt-0.5"
                                 />
                                 <div className="flex-1 space-y-1">
@@ -3187,7 +3191,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               id="companyName"
                               value={editingData.companyName || ''}
                               onChange={(e) => {
-                                setEditingData(prev => ({ ...prev, companyName: e.target.value }));
+                                setEditingData((prev: any) => ({ ...prev, companyName: e.target.value }));
                                 clearFieldError('companyName');
                               }}
                               placeholder="Enter your company name"
@@ -3220,7 +3224,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                             
                             <RadioGroup
                               value={editingData.logoMethod || 'clearbit'}
-                              onValueChange={(value) => setEditingData(prev => ({ ...prev, logoMethod: value as 'clearbit' | 'upload' }))}
+                              onValueChange={(value) => setEditingData((prev: any) => ({ ...prev, logoMethod: value as 'clearbit' | 'upload' }))}
                               className="space-y-3"
                             >
                               {/* Clearbit Method Card */}
@@ -3265,7 +3269,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                   id="companyDomain"
                                   value={editingData.companyDomain || ''}
                                   onChange={(e) => {
-                                    setEditingData(prev => ({ ...prev, companyDomain: e.target.value }));
+                                    setEditingData((prev: any) => ({ ...prev, companyDomain: e.target.value }));
                                     clearFieldError('companyDomain');
                                     if (domainError) setDomainError('');
                                   }}
@@ -3277,7 +3281,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                       const formattedDomain = formatDomainWithProtocol(rawDomain);
                                       
                                       // Update the input field to show the cleaned domain (without protocol for Clearbit)
-                                      setEditingData(prev => ({ 
+                                      setEditingData((prev: any) => ({ 
                                         ...prev, 
                                         companyDomain: normalizedDomain,
                                         // Store the formatted version for other uses if needed
@@ -3320,7 +3324,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => setEditingData(prev => ({ ...prev, logoMethod: 'upload' }))}
+                                            onClick={() => setEditingData((prev: any) => ({ ...prev, logoMethod: 'upload' }))}
                                             className="mt-2 text-xs w-full sm:w-auto"
                                           >
                                             Upload logo instead
@@ -3368,7 +3372,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                       type="button"
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => setEditingData(prev => ({ ...prev, logoMethod: 'upload' }))}
+                                      onClick={() => setEditingData((prev: any) => ({ ...prev, logoMethod: 'upload' }))}
                                       className="text-xs w-full sm:w-auto sm:flex-shrink-0"
                                     >
                                       Use different logo
@@ -3448,7 +3452,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               type="url"
                               value={editingData.propertyPageLink || ''}
                               onChange={(e) => {
-                                setEditingData(prev => ({ ...prev, propertyPageLink: e.target.value }));
+                                setEditingData((prev: any) => ({ ...prev, propertyPageLink: e.target.value }));
                                 clearFieldError('propertyPageLink');
                               }}
                               onBlur={async (e) => {
@@ -3470,7 +3474,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     // Update local state
                                     setListingData(prev => prev ? {
                                       ...prev,
-                                      propertyPageLink: newValue || null
+                                      propertyPageLink: newValue || undefined
                                     } : null);
                                     
                                     if (newValue) {
@@ -4004,7 +4008,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     <Button 
                                       variant="ghost" 
                                       size="sm"
-                                      onClick={() => handleEditContact(contact.id, contact)}
+                                      onClick={() => contact.id && handleEditContact(contact.id, contact)}
                                     >
                                       <Edit className="w-3 h-3 mr-1" />
                                       Edit
@@ -4013,7 +4017,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                       variant="ghost" 
                                       size="sm" 
                                       className="text-red-600 hover:text-red-700"
-                                      onClick={() => handleDeleteContact(contact.id)}
+                                      onClick={() => contact.id && handleDeleteContact(contact.id)}
                                     >
                                       <Trash2 className="w-3 h-3 mr-1" />
                                       Remove
@@ -4096,9 +4100,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               "hover:shadow-sm"
                             )}
                             draggable
-                            onDragStart={(e) => handleDragStart(e, faq.id)}
+                            onDragStart={(e) => faq.id && handleDragStart(e, faq.id)}
                             onDragOver={handleDragOver}
-                            onDrop={(e) => handleDrop(e, faq.id)}
+                            onDrop={(e) => faq.id && handleDrop(e, faq.id)}
                             onDragEnd={handleDragEnd}
                           >
                             {/* FAQ Header */}
@@ -4125,7 +4129,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               ) : (
                                 // Display mode
                                 <button
-                                  onClick={() => toggleFAQ(faq.id)}
+                                  onClick={() => faq.id && toggleFAQ(faq.id)}
                                   className="flex-1 px-2 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
                                 >
                                   <span className="font-medium text-gray-900">{faq.question}</span>
@@ -4149,7 +4153,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                           size="sm"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            deleteFAQ(faq.id);
+                                            faq.id && deleteFAQ(faq.id);
                                           }}
                                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
@@ -4157,7 +4161,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                         </Button>
                                       </>
                                     )}
-                                    {expandedFAQs.has(faq.id) ? (
+                                    {faq.id && expandedFAQs.has(faq.id) ? (
                                       <ChevronUp className="w-4 h-4 text-gray-400" />
                                     ) : (
                                       <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -4168,7 +4172,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                             </div>
                             
                             {/* FAQ Answer - always visible when editing, collapsible otherwise */}
-                            {(expandedFAQs.has(faq.id) || editingFAQ === faq.id) && (
+                            {faq.id && (expandedFAQs.has(faq.id) || editingFAQ === faq.id) && (
                               <div className="px-4 pb-3 border-t border-gray-100 ml-6">
                                 {editingFAQ === faq.id ? (
                                   <div className="pt-3 space-y-3">
@@ -4346,7 +4350,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         isOpen={modalStates.faqs}
         onClose={() => closeModal('faqs')}
         currentData={{
-          faqs: listingData?.faqs || []
+          faqs: (listingData?.faqs || []).filter(faq => faq.id) as any[]
         }}
         onSave={handleFAQsSave}
       />

@@ -110,7 +110,7 @@ export function RequirementsModal({
               
               <MultiSelectDropdown
                 options={sectorsOptions}
-                selected={sectors}
+                value={sectors}
                 onChange={setSectors}
                 placeholder="Select sectors..."
                 className="w-full"
@@ -139,7 +139,7 @@ export function RequirementsModal({
               
               <MultiSelectDropdown
                 options={useClassesOptions}
-                selected={useClasses}
+                value={useClasses}
                 onChange={setUseClasses}
                 placeholder="Select use classes..."
                 className="w-full"
@@ -172,8 +172,8 @@ export function RequirementsModal({
                   max={50000}
                   step={100}
                   value={siteSize}
-                  onValueChange={setSiteSize}
-                  formatLabel={formatSiteSize}
+                  onChange={setSiteSize}
+                  formatValue={formatSiteSize}
                 />
               </div>
 
@@ -198,8 +198,8 @@ export function RequirementsModal({
                   max={500}
                   step={1}
                   value={dwellingCount}
-                  onValueChange={setDwellingCount}
-                  formatLabel={(value) => value.toString()}
+                  onChange={setDwellingCount}
+                  formatValue={(value) => value.toString()}
                 />
               </div>
 
@@ -222,8 +222,8 @@ export function RequirementsModal({
                   max={50}
                   step={0.1}
                   value={siteAcreage}
-                  onValueChange={setSiteAcreage}
-                  formatLabel={formatAcreage}
+                  onChange={setSiteAcreage}
+                  formatValue={formatAcreage}
                 />
               </div>
 

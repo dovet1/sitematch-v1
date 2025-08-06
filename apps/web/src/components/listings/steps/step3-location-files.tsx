@@ -150,8 +150,6 @@ export function Step3LocationFiles({
           <LocationSearch
             value={data.locations || []}
             onChange={handleLocationChange}
-            isNationwide={data.locationSearchNationwide || false}
-            onNationwideChange={handleNationwideChange}
             error={hasLocationError}
           />
           

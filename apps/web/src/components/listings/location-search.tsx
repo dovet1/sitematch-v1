@@ -190,7 +190,7 @@ export function LocationSearch({
 
   const handleLocationRemove = (locationId: string) => {
     const updatedLocations = value.filter(loc => loc.id !== locationId);
-    onChange(updatedLocations);
+    onChange?.(updatedLocations);
   };
 
 

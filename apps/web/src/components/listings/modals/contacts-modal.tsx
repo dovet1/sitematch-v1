@@ -135,7 +135,7 @@ export function ContactsModal({
     }
 
     const contactData: Contact = {
-      id: (internalEditingContact?.id || editingContact?.id) || undefined,
+      id: (internalEditingContact?.id || editingContact?.id) || '',
       name: formData.name.trim(),
       title: formData.title.trim(),
       email: formData.email.trim(),
@@ -176,7 +176,7 @@ export function ContactsModal({
       } else {
         // Internal editing mode
         setContacts(prev => 
-          prev.map(contact => contact.id === contactToUpdate.id ? contactData : contact)
+          prev.map(contact => contact.id === contactToUpdate?.id ? contactData : contact)
         );
       }
     }
