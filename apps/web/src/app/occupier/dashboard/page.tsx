@@ -8,6 +8,7 @@ import { Plus, FileText, Clock, CheckCircle, AlertTriangle, Eye } from 'lucide-r
 import Link from 'next/link';
 import StatusBadge from '../components/StatusBadge';
 import ConsultantProfileCard from '@/components/consultant/consultant-profile-card';
+import { ImmersiveListingModal } from '@/components/listings/ImmersiveListingModal';
 import { useState, useEffect } from 'react';
 import type { User } from '@supabase/auth-js';
 
@@ -24,6 +25,7 @@ export default function OccupierDashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [previewListingId, setPreviewListingId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -114,7 +116,7 @@ export default function OccupierDashboard() {
           message: listing.rejection_reason || 'Changes requested',
           action: {
             label: 'Fix & Resubmit',
-            href: `/occupier/create-listing?edit=${listing.id}`,
+            href: `/occupier/listing/${listing.id}`,
             variant: 'destructive' as const
           }
         };
@@ -125,7 +127,7 @@ export default function OccupierDashboard() {
           message: 'Under review',
           action: {
             label: 'View Details',
-            href: `/occupier/create-listing?edit=${listing.id}`,
+            href: `/occupier/listing/${listing.id}`,
             variant: 'secondary' as const
           }
         };
@@ -136,7 +138,7 @@ export default function OccupierDashboard() {
           message: 'Published',
           action: {
             label: 'View Listing',
-            href: `/occupier/create-listing?edit=${listing.id}`,
+            href: `/occupier/listing/${listing.id}`,
             variant: 'secondary' as const
           }
         };
@@ -147,7 +149,7 @@ export default function OccupierDashboard() {
           message: 'Draft',
           action: {
             label: 'Continue Editing',
-            href: `/occupier/create-listing?edit=${listing.id}`,
+            href: `/occupier/listing/${listing.id}`,
             variant: 'outline' as const
           }
         };
@@ -280,15 +282,13 @@ export default function OccupierDashboard() {
                           {/* Right Side - Actions */}
                           <div className="flex items-center gap-2 ml-14 sm:ml-0">
                             <Button
-                              asChild
                               variant="ghost"
                               size="sm"
                               className="hover:bg-muted"
+                              onClick={() => setPreviewListingId(listing.id)}
                             >
-                              <Link href={`/occupier/create-listing?edit=${listing.id}`}>
-                                <Eye className="w-4 h-4" />
-                                <span className="sr-only">View details</span>
-                              </Link>
+                              <Eye className="w-4 h-4" />
+                              <span className="sr-only">Preview listing</span>
                             </Button>
                             
                             <Button
@@ -316,6 +316,15 @@ export default function OccupierDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Preview Modal */}
+      {previewListingId && (
+        <ImmersiveListingModal
+          listingId={previewListingId}
+          isOpen={true}
+          onClose={() => setPreviewListingId(null)}
+        />
+      )}
     </div>
   );
 }

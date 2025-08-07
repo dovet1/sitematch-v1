@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { DocumentUpload } from '@/components/listings/document-upload';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { 
   Building2, 
@@ -30,6 +31,7 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
+  AlertCircle,
   ExternalLink,
   Save,
   X,
@@ -144,6 +146,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     companyDomain?: string;
     propertyPageLink?: string;
   }>({});
+  
+  // Track latest version for rejection status
+  const [latestVersion, setLatestVersion] = useState<any>(null);
+  // Track dismissal state for rejection banner
+  const [isRejectionBannerDismissed, setIsRejectionBannerDismissed] = useState(false);
 
 
 
@@ -221,6 +228,17 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         supabase.from('listing_sectors').select('sector_id').eq('listing_id', listingId),
         supabase.from('listing_use_classes').select('use_class_id').eq('listing_id', listingId)
       ]);
+      
+      // Fetch latest version to check for rejection
+      const { data: latestVersionData } = await supabase
+        .from('listing_versions')
+        .select('status, review_notes, reviewed_at')
+        .eq('listing_id', listingId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      setLatestVersion(latestVersionData);
       
       console.log('Fetched contacts from DB:', contacts);
       console.log('First contact headshot_url:', contacts?.[0]?.headshot_url);
@@ -3080,6 +3098,77 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 ))}
               </div>
             </div>
+
+            {/* Rejection Feedback Card */}
+            {listingData?.status === 'draft' && latestVersion?.status === 'rejected' && !isRejectionBannerDismissed && (
+              <div className="max-w-4xl mx-auto px-6 lg:px-8 py-6">
+                <div className="relative overflow-hidden rounded-xl border-l-4 border-l-amber-500 bg-gradient-to-r from-amber-50/80 via-orange-50/60 to-red-50/40 shadow-sm">
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-100/20 to-red-100/20 opacity-30"></div>
+                  
+                  <div className="relative p-6">
+                    {/* Dismiss Button */}
+                    <button
+                      onClick={() => setIsRejectionBannerDismissed(true)}
+                      className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors duration-200 shadow-sm hover:shadow-md"
+                      aria-label="Dismiss notification"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+
+                    <div className="flex items-start gap-4 pr-8">
+                      {/* Status Icon */}
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md">
+                          <AlertCircle className="h-5 w-5 text-white" />
+                        </div>
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                            Action Required
+                            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 font-medium">
+                              Needs Revision
+                            </Badge>
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {latestVersion.reviewed_at ? new Date(latestVersion.reviewed_at).toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : 'Recently'}
+                          </p>
+                        </div>
+                        
+                        <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 mb-4 border border-amber-200/50">
+                          <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4 text-amber-600" />
+                            Feedback from our review team:
+                          </p>
+                          <p className="text-gray-800 leading-relaxed">
+                            {latestVersion.review_notes || 'No specific feedback provided. Please review all sections and ensure completeness.'}
+                          </p>
+                        </div>
+                        
+                        <div className="bg-blue-50/80 backdrop-blur-sm rounded-lg p-4 border border-blue-200/50">
+                          <p className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                            Next Steps:
+                          </p>
+                          <div className="text-sm text-blue-700 space-y-1">
+                            <p>1. Review the feedback above and make the necessary changes using the tabs</p>
+                            <p>2. Once you've addressed all concerns, use the <strong>"Submit for Review"</strong> button to resubmit your listing</p>
+                            <p>3. Our team will review your changes and get back to you promptly</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Tab Content Container */}
             <div className="max-w-4xl mx-auto px-6 lg:px-8 py-6 lg:py-8" role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>

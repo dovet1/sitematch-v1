@@ -20,46 +20,68 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { Eye, Edit, Archive, Trash2, Clock, CheckCircle, XCircle, ArchiveIcon } from 'lucide-react'
+import { Eye, Edit, Archive, Trash2, Clock, CheckCircle, XCircle, ArchiveIcon, RefreshCw, Info } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ImmersiveListingModal } from '@/components/listings/ImmersiveListingModal'
+import { RejectionModal } from './RejectionModal'
+import { toast } from 'sonner'
 
 interface ModerationQueueProps {
   listings: any[] // Using any for now until we have the full type
 }
 
-export function ModerationQueue({ listings }: ModerationQueueProps) {
+export function ModerationQueue({ listings: initialListings }: ModerationQueueProps) {
+  const listings = initialListings // Store in local variable for use in callbacks
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortField, setSortField] = useState<string>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const [previewListingId, setPreviewListingId] = useState<string | null>(null)
+  const [rejectionModal, setRejectionModal] = useState<{ listingId: string; companyName: string; versionId?: string } | null>(null)
   const router = useRouter()
 
   const handleStatusUpdate = async (listingId: string, status: 'approved' | 'rejected' | 'archived') => {
     setIsLoading(listingId)
     try {
-      const requestBody: any = { status }
-      
-      // Add default reason for rejections from quick actions
-      if (status === 'rejected') {
-        requestBody.reason = 'Quick rejection - requires review'
-      }
-
-      const response = await fetch(`/api/listings/${listingId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      })
-
-      if (response.ok) {
-        router.refresh() // Refresh the page to show updated data
+      if (status === 'approved') {
+        // Use the versioning system for approval
+        const { approveListingAction } = await import('@/lib/actions/submit-listing-for-review')
+        
+        // Find the listing to get its pending version ID
+        const listing = listings.find(l => l.id === listingId)
+        const versionId = listing?.pending_version_id
+        
+        if (versionId) {
+          const result = await approveListingAction(listingId, versionId)
+          if (result.success) {
+            toast.success('Listing approved successfully')
+            router.refresh()
+          } else {
+            toast.error(result.error || 'Failed to approve listing')
+          }
+        } else {
+          toast.error('No pending review version found')
+        }
       } else {
-        console.error('Failed to update listing status')
+        // For archived status, use the existing API
+        const requestBody: any = { status }
+        
+        const response = await fetch(`/api/listings/${listingId}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        })
+
+        if (response.ok) {
+          toast.success('Listing archived successfully')
+          router.refresh()
+        } else {
+          toast.error('Failed to update listing status')
+        }
       }
     } catch (error) {
       console.error('Error updating listing status:', error)
@@ -71,7 +93,17 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
   // Filter and sort listings
   const filteredAndSortedListings = listings
     .filter(listing => {
-      const matchesStatus = filterStatus === 'all' || listing.status === filterStatus
+      let matchesStatus = false;
+      
+      if (filterStatus === 'all') {
+        matchesStatus = true;
+      } else if (filterStatus === 'rejected') {
+        // Show recently rejected listings (status is 'draft' but has recent rejection)
+        matchesStatus = listing.status === 'draft' && listing.is_recently_rejected;
+      } else {
+        matchesStatus = listing.status === filterStatus;
+      }
+      
       const matchesSearch = searchTerm === '' || 
         listing.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
       return matchesStatus && matchesSearch
@@ -118,7 +150,7 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="rejected">Rejected (Last 7 days)</SelectItem>
               <SelectItem value="archived">Archived</SelectItem>
             </SelectContent>
           </Select>
@@ -170,7 +202,15 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
               filteredAndSortedListings.map((listing) => (
                 <TableRow key={listing.id}>
                   <TableCell className="font-medium">
-                    {listing.company_name || 'Unnamed Company'}
+                    <div className="flex items-center gap-2">
+                      {listing.company_name || 'Unnamed Company'}
+                      {listing.is_resubmission && (
+                        <Badge variant="outline" className="flex items-center gap-1 text-orange-600 border-orange-200">
+                          <RefreshCw className="h-3 w-3" />
+                          Resubmitted ({listing.rejection_count}x)
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={listing.status} />
@@ -199,12 +239,6 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
                         <Eye className="h-4 w-4" />
                       </Button>
                       
-                      {/* Edit Listing */}
-                      <Button variant="ghost" size="sm" asChild title="Edit listing">
-                        <Link href={`/occupier/listing/${listing.id}`}>
-                          <Edit className="h-4 w-4" />
-                        </Link>
-                      </Button>
                       {listing.status === 'pending' && (
                         <>
                           <Button 
@@ -221,7 +255,11 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
                             variant="ghost" 
                             size="sm" 
                             className="text-destructive hover:text-destructive"
-                            onClick={() => handleStatusUpdate(listing.id, 'rejected')}
+                            onClick={() => setRejectionModal({ 
+                              listingId: listing.id, 
+                              companyName: listing.company_name || 'Unnamed Company',
+                              versionId: listing.pending_version_id
+                            })}
                             disabled={isLoading === listing.id}
                             title="Reject listing"
                           >
@@ -258,6 +296,17 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
           onClose={() => setPreviewListingId(null)}
           // Use the admin API endpoint since admins need to see all data
           apiEndpoint={`/api/admin/listings/${previewListingId}/detailed`}
+        />
+      )}
+
+      {/* Rejection Modal */}
+      {rejectionModal && (
+        <RejectionModal
+          isOpen={true}
+          onClose={() => setRejectionModal(null)}
+          listingId={rejectionModal.listingId}
+          companyName={rejectionModal.companyName}
+          versionId={rejectionModal.versionId}
         />
       )}
     </div>

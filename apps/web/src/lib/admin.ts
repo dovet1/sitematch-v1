@@ -140,7 +140,10 @@ export class AdminService {
   }
 
   async getAllListings() {
-    // Get listings first
+    // Get listings first - include rejected listings from last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
     const { data: listings, error } = await this.supabase
       .from('listings')
       .select('*')
@@ -187,6 +190,28 @@ export class AdminService {
       `)
       .in('listing_id', listingIds)
 
+    // Get pending review versions for all listings
+    const { data: allListingVersions } = await this.supabase
+      .from('listing_versions')
+      .select('id, listing_id, status')
+      .eq('status', 'pending_review')
+      .in('listing_id', listingIds)
+    
+    // Get latest rejected versions to show recently rejected listings
+    const { data: rejectedVersions } = await this.supabase
+      .from('listing_versions')
+      .select('listing_id, status, reviewed_at, review_notes')
+      .eq('status', 'rejected')
+      .gte('reviewed_at', sevenDaysAgo.toISOString())
+      .in('listing_id', listingIds)
+
+    // Get all rejected versions to identify resubmissions
+    const { data: allRejectedVersions } = await this.supabase
+      .from('listing_versions')
+      .select('listing_id, status, reviewed_at, review_notes')
+      .eq('status', 'rejected')
+      .in('listing_id', listingIds)
+
     // Create lookup maps
     const sectorsMap = new Map(sectors?.map((s: any) => [s.id, s]) || [])
     const useClassesMap = new Map(useClasses?.map((uc: any) => [uc.id, uc]) || [])
@@ -195,6 +220,9 @@ export class AdminService {
     // Create junction data maps
     const listingSectorsMap = new Map<string, any[]>();
     const listingUseClassesMap = new Map<string, any[]>();
+    const listingVersionsMap = new Map<string, string>();
+    const rejectedVersionsMap = new Map<string, any>();
+    const allRejectedVersionsMap = new Map<string, any[]>();
 
     allListingSectors?.forEach((ls: any) => {
       if (!listingSectorsMap.has(ls.listing_id)) {
@@ -214,17 +242,50 @@ export class AdminService {
       }
     });
 
+    allListingVersions?.forEach((version: any) => {
+      listingVersionsMap.set(version.listing_id, version.id);
+    });
+
+    rejectedVersions?.forEach((version: any) => {
+      rejectedVersionsMap.set(version.listing_id, version);
+    });
+
+    // Group all rejected versions by listing_id to count rejections
+    allRejectedVersions?.forEach((version: any) => {
+      if (!allRejectedVersionsMap.has(version.listing_id)) {
+        allRejectedVersionsMap.set(version.listing_id, []);
+      }
+      allRejectedVersionsMap.get(version.listing_id)!.push(version);
+    });
+
     // Join data in JavaScript - support both junction tables and legacy single relationships
     const listingsWithJoins = listings.map((listing: any) => {
       const sectorsFromJunction = listingSectorsMap.get(listing.id) || [];
       const useClassesFromJunction = listingUseClassesMap.get(listing.id) || [];
+      const rejectedVersion = rejectedVersionsMap.get(listing.id);
+      const allRejectedForListing = allRejectedVersionsMap.get(listing.id) || [];
 
       return {
         ...listing,
         // Use junction table data if available, fallback to single relationships
         sectors: sectorsFromJunction.length > 0 ? sectorsFromJunction : (sectorsMap.get(listing.sector_id) ? [sectorsMap.get(listing.sector_id)] : []),
         use_classes: useClassesFromJunction.length > 0 ? useClassesFromJunction : (useClassesMap.get(listing.use_class_id) ? [useClassesMap.get(listing.use_class_id)] : []),
-        users: usersMap.get(listing.created_by) || null
+        users: usersMap.get(listing.created_by) || null,
+        pending_version_id: listingVersionsMap.get(listing.id) || null,
+        // Add rejection info for recently rejected listings
+        recent_rejection: rejectedVersion ? {
+          reviewed_at: rejectedVersion.reviewed_at,
+          review_notes: rejectedVersion.review_notes
+        } : null,
+        // Mark as recently rejected if it has a rejected version within 7 days
+        is_recently_rejected: !!rejectedVersion,
+        // Mark as resubmission if status is pending and has previous rejections
+        is_resubmission: listing.status === 'pending' && allRejectedForListing.length > 0,
+        // Count of previous rejections
+        rejection_count: allRejectedForListing.length,
+        // Most recent rejection details for resubmissions
+        previous_rejection: allRejectedForListing.length > 0 ? allRejectedForListing
+          .sort((a: any, b: any) => new Date(b.reviewed_at).getTime() - new Date(a.reviewed_at).getTime())[0] : null
       };
     })
 

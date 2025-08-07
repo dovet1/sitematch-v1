@@ -138,33 +138,95 @@ export async function rejectListingAction(
   versionId: string, 
   reason?: string
 ): Promise<{ success: boolean; error?: string }> {
+  console.log('rejectListingAction called:', { listingId, versionId, reason });
+  
   try {
     // Check authentication and authorization
     const currentUser = await getCurrentUser();
+    console.log('Current user:', currentUser);
     
     if (!currentUser || currentUser.role !== 'admin') {
+      console.log('Authorization failed:', { currentUser });
       return { success: false, error: 'Admin access required' };
     }
 
-    const { createServerClient } = await import('@/lib/supabase');
-    const supabase = createServerClient();
+    // Use admin client for unrestricted access to bypass RLS
+    const { createAdminClient } = await import('@/lib/supabase');
+    const supabase = createAdminClient();
+    
+    // First, let's verify the version exists and get the latest one if needed
+    let targetVersionId = versionId;
+    let existingVersion;
+    
+    if (versionId) {
+      const { data, error: fetchError } = await supabase
+        .from('listing_versions')
+        .select('id, status, listing_id')
+        .eq('id', versionId)
+        .single();
+        
+      console.log('Existing version check:', { data, fetchError });
+      existingVersion = data;
+    }
+    
+    // If no version found with the provided ID, get the latest pending_review version
+    if (!existingVersion) {
+      console.log('Version not found with ID, fetching latest pending_review version for listing:', listingId);
+      
+      const { data: latestVersion, error: latestError } = await supabase
+        .from('listing_versions')
+        .select('id, status, listing_id')
+        .eq('listing_id', listingId)
+        .eq('status', 'pending_review')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      console.log('Latest version check:', { latestVersion, latestError });
+      
+      if (latestError || !latestVersion) {
+        console.error('No pending review version found for listing');
+        return { success: false, error: 'No pending review version found for this listing' };
+      }
+      
+      existingVersion = latestVersion;
+      targetVersionId = latestVersion.id;
+    }
+    
+    console.log('Using version:', { targetVersionId, status: existingVersion.status });
 
     // Update the version status to rejected
-    const { error: versionError } = await supabase
+    console.log('Updating version status to rejected...');
+    const updateData = {
+      status: 'rejected',
+      reviewed_by: currentUser.id,
+      reviewed_at: new Date().toISOString(),
+      review_notes: reason || null,
+      is_live: false
+    };
+    console.log('Update data:', updateData);
+    console.log('Version ID:', versionId);
+    
+    const { data: versionData, error: versionError } = await supabase
       .from('listing_versions')
-      .update({ 
-        status: 'rejected',
-        reviewed_by: currentUser.id,
-        reviewed_at: new Date().toISOString(),
-        rejection_reason: reason || null,
-        is_live: false
-      })
-      .eq('id', versionId);
+      .update(updateData)
+      .eq('id', targetVersionId)
+      .select();
+
+    console.log('Version update result:', { versionData, versionError });
 
     if (versionError) {
+      console.error('Version update error:', versionError);
       return { success: false, error: `Failed to reject version: ${versionError.message}` };
     }
+    
+    if (!versionData || versionData.length === 0) {
+      console.error('No version was updated - version ID might not exist');
+      return { success: false, error: 'Version not found or already processed' };
+    }
 
+    console.log('Version updated successfully, now updating listing status...');
+    
     // Update the listing status back to draft
     const { error: listingError } = await supabase
       .from('listings')
@@ -174,8 +236,11 @@ export async function rejectListingAction(
       .eq('id', listingId);
 
     if (listingError) {
+      console.error('Listing update error:', listingError);
       return { success: false, error: `Failed to update listing: ${listingError.message}` };
     }
+
+    console.log('Listing status updated successfully');
 
     // Revalidate relevant pages
     revalidatePath(`/occupier/listing/${listingId}`);
