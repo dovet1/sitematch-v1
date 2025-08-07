@@ -95,7 +95,8 @@ export async function createListingVersion(
       content,
       status,
       created_by: userId,
-      is_live: status === 'approved'
+      is_live: status === 'approved',
+      submitted_at: new Date().toISOString()
     };
 
     const { data: version, error: versionError } = await client

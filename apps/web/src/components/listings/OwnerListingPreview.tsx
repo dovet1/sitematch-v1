@@ -23,8 +23,17 @@ export function OwnerListingPreview({ listingId, userId }: OwnerListingPreviewPr
   }, []);
 
   const handleClose = () => {
-    // Navigate back to the listing detail page
-    router.push(`/occupier/listing/${listingId}`);
+    // Check if user came from dashboard by looking at the referrer
+    const referrer = document.referrer;
+    const isDashboard = referrer.includes('/occupier/dashboard');
+    
+    if (isDashboard) {
+      // Return to dashboard if they came from there
+      router.push('/occupier/dashboard');
+    } else {
+      // Otherwise return to listing detail page (default behavior)
+      router.push(`/occupier/listing/${listingId}`);
+    }
   };
 
   return (

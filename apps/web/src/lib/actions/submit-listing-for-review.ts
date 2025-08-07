@@ -84,10 +84,32 @@ export async function approveListingAction(
       return { success: false, error: 'Admin access required' };
     }
 
-    const { createServerClient } = await import('@/lib/supabase');
-    const supabase = createServerClient();
+    // Use admin client for unrestricted access
+    const { createAdminClient } = await import('@/lib/supabase');
+    const supabase = createAdminClient();
 
-    // Update the version status to approved and set is_live flag
+    // First, get the version data that we're approving
+    const { data: version, error: versionFetchError } = await supabase
+      .from('listing_versions')
+      .select('listing_id, content')
+      .eq('id', versionId)
+      .single();
+
+    if (versionFetchError || !version) {
+      return { success: false, error: 'Version not found' };
+    }
+
+    // Step 1: Deactivate all other versions for this listing
+    const { error: deactivateError } = await supabase
+      .from('listing_versions')
+      .update({ is_live: false })
+      .eq('listing_id', listingId);
+
+    if (deactivateError) {
+      return { success: false, error: `Failed to deactivate other versions: ${deactivateError.message}` };
+    }
+
+    // Step 2: Update the version status to approved and set is_live flag
     const { error: versionError } = await supabase
       .from('listing_versions')
       .update({ 
@@ -102,14 +124,32 @@ export async function approveListingAction(
       return { success: false, error: `Failed to approve version: ${versionError.message}` };
     }
 
-    // Update the listing to make this the live version
+    // Step 3: Sync approved version content to main listings table
+    const content = version.content;
+    const updateData: any = {
+      status: 'approved',
+      updated_at: new Date().toISOString()
+    };
+
+    // Sync key fields from the approved version's content
+    if (content.company_name) updateData.company_name = content.company_name;
+    if (content.description) updateData.description = content.description;
+    if (content.contact_name) updateData.contact_name = content.contact_name;
+    if (content.contact_title) updateData.contact_title = content.contact_title;
+    if (content.contact_email) updateData.contact_email = content.contact_email;
+    if (content.contact_phone) updateData.contact_phone = content.contact_phone;
+    if (content.property_page_link) updateData.property_page_link = content.property_page_link;
+    if (content.listing_type) updateData.listing_type = content.listing_type;
+    if (content.site_size_min) updateData.site_size_min = content.site_size_min;
+    if (content.site_size_max) updateData.site_size_max = content.site_size_max;
+    if (content.dwelling_count_min) updateData.dwelling_count_min = content.dwelling_count_min;
+    if (content.dwelling_count_max) updateData.dwelling_count_max = content.dwelling_count_max;
+    if (content.site_acreage_min) updateData.site_acreage_min = content.site_acreage_min;
+    if (content.site_acreage_max) updateData.site_acreage_max = content.site_acreage_max;
+
     const { error: listingError } = await supabase
       .from('listings')
-      .update({ 
-        live_version_id: versionId,
-        status: 'approved',
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', listingId);
 
     if (listingError) {

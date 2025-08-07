@@ -210,14 +210,14 @@ export function ImmersiveListingModal({
             )}
 
             {/* Property Page Link */}
-            {listing.company.property_page_link && (
+            {listing.company?.property_page_link && (
               <div className="p-4 rounded-lg bg-violet-50 border border-violet-200">
                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <span className="text-violet-500">🔗</span>
                   Property Page
                 </h4>
                 <a
-                  href={listing.company.property_page_link}
+                  href={listing.company?.property_page_link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-3 rounded-lg bg-white border border-violet-200 hover:border-violet-300 hover:bg-violet-50 transition-all duration-200 group"
@@ -233,7 +233,7 @@ export function ImmersiveListingModal({
                       View Requirement Details
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {listing.company.property_page_link}
+                      {listing.company?.property_page_link}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 text-violet-600 group-hover:text-violet-700">
@@ -267,47 +267,47 @@ export function ImmersiveListingModal({
             <h3 className="text-lg font-semibold">Requirements</h3>
             
             {/* Site Size Requirements */}
-            {listing.listing_type === 'commercial' && listing.company.site_size && (
+            {listing.listing_type === 'commercial' && listing.company?.site_size && (
               <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
                 <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                   <span className="text-violet-500">📐</span>
                   Site Size
                 </h4>
-                <p className="text-gray-700">{listing.company.site_size}</p>
+                <p className="text-gray-700">{listing.company?.site_size}</p>
               </div>
             )}
 
             {/* Dwelling Count (for residential) */}
-            {listing.listing_type === 'residential' && listing.company.dwelling_count && (
+            {listing.listing_type === 'residential' && listing.company?.dwelling_count && (
               <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
                 <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                   <span className="text-violet-500">🏠</span>
                   Dwelling Count
                 </h4>
-                <p className="text-gray-700">{listing.company.dwelling_count}</p>
+                <p className="text-gray-700">{listing.company?.dwelling_count}</p>
               </div>
             )}
 
             {/* Site Acreage (for residential) */}
-            {listing.listing_type === 'residential' && listing.company.site_acreage && (
+            {listing.listing_type === 'residential' && listing.company?.site_acreage && (
               <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
                 <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                   <span className="text-violet-500">🌾</span>
                   Site Acreage
                 </h4>
-                <p className="text-gray-700">{listing.company.site_acreage}</p>
+                <p className="text-gray-700">{listing.company?.site_acreage}</p>
               </div>
             )}
 
             {/* Sectors */}
-            {listing.listing_type === 'commercial' && listing.company.sectors && listing.company.sectors.length > 0 && (
+            {listing.listing_type === 'commercial' && listing.company?.sectors && listing.company.sectors.length > 0 && (
               <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <span className="text-blue-500">🏢</span>
                   Sectors
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {listing.company.sectors.map((sector, index) => (
+                  {listing.company?.sectors?.map((sector, index) => (
                     <span
                       key={index}
                       className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200"
@@ -320,14 +320,14 @@ export function ImmersiveListingModal({
             )}
 
             {/* Use Classes */}
-            {listing.listing_type === 'commercial' && listing.company.use_classes && listing.company.use_classes.length > 0 && (
+            {listing.listing_type === 'commercial' && listing.company?.use_classes && listing.company.use_classes.length > 0 && (
               <div className="p-4 rounded-lg bg-green-50 border border-green-200">
                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <span className="text-green-500">🏗️</span>
                   Use Classes
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {listing.company.use_classes.map((useClass, index) => (
+                  {listing.company?.use_classes?.map((useClass, index) => (
                     <span
                       key={index}
                       className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200"
@@ -342,12 +342,12 @@ export function ImmersiveListingModal({
 
             {/* Empty state */}
             {((listing.listing_type === 'commercial' && 
-               !listing.company.site_size && 
-               (!listing.company.sectors || listing.company.sectors.length === 0) && 
-               (!listing.company.use_classes || listing.company.use_classes.length === 0)) ||
+               !listing.company?.site_size && 
+               (!listing.company?.sectors || listing.company.sectors?.length === 0) && 
+               (!listing.company?.use_classes || listing.company.use_classes?.length === 0)) ||
               (listing.listing_type === 'residential' && 
-               !listing.company.dwelling_count && 
-               !listing.company.site_acreage)) && (
+               !listing.company?.dwelling_count && 
+               !listing.company?.site_acreage)) && (
               <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
                 <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
@@ -530,7 +530,7 @@ export function ImmersiveListingModal({
                 onClick={() => setActiveTab('contact')}
                 className="text-violet-700 text-sm hover:text-violet-800 underline transition-colors"
               >
-                Contact {listing.company.name}'s team to find out more
+                Contact {listing.company?.name || 'the team'} to find out more
               </button>
             </div>
           </div>
@@ -577,8 +577,8 @@ export function ImmersiveListingModal({
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {listing?.company.logo_url ? (
                       <img
-                        src={listing.company.logo_url}
-                        alt={`${listing.company.name} logo`}
+                        src={listing.company?.logo_url}
+                        alt={`${listing.company?.name || 'Company'} logo`}
                         className="w-8 h-8 object-contain flex-shrink-0"
                       />
                     ) : (
@@ -622,7 +622,7 @@ export function ImmersiveListingModal({
                         tabs={tabs}
                         activeTab={activeTab}
                         onTabChange={handleTabChange}
-                        companyName={listing.company.name}
+                        companyName={listing.company?.name}
                       />
 
                       {/* Tab Content */}
@@ -697,31 +697,31 @@ export function ImmersiveListingModal({
                     {/* Company Hero Card */}
                     <div className={styles.companyHero}>
                       <div className="flex items-center gap-4">
-                        {listing.company.logo_url ? (
+                        {listing.company?.logo_url ? (
                           <img
-                            src={listing.company.logo_url}
-                            alt={`${listing.company.name} logo`}
+                            src={listing.company?.logo_url}
+                            alt={`${listing.company?.name || 'Company'} logo`}
                             className="w-12 h-12 object-contain"
                           />
                         ) : (
                           <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center">
                             <span className="text-white font-semibold">
-                              {listing.company.name?.charAt(0).toUpperCase() || 'C'}
+                              {listing.company?.name?.charAt(0).toUpperCase() || 'C'}
                             </span>
                           </div>
                         )}
                         <div>
                           <h2 className="text-2xl font-bold text-gray-900">
-                            {listing.company.name}
+                            {listing.company?.name || 'Unnamed Company'}
                           </h2>
                           <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
                             <span>{listing.listing_type === 'residential' ? 'Residential' : 'Commercial'}</span>
                             <span>📍 {listing.locations?.all && listing.locations.all.length > 0 ? `${listing.locations.all.length} Locations` : 'Nationwide'}</span>
-                            {listing.listing_type === 'commercial' && listing.company.site_size && (
-                              <span>📐 {listing.company.site_size}</span>
+                            {listing.listing_type === 'commercial' && listing.company?.site_size && (
+                              <span>📐 {listing.company?.site_size}</span>
                             )}
-                            {listing.listing_type === 'residential' && listing.company.site_acreage && (
-                              <span>🌾 {listing.company.site_acreage}</span>
+                            {listing.listing_type === 'residential' && listing.company?.site_acreage && (
+                              <span>🌾 {listing.company?.site_acreage}</span>
                             )}
                           </div>
                         </div>

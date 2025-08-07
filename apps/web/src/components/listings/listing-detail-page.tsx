@@ -1137,7 +1137,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         
         // Redirect to success page after short delay
         setTimeout(() => {
-          router.push(`/occupier/listing/${listingId}/submitted`);
+          router.push(`/occupier/success/${listingId}`);
         }, 1500);
       } else {
         throw new Error(result.error || 'Failed to submit for review');
@@ -3960,28 +3960,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         </div>
                       ) : null}
 
-                      {/* Empty state */}
-                      {((listingData.listingType === 'commercial' && 
-                         !listingData.siteSizeMin && !listingData.siteSizeMax &&
-                         (!listingData.sectors || listingData.sectors.length === 0) &&
-                         (!listingData.useClassIds || listingData.useClassIds.length === 0)) ||
-                        (listingData.listingType === 'residential' && 
-                         !listingData.dwellingCountMin && !listingData.dwellingCountMax &&
-                         !listingData.siteAcreageMin && !listingData.siteAcreageMax)) && (
-                        <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
-                          <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Building2 className="w-8 h-8 text-violet-500" />
-                          </div>
-                          <h4 className="font-semibold text-gray-900 mb-2">Add Your Requirements</h4>
-                          <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
-                            Specify your property requirements to help agents find the right opportunities.
-                          </p>
-                          <Button onClick={() => openModal('siteSize')} className="bg-violet-600 hover:bg-violet-700 text-white">
-                            <Plus className="w-4 h-4 mr-1" />
-                            Add Requirements
-                          </Button>
-                        </div>
-                      )}
                     </>
                   )}
                 </div>
