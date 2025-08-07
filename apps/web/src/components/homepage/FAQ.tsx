@@ -8,11 +8,11 @@ export function FAQ() {
 
   const faqs = [
     {
-      question: "How does SiteMatch work?",
-      answer: "SiteMatch connects commercial property requirements with available spaces. Occupiers post their specific needs, our team reviews and verifies the requirements, then qualified landlords and agents contact them directly with suitable options."
+      question: "How does SiteMatcher work?",
+      answer: "SiteMatcher connects commercial property requirements with available spaces. Occupiers post their specific needs, our team reviews and verifies the requirements, then qualified landlords and agents contact them directly with suitable options."
     },
     {
-      question: "Is SiteMatch free to use?",
+      question: "Is SiteMatcher free to use?",
       answer: "Yes, posting requirements and searching for properties is completely free for occupiers. There are no hidden fees or subscription costs. Landlords and agents can browse requirements at no charge as well."
     },
     {
@@ -24,7 +24,7 @@ export function FAQ() {
       answer: "Most verified requirements receive their first response within 72 hours. High-demand locations and property types often see responses within 24 hours. Our approval process typically takes 1-2 business days."
     },
     {
-      question: "What areas does SiteMatch cover?",
+      question: "What areas does SiteMatcher cover?",
       answer: "We cover all major UK cities and towns, with particularly strong coverage in London, Manchester, Birmingham, Leeds, Glasgow, and other metropolitan areas. Our network spans over 120 cities across Britain."
     },
     {

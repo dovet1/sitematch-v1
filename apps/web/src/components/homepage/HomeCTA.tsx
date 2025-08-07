@@ -12,7 +12,7 @@ export function HomeCTA() {
             Ready to Find Your Perfect Match?
           </h2>
           <p className="body-large text-primary-100 max-w-2xl mx-auto">
-            Join the growing community of property professionals who are making smarter connections through SiteMatch.
+            Join the growing community of property professionals who are making smarter connections through SiteMatcher.
           </p>
         </div>
 
@@ -105,7 +105,7 @@ export function HomeCTA() {
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3">
             <Users className="w-5 h-5 text-white" />
             <span className="text-white font-medium">
-              Join 200+ companies already using SiteMatch
+              Join 200+ companies already using SiteMatcher
             </span>
           </div>
         </div>

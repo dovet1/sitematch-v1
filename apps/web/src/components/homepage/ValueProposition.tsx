@@ -20,7 +20,7 @@ export function ValueProposition() {
             Connect Property Requirements with Perfect Opportunities
           </h2>
           <p className="body-large text-muted-foreground max-w-3xl mx-auto">
-            SiteMatch bridges the gap between property seekers and requirement listers, 
+            SiteMatcher bridges the gap between property seekers and requirement listers, 
             creating a transparent marketplace for commercial property needs across the UK.
           </p>
         </div>

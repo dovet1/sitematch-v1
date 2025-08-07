@@ -62,12 +62,12 @@ export function Header() {
             <Link 
               href="/" 
               className="flex items-center space-x-2 violet-bloom-link hover:opacity-80 transition-opacity"
-              aria-label="SiteMatch Home"
+              aria-label="SiteMatcher Home"
             >
               <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-sm">
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
-              <span className="heading-4 font-bold text-foreground">SiteMatch</span>
+              <span className="heading-4 font-bold text-foreground">SiteMatcher</span>
             </Link>
           </div>
 

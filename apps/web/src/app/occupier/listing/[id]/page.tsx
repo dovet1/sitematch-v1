@@ -36,6 +36,6 @@ export default async function ListingDetailRoute({ params }: ListingDetailRouteP
 }
 
 export const metadata = {
-  title: 'Listing Details - SiteMatch',
+  title: 'Listing Details - SiteMatcher',
   description: 'View and edit your property listing details',
 };

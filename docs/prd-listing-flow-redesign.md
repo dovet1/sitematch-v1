@@ -82,7 +82,7 @@ All interfaces must maintain existing accessibility standards with proper ARIA l
 
 ### Branding
 
-Must follow existing SiteMatch branding patterns including the violet-bloom design system, consistent typography, and existing interaction patterns.
+Must follow existing SiteMatcher branding patterns including the violet-bloom design system, consistent typography, and existing interaction patterns.
 
 ### Target Device and Platforms
 
@@ -178,7 +178,7 @@ so that I understand what else I can add to improve my listing.
 5. Supporting Documents section shows "Add site plans and fit-out examples" empty state
 6. Each empty state includes a clear "Add Information" button
 7. Empty states include brief descriptions of what information goes in each section
-8. Visual design matches existing SiteMatch patterns
+8. Visual design matches existing SiteMatcher patterns
 
 ## Epic 2: Progressive Enhancement Interface
 
@@ -446,7 +446,7 @@ so that I can work on my listings while traveling or away from my desktop.
 - Version management UI for live vs draft listings (FR11)
 - Real-time save status and conflict resolution interfaces
 
-Please provide wireframes, interaction flows, and component specifications that align with existing SiteMatch patterns."
+Please provide wireframes, interaction flows, and component specifications that align with existing SiteMatcher patterns."
 
 ### Technical Architect Prompt  
 

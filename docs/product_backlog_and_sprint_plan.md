@@ -1,4 +1,4 @@
-# SiteMatch – Product Backlog & Sprint Plan (MVP)
+# SiteMatcher – Product Backlog & Sprint Plan (MVP)
 
 *Prepared by BMAD PO – v1.1 · 30 June 2025*
 

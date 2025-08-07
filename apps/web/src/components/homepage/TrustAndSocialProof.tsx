@@ -8,7 +8,7 @@ export function TrustAndSocialProof() {
       icon: Users,
       value: '2,500+',
       label: 'Active Users',
-      description: 'Property professionals using SiteMatch',
+      description: 'Property professionals using SiteMatcher',
     },
     {
       icon: CheckCircle,
@@ -61,7 +61,7 @@ export function TrustAndSocialProof() {
             Trusted by Property Professionals
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Join thousands of landlords, agents, and occupiers who trust SiteMatch to connect 
+            Join thousands of landlords, agents, and occupiers who trust SiteMatcher to connect 
             property opportunities with requirements efficiently and securely.
           </p>
         </div>

@@ -5,7 +5,7 @@ test.describe('Homepage', () => {
     await page.goto('/')
     
     // Check if the main heading is visible
-    await expect(page.getByRole('heading', { name: 'Welcome to SiteMatch' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Welcome to SiteMatcher' })).toBeVisible()
     
     // Check if the main description is visible
     await expect(page.getByText('Find and list commercial properties and businesses in your area')).toBeVisible()
@@ -28,6 +28,6 @@ test.describe('Homepage', () => {
   test('should have proper page title', async ({ page }) => {
     await page.goto('/')
     
-    await expect(page).toHaveTitle(/SiteMatch - Commercial Directory/)
+    await expect(page).toHaveTitle(/SiteMatcher - Commercial Directory/)
   })
 })

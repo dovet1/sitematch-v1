@@ -8,8 +8,8 @@ import { LeadCaptureProvider } from '@/components/lead-capture-provider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'SiteMatch - Commercial Directory',
-  description: 'Find and list commercial space with SiteMatch',
+  title: 'SiteMatcher - Commercial Directory',
+  description: 'Find and list commercial space with SiteMatcher',
   viewport: 'width=device-width, initial-scale=1',
 }
 

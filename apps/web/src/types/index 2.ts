@@ -1,4 +1,4 @@
-// Basic types for the SiteMatch application
+// Basic types for the SiteMatcher application
 
 export interface User {
   id: string

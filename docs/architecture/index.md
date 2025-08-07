@@ -1,8 +1,8 @@
-# SiteMatch – Architecture Specification (MVP)
+# SiteMatcher – Architecture Specification (MVP)
 
 ## Table of Contents
 
-- [SiteMatch – Architecture Specification (MVP)](#table-of-contents)
+- [SiteMatcher – Architecture Specification (MVP)](#table-of-contents)
   - [1. Overview](./1-overview.md)
   - [2. Tech Stack](./2-tech-stack.md)
   - [3. Domain Model (ER excerpt)](./3-domain-model-er-excerpt.md)

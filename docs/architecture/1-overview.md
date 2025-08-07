@@ -1,6 +1,6 @@
 # 1. Overview
 
-SiteMatch MVP will be delivered as a **serverless full‑stack application** combining a Next.js front‑end with a Supabase back‑end (Postgres, Auth, Storage, Edge Functions).  All services are **multi‑tenant** but scoped to the UK & Ireland market.
+SiteMatcher MVP will be delivered as a **serverless full‑stack application** combining a Next.js front‑end with a Supabase back‑end (Postgres, Auth, Storage, Edge Functions).  All services are **multi‑tenant** but scoped to the UK & Ireland market.
 
 ![High‑level diagram](link-to-lucid-or-figma-diagram)
 

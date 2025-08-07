@@ -41,7 +41,7 @@ export function createRejectionEmail(data: RejectionEmailData): EmailTemplate {
     ? data.customReason 
     : reasonText;
 
-  const subject = "SiteMatch Listing Review - Action Required";
+  const subject = "SiteMatcher Listing Review - Action Required";
   
   const html = `
 <!DOCTYPE html>
@@ -61,7 +61,7 @@ export function createRejectionEmail(data: RejectionEmailData): EmailTemplate {
 </head>
 <body>
   <div class="header">
-    <h1 style="margin: 0; font-size: 24px;">SiteMatch</h1>
+    <h1 style="margin: 0; font-size: 24px;">SiteMatcher</h1>
     <p style="margin: 5px 0 0 0; opacity: 0.9;">Property Requirements Directory</p>
   </div>
   
@@ -88,18 +88,18 @@ export function createRejectionEmail(data: RejectionEmailData): EmailTemplate {
     <p>If you have any questions about the feedback provided, please don't hesitate to contact our support team.</p>
     
     <p>Best regards,<br>
-    The SiteMatch Team</p>
+    The SiteMatcher Team</p>
     
     <div class="footer">
       <p>This email was sent regarding your listing: <strong>${data.listingTitle}</strong></p>
-      <p>SiteMatch - Connecting occupiers with the perfect property</p>
+      <p>SiteMatcher - Connecting occupiers with the perfect property</p>
     </div>
   </div>
 </body>
 </html>`;
 
   const text = `
-SiteMatch Listing Review - Action Required
+SiteMatcher Listing Review - Action Required
 
 Dear ${data.contactName},
 
@@ -116,17 +116,17 @@ Once you've made the necessary updates, our team will review your submission aga
 If you have any questions about the feedback provided, please contact our support team.
 
 Best regards,
-The SiteMatch Team
+The SiteMatcher Team
 
 This email was sent regarding your listing: ${data.listingTitle}
-SiteMatch - Connecting occupiers with the perfect property
+SiteMatcher - Connecting occupiers with the perfect property
 `;
 
   return { subject, html, text };
 }
 
 export function createApprovalEmail(data: ApprovalEmailData): EmailTemplate {
-  const subject = "Your SiteMatch Listing is Now Live!";
+  const subject = "Your SiteMatcher Listing is Now Live!";
   
   const html = `
 <!DOCTYPE html>
@@ -155,7 +155,7 @@ export function createApprovalEmail(data: ApprovalEmailData): EmailTemplate {
     
     <p>Dear ${data.contactName},</p>
     
-    <p>Great news! Your property requirement listing for <strong>${data.companyName}</strong> has been approved and is now live in the SiteMatch directory.</p>
+    <p>Great news! Your property requirement listing for <strong>${data.companyName}</strong> has been approved and is now live in the SiteMatcher directory.</p>
     
     <div class="success-box">
       <strong>✅ Your listing is now visible to property professionals</strong><br>
@@ -171,25 +171,25 @@ export function createApprovalEmail(data: ApprovalEmailData): EmailTemplate {
       <li>You can manage your listing anytime through your dashboard</li>
     </ul>
     
-    <p>Thank you for choosing SiteMatch to help find your perfect property.</p>
+    <p>Thank you for choosing SiteMatcher to help find your perfect property.</p>
     
     <p>Best regards,<br>
-    The SiteMatch Team</p>
+    The SiteMatcher Team</p>
     
     <div class="footer">
       <p>Listing: <strong>${data.listingTitle}</strong></p>
-      <p>SiteMatch - Connecting occupiers with the perfect property</p>
+      <p>SiteMatcher - Connecting occupiers with the perfect property</p>
     </div>
   </div>
 </body>
 </html>`;
 
   const text = `
-Your SiteMatch Listing is Now Live!
+Your SiteMatcher Listing is Now Live!
 
 Dear ${data.contactName},
 
-Great news! Your property requirement listing for ${data.companyName} has been approved and is now live in the SiteMatch directory.
+Great news! Your property requirement listing for ${data.companyName} has been approved and is now live in the SiteMatcher directory.
 
 ✅ Your listing is now visible to property professionals
 Landlords and agents can now discover your requirements and reach out with suitable opportunities.
@@ -201,20 +201,20 @@ What happens next?
 - You'll receive email notifications when landlords express interest  
 - You can manage your listing anytime through your dashboard
 
-Thank you for choosing SiteMatch to help find your perfect property.
+Thank you for choosing SiteMatcher to help find your perfect property.
 
 Best regards,
-The SiteMatch Team
+The SiteMatcher Team
 
 Listing: ${data.listingTitle}
-SiteMatch - Connecting occupiers with the perfect property
+SiteMatcher - Connecting occupiers with the perfect property
 `;
 
   return { subject, html, text };
 }
 
 export function createSubmissionEmail(data: SubmissionEmailData): EmailTemplate {
-  const subject = "Submission Received - Your SiteMatch Listing is Under Review";
+  const subject = "Submission Received - Your SiteMatcher Listing is Under Review";
   
   const html = `
 <!DOCTYPE html>
@@ -302,12 +302,12 @@ export function createSubmissionEmail(data: SubmissionEmailData): EmailTemplate 
     <p>If you have any questions about your submission or need to make changes, don't hesitate to contact our support team.</p>
     
     <p>Best regards,<br>
-    The SiteMatch Team</p>
+    The SiteMatcher Team</p>
     
     <div class="footer">
       <p><strong>Listing:</strong> ${data.listingTitle}</p>
-      <p>SiteMatch - Connecting occupiers with the perfect property</p>
-      <p style="font-size: 12px; color: #9ca3af; margin-top: 20px;">This email was sent because you submitted a property requirement listing on SiteMatch.</p>
+      <p>SiteMatcher - Connecting occupiers with the perfect property</p>
+      <p style="font-size: 12px; color: #9ca3af; margin-top: 20px;">This email was sent because you submitted a property requirement listing on SiteMatcher.</p>
     </div>
   </div>
 </body>
@@ -343,10 +343,10 @@ QUICK ACTIONS:
 If you have any questions about your submission or need to make changes, contact our support team.
 
 Best regards,
-The SiteMatch Team
+The SiteMatcher Team
 
 Listing: ${data.listingTitle}
-SiteMatch - Connecting occupiers with the perfect property
+SiteMatcher - Connecting occupiers with the perfect property
 `;
 
   return { subject, html, text };

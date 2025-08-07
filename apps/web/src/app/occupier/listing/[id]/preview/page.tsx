@@ -30,6 +30,6 @@ export default async function OwnerPreviewRoute({ params }: OwnerPreviewRoutePro
 }
 
 export const metadata = {
-  title: 'Preview Listing - SiteMatch',
+  title: 'Preview Listing - SiteMatcher',
   description: 'Preview your listing as it would appear to potential matches',
 };

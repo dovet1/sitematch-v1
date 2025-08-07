@@ -77,7 +77,7 @@ export function SignUpModal({ children, redirectTo }: SignUpModalProps) {
             Create Account
           </DialogTitle>
           <DialogDescription>
-            Join SiteMatch to start discovering and listing commercial properties.
+            Join SiteMatcher to start discovering and listing commercial properties.
           </DialogDescription>
         </DialogHeader>
         

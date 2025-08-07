@@ -251,6 +251,6 @@ export default async function ListingSuccessPage({ params }: PageProps) {
 }
 
 export const metadata = {
-  title: 'Submission Successful - SiteMatch',
+  title: 'Submission Successful - SiteMatcher',
   description: 'Your property requirement has been successfully submitted for review',
 };

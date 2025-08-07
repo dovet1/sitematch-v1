@@ -97,6 +97,6 @@ export default async function QuickCreateListingPage() {
 // =====================================================
 
 export const metadata = {
-  title: 'Create New Listing - SiteMatch',
+  title: 'Create New Listing - SiteMatcher',
   description: 'Create a new property requirement listing quickly',
 };
