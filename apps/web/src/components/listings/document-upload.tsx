@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-import { uploadFileDirect, deleteFileDirect } from '@/lib/file-upload-direct';
+import { uploadFileTemporary, deleteTempFile, TempFileUpload } from '@/lib/temp-file-storage';
 import { validateFiles } from '@/lib/file-upload';
 import { useAuth } from '@/hooks/use-auth';
 import { formatFileSize, isDocumentFile, isImageFile } from '@/types/uploads';
@@ -29,6 +29,7 @@ interface DocumentUploadProps extends MultiFileUploadProps {
   showPreview?: boolean;
   organizationId: string;
   listingId?: string;
+  useTemporaryStorage?: boolean; // New prop to control storage mode
 }
 
 export function DocumentUpload({
@@ -43,7 +44,8 @@ export function DocumentUpload({
   maxFileSize = 10 * 1024 * 1024, // 10MB default
   showPreview = true,
   organizationId,
-  listingId
+  listingId,
+  useTemporaryStorage = !listingId // Use temporary storage when no listingId
 }: DocumentUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -96,26 +98,58 @@ export function DocumentUpload({
       const uploadedFiles: UploadedFile[] = [];
       let totalProgress = 0;
       
-      // Upload files one by one using direct upload
+      // Upload files using appropriate method
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const result = await uploadFileDirect({
-          file,
-          fileType: type,
-          listingId,
-          userId: user.id,
-          onProgress: (fileProgress) => {
-            // Calculate overall progress
-            totalProgress = ((i * 100) + fileProgress) / files.length;
-            setUploadProgress(totalProgress);
-            onProgress?.(totalProgress);
-          }
-        });
         
-        if (result.success && result.file) {
-          uploadedFiles.push(result.file);
+        if (useTemporaryStorage) {
+          // Use temporary storage (no database record)
+          const result = await uploadFileTemporary({
+            file,
+            fileType: type,
+            userId: user.id,
+            onProgress: (fileProgress) => {
+              totalProgress = ((i * 100) + fileProgress) / files.length;
+              setUploadProgress(totalProgress);
+              onProgress?.(totalProgress);
+            }
+          });
+          
+          if (result.success && result.file) {
+            // Convert TempFileUpload to UploadedFile format
+            uploadedFiles.push({
+              id: result.file.id,
+              name: result.file.name,
+              url: result.file.url,
+              path: result.file.path,
+              type: result.file.type,
+              size: result.file.size,
+              mimeType: result.file.mimeType,
+              uploadedAt: result.file.uploadedAt
+            });
+          } else {
+            throw new Error(result.error || 'Upload failed');
+          }
         } else {
-          throw new Error(result.error || 'Upload failed');
+          // Use direct upload with immediate database record
+          const { uploadFileDirect } = await import('@/lib/file-upload-direct');
+          const result = await uploadFileDirect({
+            file,
+            fileType: type,
+            listingId,
+            userId: user.id,
+            onProgress: (fileProgress) => {
+              totalProgress = ((i * 100) + fileProgress) / files.length;
+              setUploadProgress(totalProgress);
+              onProgress?.(totalProgress);
+            }
+          });
+          
+          if (result.success && result.file) {
+            uploadedFiles.push(result.file);
+          } else {
+            throw new Error(result.error || 'Upload failed');
+          }
         }
       }
 
@@ -152,22 +186,36 @@ export function DocumentUpload({
       };
       const bucket = bucketMap[type as keyof typeof bucketMap] || 'brochures';
       
-      // Delete from storage and database
-      const result = await deleteFileDirect(fileToRemove.id, fileToRemove.path, bucket);
-      
-      if (result.success) {
-        // Remove from local state
-        const updatedFiles = value.filter(file => file.id !== fileToRemove.id);
-        onChange(updatedFiles);
+      if (useTemporaryStorage) {
+        // Delete from temporary storage only
+        const result = await deleteTempFile(fileToRemove.path, bucket);
+        
+        if (result.success) {
+          // Remove from local state
+          const updatedFiles = value.filter(file => file.id !== fileToRemove.id);
+          onChange(updatedFiles);
+        } else {
+          throw new Error(result.error || 'Failed to delete file');
+        }
       } else {
-        throw new Error(result.error || 'Failed to delete file');
+        // Delete from storage and database
+        const { deleteFileDirect } = await import('@/lib/file-upload-direct');
+        const result = await deleteFileDirect(fileToRemove.id, fileToRemove.path, bucket);
+        
+        if (result.success) {
+          // Remove from local state
+          const updatedFiles = value.filter(file => file.id !== fileToRemove.id);
+          onChange(updatedFiles);
+        } else {
+          throw new Error(result.error || 'Failed to delete file');
+        }
       }
       
     } catch (error) {
       console.error('File deletion error:', error);
       setValidationError(error instanceof Error ? error.message : 'Failed to delete file');
     }
-  }, [disabled, type, value, onChange]);
+  }, [disabled, type, value, onChange, useTemporaryStorage]);
 
   // =====================================================
   // DRAG AND DROP

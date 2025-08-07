@@ -18,10 +18,12 @@ interface QuickCreateClientProps {
 export function QuickCreateClient({ userEmail, userId }: QuickCreateClientProps) {
   const handleImmediateCreation = useCallback(async (data: CompanyInfoData) => {
     console.log('Raw data received:', data);
+    console.log('Primary contact data:', data.primaryContact);
+    console.log('Headshot URL:', data.primaryContact?.headshotUrl);
     console.log('Data keys:', Object.keys(data));
     console.log('Data types:', Object.keys(data).map(key => `${key}: ${typeof data[key as keyof CompanyInfoData]}`));
     
-    // Serialize the data to remove File objects and other non-serializable items
+    // Serialize the data to preserve file metadata but remove File objects
     const serializedData = {
       companyName: data.companyName,
       listingType: data.listingType,
@@ -32,13 +34,15 @@ export function QuickCreateClient({ userEmail, userId }: QuickCreateClientProps)
         contactPhone: data.primaryContact.contactPhone,
         contactArea: data.primaryContact.contactArea,
         isPrimaryContact: data.primaryContact.isPrimaryContact,
-        headshotUrl: data.primaryContact.headshotUrl
+        headshotUrl: data.primaryContact.headshotUrl,
+        headshotFile: data.primaryContact.headshotFile // Include metadata for server action
       } : undefined,
       clearbitLogo: data.clearbitLogo,
       companyDomain: data.companyDomain,
-      logoUrl: data.logoUrl, // Include for uploaded logos
+      logoUrl: data.logoUrl,
+      logoFile: data.logoFile, // Include metadata for server action
       propertyPageLink: data.propertyPageLink,
-      // Handle brochure files - only URLs, not File objects
+      // Handle brochure files - preserve all metadata
       brochureFiles: data.brochureFiles?.map((file) => ({
         name: file.name,
         url: file.url,

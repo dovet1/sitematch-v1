@@ -87,6 +87,7 @@ export function Step1ImmediateCreation({
   // Logo method state
   const [logoLoading, setLogoLoading] = useState(false);
   const [domainError, setDomainError] = useState<string>('');
+  const [headshotUploading, setHeadshotUploading] = useState(false);
 
   // =====================================================
   // EFFECTS - Same as original Step1CompanyInfo
@@ -226,72 +227,95 @@ export function Step1ImmediateCreation({
     setValue('clearbitLogo', false);
     if (!file) {
       setValue('logoPreview', '');
+      setValue('logoUrl', '');
+      return;
     }
     
     if (file instanceof File) {
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('type', 'logo');
-        formData.append('is_primary', 'true');
-        
-        if (listingId) {
-          formData.append('listingId', listingId);
-        }
-        
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
+        // Use temporary file storage since listing doesn't exist yet
+        const { uploadFileTemporary } = await import('@/lib/temp-file-storage');
+        const result = await uploadFileTemporary({
+          file,
+          fileType: 'logo',
+          userId: userId
         });
         
-        if (response.ok) {
-          const result = await response.json();
-          setValue('logoUrl', result.url);
+        if (result.success && result.file) {
+          setValue('logoUrl', result.file.url);
+          // Store metadata for later database insertion
+          setValue('logoFile', {
+            tempPath: result.file.path,
+            tempUrl: result.file.url,
+            name: file.name,
+            size: file.size,
+            type: file.type
+          } as any);
+          // Set preview so ImageUpload shows the uploaded logo
+          setValue('logoPreview', result.file.url);
         } else {
-          console.error('Failed to upload logo:', await response.text());
+          console.error('Failed to upload logo:', result.error);
+          toast.error('Failed to upload logo');
         }
       } catch (error) {
         console.error('Error uploading logo:', error);
+        toast.error('Error uploading logo');
       }
     }
-  }, [setValue, listingId]);
+  }, [setValue, userId]);
 
   const handleLogoPreviewChange = useCallback((preview: string | null) => {
     setValue('logoPreview', preview || '');
   }, [setValue]);
 
   const handleHeadshotUpload = useCallback(async (file: File | null) => {
-    setValue('primaryContact.headshotFile', file || undefined);
     if (!file) {
+      setValue('primaryContact.headshotFile', undefined);
       setValue('primaryContact.headshotPreview', '');
       setValue('primaryContact.headshotUrl', '');
-    } else {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('type', 'headshot');
-        formData.append('is_primary', 'true');
-        
-        if (listingId) {
-          formData.append('listingId', listingId);
-        }
-        
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          setValue('primaryContact.headshotUrl', result.url);
-        } else {
-          console.error('Failed to upload headshot:', await response.text());
-        }
-      } catch (error) {
-        console.error('Error uploading headshot:', error);
-      }
+      setHeadshotUploading(false);
+      return;
     }
-  }, [setValue, listingId]);
+    
+    setHeadshotUploading(true);
+    try {
+      // Use temporary file storage since listing doesn't exist yet
+      const { uploadFileTemporary } = await import('@/lib/temp-file-storage');
+      const result = await uploadFileTemporary({
+        file,
+        fileType: 'headshot',
+        userId: userId
+      });
+      
+      if (result.success && result.file) {
+        console.log('Headshot upload response:', result);
+        console.log('Headshot URL:', result.file.url);
+        
+        // Set the URL for server-side processing
+        setValue('primaryContact.headshotUrl', result.file.url);
+        
+        // Store all metadata needed for server action
+        setValue('primaryContact.headshotFile', {
+          tempPath: result.file.path,
+          tempUrl: result.file.url,
+          name: file.name,
+          size: file.size,
+          type: file.type
+        } as any);
+        
+        // Use the uploaded URL for preview (ImageUpload will display this)
+        setValue('primaryContact.headshotPreview', result.file.url);
+      } else {
+        console.error('Failed to upload headshot:', result.error);
+        toast.error('Failed to upload headshot');
+      }
+    } catch (error) {
+      console.error('Error uploading headshot:', error);
+      toast.error('Error uploading headshot');
+    } finally {
+      setHeadshotUploading(false);
+    }
+  }, [setValue, userId]);
 
   const handleHeadshotPreviewChange = useCallback((preview: string | null) => {
     setValue('primaryContact.headshotPreview', preview || '');
@@ -302,6 +326,15 @@ export function Step1ImmediateCreation({
   // =====================================================
 
   const handleImmediateCreation = useCallback(async (formData: Step1FormData) => {
+    console.log('Form submission data:', {
+      companyName: formData.companyName,
+      headshotUrl: formData.primaryContact?.headshotUrl,
+      headshotFile: formData.primaryContact?.headshotFile,
+      headshotFileType: typeof formData.primaryContact?.headshotFile,
+      logoFile: formData.logoFile,
+      logoFileType: typeof formData.logoFile
+    });
+    
     setIsCreating(true);
     setCreationProgress(10);
 
@@ -666,6 +699,7 @@ export function Step1ImmediateCreation({
               maxFileSize={10 * 1024 * 1024}
               organizationId=""
               listingId={listingId}
+              useTemporaryStorage={true}
             />
           </div>
           
@@ -863,13 +897,19 @@ export function Step1ImmediateCreation({
               <span className="text-gray-500 font-normal ml-1">(Optional)</span>
             </Label>
             <ImageUpload
-              value={watchedValues.primaryContact?.headshotFile || watchedValues.primaryContact?.headshotPreview}
+              value={watchedValues.primaryContact?.headshotPreview || watchedValues.primaryContact?.headshotFile}
               onChange={handleHeadshotUpload}
               onPreviewChange={handleHeadshotPreviewChange}
               placeholder="Upload professional headshot"
               maxSize={5 * 1024 * 1024}
               acceptedTypes={["image/png", "image/jpeg", "image/jpg"]}
             />
+            {headshotUploading && (
+              <p className="text-sm text-blue-600 flex items-center gap-2">
+                <span className="animate-spin h-3 w-3 border border-blue-500 border-t-transparent rounded-full"></span>
+                Uploading headshot...
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -886,7 +926,7 @@ export function Step1ImmediateCreation({
           
           <Button
             type="submit"
-            disabled={!isValid || isCreating}
+            disabled={!isValid || isCreating || headshotUploading}
             className="violet-bloom-button violet-bloom-touch shadow-lg hover:shadow-xl transition-all w-full sm:w-auto min-w-[200px]"
           >
             {isCreating ? (
@@ -905,6 +945,12 @@ export function Step1ImmediateCreation({
           {!isValid && (
             <p className="text-sm text-muted-foreground text-center">
               Please fill in all required fields above
+            </p>
+          )}
+          
+          {headshotUploading && (
+            <p className="text-sm text-blue-600 text-center">
+              Please wait for the headshot to finish uploading...
             </p>
           )}
         </div>

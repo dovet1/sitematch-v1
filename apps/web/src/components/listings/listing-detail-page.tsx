@@ -52,6 +52,7 @@ import { uploadFiles, validateFiles } from '@/lib/file-upload';
 import type { FileUploadType, UploadedFile } from '@/types/uploads';
 import { ImmersiveListingModal } from '@/components/listings/ImmersiveListingModal';
 import { fetchCompanyLogo, validateDomain, normalizeDomain, formatDomainWithProtocol } from '@/lib/clearbit-logo';
+import { getCurrentListingVersion } from '@/lib/version-management';
 
 // Import CRUD modals
 import { OverviewModal } from '@/components/listings/modals/overview-modal';
@@ -220,6 +221,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         supabase.from('listing_sectors').select('sector_id').eq('listing_id', listingId),
         supabase.from('listing_use_classes').select('use_class_id').eq('listing_id', listingId)
       ]);
+      
+      console.log('Fetched contacts from DB:', contacts);
+      console.log('First contact headshot_url:', contacts?.[0]?.headshot_url);
 
       // Transform data to match WizardFormData structure
       const transformedData: ListingData = {
@@ -285,16 +289,19 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         })) || [],
 
         // Additional contacts
-        additionalContacts: contacts?.filter(c => !c.is_primary_contact).map(contact => ({
-          id: contact.id,
-          contactName: contact.contact_name,
-          contactTitle: contact.contact_title,
-          contactEmail: contact.contact_email,
-          contactPhone: contact.contact_phone,
-          contactArea: contact.contact_area,
-          isPrimaryContact: false,
-          headshotUrl: contact.headshot_url
-        })) || [],
+        additionalContacts: contacts?.filter(c => !c.is_primary_contact).map(contact => {
+          console.log('Mapping additional contact:', contact.contact_name, 'headshot_url:', contact.headshot_url);
+          return {
+            id: contact.id,
+            contactName: contact.contact_name,
+            contactTitle: contact.contact_title,
+            contactEmail: contact.contact_email,
+            contactPhone: contact.contact_phone,
+            contactArea: contact.contact_area,
+            isPrimaryContact: false,
+            headshotUrl: contact.headshot_url
+          };
+        }) || [],
 
         // FAQs
         faqs: faqs?.map(faq => ({
@@ -3979,10 +3986,36 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   </div>
                   
                   <div className="space-y-4">
-                    {/* All Contacts from listing_contacts table */}
-                    {listingData.additionalContacts && listingData.additionalContacts.length > 0 ? (
-                      <>
-                        {listingData.additionalContacts.map((contact, index) => (
+                    {/* All Contacts - no separation between primary and additional */}
+                    {(() => {
+                      // Combine all contacts into one array
+                      const allContacts = [];
+                      
+                      // Add primary contact first if it exists
+                      if (listingData.primaryContact?.contactName) {
+                        allContacts.push({
+                          id: 'primary',
+                          contactName: listingData.primaryContact.contactName,
+                          contactTitle: listingData.primaryContact.contactTitle,
+                          contactEmail: listingData.primaryContact.contactEmail,
+                          contactPhone: listingData.primaryContact.contactPhone,
+                          contactArea: listingData.primaryContact.contactArea,
+                          headshotUrl: listingData.primaryContact.headshotUrl,
+                          isPrimary: true
+                        });
+                      }
+                      
+                      // Add additional contacts
+                      if (listingData.additionalContacts) {
+                        allContacts.push(...listingData.additionalContacts.map(contact => ({
+                          ...contact,
+                          isPrimary: false
+                        })));
+                      }
+                      
+                      return allContacts.length > 0 ? (
+                        <>
+                          {allContacts.map((contact, index) => (
                           <div 
                             key={contact.id || index} 
                             className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-200 transition-all duration-200"
@@ -4055,15 +4088,16 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               </div>
                             </div>
                           </div>
-                        ))}
-                      </>
-                    ) : (
-                      <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200 border-dashed">
-                        <Users className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">No contacts added yet</p>
-                        <p className="text-xs text-gray-500 mt-1">Add a contact to help agents reach the right person</p>
-                      </div>
-                    )}
+                          ))}
+                        </>
+                      ) : (
+                        <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200 border-dashed">
+                          <Users className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600">No contacts added yet</p>
+                          <p className="text-xs text-gray-500 mt-1">Add a contact to help agents reach the right person</p>
+                        </div>
+                      );
+                    })()}
 
                   </div>
                 </div>

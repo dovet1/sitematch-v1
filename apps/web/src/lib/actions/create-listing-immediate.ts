@@ -7,11 +7,12 @@
 
 import { getCurrentUser } from '@/lib/auth';
 import type { CompanyInfoData } from '@/types/wizard';
+import { createListingVersion } from '@/lib/version-management';
 
 export async function createListingImmediate(rawData: any): Promise<{ success: boolean; listingId?: string; error?: string }> {
   console.log('createListingImmediate called with raw data keys:', Object.keys(rawData));
   
-  // Sanitize the data to remove File objects and other non-serializable items
+  // Sanitize the data to preserve file metadata but remove File objects
   const data = {
     companyName: rawData.companyName,
     listingType: rawData.listingType,
@@ -22,13 +23,15 @@ export async function createListingImmediate(rawData: any): Promise<{ success: b
       contactPhone: rawData.primaryContact.contactPhone,
       contactArea: rawData.primaryContact.contactArea,
       isPrimaryContact: rawData.primaryContact.isPrimaryContact,
-      headshotUrl: rawData.primaryContact.headshotUrl
+      headshotUrl: rawData.primaryContact.headshotUrl,
+      headshotFile: rawData.primaryContact.headshotFile
     } : undefined,
     clearbitLogo: rawData.clearbitLogo,
     companyDomain: rawData.companyDomain,
     logoUrl: rawData.logoUrl,
+    logoFile: rawData.logoFile,
     propertyPageLink: rawData.propertyPageLink,
-    // Handle brochure files - only URLs, not File objects
+    // Handle brochure files - preserve all metadata
     brochureFiles: rawData.brochureFiles?.map((file: any) => ({
       name: file.name,
       url: file.url,
@@ -42,7 +45,9 @@ export async function createListingImmediate(rawData: any): Promise<{ success: b
     companyName: data.companyName,
     listingType: data.listingType,
     contactName: data.primaryContact?.contactName,
-    brochureFilesCount: data.brochureFiles?.length || 0
+    brochureFilesCount: data.brochureFiles?.length || 0,
+    headshotUrl: data.primaryContact?.headshotUrl,
+    headshotFile: data.primaryContact?.headshotFile
   });
   
   try {
@@ -53,25 +58,8 @@ export async function createListingImmediate(rawData: any): Promise<{ success: b
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Get reference data
-    const { getSectors, getUseClasses } = await import('@/lib/listings');
-    
-    let sectorId, useClassId;
-    try {
-      const sectors = await getSectors();
-      const useClasses = await getUseClasses();
-      
-      // Use first available sector and use class as defaults
-      sectorId = sectors[0]?.id;
-      useClassId = useClasses[0]?.id;
-    } catch (error) {
-      console.error('Failed to fetch reference data:', error);
-      return { success: false, error: 'Database not set up properly. Please run the SQL setup script first.' };
-    }
-
-    if (!sectorId || !useClassId) {
-      return { success: false, error: 'No sectors or use classes available. Please run the SQL setup script first.' };
-    }
+    // Note: We no longer assign default sectors/use_classes at creation time
+    // These will be set when users complete the requirements section of the listing
 
     // Create listing with version management
     const { createServerClient } = await import('@/lib/supabase');
@@ -92,11 +80,9 @@ export async function createListingImmediate(rawData: any): Promise<{ success: b
       // Logo fields - store company domain for Clearbit logos
       clearbit_logo: data.clearbitLogo || false,
       company_domain: data.companyDomain,
-      // Property page link
-      property_page_link: data.propertyPageLink,
-      // Default values for required fields
-      sector_id: sectorId,
-      use_class_id: useClassId,
+      // Property page link - ensure null instead of empty string
+      property_page_link: data.propertyPageLink?.trim() || null,
+      // User and completion tracking
       created_by: currentUser.id,
       completion_percentage: 20, // 20% complete after Step 1
       last_edited_at: new Date().toISOString()
@@ -115,41 +101,22 @@ export async function createListingImmediate(rawData: any): Promise<{ success: b
 
     console.log('Listing created successfully:', listing.id);
 
-    // Create initial version record
-    const versionData = {
-      listing_id: listing.id,
-      content: {
-        ...listingData,
-        id: listing.id,
-        created_at: listing.created_at,
-        primaryContact: data.primaryContact
-      },
-      status: 'draft',
-      created_by: currentUser.id
-    };
-
-    const { data: version, error: versionError } = await supabase
-      .from('listing_versions')
-      .insert([versionData])
-      .select()
-      .single();
-
-    if (versionError) {
-      console.error('Error creating version:', versionError);
+    // Create initial version record with comprehensive snapshot
+    const versionResult = await createListingVersion(listing.id, 'draft', currentUser.id, supabase);
+    
+    if (!versionResult.success) {
+      console.error('Error creating version:', versionResult.error);
       // Continue anyway - version management is secondary
-    } else {
-      // Update listing to reference this version
-      await supabase
-        .from('listings')
-        .update({ 
-          current_version_id: version.id,
-          live_version_id: null // No live version yet
-        })
-        .eq('id', listing.id);
     }
 
     // Store primary contact in listing_contacts table
     if (data.primaryContact) {
+      console.log('Creating contact with data:', {
+        contactName: data.primaryContact.contactName,
+        headshotUrl: data.primaryContact.headshotUrl,
+        headshotType: typeof data.primaryContact.headshotUrl
+      });
+      
       const contactData = {
         listing_id: listing.id,
         contact_name: data.primaryContact.contactName || '',
@@ -171,59 +138,89 @@ export async function createListingImmediate(rawData: any): Promise<{ success: b
       }
     }
 
-    // Store uploaded logo file if any (not Clearbit)
-    if (data.logoUrl && !data.clearbitLogo) {
-      console.log('Storing uploaded logo in file_uploads table:', data.logoUrl);
+    // Insert uploaded files into file_uploads table with listing_id
+    const filesToInsert = [];
+
+    // Add uploaded logo file if any (not Clearbit)
+    if (data.logoUrl && !data.clearbitLogo && data.logoFile && (data.logoFile as any).tempPath) {
+      console.log('Adding uploaded logo to file_uploads table:', data.logoUrl);
+      const logoFile = data.logoFile as any;
       
-      const logoFileData = {
+      filesToInsert.push({
         user_id: currentUser.id,
         listing_id: listing.id,
-        file_path: data.logoUrl.includes('/storage/v1/object/public/') 
-          ? data.logoUrl.split('/storage/v1/object/public/logos/')[1] 
-          : data.logoUrl,
-        file_name: 'company-logo.png', // Default name for uploaded logos
-        file_size: 0, // Size not available in immediate creation
+        file_path: logoFile.tempPath,
+        file_name: logoFile.name || 'company-logo.png',
+        file_size: logoFile.size || 0,
         file_type: 'logo',
-        mime_type: 'image/png',
+        mime_type: logoFile.type || 'image/png',
         bucket_name: 'logos',
         display_order: 0,
         is_primary: true
-      };
-
-      const { error: logoError } = await supabase
-        .from('file_uploads')
-        .insert([logoFileData]);
-
-      if (logoError) {
-        console.error('Error storing logo file reference:', logoError);
-        // Continue anyway - logo storage is optional
-      } else {
-        console.log('Successfully stored logo file reference');
-      }
+      });
     }
 
-    // Store brochure files if any
+    // Add brochure files with listing_id
     if (data.brochureFiles && data.brochureFiles.length > 0) {
-      const fileInserts = data.brochureFiles.map((file: any, index: number) => ({
+      console.log('Adding brochure files to file_uploads table:', data.brochureFiles.length, 'files');
+      
+      data.brochureFiles.forEach((file: any, index: number) => {
+        if (file.path && file.name) {
+          filesToInsert.push({
+            user_id: currentUser.id,
+            listing_id: listing.id,
+            file_path: file.path,
+            file_name: file.name,
+            file_size: file.size || 0,
+            file_type: 'brochure',
+            mime_type: file.mimeType || 'application/pdf',
+            bucket_name: 'brochures',
+            display_order: index,
+            is_primary: index === 0
+          });
+        }
+      });
+    }
+    
+    // Add headshot file with listing_id
+    console.log('Headshot check:', {
+      hasHeadshotUrl: !!data.primaryContact?.headshotUrl,
+      hasHeadshotFile: !!data.primaryContact?.headshotFile,
+      headshotFileType: typeof data.primaryContact?.headshotFile,
+      hasTempPath: !!(data.primaryContact?.headshotFile as any)?.tempPath
+    });
+    
+    if (data.primaryContact?.headshotUrl && data.primaryContact?.headshotFile && (data.primaryContact.headshotFile as any).tempPath) {
+      console.log('Adding headshot to file_uploads table:', data.primaryContact.headshotUrl);
+      const headshotFile = data.primaryContact.headshotFile as any;
+      
+      filesToInsert.push({
         user_id: currentUser.id,
         listing_id: listing.id,
-        file_path: file.path || file.url,
-        file_name: file.name,
-        file_size: file.size || 0,
-        file_type: 'brochure',
-        mime_type: file.mimeType || 'application/pdf',
-        bucket_name: 'brochures',
-        display_order: index,
-        is_primary: index === 0
-      }));
+        file_path: headshotFile.tempPath,
+        file_name: headshotFile.name || 'headshot.jpg',
+        file_size: headshotFile.size || 0,
+        file_type: 'headshot',
+        mime_type: headshotFile.type || 'image/jpeg',
+        bucket_name: 'headshots',
+        display_order: 0,
+        is_primary: true
+      });
+    }
 
+    // Insert all files at once with listing_id
+    if (filesToInsert.length > 0) {
+      console.log('Inserting', filesToInsert.length, 'files with listing_id:', listing.id);
+      
       const { error: filesError } = await supabase
         .from('file_uploads')
-        .insert(fileInserts);
+        .insert(filesToInsert);
 
       if (filesError) {
-        console.error('Error storing file references:', filesError);
-        // Continue anyway - files are optional
+        console.error('Error inserting files:', filesError);
+        // Continue anyway - file storage is optional
+      } else {
+        console.log('Successfully inserted all files with listing_id');
       }
     }
 
