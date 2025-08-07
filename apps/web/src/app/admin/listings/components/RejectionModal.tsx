@@ -106,6 +106,11 @@ export function RejectionModal({
 
       console.log('Calling rejectListingAction with:', { listingId, targetVersionId, reason })
       
+      // Ensure we have a version ID before proceeding
+      if (!targetVersionId) {
+        throw new Error('No version ID available for rejection')
+      }
+      
       // Use the proper rejection action that updates versions
       const result = await rejectListingAction(listingId, targetVersionId, reason)
       
