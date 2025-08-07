@@ -221,10 +221,13 @@ export function MySubmissionForm() {
           const data = Object.fromEntries(formData);
           handleSubmit(data);
         }}>
-          {/* Your form fields here */}
+          // Form fields would go here
           
           <PremiumSubmitButton
-            onSubmit={() => handleSubmit(formData)}
+            onSubmit={async () => {
+              // This is just example code - in real usage, you'd get actual form data
+              await handleSubmit({});
+            }}
           >
             Submit for Review
           </PremiumSubmitButton>
