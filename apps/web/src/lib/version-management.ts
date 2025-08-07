@@ -262,16 +262,16 @@ export async function getListingFromVersion(
   try {
     const supabase = createServerClient();
     
-    // Determine which version to use
-    const versionField = usePublishedVersion ? 'live_version_id' : 'current_version_id';
-    
+    // Get both version fields and determine which one to use
     const { data: listing } = await supabase
       .from('listings')
-      .select(`${versionField}`)
+      .select('live_version_id, current_version_id')
       .eq('id', listingId)
       .single();
 
-    const versionId = listing?.[versionField];
+    const versionId = usePublishedVersion 
+      ? listing?.live_version_id 
+      : listing?.current_version_id;
     
     if (!versionId) {
       // Fallback to current database state if no version exists
