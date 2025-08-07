@@ -214,18 +214,31 @@ export async function submitListingForReview(
   userId: string
 ): Promise<{ success: boolean; versionId?: string; error?: string }> {
   try {
+    console.log('submitListingForReview called with:', { listingId, userId });
+    
     const result = await createListingVersion(listingId, 'pending_review', userId);
     
+    console.log('createListingVersion result:', result);
+    
     if (result.success) {
+      console.log('Version created successfully, updating listing status...');
       // Update the listing status
       const supabase = createServerClient();
-      await supabase
+      const { data, error: updateError } = await supabase
         .from('listings')
         .update({ 
           status: 'pending',
-          submitted_at: new Date().toISOString()
+          updated_at: new Date().toISOString()
         })
-        .eq('id', listingId);
+        .eq('id', listingId)
+        .select();
+      
+      if (updateError) {
+        console.error('Error updating listing status:', updateError);
+        return { success: false, error: `Failed to update listing status: ${updateError.message}` };
+      }
+      
+      console.log('Successfully updated listing status:', data);
     }
     
     return result;

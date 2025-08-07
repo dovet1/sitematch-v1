@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -15,100 +16,130 @@ export async function GET(
       );
     }
 
-    const supabase = createServerClient();
-    
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
+    // Require admin authentication
+    await requireAdmin();
 
-    // Get basic listing information and verify ownership
-    const { data: listing, error: listingError } = await supabase
+    const supabase = createServerClient();
+
+    // Get the listing status first to determine what version to show
+    const { data: listingInfo, error: listingInfoError } = await supabase
       .from('listings')
-      .select(`
-        id, 
-        company_name, 
-        company_domain,
-        title, 
-        description, 
-        site_size_min, 
-        site_size_max, 
-        contact_name, 
-        contact_title, 
-        contact_email, 
-        contact_phone, 
-        contact_area,
-        created_at,
-        listing_type,
-        dwelling_count_min,
-        dwelling_count_max,
-        site_acreage_min,
-        site_acreage_max,
-        property_page_link,
-        created_by
-      `)
+      .select('status')
       .eq('id', id)
       .single();
 
-    if (listingError) {
-      if (listingError.code === 'PGRST116') {
+    if (listingInfoError) {
+      return NextResponse.json(
+        { error: 'Listing not found' },
+        { status: 404 }
+      );
+    }
+
+    let version;
+    let versionError;
+
+    // Try to get the appropriate version based on listing status
+    if (listingInfo.status === 'pending') {
+      // Get the latest pending_review version
+      const result = await supabase
+        .from('listing_versions')
+        .select('content, version_number, created_at')
+        .eq('listing_id', id)
+        .eq('status', 'pending_review')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      version = result.data;
+      versionError = result.error;
+    }
+
+    // If no pending_review version found, try to get the latest version of any status
+    if (!version) {
+      const result = await supabase
+        .from('listing_versions')
+        .select('content, version_number, created_at')
+        .eq('listing_id', id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      version = result.data;
+      versionError = result.error;
+    }
+
+    // If still no version found, fall back to current database state
+    if (!version) {
+      console.log(`No version found for listing ${id}, falling back to current database state`);
+      
+      // Get current database state as fallback
+      const [
+        { data: listing },
+        { data: contacts },
+        { data: locations }, 
+        { data: faqs },
+        { data: sectors },
+        { data: useClasses },
+        { data: files }
+      ] = await Promise.all([
+        supabase.from('listings').select('*').eq('id', id).single(),
+        supabase.from('listing_contacts').select('*').eq('listing_id', id),
+        supabase.from('listing_locations').select('*').eq('listing_id', id),
+        supabase.from('faqs').select('*').eq('listing_id', id),
+        supabase.from('listing_sectors').select('sector_id, sectors(id, name)').eq('listing_id', id),
+        supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id),
+        supabase.from('file_uploads').select('*').eq('listing_id', id)
+      ]);
+
+      if (!listing) {
         return NextResponse.json(
           { error: 'Listing not found' },
           { status: 404 }
         );
       }
-      
-      console.error('Error fetching listing:', listingError);
+
+      // Create a version-like content structure
+      version = {
+        content: {
+          listing,
+          contacts: contacts || [],
+          locations: locations || [],
+          faqs: (faqs || []).sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)),
+          sectors: (sectors || []).map((s: any) => ({
+            sector_id: s.sector_id,
+            sector: s.sectors
+          })),
+          use_classes: (useClasses || []).map((uc: any) => ({
+            use_class_id: uc.use_class_id,
+            use_class: uc.use_classes
+          })),
+          files: (files || []).sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
+        }
+      };
+    }
+
+    // Extract the versioned content
+    const versionContent = version.content;
+    
+    if (!versionContent?.listing) {
       return NextResponse.json(
-        { error: 'Failed to fetch listing' },
+        { error: 'Invalid version content' },
         { status: 500 }
       );
     }
 
-    // Verify the user owns this listing
-    if (listing.created_by !== user.id) {
-      return NextResponse.json(
-        { error: 'Access denied - you can only preview your own listings' },
-        { status: 403 }
-      );
-    }
+    // Use the versioned data
+    const listing = versionContent.listing;
+    const contacts = versionContent.contacts || [];
+    const locations = versionContent.locations || [];
+    const faqs = versionContent.faqs || [];
+    const files = versionContent.files || [];
+    const sectors = versionContent.sectors || [];
+    const useClasses = versionContent.use_classes || [];
 
-    // Get related data - since user is authenticated and owns the listing, 
-    // they can access all files regardless of listing status
-    const [
-      { data: locations },
-      { data: faqs },
-      { data: files },
-      { data: contacts },
-      { data: listingSectors },
-      { data: listingUseClasses }
-    ] = await Promise.all([
-      supabase.from('listing_locations').select('id, place_name, coordinates, formatted_address').eq('listing_id', id),
-      supabase.from('faqs').select('id, question, answer, display_order').eq('listing_id', id),
-      supabase.from('file_uploads').select('id, file_path, file_name, file_size, file_type, bucket_name, is_primary, display_order, caption').eq('listing_id', id),
-      supabase.from('listing_contacts').select('id, contact_name, contact_title, contact_email, contact_phone, contact_area, headshot_url, is_primary_contact').eq('listing_id', id),
-      supabase.from('listing_sectors').select('sector_id, sectors(id, name)').eq('listing_id', id),
-      supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id)
-    ]);
-
-    // Debug logging
-    if (files && files.length > 0) {
-      console.log(`Owner preview - Files found for listing ${id}:`, files.map(f => `${f.file_type}:${f.file_name}`));
-      console.log(`All unique file types:`, Array.from(new Set(files.map(f => f.file_type))));
-      console.log(`Filtered fit outs:`, files.filter(f => f.file_type === 'fitOut' || f.file_type === 'fit_out'));
-      console.log(`Filtered site plans:`, files.filter(f => f.file_type === 'sitePlan' || f.file_type === 'site_plan'));
-    } else {
-      console.log(`Owner preview - No files found for listing ${id}`);
-    }
-
-    // Get sectors and use classes
-    const allSectors = (listingSectors?.map((ls: any) => ls.sectors).filter(Boolean) || []);
-    const allUseClasses = (listingUseClasses?.map((luc: any) => luc.use_classes).filter(Boolean) || []);
+    // Get sectors and use classes from versioned data
+    const allSectors = sectors.map((s: any) => s.sector).filter(Boolean);
+    const allUseClasses = useClasses.map((uc: any) => uc.use_class).filter(Boolean);
 
     // Get logo file or generate Clearbit URL
     const logoFile = files?.find((file: any) => file.file_type === 'logo' && file.is_primary);
@@ -174,10 +205,10 @@ export async function GET(
         property_page_link: listing.property_page_link
       },
       
-      // Contact information from listing_contacts table only
+      // Contact information from versioned contacts data
       contacts: {
         primary: (() => {
-          // Find the primary contact from listing_contacts table
+          // Find the primary contact from versioned contacts data
           const primaryContact = contacts?.find((contact: any) => contact.is_primary_contact);
           if (primaryContact) {
             return {
@@ -281,7 +312,7 @@ export async function GET(
     return NextResponse.json(enhancedListing);
     
   } catch (error) {
-    console.error('Unexpected error in owner listing preview API:', error);
+    console.error('Unexpected error in admin listing preview API:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

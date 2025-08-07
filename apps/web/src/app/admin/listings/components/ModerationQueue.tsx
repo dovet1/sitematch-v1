@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input'
 import { Eye, Edit, Archive, Trash2, Clock, CheckCircle, XCircle, ArchiveIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { ImmersiveListingModal } from '@/components/listings/ImmersiveListingModal'
 
 interface ModerationQueueProps {
   listings: any[] // Using any for now until we have the full type
@@ -34,6 +35,7 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
   const [sortField, setSortField] = useState<string>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [isLoading, setIsLoading] = useState<string | null>(null)
+  const [previewListingId, setPreviewListingId] = useState<string | null>(null)
   const router = useRouter()
 
   const handleStatusUpdate = async (listingId: string, status: 'approved' | 'rejected' | 'archived') => {
@@ -187,9 +189,20 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/admin/listings/${listing.id}`}>
-                          <Eye className="h-4 w-4" />
+                      {/* Preview Modal */}
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setPreviewListingId(listing.id)}
+                        title="Preview listing"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      
+                      {/* Edit Listing */}
+                      <Button variant="ghost" size="sm" asChild title="Edit listing">
+                        <Link href={`/occupier/listing/${listing.id}`}>
+                          <Edit className="h-4 w-4" />
                         </Link>
                       </Button>
                       {listing.status === 'pending' && (
@@ -236,6 +249,17 @@ export function ModerationQueue({ listings }: ModerationQueueProps) {
           </TableBody>
         </Table>
       </div>
+
+      {/* Preview Modal */}
+      {previewListingId && (
+        <ImmersiveListingModal
+          listingId={previewListingId}
+          isOpen={true}
+          onClose={() => setPreviewListingId(null)}
+          // Use the admin API endpoint since admins need to see all data
+          apiEndpoint={`/api/admin/listings/${previewListingId}/detailed`}
+        />
+      )}
     </div>
   )
 }

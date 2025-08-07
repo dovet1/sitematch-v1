@@ -1103,25 +1103,27 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     if (!listingData) return;
 
     try {
-      const supabase = createClientClient();
+      console.log('Submitting listing for review:', listingId);
       
-      // Update listing status to pending
-      const { error } = await supabase
-        .from('listings')
-        .update({ 
-          status: 'pending',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', listingId);
-
-      if (error) {
-        throw new Error(error.message);
+      // Use the version management system to create a proper submission
+      const { submitListingForReviewAction } = await import('@/lib/actions/submit-listing-for-review');
+      const result = await submitListingForReviewAction(listingId);
+      
+      console.log('Submit result:', result);
+      
+      if (result.success) {
+        toast.success('Listing submitted for review!');
+        
+        // Update local state
+        setListingData(prev => prev ? { ...prev, status: 'pending' } : null);
+        
+        // Redirect to success page after short delay
+        setTimeout(() => {
+          router.push(`/occupier/listing/${listingId}/submitted`);
+        }, 1500);
+      } else {
+        throw new Error(result.error || 'Failed to submit for review');
       }
-
-      toast.success('Listing submitted for review!');
-      
-      // Update local state
-      setListingData(prev => prev ? { ...prev, status: 'pending' } : null);
     } catch (err) {
       console.error('Error submitting listing:', err);
       toast.error('Failed to submit listing for review');
@@ -2480,27 +2482,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     }
   };
 
-  // Portal for action buttons in breadcrumb bar
-  const ActionButtons = () => (
-    <>
-      <Button
-        variant="outline"
-        onClick={() => router.push(`/occupier/listing/${listingId}/preview`)}
-      >
-        <Eye className="w-4 h-4 mr-2" />
-        Preview
-      </Button>
-      
-      {listingData?.status === 'draft' && (
-        <Button
-          onClick={handleSubmitForReview}
-          className="bg-violet-600 hover:bg-violet-700 text-white"
-        >
-          Submit for Review
-        </Button>
-      )}
-    </>
-  );
+  // Action buttons are now integrated into the header layout
 
   return (
     <>
@@ -3002,28 +2984,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
         {/* Information Panel - Scrollable */}
         <div className="flex-1 h-full overflow-y-auto bg-white relative z-10">
-          {/* Action Buttons - Fixed in top right */}
-          <div className="absolute top-6 right-6 z-30 flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push(`/occupier/listing/${listingId}/preview`)}
-              className="bg-white/95 backdrop-blur-sm shadow-sm"
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              Preview
-            </Button>
-            
-            {listingData?.status === 'draft' && (
-              <Button
-                size="sm"
-                onClick={handleSubmitForReview}
-                className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
-              >
-                Submit for Review
-              </Button>
-            )}
-          </div>
+          {/* Action buttons are now in the header */}
             {/* Company Hero Card - Redesigned for better visual hierarchy */}
             <div className="py-4 px-6 border-b border-gray-200 bg-gradient-to-r from-violet-50 to-purple-50">
               <div className="flex items-center gap-5">
@@ -3051,11 +3012,34 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         Manage and edit your property listing
                       </p>
                     </div>
-                    <div className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${statusInfo.bgColor}`}>
-                      <StatusIcon className={`w-3.5 h-3.5 ${statusInfo.color}`} />
-                      <span className={`text-xs font-medium ${statusInfo.color}`}>
-                        {statusInfo.label}
-                      </span>
+                    <div className="flex items-center gap-3">
+                      {/* Status Badge */}
+                      <div className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${statusInfo.bgColor}`}>
+                        <StatusIcon className={`w-3.5 h-3.5 ${statusInfo.color}`} />
+                        <span className={`text-xs font-medium ${statusInfo.color}`}>
+                          {statusInfo.label}
+                        </span>
+                      </div>
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/occupier/listing/${listingId}/preview`)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Preview
+                        </Button>
+                        {listingData?.status === 'draft' && (
+                          <Button
+                            size="sm"
+                            onClick={handleSubmitForReview}
+                            className="bg-violet-600 hover:bg-violet-700 text-white"
+                          >
+                            Submit for Review
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

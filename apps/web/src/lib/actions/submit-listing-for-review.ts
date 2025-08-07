@@ -44,14 +44,21 @@ export async function submitListingForReviewAction(
       }
     }
 
+    console.log('About to call submitListingForReview for listing:', listingId);
+    
     // Submit for review (creates comprehensive version snapshot)
     const result = await submitListingForReview(listingId, currentUser.id);
+    
+    console.log('submitListingForReview result:', result);
 
     if (result.success) {
+      console.log('Submission successful, revalidating paths...');
       // Revalidate the listing page to show updated status
       revalidatePath(`/occupier/listing/${listingId}`);
       revalidatePath(`/admin/listings/${listingId}`);
       revalidatePath('/admin/listings');
+    } else {
+      console.error('Submission failed:', result.error);
     }
 
     return result;
@@ -101,7 +108,7 @@ export async function approveListingAction(
       .update({ 
         live_version_id: versionId,
         status: 'approved',
-        approved_at: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', listingId);
 
