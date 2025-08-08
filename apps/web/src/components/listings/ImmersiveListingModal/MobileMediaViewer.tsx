@@ -30,24 +30,27 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
 
   const mediaItems = [
     { 
-      type: 'map', 
-      label: 'Map',
+      type: 'coverage', 
+      label: 'Coverage',
       icon: MapPin,
-      available: true // Always show map tab, content changes based on hasLocations
+      available: true,
+      hasContent: hasLocations
     },
     { 
       type: 'site-plan', 
       label: 'Site Plans',
       icon: FileText,
-      available: listing?.files?.site_plans && listing.files.site_plans.length > 0
+      available: true, // Always show
+      hasContent: listing?.files?.site_plans && listing.files.site_plans.length > 0
     },
     { 
       type: 'fit-out', 
-      label: 'Fit-out',
+      label: 'Fit-Outs',
       icon: Home,
-      available: listing?.files?.fit_outs && listing.files.fit_outs.length > 0
+      available: true, // Always show
+      hasContent: listing?.files?.fit_outs && listing.files.fit_outs.length > 0
     }
-  ].filter(item => item.available);
+  ]; // Remove filter - show all tabs
 
   // Handle swipe gestures
   const handlers = useSwipeable({
@@ -87,7 +90,7 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
   }, [isFullscreen]);
 
   const renderMediaContent = (type: string) => {
-    if (isLoading) {
+    if (isLoading || !listing) {
       return (
         <div className="w-full h-full flex items-center justify-center bg-gray-100">
           <div className="animate-pulse">
@@ -98,7 +101,7 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
     }
 
     switch (type) {
-      case 'map':
+      case 'coverage':
         if (hasLocations) {
           return (
             <InteractiveMapView

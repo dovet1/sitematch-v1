@@ -72,6 +72,7 @@ import { useMobileBreakpoint } from '@/components/listings/ImmersiveListingModal
 import { MobileVisualHero } from '@/components/listings/ImmersiveListingModal/MobileVisualHero';
 import { MobileTabNavigation } from '@/components/listings/ImmersiveListingModal/MobileTabNavigation';
 import { SimpleMobileBottomSheet } from '@/components/listings/ImmersiveListingModal/SimpleMobileBottomSheet';
+import { MobileHeader } from '@/components/listings/ImmersiveListingModal/MobileHeader';
 
 
 interface ListingDetailPageProps {
@@ -151,7 +152,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     siteSize: false,
     locations: false,
     contacts: false,
-    faqs: false
+    faqs: false,
+    preview: false
   });
 
   const [editingContactData, setEditingContactData] = useState<any>(null);
@@ -2548,9 +2550,18 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   if (isMobile) {
     return (
       <>
-      <div className="h-screen bg-violet-900 relative overflow-hidden">
-        {/* Mobile Visual Hero - Full Screen */}
-        <div className="absolute inset-0 overflow-hidden bg-violet-900">
+      <div className="h-screen bg-violet-900 relative overflow-hidden flex flex-col">
+        {/* Mobile Header */}
+        <MobileHeader
+          companyName={companyName}
+          companyLogo={listingData?.logoPreview}
+          status={listingData?.status || 'draft'}
+          onBack={() => router.push('/occupier/dashboard')}
+          onPreview={() => openModal('preview')}
+        />
+        
+        {/* Mobile Visual Hero - Flexible height */}
+        <div className="flex-1 overflow-hidden bg-violet-900">
           <MobileVisualHero 
             listing={{
               ...listingData,
@@ -2574,28 +2585,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
             onAddLocations={() => openModal('locations')}
           />
           
-          {/* Mobile Navigation - Back to dashboard */}
-          <div className="absolute top-4 left-4 z-20">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push('/occupier/dashboard')}
-              className="text-gray-900 hover:text-gray-900 font-medium bg-white/95 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 px-4 py-2.5 rounded-lg border border-white/20"
-            >
-              ← Dashboard
-            </Button>
-          </div>
-
-          {/* Mobile Status Badge and Actions */}
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-            {/* Status Badge */}
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-md ${statusInfo.bgColor}`}>
-              <StatusIcon className={`w-3 h-3 ${statusInfo.color}`} />
-              <span className={`text-xs font-medium ${statusInfo.color}`}>
-                {statusInfo.label}
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* Mobile Bottom Sheet with Content */}
@@ -2921,6 +2910,13 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           })) || []
         }}
         onSave={handleLocationsSave}
+      />
+
+      {/* Preview Modal - Shows immersive listing view */}
+      <ImmersiveListingModal
+        isOpen={modalStates.preview}
+        onClose={() => closeModal('preview')}
+        listingId={listingId}
       />
     </>
     );
@@ -4865,7 +4861,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         onSave={handleFAQsSave}
       />
 
-
+      {/* Preview Modal - Shows immersive listing view */}
+      <ImmersiveListingModal
+        isOpen={modalStates.preview}
+        onClose={() => closeModal('preview')}
+        listingId={listingId}
+      />
 
     </>
   );
