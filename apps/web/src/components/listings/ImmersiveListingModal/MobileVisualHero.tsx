@@ -13,9 +13,11 @@ interface MobileVisualHeroProps {
   onAddLocations?: () => void;
   onAddSitePlans?: () => void;
   onAddFitOuts?: () => void;
+  onDeleteSitePlan?: (index: number, file: any) => void;
+  onDeleteFitOut?: (index: number, file: any) => void;
 }
 
-export function MobileVisualHero({ listing, isLoading, className, onAddLocations, onAddSitePlans, onAddFitOuts }: MobileVisualHeroProps) {
+export function MobileVisualHero({ listing, isLoading, className, onAddLocations, onAddSitePlans, onAddFitOuts, onDeleteSitePlan, onDeleteFitOut }: MobileVisualHeroProps) {
   return (
     <MobileMediaViewer 
       listing={listing} 
@@ -24,6 +26,8 @@ export function MobileVisualHero({ listing, isLoading, className, onAddLocations
       onAddLocations={onAddLocations}
       onAddSitePlans={onAddSitePlans}
       onAddFitOuts={onAddFitOuts}
+      onDeleteSitePlan={onDeleteSitePlan}
+      onDeleteFitOut={onDeleteFitOut}
     />
   );
 }

@@ -2468,6 +2468,51 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     }
   };
 
+  // Mobile deletion functions (skip confirm dialog since we have our own confirmation UI)
+  const handleMobileDeleteFile = async (file: any, type: 'siteplans' | 'fitouts') => {
+    try {
+      const supabase = createClientClient();
+      
+      // Delete from storage
+      const bucket = type === 'siteplans' ? 'site-plans' : 'fit-outs';
+      const { error: storageError } = await supabase.storage
+        .from(bucket)
+        .remove([file.path]);
+
+      if (storageError) {
+        throw new Error(`Failed to delete file from storage: ${storageError.message}`);
+      }
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('file_uploads')
+        .delete()
+        .eq('id', file.id);
+
+      if (dbError) {
+        throw new Error(`Failed to delete file record: ${dbError.message}`);
+      }
+
+      // Update local state
+      if (type === 'siteplans') {
+        setListingData(prev => prev ? {
+          ...prev,
+          sitePlanFiles: prev.sitePlanFiles?.filter(f => f.id !== file.id) || []
+        } : null);
+      } else {
+        setListingData(prev => prev ? {
+          ...prev,
+          fitOutFiles: prev.fitOutFiles?.filter(f => f.id !== file.id) || []
+        } : null);
+      }
+
+      toast.success('File deleted successfully!');
+    } catch (error) {
+      console.error('Delete file error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete file');
+    }
+  };
+
   const handleQuickUpload = async (files: File[], type: 'siteplans' | 'fitouts') => {
     try {
       const supabase = createClientClient();
@@ -2576,8 +2621,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           onPreview={() => openModal('preview')}
         />
         
-        {/* Mobile Visual Hero - Flexible height */}
-        <div className="flex-1 overflow-hidden bg-violet-900">
+        {/* Mobile Visual Hero - Height excludes bottom sheet */}
+        <div className="relative bg-violet-900" style={{ height: 'calc(100vh - 88px - 150px)' }}>
           <MobileVisualHero 
             listing={{
               ...listingData,
@@ -2606,6 +2651,22 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
             onAddFitOuts={() => {
               console.log('Mobile: Add Fit Outs clicked');
               openQuickAddModal('uploadFitOuts');
+            }}
+            onDeleteSitePlan={(index, file) => {
+              console.log('Mobile: Delete site plan clicked', { index, file });
+              // Use the mobile delete function (skips confirm dialog)
+              const actualFile = listingData?.sitePlanFiles?.[index];
+              if (actualFile) {
+                handleMobileDeleteFile(actualFile, 'siteplans');
+              }
+            }}
+            onDeleteFitOut={(index, file) => {
+              console.log('Mobile: Delete fit-out clicked', { index, file });
+              // Use the mobile delete function (skips confirm dialog)
+              const actualFile = listingData?.fitOutFiles?.[index];
+              if (actualFile) {
+                handleMobileDeleteFile(actualFile, 'fitouts');
+              }
             }}
           />
           

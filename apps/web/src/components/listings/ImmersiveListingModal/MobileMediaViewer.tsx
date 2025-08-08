@@ -18,9 +18,11 @@ interface MobileMediaViewerProps {
   onAddLocations?: () => void;
   onAddSitePlans?: () => void;
   onAddFitOuts?: () => void;
+  onDeleteSitePlan?: (index: number, file: any) => void;
+  onDeleteFitOut?: (index: number, file: any) => void;
 }
 
-export function MobileMediaViewer({ listing, isLoading, className, onAddLocations, onAddSitePlans, onAddFitOuts }: MobileMediaViewerProps) {
+export function MobileMediaViewer({ listing, isLoading, className, onAddLocations, onAddSitePlans, onAddFitOuts, onDeleteSitePlan, onDeleteFitOut }: MobileMediaViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenImageIndex, setFullscreenImageIndex] = useState(0);
@@ -133,6 +135,11 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
               setIsFullscreen(true);
             }}
             onAddClick={onAddSitePlans}
+            onDeleteImage={onDeleteSitePlan ? (index, image) => {
+              // Convert back to original file format for the handler
+              const originalFile = listing.files?.site_plans?.[index];
+              onDeleteSitePlan(index, originalFile || image);
+            } : undefined}
           />
         );
 
@@ -154,6 +161,11 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
               setIsFullscreen(true);
             }}
             onAddClick={onAddFitOuts}
+            onDeleteImage={onDeleteFitOut ? (index, image) => {
+              // Convert back to original file format for the handler
+              const originalFile = listing.files?.fit_outs?.[index];
+              onDeleteFitOut(index, originalFile || image);
+            } : undefined}
           />
         );
 
