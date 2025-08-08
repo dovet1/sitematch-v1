@@ -11,15 +11,19 @@ interface MobileVisualHeroProps {
   isLoading: boolean;
   className?: string;
   onAddLocations?: () => void;
+  onAddSitePlans?: () => void;
+  onAddFitOuts?: () => void;
 }
 
-export function MobileVisualHero({ listing, isLoading, className, onAddLocations }: MobileVisualHeroProps) {
+export function MobileVisualHero({ listing, isLoading, className, onAddLocations, onAddSitePlans, onAddFitOuts }: MobileVisualHeroProps) {
   return (
     <MobileMediaViewer 
       listing={listing} 
       isLoading={isLoading} 
       className={cn("h-full", className)}
       onAddLocations={onAddLocations}
+      onAddSitePlans={onAddSitePlans}
+      onAddFitOuts={onAddFitOuts}
     />
   );
 }

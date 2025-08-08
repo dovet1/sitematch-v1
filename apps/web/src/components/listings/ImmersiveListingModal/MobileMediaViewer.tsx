@@ -16,9 +16,11 @@ interface MobileMediaViewerProps {
   isLoading: boolean;
   className?: string;
   onAddLocations?: () => void;
+  onAddSitePlans?: () => void;
+  onAddFitOuts?: () => void;
 }
 
-export function MobileMediaViewer({ listing, isLoading, className, onAddLocations }: MobileMediaViewerProps) {
+export function MobileMediaViewer({ listing, isLoading, className, onAddLocations, onAddSitePlans, onAddFitOuts }: MobileMediaViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenImageIndex, setFullscreenImageIndex] = useState(0);
@@ -130,6 +132,7 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
               setFullscreenImageIndex(index);
               setIsFullscreen(true);
             }}
+            onAddClick={onAddSitePlans}
           />
         );
 
@@ -150,6 +153,7 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
               setFullscreenImageIndex(index);
               setIsFullscreen(true);
             }}
+            onAddClick={onAddFitOuts}
           />
         );
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Image as ImageIcon, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Image as ImageIcon, FileText, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ImageFile {
   id: string;
@@ -13,9 +14,10 @@ interface SimpleImageGalleryProps {
   images: ImageFile[];
   type: 'fit-outs' | 'site-plans';
   onImageClick?: (index: number) => void;
+  onAddClick?: () => void; // New prop for add button
 }
 
-export function SimpleImageGallery({ images, type, onImageClick }: SimpleImageGalleryProps) {
+export function SimpleImageGallery({ images, type, onImageClick, onAddClick }: SimpleImageGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imageLoaded, setImageLoaded] = useState<{ [key: string]: boolean }>({});
 
@@ -34,15 +36,27 @@ export function SimpleImageGallery({ images, type, onImageClick }: SimpleImageGa
   if (!images || images.length === 0) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-white">
-        <div className="text-center">
+        <div className="text-center max-w-xs mx-auto">
           {type === 'fit-outs' ? (
             <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           ) : (
             <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           )}
-          <p className="text-gray-600">
+          <p className="text-gray-600 mb-6">
             No {type === 'fit-outs' ? 'fit-out examples' : 'site plans'} available
           </p>
+          {onAddClick && (
+            <Button
+              onClick={() => {
+                console.log(`SimpleImageGallery: Add ${type} button clicked`);
+                onAddClick();
+              }}
+              className="bg-violet-600 hover:bg-violet-700 text-white transition-all duration-200 px-6 py-2.5 rounded-lg font-medium shadow-lg hover:shadow-xl"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add {type === 'fit-outs' ? 'Fit-Out Examples' : 'Site Plans'}
+            </Button>
+          )}
         </div>
       </div>
     );
