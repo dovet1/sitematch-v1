@@ -35,14 +35,11 @@ export async function GET(
         contact_phone, 
         contact_area,
         created_at,
-        sector_id,
-        use_class_id,
         listing_type,
         dwelling_count_min,
         dwelling_count_max,
         site_acreage_min,
         site_acreage_max,
-        brochure_url,
         property_page_link
       `)
       .eq('id', id)
@@ -142,7 +139,6 @@ export async function GET(
         site_size: formatSizeRange(listing.site_size_min, listing.site_size_max),
         dwelling_count: formatDwellingRange(listing.dwelling_count_min, listing.dwelling_count_max),
         site_acreage: formatAcreageRange(listing.site_acreage_min, listing.site_acreage_max),
-        brochure_url: listing.brochure_url,
         property_page_link: listing.property_page_link
       },
       
