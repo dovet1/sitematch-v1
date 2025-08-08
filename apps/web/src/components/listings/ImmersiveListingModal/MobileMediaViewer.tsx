@@ -27,6 +27,7 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenImageIndex, setFullscreenImageIndex] = useState(0);
   const [fullscreenImages, setFullscreenImages] = useState<any[]>([]);
+  const [customCloseHandler, setCustomCloseHandler] = useState<(() => void) | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Determine if we should show map or nationwide view
@@ -84,6 +85,12 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isFullscreen) {
         setIsFullscreen(false);
+        setFullscreenImages([]);
+        setFullscreenImageIndex(0);
+        if (customCloseHandler) {
+          customCloseHandler();
+          setCustomCloseHandler(null);
+        }
       }
     };
 
@@ -91,7 +98,7 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
       document.addEventListener('keydown', handleEscape);
       return () => document.removeEventListener('keydown', handleEscape);
     }
-  }, [isFullscreen]);
+  }, [isFullscreen, customCloseHandler]);
 
   const renderMediaContent = (type: string) => {
     if (isLoading || !listing) {
@@ -129,9 +136,10 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
           <SimpleImageGallery 
             images={sitePlans}
             type="site-plans"
-            onImageClick={(index) => {
+            onImageClick={(index, onClose) => {
               setFullscreenImages(sitePlans);
               setFullscreenImageIndex(index);
+              setCustomCloseHandler(onClose || null);
               setIsFullscreen(true);
             }}
             onAddClick={onAddSitePlans}
@@ -155,9 +163,10 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
           <SimpleImageGallery 
             images={fitOuts}
             type="fit-outs"
-            onImageClick={(index) => {
+            onImageClick={(index, onClose) => {
               setFullscreenImages(fitOuts);
               setFullscreenImageIndex(index);
+              setCustomCloseHandler(onClose || null);
               setIsFullscreen(true);
             }}
             onAddClick={onAddFitOuts}
@@ -282,7 +291,15 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
             >
               {/* Close Button */}
               <button
-                onClick={() => setIsFullscreen(false)}
+                onClick={() => {
+                  setIsFullscreen(false);
+                  setFullscreenImages([]);
+                  setFullscreenImageIndex(0);
+                  if (customCloseHandler) {
+                    customCloseHandler();
+                    setCustomCloseHandler(null);
+                  }
+                }}
                 className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
                 style={{ zIndex: 100000 }}
                 aria-label="Close fullscreen"
