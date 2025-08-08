@@ -2547,6 +2547,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   // Mobile layout
   if (isMobile) {
     return (
+      <>
       <div className="h-screen bg-violet-900 relative overflow-hidden">
         {/* Mobile Visual Hero - Full Screen */}
         <div className="absolute inset-0 overflow-hidden bg-violet-900">
@@ -2906,6 +2907,22 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           }
         />
       </div>
+
+      {/* Mobile Modals - Need to be rendered on mobile */}
+      <LocationsModal
+        isOpen={modalStates.locations}
+        onClose={() => closeModal('locations')}
+        currentData={{
+          locations: listingData?.locations?.map(loc => ({
+            id: loc.id,
+            name: loc.place_name || loc.formatted_address || 'Unknown location',
+            coordinates: loc.coordinates,
+            type: loc.type
+          })) || []
+        }}
+        onSave={handleLocationsSave}
+      />
+    </>
     );
   }
 

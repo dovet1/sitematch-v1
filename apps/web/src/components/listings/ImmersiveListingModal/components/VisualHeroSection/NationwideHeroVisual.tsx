@@ -103,16 +103,6 @@ export function NationwideHeroVisual({ company, onAddLocations }: NationwideHero
         {isMobile && onAddLocations && (
           <motion.button
             onClick={onAddLocations}
-            onTouchStart={(e) => {
-              // Prevent default to avoid issues with touch handling
-              e.preventDefault();
-            }}
-            onTouchEnd={(e) => {
-              // Handle touch end to ensure it works on mobile
-              e.preventDefault();
-              e.stopPropagation();
-              onAddLocations();
-            }}
             className="flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 text-white font-medium transition-all duration-200 hover:bg-white/20 hover:border-white/30 active:scale-95 cursor-pointer relative z-50"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

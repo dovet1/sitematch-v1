@@ -84,9 +84,9 @@ export function LocationSearch({
         types: ['place', 'locality', 'neighborhood']
       });
 
-      // Filter out locations already selected
+      // Filter out locations already selected - use current value at time of execution
       const filteredResults = searchResults.filter(
-        result => !value.some(selected => selected.id === result.id)
+        result => !value?.some(selected => selected.id === result.id)
       );
 
       setResults(filteredResults);
@@ -100,12 +100,12 @@ export function LocationSearch({
     } finally {
       setIsLoading(false);
     }
-  }, [value]);
+  }, []); // Remove value dependency
 
   // Debounced search effect
   useEffect(() => {
     performSearch(query);
-  }, [query, performSearch]);
+  }, [query, performSearch]); // performSearch is now stable
 
   // =====================================================
   // VALIDATION
@@ -135,15 +135,7 @@ export function LocationSearch({
     return validation;
   }, [value, maxLocations]);
 
-  // Validate on changes with debouncing to prevent infinite loops
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      const validation = validateLocations();
-      onValidationChange?.(validation);
-    }, 100);
-
-    return () => clearTimeout(timeoutId);
-  }, [value, maxLocations, onValidationChange, validateLocations]);
+  // Removed validation useEffect - not being used by current implementation
 
   // =====================================================
   // EVENT HANDLERS
@@ -295,11 +287,6 @@ export function LocationSearch({
       {/* Location Search */}
       <div className="space-y-3">
         <div className="relative">
-          <Label className="font-medium">Locations</Label>
-          <p className="text-sm text-gray-600 mb-2">
-            Search and select specific locations where you'd like to operate
-          </p>
-            
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
