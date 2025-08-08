@@ -15,9 +15,10 @@ interface MobileMediaViewerProps {
   listing: any;
   isLoading: boolean;
   className?: string;
+  onAddLocations?: () => void;
 }
 
-export function MobileMediaViewer({ listing, isLoading, className }: MobileMediaViewerProps) {
+export function MobileMediaViewer({ listing, isLoading, className, onAddLocations }: MobileMediaViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenImageIndex, setFullscreenImageIndex] = useState(0);
@@ -106,7 +107,7 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
             />
           );
         } else {
-          return <NationwideHeroVisual company={listing?.company || { name: 'Company' }} />;
+          return <NationwideHeroVisual company={listing?.company || { name: 'Company' }} onAddLocations={onAddLocations} />;
         }
 
       case 'site-plan':

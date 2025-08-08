@@ -48,7 +48,13 @@
       "Bash(bmad create-story:*)",
       "Bash(timeout 30 npm run build)",
       "Bash(git push:*)",
-      "Bash(timeout 30 npm run dev)"
+      "Bash(timeout 30 npm run dev)",
+      "Bash(gtimeout 60 npm run build)",
+      "Bash(turbo run:*)",
+      "Bash(npx turbo run:*)",
+      "Bash(turbo:*)",
+      "Bash(npx turbo:*)",
+      "Bash(npx next build:*)"
     ],
     "deny": []
   }

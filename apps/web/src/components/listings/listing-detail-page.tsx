@@ -67,6 +67,12 @@ import { SectorsModal } from '@/components/listings/modals/sectors-modal';
 import { UseClassesModal } from '@/components/listings/modals/use-classes-modal';
 import { SiteSizeModal } from '@/components/listings/modals/site-size-modal';
 
+// Import mobile components
+import { useMobileBreakpoint } from '@/components/listings/ImmersiveListingModal/hooks/useMobileBreakpoint';
+import { MobileVisualHero } from '@/components/listings/ImmersiveListingModal/MobileVisualHero';
+import { MobileTabNavigation } from '@/components/listings/ImmersiveListingModal/MobileTabNavigation';
+import { SimpleMobileBottomSheet } from '@/components/listings/ImmersiveListingModal/SimpleMobileBottomSheet';
+
 
 interface ListingDetailPageProps {
   listingId: string;
@@ -87,6 +93,37 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   const [listingData, setListingData] = useState<ListingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Mobile breakpoint detection
+  const { isMobile } = useMobileBreakpoint();
+  
+  // Prevent body scroll on mobile
+  useEffect(() => {
+    if (isMobile) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      
+      // Prevent body scroll and pull-to-refresh
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overscrollBehavior = 'none'; // Prevent pull-to-refresh
+      
+      // Also prevent overscroll on the document
+      document.documentElement.style.overscrollBehavior = 'none';
+      
+      return () => {
+        // Restore body scroll and overscroll behavior
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overscrollBehavior = '';
+        document.documentElement.style.overscrollBehavior = '';
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isMobile]);
   
   // Tab navigation (matching public modal exactly)
   const [activeTab, setActiveTab] = useState('overview');
@@ -151,6 +188,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   const [latestVersion, setLatestVersion] = useState<any>(null);
   // Track dismissal state for rejection banner
   const [isRejectionBannerDismissed, setIsRejectionBannerDismissed] = useState(false);
+  // Track submission state
+  const [submitting, setSubmitting] = useState(false);
 
 
 
@@ -1120,6 +1159,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   const handleSubmitForReview = async () => {
     if (!listingData) return;
 
+    setSubmitting(true);
     try {
       console.log('Submitting listing for review:', listingId);
       
@@ -1145,6 +1185,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     } catch (err) {
       console.error('Error submitting listing:', err);
       toast.error('Failed to submit listing for review');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -2502,6 +2544,372 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   // Action buttons are now integrated into the header layout
 
+  // Mobile layout
+  if (isMobile) {
+    return (
+      <div className="h-screen bg-violet-900 relative overflow-hidden">
+        {/* Mobile Visual Hero - Full Screen */}
+        <div className="absolute inset-0 overflow-hidden bg-violet-900">
+          <MobileVisualHero 
+            listing={{
+              ...listingData,
+              company: {
+                name: listingData?.companyName || 'Company'
+              },
+              locations: {
+                all: listingData?.locations?.map(loc => ({
+                  id: loc.id,
+                  place_name: loc.place_name || loc.formatted_address || 'Unknown location',
+                  coordinates: loc.coordinates,
+                  formatted_address: loc.formatted_address || ''
+                })) || []
+              },
+              files: {
+                site_plans: listingData?.sitePlanFiles || [],
+                fit_outs: listingData?.fitOutFiles || []
+              }
+            } as any}
+            isLoading={loading}
+            onAddLocations={() => openModal('locations')}
+          />
+          
+          {/* Mobile Navigation - Back to dashboard */}
+          <div className="absolute top-4 left-4 z-20">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/occupier/dashboard')}
+              className="text-gray-900 hover:text-gray-900 font-medium bg-white/95 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 px-4 py-2.5 rounded-lg border border-white/20"
+            >
+              ← Dashboard
+            </Button>
+          </div>
+
+          {/* Mobile Status Badge and Actions */}
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+            {/* Status Badge */}
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-md ${statusInfo.bgColor}`}>
+              <StatusIcon className={`w-3 h-3 ${statusInfo.color}`} />
+              <span className={`text-xs font-medium ${statusInfo.color}`}>
+                {statusInfo.label}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Bottom Sheet with Content */}
+        <SimpleMobileBottomSheet
+          peekContent={
+            <div className="p-4">
+              {/* Company info peek */}
+              <div className="flex items-center gap-3">
+                {listingData?.logoPreview ? (
+                  <img
+                    src={listingData.logoPreview}
+                    alt={`${companyName} logo`}
+                    className="w-10 h-10 object-contain rounded-lg shadow-sm bg-white p-1"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center shadow-sm">
+                    <span className="text-white font-bold text-sm">
+                      {companyName.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 leading-tight">
+                    {companyName}
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Tap to view full listing details
+                  </p>
+                </div>
+              </div>
+            </div>
+          }
+          fullContent={
+            <div className="h-full flex flex-col">
+              {/* Mobile Tab Navigation */}
+              <MobileTabNavigation
+                tabs={tabs}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                companyName={companyName}
+                className="flex-shrink-0"
+              />
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                {/* Rejection Feedback Card - Mobile version */}
+                {listingData?.status === 'draft' && latestVersion?.status === 'rejected' && !isRejectionBannerDismissed && (
+                  <div className="relative overflow-hidden rounded-lg border-l-4 border-l-amber-500 bg-gradient-to-r from-amber-50/80 via-orange-50/60 to-red-50/40 shadow-sm">
+                    <div className="p-4">
+                      <button
+                        onClick={() => setIsRejectionBannerDismissed(true)}
+                        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                        aria-label="Dismiss notification"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+
+                      <div className="pr-8">
+                        <h3 className="text-base font-semibold text-gray-900 mb-2">
+                          Action Required
+                        </h3>
+                        <div className="bg-white/70 rounded-md p-3 mb-3">
+                          <p className="text-sm text-gray-800">
+                            {latestVersion.review_notes || 'No specific feedback provided. Please review all sections and ensure completeness.'}
+                          </p>
+                        </div>
+                        <p className="text-sm text-blue-700">
+                          Review the feedback and make necessary changes, then resubmit.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab Content - Mobile Optimized */}
+                <div className="space-y-4">
+                  {/* Company Profile Section - Always visible on mobile */}
+                  <div className="bg-white rounded-lg border p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">Company Profile</h3>
+                      <Button 
+                        onClick={() => {
+                          setEditingSection('companyProfile');
+                          setEditingData({
+                            companyName: listingData.companyName || '',
+                            listingType: listingData.listingType || 'commercial',
+                            companyDomain: listingData.companyDomain || '',
+                            propertyPageLink: listingData.propertyPageLink || '',
+                            logoMethod: listingData.logoMethod || (listingData.companyDomain ? 'clearbit' : 'upload'),
+                            logoPreview: listingData.logoPreview || '',
+                            clearbitLogo: listingData.clearbitLogo || false
+                          });
+                        }} 
+                        className="bg-violet-600 hover:bg-violet-700 text-white h-11 min-w-[44px]"
+                        disabled={editingSection === 'companyProfile'}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                    </div>
+                    
+                    {/* Company info display */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center">
+                          <Building2 className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{listingData.companyName || 'Company Name'}</h4>
+                          <p className="text-sm text-gray-600 capitalize">
+                            {listingData.listingType || 'commercial'} property requirement
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {listingData.companyDomain && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <ExternalLink className="w-4 h-4" />
+                          <span>{listingData.companyDomain}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons Row */}
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push(`/occupier/listing/${listingId}/preview`)}
+                      className="flex-1 h-12"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Preview
+                    </Button>
+                    {(listingData.status === 'draft') && (
+                      <Button
+                        onClick={handleSubmitForReview}
+                        disabled={submitting}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white h-12"
+                      >
+                        {submitting ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Submit for Review
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Tab-specific content */}
+                  {activeTab === 'overview' && (
+                    <div className="space-y-4">
+                      {/* Overview content will be implemented based on desktop version */}
+                      <div className="bg-white rounded-lg border p-4">
+                        <h4 className="font-medium mb-2">Listing Overview</h4>
+                        <p className="text-sm text-gray-600">
+                          View and manage your property listing details.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'requirements' && (
+                    <div className="space-y-4">
+                      {/* Requirements content */}
+                      <div className="bg-white rounded-lg border p-4">
+                        <h4 className="font-medium mb-2">Property Requirements</h4>
+                        <p className="text-sm text-gray-600">
+                          Manage sectors, use classes, and size requirements.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'locations' && (
+                    <div className="space-y-4">
+                      {/* Locations content */}
+                      <div className="bg-white rounded-lg border p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium">Preferred Locations</h4>
+                          <Button 
+                            size="sm"
+                            onClick={() => setEditingSection('locations')}
+                            className="h-9 min-w-[44px]"
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                        {listingData.locations && listingData.locations.length > 0 ? (
+                          <div className="space-y-2">
+                            {listingData.locations.map((location: any, index: number) => (
+                              <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-md">
+                                <MapPin className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm">{location.place_name || location.formatted_address}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">No locations specified</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'contact' && (
+                    <div className="space-y-4">
+                      {/* Contact content */}
+                      <div className="bg-white rounded-lg border p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium">Contact Information</h4>
+                          <Button 
+                            size="sm"
+                            onClick={() => setEditingSection('contacts')}
+                            className="h-9 min-w-[44px]"
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                        </div>
+{/* Build combined contacts list */}
+                        {(() => {
+                          const allContacts = [];
+                          
+                          // Add primary contact if it exists
+                          if (listingData.primaryContact?.contactName) {
+                            allContacts.push({
+                              id: 'primary',
+                              contactName: listingData.primaryContact.contactName,
+                              contactTitle: listingData.primaryContact.contactTitle,
+                              contactEmail: listingData.primaryContact.contactEmail,
+                              isPrimary: true
+                            });
+                          }
+                          
+                          // Add additional contacts
+                          if (listingData.additionalContacts) {
+                            allContacts.push(...listingData.additionalContacts.map(contact => ({
+                              ...contact,
+                              isPrimary: false
+                            })));
+                          }
+                          
+                          return allContacts.length > 0 ? (
+                            <div className="space-y-2">
+                              {allContacts.map((contact: any, index: number) => (
+                                <div key={contact.id || index} className="p-2 bg-gray-50 rounded-md">
+                                  <div className="font-medium text-sm">
+                                    {contact.contactName}
+                                    {contact.isPrimary && (
+                                      <span className="ml-2 px-2 py-0.5 text-xs bg-violet-100 text-violet-700 rounded-full">Primary</span>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-gray-600">{contact.contactTitle}</div>
+                                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <Mail className="w-3 h-3" />
+                                    <span>{contact.contactEmail}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500">No contact information provided</p>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'faqs' && (
+                    <div className="space-y-4">
+                      {/* FAQs content */}
+                      <div className="bg-white rounded-lg border p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium">Frequently Asked Questions</h4>
+                          <Button 
+                            size="sm"
+                            onClick={() => setQuickAddModals(prev => ({ ...prev, faq: true }))}
+                            className="h-9 min-w-[44px]"
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                        {listingData.faqs && listingData.faqs.length > 0 ? (
+                          <div className="space-y-3">
+                            {listingData.faqs.map((faq: any, index: number) => (
+                              <div key={faq.id || index} className="p-3 bg-gray-50 rounded-md">
+                                <div className="font-medium text-sm mb-1">{faq.question}</div>
+                                <div className="text-sm text-gray-600">{faq.answer}</div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">No FAQs added yet</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          }
+        />
+      </div>
+    );
+  }
+
+  // Desktop layout (unchanged)
   return (
     <>
       {/* Fixed Layout Container - Below navbar */}
