@@ -42,7 +42,8 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  GripVertical
+  GripVertical,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -2752,10 +2753,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   {/* Tab-specific content */}
                   {activeTab === 'overview' && (
                     <div className="space-y-4">
-                      {/* Company Profile Section */}
+                      {/* Company Profile & Requirements Material Section */}
                       <div className="bg-white rounded-lg border p-4">
                         <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-medium">Company Profile</h4>
+                          <h4 className="font-medium">From {listingData?.companyName || 'Company Name'}</h4>
                           <Button 
                             onClick={() => {
                               setEditingData({
@@ -2776,9 +2777,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           </Button>
                         </div>
                         
-                        
                         {/* Company info display */}
-                        <div className="space-y-3">
+                        <div className="space-y-3 mb-6">
                           <div className="flex items-center gap-3">
                             {listingData?.logoPreview ? (
                               <img
@@ -2800,14 +2800,70 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               </p>
                             </div>
                           </div>
-                          
-                          {listingData?.companyDomain && (
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <ExternalLink className="w-4 h-4" />
-                              <span>{listingData.companyDomain}</span>
-                            </div>
-                          )}
                         </div>
+
+                        {/* Requirements Material Section */}
+                        {/* Requirements Brochure Display */}
+                        {listingData?.brochureFiles && listingData.brochureFiles.length > 0 ? (
+                          <div className="space-y-2 mb-4">
+                            <h5 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                              <FileText className="w-4 h-4 text-blue-600" />
+                              Requirements Brochure
+                            </h5>
+                            {listingData.brochureFiles.map((file) => (
+                              <a
+                                key={file.id}
+                                href={file.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 border border-blue-200 hover:border-blue-300 hover:bg-blue-100 transition-all duration-200"
+                              >
+                                <FileText className="w-5 h-5 text-blue-600" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    View Requirements Brochure
+                                  </p>
+                                  <p className="text-xs text-gray-600">
+                                    {(file.size / 1024 / 1024).toFixed(1)} MB
+                                  </p>
+                                </div>
+                                <Download className="w-4 h-4 text-blue-600" />
+                              </a>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg mb-4">
+                            <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm">No brochure uploaded</p>
+                          </div>
+                        )}
+
+                        {/* Property Page Link Display */}
+                        {listingData?.propertyPageLink ? (
+                          <div className="space-y-2">
+                            <h5 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                              <ExternalLink className="w-4 h-4 text-green-600" />
+                              Property Page Link
+                            </h5>
+                            <a
+                              href={listingData.propertyPageLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200 hover:border-green-300 hover:bg-green-100 transition-all duration-200"
+                            >
+                              <ExternalLink className="w-5 h-5 text-green-600" />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">View Property Page</p>
+                                <p className="text-xs text-gray-600 break-all">{listingData.propertyPageLink}</p>
+                              </div>
+                            </a>
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+                            <ExternalLink className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm">No property page link added</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -3257,6 +3313,97 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Requirements Material Section */}
+            <div className="space-y-4">
+              <h3 className="text-base font-medium">Requirements Material</h3>
+              
+              {/* Requirements Brochure Upload */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Requirements Brochure
+                  <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+                </label>
+                <DocumentUpload
+                  type="brochure"
+                  value={listingData?.brochureFiles || []}
+                  onChange={(files) => {
+                    // Transform UploadedFile[] to the expected format
+                    const brochureFiles = files.map(file => ({
+                      id: file.id,
+                      name: file.name,
+                      url: file.url,
+                      path: file.path,
+                      type: 'brochure' as const,
+                      size: file.size,
+                      mimeType: file.mimeType,
+                      uploadedAt: file.uploadedAt
+                    }));
+                    
+                    // Update local state
+                    setListingData(prev => prev ? {
+                      ...prev,
+                      brochureFiles
+                    } : null);
+                  }}
+                  acceptedTypes={['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']}
+                  maxFileSize={10 * 1024 * 1024} // 10MB
+                  organizationId=""
+                  listingId={listingId}
+                />
+                <p className="text-xs text-gray-600">
+                  Upload a PDF, DOC, or DOCX file with your property requirements (max 10MB)
+                </p>
+              </div>
+              
+              {/* Property Page Link */}
+              <div className="space-y-2">
+                <label htmlFor="propertyPageLink-mobile" className="text-sm font-medium">
+                  Property Page Link
+                  <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+                </label>
+                <Input
+                  id="propertyPageLink-mobile"
+                  type="url"
+                  value={editingData.propertyPageLink || ''}
+                  onChange={(e) => setEditingData((prev: any) => ({ ...prev, propertyPageLink: e.target.value }))}
+                  onBlur={async (e) => {
+                    // Save property page link immediately when user finishes editing
+                    const newValue = e.target.value.trim();
+                    if (newValue !== (listingData?.propertyPageLink || '').trim()) {
+                      try {
+                        const supabase = createClientClient();
+                        const { error } = await supabase
+                          .from('listings')
+                          .update({
+                            property_page_link: newValue || null,
+                            updated_at: new Date().toISOString()
+                          })
+                          .eq('id', listingId);
+                        
+                        if (error) throw error;
+                        
+                        // Update local state
+                        setListingData(prev => prev ? {
+                          ...prev,
+                          propertyPageLink: newValue
+                        } : null);
+                        
+                        toast.success('Property page link updated');
+                      } catch (error) {
+                        console.error('Error updating property page link:', error);
+                        toast.error('Failed to update property page link');
+                      }
+                    }
+                  }}
+                  placeholder="https://example.com/property-page"
+                  className="w-full h-12"
+                />
+                <p className="text-xs text-gray-600">
+                  Link to your existing property or requirements page (optional)
+                </p>
               </div>
             </div>
           </div>
