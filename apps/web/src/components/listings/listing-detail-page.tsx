@@ -153,7 +153,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     locations: false,
     contacts: false,
     faqs: false,
-    preview: false
+    preview: false,
+    companyProfile: false
   });
 
   const [editingContactData, setEditingContactData] = useState<any>(null);
@@ -2751,12 +2752,62 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   {/* Tab-specific content */}
                   {activeTab === 'overview' && (
                     <div className="space-y-4">
-                      {/* Overview content will be implemented based on desktop version */}
+                      {/* Company Profile Section */}
                       <div className="bg-white rounded-lg border p-4">
-                        <h4 className="font-medium mb-2">Listing Overview</h4>
-                        <p className="text-sm text-gray-600">
-                          View and manage your property listing details.
-                        </p>
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-medium">Company Profile</h4>
+                          <Button 
+                            onClick={() => {
+                              setEditingData({
+                                companyName: listingData?.companyName || '',
+                                listingType: listingData?.listingType || 'commercial',
+                                companyDomain: listingData?.companyDomain || '',
+                                propertyPageLink: listingData?.propertyPageLink || '',
+                                logoMethod: listingData?.logoMethod || (listingData?.companyDomain ? 'clearbit' : 'upload'),
+                                logoPreview: listingData?.logoPreview || '',
+                                clearbitLogo: listingData?.clearbitLogo || false
+                              });
+                              openModal('companyProfile');
+                            }}
+                            className="bg-violet-600 hover:bg-violet-700 text-white h-11 min-w-[44px]"
+                          >
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </Button>
+                        </div>
+                        
+                        
+                        {/* Company info display */}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            {listingData?.logoPreview ? (
+                              <img
+                                src={listingData.logoPreview}
+                                alt={`${listingData.companyName} logo`}
+                                className="w-12 h-12 object-contain rounded-lg shadow-sm bg-white p-1 border"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center shadow-sm">
+                                <span className="text-white font-bold text-sm">
+                                  {(listingData?.companyName || 'C').charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                            <div>
+                              <h4 className="font-medium">{listingData?.companyName || 'Company Name'}</h4>
+                              <p className="text-sm text-gray-600 capitalize">
+                                {listingData?.listingType || 'commercial'} property requirement
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {listingData?.companyDomain && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <ExternalLink className="w-4 h-4" />
+                              <span>{listingData.companyDomain}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -2942,6 +2993,275 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         type="fitouts"
         onUpload={(files) => handleQuickUpload(files, 'fitouts')}
       />
+
+      {/* Company Profile Modal - Mobile Only */}
+      {modalStates.companyProfile && (
+        <div className="fixed inset-0 bg-white z-[10002] flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b bg-white">
+            <Button
+              variant="ghost"
+              onClick={() => closeModal('companyProfile')}
+              className="p-2 h-auto"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+            <h2 className="text-lg font-semibold">Company Profile</h2>
+            <Button
+              onClick={async () => {
+                try {
+                  const supabase = createClientClient();
+                  
+                  // Determine clearbit_logo value based on logo method
+                  const clearbitLogo = editingData.logoMethod === 'clearbit';
+                  
+                  // If switching to Clearbit logo, clean up any uploaded logo files
+                  if (clearbitLogo) {
+                    const { data: existingLogos, error: fetchError } = await supabase
+                      .from('file_uploads')
+                      .select('id, file_path, bucket_name')
+                      .eq('listing_id', listingId)
+                      .eq('file_type', 'logo');
+
+                    if (fetchError) {
+                      console.error('Error fetching existing logos:', fetchError);
+                    } else if (existingLogos && existingLogos.length > 0) {
+                      // Delete logo files from storage
+                      for (const logo of existingLogos) {
+                        await supabase.storage.from(logo.bucket_name).remove([logo.file_path]);
+                      }
+                      
+                      // Delete logo records from database
+                      await supabase
+                        .from('file_uploads')
+                        .delete()
+                        .eq('listing_id', listingId)
+                        .eq('file_type', 'logo');
+                    }
+                  }
+                  
+                  const { error } = await supabase
+                    .from('listings')
+                    .update({
+                      company_name: editingData.companyName,
+                      listing_type: editingData.listingType,
+                      company_domain: editingData.companyDomain,
+                      property_page_link: editingData.propertyPageLink,
+                      clearbit_logo: clearbitLogo,
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', listingId);
+
+                  if (error) throw error;
+
+                  // Update local state to match what we saved
+                  setListingData(prev => prev ? {
+                    ...prev,
+                    companyName: editingData.companyName,
+                    listingType: editingData.listingType,
+                    companyDomain: editingData.companyDomain,
+                    propertyPageLink: editingData.propertyPageLink,
+                    logoMethod: editingData.logoMethod, // Keep in local state for UI
+                    logoPreview: editingData.logoPreview, // Keep in local state for UI
+                    clearbitLogo: clearbitLogo
+                  } : null);
+
+                  toast.success('Company profile updated');
+                  closeModal('companyProfile');
+                } catch (error) {
+                  console.error('Error updating company profile:', error);
+                  toast.error('Failed to update company profile');
+                }
+              }}
+              className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2"
+            >
+              Save
+            </Button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* Listing Type Section */}
+            <div className="space-y-4">
+              <h3 className="text-base font-medium">Listing Type</h3>
+              <div className="space-y-3">
+                {/* Commercial Option */}
+                <div className="flex items-start space-x-3 p-4 rounded-lg border hover:bg-gray-50 transition-colors">
+                  <input
+                    type="radio"
+                    id="commercial-mobile"
+                    name="listingType"
+                    value="commercial"
+                    checked={editingData.listingType === 'commercial'}
+                    onChange={() => setEditingData((prev: any) => ({ ...prev, listingType: 'commercial' }))}
+                    className="mt-0.5 w-4 h-4"
+                  />
+                  <div className="flex-1 space-y-1">
+                    <label htmlFor="commercial-mobile" className="text-sm font-medium cursor-pointer block">
+                      Commercial
+                    </label>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Office spaces, retail units, industrial sites, and other business properties
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Residential Option */}
+                <div className="flex items-start space-x-3 p-4 rounded-lg border hover:bg-gray-50 transition-colors">
+                  <input
+                    type="radio"
+                    id="residential-mobile"
+                    name="listingType"
+                    value="residential"
+                    checked={editingData.listingType === 'residential'}
+                    onChange={() => setEditingData((prev: any) => ({ ...prev, listingType: 'residential' }))}
+                    className="mt-0.5 w-4 h-4"
+                  />
+                  <div className="flex-1 space-y-1">
+                    <label htmlFor="residential-mobile" className="text-sm font-medium cursor-pointer block">
+                      Residential
+                    </label>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Houses, apartments, condos, and other living spaces
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Company Details Section */}
+            <div className="space-y-4">
+              <h3 className="text-base font-medium">Company Details</h3>
+              <div className="space-y-2">
+                <label htmlFor="companyName-mobile" className="text-sm font-medium">
+                  Company Name *
+                </label>
+                <Input
+                  id="companyName-mobile"
+                  value={editingData.companyName || ''}
+                  onChange={(e) => setEditingData((prev: any) => ({ ...prev, companyName: e.target.value }))}
+                  placeholder="Enter your company name"
+                  className="w-full h-12"
+                />
+              </div>
+            </div>
+
+            {/* Company Logo Section */}
+            <div className="space-y-4">
+              <h3 className="text-base font-medium">Company Logo</h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">How would you like to add your logo?</label>
+                  <p className="text-xs text-gray-600">
+                    We can automatically find your logo, or you can upload your own
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  {/* Find Logo Automatically Option */}
+                  <div className="flex items-start space-x-3 p-4 rounded-lg border hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      id="clearbit-mobile"
+                      name="logoMethod"
+                      value="clearbit"
+                      checked={editingData.logoMethod === 'clearbit'}
+                      onChange={() => setEditingData((prev: any) => ({ ...prev, logoMethod: 'clearbit' }))}
+                      className="mt-0.5 w-4 h-4"
+                    />
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="clearbit-mobile" className="text-sm font-medium cursor-pointer">
+                          Find logo automatically
+                        </label>
+                        <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                      </div>
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        We'll search for your company's logo using your domain
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Upload Logo Option */}
+                  <div className="flex items-start space-x-3 p-4 rounded-lg border hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      id="upload-mobile"
+                      name="logoMethod"
+                      value="upload"
+                      checked={editingData.logoMethod === 'upload'}
+                      onChange={() => setEditingData((prev: any) => ({ ...prev, logoMethod: 'upload' }))}
+                      className="mt-0.5 w-4 h-4"
+                    />
+                    <div className="flex-1 space-y-1">
+                      <label htmlFor="upload-mobile" className="text-sm font-medium cursor-pointer">
+                        Upload your own logo
+                      </label>
+                      <p className="text-xs text-gray-600 leading-relaxed">
+                        Choose a custom logo file • PNG, JPG, or SVG up to 2MB
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Domain Input for Clearbit */}
+                {editingData.logoMethod === 'clearbit' && (
+                  <div className="space-y-2">
+                    <label htmlFor="companyDomain-mobile" className="text-sm font-medium">
+                      Company Domain
+                    </label>
+                    <Input
+                      id="companyDomain-mobile"
+                      value={editingData.companyDomain || ''}
+                      onChange={(e) => setEditingData((prev: any) => ({ ...prev, companyDomain: e.target.value }))}
+                      placeholder="e.g., apple.com"
+                      className="w-full h-12"
+                    />
+                    <p className="text-xs text-gray-600">
+                      Enter your company domain to find your logo automatically
+                    </p>
+                  </div>
+                )}
+
+                {/* File Upload for Upload Method */}
+                {editingData.logoMethod === 'upload' && (
+                  <div className="space-y-2">
+                    <ImageUpload
+                      value={editingData.logoPreview}
+                      onChange={handleLogoFileUpload}
+                      onPreviewChange={handleLogoPreviewChange}
+                      placeholder="Upload your company logo"
+                      maxSize={2 * 1024 * 1024}
+                      acceptedTypes={["image/png", "image/jpeg", "image/jpg", "image/svg+xml"]}
+                    />
+                  </div>
+                )}
+
+                {/* Logo Preview */}
+                {editingData.logoPreview && (
+                  <div className="p-4 bg-gray-50 rounded-lg border">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-white rounded-lg border flex items-center justify-center">
+                        <img
+                          src={editingData.logoPreview}
+                          alt="Company logo preview"
+                          className="w-8 h-8 object-contain"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-green-700">Logo ready!</p>
+                        <p className="text-xs text-gray-600">
+                          {editingData.clearbitLogo ? `Found automatically from ${editingData.companyDomain}` : 'Custom logo uploaded'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
     );
   }
