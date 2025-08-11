@@ -43,7 +43,8 @@ import {
   ChevronDown,
   ChevronUp,
   GripVertical,
-  Download
+  Download,
+  Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -2770,117 +2771,142 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   {/* Tab-specific content */}
                   {activeTab === 'overview' && (
                     <div className="space-y-4">
-                      {/* Company Profile & Requirements Material Section */}
-                      <div className="bg-white rounded-lg border p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-medium">From {listingData?.companyName || 'Company Name'}</h4>
-                          <Button 
-                            onClick={() => {
-                              setEditingData({
-                                companyName: listingData?.companyName || '',
-                                listingType: listingData?.listingType || 'commercial',
-                                companyDomain: listingData?.companyDomain || '',
-                                propertyPageLink: listingData?.propertyPageLink || '',
-                                logoMethod: listingData?.logoMethod || (listingData?.companyDomain ? 'clearbit' : 'upload'),
-                                logoPreview: listingData?.logoPreview || '',
-                                clearbitLogo: listingData?.clearbitLogo || false
-                              });
-                              openModal('companyProfile');
-                            }}
-                            className="bg-violet-600 hover:bg-violet-700 text-white h-11 min-w-[44px]"
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                          </Button>
-                        </div>
-                        
-                        {/* Company info display */}
-                        <div className="space-y-3 mb-6">
-                          <div className="flex items-center gap-3">
-                            {listingData?.logoPreview ? (
-                              <img
-                                src={listingData.logoPreview}
-                                alt={`${listingData.companyName} logo`}
-                                className="w-12 h-12 object-contain rounded-lg shadow-sm bg-white p-1 border"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center shadow-sm">
-                                <span className="text-white font-bold text-sm">
-                                  {(listingData?.companyName || 'C').charAt(0).toUpperCase()}
-                                </span>
+                      {/* Premium Company Profile & Requirements Material Section */}
+                      <div className="bg-gradient-to-br from-violet-50 via-white to-violet-50/50 rounded-2xl border border-violet-100 overflow-hidden shadow-sm">
+                        <div className="p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl flex items-center justify-center shadow-sm">
+                                <Building2 className="w-4 h-4 text-white" />
                               </div>
-                            )}
-                            <div>
-                              <h4 className="font-medium">{listingData?.companyName || 'Company Name'}</h4>
-                              <p className="text-sm text-gray-600 capitalize">
-                                {listingData?.listingType || 'commercial'} property requirement
-                              </p>
+                              <div>
+                                <h4 className="font-semibold text-gray-900 text-base">From {listingData?.companyName || 'Company Name'}</h4>
+                                <p className="text-xs text-gray-600">Company profile & requirements</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setEditingData({
+                                  companyName: listingData?.companyName || '',
+                                  listingType: listingData?.listingType || 'commercial',
+                                  companyDomain: listingData?.companyDomain || '',
+                                  propertyPageLink: listingData?.propertyPageLink || '',
+                                  logoMethod: listingData?.logoMethod || (listingData?.companyDomain ? 'clearbit' : 'upload'),
+                                  logoPreview: listingData?.logoPreview || '',
+                                  clearbitLogo: listingData?.clearbitLogo || false
+                                });
+                                openModal('companyProfile');
+                              }}
+                              className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-95"
+                              style={{ minHeight: '44px', minWidth: '44px', touchAction: 'manipulation' }}
+                            >
+                              <Edit className="w-4 h-4" />
+                              <span className="font-medium text-sm">Edit</span>
+                            </button>
+                          </div>
+                        
+                          {/* Company info display */}
+                          <div className="p-3 bg-white/80 backdrop-blur-sm rounded-xl border border-violet-100 mb-6">
+                            <div className="flex items-center gap-3">
+                              {listingData?.logoPreview ? (
+                                <img
+                                  src={listingData.logoPreview}
+                                  alt={`${listingData.companyName} logo`}
+                                  className="w-12 h-12 object-contain rounded-xl shadow-sm bg-white p-2 border border-violet-100"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl flex items-center justify-center shadow-sm">
+                                  <span className="text-white font-bold text-sm">
+                                    {(listingData?.companyName || 'C').charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-gray-900 truncate">{listingData?.companyName || 'Company Name'}</h4>
+                                <p className="text-sm text-gray-600 capitalize">
+                                  {listingData?.listingType || 'commercial'} property requirement
+                                </p>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
                         {/* Requirements Material Section */}
-                        {/* Requirements Brochure Display */}
-                        {listingData?.brochureFiles && listingData.brochureFiles.length > 0 ? (
-                          <div className="space-y-2 mb-4">
-                            <h5 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-blue-600" />
-                              Requirements Brochure
-                            </h5>
-                            {listingData.brochureFiles.map((file) => (
+                          {/* Requirements Brochure Display */}
+                          {listingData?.brochureFiles && listingData.brochureFiles.length > 0 ? (
+                            <div className="space-y-3 mb-4">
+                              <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                <div className="w-5 h-5 bg-blue-100 rounded-lg flex items-center justify-center">
+                                  <FileText className="w-3 h-3 text-blue-600" />
+                                </div>
+                                Requirements Brochure
+                              </h5>
+                              {listingData.brochureFiles.map((file) => (
+                                <a
+                                  key={file.id}
+                                  href={file.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 p-3 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-100 hover:border-blue-200 hover:bg-white/90 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
+                                >
+                                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <FileText className="w-4 h-4 text-blue-600" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      View Requirements Brochure
+                                    </p>
+                                    <p className="text-xs text-gray-600">
+                                      {(file.size / 1024 / 1024).toFixed(1)} MB
+                                    </p>
+                                  </div>
+                                  <Download className="w-4 h-4 text-blue-600" />
+                                </a>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6 mb-4">
+                              <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                <FileText className="w-6 h-6 text-gray-400" />
+                              </div>
+                              <h5 className="font-medium text-gray-700 mb-1">No Requirements Brochure</h5>
+                              <p className="text-sm text-gray-500">Upload a brochure to share detailed requirements</p>
+                            </div>
+                          )}
+
+                          {/* Property Page Link Display */}
+                          {listingData?.propertyPageLink ? (
+                            <div className="space-y-3">
+                              <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                <div className="w-5 h-5 bg-green-100 rounded-lg flex items-center justify-center">
+                                  <ExternalLink className="w-3 h-3 text-green-600" />
+                                </div>
+                                Property Page Link
+                              </h5>
                               <a
-                                key={file.id}
-                                href={file.url}
+                                href={listingData.propertyPageLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 border border-blue-200 hover:border-blue-300 hover:bg-blue-100 transition-all duration-200"
+                                className="flex items-center gap-3 p-3 bg-white/80 backdrop-blur-sm rounded-xl border border-green-100 hover:border-green-200 hover:bg-white/90 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
                               >
-                                <FileText className="w-5 h-5 text-blue-600" />
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-gray-900">
-                                    View Requirements Brochure
-                                  </p>
-                                  <p className="text-xs text-gray-600">
-                                    {(file.size / 1024 / 1024).toFixed(1)} MB
-                                  </p>
+                                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <ExternalLink className="w-4 h-4 text-green-600" />
                                 </div>
-                                <Download className="w-4 h-4 text-blue-600" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900">View Property Page</p>
+                                  <p className="text-xs text-gray-600 truncate">{listingData.propertyPageLink}</p>
+                                </div>
                               </a>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg mb-4">
-                            <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm">No brochure uploaded</p>
-                          </div>
-                        )}
-
-                        {/* Property Page Link Display */}
-                        {listingData?.propertyPageLink ? (
-                          <div className="space-y-2">
-                            <h5 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                              <ExternalLink className="w-4 h-4 text-green-600" />
-                              Property Page Link
-                            </h5>
-                            <a
-                              href={listingData.propertyPageLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200 hover:border-green-300 hover:bg-green-100 transition-all duration-200"
-                            >
-                              <ExternalLink className="w-5 h-5 text-green-600" />
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-gray-900">View Property Page</p>
-                                <p className="text-xs text-gray-600 break-all">{listingData.propertyPageLink}</p>
+                            </div>
+                          ) : (
+                            <div className="text-center py-6">
+                              <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                <ExternalLink className="w-6 h-6 text-gray-400" />
                               </div>
-                            </a>
-                          </div>
-                        ) : (
-                          <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
-                            <ExternalLink className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm">No property page link added</p>
-                          </div>
-                        )}
+                              <h5 className="font-medium text-gray-700 mb-1">No Property Page</h5>
+                              <p className="text-sm text-gray-500">Add a link to your property page or website</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -3494,31 +3520,71 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
                   {activeTab === 'locations' && (
                     <div className="space-y-4">
-                      {/* Locations content */}
-                      <div className="bg-white rounded-lg border p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium">Preferred Locations</h4>
-                          <Button 
-                            size="sm"
-                            onClick={() => setEditingSection('locations')}
-                            className="h-9 min-w-[44px]"
-                          >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Add
-                          </Button>
-                        </div>
-                        {listingData.locations && listingData.locations.length > 0 ? (
-                          <div className="space-y-2">
-                            {listingData.locations.map((location: any, index: number) => (
-                              <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-md">
-                                <MapPin className="w-4 h-4 text-gray-500" />
-                                <span className="text-sm">{location.place_name || location.formatted_address}</span>
+                      {/* Premium Locations Section */}
+                      <div className="bg-gradient-to-br from-violet-50 via-white to-violet-50/50 rounded-2xl border border-violet-100 overflow-hidden shadow-sm">
+                        <div className="p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl flex items-center justify-center shadow-sm">
+                                <MapPin className="w-4 h-4 text-white" />
                               </div>
-                            ))}
+                              <div>
+                                <h4 className="font-semibold text-gray-900 text-base">Preferred Locations</h4>
+                                <p className="text-xs text-gray-600">Target specific areas or go nationwide</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => openModal('locations')}
+                              className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-95"
+                              style={{ minHeight: '44px', minWidth: '44px', touchAction: 'manipulation' }}
+                            >
+                              {listingData.locations && listingData.locations.length > 0 ? (
+                                <>
+                                  <Edit className="w-4 h-4" />
+                                  <span className="font-medium text-sm">Edit</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="w-4 h-4" />
+                                  <span className="font-medium text-sm">Add</span>
+                                </>
+                              )}
+                            </button>
                           </div>
-                        ) : (
-                          <p className="text-sm text-gray-500">No locations specified</p>
-                        )}
+                          
+                          {listingData.locations && listingData.locations.length > 0 ? (
+                            <div className="space-y-3">
+                              {listingData.locations.map((location: any, index: number) => (
+                                <div 
+                                  key={index} 
+                                  className="flex items-center gap-3 p-3 bg-white/80 backdrop-blur-sm rounded-xl border border-violet-100 hover:bg-white/90 transition-all duration-200"
+                                >
+                                  <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <MapPin className="w-4 h-4 text-violet-600" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <span className="text-sm font-medium text-gray-900 block truncate">
+                                      {location.place_name || location.formatted_address || 'Unknown Location'}
+                                    </span>
+                                    <span className="text-xs text-gray-500">Target Location</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8">
+                              <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                <Globe className="w-8 h-8 text-violet-500" />
+                              </div>
+                              <h5 className="font-semibold text-gray-900 mb-1">Nationwide Coverage</h5>
+                              <p className="text-sm text-gray-600 mb-4">Open to opportunities across the UK & Ireland</p>
+                              <div className="flex items-center justify-center gap-2 text-xs text-violet-600">
+                                <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse"></div>
+                                <span>Tap Add to specify target areas</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
