@@ -72,7 +72,6 @@ import { useMobileBreakpoint } from '@/components/listings/ImmersiveListingModal
 import { MobileVisualHero } from '@/components/listings/ImmersiveListingModal/MobileVisualHero';
 import { MobileTabNavigation } from '@/components/listings/ImmersiveListingModal/MobileTabNavigation';
 import { SimpleMobileBottomSheet } from '@/components/listings/ImmersiveListingModal/SimpleMobileBottomSheet';
-import { MobileHeader } from '@/components/listings/ImmersiveListingModal/MobileHeader';
 
 
 interface ListingDetailPageProps {
@@ -152,8 +151,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     siteSize: false,
     locations: false,
     contacts: false,
-    faqs: false,
-    preview: false
+    faqs: false
   });
 
   const [editingContactData, setEditingContactData] = useState<any>(null);
@@ -1207,12 +1205,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   // Quick Add Modal functions
   const openQuickAddModal = (type: keyof typeof quickAddModals) => {
-    console.log('openQuickAddModal called with:', type);
-    setQuickAddModals(prev => {
-      const newState = { ...prev, [type]: true };
-      console.log('quickAddModals updated:', newState);
-      return newState;
-    });
+    setQuickAddModals(prev => ({ ...prev, [type]: true }));
   };
 
   const closeQuickAddModal = (type: keyof typeof quickAddModals) => {
@@ -2294,13 +2287,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     if (!isOpen) return null;
 
     return (
-      <div className={`fixed inset-0 bg-black/50 backdrop-blur-sm flex ${isMobile ? 'z-[10002]' : 'z-50 items-center justify-center p-4'}`}>
-        <div className={`bg-white shadow-2xl w-full flex flex-col ${
-          isMobile 
-            ? 'h-screen md:h-auto md:max-h-[calc(100vh-8rem)] md:rounded-xl md:max-w-lg md:mx-4' 
-            : 'rounded-xl max-w-lg max-h-[90vh] overflow-y-auto'
-        }`}>
-          <div className={`${isMobile ? 'flex-1 flex flex-col p-6' : 'p-6'}`}>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
               <Button variant="ghost" size="sm" onClick={onClose}>
@@ -2352,39 +2341,32 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
             {/* Selected files */}
             {selectedFiles.length > 0 && (
-              <div className={`mt-4 space-y-2 ${isMobile ? 'flex-1 min-h-0' : ''}`}>
+              <div className="mt-4 space-y-2">
                 <p className="text-sm font-medium text-gray-700">Selected files:</p>
-                <div className={isMobile ? 'overflow-y-auto max-h-32' : ''}>
-                  {selectedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded mb-2">
-                      <span className="text-sm text-gray-600 truncate">{file.name}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                        className="text-red-500 hover:text-red-700 ml-2 flex-shrink-0"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                {selectedFiles.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <span className="text-sm text-gray-600 truncate">{file.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile(index)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
             
-            <div className={`flex gap-3 pt-4 border-t ${isMobile ? 'mt-auto justify-stretch' : 'justify-end mt-6'}`}>
-              <Button 
-                variant="outline" 
-                onClick={onClose} 
-                disabled={isUploading}
-                className={isMobile ? 'flex-1' : ''}
-              >
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+              <Button variant="outline" onClick={onClose} disabled={isUploading}>
                 Cancel
               </Button>
               <Button 
                 onClick={handleUpload} 
                 disabled={selectedFiles.length === 0 || isUploading}
-                className={`bg-violet-600 hover:bg-violet-700 text-white ${isMobile ? 'flex-1' : ''}`}
+                className="bg-violet-600 hover:bg-violet-700 text-white"
               >
                 {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''}`}
               </Button>
@@ -2425,51 +2407,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       return;
     }
 
-    try {
-      const supabase = createClientClient();
-      
-      // Delete from storage
-      const bucket = type === 'siteplans' ? 'site-plans' : 'fit-outs';
-      const { error: storageError } = await supabase.storage
-        .from(bucket)
-        .remove([file.path]);
-
-      if (storageError) {
-        throw new Error(`Failed to delete file from storage: ${storageError.message}`);
-      }
-
-      // Delete from database
-      const { error: dbError } = await supabase
-        .from('file_uploads')
-        .delete()
-        .eq('id', file.id);
-
-      if (dbError) {
-        throw new Error(`Failed to delete file record: ${dbError.message}`);
-      }
-
-      // Update local state
-      if (type === 'siteplans') {
-        setListingData(prev => prev ? {
-          ...prev,
-          sitePlanFiles: prev.sitePlanFiles?.filter(f => f.id !== file.id) || []
-        } : null);
-      } else {
-        setListingData(prev => prev ? {
-          ...prev,
-          fitOutFiles: prev.fitOutFiles?.filter(f => f.id !== file.id) || []
-        } : null);
-      }
-
-      toast.success('File deleted successfully!');
-    } catch (error) {
-      console.error('Delete file error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete file');
-    }
-  };
-
-  // Mobile deletion functions (skip confirm dialog since we have our own confirmation UI)
-  const handleMobileDeleteFile = async (file: any, type: 'siteplans' | 'fitouts') => {
     try {
       const supabase = createClientClient();
       
@@ -2611,18 +2548,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   if (isMobile) {
     return (
       <>
-      <div className="h-screen bg-violet-900 relative overflow-hidden flex flex-col">
-        {/* Mobile Header */}
-        <MobileHeader
-          companyName={companyName}
-          companyLogo={listingData?.logoPreview}
-          status={listingData?.status || 'draft'}
-          onBack={() => router.push('/occupier/dashboard')}
-          onPreview={() => openModal('preview')}
-        />
-        
-        {/* Mobile Visual Hero - Height excludes bottom sheet */}
-        <div className="relative bg-violet-900" style={{ height: 'calc(100vh - 88px - 150px)' }}>
+        <div className="h-screen bg-violet-900 relative overflow-hidden">
+        {/* Mobile Visual Hero - Full Screen */}
+        <div className="absolute inset-0 overflow-hidden bg-violet-900">
           <MobileVisualHero 
             listing={{
               ...listingData,
@@ -2644,32 +2572,30 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
             } as any}
             isLoading={loading}
             onAddLocations={() => openModal('locations')}
-            onAddSitePlans={() => {
-              console.log('Mobile: Add Site Plans clicked');
-              openQuickAddModal('uploadSitePlans');
-            }}
-            onAddFitOuts={() => {
-              console.log('Mobile: Add Fit Outs clicked');
-              openQuickAddModal('uploadFitOuts');
-            }}
-            onDeleteSitePlan={(index, file) => {
-              console.log('Mobile: Delete site plan clicked', { index, file });
-              // Use the mobile delete function (skips confirm dialog)
-              const actualFile = listingData?.sitePlanFiles?.[index];
-              if (actualFile) {
-                handleMobileDeleteFile(actualFile, 'siteplans');
-              }
-            }}
-            onDeleteFitOut={(index, file) => {
-              console.log('Mobile: Delete fit-out clicked', { index, file });
-              // Use the mobile delete function (skips confirm dialog)
-              const actualFile = listingData?.fitOutFiles?.[index];
-              if (actualFile) {
-                handleMobileDeleteFile(actualFile, 'fitouts');
-              }
-            }}
           />
           
+          {/* Mobile Navigation - Back to dashboard */}
+          <div className="absolute top-4 left-4 z-20">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/occupier/dashboard')}
+              className="text-gray-900 hover:text-gray-900 font-medium bg-white/95 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 px-4 py-2.5 rounded-lg border border-white/20"
+            >
+              ← Dashboard
+            </Button>
+          </div>
+
+          {/* Mobile Status Badge and Actions */}
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+            {/* Status Badge */}
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-md ${statusInfo.bgColor}`}>
+              <StatusIcon className={`w-3 h-3 ${statusInfo.color}`} />
+              <span className={`text-xs font-medium ${statusInfo.color}`}>
+                {statusInfo.label}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Mobile Bottom Sheet with Content */}
@@ -2982,7 +2908,78 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         />
       </div>
 
-      {/* Mobile Modals - Need to be rendered on mobile */}
+      {/* Modals - Need to be rendered for both mobile and desktop */}
+      {/* Quick Actions Modals */}
+      <QuickAddFAQModal
+        isOpen={quickAddModals.faq}
+        onClose={() => closeQuickAddModal('faq')}
+        onSave={handleQuickAddFAQ}
+      />
+      
+      <QuickUploadModal
+        isOpen={quickAddModals.uploadSitePlans}
+        onClose={() => closeQuickAddModal('uploadSitePlans')}
+        type="siteplans"
+        onUpload={(files) => handleQuickUpload(files, 'siteplans')}
+      />
+      
+      <QuickUploadModal
+        isOpen={quickAddModals.uploadFitOuts}
+        onClose={() => closeQuickAddModal('uploadFitOuts')}
+        type="fitouts"
+        onUpload={(files) => handleQuickUpload(files, 'fitouts')}
+      />
+
+      {/* CRUD Modals */}
+      <OverviewModal
+        isOpen={modalStates.overview}
+        onClose={() => closeModal('overview')}
+        listingId={listingId}
+        currentData={{
+          brochureFiles: listingData?.brochureFiles || [],
+          propertyPageLink: listingData?.propertyPageLink
+        }}
+        onSave={handleOverviewSave}
+      />
+
+      {/* Separate Requirements Modals */}
+      <SectorsModal
+        isOpen={modalStates.sectors}
+        onClose={() => closeModal('sectors')}
+        currentData={listingData?.sectors || []}
+        onSave={handleSectorsSave}
+        sectorsOptions={sectors.map(s => ({ 
+          value: s.id, 
+          label: formatName(s.name)
+        }))}
+      />
+
+      <UseClassesModal
+        isOpen={modalStates.useClasses}
+        onClose={() => closeModal('useClasses')}
+        currentData={listingData?.useClassIds || []}
+        onSave={handleUseClassesSave}
+        useClassesOptions={useClasses.map(uc => ({ 
+          value: uc.id, 
+          label: formatName(uc.name)
+        }))}
+      />
+
+      <SiteSizeModal
+        isOpen={modalStates.siteSize}
+        onClose={() => closeModal('siteSize')}
+        listingType={listingData?.listingType || 'commercial'}
+        currentData={{
+          siteSizeMin: listingData?.siteSizeMin,
+          siteSizeMax: listingData?.siteSizeMax,
+          dwellingCountMin: listingData?.dwellingCountMin,
+          dwellingCountMax: listingData?.dwellingCountMax,
+          siteAcreageMin: listingData?.siteAcreageMin,
+          siteAcreageMax: listingData?.siteAcreageMax
+        }}
+        onSave={handleSiteSizeSave}
+      />
+
       <LocationsModal
         isOpen={modalStates.locations}
         onClose={() => closeModal('locations')}
@@ -2997,27 +2994,25 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         onSave={handleLocationsSave}
       />
 
-      {/* Preview Modal - Shows immersive listing view */}
-      <ImmersiveListingModal
-        isOpen={modalStates.preview}
-        onClose={() => closeModal('preview')}
+      <ContactsModal
+        isOpen={modalStates.contacts}
+        onClose={() => closeModal('contacts')}
         listingId={listingId}
-        apiEndpoint={`/api/occupier/listings/${listingId}/detailed`}
+        currentData={{
+          contacts: editingContactData ? [editingContactData] : []
+        }}
+        onSave={handleContactsSave}
+        addOnlyMode={!editingContactData}
+        editingContact={editingContactData}
       />
 
-      {/* Mobile Upload Modals */}
-      <QuickUploadModal
-        isOpen={quickAddModals.uploadSitePlans}
-        onClose={() => closeQuickAddModal('uploadSitePlans')}
-        type="siteplans"
-        onUpload={(files) => handleQuickUpload(files, 'siteplans')}
-      />
-      
-      <QuickUploadModal
-        isOpen={quickAddModals.uploadFitOuts}
-        onClose={() => closeQuickAddModal('uploadFitOuts')}
-        type="fitouts"
-        onUpload={(files) => handleQuickUpload(files, 'fitouts')}
+      <FAQsModal
+        isOpen={modalStates.faqs}
+        onClose={() => closeModal('faqs')}
+        currentData={{
+          faqs: (listingData?.faqs || []).filter(faq => faq.id) as any[]
+        }}
+        onSave={handleFAQsSave}
       />
     </>
     );
@@ -4856,119 +4851,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         </div>
       </div>
       
-      {/* Quick Add Modals */}
-      <QuickAddFAQModal
-        isOpen={quickAddModals.faq}
-        onClose={() => closeQuickAddModal('faq')}
-        onSave={handleQuickAddFAQ}
-      />
-      
-      <QuickUploadModal
-        isOpen={quickAddModals.uploadSitePlans}
-        onClose={() => closeQuickAddModal('uploadSitePlans')}
-        type="siteplans"
-        onUpload={(files) => handleQuickUpload(files, 'siteplans')}
-      />
-      
-      <QuickUploadModal
-        isOpen={quickAddModals.uploadFitOuts}
-        onClose={() => closeQuickAddModal('uploadFitOuts')}
-        type="fitouts"
-        onUpload={(files) => handleQuickUpload(files, 'fitouts')}
-      />
+      {/* Modals moved to mobile section to ensure they render for both mobile and desktop */}
 
-      {/* CRUD Modals */}
-      <OverviewModal
-        isOpen={modalStates.overview}
-        onClose={() => closeModal('overview')}
-        listingId={listingId}
-        currentData={{
-          brochureFiles: listingData?.brochureFiles || [],
-          propertyPageLink: listingData?.propertyPageLink
-        }}
-        onSave={handleOverviewSave}
-      />
 
-      {/* Separate Requirements Modals */}
-      <SectorsModal
-        isOpen={modalStates.sectors}
-        onClose={() => closeModal('sectors')}
-        currentData={listingData?.sectors || []}
-        onSave={handleSectorsSave}
-        sectorsOptions={sectors.map(s => ({ 
-          value: s.id, 
-          label: formatName(s.name)
-        }))}
-      />
-
-      <UseClassesModal
-        isOpen={modalStates.useClasses}
-        onClose={() => closeModal('useClasses')}
-        currentData={listingData?.useClassIds || []}
-        onSave={handleUseClassesSave}
-        useClassesOptions={useClasses.map(uc => ({ 
-          value: uc.id, 
-          label: formatName(uc.name)
-        }))}
-      />
-
-      <SiteSizeModal
-        isOpen={modalStates.siteSize}
-        onClose={() => closeModal('siteSize')}
-        listingType={listingData?.listingType || 'commercial'}
-        currentData={{
-          siteSizeMin: listingData?.siteSizeMin,
-          siteSizeMax: listingData?.siteSizeMax,
-          dwellingCountMin: listingData?.dwellingCountMin,
-          dwellingCountMax: listingData?.dwellingCountMax,
-          siteAcreageMin: listingData?.siteAcreageMin,
-          siteAcreageMax: listingData?.siteAcreageMax
-        }}
-        onSave={handleSiteSizeSave}
-      />
-
-      <LocationsModal
-        isOpen={modalStates.locations}
-        onClose={() => closeModal('locations')}
-        currentData={{
-          locations: listingData?.locations?.map(loc => ({
-            id: loc.id,
-            name: loc.place_name || loc.formatted_address || 'Unknown location',
-            coordinates: loc.coordinates,
-            type: loc.type
-          })) || []
-        }}
-        onSave={handleLocationsSave}
-      />
-
-      <ContactsModal
-        isOpen={modalStates.contacts}
-        onClose={() => closeModal('contacts')}
-        listingId={listingId}
-        currentData={{
-          contacts: editingContactData ? [editingContactData] : [] // Pass the editing contact if available
-        }}
-        onSave={handleContactsSave}
-        addOnlyMode={!editingContactData} // Only use add-only mode when not editing
-        editingContact={editingContactData}
-      />
-
-      <FAQsModal
-        isOpen={modalStates.faqs}
-        onClose={() => closeModal('faqs')}
-        currentData={{
-          faqs: (listingData?.faqs || []).filter(faq => faq.id) as any[]
-        }}
-        onSave={handleFAQsSave}
-      />
-
-      {/* Preview Modal - Shows immersive listing view */}
-      <ImmersiveListingModal
-        isOpen={modalStates.preview}
-        onClose={() => closeModal('preview')}
-        listingId={listingId}
-        apiEndpoint={`/api/occupier/listings/${listingId}/detailed`}
-      />
 
     </>
   );
