@@ -2613,7 +2613,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   if (isMobile) {
     return (
       <>
-      <div className="h-screen bg-violet-900 relative overflow-hidden flex flex-col">
+      <div className={`h-screen bg-violet-900 relative overflow-hidden flex flex-col ${modalStates.preview ? 'hidden' : ''}`}>
         {/* Mobile Header */}
         <MobileHeader
           companyName={companyName}

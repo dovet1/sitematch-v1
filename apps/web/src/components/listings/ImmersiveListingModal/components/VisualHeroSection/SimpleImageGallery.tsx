@@ -238,8 +238,8 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
         </div>
       )}
 
-      {/* Manage Uploads Button */}
-      {images.length > 0 && (
+      {/* Manage Uploads Button - Only show if edit callbacks are available */}
+      {images.length > 0 && (onAddClick || onDeleteImage) && (
         <button
           onClick={(e) => {
             e.stopPropagation();

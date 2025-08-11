@@ -558,7 +558,7 @@ export function ImmersiveListingModal({
 
             {/* Mobile Container */}
             <div 
-              className="fixed inset-0 z-[10000] flex flex-col bg-gradient-to-br from-violet-900 to-violet-700"
+              className="fixed inset-0 z-[10003] flex flex-col bg-gradient-to-br from-violet-900 to-violet-700"
               style={{ 
                 overscrollBehavior: 'none',
                 touchAction: 'pan-y' 
@@ -572,7 +572,7 @@ export function ImmersiveListingModal({
               }}
             >
               {/* Mobile Header */}
-              <div className="fixed top-0 left-0 right-0 z-[10002] bg-white/95 backdrop-blur-md border-b border-gray-200">
+              <div className="fixed top-0 left-0 right-0 z-[10004] bg-white/95 backdrop-blur-md border-b border-gray-200">
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {listing?.company.logo_url ? (
