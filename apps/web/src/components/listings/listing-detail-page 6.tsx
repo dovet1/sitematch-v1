@@ -167,10 +167,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   // Carousel state for site-plans and fit-outs
   const [sitePlansIndex, setSitePlansIndex] = useState(0);
   const [fitOutsIndex, setFitOutsIndex] = useState(0);
-  
-  // FAQ reordering state
-  const [draggedFaqIndex, setDraggedFaqIndex] = useState<number | null>(null);
-  const [dragOverFaqIndex, setDragOverFaqIndex] = useState<number | null>(null);
 
   // CRUD Modal states
   const [modalStates, setModalStates] = useState({
@@ -4261,56 +4257,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       {(() => {
                         const allFaqs = listingData?.faqs || [];
                         
-                        const handleFaqDragStart = (e: React.DragEvent | React.TouchEvent, index: number) => {
-                          setDraggedFaqIndex(index);
-                          // Add haptic feedback for mobile
-                          if ('vibrate' in navigator) {
-                            navigator.vibrate(50);
-                          }
-                        };
-                        
-                        const handleFaqDragOver = (e: React.DragEvent, index: number) => {
-                          e.preventDefault();
-                          setDragOverFaqIndex(index);
-                        };
-                        
-                        const handleFaqDrop = async (e: React.DragEvent, dropIndex: number) => {
-                          e.preventDefault();
-                          
-                          if (draggedFaqIndex === null || draggedFaqIndex === dropIndex) {
-                            setDraggedFaqIndex(null);
-                            setDragOverFaqIndex(null);
-                            return;
-                          }
-                          
-                          // Reorder the FAQs
-                          const reorderedFaqs = [...allFaqs];
-                          const [draggedFaq] = reorderedFaqs.splice(draggedFaqIndex, 1);
-                          reorderedFaqs.splice(dropIndex, 0, draggedFaq);
-                          
-                          // Update display order
-                          const updatedFaqs = reorderedFaqs.map((faq: any, idx: number) => ({
-                            ...faq,
-                            displayOrder: idx,
-                            order: idx
-                          }));
-                          
-                          // Save the new order
-                          try {
-                            await handleFAQsSave({ faqs: updatedFaqs });
-                          } catch (error) {
-                            console.error('Error reordering FAQs:', error);
-                          }
-                          
-                          setDraggedFaqIndex(null);
-                          setDragOverFaqIndex(null);
-                        };
-                        
-                        const handleFaqDragEnd = () => {
-                          setDraggedFaqIndex(null);
-                          setDragOverFaqIndex(null);
-                        };
-                        
                         return (
                           <>
                             {allFaqs.length > 0 ? (
@@ -4318,147 +4264,39 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 {allFaqs.map((faq: any, index: number) => (
                                   <div 
                                     key={faq.id || index}
-                                    draggable={false}
-                                    onDragStart={(e) => handleFaqDragStart(e, index)}
-                                    onDragOver={(e) => handleFaqDragOver(e, index)}
-                                    onDrop={(e) => handleFaqDrop(e, index)}
-                                    onDragEnd={handleFaqDragEnd}
-                                    className={cn(
-                                      "bg-gradient-to-br from-white via-purple-50/20 to-white rounded-2xl border overflow-hidden shadow-sm transition-all duration-200",
-                                      draggedFaqIndex === index && "opacity-50 scale-105",
-                                      dragOverFaqIndex === index && "border-purple-400 border-2 bg-purple-50/30",
-                                      !draggedFaqIndex && !dragOverFaqIndex && "border-purple-100 hover:shadow-md"
-                                    )}
+                                    className="bg-gradient-to-br from-white via-purple-50/20 to-white rounded-2xl border border-purple-100 overflow-hidden shadow-sm transition-all duration-200 hover:shadow-md"
                                   >
                                     {/* FAQ Card Header - Clickable to expand */}
-                                    <div className="flex items-stretch">
-                                      {/* Drag Handle - Desktop + Mobile Reorder Buttons */}
-                                      {!editingSections[`faq-${faq.id}`] && allFaqs.length > 1 && (
-                                        <div className="flex items-center bg-purple-50/50 border-r border-purple-100">
-                                          {/* Desktop Drag Handle */}
-                                          <div 
-                                            className="hidden sm:flex items-center px-2 cursor-grab active:cursor-grabbing select-none"
-                                            onMouseDown={(e) => {
-                                              const card = e.currentTarget.closest('[draggable]') as HTMLElement;
-                                              if (card) {
-                                                card.draggable = true;
-                                              }
-                                            }}
-                                            onMouseUp={(e) => {
-                                              const card = e.currentTarget.closest('[draggable]') as HTMLElement;
-                                              if (card) {
-                                                card.draggable = false;
-                                              }
-                                            }}
-                                          >
-                                            <GripVertical className="w-4 h-4 text-purple-400" />
-                                          </div>
-                                          
-                                          {/* Mobile Reorder Buttons */}
-                                          <div className="flex flex-col sm:hidden">
-                                            <button
-                                              onClick={async () => {
-                                                if (index > 0) {
-                                                  console.log('Moving FAQ up from index', index, 'to', index - 1);
-                                                  // Move FAQ up by swapping with previous
-                                                  const reorderedFaqs = [...allFaqs];
-                                                  [reorderedFaqs[index - 1], reorderedFaqs[index]] = [reorderedFaqs[index], reorderedFaqs[index - 1]];
-                                                  
-                                                  // Update display order
-                                                  const updatedFaqs = reorderedFaqs.map((faq: any, idx: number) => ({
-                                                    ...faq,
-                                                    displayOrder: idx,
-                                                    order: idx
-                                                  }));
-                                                  
-                                                  try {
-                                                    await handleFAQsSave({ faqs: updatedFaqs });
-                                                    console.log('FAQ moved up successfully');
-                                                  } catch (error) {
-                                                    console.error('Error moving FAQ up:', error);
-                                                  }
-                                                }
-                                              }}
-                                              disabled={index === 0}
-                                              className={`p-1 transition-colors ${
-                                                index === 0 
-                                                  ? 'text-gray-300' 
-                                                  : 'text-purple-600 hover:bg-purple-100 active:bg-purple-200'
-                                              }`}
-                                              style={{ minHeight: '24px', minWidth: '28px' }}
-                                            >
-                                              <ChevronUp className="w-3 h-3" />
-                                            </button>
-                                            <button
-                                              onClick={async () => {
-                                                if (index < allFaqs.length - 1) {
-                                                  console.log('Moving FAQ down from index', index, 'to', index + 1);
-                                                  // Move FAQ down by swapping with next
-                                                  const reorderedFaqs = [...allFaqs];
-                                                  [reorderedFaqs[index], reorderedFaqs[index + 1]] = [reorderedFaqs[index + 1], reorderedFaqs[index]];
-                                                  
-                                                  // Update display order
-                                                  const updatedFaqs = reorderedFaqs.map((faq: any, idx: number) => ({
-                                                    ...faq,
-                                                    displayOrder: idx,
-                                                    order: idx
-                                                  }));
-                                                  
-                                                  try {
-                                                    await handleFAQsSave({ faqs: updatedFaqs });
-                                                    console.log('FAQ moved down successfully');
-                                                  } catch (error) {
-                                                    console.error('Error moving FAQ down:', error);
-                                                  }
-                                                }
-                                              }}
-                                              disabled={index === allFaqs.length - 1}
-                                              className={`p-1 transition-colors ${
-                                                index === allFaqs.length - 1
-                                                  ? 'text-gray-300' 
-                                                  : 'text-purple-600 hover:bg-purple-100 active:bg-purple-200'
-                                              }`}
-                                              style={{ minHeight: '24px', minWidth: '28px' }}
-                                            >
-                                              <ChevronDown className="w-3 h-3" />
-                                            </button>
-                                          </div>
-                                        </div>
-                                      )}
-                                      
-                                      {/* Main content area */}
-                                      <div 
-                                        className="flex-1 p-4 cursor-pointer"
-                                        onClick={() => setExpandedSections(prev => ({
-                                          ...prev,
-                                          [`faq-${faq.id}`]: !prev[`faq-${faq.id}`]
-                                        }))}
-                                        style={{ touchAction: 'manipulation' }}
-                                        data-faq-index={index}
-                                      >
-                                        <div className="flex items-start justify-between gap-3">
-                                          <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                              <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                                <span className="text-white text-xs font-bold leading-none">{index + 1}</span>
-                                              </div>
-                                              <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
-                                                {faq.question || 'No question'}
-                                              </h4>
+                                    <div 
+                                      className="p-4 cursor-pointer"
+                                      onClick={() => setExpandedSections(prev => ({
+                                        ...prev,
+                                        [`faq-${faq.id}`]: !prev[`faq-${faq.id}`]
+                                      }))}
+                                      style={{ touchAction: 'manipulation' }}
+                                    >
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                              <span className="text-white text-xs font-bold leading-none">{index + 1}</span>
                                             </div>
-                                            {!expandedSections[`faq-${faq.id}`] && (
-                                              <p className="text-xs text-gray-600 line-clamp-2 mt-1 pl-8">
-                                                {faq.answer || 'No answer'}
-                                              </p>
-                                            )}
+                                            <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
+                                              {faq.question || 'No question'}
+                                            </h4>
                                           </div>
-                                          <ChevronDown 
-                                            className={cn(
-                                              "w-5 h-5 text-gray-400 transition-transform duration-200 flex-shrink-0",
-                                              expandedSections[`faq-${faq.id}`] && "rotate-180"
-                                            )} 
-                                          />
+                                          {!expandedSections[`faq-${faq.id}`] && (
+                                            <p className="text-xs text-gray-600 line-clamp-2 mt-1 pl-8">
+                                              {faq.answer || 'No answer'}
+                                            </p>
+                                          )}
                                         </div>
+                                        <ChevronDown 
+                                          className={cn(
+                                            "w-5 h-5 text-gray-400 transition-transform duration-200 flex-shrink-0",
+                                            expandedSections[`faq-${faq.id}`] && "rotate-180"
+                                          )} 
+                                        />
                                       </div>
                                     </div>
 
