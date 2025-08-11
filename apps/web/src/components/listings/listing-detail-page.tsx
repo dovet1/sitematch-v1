@@ -44,7 +44,8 @@ import {
   ChevronUp,
   GripVertical,
   Download,
-  Globe
+  Globe,
+  HelpCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -166,6 +167,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   // Carousel state for site-plans and fit-outs
   const [sitePlansIndex, setSitePlansIndex] = useState(0);
   const [fitOutsIndex, setFitOutsIndex] = useState(0);
+  
+  // FAQ reordering state
+  const [draggedFaqIndex, setDraggedFaqIndex] = useState<number | null>(null);
+  const [dragOverFaqIndex, setDragOverFaqIndex] = useState<number | null>(null);
 
   // CRUD Modal states
   const [modalStates, setModalStates] = useState({
@@ -4231,33 +4236,448 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   )}
 
                   {activeTab === 'faqs' && (
-                    <div className="space-y-4">
-                      {/* FAQs content */}
-                      <div className="bg-white rounded-lg border p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium">Frequently Asked Questions</h4>
-                          <Button 
-                            size="sm"
-                            onClick={() => setQuickAddModals(prev => ({ ...prev, faq: true }))}
-                            className="h-9 min-w-[44px]"
-                          >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Add
-                          </Button>
-                        </div>
-                        {listingData.faqs && listingData.faqs.length > 0 ? (
-                          <div className="space-y-3">
-                            {listingData.faqs.map((faq: any, index: number) => (
-                              <div key={faq.id || index} className="p-3 bg-gray-50 rounded-md">
-                                <div className="font-medium text-sm mb-1">{faq.question}</div>
-                                <div className="text-sm text-gray-600">{faq.answer}</div>
+                    <div className="space-y-4 px-4 pb-4">
+                      {/* Premium Header */}
+                      <div className="bg-gradient-to-br from-purple-50 via-white to-purple-50/50 rounded-2xl border border-purple-100 overflow-hidden shadow-sm">
+                        <div className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+                                <HelpCircle className="w-5 h-5 text-white" />
                               </div>
-                            ))}
+                              <div>
+                                <h3 className="font-semibold text-gray-900 text-base">Frequently Asked Questions</h3>
+                                <p className="text-xs text-gray-600">Help people understand your requirements</p>
+                              </div>
+                            </div>
+                            <span className="text-sm font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-lg">
+                              {listingData?.faqs?.length || 0}/10
+                            </span>
                           </div>
-                        ) : (
-                          <p className="text-sm text-gray-500">No FAQs added yet</p>
-                        )}
+                        </div>
                       </div>
+
+                      {/* FAQs List */}
+                      {(() => {
+                        const allFaqs = listingData?.faqs || [];
+                        
+                        const handleFaqDragStart = (e: React.DragEvent | React.TouchEvent, index: number) => {
+                          setDraggedFaqIndex(index);
+                          // Add haptic feedback for mobile
+                          if ('vibrate' in navigator) {
+                            navigator.vibrate(50);
+                          }
+                        };
+                        
+                        const handleFaqDragOver = (e: React.DragEvent, index: number) => {
+                          e.preventDefault();
+                          setDragOverFaqIndex(index);
+                        };
+                        
+                        const handleFaqDrop = async (e: React.DragEvent, dropIndex: number) => {
+                          e.preventDefault();
+                          
+                          if (draggedFaqIndex === null || draggedFaqIndex === dropIndex) {
+                            setDraggedFaqIndex(null);
+                            setDragOverFaqIndex(null);
+                            return;
+                          }
+                          
+                          // Reorder the FAQs
+                          const reorderedFaqs = [...allFaqs];
+                          const [draggedFaq] = reorderedFaqs.splice(draggedFaqIndex, 1);
+                          reorderedFaqs.splice(dropIndex, 0, draggedFaq);
+                          
+                          // Update display order
+                          const updatedFaqs = reorderedFaqs.map((faq: any, idx: number) => ({
+                            ...faq,
+                            displayOrder: idx,
+                            order: idx
+                          }));
+                          
+                          // Save the new order
+                          try {
+                            await handleFAQsSave({ faqs: updatedFaqs });
+                          } catch (error) {
+                            console.error('Error reordering FAQs:', error);
+                          }
+                          
+                          setDraggedFaqIndex(null);
+                          setDragOverFaqIndex(null);
+                        };
+                        
+                        const handleFaqDragEnd = () => {
+                          setDraggedFaqIndex(null);
+                          setDragOverFaqIndex(null);
+                        };
+                        
+                        return (
+                          <>
+                            {allFaqs.length > 0 ? (
+                              <div className="space-y-3">
+                                {allFaqs.map((faq: any, index: number) => (
+                                  <div 
+                                    key={faq.id || index}
+                                    draggable={!editingSections[`faq-${faq.id}`]}
+                                    onDragStart={(e) => handleFaqDragStart(e, index)}
+                                    onDragOver={(e) => handleFaqDragOver(e, index)}
+                                    onDrop={(e) => handleFaqDrop(e, index)}
+                                    onDragEnd={handleFaqDragEnd}
+                                    className={cn(
+                                      "bg-gradient-to-br from-white via-purple-50/20 to-white rounded-2xl border overflow-hidden shadow-sm transition-all duration-200",
+                                      draggedFaqIndex === index && "opacity-50 scale-105",
+                                      dragOverFaqIndex === index && "border-purple-400 border-2 bg-purple-50/30",
+                                      !draggedFaqIndex && !dragOverFaqIndex && "border-purple-100 hover:shadow-md"
+                                    )}
+                                  >
+                                    {/* FAQ Card Header - Clickable to expand */}
+                                    <div className="flex items-stretch">
+                                      {/* Drag Handle */}
+                                      {!editingSections[`faq-${faq.id}`] && allFaqs.length > 1 && (
+                                        <div 
+                                          className="flex items-center px-2 bg-purple-50/50 border-r border-purple-100 cursor-move touch-manipulation"
+                                          onMouseDown={(e) => e.currentTarget.parentElement?.parentElement?.setAttribute('draggable', 'true')}
+                                          onMouseUp={(e) => e.currentTarget.parentElement?.parentElement?.setAttribute('draggable', 'false')}
+                                          onTouchStart={(e) => {
+                                            const touch = e.touches[0];
+                                            const element = e.currentTarget.parentElement?.parentElement;
+                                            if (element) {
+                                              element.style.position = 'relative';
+                                              element.style.zIndex = '1000';
+                                              element.style.opacity = '0.7';
+                                              element.style.transform = 'scale(0.98)';
+                                              setDraggedFaqIndex(index);
+                                            }
+                                          }}
+                                          onTouchEnd={async (e) => {
+                                            const element = e.currentTarget.parentElement?.parentElement;
+                                            if (element && draggedFaqIndex === index) {
+                                              const touch = e.changedTouches[0];
+                                              // Find the element under the touch point
+                                              const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+                                              const faqCard = elementBelow?.closest('[data-faq-index]');
+                                              
+                                              if (faqCard) {
+                                                const targetIndex = parseInt(faqCard.getAttribute('data-faq-index') || '0');
+                                                if (targetIndex !== index && targetIndex >= 0) {
+                                                  // Perform the reorder
+                                                  await handleFaqReorder(index, targetIndex);
+                                                }
+                                              }
+                                              
+                                              // Reset styles
+                                              element.style.position = '';
+                                              element.style.zIndex = '';
+                                              element.style.opacity = '';
+                                              element.style.transform = '';
+                                            }
+                                            setDraggedFaqIndex(null);
+                                            setDragOverFaqIndex(null);
+                                          }}
+                                        >
+                                          <GripVertical className="w-4 h-4 text-purple-400" />
+                                        </div>
+                                      )}
+                                      
+                                      {/* Main content area */}
+                                      <div 
+                                        className="flex-1 p-4 cursor-pointer"
+                                        onClick={() => setExpandedSections(prev => ({
+                                          ...prev,
+                                          [`faq-${faq.id}`]: !prev[`faq-${faq.id}`]
+                                        }))}
+                                        style={{ touchAction: 'manipulation' }}
+                                        data-faq-index={index}
+                                      >
+                                        <div className="flex items-start justify-between gap-3">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                                <span className="text-white text-xs font-bold leading-none">{index + 1}</span>
+                                              </div>
+                                              <h4 className="font-medium text-gray-900 text-sm line-clamp-2">
+                                                {faq.question || 'No question'}
+                                              </h4>
+                                            </div>
+                                            {!expandedSections[`faq-${faq.id}`] && (
+                                              <p className="text-xs text-gray-600 line-clamp-2 mt-1 pl-8">
+                                                {faq.answer || 'No answer'}
+                                              </p>
+                                            )}
+                                          </div>
+                                          <ChevronDown 
+                                            className={cn(
+                                              "w-5 h-5 text-gray-400 transition-transform duration-200 flex-shrink-0",
+                                              expandedSections[`faq-${faq.id}`] && "rotate-180"
+                                            )} 
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Expandable Content */}
+                                    {expandedSections[`faq-${faq.id}`] && (
+                                      <div className="border-t border-purple-100 p-4 bg-gradient-to-b from-white to-purple-50/30">
+                                        {editingSections[`faq-${faq.id}`] ? (
+                                          /* Edit Mode */
+                                          <div className="space-y-4">
+                                            <div>
+                                              <Label className="text-sm font-medium text-gray-700 mb-2 block">Question</Label>
+                                              <Textarea
+                                                value={editingData[`faq-${faq.id}`]?.question || faq.question || ''}
+                                                onChange={(e) => setEditingData((prev: any) => ({
+                                                  ...prev,
+                                                  [`faq-${faq.id}`]: {
+                                                    ...prev[`faq-${faq.id}`],
+                                                    question: e.target.value
+                                                  }
+                                                }))}
+                                                className="min-h-[80px] text-base border-gray-200 focus:border-purple-400 focus:ring-purple-400/20"
+                                                placeholder="What questions do people commonly ask?"
+                                              />
+                                            </div>
+                                            
+                                            <div>
+                                              <Label className="text-sm font-medium text-gray-700 mb-2 block">Answer</Label>
+                                              <Textarea
+                                                value={editingData[`faq-${faq.id}`]?.answer || faq.answer || ''}
+                                                onChange={(e) => setEditingData((prev: any) => ({
+                                                  ...prev,
+                                                  [`faq-${faq.id}`]: {
+                                                    ...prev[`faq-${faq.id}`],
+                                                    answer: e.target.value
+                                                  }
+                                                }))}
+                                                className="min-h-[120px] text-base border-gray-200 focus:border-purple-400 focus:ring-purple-400/20"
+                                                placeholder="Provide a clear, helpful answer"
+                                              />
+                                            </div>
+                                            
+                                            {/* Save/Cancel Actions */}
+                                            <div className="flex gap-3 pt-2">
+                                              <button
+                                                onClick={() => {
+                                                  const faqData = editingData[`faq-${faq.id}`];
+                                                  
+                                                  // If it's a new FAQ being cancelled, remove it from the list
+                                                  if (faqData?.isNew) {
+                                                    const updatedFaqs = allFaqs.filter((f: any) => f.id !== faq.id);
+                                                    setListingData(prev => prev ? { ...prev, faqs: updatedFaqs } : prev);
+                                                  }
+                                                  
+                                                  setEditingSections((prev: any) => ({ ...prev, [`faq-${faq.id}`]: false }));
+                                                  // Clear editing data
+                                                  setEditingData((prev: any) => {
+                                                    const newData = { ...prev };
+                                                    delete newData[`faq-${faq.id}`];
+                                                    return newData;
+                                                  });
+                                                  
+                                                  // Clear expanded state
+                                                  setExpandedSections((prev: any) => {
+                                                    const newState = { ...prev };
+                                                    delete newState[`faq-${faq.id}`];
+                                                    return newState;
+                                                  });
+                                                }}
+                                                className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all duration-200 font-medium text-sm"
+                                                style={{ minHeight: '44px', touchAction: 'manipulation' }}
+                                              >
+                                                Cancel
+                                              </button>
+                                              <button
+                                                onClick={async () => {
+                                                  const updatedFaqData = editingData[`faq-${faq.id}`];
+                                                  if (updatedFaqData) {
+                                                    try {
+                                                      let updatedFaqs;
+                                                      
+                                                      if (updatedFaqData.isNew) {
+                                                        // For new FAQs, update the temporary FAQ with actual data
+                                                        updatedFaqs = allFaqs.map((f: any) => 
+                                                          f.id === faq.id 
+                                                            ? { ...f, question: updatedFaqData.question, answer: updatedFaqData.answer }
+                                                            : f
+                                                        ).filter((f: any) => f.question && f.answer); // Only keep FAQs with both question and answer
+                                                      } else {
+                                                        // For existing FAQs, just update
+                                                        updatedFaqs = allFaqs.map((f: any) => 
+                                                          f.id === faq.id 
+                                                            ? { ...f, question: updatedFaqData.question, answer: updatedFaqData.answer }
+                                                            : f
+                                                        );
+                                                      }
+                                                      
+                                                      await handleFAQsSave({ faqs: updatedFaqs });
+                                                      
+                                                      // Clear editing state
+                                                      setEditingSections((prev: any) => ({ ...prev, [`faq-${faq.id}`]: false }));
+                                                      setEditingData((prev: any) => {
+                                                        const newData = { ...prev };
+                                                        delete newData[`faq-${faq.id}`];
+                                                        return newData;
+                                                      });
+                                                      
+                                                      // Clear expanded state for new FAQs after save
+                                                      if (updatedFaqData.isNew) {
+                                                        setExpandedSections((prev: any) => {
+                                                          const newState = { ...prev };
+                                                          delete newState[`faq-${faq.id}`];
+                                                          return newState;
+                                                        });
+                                                      }
+                                                    } catch (error) {
+                                                      console.error('Error saving FAQ:', error);
+                                                    }
+                                                  }
+                                                }}
+                                                disabled={!editingData[`faq-${faq.id}`]?.question || !editingData[`faq-${faq.id}`]?.answer}
+                                                className="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white rounded-xl transition-all duration-200 font-medium text-sm shadow-sm"
+                                                style={{ minHeight: '44px', touchAction: 'manipulation' }}
+                                              >
+                                                Save FAQ
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          /* View Mode */
+                                          <div className="space-y-3">
+                                            <div>
+                                              <Label className="text-xs font-medium text-gray-500 mb-1 block">Question</Label>
+                                              <p className="text-sm text-gray-900">{faq.question}</p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-xs font-medium text-gray-500 mb-1 block">Answer</Label>
+                                              <p className="text-sm text-gray-700 whitespace-pre-wrap">{faq.answer}</p>
+                                            </div>
+                                            
+                                            {/* Actions */}
+                                            <div className="flex gap-2 pt-2">
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setEditingSections((prev: any) => ({ ...prev, [`faq-${faq.id}`]: true }));
+                                                  setEditingData((prev: any) => ({
+                                                    ...prev,
+                                                    [`faq-${faq.id}`]: {
+                                                      question: faq.question,
+                                                      answer: faq.answer
+                                                    }
+                                                  }));
+                                                }}
+                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-all duration-200 font-medium text-sm shadow-sm"
+                                                style={{ minHeight: '44px', touchAction: 'manipulation' }}
+                                              >
+                                                <Edit className="w-4 h-4" />
+                                                Edit
+                                              </button>
+                                              <button
+                                                onClick={async (e) => {
+                                                  e.stopPropagation();
+                                                  if (window.confirm('Are you sure you want to delete this FAQ?')) {
+                                                    try {
+                                                      const updatedFaqs = allFaqs.filter((f: any) => f.id !== faq.id);
+                                                      await handleFAQsSave({ faqs: updatedFaqs });
+                                                    } catch (error) {
+                                                      console.error('Error deleting FAQ:', error);
+                                                    }
+                                                  }
+                                                }}
+                                                className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all duration-200"
+                                                style={{ minHeight: '44px', touchAction: 'manipulation' }}
+                                              >
+                                                <Trash2 className="w-4 h-4" />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                                
+                                {/* Add New FAQ Button */}
+                                {allFaqs.length < 10 && (
+                                  <button
+                                    onClick={() => {
+                                      const newFaqId = `faq-${Date.now()}`;
+                                      const newFaq = {
+                                        id: newFaqId,
+                                        question: '',
+                                        answer: '',
+                                        displayOrder: allFaqs.length
+                                      };
+                                      
+                                      // Add to editing state immediately
+                                      setExpandedSections((prev: any) => ({ ...prev, [`faq-${newFaqId}`]: true }));
+                                      setEditingSections((prev: any) => ({ ...prev, [`faq-${newFaqId}`]: true }));
+                                      setEditingData((prev: any) => ({
+                                        ...prev,
+                                        [`faq-${newFaqId}`]: {
+                                          question: '',
+                                          answer: '',
+                                          isNew: true
+                                        }
+                                      }));
+                                      
+                                      // Add to FAQs list
+                                      const updatedFaqs = [...allFaqs, newFaq];
+                                      setListingData(prev => prev ? { ...prev, faqs: updatedFaqs } : prev);
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl transition-all duration-200 font-medium text-sm shadow-lg hover:shadow-xl"
+                                    style={{ minHeight: '48px', touchAction: 'manipulation' }}
+                                  >
+                                    <Plus className="w-5 h-5" />
+                                    Add FAQ
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              /* Empty State */
+                              <div className="bg-gradient-to-br from-purple-50 via-white to-purple-50/50 rounded-2xl border-2 border-dashed border-purple-200 p-8 text-center">
+                                <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                                  <HelpCircle className="w-8 h-8 text-purple-600" />
+                                </div>
+                                <h4 className="font-semibold text-gray-900 mb-2">No FAQs Yet</h4>
+                                <p className="text-sm text-gray-600 mb-6 max-w-xs mx-auto">
+                                  Answer common questions to help people understand your requirements better
+                                </p>
+                                <button
+                                  onClick={() => {
+                                    const newFaqId = `faq-${Date.now()}`;
+                                    const newFaq = {
+                                      id: newFaqId,
+                                      question: '',
+                                      answer: '',
+                                      displayOrder: 0
+                                    };
+                                    
+                                    // Add to editing state immediately
+                                    setExpandedSections((prev: any) => ({ ...prev, [`faq-${newFaqId}`]: true }));
+                                    setEditingSections((prev: any) => ({ ...prev, [`faq-${newFaqId}`]: true }));
+                                    setEditingData((prev: any) => ({
+                                      ...prev,
+                                      [`faq-${newFaqId}`]: {
+                                        question: '',
+                                        answer: '',
+                                        isNew: true
+                                      }
+                                    }));
+                                    
+                                    // Add to FAQs list
+                                    setListingData(prev => prev ? { ...prev, faqs: [newFaq] } : prev);
+                                  }}
+                                  className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-all duration-200 font-medium text-sm shadow-sm"
+                                  style={{ minHeight: '44px', touchAction: 'manipulation' }}
+                                >
+                                  <Plus className="w-4 h-4" />
+                                  Add First FAQ
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
