@@ -141,6 +141,23 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   // Visual hero view state (matching public modal)
   const [visualView, setVisualView] = useState<'map' | 'fitouts' | 'siteplans'>('map');
   
+  // Mobile requirements section state
+  const [expandedSections, setExpandedSections] = useState({
+    siteSize: false,
+    dwellingCount: false,
+    siteAcreage: false,
+    sectors: false,
+    useClasses: false
+  });
+  
+  const [editingSections, setEditingSections] = useState({
+    siteSize: false,
+    dwellingCount: false,
+    siteAcreage: false,
+    sectors: false,
+    useClasses: false
+  });
+  
   // Carousel state for site-plans and fit-outs
   const [sitePlansIndex, setSitePlansIndex] = useState(0);
   const [fitOutsIndex, setFitOutsIndex] = useState(0);
@@ -2869,14 +2886,609 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   )}
 
                   {activeTab === 'requirements' && (
-                    <div className="space-y-4">
-                      {/* Requirements content */}
-                      <div className="bg-white rounded-lg border p-4">
-                        <h4 className="font-medium mb-2">Property Requirements</h4>
-                        <p className="text-sm text-gray-600">
-                          Manage sectors, use classes, and size requirements.
-                        </p>
-                      </div>
+                    <div className="space-y-3 px-1">
+                      {/* Premium Mobile Requirements Interface */}
+                      
+                      {/* Site Size Requirements - Commercial Only */}
+                      {listingData?.listingType === 'commercial' && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                          <div 
+                            className="p-4 flex items-center justify-between cursor-pointer active:bg-gray-50 transition-all duration-200 min-h-[68px]"
+                            onClick={() => setExpandedSections(prev => ({
+                              ...prev,
+                              siteSize: !prev.siteSize
+                            }))}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-100 to-violet-200 flex items-center justify-center shadow-sm">
+                                <span className="text-2xl">📐</span>
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900 text-base">Site Size</h4>
+                                {(listingData?.siteSizeMin || listingData?.siteSizeMax) ? (
+                                  <p className="text-sm text-gray-600 mt-0.5">
+                                    {listingData.siteSizeMin && listingData.siteSizeMax 
+                                      ? `${listingData.siteSizeMin.toLocaleString()} - ${listingData.siteSizeMax.toLocaleString()} sq ft`
+                                      : listingData.siteSizeMin 
+                                        ? `From ${listingData.siteSizeMin.toLocaleString()} sq ft`
+                                        : `Up to ${listingData.siteSizeMax?.toLocaleString()} sq ft`
+                                    }
+                                  </p>
+                                ) : (
+                                  <p className="text-sm text-gray-500 mt-0.5">Tap to add size requirements</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {(listingData?.siteSizeMin || listingData?.siteSizeMax) && (
+                                <div className="w-2 h-2 bg-violet-500 rounded-full"></div>
+                              )}
+                              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${expandedSections.siteSize ? 'rotate-180' : ''}`} />
+                            </div>
+                          </div>
+                          
+                          {expandedSections.siteSize && (
+                            <div className="border-t border-gray-100 p-4 bg-gradient-to-b from-white to-gray-50">
+                              {editingSections.siteSize ? (
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Minimum Size</Label>
+                                      <div className="relative">
+                                        <Input
+                                          type="number"
+                                          placeholder="e.g., 1,000"
+                                          value={editingData.siteSizeMin || ''}
+                                          onChange={(e) => setEditingData((prev: any) => ({
+                                            ...prev,
+                                            siteSizeMin: e.target.value ? parseInt(e.target.value) : undefined
+                                          }))}
+                                          className="h-12 text-base pr-16 border-gray-200 focus:border-violet-400 focus:ring-violet-400/20"
+                                        />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">sq ft</span>
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Maximum Size</Label>
+                                      <div className="relative">
+                                        <Input
+                                          type="number"
+                                          placeholder="e.g., 10,000"
+                                          value={editingData.siteSizeMax || ''}
+                                          onChange={(e) => setEditingData((prev: any) => ({
+                                            ...prev,
+                                            siteSizeMax: e.target.value ? parseInt(e.target.value) : undefined
+                                          }))}
+                                          className="h-12 text-base pr-16 border-gray-200 focus:border-violet-400 focus:ring-violet-400/20"
+                                        />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">sq ft</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-3 pt-2">
+                                    <Button 
+                                      variant="outline" 
+                                      className="flex-1 h-12 border-gray-200 hover:border-gray-300"
+                                      onClick={() => setEditingSections(prev => ({ ...prev, siteSize: false }))}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button 
+                                      className="flex-1 h-12 bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 text-white shadow-lg"
+                                      onClick={async () => {
+                                        await handleSiteSizeSave({
+                                          siteSizeMin: editingData.siteSizeMin,
+                                          siteSizeMax: editingData.siteSizeMax
+                                        });
+                                        setEditingSections(prev => ({ ...prev, siteSize: false }));
+                                      }}
+                                    >
+                                      Save Changes
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex gap-3">
+                                  <Button 
+                                    variant="outline" 
+                                    className="flex-1 h-12 border-violet-200 hover:border-violet-300 hover:bg-violet-50"
+                                    onClick={() => {
+                                      setEditingData({
+                                        siteSizeMin: listingData?.siteSizeMin,
+                                        siteSizeMax: listingData?.siteSizeMax
+                                      });
+                                      setEditingSections(prev => ({ ...prev, siteSize: true }));
+                                    }}
+                                  >
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    {(listingData?.siteSizeMin || listingData?.siteSizeMax) ? 'Edit Requirements' : 'Add Requirements'}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Dwelling Count - Residential Only */}
+                      {listingData?.listingType === 'residential' && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                          <div 
+                            className="p-4 flex items-center justify-between cursor-pointer active:bg-gray-50 transition-all duration-200 min-h-[68px]"
+                            onClick={() => setExpandedSections(prev => ({
+                              ...prev,
+                              dwellingCount: !prev.dwellingCount
+                            }))}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center shadow-sm">
+                                <span className="text-2xl">🏠</span>
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900 text-base">Dwelling Count</h4>
+                                {(listingData?.dwellingCountMin || listingData?.dwellingCountMax) ? (
+                                  <p className="text-sm text-gray-600 mt-0.5">
+                                    {listingData.dwellingCountMin && listingData.dwellingCountMax 
+                                      ? `${listingData.dwellingCountMin} - ${listingData.dwellingCountMax} dwellings`
+                                      : listingData.dwellingCountMin 
+                                        ? `From ${listingData.dwellingCountMin} dwellings`
+                                        : `Up to ${listingData.dwellingCountMax} dwellings`
+                                    }
+                                  </p>
+                                ) : (
+                                  <p className="text-sm text-gray-500 mt-0.5">Tap to add dwelling requirements</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {(listingData?.dwellingCountMin || listingData?.dwellingCountMax) && (
+                                <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                              )}
+                              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${expandedSections.dwellingCount ? 'rotate-180' : ''}`} />
+                            </div>
+                          </div>
+                          
+                          {expandedSections.dwellingCount && (
+                            <div className="border-t border-gray-100 p-4 bg-gradient-to-b from-white to-gray-50">
+                              {editingSections.dwellingCount ? (
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Minimum Dwellings</Label>
+                                      <Input
+                                        type="number"
+                                        placeholder="e.g., 10"
+                                        value={editingData.dwellingCountMin || ''}
+                                        onChange={(e) => setEditingData((prev: any) => ({
+                                          ...prev,
+                                          dwellingCountMin: e.target.value ? parseInt(e.target.value) : undefined
+                                        }))}
+                                        className="h-12 text-base border-gray-200 focus:border-emerald-400 focus:ring-emerald-400/20"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Maximum Dwellings</Label>
+                                      <Input
+                                        type="number"
+                                        placeholder="e.g., 100"
+                                        value={editingData.dwellingCountMax || ''}
+                                        onChange={(e) => setEditingData((prev: any) => ({
+                                          ...prev,
+                                          dwellingCountMax: e.target.value ? parseInt(e.target.value) : undefined
+                                        }))}
+                                        className="h-12 text-base border-gray-200 focus:border-emerald-400 focus:ring-emerald-400/20"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-3 pt-2">
+                                    <Button 
+                                      variant="outline" 
+                                      className="flex-1 h-12 border-gray-200 hover:border-gray-300"
+                                      onClick={() => setEditingSections(prev => ({ ...prev, dwellingCount: false }))}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button 
+                                      className="flex-1 h-12 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white shadow-lg"
+                                      onClick={async () => {
+                                        await handleSiteSizeSave({
+                                          dwellingCountMin: editingData.dwellingCountMin,
+                                          dwellingCountMax: editingData.dwellingCountMax
+                                        });
+                                        setEditingSections(prev => ({ ...prev, dwellingCount: false }));
+                                      }}
+                                    >
+                                      Save Changes
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex gap-3">
+                                  <Button 
+                                    variant="outline" 
+                                    className="flex-1 h-12 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-50"
+                                    onClick={() => {
+                                      setEditingData({
+                                        dwellingCountMin: listingData?.dwellingCountMin,
+                                        dwellingCountMax: listingData?.dwellingCountMax
+                                      });
+                                      setEditingSections(prev => ({ ...prev, dwellingCount: true }));
+                                    }}
+                                  >
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    {(listingData?.dwellingCountMin || listingData?.dwellingCountMax) ? 'Edit Dwellings' : 'Add Dwellings'}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Site Acreage - Residential Only */}
+                      {listingData?.listingType === 'residential' && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                          <div 
+                            className="p-4 flex items-center justify-between cursor-pointer active:bg-gray-50 transition-all duration-200 min-h-[68px]"
+                            onClick={() => setExpandedSections(prev => ({
+                              ...prev,
+                              siteAcreage: !prev.siteAcreage
+                            }))}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center shadow-sm">
+                                <span className="text-2xl">🌾</span>
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900 text-base">Site Acreage</h4>
+                                {(listingData?.siteAcreageMin || listingData?.siteAcreageMax) ? (
+                                  <p className="text-sm text-gray-600 mt-0.5">
+                                    {listingData.siteAcreageMin && listingData.siteAcreageMax 
+                                      ? `${listingData.siteAcreageMin} - ${listingData.siteAcreageMax} acres`
+                                      : listingData.siteAcreageMin 
+                                        ? `From ${listingData.siteAcreageMin} acres`
+                                        : `Up to ${listingData.siteAcreageMax} acres`
+                                    }
+                                  </p>
+                                ) : (
+                                  <p className="text-sm text-gray-500 mt-0.5">Tap to add acreage requirements</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {(listingData?.siteAcreageMin || listingData?.siteAcreageMax) && (
+                                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                              )}
+                              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${expandedSections.siteAcreage ? 'rotate-180' : ''}`} />
+                            </div>
+                          </div>
+                          
+                          {expandedSections.siteAcreage && (
+                            <div className="border-t border-gray-100 p-4 bg-gradient-to-b from-white to-gray-50">
+                              {editingSections.siteAcreage ? (
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Minimum Acres</Label>
+                                      <div className="relative">
+                                        <Input
+                                          type="number"
+                                          step="0.1"
+                                          placeholder="e.g., 0.5"
+                                          value={editingData.siteAcreageMin || ''}
+                                          onChange={(e) => setEditingData((prev: any) => ({
+                                            ...prev,
+                                            siteAcreageMin: e.target.value ? parseFloat(e.target.value) : undefined
+                                          }))}
+                                          className="h-12 text-base pr-16 border-gray-200 focus:border-amber-400 focus:ring-amber-400/20"
+                                        />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">acres</span>
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <Label className="text-sm font-medium text-gray-700 mb-2 block">Maximum Acres</Label>
+                                      <div className="relative">
+                                        <Input
+                                          type="number"
+                                          step="0.1"
+                                          placeholder="e.g., 5.0"
+                                          value={editingData.siteAcreageMax || ''}
+                                          onChange={(e) => setEditingData((prev: any) => ({
+                                            ...prev,
+                                            siteAcreageMax: e.target.value ? parseFloat(e.target.value) : undefined
+                                          }))}
+                                          className="h-12 text-base pr-16 border-gray-200 focus:border-amber-400 focus:ring-amber-400/20"
+                                        />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">acres</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-3 pt-2">
+                                    <Button 
+                                      variant="outline" 
+                                      className="flex-1 h-12 border-gray-200 hover:border-gray-300"
+                                      onClick={() => setEditingSections(prev => ({ ...prev, siteAcreage: false }))}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button 
+                                      className="flex-1 h-12 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white shadow-lg"
+                                      onClick={async () => {
+                                        await handleSiteSizeSave({
+                                          siteAcreageMin: editingData.siteAcreageMin,
+                                          siteAcreageMax: editingData.siteAcreageMax
+                                        });
+                                        setEditingSections(prev => ({ ...prev, siteAcreage: false }));
+                                      }}
+                                    >
+                                      Save Changes
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex gap-3">
+                                  <Button 
+                                    variant="outline" 
+                                    className="flex-1 h-12 border-amber-200 hover:border-amber-300 hover:bg-amber-50"
+                                    onClick={() => {
+                                      setEditingData({
+                                        siteAcreageMin: listingData?.siteAcreageMin,
+                                        siteAcreageMax: listingData?.siteAcreageMax
+                                      });
+                                      setEditingSections(prev => ({ ...prev, siteAcreage: true }));
+                                    }}
+                                  >
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    {(listingData?.siteAcreageMin || listingData?.siteAcreageMax) ? 'Edit Acreage' : 'Add Acreage'}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Sectors - Commercial Only */}
+                      {listingData?.listingType === 'commercial' && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                          <div 
+                            className="p-4 flex items-center justify-between cursor-pointer active:bg-gray-50 transition-all duration-200 min-h-[68px]"
+                            onClick={() => setExpandedSections(prev => ({
+                              ...prev,
+                              sectors: !prev.sectors
+                            }))}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center shadow-sm">
+                                <span className="text-2xl">🏢</span>
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900 text-base">Sectors</h4>
+                                {listingData?.sectors && listingData.sectors.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {listingData.sectors.slice(0, 2).map((sectorId, index) => {
+                                      const sector = sectors.find(s => s.id === sectorId);
+                                      return (
+                                        <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-700">
+                                          {sector?.name ? formatName(sector.name) : sectorId}
+                                        </span>
+                                      );
+                                    })}
+                                    {listingData.sectors.length > 2 && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-700">
+                                        +{listingData.sectors.length - 2} more
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-gray-500 mt-0.5">Tap to add industry sectors</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {listingData?.sectors && listingData.sectors.length > 0 && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              )}
+                              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${expandedSections.sectors ? 'rotate-180' : ''}`} />
+                            </div>
+                          </div>
+                          
+                          {expandedSections.sectors && (
+                            <div className="border-t border-gray-100 p-4 bg-gradient-to-b from-white to-blue-50/30">
+                              {editingSections.sectors ? (
+                                <div className="space-y-4">
+                                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                                    {sectors.map((sector) => (
+                                      <label key={sector.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:bg-blue-50 hover:border-blue-200 cursor-pointer min-h-[52px] transition-all duration-200">
+                                        <input
+                                          type="checkbox"
+                                          checked={editingData.sectors?.includes(sector.id) || false}
+                                          onChange={(e) => {
+                                            const currentSectors = editingData.sectors || [];
+                                            const newSectors = e.target.checked
+                                              ? [...currentSectors, sector.id]
+                                              : currentSectors.filter((id: any) => id !== sector.id);
+                                            setEditingData((prev: any) => ({ ...prev, sectors: newSectors }));
+                                          }}
+                                          className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 focus:ring-offset-2"
+                                        />
+                                        <span className="text-sm font-medium flex-1">{formatName(sector.name)}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                  <div className="flex gap-3 pt-2">
+                                    <Button 
+                                      variant="outline" 
+                                      className="flex-1 h-12 border-gray-200 hover:border-gray-300"
+                                      onClick={() => setEditingSections(prev => ({ ...prev, sectors: false }))}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button 
+                                      className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
+                                      onClick={async () => {
+                                        await handleSectorsSave(editingData.sectors || []);
+                                        setEditingSections(prev => ({ ...prev, sectors: false }));
+                                      }}
+                                    >
+                                      Save Changes
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-4">
+                                  {listingData?.sectors && listingData.sectors.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                      {listingData.sectors.map((sectorId, index) => {
+                                        const sector = sectors.find(s => s.id === sectorId);
+                                        return (
+                                          <span key={index} className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                            {sector?.name ? formatName(sector.name) : sectorId}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                  <div className="flex gap-3">
+                                    <Button 
+                                      variant="outline" 
+                                      className="flex-1 h-12 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
+                                      onClick={() => {
+                                        setEditingData({ sectors: listingData?.sectors || [] });
+                                        setEditingSections(prev => ({ ...prev, sectors: true }));
+                                      }}
+                                    >
+                                      <Edit className="w-4 h-4 mr-2" />
+                                      {listingData?.sectors && listingData.sectors.length > 0 ? 'Edit Sectors' : 'Add Sectors'}
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Use Classes - Commercial Only */}
+                      {listingData?.listingType === 'commercial' && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                          <div 
+                            className="p-4 flex items-center justify-between cursor-pointer active:bg-gray-50 transition-all duration-200 min-h-[68px]"
+                            onClick={() => setExpandedSections(prev => ({
+                              ...prev,
+                              useClasses: !prev.useClasses
+                            }))}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center shadow-sm">
+                                <span className="text-2xl">🏗️</span>
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900 text-base">Use Classes</h4>
+                                {listingData?.useClassIds && listingData.useClassIds.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {listingData.useClassIds.slice(0, 2).map((useClassId, index) => {
+                                      const useClass = useClasses.find(uc => uc.id === useClassId);
+                                      return (
+                                        <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-100 text-green-700">
+                                          {useClass?.name ? formatName(useClass.name) : useClassId}
+                                        </span>
+                                      );
+                                    })}
+                                    {listingData.useClassIds.length > 2 && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-100 text-green-700">
+                                        +{listingData.useClassIds.length - 2} more
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-gray-500 mt-0.5">Tap to add planning use classes</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {listingData?.useClassIds && listingData.useClassIds.length > 0 && (
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              )}
+                              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${expandedSections.useClasses ? 'rotate-180' : ''}`} />
+                            </div>
+                          </div>
+                          
+                          {expandedSections.useClasses && (
+                            <div className="border-t border-gray-100 p-4 bg-gradient-to-b from-white to-green-50/30">
+                              {editingSections.useClasses ? (
+                                <div className="space-y-4">
+                                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                                    {useClasses.map((useClass) => (
+                                      <label key={useClass.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:bg-green-50 hover:border-green-200 cursor-pointer min-h-[52px] transition-all duration-200">
+                                        <input
+                                          type="checkbox"
+                                          checked={editingData.useClassIds?.includes(useClass.id) || false}
+                                          onChange={(e) => {
+                                            const currentUseClasses = editingData.useClassIds || [];
+                                            const newUseClasses = e.target.checked
+                                              ? [...currentUseClasses, useClass.id]
+                                              : currentUseClasses.filter((id: any) => id !== useClass.id);
+                                            setEditingData((prev: any) => ({ ...prev, useClassIds: newUseClasses }));
+                                          }}
+                                          className="w-5 h-5 text-green-600 rounded focus:ring-green-500 focus:ring-offset-2"
+                                        />
+                                        <span className="text-sm font-medium flex-1">{formatName(useClass.name)}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                  <div className="flex gap-3 pt-2">
+                                    <Button 
+                                      variant="outline" 
+                                      className="flex-1 h-12 border-gray-200 hover:border-gray-300"
+                                      onClick={() => setEditingSections(prev => ({ ...prev, useClasses: false }))}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button 
+                                      className="flex-1 h-12 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg"
+                                      onClick={async () => {
+                                        await handleUseClassesSave(editingData.useClassIds || []);
+                                        setEditingSections(prev => ({ ...prev, useClasses: false }));
+                                      }}
+                                    >
+                                      Save Changes
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-4">
+                                  {listingData?.useClassIds && listingData.useClassIds.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                      {listingData.useClassIds.map((useClassId, index) => {
+                                        const useClass = useClasses.find(uc => uc.id === useClassId);
+                                        return (
+                                          <span key={index} className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium bg-green-100 text-green-800 border border-green-200">
+                                            {useClass?.name ? formatName(useClass.name) : useClassId}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                  <div className="flex gap-3">
+                                    <Button 
+                                      variant="outline" 
+                                      className="flex-1 h-12 border-green-200 hover:border-green-300 hover:bg-green-50"
+                                      onClick={() => {
+                                        setEditingData({ useClassIds: listingData?.useClassIds || [] });
+                                        setEditingSections(prev => ({ ...prev, useClasses: true }));
+                                      }}
+                                    >
+                                      <Edit className="w-4 h-4 mr-2" />
+                                      {listingData?.useClassIds && listingData.useClassIds.length > 0 ? 'Edit Use Classes' : 'Add Use Classes'}
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 
