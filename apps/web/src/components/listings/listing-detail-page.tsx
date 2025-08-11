@@ -58,6 +58,9 @@ import { ImmersiveListingModal } from '@/components/listings/ImmersiveListingMod
 import { fetchCompanyLogo, validateDomain, normalizeDomain, formatDomainWithProtocol } from '@/lib/clearbit-logo';
 import { getCurrentListingVersion } from '@/lib/version-management';
 
+// Import authentication
+import { useAuth } from '@/contexts/auth-context';
+
 // Import CRUD modals
 import { OverviewModal } from '@/components/listings/modals/overview-modal';
 import { LocationsModal } from '@/components/listings/modals/locations-modal';
@@ -93,6 +96,7 @@ interface ListingData extends WizardFormData {
 
 export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: ListingDetailPageProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [listingData, setListingData] = useState<ListingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,7 +147,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   const [visualView, setVisualView] = useState<'map' | 'fitouts' | 'siteplans'>('map');
   
   // Mobile requirements section state
-  const [expandedSections, setExpandedSections] = useState({
+  const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({
     siteSize: false,
     dwellingCount: false,
     siteAcreage: false,
@@ -151,7 +155,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     useClasses: false
   });
   
-  const [editingSections, setEditingSections] = useState({
+  const [editingSections, setEditingSections] = useState<{[key: string]: boolean}>({
     siteSize: false,
     dwellingCount: false,
     siteAcreage: false,
@@ -1051,6 +1055,28 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       isPrimary: contactId === 'primary'
     });
     setModalStates(prev => ({ ...prev, contacts: true }));
+  };
+
+  // Helper function for uploading contact headshots
+  const handleContactHeadshotUpload = async (file: File, contactKey: string) => {
+    try {
+      const uploadedFiles = await uploadFiles([file], 'headshot', user?.id!, listingData?.id || '');
+      if (uploadedFiles.length > 0) {
+        // Update the editing data with the new headshot URL
+        setEditingData((prev: any) => ({
+          ...prev,
+          [contactKey]: {
+            ...prev[contactKey],
+            headshotUrl: uploadedFiles[0].url
+          }
+        }));
+        return uploadedFiles[0].url;
+      }
+    } catch (error) {
+      console.error('Error uploading headshot:', error);
+      toast.error('Failed to upload profile photo');
+    }
+    return null;
   };
 
   const handleDeleteContact = async (contactId: string) => {
@@ -2995,7 +3021,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     <Button 
                                       variant="outline" 
                                       className="flex-1 h-12 border-gray-200 hover:border-gray-300"
-                                      onClick={() => setEditingSections(prev => ({ ...prev, siteSize: false }))}
+                                      onClick={() => setEditingSections((prev: any) => ({ ...prev, siteSize: false }))}
                                     >
                                       Cancel
                                     </Button>
@@ -3006,7 +3032,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                           siteSizeMin: editingData.siteSizeMin,
                                           siteSizeMax: editingData.siteSizeMax
                                         });
-                                        setEditingSections(prev => ({ ...prev, siteSize: false }));
+                                        setEditingSections((prev: any) => ({ ...prev, siteSize: false }));
                                       }}
                                     >
                                       Save Changes
@@ -3023,7 +3049,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                         siteSizeMin: listingData?.siteSizeMin,
                                         siteSizeMax: listingData?.siteSizeMax
                                       });
-                                      setEditingSections(prev => ({ ...prev, siteSize: true }));
+                                      setEditingSections((prev: any) => ({ ...prev, siteSize: true }));
                                     }}
                                   >
                                     <Edit className="w-4 h-4 mr-2" />
@@ -3110,7 +3136,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     <Button 
                                       variant="outline" 
                                       className="flex-1 h-12 border-gray-200 hover:border-gray-300"
-                                      onClick={() => setEditingSections(prev => ({ ...prev, dwellingCount: false }))}
+                                      onClick={() => setEditingSections((prev: any) => ({ ...prev, dwellingCount: false }))}
                                     >
                                       Cancel
                                     </Button>
@@ -3121,7 +3147,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                           dwellingCountMin: editingData.dwellingCountMin,
                                           dwellingCountMax: editingData.dwellingCountMax
                                         });
-                                        setEditingSections(prev => ({ ...prev, dwellingCount: false }));
+                                        setEditingSections((prev: any) => ({ ...prev, dwellingCount: false }));
                                       }}
                                     >
                                       Save Changes
@@ -3138,7 +3164,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                         dwellingCountMin: listingData?.dwellingCountMin,
                                         dwellingCountMax: listingData?.dwellingCountMax
                                       });
-                                      setEditingSections(prev => ({ ...prev, dwellingCount: true }));
+                                      setEditingSections((prev: any) => ({ ...prev, dwellingCount: true }));
                                     }}
                                   >
                                     <Edit className="w-4 h-4 mr-2" />
@@ -3233,7 +3259,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     <Button 
                                       variant="outline" 
                                       className="flex-1 h-12 border-gray-200 hover:border-gray-300"
-                                      onClick={() => setEditingSections(prev => ({ ...prev, siteAcreage: false }))}
+                                      onClick={() => setEditingSections((prev: any) => ({ ...prev, siteAcreage: false }))}
                                     >
                                       Cancel
                                     </Button>
@@ -3244,7 +3270,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                           siteAcreageMin: editingData.siteAcreageMin,
                                           siteAcreageMax: editingData.siteAcreageMax
                                         });
-                                        setEditingSections(prev => ({ ...prev, siteAcreage: false }));
+                                        setEditingSections((prev: any) => ({ ...prev, siteAcreage: false }));
                                       }}
                                     >
                                       Save Changes
@@ -3261,7 +3287,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                         siteAcreageMin: listingData?.siteAcreageMin,
                                         siteAcreageMax: listingData?.siteAcreageMax
                                       });
-                                      setEditingSections(prev => ({ ...prev, siteAcreage: true }));
+                                      setEditingSections((prev: any) => ({ ...prev, siteAcreage: true }));
                                     }}
                                   >
                                     <Edit className="w-4 h-4 mr-2" />
@@ -3346,7 +3372,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     <Button 
                                       variant="outline" 
                                       className="flex-1 h-12 border-gray-200 hover:border-gray-300"
-                                      onClick={() => setEditingSections(prev => ({ ...prev, sectors: false }))}
+                                      onClick={() => setEditingSections((prev: any) => ({ ...prev, sectors: false }))}
                                     >
                                       Cancel
                                     </Button>
@@ -3354,7 +3380,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                       className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
                                       onClick={async () => {
                                         await handleSectorsSave(editingData.sectors || []);
-                                        setEditingSections(prev => ({ ...prev, sectors: false }));
+                                        setEditingSections((prev: any) => ({ ...prev, sectors: false }));
                                       }}
                                     >
                                       Save Changes
@@ -3381,7 +3407,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                       className="flex-1 h-12 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
                                       onClick={() => {
                                         setEditingData({ sectors: listingData?.sectors || [] });
-                                        setEditingSections(prev => ({ ...prev, sectors: true }));
+                                        setEditingSections((prev: any) => ({ ...prev, sectors: true }));
                                       }}
                                     >
                                       <Edit className="w-4 h-4 mr-2" />
@@ -3467,7 +3493,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     <Button 
                                       variant="outline" 
                                       className="flex-1 h-12 border-gray-200 hover:border-gray-300"
-                                      onClick={() => setEditingSections(prev => ({ ...prev, useClasses: false }))}
+                                      onClick={() => setEditingSections((prev: any) => ({ ...prev, useClasses: false }))}
                                     >
                                       Cancel
                                     </Button>
@@ -3475,7 +3501,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                       className="flex-1 h-12 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg"
                                       onClick={async () => {
                                         await handleUseClassesSave(editingData.useClassIds || []);
-                                        setEditingSections(prev => ({ ...prev, useClasses: false }));
+                                        setEditingSections((prev: any) => ({ ...prev, useClasses: false }));
                                       }}
                                     >
                                       Save Changes
@@ -3502,7 +3528,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                       className="flex-1 h-12 border-green-200 hover:border-green-300 hover:bg-green-50"
                                       onClick={() => {
                                         setEditingData({ useClassIds: listingData?.useClassIds || [] });
-                                        setEditingSections(prev => ({ ...prev, useClasses: true }));
+                                        setEditingSections((prev: any) => ({ ...prev, useClasses: true }));
                                       }}
                                     >
                                       <Edit className="w-4 h-4 mr-2" />
@@ -3590,66 +3616,617 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   )}
 
                   {activeTab === 'contact' && (
-                    <div className="space-y-4">
-                      {/* Contact content */}
-                      <div className="bg-white rounded-lg border p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium">Contact Information</h4>
-                          <Button 
-                            size="sm"
-                            onClick={() => setEditingSection('contacts')}
-                            className="h-9 min-w-[44px]"
-                          >
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                        </div>
-{/* Build combined contacts list */}
-                        {(() => {
-                          const allContacts = [];
-                          
-                          // Add primary contact if it exists
-                          if (listingData.primaryContact?.contactName) {
-                            allContacts.push({
-                              id: 'primary',
-                              contactName: listingData.primaryContact.contactName,
-                              contactTitle: listingData.primaryContact.contactTitle,
-                              contactEmail: listingData.primaryContact.contactEmail,
-                              isPrimary: true
-                            });
+                    <div className="space-y-3 px-1">
+                      {/* Premium Mobile Contacts Interface */}
+                      
+                      {/* Existing Contacts with Expandable Cards */}
+                      {(() => {
+                        const allContacts = [];
+                        
+                        // Add primary contact if it exists
+                        if (listingData.primaryContact?.contactName) {
+                          allContacts.push({
+                            id: 'primary',
+                            contactName: listingData.primaryContact.contactName,
+                            contactTitle: listingData.primaryContact.contactTitle,
+                            contactEmail: listingData.primaryContact.contactEmail,
+                            contactPhone: listingData.primaryContact.contactPhone,
+                            contactArea: listingData.primaryContact.contactArea,
+                            headshotUrl: listingData.primaryContact.headshotUrl,
+                            isPrimary: true
+                          });
+                        }
+                        
+                        // Add additional contacts
+                        if (listingData.additionalContacts) {
+                          allContacts.push(...listingData.additionalContacts.map(contact => ({
+                            id: contact.id || contact.contactName?.replace(/\s+/g, '-').toLowerCase(),
+                            contactName: contact.contactName,
+                            contactTitle: contact.contactTitle,
+                            contactEmail: contact.contactEmail,
+                            contactPhone: contact.contactPhone,
+                            contactArea: contact.contactArea,
+                            headshotUrl: contact.headshotUrl,
+                            isPrimary: false
+                          })));
+                        }
+                        
+                        const getContactInitials = (name: string) => {
+                          if (!name || typeof name !== 'string') {
+                            return '??';
                           }
-                          
-                          // Add additional contacts
-                          if (listingData.additionalContacts) {
-                            allContacts.push(...listingData.additionalContacts.map(contact => ({
-                              ...contact,
-                              isPrimary: false
-                            })));
-                          }
-                          
-                          return allContacts.length > 0 ? (
-                            <div className="space-y-2">
-                              {allContacts.map((contact: any, index: number) => (
-                                <div key={contact.id || index} className="p-2 bg-gray-50 rounded-md">
-                                  <div className="font-medium text-sm">
-                                    {contact.contactName}
-                                    {contact.isPrimary && (
-                                      <span className="ml-2 px-2 py-0.5 text-xs bg-violet-100 text-violet-700 rounded-full">Primary</span>
-                                    )}
-                                  </div>
-                                  <div className="text-sm text-gray-600">{contact.contactTitle}</div>
-                                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <Mail className="w-3 h-3" />
-                                    <span>{contact.contactEmail}</span>
+                          return name
+                            .split(' ')
+                            .map(part => part.charAt(0).toUpperCase())
+                            .join('')
+                            .slice(0, 2);
+                        };
+                        
+                        return (
+                          <>
+                            {allContacts.map((contact: any, index: number) => (
+                              <div key={contact.id || index} className="bg-gradient-to-br from-blue-50 via-white to-blue-50/50 rounded-2xl border border-blue-100 overflow-hidden shadow-sm">
+                                {/* Contact Card Header - Clickable to expand */}
+                                <div 
+                                  className="p-4 cursor-pointer"
+                                  onClick={() => setExpandedSections(prev => ({
+                                    ...prev,
+                                    [`contact-${contact.id}`]: !prev[`contact-${contact.id}`]
+                                  }))}
+                                  style={{ touchAction: 'manipulation' }}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      {/* Avatar */}
+                                      <div className="w-10 h-10 flex-shrink-0">
+                                        {contact.headshotUrl ? (
+                                          <img
+                                            src={contact.headshotUrl}
+                                            alt={contact.contactName}
+                                            className="w-10 h-10 rounded-xl object-cover border border-blue-100"
+                                          />
+                                        ) : (
+                                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+                                            <span className="text-white font-medium text-xs">
+                                              {getContactInitials(contact.contactName)}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      {/* Contact Summary */}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-semibold text-gray-900 truncate">
+                                            {contact.contactName}
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-gray-600 truncate">{contact.contactTitle}</p>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Expand/Collapse Indicator */}
+                                    <div className="flex items-center gap-2">
+                                      <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${expandedSections[`contact-${contact.id}`] ? 'rotate-180' : ''}`} />
+                                    </div>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-gray-500">No contact information provided</p>
-                          );
-                        })()}
-                      </div>
+                                
+                                {/* Expandable Content */}
+                                {expandedSections[`contact-${contact.id}`] && (
+                                  <div className="border-t border-gray-100 p-4 bg-gradient-to-b from-white to-blue-50/30">
+                                    {editingSections[`contact-${contact.id}`] ? (
+                                      /* Edit Mode */
+                                      <div className="space-y-4">
+                                        <div className="grid grid-cols-1 gap-4">
+                                          {/* Headshot Upload */}
+                                          <div>
+                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">Profile Photo</Label>
+                                            <ImageUpload
+                                              value={editingData[`contact-${contact.id}`]?.headshotUrl || contact.headshotUrl || ''}
+                                              onChange={(file) => {
+                                                if (file) {
+                                                  handleContactHeadshotUpload(file, `contact-${contact.id}`);
+                                                } else {
+                                                  // Handle removal - clear the headshot URL
+                                                  setEditingData((prev: any) => ({
+                                                    ...prev,
+                                                    [`contact-${contact.id}`]: {
+                                                      ...prev[`contact-${contact.id}`],
+                                                      headshotUrl: ''
+                                                    }
+                                                  }));
+                                                }
+                                              }}
+                                              acceptedTypes={["image/png", "image/jpeg", "image/jpg"]}
+                                              maxSize={5 * 1024 * 1024} // 5MB
+                                              placeholder="Upload profile photo"
+                                              className="w-full"
+                                            />
+                                          </div>
+                                          
+                                          <div>
+                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">Contact Name</Label>
+                                            <Input
+                                              value={editingData[`contact-${contact.id}`]?.contactName || contact.contactName || ''}
+                                              onChange={(e) => setEditingData((prev: any) => ({
+                                                ...prev,
+                                                [`contact-${contact.id}`]: {
+                                                  ...prev[`contact-${contact.id}`],
+                                                  contactName: e.target.value
+                                                }
+                                              }))}
+                                              className="h-12 text-base border-gray-200 focus:border-blue-400 focus:ring-blue-400/20"
+                                              placeholder="Full name"
+                                            />
+                                          </div>
+                                          
+                                          <div>
+                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">Job Title</Label>
+                                            <Input
+                                              value={editingData[`contact-${contact.id}`]?.contactTitle || contact.contactTitle || ''}
+                                              onChange={(e) => setEditingData((prev: any) => ({
+                                                ...prev,
+                                                [`contact-${contact.id}`]: {
+                                                  ...prev[`contact-${contact.id}`],
+                                                  contactTitle: e.target.value
+                                                }
+                                              }))}
+                                              className="h-12 text-base border-gray-200 focus:border-blue-400 focus:ring-blue-400/20"
+                                              placeholder="e.g., Director of Property"
+                                            />
+                                          </div>
+                                          
+                                          <div>
+                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">Email</Label>
+                                            <Input
+                                              type="email"
+                                              value={editingData[`contact-${contact.id}`]?.contactEmail || contact.contactEmail || ''}
+                                              onChange={(e) => setEditingData((prev: any) => ({
+                                                ...prev,
+                                                [`contact-${contact.id}`]: {
+                                                  ...prev[`contact-${contact.id}`],
+                                                  contactEmail: e.target.value
+                                                }
+                                              }))}
+                                              className="h-12 text-base border-gray-200 focus:border-blue-400 focus:ring-blue-400/20"
+                                              placeholder="email@company.com"
+                                            />
+                                          </div>
+                                          
+                                          <div>
+                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">Phone (Optional)</Label>
+                                            <Input
+                                              type="tel"
+                                              value={editingData[`contact-${contact.id}`]?.contactPhone || contact.contactPhone || ''}
+                                              onChange={(e) => setEditingData((prev: any) => ({
+                                                ...prev,
+                                                [`contact-${contact.id}`]: {
+                                                  ...prev[`contact-${contact.id}`],
+                                                  contactPhone: e.target.value
+                                                }
+                                              }))}
+                                              className="h-12 text-base border-gray-200 focus:border-blue-400 focus:ring-blue-400/20"
+                                              placeholder="+44 20 1234 5678"
+                                            />
+                                          </div>
+                                          
+                                          <div>
+                                            <Label className="text-sm font-medium text-gray-700 mb-2 block">Coverage Area (Optional)</Label>
+                                            <Input
+                                              value={editingData[`contact-${contact.id}`]?.contactArea || contact.contactArea || ''}
+                                              onChange={(e) => setEditingData((prev: any) => ({
+                                                ...prev,
+                                                [`contact-${contact.id}`]: {
+                                                  ...prev[`contact-${contact.id}`],
+                                                  contactArea: e.target.value
+                                                }
+                                              }))}
+                                              className="h-12 text-base border-gray-200 focus:border-blue-400 focus:ring-blue-400/20"
+                                              placeholder="e.g., London, South East England"
+                                            />
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Save/Cancel Actions */}
+                                        <div className="flex gap-3 pt-2">
+                                          <button
+                                            onClick={() => setEditingSections((prev: any) => ({ ...prev, [`contact-${contact.id}`]: false }))}
+                                            className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all duration-200 font-medium text-sm"
+                                            style={{ minHeight: '44px', touchAction: 'manipulation' }}
+                                          >
+                                            Cancel
+                                          </button>
+                                          <button
+                                            onClick={async () => {
+                                              // Handle save existing contact logic
+                                              const updatedContactData = editingData[`contact-${contact.id}`];
+                                              if (updatedContactData) {
+                                                try {
+                                                  await handleContactsSave({
+                                                    contacts: [{
+                                                      id: contact.id,
+                                                      name: updatedContactData.contactName,
+                                                      title: updatedContactData.contactTitle,
+                                                      email: updatedContactData.contactEmail,
+                                                      phone: updatedContactData.contactPhone || null,
+                                                      area: updatedContactData.contactArea || null,
+                                                      headshotUrl: updatedContactData.headshotUrl || contact.headshotUrl || null,
+                                                      isPrimary: contact.isPrimary || false
+                                                    }]
+                                                  });
+                                                  
+                                                  // Reload the data
+                                                  await fetchListingData();
+                                                  
+                                                  // Close edit mode
+                                                  setEditingSections((prev: any) => ({ ...prev, [`contact-${contact.id}`]: false }));
+                                                } catch (error) {
+                                                  console.error('Error saving contact:', error);
+                                                  // You might want to show a toast error here
+                                                }
+                                              }
+                                            }}
+                                            className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all duration-200 font-medium text-sm shadow-sm"
+                                            style={{ minHeight: '44px', touchAction: 'manipulation' }}
+                                          >
+                                            Save Changes
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      /* View Mode */
+                                      <div className="space-y-3">
+                                        <div className="flex items-center gap-1">
+                                          <Mail className="w-4 h-4 text-blue-600" />
+                                          <span className="text-sm text-gray-700">{contact.contactEmail}</span>
+                                        </div>
+                                        {contact.contactPhone && (
+                                          <div className="flex items-center gap-1">
+                                            <Phone className="w-4 h-4 text-blue-600" />
+                                            <span className="text-sm text-gray-700">{contact.contactPhone}</span>
+                                          </div>
+                                        )}
+                                        {contact.contactArea && (
+                                          <div className="flex items-center gap-1">
+                                            <MapPin className="w-4 h-4 text-blue-600" />
+                                            <span className="text-sm text-gray-700">{contact.contactArea}</span>
+                                          </div>
+                                        )}
+                                        
+                                        {/* Edit Button */}
+                                        <div className="pt-2">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingSections((prev: any) => ({ ...prev, [`contact-${contact.id}`]: true }));
+                                              setEditingData((prev: any) => ({
+                                                ...prev,
+                                                [`contact-${contact.id}`]: {
+                                                  contactName: contact.contactName,
+                                                  contactTitle: contact.contactTitle,
+                                                  contactEmail: contact.contactEmail,
+                                                  contactPhone: contact.contactPhone || '',
+                                                  contactArea: contact.contactArea || '',
+                                                  headshotUrl: contact.headshotUrl || ''
+                                                }
+                                              }));
+                                            }}
+                                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all duration-200 font-medium text-sm shadow-sm"
+                                            style={{ minHeight: '44px', touchAction: 'manipulation' }}
+                                          >
+                                            <Edit className="w-4 h-4" />
+                                            Edit Contact
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            
+                            {/* Add New Contact Card */}
+                            {(() => {
+                              const newContactKey = Object.keys(editingData).find(key => 
+                                key.startsWith('contact-') && editingData[key]?.isNew
+                              );
+                              
+                              return newContactKey ? (
+                                <div className="bg-gradient-to-br from-green-50 via-white to-green-50/50 rounded-2xl border border-green-100 overflow-hidden shadow-sm">
+                                  <div className="p-4">
+                                    <div className="flex items-center gap-3 mb-4">
+                                      <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-sm">
+                                        <Plus className="w-4 h-4 text-white" />
+                                      </div>
+                                      <div>
+                                        <h4 className="font-semibold text-gray-900 text-base">New Contact</h4>
+                                        <p className="text-xs text-gray-600">Add team member details</p>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="space-y-4">
+                                      {/* Headshot Upload */}
+                                      <div>
+                                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Profile Photo</Label>
+                                        <ImageUpload
+                                          value={editingData[newContactKey]?.headshotUrl || ''}
+                                          onChange={(file) => {
+                                            if (file) {
+                                              handleContactHeadshotUpload(file, newContactKey);
+                                            } else {
+                                              // Handle removal - clear the headshot URL
+                                              setEditingData((prev: any) => ({
+                                                ...prev,
+                                                [newContactKey]: {
+                                                  ...prev[newContactKey],
+                                                  headshotUrl: ''
+                                                }
+                                              }));
+                                            }
+                                          }}
+                                          acceptedTypes={["image/png", "image/jpeg", "image/jpg"]}
+                                          maxSize={5 * 1024 * 1024} // 5MB
+                                          placeholder="Upload profile photo"
+                                          className="w-full"
+                                        />
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Contact Name</Label>
+                                        <Input
+                                          value={editingData[newContactKey]?.contactName || ''}
+                                          onChange={(e) => setEditingData((prev: any) => ({
+                                            ...prev,
+                                            [newContactKey]: {
+                                              ...prev[newContactKey],
+                                              contactName: e.target.value
+                                            }
+                                          }))}
+                                          className="h-12 text-base border-gray-200 focus:border-green-400 focus:ring-green-400/20"
+                                          placeholder="Full name"
+                                        />
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Job Title</Label>
+                                        <Input
+                                          value={editingData[newContactKey]?.contactTitle || ''}
+                                          onChange={(e) => setEditingData((prev: any) => ({
+                                            ...prev,
+                                            [newContactKey]: {
+                                              ...prev[newContactKey],
+                                              contactTitle: e.target.value
+                                            }
+                                          }))}
+                                          className="h-12 text-base border-gray-200 focus:border-green-400 focus:ring-green-400/20"
+                                          placeholder="e.g., Director of Property"
+                                        />
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Email</Label>
+                                        <Input
+                                          type="email"
+                                          value={editingData[newContactKey]?.contactEmail || ''}
+                                          onChange={(e) => setEditingData((prev: any) => ({
+                                            ...prev,
+                                            [newContactKey]: {
+                                              ...prev[newContactKey],
+                                              contactEmail: e.target.value
+                                            }
+                                          }))}
+                                          className="h-12 text-base border-gray-200 focus:border-green-400 focus:ring-green-400/20"
+                                          placeholder="email@company.com"
+                                        />
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Phone (Optional)</Label>
+                                        <Input
+                                          type="tel"
+                                          value={editingData[newContactKey]?.contactPhone || ''}
+                                          onChange={(e) => setEditingData((prev: any) => ({
+                                            ...prev,
+                                            [newContactKey]: {
+                                              ...prev[newContactKey],
+                                              contactPhone: e.target.value
+                                            }
+                                          }))}
+                                          className="h-12 text-base border-gray-200 focus:border-green-400 focus:ring-green-400/20"
+                                          placeholder="+44 20 1234 5678"
+                                        />
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Coverage Area (Optional)</Label>
+                                        <Input
+                                          value={editingData[newContactKey]?.contactArea || ''}
+                                          onChange={(e) => setEditingData((prev: any) => ({
+                                            ...prev,
+                                            [newContactKey]: {
+                                              ...prev[newContactKey],
+                                              contactArea: e.target.value
+                                            }
+                                          }))}
+                                          className="h-12 text-base border-gray-200 focus:border-green-400 focus:ring-green-400/20"
+                                          placeholder="e.g., London, South East England"
+                                        />
+                                      </div>
+                                      
+                                      {/* Save/Cancel Actions */}
+                                      <div className="flex gap-3 pt-2">
+                                        <button
+                                          onClick={() => {
+                                            setExpandedSections(prev => {
+                                              const newState = { ...prev };
+                                              delete newState[newContactKey];
+                                              return newState;
+                                            });
+                                            setEditingSections((prev: any) => {
+                                              const newState = { ...prev };
+                                              delete newState[newContactKey];
+                                              return newState;
+                                            });
+                                            setEditingData((prev: any) => {
+                                              const newState = { ...prev };
+                                              delete newState[newContactKey];
+                                              return newState;
+                                            });
+                                          }}
+                                          className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-all duration-200 font-medium text-sm"
+                                          style={{ minHeight: '44px', touchAction: 'manipulation' }}
+                                        >
+                                          Cancel
+                                        </button>
+                                        <button
+                                          onClick={async () => {
+                                            // Handle save new contact logic here
+                                            const contactData = editingData[newContactKey];
+                                            if (contactData?.contactName && contactData?.contactTitle && contactData?.contactEmail) {
+                                              try {
+                                                await handleContactsSave({
+                                                  contacts: [{
+                                                    name: contactData.contactName,
+                                                    title: contactData.contactTitle,
+                                                    email: contactData.contactEmail,
+                                                    phone: contactData.contactPhone || null,
+                                                    area: contactData.contactArea || null,
+                                                    headshotUrl: contactData.headshotUrl || null,
+                                                    isPrimary: false
+                                                  }]
+                                                });
+                                                
+                                                // Reload the data
+                                                await fetchListingData();
+                                                
+                                                // Clear the form
+                                                setExpandedSections(prev => {
+                                                  const newState = { ...prev };
+                                                  delete newState[newContactKey];
+                                                  return newState;
+                                                });
+                                                setEditingSections((prev: any) => {
+                                                  const newState = { ...prev };
+                                                  delete newState[newContactKey];
+                                                  return newState;
+                                                });
+                                                setEditingData((prev: any) => {
+                                                  const newState = { ...prev };
+                                                  delete newState[newContactKey];
+                                                  return newState;
+                                                });
+                                              } catch (error) {
+                                                console.error('Error saving new contact:', error);
+                                                // You might want to show a toast error here
+                                              }
+                                            }
+                                          }}
+                                          className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-200 font-medium text-sm shadow-sm"
+                                          style={{ minHeight: '44px', touchAction: 'manipulation' }}
+                                        >
+                                          Save Contact
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : null;
+                            })()}
+                            
+                            {/* Add Contact Button - Only show if no contact is being added */}
+                            {!Object.keys(editingData).some(key => 
+                              key.startsWith('contact-') && editingData[key]?.isNew
+                            ) && (
+                              <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50/30 rounded-2xl border-2 border-dashed border-blue-200 overflow-hidden">
+                                <button
+                                  onClick={() => {
+                                    const newContactId = Date.now().toString();
+                                    const contactKey = `contact-${newContactId}`;
+                                    setExpandedSections(prev => ({
+                                      ...prev,
+                                      [contactKey]: true
+                                    }));
+                                    setEditingSections((prev: any) => ({
+                                      ...prev,
+                                      [contactKey]: true
+                                    }));
+                                    setEditingData((prev: any) => ({
+                                      ...prev,
+                                      [contactKey]: {
+                                        id: newContactId,
+                                        contactName: '',
+                                        contactTitle: '',
+                                        contactEmail: '',
+                                        contactPhone: '',
+                                        contactArea: '',
+                                        headshotUrl: '',
+                                        isNew: true
+                                      }
+                                    }));
+                                  }}
+                                  className="w-full p-6 text-center hover:bg-blue-50/50 transition-all duration-200"
+                                  style={{ touchAction: 'manipulation' }}
+                                >
+                                  <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                    <Plus className="w-6 h-6 text-blue-600" />
+                                  </div>
+                                  <h5 className="font-semibold text-gray-900 mb-1">Add Contact</h5>
+                                  <p className="text-sm text-gray-600">Add a team member or key contact</p>
+                                </button>
+                              </div>
+                            )}
+                            
+                            {/* Empty State - Only show when no contacts exist */}
+                            {allContacts.length === 0 && !Object.keys(editingData).some(key => 
+                              key.startsWith('contact-') && editingData[key]?.isNew
+                            ) && (
+                              <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50/30 rounded-2xl border-2 border-dashed border-blue-200 overflow-hidden">
+                                <div className="text-center py-8 px-6">
+                                  <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <Users className="w-8 h-8 text-blue-500" />
+                                  </div>
+                                  <h5 className="font-semibold text-gray-900 mb-2">No Contacts Added</h5>
+                                  <p className="text-sm text-gray-600 mb-6">Add team members to help agents reach the right person</p>
+                                  
+                                  <button
+                                    onClick={() => {
+                                      const newContactId = Date.now().toString();
+                                      const contactKey = `contact-${newContactId}`;
+                                      setExpandedSections(prev => ({
+                                        ...prev,
+                                        [contactKey]: true
+                                      }));
+                                      setEditingSections((prev: any) => ({
+                                        ...prev,
+                                        [contactKey]: true
+                                      }));
+                                      setEditingData((prev: any) => ({
+                                        ...prev,
+                                        [contactKey]: {
+                                          id: newContactId,
+                                          contactName: '',
+                                          contactTitle: '',
+                                          contactEmail: '',
+                                          contactPhone: '',
+                                          contactArea: '',
+                                          headshotUrl: '',
+                                          isNew: true
+                                        }
+                                      }));
+                                    }}
+                                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all duration-200 font-medium text-sm shadow-sm"
+                                    style={{ minHeight: '44px', touchAction: 'manipulation' }}
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                    Add First Contact
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
 
@@ -3704,6 +4281,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         }}
         onSave={handleLocationsSave}
       />
+
 
       {/* Preview Modal - Shows immersive listing view */}
       <ImmersiveListingModal
