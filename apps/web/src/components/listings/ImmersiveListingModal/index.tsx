@@ -246,20 +246,6 @@ export function ImmersiveListingModal({
               </div>
             )}
 
-            {/* Empty state if no overview content */}
-            {!listing.company?.brochure_url && !listing.company?.property_page_link && (
-              <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
-                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Overview Coming Soon</h4>
-                <p className="text-gray-600 text-sm max-w-sm mx-auto">
-                  Additional property details and resources will be available here shortly.
-                </p>
-              </div>
-            )}
           </div>
         )}
         {activeTab === 'requirements' && (
@@ -374,14 +360,14 @@ export function ImmersiveListingModal({
                     key={index} 
                     className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-200 transition-all duration-200"
                   >
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-sm">
                         <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                         </svg>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 mb-1 leading-snug">
+                        <h4 className="font-medium text-gray-900 leading-snug">
                           {location.place_name || 'Unknown location'}
                         </h4>
                       </div>
