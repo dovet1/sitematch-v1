@@ -368,31 +368,47 @@ export function ImmersiveListingModal({
             <h3 className="text-lg font-semibold">Locations</h3>
             
             {listing.locations?.all && listing.locations.all.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {listing.locations.all.map((location, index) => (
                   <div 
                     key={index} 
-                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                    className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-200 transition-all duration-200"
                   >
-                    <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                      </svg>
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 mb-1 leading-snug">
+                          {location.place_name || 'Unknown location'}
+                        </h4>
+                        {location.context && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {location.context.slice(0, 2).map(ctx => ctx.text).join(', ')}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-gray-700">
-                      {location.place_name || 'Unknown location'}
-                    </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-4 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100">
-                <p className="font-medium text-gray-800 flex items-center gap-2">
-                  <span className="text-xl">🌍</span> Nationwide Coverage
-                </p>
-                <p className="mt-2 text-gray-600 text-sm">
-                  This listing is open to opportunities across the UK & Ireland
-                </p>
+              <div className="p-6 rounded-lg bg-gradient-to-br from-violet-50 via-white to-blue-50/30 border border-violet-100 shadow-sm">
+                <div className="text-center">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center mx-auto mb-3 shadow-sm">
+                    <span className="text-2xl">🌍</span>
+                  </div>
+                  <h4 className="font-semibold text-gray-900 mb-1">Nationwide Coverage</h4>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Open to opportunities across the UK & Ireland
+                  </p>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-100 rounded-full">
+                    <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-medium text-violet-700">National Reach</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
