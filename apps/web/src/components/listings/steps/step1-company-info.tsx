@@ -881,7 +881,7 @@ export function Step1CompanyInfo({
               value={watchedValues.primaryContact?.headshotFile || watchedValues.primaryContact?.headshotPreview || data.primaryContact?.headshotUrl}
               onChange={handleHeadshotUpload}
               onPreviewChange={handleHeadshotPreviewChange}
-              placeholder="Upload professional headshot"
+              placeholder="Upload photo"
               maxSize={5 * 1024 * 1024} // 5MB
               acceptedTypes={["image/png", "image/jpeg", "image/jpg"]}
             />

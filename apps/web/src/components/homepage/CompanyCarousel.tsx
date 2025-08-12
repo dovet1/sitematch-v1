@@ -146,7 +146,7 @@ export function CompanyCarousel() {
       <section className="company-carousel py-20 bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="company-carousel__container max-w-7xl mx-auto px-6">
           <h2 className="company-carousel__title text-3xl font-bold text-gray-800 text-center mb-12">
-            Companies We Work With
+            Companies we work with
           </h2>
           <div className="flex justify-center items-center h-20">
             <div className="animate-pulse text-gray-500">Loading companies...</div>
@@ -165,7 +165,7 @@ export function CompanyCarousel() {
     <section className="company-carousel py-20 bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="company-carousel__container max-w-7xl mx-auto px-6">
         <h2 className="company-carousel__title text-3xl font-bold text-gray-800 text-center mb-12">
-          Companies We Work With
+          Companies we work with
         </h2>
         
         <div 

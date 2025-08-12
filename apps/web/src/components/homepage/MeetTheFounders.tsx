@@ -1,14 +1,14 @@
 'use client';
 
-import { ExternalLink, Building, Code, Linkedin } from 'lucide-react';
+import { Building, Code } from 'lucide-react';
 
 export function MeetTheFounders() {
   const founders = [
     {
       name: 'Rob',
-      role: 'Co-Founder & Property Expert',
-      background: 'Property Acquisition Specialist',
-      description: 'With over 8 years in commercial property acquisition, Rob has worked with major retailers, restaurant chains, and growing businesses to secure prime locations across the UK. His deep understanding of the challenges occupiers face when finding space led to the creation of SiteMatcher.',
+      role: 'Co-Founder & CEO',
+      background: 'Property Acquisition Expert',
+      description: 'As a former Property Director at Aldi and Head of Acquisitions at Marks & Spencer, Rob knows the impact of getting property requirements in front of the right audience. He set out to build a simple, fast, and targeted platform that helps the industry to close deals and bring exceptional spaces to life.',
       expertise: ['Commercial Property', 'Retail Expansion', 'Location Strategy', 'Market Analysis'],
       linkedin: '#',
       photo: null,
@@ -17,7 +17,7 @@ export function MeetTheFounders() {
       name: 'Tom',
       role: 'Co-Founder & CTO',
       background: 'Technology & Product Development',
-      description: 'A full-stack developer and technology strategist with 10+ years building scalable platforms. Tom previously led development teams at fintech and proptech startups, bringing deep expertise in creating user-centric solutions for complex business challenges.',
+      description: 'As CTO and co-founder, Tom draws on his background in software engineering, product management, and operations to build a platform that delivers real results for commercial occupiers. He’s worked on B2B and B2C products and advised VC firms on technical due diligence, backing businesses ready to scale.',
       expertise: ['Full-Stack Development', 'Product Strategy', 'Platform Architecture', 'PropTech Innovation'],
       linkedin: '#',
       photo: null,
@@ -32,8 +32,7 @@ export function MeetTheFounders() {
             Meet Our Founders
           </h2>
           <p className="founders__subtitle text-lg text-gray-600 max-w-3xl mx-auto">
-            Combining deep property market expertise with cutting-edge technology to solve 
-            real challenges in commercial property matching.
+            Combining years of hands-on property experience with in-house web development, we simplify connections across the property industry to make deals happen
           </p>
         </div>
 
@@ -65,32 +64,9 @@ export function MeetTheFounders() {
               </p>
 
               {/* Description */}
-              <p className="founders__description text-sm md:text-base text-gray-700 leading-relaxed mb-4 md:mb-6">
+              <p className="founders__description text-sm md:text-base text-gray-700 leading-relaxed">
                 {founder.description}
               </p>
-
-              {/* Expertise Tags */}
-              <div className="founders__expertise flex flex-wrap justify-center gap-2 mb-4 md:mb-6">
-                {founder.expertise.map((skill, skillIndex) => (
-                  <span 
-                    key={skillIndex}
-                    className="px-2 md:px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs md:text-sm font-medium border border-violet-200"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-
-              {/* LinkedIn Link */}
-              <a
-                href={founder.linkedin}
-                className="founders__linkedin inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 text-sm md:text-base"
-                aria-label={`View ${founder.name}'s LinkedIn profile`}
-              >
-                <Linkedin className="w-4 h-4" />
-                <span className="hidden sm:inline">Connect on LinkedIn</span>
-                <span className="sm:hidden">LinkedIn</span>
-              </a>
             </div>
           ))}
         </div>

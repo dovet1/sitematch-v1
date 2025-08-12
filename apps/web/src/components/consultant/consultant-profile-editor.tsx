@@ -289,7 +289,7 @@ export default function ConsultantProfileEditor({ initialData, className }: Cons
                   }}
                   acceptedTypes={['image/jpeg', 'image/png', 'image/webp']}
                   maxSize={5 * 1024 * 1024}
-                  placeholder="Upload professional headshot"
+                  placeholder="Upload photo"
                   className="mt-2"
                 />
               </div>

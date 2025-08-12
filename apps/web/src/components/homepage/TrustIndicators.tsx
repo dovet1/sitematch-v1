@@ -95,7 +95,7 @@ export function TrustIndicators() {
         <div className="flex flex-wrap justify-center items-center gap-8 mb-16">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Clock className="w-5 h-5" />
-            <span className="text-sm font-medium">Updated Daily</span>
+            <span className="text-sm font-medium">20+ Industry Sectors</span>
           </div>
           
           <div className="flex items-center gap-2 text-muted-foreground">

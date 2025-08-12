@@ -7,27 +7,32 @@ export function HowItWorks() {
   const steps = [
     {
       icon: FileText,
-      title: 'Post Requirement',
-      description: 'Share your specific commercial property needs including location, size, budget, and timing requirements.',
+      title: 'Put your needs on the map - literally',
+      description: 'Post your site and location requirements—searchable, filterable, and ready to be discovered by the property industry. Get seen, get shortlisted, and get ahead when the right opportunities land.',
     },
     {
       icon: Shield,
-      title: 'Admin Review',
-      description: 'Our team reviews and verifies your requirement to ensure quality and authenticity for all users.',
+      title: 'Free to view - no barriers',
+      description: 'Requirements are visible to everyone, with no paywalls, no hidden fees, and no restrictions. Maximum exposure, zero cost.',
     },
     {
       icon: Users,
-      title: 'Landlords Contact You',
-      description: 'Qualified property owners and agents reach out directly with suitable options that match your needs.',
+      title: 'Tools that drive daily visitors',
+      description: 'We offer powerful, no-cost tools like SiteSketcher—a fast, intuitive way to create site feasibility drawings. This attracts hundreds of agents, landlords, developers, and occupiers who use it to sketch ideas, assess potential, and share concepts.',
     },
   ];
 
   return (
     <section className="how-it-works py-20 bg-white">
       <div className="how-it-works__container max-w-7xl mx-auto px-6">
-        <h2 className="how-it-works__title text-3xl font-bold text-gray-800 text-center mb-16">
-          How It Works
-        </h2>
+        <div className="text-center mb-16">
+          <h2 className="how-it-works__title text-3xl font-bold text-gray-800 mb-4">
+            How It Works
+          </h2>
+          <p className="text-lg text-gray-600">
+            Are you buying or leasing sites?
+          </p>
+        </div>
 
         <div className="how-it-works__steps grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 relative mb-8 md:mb-12">
           {/* Connector lines for desktop */}

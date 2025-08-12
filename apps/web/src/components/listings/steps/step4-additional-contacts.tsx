@@ -354,7 +354,7 @@ export function Step4AdditionalContacts({
                     message: 'Coverage area must be no more than 255 characters'
                   }
                 })}
-                placeholder="e.g., The South West"
+                placeholder="e.g., South-West England"
                 className={
                   formErrors.additionalContacts?.[index]?.contactArea
                     ? 'border-red-500 focus:ring-red-500'
