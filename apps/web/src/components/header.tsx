@@ -38,7 +38,7 @@ export function Header() {
       requiresAuth: false
     },
     {
-      href: '/occupier/create-listing?fresh=true',
+      href: '/occupier/create-listing-quick',
       label: 'Post Requirement',
       primary: true,
       showWhen: 'always',
@@ -84,7 +84,7 @@ export function Header() {
                   >
                     <button
                       className={`
-                        px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
+                        px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch cursor-pointer
                         ${item.primary 
                           ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800' 
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -100,7 +100,7 @@ export function Header() {
                     key={item.href}
                     href={item.href}
                     className={`
-                      px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
+                      px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch cursor-pointer
                       ${item.primary 
                         ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800' 
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted'
