@@ -2664,36 +2664,13 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       <>
       <div className={`h-screen bg-violet-900 relative overflow-hidden flex flex-col ${modalStates.preview ? 'hidden' : ''}`}>
         {/* Mobile Header */}
-        <div className="bg-white">
-          <MobileHeader
-            companyName={companyName}
-            companyLogo={listingData?.logoPreview}
-            status={listingData?.status || 'draft'}
-            onBack={() => router.push('/occupier/dashboard')}
-            onPreview={() => openModal('preview')}
-          />
-          
-          {/* Submit for Review Button - Premium Clean Design */}
-          {listingData?.status === 'draft' && (
-            <div className="px-4 pb-3">
-            <button
-              onClick={handleSubmitForReview}
-              className="relative w-full bg-gradient-to-r from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 text-white rounded-2xl py-3.5 px-5 font-semibold transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-2.5 shadow-lg overflow-hidden group"
-              style={{ 
-                touchAction: 'manipulation',
-                boxShadow: '0 4px 14px 0 rgba(124, 58, 237, 0.25)'
-              }}
-              aria-label="Submit listing for review"
-            >
-              {/* Subtle shimmer effect */}
-              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-              
-              <CheckCircle className="w-5 h-5" />
-              <span className="text-sm tracking-wide">Submit for Review</span>
-            </button>
-            </div>
-          )}
-        </div>
+        <MobileHeader
+          companyName={companyName}
+          companyLogo={listingData?.logoPreview}
+          status={listingData?.status || 'draft'}
+          onBack={() => router.push('/occupier/dashboard')}
+          onPreview={() => openModal('preview')}
+        />
         
         {/* Mobile Visual Hero - Height excludes bottom sheet */}
         <div className="relative bg-violet-900" style={{ height: 'calc(100vh - 88px - 150px)' }}>
@@ -4341,7 +4318,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 {allFaqs.map((faq: any, index: number) => (
                                   <div 
                                     key={faq.id || index}
-                                    draggable={false}
+                                    draggable={!editingSections[`faq-${faq.id}`] && allFaqs.length > 1}
                                     onDragStart={(e) => handleFaqDragStart(e, index)}
                                     onDragOver={(e) => handleFaqDragOver(e, index)}
                                     onDrop={(e) => handleFaqDrop(e, index)}
@@ -4355,97 +4332,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                   >
                                     {/* FAQ Card Header - Clickable to expand */}
                                     <div className="flex items-stretch">
-                                      {/* Drag Handle - Desktop + Mobile Reorder Buttons */}
+                                      {/* Simple Drag Handle */}
                                       {!editingSections[`faq-${faq.id}`] && allFaqs.length > 1 && (
-                                        <div className="flex items-center bg-purple-50/50 border-r border-purple-100">
-                                          {/* Desktop Drag Handle */}
-                                          <div 
-                                            className="hidden sm:flex items-center px-2 cursor-grab active:cursor-grabbing select-none"
-                                            onMouseDown={(e) => {
-                                              const card = e.currentTarget.closest('[draggable]') as HTMLElement;
-                                              if (card) {
-                                                card.draggable = true;
-                                              }
-                                            }}
-                                            onMouseUp={(e) => {
-                                              const card = e.currentTarget.closest('[draggable]') as HTMLElement;
-                                              if (card) {
-                                                card.draggable = false;
-                                              }
-                                            }}
-                                          >
-                                            <GripVertical className="w-4 h-4 text-purple-400" />
-                                          </div>
-                                          
-                                          {/* Mobile Reorder Buttons */}
-                                          <div className="flex flex-col sm:hidden">
-                                            <button
-                                              onClick={async () => {
-                                                if (index > 0) {
-                                                  console.log('Moving FAQ up from index', index, 'to', index - 1);
-                                                  // Move FAQ up by swapping with previous
-                                                  const reorderedFaqs = [...allFaqs];
-                                                  [reorderedFaqs[index - 1], reorderedFaqs[index]] = [reorderedFaqs[index], reorderedFaqs[index - 1]];
-                                                  
-                                                  // Update display order
-                                                  const updatedFaqs = reorderedFaqs.map((faq: any, idx: number) => ({
-                                                    ...faq,
-                                                    displayOrder: idx,
-                                                    order: idx
-                                                  }));
-                                                  
-                                                  try {
-                                                    await handleFAQsSave({ faqs: updatedFaqs });
-                                                    console.log('FAQ moved up successfully');
-                                                  } catch (error) {
-                                                    console.error('Error moving FAQ up:', error);
-                                                  }
-                                                }
-                                              }}
-                                              disabled={index === 0}
-                                              className={`p-1 transition-colors ${
-                                                index === 0 
-                                                  ? 'text-gray-300' 
-                                                  : 'text-purple-600 hover:bg-purple-100 active:bg-purple-200'
-                                              }`}
-                                              style={{ minHeight: '24px', minWidth: '28px' }}
-                                            >
-                                              <ChevronUp className="w-3 h-3" />
-                                            </button>
-                                            <button
-                                              onClick={async () => {
-                                                if (index < allFaqs.length - 1) {
-                                                  console.log('Moving FAQ down from index', index, 'to', index + 1);
-                                                  // Move FAQ down by swapping with next
-                                                  const reorderedFaqs = [...allFaqs];
-                                                  [reorderedFaqs[index], reorderedFaqs[index + 1]] = [reorderedFaqs[index + 1], reorderedFaqs[index]];
-                                                  
-                                                  // Update display order
-                                                  const updatedFaqs = reorderedFaqs.map((faq: any, idx: number) => ({
-                                                    ...faq,
-                                                    displayOrder: idx,
-                                                    order: idx
-                                                  }));
-                                                  
-                                                  try {
-                                                    await handleFAQsSave({ faqs: updatedFaqs });
-                                                    console.log('FAQ moved down successfully');
-                                                  } catch (error) {
-                                                    console.error('Error moving FAQ down:', error);
-                                                  }
-                                                }
-                                              }}
-                                              disabled={index === allFaqs.length - 1}
-                                              className={`p-1 transition-colors ${
-                                                index === allFaqs.length - 1
-                                                  ? 'text-gray-300' 
-                                                  : 'text-purple-600 hover:bg-purple-100 active:bg-purple-200'
-                                              }`}
-                                              style={{ minHeight: '24px', minWidth: '28px' }}
-                                            >
-                                              <ChevronDown className="w-3 h-3" />
-                                            </button>
-                                          </div>
+                                        <div 
+                                          className="flex items-center px-2 bg-purple-50/50 border-r border-purple-100 cursor-grab active:cursor-grabbing"
+                                        >
+                                          <GripVertical className="w-4 h-4 text-purple-400" />
                                         </div>
                                       )}
                                       

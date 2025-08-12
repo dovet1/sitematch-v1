@@ -56,64 +56,75 @@ export function MobileHeader({
   const StatusIcon = statusInfo.icon;
 
   return (
-    <div className="relative bg-white/95 backdrop-blur-sm border-b border-white/20 shadow-sm">
+    <div className="relative">
       {/* Safe area padding */}
       <div className="pt-safe-top">
-        <div className="px-4 py-3">
+        <div className="px-4 py-4">
           {/* Top row - Back button, Company info, Preview button */}
           <div className="flex items-center justify-between mb-3">
             {/* Back button */}
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={onBack}
-              className="text-gray-700 hover:text-gray-900 hover:bg-white/50 transition-colors p-2 rounded-lg"
+              className="p-2.5 rounded-2xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              style={{ touchAction: 'manipulation' }}
             >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
+              <ArrowLeft className="w-5 h-5 text-gray-700" />
+            </button>
 
             {/* Company branding - center */}
-            <div className="flex items-center gap-3 flex-1 justify-center px-4">
+            <div className="flex items-center gap-3 flex-1 justify-center px-3">
               {companyLogo ? (
-                <img
-                  src={companyLogo}
-                  alt={`${companyName} logo`}
-                  className="w-8 h-8 object-contain rounded-md bg-white shadow-sm"
-                />
+                <div className="relative">
+                  <img
+                    src={companyLogo}
+                    alt={`${companyName} logo`}
+                    className="w-10 h-10 object-contain rounded-xl bg-white shadow-sm border border-gray-100 p-1"
+                  />
+                </div>
               ) : (
-                <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-md flex items-center justify-center shadow-sm">
-                  <span className="text-white font-bold text-sm">
-                    {companyName.charAt(0).toUpperCase()}
-                  </span>
+                <div className="relative">
+                  <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl flex items-center justify-center shadow-sm">
+                    <span className="text-white font-bold text-base">
+                      {companyName.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
                 </div>
               )}
-              <h1 className="font-semibold text-gray-900 text-lg truncate max-w-[180px]">
-                {companyName}
-              </h1>
+              <div>
+                <h1 className="font-bold text-gray-900 text-lg tracking-tight truncate max-w-[180px]">
+                  {companyName}
+                </h1>
+                <p className="text-[10px] text-gray-400 font-medium tracking-wider uppercase">Listing Management</p>
+              </div>
             </div>
 
             {/* Preview button */}
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={onPreview}
-              className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 transition-colors p-2 rounded-lg"
+              className="p-2.5 rounded-2xl bg-gradient-to-br from-violet-50 to-violet-100/50 hover:from-violet-100 hover:to-violet-100 active:from-violet-200 active:to-violet-200 transition-all duration-200"
+              style={{ touchAction: 'manipulation' }}
             >
-              <Eye className="w-5 h-5" />
-            </Button>
+              <Eye className="w-5 h-5 text-violet-700" />
+            </button>
           </div>
 
-          {/* Bottom row - Status and tabs will go here */}
+          {/* Bottom row - Status badge */}
           <div className="flex items-center justify-center">
-            {/* Status badge */}
             <div className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-full shadow-sm",
-              statusInfo.bgColor
+              "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-sm",
+              status === 'draft' && 'bg-gray-100 text-gray-700',
+              status === 'pending' && 'bg-amber-50 text-amber-700 border border-amber-200/50',
+              status === 'approved' && 'bg-emerald-50 text-emerald-700 border border-emerald-200/50',
+              status === 'rejected' && 'bg-red-50 text-red-700 border border-red-200/50'
             )}>
-              <StatusIcon className={cn("w-4 h-4", statusInfo.iconColor)} />
-              <span className={cn("text-sm font-medium", statusInfo.textColor)}>
-                {statusInfo.label}
-              </span>
+              <StatusIcon className={cn(
+                "w-3.5 h-3.5",
+                status === 'draft' && 'text-gray-500',
+                status === 'pending' && 'text-amber-600',
+                status === 'approved' && 'text-emerald-600',
+                status === 'rejected' && 'text-red-600'
+              )} />
+              <span>{statusInfo.label}</span>
             </div>
           </div>
         </div>
