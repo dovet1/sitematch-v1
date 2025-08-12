@@ -384,11 +384,6 @@ export function ImmersiveListingModal({
                         <h4 className="font-medium text-gray-900 mb-1 leading-snug">
                           {location.place_name || 'Unknown location'}
                         </h4>
-                        {location.context && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            {location.context.slice(0, 2).map(ctx => ctx.text).join(', ')}
-                          </p>
-                        )}
                       </div>
                     </div>
                   </div>
