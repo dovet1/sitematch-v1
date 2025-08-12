@@ -1,8 +1,8 @@
-# SiteMatch – MVP Product Requirements Document (PRD)
+# SiteMatcher – MVP Product Requirements Document (PRD)
 
 ## Table of Contents
 
-- [SiteMatch – MVP Product Requirements Document (PRD)](#table-of-contents)
+- [SiteMatcher – MVP Product Requirements Document (PRD)](#table-of-contents)
   - [1. Purpose & Vision](./1-purpose-vision.md)
   - [2. User Roles & Access](./2-user-roles-access.md)
     - [2.1 Landlord Email Capture](./2-user-roles-access.md#21-landlord-email-capture)

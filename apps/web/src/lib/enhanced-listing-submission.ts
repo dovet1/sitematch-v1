@@ -171,8 +171,17 @@ export async function submitEnhancedListing(
 
     // 6. Send confirmation email
     try {
-      const { sendSubmissionConfirmation } = await import('@/lib/enhanced-listings');
-      await sendSubmissionConfirmation(enhancedListingData.contact_email, result.id);
+      const { sendSubmissionEmail } = await import('@/lib/email-templates');
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+      
+      await sendSubmissionEmail({
+        contactName: enhancedListingData.contact_name || 'Valued Customer',
+        companyName: enhancedListingData.company_name || 'Your Company',
+        listingTitle: `Property Requirement - ${enhancedListingData.company_name}`,
+        dashboardUrl: `${baseUrl}/occupier/dashboard`,
+        previewUrl: `${baseUrl}/occupier/listing/${result.id}`,
+        contactEmail: enhancedListingData.contact_email
+      });
     } catch (emailError) {
       console.error('Failed to send confirmation email:', emailError);
       // Don't fail the submission for email errors

@@ -15,13 +15,19 @@ interface MobileMediaViewerProps {
   listing: any;
   isLoading: boolean;
   className?: string;
+  onAddLocations?: () => void;
+  onAddSitePlans?: () => void;
+  onAddFitOuts?: () => void;
+  onDeleteSitePlan?: (index: number, file: any) => void;
+  onDeleteFitOut?: (index: number, file: any) => void;
 }
 
-export function MobileMediaViewer({ listing, isLoading, className }: MobileMediaViewerProps) {
+export function MobileMediaViewer({ listing, isLoading, className, onAddLocations, onAddSitePlans, onAddFitOuts, onDeleteSitePlan, onDeleteFitOut }: MobileMediaViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenImageIndex, setFullscreenImageIndex] = useState(0);
   const [fullscreenImages, setFullscreenImages] = useState<any[]>([]);
+  const [customCloseHandler, setCustomCloseHandler] = useState<(() => void) | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Determine if we should show map or nationwide view
@@ -29,24 +35,27 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
 
   const mediaItems = [
     { 
-      type: 'map', 
-      label: 'Map',
+      type: 'coverage', 
+      label: 'Coverage',
       icon: MapPin,
-      available: true // Always show map tab, content changes based on hasLocations
+      available: true,
+      hasContent: hasLocations
     },
     { 
       type: 'site-plan', 
       label: 'Site Plans',
       icon: FileText,
-      available: listing?.files?.site_plans && listing.files.site_plans.length > 0
+      available: true, // Always show
+      hasContent: listing?.files?.site_plans && listing.files.site_plans.length > 0
     },
     { 
       type: 'fit-out', 
-      label: 'Fit-out',
+      label: 'Fit-Outs',
       icon: Home,
-      available: listing?.files?.fit_outs && listing.files.fit_outs.length > 0
+      available: true, // Always show
+      hasContent: listing?.files?.fit_outs && listing.files.fit_outs.length > 0
     }
-  ].filter(item => item.available);
+  ]; // Remove filter - show all tabs
 
   // Handle swipe gestures
   const handlers = useSwipeable({
@@ -76,6 +85,12 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isFullscreen) {
         setIsFullscreen(false);
+        setFullscreenImages([]);
+        setFullscreenImageIndex(0);
+        if (customCloseHandler) {
+          customCloseHandler();
+          setCustomCloseHandler(null);
+        }
       }
     };
 
@@ -83,10 +98,10 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
       document.addEventListener('keydown', handleEscape);
       return () => document.removeEventListener('keydown', handleEscape);
     }
-  }, [isFullscreen]);
+  }, [isFullscreen, customCloseHandler]);
 
   const renderMediaContent = (type: string) => {
-    if (isLoading) {
+    if (isLoading || !listing) {
       return (
         <div className="w-full h-full flex items-center justify-center bg-gray-100">
           <div className="animate-pulse">
@@ -97,7 +112,7 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
     }
 
     switch (type) {
-      case 'map':
+      case 'coverage':
         if (hasLocations) {
           return (
             <InteractiveMapView
@@ -106,7 +121,7 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
             />
           );
         } else {
-          return <NationwideHeroVisual company={listing?.company || { name: 'Company' }} />;
+          return <NationwideHeroVisual company={listing?.company || { name: 'Company' }} onAddLocations={onAddLocations} />;
         }
 
       case 'site-plan':
@@ -121,11 +136,18 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
           <SimpleImageGallery 
             images={sitePlans}
             type="site-plans"
-            onImageClick={(index) => {
+            onImageClick={(index, onClose) => {
               setFullscreenImages(sitePlans);
               setFullscreenImageIndex(index);
+              setCustomCloseHandler(onClose || null);
               setIsFullscreen(true);
             }}
+            onAddClick={onAddSitePlans}
+            onDeleteImage={onDeleteSitePlan ? (index, image) => {
+              // Convert back to original file format for the handler
+              const originalFile = listing.files?.site_plans?.[index];
+              onDeleteSitePlan(index, originalFile || image);
+            } : undefined}
           />
         );
 
@@ -141,11 +163,18 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
           <SimpleImageGallery 
             images={fitOuts}
             type="fit-outs"
-            onImageClick={(index) => {
+            onImageClick={(index, onClose) => {
               setFullscreenImages(fitOuts);
               setFullscreenImageIndex(index);
+              setCustomCloseHandler(onClose || null);
               setIsFullscreen(true);
             }}
+            onAddClick={onAddFitOuts}
+            onDeleteImage={onDeleteFitOut ? (index, image) => {
+              // Convert back to original file format for the handler
+              const originalFile = listing.files?.fit_outs?.[index];
+              onDeleteFitOut(index, originalFile || image);
+            } : undefined}
           />
         );
 
@@ -262,7 +291,15 @@ export function MobileMediaViewer({ listing, isLoading, className }: MobileMedia
             >
               {/* Close Button */}
               <button
-                onClick={() => setIsFullscreen(false)}
+                onClick={() => {
+                  setIsFullscreen(false);
+                  setFullscreenImages([]);
+                  setFullscreenImageIndex(0);
+                  if (customCloseHandler) {
+                    customCloseHandler();
+                    setCustomCloseHandler(null);
+                  }
+                }}
                 className="absolute top-4 right-4 w-12 h-12 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
                 style={{ zIndex: 100000 }}
                 aria-label="Close fullscreen"

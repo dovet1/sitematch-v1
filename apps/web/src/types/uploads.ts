@@ -65,10 +65,10 @@ export const FILE_UPLOAD_CONFIGS: Record<FileUploadType, FileUploadConfig> = {
   headshot: {
     bucket: 'headshots',
     allowedTypes: ['image/jpeg', 'image/png'],
-    maxSize: 2 * 1024 * 1024, // 2MB
+    maxSize: 5 * 1024 * 1024, // 5MB
     maxFiles: 1,
     requiresOptimization: true,
-    description: 'Contact headshot (JPG, PNG - max 2MB)'
+    description: 'Contact headshot (JPG, PNG - max 5MB)'
   }
 };
 

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 export function Testimonials() {
   const testimonials = [
     {
-      quote: "SiteMatch helped us find the perfect retail unit for our expanding coffee chain. The detailed requirements and direct contact with decision-makers made the process incredibly efficient.",
+      quote: "SiteMatcher helped us find the perfect retail unit for our expanding coffee chain. The detailed requirements and direct contact with decision-makers made the process incredibly efficient.",
       author: "Sarah Chen",
       role: "Expansion Director",
       company: "Artisan Coffee Co.",
@@ -15,7 +15,7 @@ export function Testimonials() {
       image: null, // Placeholder for future photo implementation
     },
     {
-      quote: "As a small business looking for warehouse space, we struggled to get attention from agents. SiteMatch gave us direct access to property owners who were genuinely interested in our requirements.",
+      quote: "As a small business looking for warehouse space, we struggled to get attention from agents. SiteMatcher gave us direct access to property owners who were genuinely interested in our requirements.",
       author: "Mike Thompson",
       role: "Operations Manager",
       company: "Thompson Logistics",
@@ -23,7 +23,7 @@ export function Testimonials() {
       image: null,
     },
     {
-      quote: "The quality of leads from SiteMatch is outstanding. We've closed three deals in six months, and the tenants we've found are exactly what we were looking for.",
+      quote: "The quality of leads from SiteMatcher is outstanding. We've closed three deals in six months, and the tenants we've found are exactly what we were looking for.",
       author: "Emma Rodriguez",
       role: "Property Portfolio Manager",
       company: "Urban Developments",
@@ -31,7 +31,7 @@ export function Testimonials() {
       image: null,
     },
     {
-      quote: "We needed to relocate our manufacturing facility quickly. SiteMatch's detailed search filters and nationwide coverage helped us find options we never would have discovered otherwise.",
+      quote: "We needed to relocate our manufacturing facility quickly. SiteMatcher's detailed search filters and nationwide coverage helped us find options we never would have discovered otherwise.",
       author: "James Wilson",
       role: "Facilities Director",
       company: "TechManufacturing Ltd",
@@ -39,7 +39,7 @@ export function Testimonials() {
       image: null,
     },
     {
-      quote: "The transparency of SiteMatch is refreshing. No hidden fees, no complex contracts - just genuine connections between property needs and opportunities.",
+      quote: "The transparency of SiteMatcher is refreshing. No hidden fees, no complex contracts - just genuine connections between property needs and opportunities.",
       author: "Rachel Adams",
       role: "Commercial Director",
       company: "Adams Property Group",

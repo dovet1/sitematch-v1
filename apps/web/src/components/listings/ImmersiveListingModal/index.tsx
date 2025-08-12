@@ -18,6 +18,7 @@ interface ImmersiveListingModalProps {
   onClose: () => void;
   searchState?: any;
   scrollPosition?: number;
+  apiEndpoint?: string; // Allow custom API endpoint for owner preview
 }
 
 export function ImmersiveListingModal({
@@ -25,7 +26,8 @@ export function ImmersiveListingModal({
   isOpen,
   onClose,
   searchState,
-  scrollPosition
+  scrollPosition,
+  apiEndpoint
 }: ImmersiveListingModalProps) {
   const [listing, setListing] = useState<EnhancedListingModalContent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -116,7 +118,8 @@ export function ImmersiveListingModal({
       setError(null);
       
       try {
-        const response = await fetch(`/api/public/listings/${listingId}/detailed`);
+        const endpoint = apiEndpoint || `/api/public/listings/${listingId}/detailed`;
+        const response = await fetch(endpoint);
         
         if (!response.ok) {
           throw new Error('Failed to fetch listing details');
@@ -133,7 +136,7 @@ export function ImmersiveListingModal({
     };
 
     fetchListing();
-  }, [isOpen, listingId]);
+  }, [isOpen, listingId, apiEndpoint]);
 
   if (!isOpen) return null;
 
@@ -165,51 +168,56 @@ export function ImmersiveListingModal({
           <div className="space-y-6">
             <h3 className="text-lg font-semibold">Requirements In {listing?.company?.name || 'Company'}'s Own Words</h3>
 
-            {/* Requirements Brochure */}
-            {listing.company?.brochure_url && (
+            {/* Requirements Brochures */}
+            {listing.files?.brochures && listing.files.brochures.length > 0 && (
               <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <span className="text-blue-500">📋</span>
-                  Requirements Brochure
+                  Requirements {listing.files.brochures.length > 1 ? 'Materials' : 'Brochure'}
                 </h4>
-                <a
-                  href={listing.company?.brochure_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-lg bg-white border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
-                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 2v8h8V6H6z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">
-                      Download Requirements Brochure
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      View detailed property requirements
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 text-blue-600 group-hover:text-blue-700">
-                    <span className="text-xs font-medium">Download</span>
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </a>
+                <div className="space-y-2">
+                  {listing.files.brochures.map((brochure: any) => (
+                    <a
+                      key={brochure.id}
+                      href={brochure.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-lg bg-white border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
+                        <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 2v8h8V6H6z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {brochure.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {brochure.caption || 'View detailed property requirements'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 text-blue-600 group-hover:text-blue-700">
+                        <span className="text-xs font-medium">Download</span>
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    </a>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Property Page Link */}
-            {listing.company.property_page_link && (
+            {listing.company?.property_page_link && (
               <div className="p-4 rounded-lg bg-violet-50 border border-violet-200">
                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <span className="text-violet-500">🔗</span>
                   Property Page
                 </h4>
                 <a
-                  href={listing.company.property_page_link}
+                  href={listing.company?.property_page_link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-3 rounded-lg bg-white border border-violet-200 hover:border-violet-300 hover:bg-violet-50 transition-all duration-200 group"
@@ -225,7 +233,7 @@ export function ImmersiveListingModal({
                       View Requirement Details
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {listing.company.property_page_link}
+                      {listing.company?.property_page_link}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 text-violet-600 group-hover:text-violet-700">
@@ -259,47 +267,47 @@ export function ImmersiveListingModal({
             <h3 className="text-lg font-semibold">Requirements</h3>
             
             {/* Site Size Requirements */}
-            {listing.listing_type === 'commercial' && listing.company.site_size && (
+            {listing.listing_type === 'commercial' && listing.company?.site_size && (
               <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
                 <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                   <span className="text-violet-500">📐</span>
                   Site Size
                 </h4>
-                <p className="text-gray-700">{listing.company.site_size}</p>
+                <p className="text-gray-700">{listing.company?.site_size}</p>
               </div>
             )}
 
             {/* Dwelling Count (for residential) */}
-            {listing.listing_type === 'residential' && listing.company.dwelling_count && (
+            {listing.listing_type === 'residential' && listing.company?.dwelling_count && (
               <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
                 <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                   <span className="text-violet-500">🏠</span>
                   Dwelling Count
                 </h4>
-                <p className="text-gray-700">{listing.company.dwelling_count}</p>
+                <p className="text-gray-700">{listing.company?.dwelling_count}</p>
               </div>
             )}
 
             {/* Site Acreage (for residential) */}
-            {listing.listing_type === 'residential' && listing.company.site_acreage && (
+            {listing.listing_type === 'residential' && listing.company?.site_acreage && (
               <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
                 <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                   <span className="text-violet-500">🌾</span>
                   Site Acreage
                 </h4>
-                <p className="text-gray-700">{listing.company.site_acreage}</p>
+                <p className="text-gray-700">{listing.company?.site_acreage}</p>
               </div>
             )}
 
             {/* Sectors */}
-            {listing.listing_type === 'commercial' && listing.company.sectors && listing.company.sectors.length > 0 && (
+            {listing.listing_type === 'commercial' && listing.company?.sectors && listing.company.sectors.length > 0 && (
               <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <span className="text-blue-500">🏢</span>
                   Sectors
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {listing.company.sectors.map((sector, index) => (
+                  {listing.company?.sectors?.map((sector, index) => (
                     <span
                       key={index}
                       className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200"
@@ -312,14 +320,14 @@ export function ImmersiveListingModal({
             )}
 
             {/* Use Classes */}
-            {listing.listing_type === 'commercial' && listing.company.use_classes && listing.company.use_classes.length > 0 && (
+            {listing.listing_type === 'commercial' && listing.company?.use_classes && listing.company.use_classes.length > 0 && (
               <div className="p-4 rounded-lg bg-green-50 border border-green-200">
                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <span className="text-green-500">🏗️</span>
                   Use Classes
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {listing.company.use_classes.map((useClass, index) => (
+                  {listing.company?.use_classes?.map((useClass, index) => (
                     <span
                       key={index}
                       className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200"
@@ -334,12 +342,12 @@ export function ImmersiveListingModal({
 
             {/* Empty state */}
             {((listing.listing_type === 'commercial' && 
-               !listing.company.site_size && 
-               (!listing.company.sectors || listing.company.sectors.length === 0) && 
-               (!listing.company.use_classes || listing.company.use_classes.length === 0)) ||
+               !listing.company?.site_size && 
+               (!listing.company?.sectors || listing.company.sectors?.length === 0) && 
+               (!listing.company?.use_classes || listing.company.use_classes?.length === 0)) ||
               (listing.listing_type === 'residential' && 
-               !listing.company.dwelling_count && 
-               !listing.company.site_acreage)) && (
+               !listing.company?.dwelling_count && 
+               !listing.company?.site_acreage)) && (
               <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
                 <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
@@ -360,31 +368,42 @@ export function ImmersiveListingModal({
             <h3 className="text-lg font-semibold">Locations</h3>
             
             {listing.locations?.all && listing.locations.all.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {listing.locations.all.map((location, index) => (
                   <div 
                     key={index} 
-                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                    className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-200 transition-all duration-200"
                   >
-                    <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                      </svg>
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 mb-1 leading-snug">
+                          {location.place_name || 'Unknown location'}
+                        </h4>
+                      </div>
                     </div>
-                    <span className="text-gray-700">
-                      {location.place_name || 'Unknown location'}
-                    </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-4 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100">
-                <p className="font-medium text-gray-800 flex items-center gap-2">
-                  <span className="text-xl">🌍</span> Nationwide Coverage
-                </p>
-                <p className="mt-2 text-gray-600 text-sm">
-                  This listing is open to opportunities across the UK & Ireland
-                </p>
+              <div className="p-6 rounded-lg bg-gradient-to-br from-violet-50 via-white to-blue-50/30 border border-violet-100 shadow-sm">
+                <div className="text-center">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center mx-auto mb-3 shadow-sm">
+                    <span className="text-2xl">🌍</span>
+                  </div>
+                  <h4 className="font-semibold text-gray-900 mb-1">Nationwide Coverage</h4>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Open to opportunities across the UK & Ireland
+                  </p>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-100 rounded-full">
+                    <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-medium text-violet-700">National Reach</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -522,7 +541,7 @@ export function ImmersiveListingModal({
                 onClick={() => setActiveTab('contact')}
                 className="text-violet-700 text-sm hover:text-violet-800 underline transition-colors"
               >
-                Contact {listing.company.name}'s team to find out more
+                Contact {listing.company?.name || 'the team'} to find out more
               </button>
             </div>
           </div>
@@ -550,7 +569,7 @@ export function ImmersiveListingModal({
 
             {/* Mobile Container */}
             <div 
-              className="fixed inset-0 z-[10000] flex flex-col bg-gradient-to-br from-violet-900 to-violet-700"
+              className="fixed inset-0 z-[10003] flex flex-col bg-gradient-to-br from-violet-900 to-violet-700"
               style={{ 
                 overscrollBehavior: 'none',
                 touchAction: 'pan-y' 
@@ -564,13 +583,13 @@ export function ImmersiveListingModal({
               }}
             >
               {/* Mobile Header */}
-              <div className="fixed top-0 left-0 right-0 z-[10002] bg-white/95 backdrop-blur-md border-b border-gray-200">
+              <div className="fixed top-0 left-0 right-0 z-[10004] bg-white/95 backdrop-blur-md border-b border-gray-200">
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {listing?.company.logo_url ? (
                       <img
-                        src={listing.company.logo_url}
-                        alt={`${listing.company.name} logo`}
+                        src={listing.company?.logo_url}
+                        alt={`${listing.company?.name || 'Company'} logo`}
                         className="w-8 h-8 object-contain flex-shrink-0"
                       />
                     ) : (
@@ -614,7 +633,7 @@ export function ImmersiveListingModal({
                         tabs={tabs}
                         activeTab={activeTab}
                         onTabChange={handleTabChange}
-                        companyName={listing.company.name}
+                        companyName={listing.company?.name}
                       />
 
                       {/* Tab Content */}
@@ -689,31 +708,31 @@ export function ImmersiveListingModal({
                     {/* Company Hero Card */}
                     <div className={styles.companyHero}>
                       <div className="flex items-center gap-4">
-                        {listing.company.logo_url ? (
+                        {listing.company?.logo_url ? (
                           <img
-                            src={listing.company.logo_url}
-                            alt={`${listing.company.name} logo`}
+                            src={listing.company?.logo_url}
+                            alt={`${listing.company?.name || 'Company'} logo`}
                             className="w-12 h-12 object-contain"
                           />
                         ) : (
                           <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center">
                             <span className="text-white font-semibold">
-                              {listing.company.name?.charAt(0).toUpperCase() || 'C'}
+                              {listing.company?.name?.charAt(0).toUpperCase() || 'C'}
                             </span>
                           </div>
                         )}
                         <div>
                           <h2 className="text-2xl font-bold text-gray-900">
-                            {listing.company.name}
+                            {listing.company?.name || 'Unnamed Company'}
                           </h2>
                           <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
                             <span>{listing.listing_type === 'residential' ? 'Residential' : 'Commercial'}</span>
                             <span>📍 {listing.locations?.all && listing.locations.all.length > 0 ? `${listing.locations.all.length} Locations` : 'Nationwide'}</span>
-                            {listing.listing_type === 'commercial' && listing.company.site_size && (
-                              <span>📐 {listing.company.site_size}</span>
+                            {listing.listing_type === 'commercial' && listing.company?.site_size && (
+                              <span>📐 {listing.company?.site_size}</span>
                             )}
-                            {listing.listing_type === 'residential' && listing.company.site_acreage && (
-                              <span>🌾 {listing.company.site_acreage}</span>
+                            {listing.listing_type === 'residential' && listing.company?.site_acreage && (
+                              <span>🌾 {listing.company?.site_acreage}</span>
                             )}
                           </div>
                         </div>

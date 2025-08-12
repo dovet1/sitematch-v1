@@ -44,7 +44,7 @@ export function TrustIndicators() {
             Trusted by Leading Companies
           </h2>
           <p className="body-large text-muted-foreground max-w-2xl mx-auto">
-            Join hundreds of businesses who trust SiteMatch to connect them with the right property opportunities.
+            Join hundreds of businesses who trust SiteMatcher to connect them with the right property opportunities.
           </p>
         </div>
 

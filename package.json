@@ -2,7 +2,7 @@
   "name": "commercial-directory",
   "private": true,
   "version": "0.1.0",
-  "description": "SiteMatch commercial directory - full-stack monorepo",
+  "description": "SiteMatcher commercial directory - full-stack monorepo",
   "keywords": [
     "commercial",
     "directory",

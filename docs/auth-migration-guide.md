@@ -1,7 +1,7 @@
 # Authentication Migration Guide - Magic Link to Email/Password
 
 ## Overview
-This guide documents the migration process from magic link authentication to email/password authentication for existing SiteMatch dev team members.
+This guide documents the migration process from magic link authentication to email/password authentication for existing SiteMatcher dev team members.
 
 ## Migration Date
 To be determined - coordinate with team

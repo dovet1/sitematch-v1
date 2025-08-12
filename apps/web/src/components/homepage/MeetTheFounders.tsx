@@ -8,7 +8,7 @@ export function MeetTheFounders() {
       name: 'Rob',
       role: 'Co-Founder & Property Expert',
       background: 'Property Acquisition Specialist',
-      description: 'With over 8 years in commercial property acquisition, Rob has worked with major retailers, restaurant chains, and growing businesses to secure prime locations across the UK. His deep understanding of the challenges occupiers face when finding space led to the creation of SiteMatch.',
+      description: 'With over 8 years in commercial property acquisition, Rob has worked with major retailers, restaurant chains, and growing businesses to secure prime locations across the UK. His deep understanding of the challenges occupiers face when finding space led to the creation of SiteMatcher.',
       expertise: ['Commercial Property', 'Retail Expansion', 'Location Strategy', 'Market Analysis'],
       linkedin: '#',
       photo: null,

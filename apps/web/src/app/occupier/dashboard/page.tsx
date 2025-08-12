@@ -18,6 +18,12 @@ interface Listing {
   created_at: string;
   updated_at: string;
   rejection_reason?: string;
+  latest_version?: {
+    status: string;
+    review_notes?: string;
+    version_number: number;
+    reviewed_at?: string;
+  };
 }
 
 export default function OccupierDashboard() {
@@ -59,10 +65,36 @@ export default function OccupierDashboard() {
         .eq('created_by', user.id)
         .order('updated_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching listings:', error);
+      // Get latest versions for each listing
+      if (listings && listings.length > 0) {
+        const listingIds = listings.map(l => l.id);
+        const { data: versions } = await supabase
+          .from('listing_versions')
+          .select('listing_id, status, review_notes, version_number, reviewed_at')
+          .in('listing_id', listingIds)
+          .order('version_number', { ascending: false });
+
+        // Attach latest version to each listing
+        const listingsWithVersions = listings.map(listing => {
+          const latestVersion = versions?.find(v => v.listing_id === listing.id);
+          return {
+            ...listing,
+            latest_version: latestVersion ? {
+              status: latestVersion.status,
+              review_notes: latestVersion.review_notes,
+              version_number: latestVersion.version_number,
+              reviewed_at: latestVersion.reviewed_at
+            } : undefined
+          };
+        });
+
+        setListings(listingsWithVersions);
       } else {
         setListings(listings || []);
+      }
+
+      if (error) {
+        console.error('Error fetching listings:', error);
       }
       
       setLoading(false);
@@ -104,17 +136,20 @@ export default function OccupierDashboard() {
     });
   };
 
-  // Get status-specific content
+  // Get status-specific content based on latest version
   const getStatusContent = (listing: Listing) => {
-    switch (listing.status) {
+    // Use latest version status if available, otherwise fall back to listing status
+    const currentStatus = listing.latest_version?.status || listing.status;
+    
+    switch (currentStatus) {
       case 'rejected':
         return {
           icon: AlertTriangle,
           iconColor: 'text-destructive',
-          message: listing.rejection_reason || 'Changes requested',
+          message: listing.latest_version?.review_notes || listing.rejection_reason || 'Changes requested',
           action: {
             label: 'Fix & Resubmit',
-            href: `/occupier/create-listing?edit=${listing.id}`,
+            href: `/occupier/listing/${listing.id}`,
             variant: 'destructive' as const
           }
         };
@@ -124,8 +159,19 @@ export default function OccupierDashboard() {
           iconColor: 'text-amber-600',
           message: 'Under review',
           action: {
-            label: 'View Details',
-            href: `/occupier/create-listing?edit=${listing.id}`,
+            label: 'Edit Listing',
+            href: `/occupier/listing/${listing.id}`,
+            variant: 'secondary' as const
+          }
+        };
+      case 'pending_review':
+        return {
+          icon: Eye,
+          iconColor: 'text-blue-600',
+          message: 'Submitted for review',
+          action: {
+            label: 'View Submission',
+            href: `/occupier/listing/${listing.id}`,
             variant: 'secondary' as const
           }
         };
@@ -136,7 +182,7 @@ export default function OccupierDashboard() {
           message: 'Published',
           action: {
             label: 'View Listing',
-            href: `/occupier/create-listing?edit=${listing.id}`,
+            href: `/occupier/listing/${listing.id}`,
             variant: 'secondary' as const
           }
         };
@@ -147,7 +193,7 @@ export default function OccupierDashboard() {
           message: 'Draft',
           action: {
             label: 'Continue Editing',
-            href: `/occupier/create-listing?edit=${listing.id}`,
+            href: `/occupier/listing/${listing.id}`,
             variant: 'outline' as const
           }
         };
@@ -155,7 +201,7 @@ export default function OccupierDashboard() {
   };
 
   // Check if user has any rejected listings that need attention
-  const hasRejectedListings = listings.some(l => l.status === 'rejected');
+  const hasRejectedListings = listings.some(l => (l.latest_version?.status || l.status) === 'rejected');
 
   if (loading) {
     return (
@@ -193,7 +239,7 @@ export default function OccupierDashboard() {
                   size="lg"
                   className="violet-bloom-button violet-bloom-touch shadow-sm hover:shadow-md transition-all"
                 >
-                  <Link href="/occupier/create-listing?fresh=true">
+                  <Link href="/occupier/create-listing-quick">
                     <Plus className="w-5 h-5 mr-2" />
                     Create New Listing
                   </Link>
@@ -219,7 +265,7 @@ export default function OccupierDashboard() {
                       Create your first listing to connect with agents and find your ideal property.
                     </p>
                     <Button asChild size="lg" className="violet-bloom-button violet-bloom-touch">
-                      <Link href="/occupier/create-listing?fresh=true">
+                      <Link href="/occupier/create-listing-quick">
                         <Plus className="w-5 h-5 mr-2" />
                         Create Your First Listing
                       </Link>
@@ -240,62 +286,153 @@ export default function OccupierDashboard() {
                   return (
                     <Card 
                       key={listing.id} 
-                      className={`violet-bloom-card-hover transition-all duration-200 ${
-                        listing.status === 'rejected' ? 'border-destructive/30' : ''
+                      className={`group relative overflow-hidden border border-border/60 bg-gradient-to-br from-card via-card to-card/95 shadow-sm hover:shadow-lg transition-all duration-300 hover:border-border/80 hover:scale-[1.01] ${
+                        (listing.latest_version?.status || listing.status) === 'rejected' ? 'border-destructive/20 bg-gradient-to-br from-destructive/5 via-card to-card' : ''
                       }`}
                     >
-                      <CardContent className="p-4 sm:p-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      {/* Premium gradient overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      <CardContent className="relative p-5 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                           {/* Left Side - Listing Info */}
                           <div className="flex items-start gap-4 flex-1">
-                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                              listing.status === 'approved' ? 'bg-emerald-50' :
-                              listing.status === 'pending' ? 'bg-amber-50' :
-                              listing.status === 'rejected' ? 'bg-destructive/10' :
-                              'bg-muted'
+                            {/* Premium Status Avatar */}
+                            <div className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ring-1 ring-black/5 transition-all duration-200 group-hover:shadow-md ${
+                              (listing.latest_version?.status || listing.status) === 'approved' ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/50' :
+                              (listing.latest_version?.status || listing.status) === 'pending' ? 'bg-gradient-to-br from-amber-50 to-amber-100/50' :
+                              (listing.latest_version?.status || listing.status) === 'pending_review' ? 'bg-gradient-to-br from-blue-50 to-blue-100/50' :
+                              (listing.latest_version?.status || listing.status) === 'rejected' ? 'bg-gradient-to-br from-red-50 to-red-100/50' :
+                              'bg-gradient-to-br from-slate-50 to-slate-100/50'
                             }`}>
-                              <StatusIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${statusContent.iconColor}`} />
+                              <StatusIcon className={`w-6 h-6 sm:w-7 sm:h-7 ${statusContent.iconColor} transition-transform duration-200 group-hover:scale-110`} />
+                              
+                              {/* Status indicator dot */}
+                              <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-card shadow-sm ${
+                                (listing.latest_version?.status || listing.status) === 'approved' ? 'bg-emerald-500' :
+                                (listing.latest_version?.status || listing.status) === 'pending' ? 'bg-amber-500' :
+                                (listing.latest_version?.status || listing.status) === 'pending_review' ? 'bg-blue-500' :
+                                (listing.latest_version?.status || listing.status) === 'rejected' ? 'bg-red-500' :
+                                'bg-slate-400'
+                              }`} />
                             </div>
                             
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="font-semibold text-foreground truncate">
-                                  {listing.company_name}
-                                </h3>
-                                <StatusBadge status={listing.status} />
+                              {/* Company Name with enhanced typography */}
+                              <h3 className="text-lg font-semibold text-foreground truncate mb-1.5 group-hover:text-primary transition-colors duration-200">
+                                {listing.company_name}
+                              </h3>
+                              
+                              {/* Premium Status Badge */}
+                              <div className="flex items-center gap-2 mb-2">
+                                <StatusBadge status={listing.latest_version?.status || listing.status} className="shadow-sm" />
                               </div>
                               
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {statusContent.message} • {formatDate(listing.updated_at)}
-                              </p>
-                              
-                              {listing.status === 'rejected' && listing.rejection_reason && (
-                                <p className="text-sm text-destructive mt-2 line-clamp-2">
-                                  Feedback: {listing.rejection_reason}
-                                </p>
+                              {/* Enhanced Rejection Feedback */}
+                              {((listing.latest_version?.status || listing.status) === 'rejected') && (listing.latest_version?.review_notes || listing.rejection_reason) && (
+                                <div className="mt-3 p-4 rounded-xl bg-gradient-to-br from-red-50 to-orange-50/80 border border-red-200/60 shadow-sm">
+                                  <div className="flex items-start gap-3">
+                                    <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                      <AlertTriangle className="w-3 h-3 text-red-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-red-900 mb-1.5 flex items-center gap-2">
+                                        Action Required
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                          Rejected
+                                        </span>
+                                      </p>
+                                      <p className="text-sm text-red-800/90 leading-relaxed">
+                                        {listing.latest_version?.review_notes || listing.rejection_reason}
+                                      </p>
+                                      <div className="mt-2 flex items-center gap-1 text-xs text-red-700/80">
+                                        <span>💡</span>
+                                        <span>Review the feedback and resubmit when ready</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Enhanced Pending Review Feedback */}
+                              {(listing.latest_version?.status === 'pending_review') && (
+                                <div className="mt-3 p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50/80 border border-blue-200/60 shadow-sm">
+                                  <div className="flex items-start gap-3">
+                                    <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                      <Eye className="w-3 h-3 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-blue-900 mb-1.5 flex items-center gap-2">
+                                        Under Review
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                          Submitted
+                                        </span>
+                                      </p>
+                                      <p className="text-sm text-blue-800/90 leading-relaxed">
+                                        Your listing has been submitted and is awaiting admin review. You'll receive feedback shortly.
+                                      </p>
+                                      <div className="mt-2 flex items-center gap-1 text-xs text-blue-700/80">
+                                        <span>⏱️</span>
+                                        <span>We typically review submissions within 1-2 business days</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Enhanced Approved Feedback */}
+                              {(listing.latest_version?.status === 'approved') && (
+                                <div className="mt-3 p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-green-50/80 border border-emerald-200/60 shadow-sm">
+                                  <div className="flex items-start gap-3">
+                                    <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                      <CheckCircle className="w-3 h-3 text-emerald-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-emerald-900 mb-1.5 flex items-center gap-2">
+                                        Published Successfully
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                                          Live
+                                        </span>
+                                      </p>
+                                      <p className="text-sm text-emerald-800/90 leading-relaxed">
+                                        Your listing is now live and visible to agents.
+                                      </p>
+                                      <div className="mt-2 flex items-center gap-1 text-xs text-emerald-700/80">
+                                        <span>🚀</span>
+                                        <span>Your listing is attracting potential matches</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </div>
                           
-                          {/* Right Side - Actions */}
-                          <div className="flex items-center gap-2 ml-14 sm:ml-0">
+                          {/* Right Side - Premium Actions */}
+                          <div className="flex items-center gap-2 ml-16 sm:ml-0">
+                            {/* Enhanced Preview Button */}
                             <Button
                               asChild
                               variant="ghost"
                               size="sm"
-                              className="hover:bg-muted"
+                              className="h-9 w-9 p-0 rounded-lg border border-border/60 bg-card/50 hover:bg-card hover:border-border shadow-sm hover:shadow transition-all duration-200"
                             >
-                              <Link href={`/occupier/create-listing?edit=${listing.id}`}>
+                              <Link href={`/occupier/listing/${listing.id}/preview`}>
                                 <Eye className="w-4 h-4" />
-                                <span className="sr-only">View details</span>
+                                <span className="sr-only">Preview listing</span>
                               </Link>
                             </Button>
                             
+                            {/* Enhanced Primary Action */}
                             <Button
                               asChild
                               variant={statusContent.action.variant}
                               size="sm"
-                              className="min-w-[100px]"
+                              className={`min-w-[100px] h-9 shadow-sm hover:shadow transition-all duration-200 font-medium ${
+                                statusContent.action.variant === 'destructive' ? 'bg-gradient-to-r from-destructive to-destructive/90' :
+                                statusContent.action.variant === 'secondary' ? 'bg-gradient-to-r from-secondary to-secondary/95 hover:from-secondary/90 hover:to-secondary/85' :
+                                'bg-gradient-to-r from-muted to-muted/95 hover:from-muted/90 hover:to-muted/85'
+                              }`}
                             >
                               <Link href={statusContent.action.href}>
                                 {statusContent.action.label}
@@ -316,6 +453,7 @@ export default function OccupierDashboard() {
           </div>
         </div>
       </div>
+
     </div>
   );
 }

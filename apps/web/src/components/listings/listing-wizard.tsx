@@ -922,21 +922,6 @@ export function ListingWizard({
               mainUpdateData.company_name = processedData.companyName;
               mainUpdateData.title = `Property Requirement - ${processedData.companyName}`;
             }
-            if (processedData.primaryContact?.contactName) {
-              mainUpdateData.contact_name = processedData.primaryContact.contactName;
-            }
-            if (processedData.primaryContact?.contactTitle) {
-              mainUpdateData.contact_title = processedData.primaryContact.contactTitle;
-            }
-            if (processedData.primaryContact?.contactEmail) {
-              mainUpdateData.contact_email = processedData.primaryContact.contactEmail;
-            }
-            if (processedData.primaryContact?.contactPhone) {
-              mainUpdateData.contact_phone = processedData.primaryContact.contactPhone;
-            }
-            if (processedData.primaryContact?.contactArea) {
-              mainUpdateData.contact_area = processedData.primaryContact.contactArea;
-            }
             // Save brochure URL to main listing if available
             if (processedData.brochureFiles && processedData.brochureFiles.length > 0) {
               mainUpdateData.brochure_url = processedData.brochureFiles[0].url;
@@ -945,6 +930,34 @@ export function ListingWizard({
             if (Object.keys(mainUpdateData).length > 0) {
               await updateDraftListing(state.listingId, mainUpdateData);
             }
+
+            // Save primary contact to listing_contacts table
+            if (processedData.primaryContact && (
+              processedData.primaryContact.contactName || 
+              processedData.primaryContact.contactEmail ||
+              processedData.primaryContact.contactTitle
+            )) {
+              const { browserClient } = await import('@/lib/supabase');
+              
+              // Clear existing primary contact first (to handle updates)
+              await browserClient.from('listing_contacts')
+                .delete()
+                .eq('listing_id', state.listingId)
+                .eq('is_primary_contact', true);
+              
+              // Add current primary contact
+              await browserClient.from('listing_contacts').insert({
+                listing_id: state.listingId,
+                contact_name: processedData.primaryContact.contactName || '',
+                contact_title: processedData.primaryContact.contactTitle || '',
+                contact_email: processedData.primaryContact.contactEmail || '',
+                contact_phone: processedData.primaryContact.contactPhone || null,
+                contact_area: processedData.primaryContact.contactArea || null,
+                headshot_url: processedData.primaryContact.headshotUrl || null,
+                is_primary_contact: true
+              });
+            }
+
             // Save locations if not nationwide and locations exist
             if (!processedData.locationSearchNationwide && processedData.locations && processedData.locations.length > 0) {
               const { addLocationsToDraftListing } = await import('@/lib/draft-listings');

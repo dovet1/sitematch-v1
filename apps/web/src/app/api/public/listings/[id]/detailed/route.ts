@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase';
+import { createClient, createAdminClient } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
@@ -16,6 +16,7 @@ export async function GET(
     }
 
     const supabase = createClient();
+    const adminSupabase = createAdminClient();
     
     // Get basic listing information first
     const { data: listing, error: listingError } = await supabase
@@ -34,18 +35,15 @@ export async function GET(
         contact_phone, 
         contact_area,
         created_at,
-        sector_id,
-        use_class_id,
         listing_type,
         dwelling_count_min,
         dwelling_count_max,
         site_acreage_min,
         site_acreage_max,
-        brochure_url,
         property_page_link
       `)
       .eq('id', id)
-      .in('status', ['approved', 'pending'])
+      .in('status', ['approved', 'pending', 'draft'])
       .single();
 
     if (listingError) {
@@ -65,44 +63,40 @@ export async function GET(
 
     // Get related data separately
     const [
-      { data: sectors },
-      { data: useClasses },
-      { data: locations },
-      { data: faqs },
-      { data: files },
-      { data: contacts },
-      { data: listingSectors },
-      { data: listingUseClasses }
+      { data: locations, error: locationsError },
+      { data: faqs, error: faqsError },
+      { data: files, error: filesError },
+      { data: contacts, error: contactsError },
+      { data: listingSectors, error: sectorsError },
+      { data: listingUseClasses, error: useClassesError }
     ] = await Promise.all([
-      supabase.from('sectors').select('id, name').eq('id', listing.sector_id),
-      supabase.from('use_classes').select('id, name, code').eq('id', listing.use_class_id),
       supabase.from('listing_locations').select('id, place_name, coordinates, formatted_address').eq('listing_id', id),
       supabase.from('faqs').select('id, question, answer, display_order').eq('listing_id', id),
-      supabase.from('file_uploads').select('id, file_path, file_name, file_size, file_type, bucket_name, is_primary, caption, display_order').eq('listing_id', id),
+      supabase.from('file_uploads').select('id, file_path, file_name, file_size, file_type, bucket_name, is_primary, display_order, caption').eq('listing_id', id),
       supabase.from('listing_contacts').select('id, contact_name, contact_title, contact_email, contact_phone, contact_area, headshot_url, is_primary_contact').eq('listing_id', id),
       supabase.from('listing_sectors').select('sector_id, sectors(id, name)').eq('listing_id', id),
       supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id)
     ]);
 
+    // Debug logging for files query
+    console.log(`Files query for listing ${id}:`);
+    console.log(`Files error:`, filesError);
+    console.log(`Files data:`, files);
+
     // Debug logging (remove in production)
     if (files && files.length > 0) {
       console.log(`Files found for listing ${id}:`, files.map(f => `${f.file_type}:${f.file_name}`));
+      console.log(`All unique file types:`, Array.from(new Set(files.map(f => f.file_type))));
+      console.log(`Filtered site plans:`, files.filter(f => f.file_type === 'sitePlan' || f.file_type === 'site_plan'));
+      console.log(`Filtered fit outs:`, files.filter(f => f.file_type === 'fitOut' || f.file_type === 'fit_out'));
+      console.log(`All files raw:`, files);
+    } else {
+      console.log(`No files found for listing ${id}`);
     }
 
-    // Combine sectors from direct relationship and junction table, removing duplicates
-    const allSectors = [
-      ...(sectors || []),
-      ...(listingSectors?.map((ls: any) => ls.sectors).filter(Boolean) || [])
-    ].filter((sector, index, self) => 
-      index === self.findIndex(s => s.id === sector.id)
-    );
-    
-    const allUseClasses = [
-      ...(useClasses || []),
-      ...(listingUseClasses?.map((luc: any) => luc.use_classes).filter(Boolean) || [])
-    ].filter((useClass, index, self) => 
-      index === self.findIndex(uc => uc.id === useClass.id)
-    );
+    // Get sectors and use classes only from junction tables
+    const allSectors = (listingSectors?.map((ls: any) => ls.sectors).filter(Boolean) || []);
+    const allUseClasses = (listingUseClasses?.map((luc: any) => luc.use_classes).filter(Boolean) || []);
 
     // Get logo file or generate Clearbit URL
     const logoFile = files?.find((file: any) => file.file_type === 'logo' && file.is_primary);
@@ -145,36 +139,33 @@ export async function GET(
         site_size: formatSizeRange(listing.site_size_min, listing.site_size_max),
         dwelling_count: formatDwellingRange(listing.dwelling_count_min, listing.dwelling_count_max),
         site_acreage: formatAcreageRange(listing.site_acreage_min, listing.site_acreage_max),
-        brochure_url: listing.brochure_url,
         property_page_link: listing.property_page_link
       },
       
-      // Enhanced contact information  
+      // Contact information from listing_contacts table only
       contacts: {
-        primary: {
-          name: listing.contact_name,
-          title: listing.contact_title || '',
-          email: listing.contact_email,
-          phone: listing.contact_phone || '',
-          contact_area: listing.contact_area || '',
-          headshot_url: (() => {
-            // First try to find primary contact in listing_contacts table
-            const primaryFromContacts = contacts?.find((contact: any) => contact.is_primary_contact);
-            if (primaryFromContacts?.headshot_url) {
-              return primaryFromContacts.headshot_url;
-            }
-            
-            // Then try to find headshot file by matching contact name
-            const headshotFile = files?.find((file: any) => 
-              file.file_type === 'headshot' && (
-                file.is_primary || 
-                file.file_name?.toLowerCase().includes(listing.contact_name?.toLowerCase().split(' ')[0] || '')
-              )
-            );
-            
-            return headshotFile ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${headshotFile.bucket_name}/${headshotFile.file_path}` : null;
-          })()
-        },
+        primary: (() => {
+          // Find the primary contact from listing_contacts table
+          const primaryContact = contacts?.find((contact: any) => contact.is_primary_contact);
+          if (primaryContact) {
+            return {
+              name: primaryContact.contact_name,
+              title: primaryContact.contact_title || '',
+              email: primaryContact.contact_email,
+              phone: primaryContact.contact_phone || '',
+              contact_area: primaryContact.contact_area || '',
+              headshot_url: primaryContact.headshot_url || (() => {
+                const headshotFile = files?.find((file: any) => 
+                  file.file_type === 'headshot' && 
+                  file.file_name?.toLowerCase().includes(primaryContact.contact_name?.toLowerCase().split(' ')[0])
+                );
+                return headshotFile ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${headshotFile.bucket_name}/${headshotFile.file_path}` : null;
+              })()
+            };
+          }
+          // Return null if no primary contact exists
+          return null;
+        })(),
         additional: (contacts || [])
           .filter((contact: any) => !contact.is_primary_contact)
           .map((contact: any) => ({
@@ -225,29 +216,29 @@ export async function GET(
             url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
             size: file.file_size,
             type: 'brochure',
-            caption: file.caption
+            caption: file.caption || null
           })),
         fit_outs: (files || [])
-          .filter((file: any) => file.file_type === 'fitOut')
+          .filter((file: any) => file.file_type === 'fitOut' || file.file_type === 'fit_out')
           .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
           .map((file: any) => ({
             id: file.id,
             name: file.file_name,
-            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
+            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/fit-outs/${file.file_path}`,
             size: file.file_size,
             type: 'fit_out',
-            caption: file.caption
+            caption: file.caption || null
           })),
         site_plans: (files || [])
-          .filter((file: any) => file.file_type === 'sitePlan')
+          .filter((file: any) => file.file_type === 'sitePlan' || file.file_type === 'site_plan')
           .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
           .map((file: any) => ({
             id: file.id,
             name: file.file_name,
-            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
+            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/site-plans/${file.file_path}`,
             size: file.file_size,
             type: 'site_plan',
-            caption: file.caption
+            caption: file.caption || null
           }))
       },
       

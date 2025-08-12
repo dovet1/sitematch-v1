@@ -1,4 +1,4 @@
-# SiteMatch – UX Wireframe Specification (MVP)
+# SiteMatcher – UX Wireframe Specification (MVP)
 
 *Version 0.2 – 30 June 2025*
 
@@ -20,7 +20,7 @@
 
 | Zone       | Elements                                                 | Notes                                                   |
 | ---------- | -------------------------------------------------------- | ------------------------------------------------------- |
-| **Left**   | SiteMatch logo (text for MVP)                            | Links back to `/`                                       |
+| **Left**   | SiteMatcher logo (text for MVP)                            | Links back to `/`                                       |
 | **Centre** | 🔍 **Search bar** *(shadcn Input with left MapPin icon)* | Placeholder: "Town / postcode or select Nationwide"     |
 | **Right**  | **Filters** button (ghost on mobile, inline on desktop)  | Opens Slide‑over on mobile; shows Pill group on desktop |
 

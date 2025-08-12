@@ -11,7 +11,7 @@ export function EnhancedCTA() {
           Ready to Find Your Perfect Commercial Space?
         </h2>
         <p className="additional-cta__subtitle text-base md:text-lg lg:text-xl opacity-90 mb-8 md:mb-10 leading-relaxed px-4 md:px-0">
-          Join thousands of businesses who have successfully connected through SiteMatch. 
+          Join thousands of businesses who have successfully connected through SiteMatcher. 
           Post your requirement today and get responses from qualified landlords within 72 hours.
         </p>
 

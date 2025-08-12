@@ -456,7 +456,7 @@ function SiteSketcherContent() {
               <Link 
                 href="/"
                 className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted transition-colors"
-                title="Back to SiteMatch"
+                title="Back to SiteMatcher"
               >
                 <ArrowLeft className="h-4 w-4 text-muted-foreground hover:text-foreground" />
               </Link>
@@ -551,7 +551,7 @@ function SiteSketcherContent() {
           <Link 
             href="/"
             className="flex items-center justify-center w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-            title="Back to SiteMatch"
+            title="Back to SiteMatcher"
           >
             <ArrowLeft className="h-5 w-5 text-gray-700" />
           </Link>

@@ -2,7 +2,7 @@
   "name": "db",
   "version": "0.1.0",
   "private": true,
-  "description": "Database package with Prisma ORM for SiteMatch",
+  "description": "Database package with Prisma ORM for SiteMatcher",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
