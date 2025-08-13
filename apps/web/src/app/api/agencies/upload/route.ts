@@ -26,10 +26,18 @@ export async function POST(request: NextRequest) {
     const fileType = formData.get('type') as string // 'logo' or 'headshot'
     const agencyId = formData.get('agencyId') as string
     const isPrimary = formData.get('is_primary') as string
+    const agentEmail = formData.get('agentEmail') as string // For headshot uploads
 
     if (!file || !fileType || !agencyId) {
       return NextResponse.json({ 
         error: 'Missing required fields: file, type, and agencyId' 
+      }, { status: 400 })
+    }
+
+    // For headshot uploads, agentEmail is required
+    if (fileType === 'headshot' && !agentEmail) {
+      return NextResponse.json({ 
+        error: 'agentEmail is required for headshot uploads' 
       }, { status: 400 })
     }
 
@@ -148,15 +156,28 @@ export async function POST(request: NextRequest) {
 
     // If this is a headshot upload, update the agency_agents record
     if (fileType === 'headshot') {
-      const { error: agentUpdateError } = await supabase
+      console.log('📷 Updating agent headshot URL:', {
+        agencyId,
+        agentEmail,
+        uploaderUserId: user.id,
+        newUrl: urlData.publicUrl
+      });
+      
+      // Update the specific agent's headshot by email
+      const { data: updateData, error: agentUpdateError } = await supabase
         .from('agency_agents')
         .update({ headshot_url: urlData.publicUrl })
         .eq('agency_id', agencyId)
-        .eq('user_id', user.id)
+        .eq('email', agentEmail)
+        .select();
 
       if (agentUpdateError) {
-        console.error('Agent headshot URL update error:', agentUpdateError)
+        console.error('❌ Agent headshot URL update error:', agentUpdateError)
         // Note: This doesn't fail the upload, just logs the error
+      } else if (updateData && updateData.length > 0) {
+        console.log('✅ Agent headshot URL updated successfully:', updateData[0]);
+      } else {
+        console.warn('⚠️ No agent record found to update headshot URL for email:', agentEmail, 'agency:', agencyId);
       }
     }
 

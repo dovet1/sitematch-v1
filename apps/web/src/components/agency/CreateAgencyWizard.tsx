@@ -34,6 +34,7 @@ interface WizardData {
     name: string
     phone: string
     role: 'admin' | 'member'
+    coverageArea: string
     headshotFile: File | null
     headshotUrl: string
   }[]
@@ -236,6 +237,7 @@ export function CreateAgencyWizard() {
             name: agent.name,
             phone: agent.phone,
             role: agent.role,
+            coverageArea: agent.coverageArea,
             headshotUrl: agent.headshotUrl?.startsWith('blob:') ? null : agent.headshotUrl
           })),
           inviteAgents: data.inviteAgents
@@ -293,6 +295,7 @@ export function CreateAgencyWizard() {
             headshotFormData.append('file', agent.headshotFile)
             headshotFormData.append('type', 'headshot')
             headshotFormData.append('agencyId', agencyId)
+            headshotFormData.append('agentEmail', agent.email)
             
             const headshotUploadResponse = await fetch('/api/agencies/upload', {
               method: 'POST',

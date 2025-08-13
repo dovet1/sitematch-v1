@@ -23,6 +23,7 @@ interface CreateAgencyRequest {
     name: string;
     phone?: string;
     role: 'admin' | 'member';
+    coverageArea?: string;
     headshotUrl?: string;
     headshotFile?: File;
   }[];
@@ -169,11 +170,22 @@ export async function POST(request: NextRequest) {
         
         if (isCreator) {
           // Update the creator's existing record with complete data
+          console.log('📝 Updating creator agent record:', {
+            name: agent.name,
+            phone: agent.phone,
+            coverageArea: agent.coverageArea,
+            headshotUrl: agent.headshotUrl,
+            role: agent.role,
+            agencyId: agency.id,
+            userId: user.id
+          });
+          
           const { error: updateError } = await supabase
             .from('agency_agents')
             .update({
               name: agent.name,
               phone: agent.phone || null,
+              coverage_area: agent.coverageArea || null,
               headshot_url: agent.headshotUrl || null,
               role: agent.role || 'admin' // Keep admin role or use specified role
             })
@@ -181,7 +193,9 @@ export async function POST(request: NextRequest) {
             .eq('user_id', user.id);
             
           if (updateError) {
-            console.error('Error updating creator agent record:', updateError);
+            console.error('❌ Error updating creator agent record:', updateError);
+          } else {
+            console.log('✅ Creator agent record updated successfully');
           }
         } else {
           // Insert new record for non-creator direct agents
@@ -193,6 +207,7 @@ export async function POST(request: NextRequest) {
               email: agent.email,
               name: agent.name,
               phone: agent.phone || null,
+              coverage_area: agent.coverageArea || null,
               headshot_url: agent.headshotUrl || null,
               role: agent.role,
               is_registered: false

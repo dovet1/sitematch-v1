@@ -27,6 +27,7 @@ interface DirectAgent {
   name: string
   phone: string
   role: 'admin' | 'member'
+  coverageArea: string
   headshotFile: File | null
   headshotUrl: string
 }
@@ -63,6 +64,7 @@ export function TeamBuildingStep({ data, updateData, errors }: TeamBuildingStepP
     name: '',
     phone: '',
     role: 'member',
+    coverageArea: '',
     headshotFile: null,
     headshotUrl: ''
   })
@@ -122,6 +124,7 @@ export function TeamBuildingStep({ data, updateData, errors }: TeamBuildingStepP
       name: '',
       phone: '',
       role: 'member',
+      coverageArea: '',
       headshotFile: null,
       headshotUrl: ''
     })
@@ -322,6 +325,19 @@ export function TeamBuildingStep({ data, updateData, errors }: TeamBuildingStepP
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="direct-coverage">Coverage Area</Label>
+                <Input
+                  id="direct-coverage"
+                  value={currentDirectAgent.coverageArea}
+                  onChange={(e) => setCurrentDirectAgent(prev => ({ ...prev, coverageArea: e.target.value }))}
+                  placeholder="e.g. London, South East England"
+                />
+                <p className="text-xs text-gray-500">
+                  Geographic areas this person covers (optional)
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="direct-role">Role</Label>
                 <select
                   id="direct-role"
@@ -452,6 +468,11 @@ export function TeamBuildingStep({ data, updateData, errors }: TeamBuildingStepP
                           {agent.role}
                         </Badge>
                       </div>
+                      {agent.coverageArea && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Coverage: {agent.coverageArea}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <Button
