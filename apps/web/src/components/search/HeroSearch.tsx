@@ -63,7 +63,8 @@ export function HeroSearch({ searchFilters }: HeroSearchProps) {
           
           {/* Subtitle */}
           <p className="body-large text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Access location requirements from companies of every size - from startups to industry leaders - searching for their next space
+            Discover property requirements from leading companies looking for their next location
+
           </p>
           
           {/* Search Form */}

@@ -168,7 +168,15 @@ export function SignUpModal({ children, redirectTo }: SignUpModalProps) {
           </Button>
 
           <p className="text-xs text-muted-foreground text-center">
-            By creating an account, you agree to our Terms of Service and Privacy Policy.
+            By creating an account, you agree to our{' '}
+            <a href="/terms" className="underline hover:text-primary">
+              Terms of Service
+            </a>{' '}
+            and{' '}
+            <a href="/privacy" className="underline hover:text-primary">
+              Privacy Policy
+            </a>
+            .
           </p>
         </form>
       </DialogContent>

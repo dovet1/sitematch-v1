@@ -27,11 +27,8 @@ export function HowItWorks() {
       <div className="how-it-works__container max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="how-it-works__title text-3xl font-bold text-gray-800 mb-4">
-            How It Works
-          </h2>
-          <p className="text-lg text-gray-600">
             Are you buying or leasing sites?
-          </p>
+          </h2>
         </div>
 
         <div className="how-it-works__steps grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 relative mb-8 md:mb-12">

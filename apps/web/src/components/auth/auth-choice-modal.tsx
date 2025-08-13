@@ -169,7 +169,15 @@ export function AuthChoiceModal({
             </div>
 
             <p className="text-xs text-muted-foreground text-center mt-6">
-              By continuing, you agree to our Terms of Service and Privacy Policy.
+              By continuing, you agree to our{' '}
+              <a href="/terms" className="underline hover:text-primary">
+                Terms of Service
+              </a>{' '}
+              and{' '}
+              <a href="/privacy" className="underline hover:text-primary">
+                Privacy Policy
+              </a>
+              .
             </p>
           </>
         );
