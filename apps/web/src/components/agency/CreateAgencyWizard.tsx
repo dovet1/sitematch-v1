@@ -153,7 +153,6 @@ export function CreateAgencyWizard() {
       case 2: // Coverage & Specialisms
         if (!data.coverageAreas.trim()) stepErrors.push('Coverage areas is required')
         if (data.coverageAreas.trim().length > 500) stepErrors.push('Coverage areas must be less than 500 characters')
-        if (data.specialisms.length === 0) stepErrors.push('At least one specialism is required')
         break
         
       case 3: // Team Building
@@ -376,137 +375,298 @@ export function CreateAgencyWizard() {
   const CurrentStepComponent = STEPS[currentStep].component
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Progress Header */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Step {currentStep + 1} of {STEPS.length}
-          </h2>
-          {lastSaved && (
-            <div className="text-sm text-gray-500">
-              Draft saved {lastSaved.toLocaleTimeString()}
-            </div>
-          )}
-        </div>
-        
-        {/* Desktop Progress Indicator */}
-        <div className="hidden sm:flex justify-between items-center mb-4">
-          {STEPS.map((step, index) => (
-            <div key={step.id} className="flex items-center">
-              <div className={`
-                flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium
-                ${index < currentStep 
-                  ? 'bg-green-100 text-green-600' 
-                  : index === currentStep 
-                    ? 'bg-blue-100 text-blue-600' 
-                    : 'bg-gray-100 text-gray-400'
-                }
-              `}>
-                {index < currentStep ? (
-                  <CheckCircle2 className="w-5 h-5" />
-                ) : (
-                  index + 1
-                )}
-              </div>
-              <div className="ml-3">
-                <p className={`text-sm font-medium ${
-                  index <= currentStep ? 'text-gray-900' : 'text-gray-400'
-                }`}>
-                  {step.title}
-                </p>
-                <p className={`text-xs ${
-                  index <= currentStep ? 'text-gray-500' : 'text-gray-400'
-                }`}>
-                  {step.description}
-                </p>
-              </div>
-              {index < STEPS.length - 1 && (
-                <div className={`flex-1 h-px mx-4 ${
-                  index < currentStep ? 'bg-green-200' : 'bg-gray-200'
-                }`} />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Mobile Progress Bar */}
-        <div className="sm:hidden">
-          <div className="flex justify-between text-sm text-gray-600 mb-2">
-            <span>{STEPS[currentStep].title}</span>
-            <span>{currentStep + 1} of {STEPS.length}</span>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        {/* Premium Progress Header */}
+        <div className="relative bg-gradient-to-br from-violet-50 via-white to-blue-50 p-6 sm:p-8 pb-4 sm:pb-6 border-b border-gray-100">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-40">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `radial-gradient(circle at 1px 1px, rgb(148, 163, 184) 1px, transparent 1px)`,
+              backgroundSize: '24px 24px'
+            }} />
           </div>
-          <Progress value={progressPercentage} className="h-2" />
-        </div>
-      </div>
-
-      {/* Error Messages */}
-      {errors.length > 0 && (
-        <div className="p-6 border-b border-gray-200">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <div className="font-medium mb-2">Please fix the following errors:</div>
-              <ul className="list-disc list-inside space-y-1">
-                {errors.map((error, index) => (
-                  <li key={index} className="text-sm">{error}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        </div>
-      )}
-
-      {/* Step Content */}
-      <div className="p-6 min-h-[400px]">
-        <CurrentStepComponent 
-          data={data}
-          updateData={updateData}
-          errors={errors}
-        />
-      </div>
-
-      {/* Navigation */}
-      <div className="p-6 border-t border-gray-200 bg-gray-50">
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={goToPrevious}
-            disabled={currentStep === 0 || isLoading}
-            className="flex items-center"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-
-          {currentStep === STEPS.length - 1 ? (
-            <Button
-              onClick={submitAgency}
-              disabled={isLoading}
-              className="flex items-center min-w-[120px]"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  Create Agency
-                  <CheckCircle2 className="w-4 h-4 ml-2" />
-                </>
+          
+          {/* Content */}
+          <div className="relative">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6 sm:mb-8">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  Create Your Agency
+                </h1>
+                <p className="text-gray-600 mt-2 text-sm sm:text-base">
+                  {STEPS[currentStep].title} • {STEPS[currentStep].description}
+                </p>
+              </div>
+              {lastSaved && (
+                <div className="flex items-center gap-2 text-sm text-gray-500 bg-white/80 backdrop-blur px-3 py-1.5 rounded-full border border-gray-200">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span>Auto-saved {lastSaved.toLocaleTimeString()}</span>
+                </div>
               )}
-            </Button>
-          ) : (
+            </div>
+        
+            {/* Desktop Progress Stepper - Enhanced */}
+            <div className="hidden lg:block">
+              <div className="grid grid-cols-4 gap-2">
+                {STEPS.map((step, index) => (
+                  <div key={step.id} className="relative">
+                    <div className="flex flex-col items-center">
+                      {/* Step Circle */}
+                      <div className={`
+                        relative flex items-center justify-center w-12 h-12 rounded-2xl text-sm font-semibold
+                        transition-all duration-300 transform mb-3 z-10
+                        ${index < currentStep 
+                          ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/25' 
+                          : index === currentStep 
+                            ? 'bg-gradient-to-br from-violet-600 to-blue-600 text-white shadow-xl shadow-violet-500/30 scale-110' 
+                            : 'bg-white border-2 border-gray-200 text-gray-400 hover:border-gray-300'
+                        }
+                      `}>
+                        {index < currentStep ? (
+                          <CheckCircle2 className="w-6 h-6" />
+                        ) : (
+                          <span className="text-base">{index + 1}</span>
+                        )}
+                        {index === currentStep && (
+                          <div className="absolute inset-0 rounded-2xl animate-pulse bg-gradient-to-br from-violet-600/20 to-blue-600/20" />
+                        )}
+                      </div>
+                      
+                      {/* Step Text */}
+                      <div className="text-center px-2">
+                        <p className={`text-sm font-semibold transition-colors leading-tight ${
+                          index <= currentStep ? 'text-gray-900' : 'text-gray-400'
+                        }`}>
+                          {step.title}
+                        </p>
+                        <p className={`text-xs mt-1 transition-colors leading-tight ${
+                          index <= currentStep ? 'text-gray-600' : 'text-gray-400'
+                        }`}>
+                          {step.description}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Connector Line */}
+                    {index < STEPS.length - 1 && (
+                      <div className="absolute top-6 left-[calc(50%+24px)] w-[calc(100%-24px)]">
+                        <div className="h-0.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all duration-500 ${
+                            index < currentStep 
+                              ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                              : ''
+                          }`} style={{ width: index < currentStep ? '100%' : '0%' }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tablet Progress - Compact */}
+            <div className="hidden sm:block lg:hidden">
+              <div className="flex items-center gap-3">
+                {STEPS.map((step, index) => (
+                  <div key={step.id} className="flex items-center">
+                    <div className={`
+                      flex items-center justify-center w-10 h-10 rounded-xl text-sm font-semibold
+                      transition-all duration-300
+                      ${index < currentStep 
+                        ? 'bg-green-500 text-white' 
+                        : index === currentStep 
+                          ? 'bg-violet-600 text-white shadow-lg' 
+                          : 'bg-gray-100 text-gray-400'
+                      }
+                    `}>
+                      {index < currentStep ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                    {index < STEPS.length - 1 && (
+                      <div className={`w-12 h-0.5 mx-2 ${
+                        index < currentStep ? 'bg-green-500' : 'bg-gray-200'
+                      }`} />
+                    )}
+                  </div>
+                ))}
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium text-gray-900">{STEPS[currentStep].title}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Progress - Enhanced */}
+            <div className="sm:hidden">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-gray-900">
+                  Step {currentStep + 1} of {STEPS.length}
+                </span>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+                  {Math.round(progressPercentage)}% Complete
+                </span>
+              </div>
+              <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-violet-500 to-blue-500 rounded-full transition-all duration-500"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Error Messages - Enhanced */}
+        {errors.length > 0 && (
+          <div className="p-4 sm:p-6 border-b border-gray-100 bg-red-50/50">
+            <Alert className="border-red-200 bg-white/90 backdrop-blur">
+              <div className="flex gap-3">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                  </div>
+                </div>
+                <AlertDescription className="flex-1">
+                  <div className="font-semibold text-red-900 mb-2">Please fix the following errors:</div>
+                  <ul className="space-y-1">
+                    {errors.map((error, index) => (
+                      <li key={index} className="text-sm text-red-700 flex items-start gap-2">
+                        <span className="text-red-400 mt-1">•</span>
+                        <span>{error}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </div>
+            </Alert>
+          </div>
+        )}
+
+        {/* Step Content - Enhanced */}
+        <div className="p-6 sm:p-8 min-h-[400px] bg-gradient-to-b from-white to-gray-50/50">
+          <CurrentStepComponent 
+            data={data}
+            updateData={updateData}
+            errors={errors}
+          />
+        </div>
+
+        {/* Navigation - Premium */}
+        <div className="p-4 sm:p-6 lg:p-8 border-t border-gray-100 bg-gradient-to-b from-gray-50 to-white">
+          {/* Mobile Navigation - Fixed Bottom Style */}
+          <div className="sm:hidden">
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={goToPrevious}
+                disabled={currentStep === 0 || isLoading}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-200 hover:bg-gray-50 transition-all duration-200 rounded-xl font-medium text-gray-700 disabled:opacity-50"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="text-base">Back</span>
+              </Button>
+              
+              {currentStep === STEPS.length - 1 ? (
+                <Button
+                  onClick={submitAgency}
+                  disabled={isLoading}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-violet-600 to-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all duration-200"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="text-base">Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-base">Complete</span>
+                      <CheckCircle2 className="w-5 h-5" />
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={goToNext}
+                  disabled={isLoading}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-violet-600 to-blue-600 text-white font-semibold rounded-xl shadow-lg transition-all duration-200"
+                >
+                  <span className="text-base">Next</span>
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              )}
+            </div>
+            
+            {/* Skip option for mobile on team step */}
+            {currentStep === 3 && data.directAgents.length === 0 && data.inviteAgents.length === 0 && (
+              <Button
+                variant="ghost"
+                onClick={goToNext}
+                disabled={isLoading}
+                className="w-full mt-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200 rounded-xl font-medium"
+              >
+                Skip Team Setup
+              </Button>
+            )}
+          </div>
+
+          {/* Desktop Navigation */}
+          <div className="hidden sm:flex sm:justify-between">
             <Button
-              onClick={goToNext}
-              disabled={isLoading}
-              className="flex items-center"
+              variant="outline"
+              onClick={goToPrevious}
+              disabled={currentStep === 0 || isLoading}
+              className="flex items-center justify-center gap-2 px-6 py-2.5 border-gray-200 hover:bg-gray-50 transition-all duration-200 rounded-xl font-medium"
             >
-              Next
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
             </Button>
-          )}
+
+            <div className="flex gap-3">
+              {/* Skip button for optional steps */}
+              {currentStep === 3 && data.directAgents.length === 0 && data.inviteAgents.length === 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={goToNext}
+                  disabled={isLoading}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200 rounded-xl font-medium"
+                >
+                  Skip Team Setup
+                </Button>
+              )}
+              
+              {currentStep === STEPS.length - 1 ? (
+                <Button
+                  onClick={submitAgency}
+                  disabled={isLoading}
+                  className="flex items-center justify-center gap-2 min-w-[140px] px-6 py-2.5 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-200 transform hover:scale-105"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Create Agency</span>
+                      <CheckCircle2 className="w-4 h-4" />
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={goToNext}
+                  disabled={isLoading}
+                  className="flex items-center justify-center gap-2 min-w-[120px] px-6 py-2.5 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-200 transform hover:scale-105"
+                >
+                  <span>Next</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

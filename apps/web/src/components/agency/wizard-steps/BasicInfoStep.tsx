@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, Globe, Building2, FileText } from 'lucide-react'
 
 interface WizardData {
   name: string
@@ -123,125 +123,183 @@ export function BasicInfoStep({ data, updateData, errors }: BasicInfoStepProps) 
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Basic Information
+    <div className="space-y-8">
+      {/* Header Section */}
+      <div className="text-center sm:text-left">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-100 to-blue-100 mb-4">
+          <Building2 className="w-7 h-7 text-violet-600" />
+        </div>
+        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+          Tell us about your agency
         </h3>
-        <p className="text-gray-600">
-          Let's start with the essential details about your agency.
+        <p className="text-gray-600 max-w-2xl">
+          Start with the foundation. These details will help property seekers and partners identify your agency.
         </p>
       </div>
 
-      {/* Agency Name */}
-      <div className="space-y-2">
-        <Label htmlFor="agency-name" className="text-sm font-medium text-gray-700">
-          Agency Name *
-        </Label>
-        <div className="relative">
-          <Input
-            id="agency-name"
-            type="text"
-            value={data.name}
-            onChange={(e) => handleNameChange(e.target.value)}
-            placeholder="Enter your agency name"
-            className={`pr-10 ${
-              getNameInputStatus() === 'error' 
-                ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
-                : getNameInputStatus() === 'success'
-                  ? 'border-green-300 focus:border-green-500 focus:ring-green-500'
-                  : ''
-            }`}
-            maxLength={100}
-          />
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            {getNameInputIcon()}
+      {/* Form Fields Container */}
+      <div className="space-y-6">
+        {/* Agency Name - Premium */}
+        <div className="group">
+          <div className="flex items-center justify-between mb-3">
+            <Label htmlFor="agency-name" className="text-sm font-semibold text-gray-900">
+              Agency Name
+            </Label>
+            <span className="text-xs text-red-500 font-medium bg-red-50 px-2 py-0.5 rounded-full">Required</span>
           </div>
-        </div>
-        <div className="flex justify-between items-center">
-          <p className={`text-xs ${
-            getNameInputStatus() === 'error' 
-              ? 'text-red-600' 
-              : getNameInputStatus() === 'success'
-                ? 'text-green-600'
-                : 'text-gray-500'
-          }`}>
-            {getNameHelperText()}
-          </p>
-          <p className="text-xs text-gray-400">
-            {data.name.length}/100
-          </p>
-        </div>
-      </div>
-
-      {/* Description */}
-      <div className="space-y-2">
-        <Label htmlFor="agency-description" className="text-sm font-medium text-gray-700">
-          Agency Description
-        </Label>
-        <Textarea
-          id="agency-description"
-          value={data.description}
-          onChange={(e) => updateData({ description: e.target.value })}
-          placeholder="Tell potential clients about your agency, your approach, and what makes you unique..."
-          rows={4}
-          maxLength={1000}
-          className="resize-none"
-        />
-        <div className="flex justify-between items-center">
-          <p className="text-xs text-gray-500">
-            Optional - This will appear on your agency profile
-          </p>
-          <div className="flex items-center space-x-2">
-            <div className={`h-1 w-16 rounded-full bg-gray-200 overflow-hidden ${
-              data.description.length > 800 ? 'bg-orange-200' : ''
-            }`}>
-              <div 
-                className={`h-full transition-all duration-300 ${
-                  data.description.length > 900 
-                    ? 'bg-red-500' 
-                    : data.description.length > 800 
-                      ? 'bg-orange-500' 
-                      : 'bg-blue-500'
-                }`}
-                style={{ width: `${(data.description.length / 1000) * 100}%` }}
-              />
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+              <Building2 className="w-5 h-5 text-gray-400 group-focus-within:text-violet-500 transition-colors" />
             </div>
-            <p className="text-xs text-gray-400">
-              {data.description.length}/1000
+            <Input
+              id="agency-name"
+              type="text"
+              value={data.name}
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="e.g., Premier Property Partners"
+              className={`pl-11 pr-12 py-3 text-base rounded-xl border-2 transition-all duration-200 ${
+                getNameInputStatus() === 'error' 
+                  ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                  : getNameInputStatus() === 'success'
+                    ? 'border-green-400 focus:border-green-500 focus:ring-2 focus:ring-green-200'
+                    : 'border-gray-200 hover:border-gray-300 focus:border-violet-500 focus:ring-2 focus:ring-violet-200'
+              }`}
+              maxLength={100}
+              required
+            />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              {getNameInputIcon()}
+            </div>
+          </div>
+          <div className="flex justify-between items-center mt-2">
+            <p className={`text-xs flex items-center gap-1.5 ${
+              getNameInputStatus() === 'error' ? 'text-red-600' : 
+              getNameInputStatus() === 'success' ? 'text-green-600' : 
+              nameCheckStatus === 'checking' ? 'text-gray-500' :
+              'text-gray-500'
+            }`}>
+              {nameCheckStatus === 'checking' && (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              )}
+              {getNameHelperText()}
             </p>
+            <span className="text-xs text-gray-400">
+              {data.name.length}/100
+            </span>
           </div>
         </div>
-      </div>
 
-      {/* Website */}
-      <div className="space-y-2">
-        <Label htmlFor="agency-website" className="text-sm font-medium text-gray-700">
-          Website URL
-        </Label>
-        <Input
-          id="agency-website"
-          type="url"
-          value={data.website}
-          onChange={(e) => handleWebsiteChange(e.target.value)}
-          placeholder="www.youragency.com"
-          className={errors.some(error => error.includes('website')) ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}
-        />
-        <div className="flex items-center space-x-2">
-          <p className="text-xs text-gray-500">
-            Optional - Your agency website (https:// will be added automatically)
-          </p>
-          {data.website && !errors.some(error => error.includes('website')) && (
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
+        {/* Description - Premium */}
+        <div className="group">
+          <div className="flex items-center justify-between mb-3">
+            <Label htmlFor="agency-description" className="text-sm font-semibold text-gray-900">
+              Description
+            </Label>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Optional</span>
+          </div>
+          <div className="relative">
+            <div className="absolute top-3 left-4 pointer-events-none">
+              <FileText className="w-5 h-5 text-gray-400 group-focus-within:text-violet-500 transition-colors" />
+            </div>
+            <Textarea
+              id="agency-description"
+              value={data.description}
+              onChange={(e) => updateData({ description: e.target.value })}
+              placeholder="Share your agency's story, expertise, and unique value proposition. What makes you the perfect partner for property seekers?"
+              rows={5}
+              maxLength={500}
+              className="pl-11 pr-4 py-3 resize-none rounded-xl border-2 border-gray-200 hover:border-gray-300 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 transition-all duration-200 text-base"
+            />
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-xs text-gray-500">
+              A compelling description helps build trust with potential clients
+            </p>
+            <span className="text-xs text-gray-400">
+              {data.description.length}/500
+            </span>
+          </div>
+        </div>
+
+        {/* Website - Premium */}
+        <div className="group">
+          <div className="flex items-center justify-between mb-3">
+            <Label htmlFor="agency-website" className="text-sm font-semibold text-gray-900">
+              Website
+            </Label>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Optional</span>
+          </div>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+              <Globe className="w-5 h-5 text-gray-400 group-focus-within:text-violet-500 transition-colors" />
+            </div>
+            <Input
+              id="agency-website"
+              type="url"
+              value={data.website}
+              onChange={(e) => handleWebsiteChange(e.target.value)}
+              placeholder="https://www.youragency.com"
+              className={`pl-11 pr-4 py-3 text-base rounded-xl border-2 transition-all duration-200 ${
+                errors.some(error => error.includes('website')) 
+                  ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
+                  : 'border-gray-200 hover:border-gray-300 focus:border-violet-500 focus:ring-2 focus:ring-violet-200'
+              }`}
+            />
+          </div>
+          {errors.some(error => error.includes('website')) ? (
+            <p className="text-xs text-red-600 flex items-center gap-1.5 mt-2">
+              <AlertCircle className="w-3 h-3" />
+              {errors.find(error => error.includes('website'))}
+            </p>
+          ) : (
+            <p className="text-xs text-gray-500 mt-2">
+              Help clients learn more about your services
+            </p>
           )}
         </div>
-        {errors.some(error => error.includes('website')) && (
-          <p className="text-xs text-red-600">
-            {errors.find(error => error.includes('website'))}
-          </p>
-        )}
       </div>
 
+      {/* Success Message - Premium */}
+      {data.name && nameCheckStatus === 'available' && (
+        <div className="relative overflow-hidden rounded-xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-4">
+          <div className="absolute top-0 right-0 w-32 h-32 transform translate-x-16 -translate-y-8">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-400/20 to-emerald-400/20 rounded-full blur-2xl" />
+          </div>
+          <div className="relative flex gap-3">
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-green-900">Perfect! Your agency name is available.</p>
+              <p className="text-sm text-green-700 mt-1">You're ready to proceed to the next step.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Tips - Premium */}
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl p-6 border border-gray-200">
+        <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <span className="w-5 h-5 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center text-xs font-bold">?</span>
+          Quick Tips
+        </h4>
+        <ul className="space-y-2 text-sm text-gray-600">
+          <li className="flex items-start gap-2">
+            <span className="text-violet-500 mt-0.5">•</span>
+            <span>Choose a name that reflects your agency's identity and is easy to remember</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-violet-500 mt-0.5">•</span>
+            <span>Include keywords in your description that property seekers might search for</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-violet-500 mt-0.5">•</span>
+            <span>A professional website URL adds credibility to your agency profile</span>
+          </li>
+        </ul>
+      </div>
     </div>
   )
 }

@@ -32,20 +32,18 @@ export default async function AddAgencyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-            Add Your Agency
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Create your agency profile, showcase your expertise, and invite your team members to join SiteMatcher's Agent Directory.
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <CreateAgencyWizard />
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-violet-50/30 via-white to-blue-50/30">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-[0.015] pointer-events-none">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 2px 2px, rgb(99, 102, 241) 1px, transparent 1px)`,
+          backgroundSize: '32px 32px'
+        }} />
+      </div>
+      
+      {/* Content */}
+      <div className="relative">
+        <CreateAgencyWizard />
       </div>
     </div>
   )
