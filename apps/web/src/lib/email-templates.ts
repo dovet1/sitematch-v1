@@ -35,6 +35,29 @@ interface SubmissionEmailData {
   previewUrl: string;
 }
 
+// =====================================================
+// Agency Invitation Email Templates - Epic 18
+// =====================================================
+
+interface AgencyInvitationEmailData {
+  recipientName: string;
+  recipientEmail: string;
+  agencyName: string;
+  inviterName: string;
+  role: 'admin' | 'member';
+  acceptUrl: string;
+  expiresAt: string;
+}
+
+interface AgencyStatusEmailData {
+  contactName: string;
+  contactEmail: string;
+  agencyName: string;
+  status: 'approved' | 'rejected';
+  adminNotes?: string;
+  dashboardUrl: string;
+}
+
 export function createRejectionEmail(data: RejectionEmailData): EmailTemplate {
   const reasonText = REJECTION_REASONS[data.rejectionReason];
   const fullReason = data.rejectionReason === 'other' && data.customReason 
@@ -352,6 +375,254 @@ SiteMatcher - Connecting occupiers with the perfect property
   return { subject, html, text };
 }
 
+// =====================================================
+// Agency Email Templates - Epic 18
+// =====================================================
+
+export function createAgencyInvitationEmail(data: AgencyInvitationEmailData): EmailTemplate {
+  const roleText = data.role === 'admin' ? 'Administrator' : 'Team Member';
+  const subject = `You've been invited to join ${data.agencyName} on SiteMatcher`;
+  
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 30px 20px; border-radius: 12px 12px 0 0; text-align: center; position: relative; overflow: hidden; }
+    .header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: shimmer 3s infinite; }
+    .content { background: #f9fafb; padding: 40px 30px; border-radius: 0 0 12px 12px; }
+    .invitation-card { background: white; border-radius: 12px; padding: 25px; margin: 20px 0; border: 2px solid #e5e7eb; position: relative; }
+    .invitation-card::before { content: '🏢'; position: absolute; top: -10px; left: 20px; background: white; padding: 0 10px; font-size: 20px; }
+    .role-badge { display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin: 10px 0; }
+    .button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 10px; font-weight: 600; margin: 20px 0; box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4); font-size: 16px; }
+    .button:hover { transform: translateY(-1px); box-shadow: 0 6px 25px rgba(59, 130, 246, 0.5); }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
+    .info-item { background: #f3f4f6; padding: 15px; border-radius: 8px; }
+    .info-label { font-size: 12px; color: #6b7280; text-transform: uppercase; font-weight: 600; margin-bottom: 5px; }
+    .info-value { font-weight: 600; color: #1f2937; }
+    .footer { color: #6b7280; font-size: 14px; margin-top: 30px; text-align: center; }
+    .expiry-notice { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center; }
+    @keyframes shimmer { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(180deg); } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 style="margin: 0; font-size: 28px; position: relative; z-index: 1;">🎉 Agency Invitation</h1>
+    <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px; position: relative; z-index: 1;">You're invited to join a real estate agency</p>
+  </div>
+  
+  <div class="content">
+    <p>Hi ${data.recipientName},</p>
+    
+    <p><strong>${data.inviterName}</strong> has invited you to join their real estate agency on SiteMatcher!</p>
+    
+    <div class="invitation-card">
+      <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 20px;">${data.agencyName}</h3>
+      <div class="role-badge">${roleText}</div>
+      
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Invited By</div>
+          <div class="info-value">${data.inviterName}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Your Role</div>
+          <div class="info-value">${roleText}</div>
+        </div>
+      </div>
+    </div>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${data.acceptUrl}" class="button">Accept Invitation</a>
+    </div>
+    
+    <div class="expiry-notice">
+      ⏰ This invitation expires on ${new Date(data.expiresAt).toLocaleDateString('en-GB', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })}
+    </div>
+    
+    <p><strong>What happens next?</strong></p>
+    <ul>
+      <li>Click "Accept Invitation" to join the agency</li>
+      <li>Create your account if you don't have one</li>
+      <li>Start collaborating with your team</li>
+      <li>Help manage agency listings and client relationships</li>
+    </ul>
+    
+    <p>If you have any questions about this invitation or SiteMatcher, feel free to contact our support team.</p>
+    
+    <p>Best regards,<br>
+    The SiteMatcher Team</p>
+    
+    <div class="footer">
+      <p>SiteMatcher - Connecting real estate professionals</p>
+      <p style="font-size: 12px; color: #9ca3af; margin-top: 15px;">
+        This invitation was sent to ${data.recipientEmail}. If you didn't expect this invitation, you can safely ignore this email.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const text = `
+You've been invited to join ${data.agencyName} on SiteMatcher
+
+Hi ${data.recipientName},
+
+${data.inviterName} has invited you to join their real estate agency on SiteMatcher!
+
+AGENCY: ${data.agencyName}
+YOUR ROLE: ${roleText}
+INVITED BY: ${data.inviterName}
+
+Accept your invitation: ${data.acceptUrl}
+
+⏰ This invitation expires on ${new Date(data.expiresAt).toLocaleDateString('en-GB')}
+
+WHAT HAPPENS NEXT:
+• Click the link above to accept the invitation
+• Create your account if you don't have one
+• Start collaborating with your team
+• Help manage agency listings and client relationships
+
+If you have any questions about this invitation or SiteMatcher, contact our support team.
+
+Best regards,
+The SiteMatcher Team
+
+This invitation was sent to ${data.recipientEmail}. If you didn't expect this invitation, you can safely ignore this email.
+`;
+
+  return { subject, html, text };
+}
+
+export function createAgencyStatusEmail(data: AgencyStatusEmailData): EmailTemplate {
+  const isApproved = data.status === 'approved';
+  const subject = `Your agency ${data.agencyName} has been ${isApproved ? 'approved' : 'rejected'}`;
+  
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, ${isApproved ? '#10b981 0%, #059669 100%' : '#ef4444 0%, #dc2626 100%'}); color: white; padding: 30px 20px; border-radius: 12px 12px 0 0; text-align: center; }
+    .content { background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; }
+    .status-box { background: ${isApproved ? '#f0fdf4' : '#fef2f2'}; border-left: 4px solid ${isApproved ? '#10b981' : '#ef4444'}; padding: 20px; margin: 20px 0; border-radius: 4px; }
+    .button { display: inline-block; background: ${isApproved ? '#10b981' : '#8b5cf6'}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+    .footer { color: #6b7280; font-size: 14px; margin-top: 30px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 style="margin: 0; font-size: 24px;">${isApproved ? '🎉' : '📝'} Agency ${isApproved ? 'Approved' : 'Update Required'}</h1>
+    <p style="margin: 5px 0 0 0; opacity: 0.9;">Your agency status has been updated</p>
+  </div>
+  
+  <div class="content">
+    <h2 style="color: #1f2937; margin-top: 0;">Agency Status Update</h2>
+    
+    <p>Dear ${data.contactName},</p>
+    
+    <p>We have reviewed your agency registration for <strong>${data.agencyName}</strong>.</p>
+    
+    <div class="status-box">
+      <strong>${isApproved ? '✅ Congratulations! Your agency has been approved.' : '📝 Action Required: Your agency registration needs updates.'}</strong><br><br>
+      ${isApproved 
+        ? 'Your agency is now live in the SiteMatcher directory and visible to potential clients.' 
+        : 'Please review the feedback below and resubmit your agency information.'}
+    </div>
+    
+    ${data.adminNotes ? `
+    <h3>Review Notes:</h3>
+    <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; margin: 15px 0;">
+      ${data.adminNotes}
+    </div>
+    ` : ''}
+    
+    <a href="${data.dashboardUrl}" class="button">${isApproved ? 'View Your Agency Dashboard' : 'Update Your Agency'}</a>
+    
+    ${isApproved ? `
+    <p><strong>What's next?</strong></p>
+    <ul>
+      <li>Your agency is now visible in our directory</li>
+      <li>You can start managing listings and team members</li>
+      <li>Potential clients can now find and contact you</li>
+    </ul>
+    ` : `
+    <p><strong>Next Steps:</strong></p>
+    <ul>
+      <li>Review the feedback provided above</li>
+      <li>Update your agency information accordingly</li>
+      <li>Resubmit for review</li>
+    </ul>
+    `}
+    
+    <p>If you have any questions, please don't hesitate to contact our support team.</p>
+    
+    <p>Best regards,<br>
+    The SiteMatcher Team</p>
+    
+    <div class="footer">
+      <p>Agency: <strong>${data.agencyName}</strong></p>
+      <p>SiteMatcher - Connecting real estate professionals</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const text = `
+Agency ${isApproved ? 'Approved' : 'Update Required'}
+
+Dear ${data.contactName},
+
+We have reviewed your agency registration for ${data.agencyName}.
+
+${isApproved ? '✅ CONGRATULATIONS! Your agency has been approved.' : '📝 ACTION REQUIRED: Your agency registration needs updates.'}
+
+${isApproved 
+  ? 'Your agency is now live in the SiteMatcher directory and visible to potential clients.' 
+  : 'Please review the feedback below and resubmit your agency information.'}
+
+${data.adminNotes ? `REVIEW NOTES:\n${data.adminNotes}\n\n` : ''}
+
+${isApproved ? 'View your agency dashboard' : 'Update your agency'}: ${data.dashboardUrl}
+
+${isApproved ? `
+WHAT'S NEXT:
+• Your agency is now visible in our directory
+• You can start managing listings and team members  
+• Potential clients can now find and contact you
+` : `
+NEXT STEPS:
+• Review the feedback provided above
+• Update your agency information accordingly
+• Resubmit for review
+`}
+
+If you have any questions, contact our support team.
+
+Best regards,
+The SiteMatcher Team
+
+Agency: ${data.agencyName}
+SiteMatcher - Connecting real estate professionals
+`;
+
+  return { subject, html, text };
+}
+
 // Email sending utilities
 export async function sendRejectionEmail(data: RejectionEmailData & { contactEmail?: string }) {
   const emailTemplate = createRejectionEmail(data);
@@ -364,6 +635,34 @@ export async function sendRejectionEmail(data: RejectionEmailData & { contactEma
   
   return sendEmail({
     to: [emailAddress],
+    subject: emailTemplate.subject,
+    html: emailTemplate.html,
+    text: emailTemplate.text
+  });
+}
+
+// =====================================================
+// Agency Email Sending Functions - Epic 18
+// =====================================================
+
+export async function sendAgencyInvitationEmail(data: AgencyInvitationEmailData) {
+  const emailTemplate = createAgencyInvitationEmail(data);
+  const { sendEmail } = await import('./resend');
+  
+  return sendEmail({
+    to: [data.recipientEmail],
+    subject: emailTemplate.subject,
+    html: emailTemplate.html,
+    text: emailTemplate.text
+  });
+}
+
+export async function sendAgencyStatusEmail(data: AgencyStatusEmailData) {
+  const emailTemplate = createAgencyStatusEmail(data);
+  const { sendEmail } = await import('./resend');
+  
+  return sendEmail({
+    to: [data.contactEmail],
     subject: emailTemplate.subject,
     html: emailTemplate.html,
     text: emailTemplate.text

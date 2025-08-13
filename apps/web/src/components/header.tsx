@@ -39,6 +39,13 @@ export function Header() {
       requiresAuth: false
     },
     {
+      href: '/agents',
+      label: 'Agents',
+      primary: false,
+      showWhen: 'always',
+      requiresAuth: false
+    },
+    {
       href: '/occupier/create-listing-quick',
       label: 'Post Requirement',
       primary: true,
