@@ -873,10 +873,10 @@ export function Step1ImmediateCreation({
               {...register('primaryContact.contactArea', {
                 maxLength: {
                   value: 255,
-                  message: 'Coverage area must be no more than 255 characters'
+                  message: 'e.g. South-West England'
                 }
               })}
-              placeholder="e.g., The South West"
+              placeholder="e.g., South-West England"
               className={cn(
                 formErrors.primaryContact?.contactArea
                   ? 'border-red-500 focus:ring-red-500'
@@ -900,7 +900,7 @@ export function Step1ImmediateCreation({
               value={watchedValues.primaryContact?.headshotPreview || watchedValues.primaryContact?.headshotFile}
               onChange={handleHeadshotUpload}
               onPreviewChange={handleHeadshotPreviewChange}
-              placeholder="Upload professional headshot"
+              placeholder="Upload photo"
               maxSize={5 * 1024 * 1024}
               acceptedTypes={["image/png", "image/jpeg", "image/jpg"]}
             />

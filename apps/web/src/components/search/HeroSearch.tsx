@@ -64,6 +64,7 @@ export function HeroSearch({ searchFilters }: HeroSearchProps) {
           {/* Subtitle */}
           <p className="body-large text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Discover property requirements from leading companies looking for their next location
+
           </p>
           
           {/* Search Form */}
@@ -122,7 +123,7 @@ export function HeroSearch({ searchFilters }: HeroSearchProps) {
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-warning rounded-full" />
-              <span>Updated Daily</span>
+              <span>20+ Industry Sectors</span>
             </div>
           </div>
         </div>

@@ -4,8 +4,7 @@ import { HowItWorks } from '@/components/homepage/HowItWorks';
 import { Testimonials } from '@/components/homepage/Testimonials';
 import { FAQ } from '@/components/homepage/FAQ';
 import { MeetTheFounders } from '@/components/homepage/MeetTheFounders';
-import { LandlordNewsletter } from '@/components/homepage/LandlordNewsletter';
-import { EnhancedCTA } from '@/components/homepage/EnhancedCTA';
+import { Footer } from '@/components/homepage/Footer';
 
 export default function Home() {
   return (
@@ -28,11 +27,8 @@ export default function Home() {
       {/* Meet the Founders */}
       <MeetTheFounders />
 
-      {/* Landlord Newsletter */}
-      <LandlordNewsletter />
-
-      {/* Enhanced CTA */}
-      <EnhancedCTA />
+      {/* Footer */}
+      <Footer />
     </main>
   );
 }
