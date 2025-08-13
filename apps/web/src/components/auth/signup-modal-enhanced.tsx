@@ -161,8 +161,8 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
         {children}
       </DialogTrigger>
       <DialogPortal>
-        <DialogOverlay className="z-[9998]" />
-        <DialogContent className="sm:max-w-[500px] z-[9999]">
+        <DialogOverlay />
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
@@ -339,7 +339,7 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
                       <SelectValue placeholder="Select your role..." />
                     </SelectTrigger>
                     <SelectContent 
-                      className="z-[10000]" 
+                      className="z-[10020]" 
                       position="popper"
                       sideOffset={4}
                     >
