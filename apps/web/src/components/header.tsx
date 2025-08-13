@@ -17,6 +17,7 @@ export function Header() {
   const pathname = usePathname()
   
   // Hide header on specific pages that need full-screen experience
+  // Only hide on the actual SiteSketcher app, not the landing page
   if (pathname === '/search' || pathname === '/sitesketcher') {
     return null
   }
@@ -31,7 +32,7 @@ export function Header() {
 
   const navigationItems = [
     {
-      href: '/sitesketcher',
+      href: '/sitesketcher/landing',
       label: 'SiteSketcher',
       primary: false,
       showWhen: 'always',

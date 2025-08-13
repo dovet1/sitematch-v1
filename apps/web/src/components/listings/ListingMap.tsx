@@ -83,17 +83,32 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
     });
   }, [listings, mappableListings, clusters, viewState]);
 
+  // Track the current location to detect changes
+  const [currentLocationKey, setCurrentLocationKey] = useState<string>('');
+  
   // Navigate map when location coordinates change
   useEffect(() => {
-    if (filters.coordinates) {
-      const newViewState = {
-        longitude: filters.coordinates.lng,
-        latitude: filters.coordinates.lat,
-        zoom: Math.max(viewState.zoom, 8.5) // More zoomed out to show surrounding pins
-      };
-      setViewState(newViewState);
+    const locationKey = filters.coordinates 
+      ? `${filters.coordinates.lat},${filters.coordinates.lng}`
+      : filters.isNationwide ? 'nationwide' : '';
+    
+    // Only update if location has actually changed
+    if (locationKey !== currentLocationKey) {
+      setCurrentLocationKey(locationKey);
+      
+      if (filters.coordinates) {
+        const newViewState = {
+          longitude: filters.coordinates.lng,
+          latitude: filters.coordinates.lat,
+          zoom: 10 // Set a reasonable zoom level for location search
+        };
+        setViewState(newViewState);
+      } else if (filters.isNationwide) {
+        // Reset to default UK view for nationwide search
+        setViewState(DEFAULT_VIEW_STATE);
+      }
     }
-  }, [filters.coordinates]);
+  }, [filters.coordinates, filters.isNationwide, currentLocationKey]);
 
   // Fetch listings data
   useEffect(() => {
@@ -154,44 +169,6 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
         
         // Cache the results
         mapCache.setCachedData(cacheKey, results, bounds);
-
-        // Only auto-center on initial load, not on subsequent map movements
-        // But only if a specific location was searched for
-        if (isInitialLoad && filters.coordinates) {
-          const coordListings = results.filter((l: SearchResult) => l.coordinates) || [];
-          if (coordListings.length > 0) {
-            // Calculate bounds to fit all listings
-            const lats = coordListings.map((l: SearchResult) => l.coordinates!.lat);
-            const lngs = coordListings.map((l: SearchResult) => l.coordinates!.lng);
-            
-            const minLat = Math.min(...lats);
-            const maxLat = Math.max(...lats);
-            const minLng = Math.min(...lngs);
-            const maxLng = Math.max(...lngs);
-            
-            const centerLat = (minLat + maxLat) / 2;
-            const centerLng = (minLng + maxLng) / 2;
-            
-            // Calculate zoom level based on bounds with padding
-            const latDiff = maxLat - minLat;
-            const lngDiff = maxLng - minLng;
-            const maxDiff = Math.max(latDiff, lngDiff);
-            
-            // Add padding to ensure all pins are visible
-            let zoom = 9;
-            if (maxDiff > 10) zoom = 4.5;
-            else if (maxDiff > 5) zoom = 5.5;
-            else if (maxDiff > 2) zoom = 6.5;
-            else if (maxDiff > 1) zoom = 7.5;
-            else if (maxDiff > 0.5) zoom = 8.5;
-            
-            setViewState({
-              longitude: centerLng,
-              latitude: centerLat,
-              zoom
-            });
-          }
-        }
       } catch (err) {
         console.error('Error fetching map listings:', err);
         setError('Failed to load map data');
@@ -273,8 +250,6 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
       onListingClick(cluster.listings[0].id);
     } else {
       // For multiple listings, show the cluster popup
-      const mapContainer = document.querySelector('.map-container');
-      const mapRect = mapContainer?.getBoundingClientRect();
       const markerRect = event.currentTarget.getBoundingClientRect();
       
       // Calculate position relative to viewport

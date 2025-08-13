@@ -74,6 +74,12 @@ export function UnifiedHeader({
 
   const navigationItems = [
     {
+      href: '/sitesketcher/landing',
+      label: 'SiteSketcher',
+      primary: false,
+      showWhen: 'always' as const
+    },
+    {
       href: '/occupier/create-listing?fresh=true',
       label: 'Post Requirement',
       primary: true,
