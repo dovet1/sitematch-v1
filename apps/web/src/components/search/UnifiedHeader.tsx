@@ -80,6 +80,12 @@ export function UnifiedHeader({
       showWhen: 'always' as const
     },
     {
+      href: '/agents',
+      label: 'Agents',
+      primary: false,
+      showWhen: 'always' as const
+    },
+    {
       href: '/occupier/create-listing?fresh=true',
       label: 'Post Requirement',
       primary: true,
