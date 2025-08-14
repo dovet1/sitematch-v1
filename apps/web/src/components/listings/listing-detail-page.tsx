@@ -3471,7 +3471,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                       const useClass = useClasses.find(uc => uc.id === useClassId);
                                       return (
                                         <span key={index} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-100 text-green-700">
-                                          {useClass?.name ? formatName(useClass.name) : useClassId}
+                                          {useClass?.code || useClassId}
                                         </span>
                                       );
                                     })}
@@ -3544,7 +3544,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                         const useClass = useClasses.find(uc => uc.id === useClassId);
                                         return (
                                           <span key={index} className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium bg-green-100 text-green-800 border border-green-200">
-                                            {useClass?.name ? formatName(useClass.name) : useClassId}
+                                            {useClass?.code || useClassId}
                                           </span>
                                         );
                                       })}
@@ -6596,7 +6596,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                   key={index}
                                   className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200"
                                 >
-                                  {useClass?.name ? formatName(useClass.name) : useClassId}
+                                  {useClass?.code || useClassId}
                                 </span>
                               );
                             })}
@@ -7044,7 +7044,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         onSave={handleUseClassesSave}
         useClassesOptions={useClasses.map(uc => ({ 
           value: uc.id, 
-          label: formatName(uc.name)
+          label: uc.code,
+          description: uc.name
         }))}
       />
 
