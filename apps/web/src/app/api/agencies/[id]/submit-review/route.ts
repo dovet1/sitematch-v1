@@ -80,7 +80,13 @@ export async function POST(
 
       const nextVersionNumber = latestVersion ? latestVersion.version_number + 1 : 1
 
-      // Create a new version from current agency data
+      // Get current team members to include in version
+      const { data: teamMembers } = await supabase
+        .from('agency_agents')
+        .select('user_id, email, name, phone, role, coverage_area, is_registered, headshot_url')
+        .eq('agency_id', agencyId)
+
+      // Create a new version from current agency data including team members
       const { error: createVersionError } = await supabase
         .from('agency_versions')
         .insert({
@@ -92,7 +98,21 @@ export async function POST(
             website: agency.website,
             logo_url: agency.logo_url,
             coverage_areas: agency.coverage_areas,
-            specialisms: agency.specialisms
+            specialisms: agency.specialisms,
+            // Include team members in version data
+            direct_agents: teamMembers?.filter(m => m.is_registered).map(member => ({
+              email: member.email,
+              name: member.name,
+              phone: member.phone,
+              role: member.role,
+              coverageArea: member.coverage_area,
+              headshotUrl: member.headshot_url
+            })) || [],
+            invite_agents: teamMembers?.filter(m => !m.is_registered).map(member => ({
+              email: member.email,
+              name: member.name,
+              role: member.role
+            })) || []
           },
           status: 'pending',
           created_by: user.id,

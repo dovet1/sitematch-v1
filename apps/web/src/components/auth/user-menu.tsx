@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { LogOut, Shield, LayoutDashboard } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { LogOut, Shield, LayoutDashboard, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/contexts/auth-context'
+import { createClientClient } from '@/lib/supabase'
 import Link from 'next/link'
 
 function UserAvatar({ email }: { email: string }) {
@@ -33,6 +34,32 @@ function UserAvatar({ email }: { email: string }) {
 export function UserMenu() {
   const { user, profile, signOut, isAdmin } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  const [hasAgency, setHasAgency] = useState(false)
+  const supabase = createClientClient()
+
+  // Check if user is part of an agency
+  useEffect(() => {
+    const checkAgencyMembership = async () => {
+      if (!user?.id) return
+
+      try {
+        const { data, error } = await supabase
+          .from('agency_agents')
+          .select('agency_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle()
+
+        if (!error && data) {
+          setHasAgency(true)
+        }
+      } catch (error) {
+        console.error('Error checking agency membership:', error)
+      }
+    }
+
+    checkAgencyMembership()
+  }, [user?.id, supabase])
 
   const handleSignOut = async () => {
     setIsLoading(true)
@@ -78,6 +105,14 @@ export function UserMenu() {
                 <span>Dashboard</span>
               </Link>
             </DropdownMenuItem>
+            {hasAgency && (
+              <DropdownMenuItem asChild>
+                <Link href="/agents/dashboard" className="flex items-center gap-2 cursor-pointer">
+                  <Building2 className="h-4 w-4" />
+                  <span>Agency Dashboard</span>
+                </Link>
+              </DropdownMenuItem>
+            )}
             {isAdmin && (
               <DropdownMenuItem asChild>
                 <Link href="/admin" className="flex items-center gap-2 cursor-pointer">

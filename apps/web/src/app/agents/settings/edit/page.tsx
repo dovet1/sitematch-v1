@@ -75,11 +75,12 @@ async function getAgencyEditData(userId: string) {
   }
 
   // Get all agency members for team management
-  const { data: members } = await supabase
+  const { data: members, error: membersError } = await supabase
     .from('agency_agents')
     .select('user_id, email, name, phone, role, coverage_area, is_registered, joined_at, headshot_url')
     .eq('agency_id', membership.agency_id)
     .order('joined_at', { ascending: true })
+
 
   return {
     membership: membership as unknown as AgencyMembership,

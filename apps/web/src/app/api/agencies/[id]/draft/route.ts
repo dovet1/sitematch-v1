@@ -108,6 +108,73 @@ export async function PUT(
       return NextResponse.json({ error: 'Failed to save changes' }, { status: 500 })
     }
 
+    // Handle team member updates if provided
+    if (changes.directAgents || changes.inviteAgents) {
+      // Get current agency members
+      const { data: currentMembers } = await supabase
+        .from('agency_agents')
+        .select('*')
+        .eq('agency_id', agencyId)
+
+      // Create a map of existing members by email for easy lookup
+      const existingMembersMap = new Map()
+      currentMembers?.forEach(member => {
+        existingMembersMap.set(member.email, member)
+      })
+
+      // Process direct agents (registered members)
+      const directAgents = changes.directAgents || []
+      const inviteAgents = changes.inviteAgents || []
+      const allNewMembers = [...directAgents, ...inviteAgents]
+
+      // Update or insert members
+      for (const member of allNewMembers) {
+        const existingMember = existingMembersMap.get(member.email)
+        
+        if (existingMember) {
+          // Update existing member
+          await supabase
+            .from('agency_agents')
+            .update({
+              name: member.name,
+              phone: member.phone || null,
+              role: member.role,
+              coverage_area: member.coverageArea || member.coverage_area || null,
+              headshot_url: member.headshotUrl || member.headshot_url || null
+            })
+            .eq('id', existingMember.id)
+        } else {
+          // Insert new member
+          await supabase
+            .from('agency_agents')
+            .insert({
+              agency_id: agencyId,
+              email: member.email,
+              name: member.name,
+              phone: member.phone || null,
+              role: member.role,
+              coverage_area: member.coverageArea || null,
+              headshot_url: member.headshotUrl || null,
+              is_registered: directAgents.includes(member), // true for direct agents
+              joined_at: new Date().toISOString()
+            })
+        }
+      }
+
+      // Remove members that are no longer in the list
+      const newMemberEmails = allNewMembers.map(m => m.email)
+      const membersToRemove = currentMembers?.filter(member => 
+        !newMemberEmails.includes(member.email) && member.user_id !== user.id // Don't remove the current user
+      )
+
+      if (membersToRemove && membersToRemove.length > 0) {
+        await supabase
+          .from('agency_agents')
+          .delete()
+          .in('id', membersToRemove.map(m => m.id))
+      }
+    }
+
     console.log('Agency draft saved:', {
       agencyId,
       agencyName: updatedAgency.name,

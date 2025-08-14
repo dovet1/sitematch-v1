@@ -120,6 +120,7 @@ export function AgencyEditFormFixed({ agency, members, currentUserId }: AgencyEd
       logoUrl: agency.logo_url || '',
       coverageAreas: agency.coverage_areas || '',
       specialisms: agency.specialisms || [],
+      // Use members from the current agency_agents table
       directAgents: members.filter(m => m.is_registered).map(member => ({
         email: member.email,
         name: member.name,
@@ -200,13 +201,85 @@ export function AgencyEditFormFixed({ agency, members, currentUserId }: AgencyEd
         }
       }
 
+      // Upload headshot files for direct agents
+      const updatedDirectAgents = await Promise.all(
+        data.directAgents.map(async (agent) => {
+          let headshotUrl = agent.headshotUrl
+
+          // Upload headshot if there's a blob URL (indicates new upload that needs permanent storage)
+          if (agent.headshotUrl && agent.headshotUrl.startsWith('blob:')) {
+            try {
+              // Convert blob URL to file for upload
+              if (agent.headshotFile) {
+                const headshotFormData = new FormData()
+                headshotFormData.append('file', agent.headshotFile)
+                headshotFormData.append('type', 'headshot')
+                headshotFormData.append('agencyId', agency.id)
+                headshotFormData.append('agentEmail', agent.email)
+                
+                const headshotUploadResponse = await fetch('/api/agencies/upload', {
+                  method: 'POST',
+                  body: headshotFormData,
+                })
+                
+                if (headshotUploadResponse.ok) {
+                  const headshotResult = await headshotUploadResponse.json()
+                  headshotUrl = headshotResult.url
+                  console.log('Uploaded headshot for', agent.email, 'to', headshotUrl)
+                } else {
+                  console.error('Failed to upload headshot for', agent.email)
+                }
+              } else {
+                // If headshotFile is missing but we have a blob URL, try to fetch and convert
+                try {
+                  const response = await fetch(agent.headshotUrl)
+                  const blob = await response.blob()
+                  const file = new File([blob], `headshot-${Date.now()}.jpg`, { type: blob.type })
+                  
+                  const headshotFormData = new FormData()
+                  headshotFormData.append('file', file)
+                  headshotFormData.append('type', 'headshot')
+                  headshotFormData.append('agencyId', agency.id)
+                  headshotFormData.append('agentEmail', agent.email)
+                  
+                  const headshotUploadResponse = await fetch('/api/agencies/upload', {
+                    method: 'POST',
+                    body: headshotFormData,
+                  })
+                  
+                  if (headshotUploadResponse.ok) {
+                    const headshotResult = await headshotUploadResponse.json()
+                    headshotUrl = headshotResult.url
+                    console.log('Converted and uploaded headshot for', agent.email, 'to', headshotUrl)
+                  } else {
+                    console.error('Failed to upload converted headshot for', agent.email)
+                  }
+                } catch (conversionError) {
+                  console.error('Error converting blob to file for', agent.email, conversionError)
+                }
+              }
+            } catch (error) {
+              console.error('Error uploading headshot for', agent.email, error)
+            }
+          }
+
+          return {
+            ...agent,
+            headshotUrl
+          }
+        })
+      )
+
       const changes = {
         name: data.name,
         description: data.description,
         website: data.website,
         logo_url: logoUrl,
         coverage_areas: data.coverageAreas,
-        specialisms: data.specialisms
+        specialisms: data.specialisms,
+        // Include team member data with uploaded headshots
+        directAgents: updatedDirectAgents,
+        inviteAgents: data.inviteAgents
       }
 
       const response = await fetch(`/api/agencies/${agency.id}/draft`, {
@@ -242,9 +315,124 @@ export function AgencyEditFormFixed({ agency, members, currentUserId }: AgencyEd
   const handleSubmitForReview = async () => {
     setIsLoading(true)
     try {
-      // First save current changes (this will upload logo if needed)
-      await handleSave()
-      
+      let logoUrl = data.logoUrl
+
+      // Upload logo file if there's a new file (blob URL indicates new upload)
+      if (data.logoFile && data.logoUrl.startsWith('blob:')) {
+        try {
+          const logoFormData = new FormData()
+          logoFormData.append('file', data.logoFile)
+          logoFormData.append('type', 'logo')
+          logoFormData.append('agencyId', agency.id)
+          
+          const logoUploadResponse = await fetch('/api/agencies/upload', {
+            method: 'POST',
+            body: logoFormData,
+          })
+          
+          if (logoUploadResponse.ok) {
+            const logoResult = await logoUploadResponse.json()
+            logoUrl = logoResult.url
+          }
+        } catch (error) {
+          console.error('Error uploading logo:', error)
+        }
+      }
+
+      // Upload headshot files for direct agents before submitting
+      const updatedDirectAgents = await Promise.all(
+        data.directAgents.map(async (agent) => {
+          let headshotUrl = agent.headshotUrl
+
+          // Upload headshot if there's a blob URL (indicates new upload that needs permanent storage)
+          if (agent.headshotUrl && agent.headshotUrl.startsWith('blob:')) {
+            try {
+              // Convert blob URL to file for upload
+              if (agent.headshotFile) {
+                const headshotFormData = new FormData()
+                headshotFormData.append('file', agent.headshotFile)
+                headshotFormData.append('type', 'headshot')
+                headshotFormData.append('agencyId', agency.id)
+                headshotFormData.append('agentEmail', agent.email)
+                
+                const headshotUploadResponse = await fetch('/api/agencies/upload', {
+                  method: 'POST',
+                  body: headshotFormData,
+                })
+                
+                if (headshotUploadResponse.ok) {
+                  const headshotResult = await headshotUploadResponse.json()
+                  headshotUrl = headshotResult.url
+                  console.log('Uploaded headshot for', agent.email, 'to', headshotUrl)
+                } else {
+                  console.error('Failed to upload headshot for', agent.email)
+                }
+              } else {
+                // If headshotFile is missing but we have a blob URL, try to fetch and convert
+                try {
+                  const response = await fetch(agent.headshotUrl)
+                  const blob = await response.blob()
+                  const file = new File([blob], `headshot-${Date.now()}.jpg`, { type: blob.type })
+                  
+                  const headshotFormData = new FormData()
+                  headshotFormData.append('file', file)
+                  headshotFormData.append('type', 'headshot')
+                  headshotFormData.append('agencyId', agency.id)
+                  headshotFormData.append('agentEmail', agent.email)
+                  
+                  const headshotUploadResponse = await fetch('/api/agencies/upload', {
+                    method: 'POST',
+                    body: headshotFormData,
+                  })
+                  
+                  if (headshotUploadResponse.ok) {
+                    const headshotResult = await headshotUploadResponse.json()
+                    headshotUrl = headshotResult.url
+                    console.log('Converted and uploaded headshot for', agent.email, 'to', headshotUrl)
+                  } else {
+                    console.error('Failed to upload converted headshot for', agent.email)
+                  }
+                } catch (conversionError) {
+                  console.error('Error converting blob to file for', agent.email, conversionError)
+                }
+              }
+            } catch (error) {
+              console.error('Error uploading headshot for', agent.email, error)
+            }
+          }
+
+          return {
+            ...agent,
+            headshotUrl
+          }
+        })
+      )
+
+      // Save the changes with uploaded files before submitting for review
+      const changes = {
+        name: data.name,
+        description: data.description,
+        website: data.website,
+        logo_url: logoUrl,
+        coverage_areas: data.coverageAreas,
+        specialisms: data.specialisms,
+        directAgents: updatedDirectAgents,
+        inviteAgents: data.inviteAgents
+      }
+
+      const saveResponse = await fetch(`/api/agencies/${agency.id}/draft`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          changes,
+          versionId: agency.id
+        })
+      })
+
+      if (!saveResponse.ok) {
+        throw new Error('Failed to save changes before review')
+      }
+
       // Wait a moment to ensure save is complete
       await new Promise(resolve => setTimeout(resolve, 100))
       
