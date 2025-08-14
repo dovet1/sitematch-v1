@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation'
 import { AgencySettingsForm } from './AgencySettingsForm'
 import { MemberManagement } from './MemberManagement'
 import { InvitationManagement } from './InvitationManagement'
+import { DraftStatusIndicator } from './DraftStatusIndicator'
+import { VersionHistory } from './VersionHistory'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Building2, Users, Settings, ArrowLeft, Plus } from 'lucide-react'
+import { Building2, Users, Settings, ArrowLeft, Plus, History } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -68,6 +70,7 @@ export function AgencySettingsClient({
   const [members, setMembers] = useState(initialMembers)
   const [invitations, setInvitations] = useState(initialInvitations)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [hasDraft, setHasDraft] = useState(false)
   const router = useRouter()
 
   const refreshData = useCallback(async () => {
@@ -161,8 +164,15 @@ export function AgencySettingsClient({
           </Alert>
         )}
 
+        {/* Draft Status Indicator */}
+        <DraftStatusIndicator 
+          agencyId={membership.agency_id}
+          isAdmin={membership.role === 'admin'}
+          onDraftChange={setHasDraft}
+        />
+
         <Tabs defaultValue="agency-info" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="agency-info" className="flex items-center">
               <Building2 className="w-4 h-4 mr-2" />
               Agency Info
@@ -170,6 +180,10 @@ export function AgencySettingsClient({
             <TabsTrigger value="team" className="flex items-center">
               <Users className="w-4 h-4 mr-2" />
               Team Management
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center">
+              <History className="w-4 h-4 mr-2" />
+              Version History
             </TabsTrigger>
             <TabsTrigger value="general" className="flex items-center">
               <Settings className="w-4 h-4 mr-2" />
@@ -231,6 +245,21 @@ export function AgencySettingsClient({
                   />
                 </div>
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="history">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Version History</h2>
+                <p className="text-gray-600 mt-1">
+                  Track changes to your agency profile and see approval status.
+                </p>
+              </div>
+              <VersionHistory 
+                agencyId={membership.agency_id}
+                isAdmin={membership.role === 'admin'}
+              />
             </div>
           </TabsContent>
 

@@ -116,33 +116,62 @@ export function AgencySettingsForm({ agency }: AgencySettingsFormProps) {
     setIsSubmitting(true)
 
     try {
-      // Prepare form data for submission
-      const submitFormData = new FormData()
-      submitFormData.append('name', formData.name.trim())
-      submitFormData.append('coverageAreas', formData.coverageAreas.trim())
-      submitFormData.append('specialisms', JSON.stringify(formData.specialisms))
+      // Determine change type based on what changed
+      const hasNameChange = formData.name.trim() !== agency.name
+      const hasLogoChange = formData.logoFile !== null
+      const hasSpecialismChange = JSON.stringify(formData.specialisms.sort()) !== JSON.stringify(agency.specialisms.sort())
       
-      if (formData.logoFile) {
-        submitFormData.append('logoFile', formData.logoFile)
+      const changeType = (hasNameChange || hasLogoChange || hasSpecialismChange) ? 'major' : 'minor'
+      
+      // Prepare changes object
+      const changes: any = {
+        name: formData.name.trim(),
+        coverage_areas: formData.coverageAreas.trim(),
+        specialisms: formData.specialisms
       }
 
-      const response = await fetch(`/api/agencies/${agency.id}`, {
-        method: 'PUT',
-        body: submitFormData,
+      // Handle logo upload separately if there's a new file
+      if (formData.logoFile) {
+        const logoFormData = new FormData()
+        logoFormData.append('file', formData.logoFile)
+        logoFormData.append('type', 'logo')
+        logoFormData.append('agencyId', agency.id)
+
+        const logoResponse = await fetch('/api/agencies/upload', {
+          method: 'POST',
+          body: logoFormData,
+        })
+
+        if (logoResponse.ok) {
+          const logoResult = await logoResponse.json()
+          changes.logo_url = logoResult.url
+        }
+      }
+
+      // Create draft version
+      const response = await fetch(`/api/agencies/${agency.id}/versions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          changes,
+          changeType
+        }),
       })
 
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to update agency')
+        throw new Error(result.error || 'Failed to create draft version')
       }
 
       setMessage({ 
         type: 'success', 
-        text: 'Agency settings updated successfully!' 
+        text: 'Changes saved as draft! Your updates are pending approval.' 
       })
 
-      // Refresh the page to show updated data
+      // Refresh the page to show draft indicator
       setTimeout(() => {
         window.location.reload()
       }, 2000)

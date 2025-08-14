@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { DraftStatusIndicator } from '@/components/agency/DraftStatusIndicator'
 import { 
   Users, 
   Mail, 
@@ -266,6 +267,12 @@ export default async function AgencyDashboardPage() {
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Draft Status Indicator */}
+        <DraftStatusIndicator 
+          agencyId={membership.agency_id}
+          isAdmin={membership.role === 'admin'}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}

@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import Image from 'next/image'
+import Link from 'next/link'
 
 interface Agency {
   id: string
@@ -51,78 +52,80 @@ export function AgencyCard({ agency }: AgencyCardProps) {
   const remainingCount = agency.specialisms.length - 3
 
   return (
-    <Card className="group cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-black/10 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:scale-[0.98]">
-      <div className="p-6">
-        {/* Logo & Name Section */}
-        <div className="flex items-center space-x-4 mb-4">
-          <div className="relative flex-shrink-0">
-            <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-inner">
-              {agency.logo_url ? (
-                <Image
-                  src={agency.logo_url}
-                  alt={`${agency.name} logo`}
-                  width={80}
-                  height={80}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <span className="text-white font-semibold text-lg tracking-wide">
-                  {initials}
-                </span>
+    <Link href={`/agents/${agency.id}`}>
+      <Card className="group cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-black/10 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 active:scale-[0.98]">
+        <div className="p-6">
+          {/* Logo & Name Section */}
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="relative flex-shrink-0">
+              <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-inner">
+                {agency.logo_url ? (
+                  <Image
+                    src={agency.logo_url}
+                    alt={`${agency.name} logo`}
+                    width={80}
+                    height={80}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className="text-white font-semibold text-lg tracking-wide">
+                    {initials}
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-lg sm:text-xl text-gray-900 leading-tight mb-1 group-hover:text-blue-600 transition-colors">
+                {agency.name}
+              </h3>
+              {coverageText && (
+                <p 
+                  className="text-sm text-gray-600 leading-relaxed"
+                  title={agency.coverage_areas || undefined}
+                >
+                  {coverageText}
+                </p>
               )}
             </div>
           </div>
-          
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg sm:text-xl text-gray-900 leading-tight mb-1 group-hover:text-blue-600 transition-colors">
-              {agency.name}
-            </h3>
-            {coverageText && (
-              <p 
-                className="text-sm text-gray-600 leading-relaxed"
-                title={agency.coverage_areas || undefined}
-              >
-                {coverageText}
-              </p>
-            )}
-          </div>
+
+          {/* Specialisms Tags */}
+          {agency.specialisms.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {visibleSpecialisms.map((specialism, index) => (
+                <Badge
+                  key={index}
+                  variant="secondary"
+                  className={`text-xs font-medium px-3 py-1 rounded-full border ${getSpecialismColor(specialism)} transition-colors`}
+                >
+                  {specialism}
+                </Badge>
+              ))}
+              {remainingCount > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="text-xs font-medium px-3 py-1 rounded-full bg-gray-100 text-gray-600 border-gray-200"
+                >
+                  +{remainingCount} more
+                </Badge>
+              )}
+              {agency.specialisms.length === 0 && (
+                <Badge
+                  variant="secondary"
+                  className="text-xs font-medium px-3 py-1 rounded-full bg-gray-50 text-gray-500 border-gray-200"
+                >
+                  General Commercial
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Specialisms Tags */}
-        {agency.specialisms.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {visibleSpecialisms.map((specialism, index) => (
-              <Badge
-                key={index}
-                variant="secondary"
-                className={`text-xs font-medium px-3 py-1 rounded-full border ${getSpecialismColor(specialism)} transition-colors`}
-              >
-                {specialism}
-              </Badge>
-            ))}
-            {remainingCount > 0 && (
-              <Badge
-                variant="secondary"
-                className="text-xs font-medium px-3 py-1 rounded-full bg-gray-100 text-gray-600 border-gray-200"
-              >
-                +{remainingCount} more
-              </Badge>
-            )}
-            {agency.specialisms.length === 0 && (
-              <Badge
-                variant="secondary"
-                className="text-xs font-medium px-3 py-1 rounded-full bg-gray-50 text-gray-500 border-gray-200"
-              >
-                General Commercial
-              </Badge>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Hover Indicator */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
-    </Card>
+        {/* Hover Indicator */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+      </Card>
+    </Link>
   )
 }
