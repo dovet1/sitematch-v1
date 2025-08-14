@@ -1,7 +1,9 @@
 // Admin Agency Rejection API - Story 18.5
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase'
+import { createServerClient, createAdminClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth'
+import { sendEmail } from '@/lib/resend'
+import { createAgencyStatusEmail } from '@/lib/email-templates'
 
 export async function POST(request: NextRequest) {
   try {
@@ -95,8 +97,40 @@ export async function POST(request: NextRequest) {
       // Don't fail the rejection for this
     }
 
-    // TODO: Send rejection email to agency creator with reason and guidance
-    // This would integrate with your existing email service
+    // Send rejection email to agency owner
+    try {
+      // Use admin client to bypass RLS policies for user lookup
+      const adminSupabase = createAdminClient()
+      const { data: agencyOwner } = await adminSupabase
+        .from('users')
+        .select('email')
+        .eq('id', agency.created_by)
+        .single()
+
+      if (agencyOwner?.email) {
+        const emailTemplate = createAgencyStatusEmail({
+          contactName: agencyOwner.email.split('@')[0], // Use email prefix as name fallback
+          contactEmail: agencyOwner.email,
+          agencyName: agency.name,
+          status: 'rejected',
+          adminNotes: reason + (adminNotes ? `\n\nAdmin Notes: ${adminNotes}` : ''),
+          dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/agencies`
+        })
+
+        await sendEmail({
+          to: agencyOwner.email,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
+          text: emailTemplate.text
+        })
+
+        console.log('✅ Rejection email sent to:', agencyOwner.email)
+      }
+    } catch (emailError) {
+      console.error('Failed to send rejection email:', emailError)
+      // Don't fail the rejection if email fails
+    }
+
     console.log('Agency version rejected:', {
       agencyId,
       versionId: pendingVersion.id,

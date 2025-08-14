@@ -58,6 +58,13 @@ interface AgencyStatusEmailData {
   dashboardUrl: string;
 }
 
+interface AgencySubmissionNotificationData {
+  agencyName: string;
+  submitterName: string;
+  submittedAt: string;
+  adminPanelUrl: string;
+}
+
 export function createRejectionEmail(data: RejectionEmailData): EmailTemplate {
   const reasonText = REJECTION_REASONS[data.rejectionReason];
   const fullReason = data.rejectionReason === 'other' && data.customReason 
@@ -618,6 +625,73 @@ The SiteMatcher Team
 
 Agency: ${data.agencyName}
 SiteMatcher - Connecting real estate professionals
+`;
+
+  return { subject, html, text };
+}
+
+export function createAgencySubmissionNotification(data: AgencySubmissionNotificationData): EmailTemplate {
+  const subject = `🔔 New Agency Submission: ${data.agencyName}`;
+  
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+    .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+    .agency-box { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .button { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+    .footer { color: #6b7280; font-size: 14px; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 style="margin: 0; font-size: 24px;">🔔 New Agency Submission</h1>
+    <p style="margin: 5px 0 0 0; opacity: 0.9;">Admin Review Required</p>
+  </div>
+  
+  <div class="content">
+    <h2 style="color: #1f2937; margin-top: 0;">Agency Awaiting Review</h2>
+    
+    <p>A new agency has been submitted for review and requires admin approval.</p>
+    
+    <div class="agency-box">
+      <h3 style="margin-top: 0; color: #1f2937;">📍 ${data.agencyName}</h3>
+      <p><strong>Submitted by:</strong> ${data.submitterName}</p>
+      <p><strong>Submitted at:</strong> ${new Date(data.submittedAt).toLocaleString()}</p>
+    </div>
+    
+    <p>Please review the agency details and either approve or reject the submission.</p>
+    
+    <a href="${data.adminPanelUrl}" class="button">Review Agency →</a>
+    
+    <div class="footer">
+      <p>This is an automated notification from the SiteMatcher admin system.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const text = `
+NEW AGENCY SUBMISSION - ADMIN REVIEW REQUIRED
+
+Agency: ${data.agencyName}
+Submitted by: ${data.submitterName}
+Submitted at: ${new Date(data.submittedAt).toLocaleString()}
+
+A new agency has been submitted for review and requires admin approval.
+
+Please review the agency details and either approve or reject the submission.
+
+Review Agency: ${data.adminPanelUrl}
+
+---
+This is an automated notification from the SiteMatcher admin system.
 `;
 
   return { subject, html, text };

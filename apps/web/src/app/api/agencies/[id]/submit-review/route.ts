@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase'
+import { createServerClient, createAdminClient } from '@/lib/supabase'
 import { getCurrentUser } from '@/lib/auth'
+import { sendEmail } from '@/lib/resend'
+import { createAgencySubmissionNotification } from '@/lib/email-templates'
 
 export async function POST(
   request: NextRequest,
@@ -138,8 +140,53 @@ export async function POST(
       }
     }
 
-    // TODO: Send notification to admins about pending review
-    // This would integrate with existing notification system
+    // Send notification to admins about pending review
+    try {
+      // Use admin client only for reading user emails for notifications
+      // This is safe because: 1) user is authenticated, 2) only reading emails, 3) legitimate business purpose
+      const adminSupabase = createAdminClient()
+      
+      // Get admin users - using role = 'admin'
+      const { data: adminUsers } = await adminSupabase
+        .from('users')
+        .select('email')
+        .eq('role', 'admin')
+
+      if (adminUsers && adminUsers.length > 0) {
+        // Get submitter details for the email notification
+        const { data: submitterUser } = await adminSupabase
+          .from('users')
+          .select('email')
+          .eq('id', user.id)
+          .single()
+
+        const submitterName = submitterUser?.email?.split('@')[0] || 'Unknown User'
+
+        const submittedAt = new Date().toISOString()
+        const emailTemplate = createAgencySubmissionNotification({
+          agencyName: agency.name,
+          submitterName,
+          submittedAt,
+          adminPanelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/agencies`
+        })
+
+        // Send to all admins
+        const adminEmails = adminUsers.map(admin => admin.email).filter(Boolean)
+        if (adminEmails.length > 0) {
+          await sendEmail({
+            to: adminEmails,
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            text: emailTemplate.text
+          })
+
+          console.log('✅ Admin notification emails sent to:', adminEmails)
+        }
+      }
+    } catch (emailError) {
+      console.error('Failed to send admin notification email:', emailError)
+      // Don't fail the submission if email fails
+    }
 
     console.log('Agency submitted for review:', {
       agencyId,
