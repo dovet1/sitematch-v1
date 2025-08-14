@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const admin = await requireAdmin()
     
     const body = await request.json()
-    const { agencyId, reason, adminNotes } = body
+    const { agencyId, versionId, reason, adminNotes } = body
 
     if (!agencyId) {
       return NextResponse.json({ error: 'Agency ID is required' }, { status: 400 })
@@ -32,30 +32,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Agency not found' }, { status: 404 })
     }
 
-    if (agency.status === 'approved') {
-      return NextResponse.json({ error: 'Cannot reject an approved agency' }, { status: 400 })
+    // Check if there's a pending version to reject
+    const { data: pendingVersion, error: versionError } = await supabase
+      .from('agency_versions')
+      .select('*')
+      .eq('agency_id', agencyId)
+      .eq('status', 'pending')
+      .single()
+
+    if (versionError || !pendingVersion) {
+      return NextResponse.json({ error: 'No pending version found to reject' }, { status: 404 })
     }
 
-    if (agency.status === 'rejected') {
-      return NextResponse.json({ error: 'Agency is already rejected' }, { status: 400 })
-    }
-
-    // Update agency status to rejected
-    const { error: updateError } = await supabase
-      .from('agencies')
-      .update({
-        status: 'rejected',
-        admin_notes: reason + (adminNotes ? `\n\nAdmin Notes: ${adminNotes}` : '')
-      })
-      .eq('id', agencyId)
-
-    if (updateError) {
-      console.error('Error rejecting agency:', updateError)
-      return NextResponse.json({ error: 'Failed to reject agency' }, { status: 500 })
-    }
-
-    // Update any pending version to rejected
-    const { error: versionError } = await supabase
+    // Update the pending version to rejected
+    const { error: updateVersionError } = await supabase
       .from('agency_versions')
       .update({
         status: 'rejected',
@@ -63,12 +53,34 @@ export async function POST(request: NextRequest) {
         reviewed_by: admin.id,
         admin_notes: reason + (adminNotes ? `\n\nAdmin Notes: ${adminNotes}` : '')
       })
-      .eq('agency_id', agencyId)
-      .eq('status', 'pending')
+      .eq('id', pendingVersion.id)
 
-    if (versionError) {
-      console.error('Error updating version status:', versionError)
-      // Don't fail the rejection for this
+    if (updateVersionError) {
+      console.error('Error rejecting version:', updateVersionError)
+      return NextResponse.json({ error: 'Failed to reject version' }, { status: 500 })
+    }
+
+    // Only update agency status to rejected if this is the first submission (no approved versions exist)
+    const { data: approvedVersions } = await supabase
+      .from('agency_versions')
+      .select('id')
+      .eq('agency_id', agencyId)
+      .eq('status', 'approved')
+
+    if (!approvedVersions || approvedVersions.length === 0) {
+      // No approved versions exist, so reject the entire agency
+      const { error: updateAgencyError } = await supabase
+        .from('agencies')
+        .update({
+          status: 'rejected',
+          admin_notes: reason + (adminNotes ? `\n\nAdmin Notes: ${adminNotes}` : '')
+        })
+        .eq('id', agencyId)
+
+      if (updateAgencyError) {
+        console.error('Error rejecting agency:', updateAgencyError)
+        // Don't fail for this - the version rejection is the important part
+      }
     }
 
     // Cancel pending invitations
@@ -85,8 +97,9 @@ export async function POST(request: NextRequest) {
 
     // TODO: Send rejection email to agency creator with reason and guidance
     // This would integrate with your existing email service
-    console.log('Agency rejected:', {
+    console.log('Agency version rejected:', {
       agencyId,
+      versionId: pendingVersion.id,
       agencyName: agency.name,
       rejectedBy: admin.id,
       reason,
@@ -98,11 +111,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Agency rejected successfully',
+      message: 'Agency version rejected successfully',
       agency: {
         id: agencyId,
         name: agency.name,
-        status: 'rejected',
+        versionId: pendingVersion.id,
         reason
       }
     })

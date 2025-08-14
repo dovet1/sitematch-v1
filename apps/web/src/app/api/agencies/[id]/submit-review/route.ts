@@ -30,7 +30,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 403 })
     }
 
-    // Get the agency and verify it exists
+    // Get the agency and verify it exists (fresh data)
     const { data: agency, error: agencyError } = await supabase
       .from('agencies')
       .select('*')
@@ -40,6 +40,12 @@ export async function POST(
     if (agencyError || !agency) {
       return NextResponse.json({ error: 'Agency not found' }, { status: 404 })
     }
+
+    console.log('Creating version with agency data:', {
+      agencyId,
+      logo_url: agency.logo_url,
+      isBlob: agency.logo_url?.startsWith('blob:')
+    })
 
     // Check if there's already a pending version
     const { data: existingVersion, error: versionError } = await supabase

@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Shield, Users, Activity, FileCheck, AlertTriangle, Building2, Calendar } from 'lucide-react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase'
+import { createServerClient } from '@/lib/supabase'
 
 export default async function AdminDashboard() {
   await requireAdmin()
@@ -23,13 +23,19 @@ export default async function AdminDashboard() {
   }))
 
   // Get agency statistics
-  const supabase = createClient()
+  const supabase = createServerClient()
   const { data: agencies } = await supabase
     .from('agencies')
-    .select('status')
-  
+    .select('id, status')
+
+  // Get agencies with pending versions (the real pending count)
+  const { data: pendingVersions } = await supabase
+    .from('agency_versions')
+    .select('agency_id')
+    .eq('status', 'pending')
+
   const agencyStats = {
-    pending: agencies?.filter(a => a.status === 'pending').length || 0,
+    pending: pendingVersions?.length || 0,
     total: agencies?.length || 0
   }
 

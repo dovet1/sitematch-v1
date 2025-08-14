@@ -61,20 +61,22 @@ export function AgencyCard({ agency }: AgencyCardProps) {
           {/* Logo & Name Section */}
           <div className="flex items-center space-x-4 mb-4">
             <div className="relative flex-shrink-0">
-              <div className="w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-inner">
+              <div className="w-20 h-20 rounded-full overflow-hidden bg-white flex items-center justify-center shadow-lg border-2 border-gray-100">
                 {agency.logo_url ? (
                   <Image
                     src={agency.logo_url}
                     alt={`${agency.name} logo`}
                     width={80}
                     height={80}
-                    className="w-full h-full object-cover"
+                    className="w-16 h-16 object-contain"
                     loading="lazy"
                   />
                 ) : (
-                  <span className="text-white font-semibold text-lg tracking-wide">
-                    {initials}
-                  </span>
+                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-semibold text-lg tracking-wide">
+                      {initials}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>

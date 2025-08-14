@@ -38,7 +38,9 @@ export async function GET(
         id,
         version_number,
         status,
-        submitted_for_review_at
+        submitted_for_review_at,
+        reviewed_at,
+        admin_notes
       `)
       .eq('agency_id', agencyId)
       .order('version_number', { ascending: false })

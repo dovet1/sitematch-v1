@@ -174,11 +174,37 @@ export function AgencyEditFormFixed({ agency, members, currentUserId }: AgencyEd
   const handleSave = async () => {
     setIsAutoSaving(true)
     try {
+      let logoUrl = data.logoUrl
+
+      // Upload logo file if there's a new file (blob URL indicates new upload)
+      if (data.logoFile && data.logoUrl.startsWith('blob:')) {
+        try {
+          const logoFormData = new FormData()
+          logoFormData.append('file', data.logoFile)
+          logoFormData.append('type', 'logo')
+          logoFormData.append('agencyId', agency.id)
+          
+          const logoUploadResponse = await fetch('/api/agencies/upload', {
+            method: 'POST',
+            body: logoFormData,
+          })
+          
+          if (logoUploadResponse.ok) {
+            const logoResult = await logoUploadResponse.json()
+            logoUrl = logoResult.url
+          } else {
+            console.error('Failed to upload logo')
+          }
+        } catch (error) {
+          console.error('Error uploading logo:', error)
+        }
+      }
+
       const changes = {
         name: data.name,
         description: data.description,
         website: data.website,
-        logo_url: data.logoUrl,
+        logo_url: logoUrl,
         coverage_areas: data.coverageAreas,
         specialisms: data.specialisms
       }
@@ -216,8 +242,11 @@ export function AgencyEditFormFixed({ agency, members, currentUserId }: AgencyEd
   const handleSubmitForReview = async () => {
     setIsLoading(true)
     try {
-      // First save current changes
+      // First save current changes (this will upload logo if needed)
       await handleSave()
+      
+      // Wait a moment to ensure save is complete
+      await new Promise(resolve => setTimeout(resolve, 100))
       
       // Then submit for review
       const response = await fetch(`/api/agencies/${agency.id}/submit-review`, {

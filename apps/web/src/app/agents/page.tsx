@@ -29,12 +29,13 @@ async function getApprovedAgencies(searchTerm?: string, page = 1) {
   const pageSize = 12
   const from = (page - 1) * pageSize
   
-  // Get agencies with their latest approved versions
-  let query = supabase
+  // Get all approved versions first, then filter to latest per agency
+  const { data: allApprovedVersions, error } = await supabase
     .from('agency_versions')
     .select(`
       id,
       agency_id,
+      version_number,
       data,
       reviewed_at,
       agencies!inner(
@@ -44,20 +45,31 @@ async function getApprovedAgencies(searchTerm?: string, page = 1) {
       )
     `)
     .eq('status', 'approved')
-    .order('reviewed_at', { ascending: false })
-    .range(from, from + pageSize - 1)
-
-  const { data: versionResults, error } = await query
+    .order('version_number', { ascending: false })
 
   if (error) {
     console.error('Error fetching approved versions:', error)
     return []
   }
 
-  if (!versionResults) return []
+  if (!allApprovedVersions) return []
+
+  // Get only the latest approved version per agency
+  const latestVersionsMap = new Map()
+  allApprovedVersions.forEach(version => {
+    if (!latestVersionsMap.has(version.agency_id) || 
+        version.version_number > latestVersionsMap.get(version.agency_id).version_number) {
+      latestVersionsMap.set(version.agency_id, version)
+    }
+  })
+
+  const latestVersions = Array.from(latestVersionsMap.values())
+  
+  // Apply pagination to the deduplicated results
+  const paginatedVersions = latestVersions.slice(from, from + pageSize)
 
   // Transform the version data to match the expected Agency interface
-  const agencies = versionResults.map(version => {
+  const agencies = paginatedVersions.map(version => {
     // Parse the JSON data if it's stored as a string
     const data = typeof version.data === 'string' ? JSON.parse(version.data) : version.data
     

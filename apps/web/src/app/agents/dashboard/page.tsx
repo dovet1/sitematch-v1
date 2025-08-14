@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { DraftStatusIndicator } from '@/components/agency/DraftStatusIndicator'
+import { RejectedStatusIndicator } from '@/components/agency/RejectedStatusIndicator'
 import { 
   Users, 
   Mail, 
@@ -267,6 +268,12 @@ export default async function AgencyDashboardPage() {
 
         {/* Draft Status Indicator */}
         <DraftStatusIndicator 
+          agencyId={membership.agency_id}
+          isAdmin={membership.role === 'admin'}
+        />
+
+        {/* Rejected Status Indicator */}
+        <RejectedStatusIndicator 
           agencyId={membership.agency_id}
           isAdmin={membership.role === 'admin'}
         />

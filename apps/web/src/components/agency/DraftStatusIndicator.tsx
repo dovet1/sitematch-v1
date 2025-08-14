@@ -23,25 +23,42 @@ export function DraftStatusIndicator({
   isAdmin
 }: DraftStatusIndicatorProps) {
   const [pendingVersion, setPendingVersion] = useState<PendingVersion | null>(null)
+  const [hasApprovedVersion, setHasApprovedVersion] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (isAdmin) {
-      fetchPendingVersion()
+      fetchVersions()
     } else {
       setIsLoading(false)
     }
   }, [agencyId, isAdmin])
 
-  const fetchPendingVersion = async () => {
+  const fetchVersions = async () => {
     try {
-      const response = await fetch(`/api/agencies/${agencyId}/versions?status=pending`)
-      if (response.ok) {
-        const data = await response.json()
-        setPendingVersion(data.versions?.[0] || null)
+      // Get all versions to determine the latest one
+      const allVersionsResponse = await fetch(`/api/agencies/${agencyId}/versions`)
+      if (allVersionsResponse.ok) {
+        const allData = await allVersionsResponse.json()
+        const versions = allData.versions || []
+        
+        // Find the latest version by version_number
+        const latestVersion = versions.reduce((latest: any, current: any) => {
+          return current.version_number > (latest?.version_number || 0) ? current : latest
+        }, null)
+        
+        // Only show pending status if the latest version is pending
+        if (latestVersion && latestVersion.status === 'pending') {
+          setPendingVersion(latestVersion)
+        } else {
+          setPendingVersion(null)
+        }
+
+        // Check for approved versions
+        setHasApprovedVersion(versions.some((v: any) => v.status === 'approved'))
       }
     } catch (error) {
-      console.error('Error fetching pending version:', error)
+      console.error('Error fetching versions:', error)
     } finally {
       setIsLoading(false)
     }
@@ -79,7 +96,10 @@ export function DraftStatusIndicator({
               Submitted {timeAgo}
             </p>
             <p className="text-sm text-yellow-700">
-              An admin will review your changes before they go live on your public listing.
+              {hasApprovedVersion 
+                ? "Changes pending admin approval. Your live listing remains unchanged until approved."
+                : "An admin will review your changes before they go live on your public listing."
+              }
             </p>
           </AlertDescription>
         </div>

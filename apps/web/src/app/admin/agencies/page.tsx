@@ -16,13 +16,13 @@ interface AgencyStats {
   avgReviewTime: number
 }
 
-interface PendingAgency {
+interface AgencyWithStatus {
   id: string
   name: string
   logo_url: string | null
   coverage_areas: string | null
   specialisms: string[]
-  status: 'pending' | 'draft'
+  status: 'pending' | 'draft' | 'approved' | 'rejected'
   created_at: string
   created_by: string
   creator_email: string
@@ -38,6 +38,12 @@ async function getAgencyStats(): Promise<AgencyStats> {
     .from('agencies')
     .select('status, created_at, approved_at')
 
+  // Get agencies with pending versions (the real pending count)
+  const { data: pendingVersions } = await supabase
+    .from('agency_versions')
+    .select('agency_id')
+    .eq('status', 'pending')
+
   if (!agencies) {
     return {
       total: 0,
@@ -50,7 +56,7 @@ async function getAgencyStats(): Promise<AgencyStats> {
   }
 
   const total = agencies.length
-  const pending = agencies.filter(a => a.status === 'pending').length
+  const pending = pendingVersions?.length || 0  // Use pending versions count
   const approved = agencies.filter(a => a.status === 'approved').length
   const rejected = agencies.filter(a => a.status === 'rejected').length
 
@@ -89,11 +95,12 @@ async function getAgencyStats(): Promise<AgencyStats> {
   }
 }
 
-async function getAllAgencies(): Promise<PendingAgency[]> {
+async function getAllAgencies(): Promise<AgencyWithStatus[]> {
   const supabase = createServerClient()
 
   console.log('=== GETTING ALL AGENCIES ===')
   
+  // Get all agencies
   const { data: allAgencies, error } = await supabase
     .from('agencies')
     .select(`
@@ -107,8 +114,7 @@ async function getAllAgencies(): Promise<PendingAgency[]> {
       created_by,
       users!agencies_created_by_fkey(email)
     `)
-    // Remove status filtering to show ALL agencies
-    .order('created_at', { ascending: false }) // Show newest first
+    .order('created_at', { ascending: false })
 
   console.log('All agencies query result:', allAgencies)
   console.log('All agencies query error:', error)
@@ -116,6 +122,14 @@ async function getAllAgencies(): Promise<PendingAgency[]> {
   if (!allAgencies) {
     return []
   }
+
+  // Get pending versions to mark agencies with pending changes
+  const { data: pendingVersions } = await supabase
+    .from('agency_versions')
+    .select('agency_id')
+    .eq('status', 'pending')
+
+  const pendingAgencyIds = new Set(pendingVersions?.map(v => v.agency_id) || [])
 
   // Get agent counts for each agency
   const agencyIds = allAgencies.map(a => a.id)
@@ -136,7 +150,7 @@ async function getAllAgencies(): Promise<PendingAgency[]> {
     logo_url: agency.logo_url,
     coverage_areas: agency.coverage_areas || '',
     specialisms: agency.specialisms || [],
-    status: agency.status as 'pending' | 'draft',
+    status: (pendingAgencyIds.has(agency.id) ? 'pending' : agency.status) as 'pending' | 'draft' | 'approved' | 'rejected',
     created_at: agency.created_at,
     created_by: agency.created_by,
     creator_email: (agency.users as any)?.email || 'Unknown',
@@ -153,7 +167,7 @@ export default async function AdminAgenciesPage() {
     await requireAdmin()
     console.log('Admin authentication passed')
 
-    console.log('Fetching stats and agencies...')
+    console.log('Fetching stats and all agencies...')
     const [stats, allAgencies] = await Promise.all([
       getAgencyStats(),
       getAllAgencies()

@@ -32,13 +32,13 @@ interface AgencyStats {
   avgReviewTime: number
 }
 
-interface PendingAgency {
+interface AgencyWithStatus {
   id: string
   name: string
   logo_url: string | null
   coverage_areas: string | null
   specialisms: string[]
-  status: 'pending' | 'draft'
+  status: 'pending' | 'draft' | 'approved' | 'rejected'
   created_at: string
   created_by: string
   creator_email: string
@@ -48,12 +48,12 @@ interface PendingAgency {
 
 interface AdminAgenciesDashboardProps {
   stats: AgencyStats
-  pendingAgencies: PendingAgency[]
+  pendingAgencies: AgencyWithStatus[]  // Keep the prop name for compatibility
 }
 
 export function AdminAgenciesDashboard({ stats, pendingAgencies }: AdminAgenciesDashboardProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'draft' | 'rejected'>('all')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'draft' | 'approved' | 'rejected'>('all')
 
   function getAgencyInitials(name: string): string {
     return name
@@ -78,7 +78,7 @@ export function AdminAgenciesDashboard({ stats, pendingAgencies }: AdminAgencies
     }
   }
 
-  function getPriorityLevel(agency: PendingAgency): 'high' | 'medium' | 'low' {
+  function getPriorityLevel(agency: AgencyWithStatus): 'high' | 'medium' | 'low' {
     const daysSinceSubmission = Math.floor(
       (Date.now() - new Date(agency.created_at).getTime()) / (1000 * 60 * 60 * 24)
     )
@@ -202,6 +202,13 @@ export function AdminAgenciesDashboard({ stats, pendingAgencies }: AdminAgencies
                 onClick={() => setFilterStatus('draft')}
               >
                 Draft ({pendingAgencies.filter(a => a.status === 'draft').length})
+              </Button>
+              <Button
+                variant={filterStatus === 'approved' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilterStatus('approved')}
+              >
+                Approved ({pendingAgencies.filter(a => a.status === 'approved').length})
               </Button>
               <Button
                 variant={filterStatus === 'rejected' ? 'default' : 'outline'}

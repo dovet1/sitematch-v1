@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const admin = await requireAdmin()
     
     const body = await request.json()
-    const { agencyId, adminNotes } = body
+    const { agencyId, versionId, adminNotes } = body
 
     if (!agencyId) {
       return NextResponse.json({ error: 'Agency ID is required' }, { status: 400 })
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerClient()
 
-    // Get the agency first to verify it exists and can be approved
+    // Get the agency first to verify it exists
     const { data: agency, error: agencyError } = await supabase
       .from('agencies')
       .select('*')
@@ -28,41 +28,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Agency not found' }, { status: 404 })
     }
 
-    if (agency.status === 'approved') {
-      return NextResponse.json({ error: 'Agency is already approved' }, { status: 400 })
-    }
-
-    // Update agency status to approved
-    const { error: updateError } = await supabase
-      .from('agencies')
-      .update({
-        status: 'approved',
-        approved_at: new Date().toISOString(),
-        approved_by: admin.id,
-        admin_notes: adminNotes || null
-      })
-      .eq('id', agencyId)
-
-    if (updateError) {
-      console.error('Error approving agency:', updateError)
-      return NextResponse.json({ error: 'Failed to approve agency' }, { status: 500 })
-    }
-
-    // Update any pending version to approved
-    console.log('=== UPDATING AGENCY VERSIONS ===')
-    console.log('Agency ID:', agencyId)
-    console.log('Admin ID:', admin.id)
-    
-    // First check what versions exist
-    const { data: existingVersions, error: checkError } = await supabase
+    // Check if there's a pending version to approve
+    const { data: pendingVersion, error: versionError } = await supabase
       .from('agency_versions')
       .select('*')
       .eq('agency_id', agencyId)
-    
-    console.log('Existing versions for agency:', existingVersions)
-    console.log('Check error:', checkError)
-    
-    const { data: updatedVersions, error: versionError } = await supabase
+      .eq('status', 'pending')
+      .single()
+
+    if (versionError || !pendingVersion) {
+      return NextResponse.json({ error: 'No pending version found to approve' }, { status: 404 })
+    }
+
+    // Approve the pending version
+    const { error: approveVersionError } = await supabase
       .from('agency_versions')
       .update({
         status: 'approved',
@@ -70,18 +49,44 @@ export async function POST(request: NextRequest) {
         reviewed_by: admin.id,
         admin_notes: adminNotes || null
       })
-      .eq('agency_id', agencyId)
-      .eq('status', 'pending')
-      .select('*')
+      .eq('id', pendingVersion.id)
 
-    console.log('Updated versions:', updatedVersions)
-    console.log('Version update error:', versionError)
+    if (approveVersionError) {
+      console.error('Error approving version:', approveVersionError)
+      return NextResponse.json({ error: 'Failed to approve version' }, { status: 500 })
+    }
+
+    // Update agency with the approved version data
+    const versionData = typeof pendingVersion.data === 'string' 
+      ? JSON.parse(pendingVersion.data) 
+      : pendingVersion.data
+
+    const { error: updateAgencyError } = await supabase
+      .from('agencies')
+      .update({
+        name: versionData.name,
+        description: versionData.description,
+        website: versionData.website,
+        logo_url: versionData.logo_url,
+        coverage_areas: versionData.coverage_areas,
+        specialisms: versionData.specialisms,
+        status: 'approved',
+        approved_at: new Date().toISOString(),
+        admin_notes: adminNotes || null
+      })
+      .eq('id', agencyId)
+
+    if (updateAgencyError) {
+      console.error('Error updating agency:', updateAgencyError)
+      return NextResponse.json({ error: 'Failed to update agency' }, { status: 500 })
+    }
 
     // TODO: Send approval email to agency creator and team members
     // This would integrate with your existing email service
-    console.log('Agency approved:', {
+    console.log('Agency version approved:', {
       agencyId,
-      agencyName: agency.name,
+      versionId: pendingVersion.id,
+      agencyName: versionData.name,
       approvedBy: admin.id,
       adminNotes
     })
@@ -91,11 +96,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Agency approved successfully',
+      message: 'Agency version approved successfully',
       agency: {
         id: agencyId,
-        name: agency.name,
-        status: 'approved'
+        name: versionData.name,
+        status: 'approved',
+        versionId: pendingVersion.id
       }
     })
 
