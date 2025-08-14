@@ -1,4 +1,4 @@
-import { createServerClient, createClient, createAdminClient } from '@/lib/supabase'
+import { createServerClient, createClient } from '@/lib/supabase'
 import { getCurrentUser } from '@/lib/auth'
 import { Suspense } from 'react'
 import { AgencyGrid } from '@/components/agency/AgencyGrid'
@@ -25,7 +25,6 @@ interface AgencySearchProps {
 }
 
 async function getApprovedAgencies(searchTerm?: string, page = 1) {
-  // Use regular client - RLS policies should allow public access to approved agencies
   const supabase = createClient()
   const pageSize = 12
   const from = (page - 1) * pageSize
@@ -38,11 +37,11 @@ async function getApprovedAgencies(searchTerm?: string, page = 1) {
       agency_id,
       version_number,
       data,
-      reviewed_at
+      reviewed_at,
+      status
     `)
     .eq('status', 'approved')
     .order('version_number', { ascending: false })
-
 
   if (error) {
     console.error('Error fetching approved versions:', error)

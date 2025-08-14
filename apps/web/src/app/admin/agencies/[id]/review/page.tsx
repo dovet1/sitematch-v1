@@ -1,5 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
-import { createServerClient } from '@/lib/supabase'
+import { createServerClient, createAdminClient } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import { AgencyReviewActions } from '@/components/admin/AgencyReviewActions'
 
@@ -53,7 +53,7 @@ interface AgencyReviewData {
 }
 
 async function getAgencyReviewData(id: string): Promise<AgencyReviewData | null> {
-  const supabase = createServerClient()
+  const supabase = createAdminClient()
 
   // Get agency data
   const { data: agency, error: agencyError } = await supabase

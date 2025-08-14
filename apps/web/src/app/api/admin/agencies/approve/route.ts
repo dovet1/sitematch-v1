@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Agency ID is required' }, { status: 400 })
     }
 
-    const supabase = createServerClient()
+    const supabase = createAdminClient()
 
     // Get the agency first to verify it exists
     const { data: agency, error: agencyError } = await supabase
@@ -86,8 +86,7 @@ export async function POST(request: NextRequest) {
     // Send approval email to agency owner
     try {
       // Use admin client to bypass RLS policies for user lookup
-      const adminSupabase = createAdminClient()
-      const { data: agencyOwner } = await adminSupabase
+      const { data: agencyOwner } = await supabase
         .from('users')
         .select('email')
         .eq('id', agency.created_by)

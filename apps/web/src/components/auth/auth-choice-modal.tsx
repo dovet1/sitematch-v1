@@ -415,7 +415,7 @@ export function AuthChoiceModal({
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select your role..." />
                   </SelectTrigger>
-                  <SelectContent className="z-[10000]" position="popper" sideOffset={4}>
+                  <SelectContent className="z-[50000]" position="popper" sideOffset={4}>
                     {userTypes.map((type) => (
                       <SelectItem key={type.value} value={type.value}>
                         {type.label}

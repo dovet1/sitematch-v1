@@ -1,5 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
-import { createServerClient } from '@/lib/supabase'
+import { createServerClient, createAdminClient } from '@/lib/supabase'
 import { AdminAgenciesDashboard } from '@/components/admin/AdminAgenciesDashboard'
 
 export const metadata = {
@@ -97,11 +97,22 @@ async function getAgencyStats(): Promise<AgencyStats> {
 
 async function getAllAgencies(): Promise<AgencyWithStatus[]> {
   const supabase = createServerClient()
+  // Also try with admin client to bypass RLS
+  const adminSupabase = createAdminClient()
 
   console.log('=== GETTING ALL AGENCIES ===')
   
-  // Get all agencies
-  const { data: allAgencies, error } = await supabase
+  // First check if Savills agency exists in main agencies table using admin client
+  const { data: savillsCheck } = await adminSupabase
+    .from('agencies')
+    .select('id, name, status')
+    .eq('id', '11e55051-acfe-4385-b22e-bb23cf0ba93b')
+    .single()
+  
+  console.log('Savills check in agencies table (admin):', savillsCheck)
+  
+  // Get all agencies using admin client to bypass RLS
+  const { data: allAgencies, error } = await adminSupabase
     .from('agencies')
     .select(`
       id,
@@ -116,6 +127,7 @@ async function getAllAgencies(): Promise<AgencyWithStatus[]> {
     `)
     .order('created_at', { ascending: false })
 
+  console.log('All agencies query result count:', allAgencies?.length)
   console.log('All agencies query result:', allAgencies)
   console.log('All agencies query error:', error)
 
@@ -123,17 +135,25 @@ async function getAllAgencies(): Promise<AgencyWithStatus[]> {
     return []
   }
 
-  // Get pending versions to mark agencies with pending changes
-  const { data: pendingVersions } = await supabase
+  // Get pending versions that have been submitted for review
+  const { data: pendingVersions } = await adminSupabase
+    .from('agency_versions')
+    .select('agency_id')
+    .eq('status', 'pending')
+    .not('submitted_for_review_at', 'is', null)
+    
+  // Get all pending versions (including drafts) for status marking
+  const { data: allPendingVersions } = await adminSupabase
     .from('agency_versions')
     .select('agency_id')
     .eq('status', 'pending')
 
   const pendingAgencyIds = new Set(pendingVersions?.map(v => v.agency_id) || [])
+  const allPendingAgencyIds = new Set(allPendingVersions?.map(v => v.agency_id) || [])
 
   // Get agent counts for each agency
   const agencyIds = allAgencies.map(a => a.id)
-  const { data: agentCounts } = await supabase
+  const { data: agentCounts } = await adminSupabase
     .from('agency_agents')
     .select('agency_id')
     .in('agency_id', agencyIds)
@@ -150,7 +170,7 @@ async function getAllAgencies(): Promise<AgencyWithStatus[]> {
     logo_url: agency.logo_url,
     coverage_areas: agency.coverage_areas || '',
     specialisms: agency.specialisms || [],
-    status: (pendingAgencyIds.has(agency.id) ? 'pending' : agency.status) as 'pending' | 'draft' | 'approved' | 'rejected',
+    status: (allPendingAgencyIds.has(agency.id) ? 'pending' : agency.status) as 'pending' | 'draft' | 'approved' | 'rejected',
     created_at: agency.created_at,
     created_by: agency.created_by,
     creator_email: (agency.users as any)?.email || 'Unknown',
