@@ -7296,7 +7296,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-lg font-semibold">Associate with Agent ({selectedAgencies.length})</h3>
-                      <p className="text-sm text-gray-600 mt-1">Connect your listing with real estate agencies for increased visibility</p>
+                      <p className="text-sm text-gray-600 mt-1">Connect your listing with agencies for increased visibility</p>
                     </div>
                   </div>
                   
