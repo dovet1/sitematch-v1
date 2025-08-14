@@ -18,7 +18,9 @@ import {
   AlertCircle, 
   CheckCircle2,
   Users,
-  Send
+  Send,
+  Edit,
+  Trash2
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -59,6 +61,7 @@ interface TeamBuildingStepProps {
 export function TeamBuildingStep({ data, updateData, errors }: TeamBuildingStepProps) {
   const [activeTab, setActiveTab] = useState('direct')
   const [uploadError, setUploadError] = useState<string>('')
+  const [editingAgentIndex, setEditingAgentIndex] = useState<number | null>(null)
   const [currentDirectAgent, setCurrentDirectAgent] = useState<DirectAgent>({
     email: '',
     name: '',
@@ -133,6 +136,63 @@ export function TeamBuildingStep({ data, updateData, errors }: TeamBuildingStepP
   const removeDirectAgent = (index: number) => {
     const updated = data.directAgents.filter((_, i) => i !== index)
     updateData({ directAgents: updated })
+    // If we were editing this agent, cancel the edit
+    if (editingAgentIndex === index) {
+      cancelEdit()
+    }
+  }
+
+  const startEditAgent = (index: number) => {
+    const agent = data.directAgents[index]
+    setCurrentDirectAgent({ ...agent })
+    setEditingAgentIndex(index)
+    setUploadError('')
+  }
+
+  const cancelEdit = () => {
+    setEditingAgentIndex(null)
+    setCurrentDirectAgent({
+      email: '',
+      name: '',
+      phone: '',
+      role: 'member',
+      coverageArea: '',
+      headshotFile: null,
+      headshotUrl: ''
+    })
+    setUploadError('')
+  }
+
+  const updateDirectAgent = () => {
+    if (editingAgentIndex === null) return
+
+    // Get all emails except the one being edited
+    const otherDirectEmails = data.directAgents
+      .filter((_, i) => i !== editingAgentIndex)
+      .map(a => a.email.toLowerCase())
+    const inviteEmails = data.inviteAgents.map(a => a.email.toLowerCase())
+    const existingEmails = [...otherDirectEmails, ...inviteEmails]
+    
+    if (!currentDirectAgent.name.trim() || !currentDirectAgent.email.trim()) {
+      return
+    }
+
+    if (!isValidEmail(currentDirectAgent.email)) {
+      return
+    }
+
+    if (existingEmails.includes(currentDirectAgent.email.toLowerCase())) {
+      return
+    }
+
+    if (!isValidPhone(currentDirectAgent.phone)) {
+      return
+    }
+
+    const updatedAgents = [...data.directAgents]
+    updatedAgents[editingAgentIndex] = { ...currentDirectAgent }
+    updateData({ directAgents: updatedAgents })
+    cancelEdit()
   }
 
   const addInviteAgent = () => {
@@ -208,6 +268,20 @@ export function TeamBuildingStep({ data, updateData, errors }: TeamBuildingStepP
   }
 
   const canAddDirectAgent = () => {
+    if (editingAgentIndex !== null) {
+      // In edit mode, check against other emails excluding the one being edited
+      const otherDirectEmails = data.directAgents
+        .filter((_, i) => i !== editingAgentIndex)
+        .map(a => a.email.toLowerCase())
+      const inviteEmails = data.inviteAgents.map(a => a.email.toLowerCase())
+      const existingEmails = [...otherDirectEmails, ...inviteEmails]
+      
+      return currentDirectAgent.name.trim() &&
+             isValidEmail(currentDirectAgent.email) &&
+             !existingEmails.includes(currentDirectAgent.email.toLowerCase()) &&
+             isValidPhone(currentDirectAgent.phone)
+    }
+    // In add mode, check against all existing emails
     return currentDirectAgent.name.trim() &&
            isValidEmail(currentDirectAgent.email) &&
            !getAllEmails().includes(currentDirectAgent.email.toLowerCase()) &&
@@ -276,7 +350,9 @@ export function TeamBuildingStep({ data, updateData, errors }: TeamBuildingStepP
 
           {/* Add Direct Agent Form */}
           <div className="space-y-4 p-4 border border-gray-200 rounded-lg">
-            <h4 className="font-medium text-gray-900">Add Team Member</h4>
+            <h4 className="font-medium text-gray-900">
+              {editingAgentIndex !== null ? 'Edit Team Member' : 'Add Team Member'}
+            </h4>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -303,9 +379,26 @@ export function TeamBuildingStep({ data, updateData, errors }: TeamBuildingStepP
                 {currentDirectAgent.email && !isValidEmail(currentDirectAgent.email) && (
                   <p className="text-xs text-red-600">Please enter a valid email address</p>
                 )}
-                {getAllEmails().includes(currentDirectAgent.email.toLowerCase()) && (
-                  <p className="text-xs text-red-600">This email is already added</p>
-                )}
+                {(() => {
+                  if (editingAgentIndex !== null) {
+                    // In edit mode, check against other emails
+                    const otherDirectEmails = data.directAgents
+                      .filter((_, i) => i !== editingAgentIndex)
+                      .map(a => a.email.toLowerCase())
+                    const inviteEmails = data.inviteAgents.map(a => a.email.toLowerCase())
+                    const existingEmails = [...otherDirectEmails, ...inviteEmails]
+                    
+                    if (existingEmails.includes(currentDirectAgent.email.toLowerCase())) {
+                      return <p className="text-xs text-red-600">This email is already added</p>
+                    }
+                  } else {
+                    // In add mode, check against all emails
+                    if (getAllEmails().includes(currentDirectAgent.email.toLowerCase())) {
+                      return <p className="text-xs text-red-600">This email is already added</p>
+                    }
+                  }
+                  return null
+                })()}
               </div>
 
               <div className="space-y-2">
@@ -420,15 +513,36 @@ export function TeamBuildingStep({ data, updateData, errors }: TeamBuildingStepP
               )}
             </div>
 
-            <Button
-              type="button"
-              onClick={addDirectAgent}
-              disabled={!canAddDirectAgent()}
-              className="w-full"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Team Member
-            </Button>
+            <div className="flex space-x-2">
+              <Button
+                type="button"
+                onClick={editingAgentIndex !== null ? updateDirectAgent : addDirectAgent}
+                disabled={!canAddDirectAgent()}
+                className="flex-1"
+              >
+                {editingAgentIndex !== null ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Update Team Member
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Team Member
+                  </>
+                )}
+              </Button>
+              {editingAgentIndex !== null && (
+                <Button
+                  type="button"
+                  onClick={cancelEdit}
+                  variant="outline"
+                  className="px-3"
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Direct Agents List */}
@@ -436,7 +550,11 @@ export function TeamBuildingStep({ data, updateData, errors }: TeamBuildingStepP
             <div className="space-y-3">
               <h4 className="font-medium text-gray-900">Added Team Members ({data.directAgents.length})</h4>
               {data.directAgents.map((agent, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                <div key={index} className={`flex items-center justify-between p-3 border rounded-lg ${
+                  editingAgentIndex === index 
+                    ? 'border-blue-300 bg-blue-50' 
+                    : 'border-gray-200'
+                }`}>
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-gray-100 rounded-full overflow-hidden flex items-center justify-center">
                       {agent.headshotUrl ? (
@@ -475,15 +593,28 @@ export function TeamBuildingStep({ data, updateData, errors }: TeamBuildingStepP
                       )}
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeDirectAgent(index)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => startEditAgent(index)}
+                      className="text-blue-600 hover:text-blue-700"
+                      disabled={editingAgentIndex !== null}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeDirectAgent(index)}
+                      className="text-red-600 hover:text-red-700"
+                      disabled={editingAgentIndex !== null}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

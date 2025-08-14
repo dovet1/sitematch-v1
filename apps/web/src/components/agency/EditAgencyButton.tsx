@@ -3,38 +3,48 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Edit3, Loader2 } from 'lucide-react'
+import { Edit3, Loader2, Building2 } from 'lucide-react'
 import Link from 'next/link'
 
 interface EditAgencyButtonProps {
   agencyId: string
   agencyStatus: 'draft' | 'pending' | 'approved' | 'rejected'
   isAdmin: boolean
+  size?: 'sm' | 'lg'
+  variant?: 'default' | 'outline'
+  className?: string
 }
 
-export function EditAgencyButton({ agencyId, agencyStatus, isAdmin }: EditAgencyButtonProps) {
+export function EditAgencyButton({ 
+  agencyId, 
+  agencyStatus, 
+  isAdmin, 
+  size = 'lg', 
+  variant = 'default',
+  className = ''
+}: EditAgencyButtonProps) {
   const [hasPendingChanges, setHasPendingChanges] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Check for pending draft changes
+  // Check for pending agency version
   useEffect(() => {
-    const checkPendingChanges = async () => {
+    const checkPendingVersion = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch(`/api/agencies/${agencyId}/draft`)
+        const response = await fetch(`/api/agencies/${agencyId}/versions?status=pending`)
         if (response.ok) {
           const data = await response.json()
-          setHasPendingChanges(data.hasDraft || false)
+          setHasPendingChanges(data.versions && data.versions.length > 0)
         }
       } catch (error) {
-        console.error('Error checking pending changes:', error)
+        console.error('Error checking pending version:', error)
       } finally {
         setIsLoading(false)
       }
     }
 
     if (agencyId && isAdmin) {
-      checkPendingChanges()
+      checkPendingVersion()
     }
   }, [agencyId, isAdmin])
 
@@ -43,7 +53,7 @@ export function EditAgencyButton({ agencyId, agencyStatus, isAdmin }: EditAgency
     return null
   }
 
-  const isDisabled = agencyStatus === 'pending' && hasPendingChanges
+  const isDisabled = hasPendingChanges
   
   const tooltipContent = isDisabled 
     ? "Changes are currently under review. Please wait for approval before making new edits."
@@ -51,15 +61,17 @@ export function EditAgencyButton({ agencyId, agencyStatus, isAdmin }: EditAgency
 
   const buttonContent = (
     <Button
-      size="lg"
+      size={size}
+      variant={variant}
       disabled={isDisabled || isLoading}
-      className={`
+      className={variant === 'default' ? `
         bg-gradient-to-r from-violet-600 to-blue-600 
         hover:from-violet-700 hover:to-blue-700 
         text-white shadow-lg hover:shadow-xl 
         transition-all duration-200 transform hover:scale-105
         disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
-      `}
+        ${className}
+      ` : `w-full justify-start disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
     >
       {isLoading ? (
         <>
@@ -68,7 +80,11 @@ export function EditAgencyButton({ agencyId, agencyStatus, isAdmin }: EditAgency
         </>
       ) : (
         <>
-          <Edit3 className="w-4 h-4 mr-2" />
+          {variant === 'outline' ? (
+            <Building2 className="w-4 h-4 mr-2" />
+          ) : (
+            <Edit3 className="w-4 h-4 mr-2" />
+          )}
           Edit Agency Listing
         </>
       )}
@@ -80,7 +96,9 @@ export function EditAgencyButton({ agencyId, agencyStatus, isAdmin }: EditAgency
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            {buttonContent}
+            <span className="inline-block">
+              {buttonContent}
+            </span>
           </TooltipTrigger>
           <TooltipContent>
             <p>{tooltipContent}</p>
@@ -94,7 +112,7 @@ export function EditAgencyButton({ agencyId, agencyStatus, isAdmin }: EditAgency
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Link href={`/agents/settings/edit`}>
+          <Link href={`/agents/settings/edit`} className="inline-block">
             {buttonContent}
           </Link>
         </TooltipTrigger>

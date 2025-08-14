@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { DraftStatusIndicator } from '@/components/agency/DraftStatusIndicator'
 import { RejectedStatusIndicator } from '@/components/agency/RejectedStatusIndicator'
+import { EditAgencyButton } from '@/components/agency/EditAgencyButton'
 import { 
   Users, 
   Mail, 
@@ -231,12 +232,11 @@ export default async function AgencyDashboardPage() {
                     Invite Members
                   </Button>
                 </Link>
-                <Link href="/agents/settings/edit">
-                  <Button className="flex items-center">
-                    <Building2 className="w-4 h-4 mr-2" />
-                    Edit Agency Listing
-                  </Button>
-                </Link>
+                <EditAgencyButton
+                  agencyId={membership.agency_id}
+                  agencyStatus={membership.agencies.status}
+                  isAdmin={membership.role === 'admin'}
+                />
               </div>
             )}
           </div>
@@ -421,12 +421,13 @@ export default async function AgencyDashboardPage() {
                         Send Invitations
                       </Button>
                     </Link>
-                    <Link href="/agents/settings/edit" className="block">
-                      <Button variant="outline" size="sm" className="w-full justify-start">
-                        <Building2 className="w-4 h-4 mr-2" />
-                        Edit Agency Listing
-                      </Button>
-                    </Link>
+                    <EditAgencyButton
+                      agencyId={membership.agency_id}
+                      agencyStatus={membership.agencies.status}
+                      isAdmin={membership.role === 'admin'}
+                      size="sm"
+                      variant="outline"
+                    />
                   </>
                 )}
               </div>

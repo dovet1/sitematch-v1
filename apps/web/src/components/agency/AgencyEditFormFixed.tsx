@@ -277,9 +277,9 @@ export function AgencyEditFormFixed({ agency, members, currentUserId }: AgencyEd
         logo_url: logoUrl,
         coverage_areas: data.coverageAreas,
         specialisms: data.specialisms,
-        // Include team member data with uploaded headshots
-        directAgents: updatedDirectAgents,
-        inviteAgents: data.inviteAgents
+        // Include team member data with uploaded headshots - always send arrays
+        directAgents: updatedDirectAgents || [],
+        inviteAgents: data.inviteAgents || []
       }
 
       const response = await fetch(`/api/agencies/${agency.id}/draft`, {
@@ -409,6 +409,7 @@ export function AgencyEditFormFixed({ agency, members, currentUserId }: AgencyEd
       )
 
       // Save the changes with uploaded files before submitting for review
+      // Always send arrays even if empty to ensure deletions are processed
       const changes = {
         name: data.name,
         description: data.description,
@@ -416,9 +417,15 @@ export function AgencyEditFormFixed({ agency, members, currentUserId }: AgencyEd
         logo_url: logoUrl,
         coverage_areas: data.coverageAreas,
         specialisms: data.specialisms,
-        directAgents: updatedDirectAgents,
-        inviteAgents: data.inviteAgents
+        directAgents: updatedDirectAgents || [],
+        inviteAgents: data.inviteAgents || []
       }
+
+      console.log('Submitting for review with team members:', {
+        directAgents: updatedDirectAgents.map(a => ({ email: a.email, name: a.name })),
+        inviteAgents: data.inviteAgents.map(a => ({ email: a.email, name: a.name })),
+        totalMembers: updatedDirectAgents.length + data.inviteAgents.length
+      })
 
       const saveResponse = await fetch(`/api/agencies/${agency.id}/draft`, {
         method: 'PUT',
