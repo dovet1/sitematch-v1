@@ -92,6 +92,8 @@ export async function POST(request: NextRequest) {
       .from('agencies')
       .insert({
         name: body.name.trim(),
+        description: body.description?.trim() || null,
+        website: body.website?.trim() || null,
         logo_url: body.logoUrl?.startsWith('blob:') ? null : body.logoUrl || null,
         coverage_areas: body.coverageAreas.trim(),
         specialisms: body.specialisms,

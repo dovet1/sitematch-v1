@@ -11,6 +11,8 @@ import Link from 'next/link'
 interface Agency {
   id: string
   name: string
+  description: string | null
+  website: string | null
   logo_url: string | null
   coverage_areas: string | null
   specialisms: string[]
@@ -27,25 +29,62 @@ async function getApprovedAgencies(searchTerm?: string, page = 1) {
   const pageSize = 12
   const from = (page - 1) * pageSize
   
+  // Get agencies with their latest approved versions
   let query = supabase
-    .from('agencies')
-    .select('id, name, logo_url, coverage_areas, specialisms, status, created_at')
+    .from('agency_versions')
+    .select(`
+      id,
+      agency_id,
+      data,
+      reviewed_at,
+      agencies!inner(
+        id,
+        status,
+        created_at
+      )
+    `)
     .eq('status', 'approved')
-    .order('created_at', { ascending: false })
+    .order('reviewed_at', { ascending: false })
     .range(from, from + pageSize - 1)
 
-  if (searchTerm) {
-    query = query.or(`name.ilike.%${searchTerm}%,coverage_areas.ilike.%${searchTerm}%`)
-  }
-
-  const { data: agencies, error } = await query
+  const { data: versionResults, error } = await query
 
   if (error) {
-    console.error('Error fetching agencies:', error)
+    console.error('Error fetching approved versions:', error)
     return []
   }
 
-  return agencies || []
+  if (!versionResults) return []
+
+  // Transform the version data to match the expected Agency interface
+  const agencies = versionResults.map(version => {
+    // Parse the JSON data if it's stored as a string
+    const data = typeof version.data === 'string' ? JSON.parse(version.data) : version.data
+    
+    return {
+      id: version.agency_id,
+      name: data.name,
+      description: data.description,
+      website: data.website,
+      logo_url: data.logo_url,
+      coverage_areas: data.coverage_areas,
+      specialisms: data.specialisms,
+      status: 'approved' as const,
+      created_at: version.agencies.created_at
+    }
+  })
+
+  // Apply search filtering after transformation
+  if (searchTerm) {
+    const searchLower = searchTerm.toLowerCase()
+    return agencies.filter(agency => 
+      agency.name?.toLowerCase().includes(searchLower) ||
+      agency.description?.toLowerCase().includes(searchLower) ||
+      agency.coverage_areas?.toLowerCase().includes(searchLower)
+    )
+  }
+
+  return agencies
 }
 
 function AgencyCardSkeleton() {

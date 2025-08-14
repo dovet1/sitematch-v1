@@ -279,27 +279,6 @@ export function BasicInfoStep({ data, updateData, errors }: BasicInfoStepProps) 
         </div>
       )}
 
-      {/* Quick Tips - Premium */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl p-6 border border-gray-200">
-        <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <span className="w-5 h-5 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center text-xs font-bold">?</span>
-          Quick Tips
-        </h4>
-        <ul className="space-y-2 text-sm text-gray-600">
-          <li className="flex items-start gap-2">
-            <span className="text-violet-500 mt-0.5">•</span>
-            <span>Choose a name that reflects your agency's identity and is easy to remember</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-violet-500 mt-0.5">•</span>
-            <span>Include keywords in your description that property seekers might search for</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-violet-500 mt-0.5">•</span>
-            <span>A professional website URL adds credibility to your agency profile</span>
-          </li>
-        </ul>
-      </div>
     </div>
   )
 }

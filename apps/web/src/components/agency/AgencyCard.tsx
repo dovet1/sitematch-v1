@@ -6,6 +6,8 @@ import Link from 'next/link'
 interface Agency {
   id: string
   name: string
+  description: string | null
+  website: string | null
   logo_url: string | null
   coverage_areas: string | null
   specialisms: string[]
@@ -47,6 +49,7 @@ function getSpecialismColor(specialism: string): string {
 
 export function AgencyCard({ agency }: AgencyCardProps) {
   const initials = getAgencyInitials(agency.name)
+  const descriptionText = agency.description ? truncateText(agency.description, 60) : null
   const coverageText = agency.coverage_areas ? truncateText(agency.coverage_areas, 45) : null
   const visibleSpecialisms = agency.specialisms.slice(0, 3)
   const remainingCount = agency.specialisms.length - 3
@@ -80,12 +83,20 @@ export function AgencyCard({ agency }: AgencyCardProps) {
               <h3 className="font-semibold text-lg sm:text-xl text-gray-900 leading-tight mb-1 group-hover:text-blue-600 transition-colors">
                 {agency.name}
               </h3>
+              {descriptionText && (
+                <p 
+                  className="text-sm text-gray-700 leading-relaxed mb-1"
+                  title={agency.description || undefined}
+                >
+                  {descriptionText}
+                </p>
+              )}
               {coverageText && (
                 <p 
-                  className="text-sm text-gray-600 leading-relaxed"
+                  className="text-xs text-gray-500 leading-relaxed"
                   title={agency.coverage_areas || undefined}
                 >
-                  {coverageText}
+                  📍 {coverageText}
                 </p>
               )}
             </div>

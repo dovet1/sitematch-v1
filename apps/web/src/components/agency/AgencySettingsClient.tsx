@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Building2, Users, Settings, ArrowLeft, Plus, History } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { EditAgencyButton } from './EditAgencyButton'
 
 interface AgencyData {
   id: string
@@ -121,6 +122,13 @@ export function AgencySettingsClient({
                 Back to Dashboard
               </Button>
             </Link>
+            
+            {/* Edit Agency Button - Top right placement */}
+            <EditAgencyButton 
+              agencyId={membership.agency_id}
+              agencyStatus={membership.agencies.status}
+              isAdmin={membership.role === 'admin'}
+            />
           </div>
           
           <div className="flex items-center space-x-4">

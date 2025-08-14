@@ -215,9 +215,6 @@ export default async function AgencyDashboardPage() {
                   {membership.agencies.name}
                 </h1>
                 <div className="flex items-center space-x-3 mt-1">
-                  <Badge className={getStatusColor(membership.agencies.status)}>
-                    {membership.agencies.status}
-                  </Badge>
                   <Badge variant="secondary">
                     {membership.role}
                   </Badge>
@@ -233,10 +230,10 @@ export default async function AgencyDashboardPage() {
                     Invite Members
                   </Button>
                 </Link>
-                <Link href="/agents/settings">
+                <Link href="/agents/settings/edit">
                   <Button className="flex items-center">
                     <Building2 className="w-4 h-4 mr-2" />
-                    Manage Agency
+                    Edit Agency Listing
                   </Button>
                 </Link>
               </div>
@@ -261,7 +258,7 @@ export default async function AgencyDashboardPage() {
             <AlertDescription>
               <strong>Approval Declined:</strong> {membership.agencies.admin_notes}
               <br />
-              <Link href="/agents/settings" className="underline mt-2 inline-block">
+              <Link href="/agents/settings/edit" className="underline mt-2 inline-block">
                 Edit your agency details and resubmit
               </Link>
             </AlertDescription>
@@ -417,10 +414,10 @@ export default async function AgencyDashboardPage() {
                         Send Invitations
                       </Button>
                     </Link>
-                    <Link href="/agents/settings" className="block">
+                    <Link href="/agents/settings/edit" className="block">
                       <Button variant="outline" size="sm" className="w-full justify-start">
-                        <Users className="w-4 h-4 mr-2" />
-                        Agency Settings
+                        <Building2 className="w-4 h-4 mr-2" />
+                        Edit Agency Listing
                       </Button>
                     </Link>
                   </>

@@ -1,6 +1,6 @@
 // Agency Versions API - Story 18.3
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
+import { createServerClient } from '@/lib/supabase'
 import { getCurrentUser } from '@/lib/auth'
 
 // GET /api/agencies/[id]/versions - Get version history
@@ -14,8 +14,10 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = createClient()
+    const supabase = createServerClient()
     const agencyId = params.id
+    const { searchParams } = new URL(request.url)
+    const status = searchParams.get('status')
 
     // Check if user has access to this agency
     const { data: membership } = await supabase
@@ -30,23 +32,22 @@ export async function GET(
     }
 
     // Get version history
-    const { data: versions, error } = await supabase
+    let query = supabase
       .from('agency_versions')
       .select(`
         id,
         version_number,
-        data,
         status,
-        admin_notes,
-        created_at,
-        created_by,
-        reviewed_at,
-        reviewed_by,
-        users!agency_versions_created_by_fkey(email),
-        reviewers:users!agency_versions_reviewed_by_fkey(email)
+        submitted_for_review_at
       `)
       .eq('agency_id', agencyId)
       .order('version_number', { ascending: false })
+
+    if (status) {
+      query = query.eq('status', status)
+    }
+
+    const { data: versions, error } = await query
 
     if (error) {
       console.error('Error fetching versions:', error)
@@ -74,7 +75,7 @@ export async function POST(
     const body = await request.json()
     const { changes, changeType = 'minor' } = body
 
-    const supabase = createClient()
+    const supabase = createServerClient()
     const agencyId = params.id
 
     // Check if user has admin access

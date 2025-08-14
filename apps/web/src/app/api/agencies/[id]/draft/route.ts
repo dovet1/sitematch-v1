@@ -1,6 +1,6 @@
 // Agency Draft API - Story 18.3
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
+import { createServerClient } from '@/lib/supabase'
 import { getCurrentUser } from '@/lib/auth'
 
 // GET /api/agencies/[id]/draft - Get current draft version
@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = createClient()
+    const supabase = createServerClient()
     const agencyId = params.id
 
     // Check if user has access to this agency
@@ -59,7 +59,7 @@ export async function GET(
   }
 }
 
-// PUT /api/agencies/[id]/draft - Update draft version (auto-save)
+// PUT /api/agencies/[id]/draft - Update agency draft (auto-save)
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -71,9 +71,9 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { changes, versionId } = body
+    const { changes } = body
 
-    const supabase = createClient()
+    const supabase = createServerClient()
     const agencyId = params.id
 
     // Check if user has admin access
@@ -88,44 +88,36 @@ export async function PUT(
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
-    // Get current draft version
-    const { data: currentDraft, error: draftError } = await supabase
-      .from('agency_versions')
-      .select('data')
-      .eq('id', versionId)
-      .eq('agency_id', agencyId)
-      .eq('status', 'pending')
-      .single()
-
-    if (draftError || !currentDraft) {
-      return NextResponse.json({ error: 'Draft not found' }, { status: 404 })
-    }
-
-    // Merge changes with current draft data
-    const updatedData = {
-      ...currentDraft.data,
-      ...changes
-    }
-
-    // Update the draft version
-    const { data: updatedVersion, error: updateError } = await supabase
-      .from('agency_versions')
+    // Update the agency directly
+    const { data: updatedAgency, error: updateError } = await supabase
+      .from('agencies')
       .update({
-        data: updatedData,
-        updated_at: new Date().toISOString()
+        name: changes.name,
+        description: changes.description,
+        website: changes.website,
+        logo_url: changes.logo_url,
+        coverage_areas: changes.coverage_areas,
+        specialisms: changes.specialisms
       })
-      .eq('id', versionId)
-      .select()
+      .eq('id', agencyId)
+      .select('*')
       .single()
 
     if (updateError) {
-      console.error('Error updating draft:', updateError)
-      return NextResponse.json({ error: 'Failed to update draft' }, { status: 500 })
+      console.error('Error updating agency draft:', updateError)
+      return NextResponse.json({ error: 'Failed to save changes' }, { status: 500 })
     }
 
+    console.log('Agency draft saved:', {
+      agencyId,
+      agencyName: updatedAgency.name,
+      savedBy: user.id,
+      savedAt: new Date().toISOString()
+    })
+
     return NextResponse.json({ 
-      version: updatedVersion,
-      message: 'Draft auto-saved'
+      agency: updatedAgency,
+      message: 'Changes saved successfully'
     })
   } catch (error) {
     console.error('Error in draft PUT:', error)
@@ -144,7 +136,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = createClient()
+    const supabase = createServerClient()
     const agencyId = params.id
 
     // Check if user has admin access

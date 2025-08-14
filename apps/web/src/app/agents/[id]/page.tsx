@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase'
+import { createServerClient } from '@/lib/supabase'
 import { getCurrentUser } from '@/lib/auth'
 import { notFound } from 'next/navigation'
 import { AgencyDetail } from '@/components/agency/AgencyDetail'
@@ -41,19 +41,47 @@ interface AgencyWithMembers {
 }
 
 async function getAgencyData(id: string): Promise<AgencyWithMembers | null> {
-  const supabase = createClient()
+  const supabase = createServerClient()
   const user = await getCurrentUser()
 
-  // Get agency data - only show approved agencies to public
-  const { data: agency, error: agencyError } = await supabase
-    .from('agencies')
-    .select('*')
-    .eq('id', id)
-    .eq('status', 'approved') // Only approved agencies are publicly visible
+  // Get the latest approved version of the agency
+  const { data: approvedVersion, error: versionError } = await supabase
+    .from('agency_versions')
+    .select(`
+      id,
+      data,
+      reviewed_at,
+      agencies!inner(
+        id,
+        status,
+        created_at
+      )
+    `)
+    .eq('agency_id', id)
+    .eq('status', 'approved')
+    .order('reviewed_at', { ascending: false })
+    .limit(1)
     .single()
 
-  if (agencyError || !agency) {
+  if (versionError || !approvedVersion) {
     return null
+  }
+
+  // Parse the JSON data if it's stored as a string
+  const data = typeof approvedVersion.data === 'string' ? JSON.parse(approvedVersion.data) : approvedVersion.data
+
+  // Transform version data to agency format
+  const agency: AgencyData = {
+    id: id,
+    name: data.name,
+    description: data.description,
+    website: data.website,
+    logo_url: data.logo_url,
+    coverage_areas: data.coverage_areas,
+    specialisms: data.specialisms,
+    status: 'approved',
+    created_at: approvedVersion.agencies.created_at,
+    approved_at: approvedVersion.reviewed_at
   }
 
   // Get agency members
