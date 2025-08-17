@@ -126,6 +126,12 @@ export function ImmersiveListingModal({
         }
 
         const data = await response.json();
+        console.log('Received listing data in modal:', data);
+        console.log('Company name from data:', data?.company?.name);
+        console.log('Contacts data:', data?.contacts);
+        console.log('Primary contact:', data?.contacts?.primary);
+        console.log('Files data:', data?.files);
+        console.log('Brochures:', data?.files?.brochures);
         setListing(data);
       } catch (err) {
         console.error('Error fetching listing details:', err);
