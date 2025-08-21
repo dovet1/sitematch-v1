@@ -2722,11 +2722,14 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           />
           
           {/* Submit for Review Button - Premium Clean Design */}
-          {console.log('Submit button visibility:', {
-            status: listingData?.status,
-            hasUnapprovedChanges,
-            shouldShow: listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges)
-          })}
+          {(() => {
+            console.log('Submit button visibility:', {
+              status: listingData?.status,
+              hasUnapprovedChanges,
+              shouldShow: listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges)
+            });
+            return null;
+          })()}
           {(listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges)) && (
             <div className="px-4 pb-3">
             <button
