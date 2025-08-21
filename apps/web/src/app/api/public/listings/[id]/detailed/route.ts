@@ -18,272 +18,342 @@ export async function GET(
     const supabase = createClient();
     const adminSupabase = createAdminClient();
     
-    // Get basic listing information first
+    // First check if listing exists and is approved
     const { data: listing, error: listingError } = await supabase
       .from('listings')
-      .select(`
-        id, 
-        company_name, 
-        company_domain,
-        title, 
-        description, 
-        site_size_min, 
-        site_size_max, 
-        contact_name, 
-        contact_title, 
-        contact_email, 
-        contact_phone, 
-        contact_area,
-        created_at,
-        listing_type,
-        dwelling_count_min,
-        dwelling_count_max,
-        site_acreage_min,
-        site_acreage_max,
-        property_page_link
-      `)
+      .select('id, status, company_name, created_at')
       .eq('id', id)
-      .in('status', ['approved', 'pending', 'draft'])
       .single();
 
-    if (listingError) {
-      if (listingError.code === 'PGRST116') {
-        return NextResponse.json(
-          { error: 'Listing not found' },
-          { status: 404 }
-        );
-      }
-      
-      console.error('Error fetching basic listing:', listingError);
+    if (listingError || !listing) {
       return NextResponse.json(
-        { error: 'Failed to fetch listing' },
-        { status: 500 }
+        { error: 'Listing not found' },
+        { status: 404 }
       );
     }
 
-    // Get related data separately
-    const [
-      { data: locations, error: locationsError },
-      { data: faqs, error: faqsError },
-      { data: files, error: filesError },
-      { data: contacts, error: contactsError },
-      { data: listingSectors, error: sectorsError },
-      { data: listingUseClasses, error: useClassesError }
-    ] = await Promise.all([
-      supabase.from('listing_locations').select('id, place_name, coordinates, formatted_address').eq('listing_id', id),
-      supabase.from('faqs').select('id, question, answer, display_order').eq('listing_id', id),
-      supabase.from('file_uploads').select('id, file_path, file_name, file_size, file_type, bucket_name, is_primary, display_order, caption').eq('listing_id', id),
-      supabase.from('listing_contacts').select('id, contact_name, contact_title, contact_email, contact_phone, contact_area, headshot_url, is_primary_contact').eq('listing_id', id),
-      supabase.from('listing_sectors').select('sector_id, sectors(id, name)').eq('listing_id', id),
-      supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id)
-    ]);
-
-    // Debug logging for files query
-    console.log(`Files query for listing ${id}:`);
-    console.log(`Files error:`, filesError);
-    console.log(`Files data:`, files);
-
-    // Debug logging (remove in production)
-    if (files && files.length > 0) {
-      console.log(`Files found for listing ${id}:`, files.map(f => `${f.file_type}:${f.file_name}`));
-      console.log(`All unique file types:`, Array.from(new Set(files.map(f => f.file_type))));
-      console.log(`Filtered site plans:`, files.filter(f => f.file_type === 'sitePlan' || f.file_type === 'site_plan'));
-      console.log(`Filtered fit outs:`, files.filter(f => f.file_type === 'fitOut' || f.file_type === 'fit_out'));
-      console.log(`All files raw:`, files);
-    } else {
-      console.log(`No files found for listing ${id}`);
+    // Only show approved listings publicly
+    if (listing.status !== 'approved') {
+      return NextResponse.json(
+        { error: 'Listing not available' },
+        { status: 404 }
+      );
     }
 
-    // Get sectors and use classes only from junction tables
-    const allSectors = (listingSectors?.map((ls: any) => ls.sectors).filter(Boolean) || []);
-    const allUseClasses = (listingUseClasses?.map((luc: any) => luc.use_classes).filter(Boolean) || []);
+    // Get the latest approved version
+    const { data: approvedVersion, error: versionError } = await supabase
+      .from('listing_versions')
+      .select('content')
+      .eq('listing_id', id)
+      .eq('status', 'approved')
+      .order('version_number', { ascending: false })
+      .limit(1)
+      .single();
 
-    // Get logo file or generate Clearbit URL
-    const logoFile = files?.find((file: any) => file.file_type === 'logo' && file.is_primary);
-    
-    // Generate Clearbit logo URL from company domain
-    const generateClearbitUrl = (companyDomain: string | null, companyName: string) => {
-      if (companyDomain) {
-        return `https://logo.clearbit.com/${companyDomain}`;
+    if (versionError || !approvedVersion) {
+      // Fallback to current database state if no approved version exists
+      // This handles legacy listings that don't have versions yet
+      console.warn(`No approved version found for listing ${id}, falling back to current state`);
+      console.log('Version error:', versionError);
+      console.log('Approved version data:', approvedVersion);
+      
+      // Get current data from database
+      const [
+        { data: currentListing },
+        { data: locations },
+        { data: faqs },
+        { data: files },
+        { data: contacts },
+        { data: listingSectors },
+        { data: listingUseClasses }
+      ] = await Promise.all([
+        supabase.from('listings').select(`
+          id, 
+          company_name, 
+          company_domain,
+          clearbit_logo,
+          title, 
+          description, 
+          site_size_min, 
+          site_size_max, 
+          contact_name, 
+          contact_title, 
+          contact_email, 
+          contact_phone, 
+          contact_area,
+          created_at,
+          listing_type,
+          dwelling_count_min,
+          dwelling_count_max,
+          site_acreage_min,
+          site_acreage_max,
+          property_page_link
+        `).eq('id', id).single(),
+        supabase.from('listing_locations').select('id, place_name, coordinates, formatted_address').eq('listing_id', id),
+        supabase.from('faqs').select('id, question, answer, display_order').eq('listing_id', id),
+        supabase.from('file_uploads').select('id, file_path, file_name, file_size, file_type, bucket_name, is_primary, display_order, caption').eq('listing_id', id),
+        supabase.from('listing_contacts').select('id, contact_name, contact_title, contact_email, contact_phone, contact_area, headshot_url, is_primary_contact').eq('listing_id', id),
+        supabase.from('listing_sectors').select('sector_id, sectors(id, name)').eq('listing_id', id),
+        supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id)
+      ]);
+
+      const allSectors = (listingSectors?.map((ls: any) => ls.sectors).filter(Boolean) || []);
+      const allUseClasses = (listingUseClasses?.map((luc: any) => luc.use_classes).filter(Boolean) || []);
+
+      // Handle logo logic for fallback
+      const fallbackLogoFile = files?.find((f: any) => f.file_type === 'logo');
+      let fallbackLogoUrl = null;
+      let fallbackShouldUseClearbitFallback = false;
+      
+      if (fallbackLogoFile) {
+        fallbackLogoUrl = fallbackLogoFile.file_path;
+      } else if (currentListing?.clearbit_logo && currentListing?.company_domain) {
+        fallbackLogoUrl = `https://logo.clearbit.com/${currentListing.company_domain}`;
+      } else {
+        fallbackShouldUseClearbitFallback = true;
       }
-      
-      // Fallback: Convert company name to domain-like format
-      const domain = companyName
-        .toLowerCase()
-        .replace(/\s+/g, '')
-        .replace(/[^a-z0-9]/g, '')
-        .replace(/ltd|limited|plc|inc|corp|corporation|llc/g, '');
-      
-      return `https://logo.clearbit.com/${domain}.com`;
-    };
 
-    // Format sector names to be more readable
-    const formatSectorName = (name: string) => {
-      return name
-        .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' & ');
-    };
+      // Transform fallback response to enhanced format
+      const fallbackResponse = {
+        company: {
+          name: currentListing?.company_name || 'Unnamed Company',
+          logo_url: fallbackLogoUrl,
+          use_clearbit_fallback: fallbackShouldUseClearbitFallback,
+          clearbit_logo: currentListing?.clearbit_logo,
+          company_domain: currentListing?.company_domain,
+          brochure_url: files?.find((f: any) => f.file_type === 'brochure')?.file_path || null,
+          property_page_link: currentListing?.property_page_link,
+          sectors: allSectors.map((s: any) => s.name),
+          use_classes: allUseClasses.map((uc: any) => `${uc.code} - ${uc.name}`),
+          sector: allSectors[0]?.name || '',
+          use_class: allUseClasses[0] ? `${allUseClasses[0].code} - ${allUseClasses[0].name}` : '',
+          site_size: currentListing?.site_size_min && currentListing?.site_size_max 
+            ? `${currentListing.site_size_min.toLocaleString()} - ${currentListing.site_size_max.toLocaleString()} sq ft`
+            : '',
+          dwelling_count: currentListing?.dwelling_count_min && currentListing?.dwelling_count_max
+            ? `${currentListing.dwelling_count_min} - ${currentListing.dwelling_count_max} units`
+            : '',
+          site_acreage: currentListing?.site_acreage_min && currentListing?.site_acreage_max
+            ? `${currentListing.site_acreage_min} - ${currentListing.site_acreage_max} acres`
+            : ''
+        },
+        contacts: {
+          primary: contacts?.find((c: any) => c.is_primary_contact) || contacts?.[0] 
+            ? {
+                ...contacts?.find((c: any) => c.is_primary_contact) || contacts?.[0],
+                name: contacts?.find((c: any) => c.is_primary_contact)?.contact_name || contacts?.[0]?.contact_name,
+                title: contacts?.find((c: any) => c.is_primary_contact)?.contact_title || contacts?.[0]?.contact_title,
+                email: contacts?.find((c: any) => c.is_primary_contact)?.contact_email || contacts?.[0]?.contact_email,
+                phone: contacts?.find((c: any) => c.is_primary_contact)?.contact_phone || contacts?.[0]?.contact_phone
+              }
+            : null,
+          additional: contacts?.filter((c: any) => !c.is_primary_contact).map((c: any) => ({
+            ...c,
+            name: c.contact_name,
+            title: c.contact_title,
+            email: c.contact_email,
+            phone: c.contact_phone
+          })) || []
+        },
+        locations: {
+          all: locations || [],
+          is_nationwide: !locations || locations.length === 0
+        },
+        faqs: faqs || [],
+        files: {
+          site_plans: files?.filter((f: any) => f.file_type === 'sitePlan' || f.file_type === 'site_plan').map((f: any) => ({
+            ...f,
+            url: f.file_path,
+            name: f.file_name
+          })) || [],
+          fit_outs: files?.filter((f: any) => f.file_type === 'fitOut' || f.file_type === 'fit_out').map((f: any) => ({
+            ...f,
+            url: f.file_path,
+            name: f.file_name
+          })) || [],
+          brochures: files?.filter((f: any) => f.file_type === 'brochure').map((f: any) => ({
+            ...f,
+            url: f.file_path,
+            name: f.file_name
+          })) || []
+        },
+        listing_type: currentListing?.listing_type,
+        description: currentListing?.description,
+        id: currentListing?.id,
+        created_at: currentListing?.created_at
+      };
 
-    // Transform comprehensive data for enhanced modal
-    const enhancedListing = {
-      // Core company information
-      company: {
-        name: listing.company_name,
-        logo_url: logoFile ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${logoFile.bucket_name}/${logoFile.file_path}` : generateClearbitUrl(listing.company_domain, listing.company_name),
-        sectors: allSectors.map((s: any) => formatSectorName(s.name)).filter(Boolean),
-        use_classes: allUseClasses.map((uc: any) => `${uc.name} (${uc.code})`).filter(Boolean),
-        // Keep legacy fields for backward compatibility
-        sector: allSectors.map((s: any) => formatSectorName(s.name)).join(', ') || 'Not specified',
-        use_class: allUseClasses.map((uc: any) => `${uc.name} (${uc.code})`).join(', ') || 'Not specified',
-        site_size: formatSizeRange(listing.site_size_min, listing.site_size_max),
-        dwelling_count: formatDwellingRange(listing.dwelling_count_min, listing.dwelling_count_max),
-        site_acreage: formatAcreageRange(listing.site_acreage_min, listing.site_acreage_max),
-        property_page_link: listing.property_page_link
-      },
-      
-      // Contact information from listing_contacts table only
-      contacts: {
-        primary: (() => {
-          // Find the primary contact from listing_contacts table
-          const primaryContact = contacts?.find((contact: any) => contact.is_primary_contact);
-          if (primaryContact) {
-            return {
-              name: primaryContact.contact_name,
-              title: primaryContact.contact_title || '',
-              email: primaryContact.contact_email,
-              phone: primaryContact.contact_phone || '',
-              contact_area: primaryContact.contact_area || '',
-              headshot_url: primaryContact.headshot_url || (() => {
-                const headshotFile = files?.find((file: any) => 
-                  file.file_type === 'headshot' && 
-                  file.file_name?.toLowerCase().includes(primaryContact.contact_name?.toLowerCase().split(' ')[0])
-                );
-                return headshotFile ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${headshotFile.bucket_name}/${headshotFile.file_path}` : null;
-              })()
-            };
-          }
-          // Return null if no primary contact exists
-          return null;
-        })(),
-        additional: (contacts || [])
-          .filter((contact: any) => !contact.is_primary_contact)
-          .map((contact: any) => ({
-            name: contact.contact_name,
-            title: contact.contact_title || '',
-            email: contact.contact_email,
-            phone: contact.contact_phone || '',
-            contact_area: contact.contact_area || '',
-            headshot_url: contact.headshot_url || (() => {
-              const headshotFile = files?.find((file: any) => 
-                file.file_type === 'headshot' && 
-                file.file_name?.toLowerCase().includes(contact.contact_name?.toLowerCase().split(' ')[0])
-              );
-              return headshotFile ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${headshotFile.bucket_name}/${headshotFile.file_path}` : null;
-            })()
-          }))
-      },
-      
-      // Location requirements
-      locations: {
-        all: (locations || [])
-          .map((loc: any) => ({
-            id: loc.id,
-            place_name: loc.place_name,
-            coordinates: loc.coordinates
-          })),
-        is_nationwide: (locations || []).length === 0 || 
-          (locations || []).some((loc: any) => loc.place_name?.toLowerCase().includes('nationwide'))
-      },
-      
-      // FAQs with ordering
-      faqs: (faqs || [])
-        .sort((a: any, b: any) => a.display_order - b.display_order)
-        .map((faq: any) => ({
-          id: faq.id,
-          question: faq.question,
-          answer: faq.answer
-        })),
-      
-      // File attachments organized by type
-      files: {
-        brochures: (files || [])
-          .filter((file: any) => file.file_type === 'brochure')
-          .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
-          .map((file: any) => ({
-            id: file.id,
-            name: file.file_name,
-            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
-            size: file.file_size,
-            type: 'brochure',
-            caption: file.caption || null
-          })),
-        fit_outs: (files || [])
-          .filter((file: any) => file.file_type === 'fitOut' || file.file_type === 'fit_out')
-          .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
-          .map((file: any) => ({
-            id: file.id,
-            name: file.file_name,
-            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/fit-outs/${file.file_path}`,
-            size: file.file_size,
-            type: 'fit_out',
-            caption: file.caption || null
-          })),
-        site_plans: (files || [])
-          .filter((file: any) => file.file_type === 'sitePlan' || file.file_type === 'site_plan')
-          .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
-          .map((file: any) => ({
-            id: file.id,
-            name: file.file_name,
-            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/site-plans/${file.file_path}`,
-            size: file.file_size,
-            type: 'site_plan',
-            caption: file.caption || null
-          }))
-      },
-      
-      // Metadata
-      id: listing.id,
-      title: listing.title,
-      description: listing.description || '',
-      created_at: listing.created_at,
-      listing_type: listing.listing_type || 'commercial'
-    };
+      return NextResponse.json(fallbackResponse);
+    }
 
-    return NextResponse.json(enhancedListing);
+    // Use the approved version content
+    // Check if content needs to be parsed from JSON string
+    const versionContent = typeof approvedVersion.content === 'string' 
+      ? JSON.parse(approvedVersion.content) 
+      : approvedVersion.content;
     
+    console.log('Approved version content type:', typeof approvedVersion.content);
+    console.log('Approved version content structure:', {
+      hasListing: !!versionContent.listing,
+      listingKeys: versionContent.listing ? Object.keys(versionContent.listing).slice(0, 5) : [],
+      locationsCount: versionContent.locations?.length || 0,
+      faqsCount: versionContent.faqs?.length || 0,
+      filesCount: versionContent.files?.length || 0,
+      contactsCount: versionContent.contacts?.length || 0,
+      sectorsCount: versionContent.sectors?.length || 0,
+      useClassesCount: versionContent.use_classes?.length || 0
+    });
+    
+    // Extract data from the version content
+    const listingData = versionContent.listing || {};
+    const locations = versionContent.locations || [];
+    const faqs = versionContent.faqs || [];
+    const files = versionContent.files || [];
+    const contacts = versionContent.contacts || [];
+    const sectors = (versionContent.sectors || []).map((s: any) => s.sector).filter(Boolean);
+    const useClasses = (versionContent.use_classes || []).map((uc: any) => uc.use_class).filter(Boolean);
+    
+    console.log('Extracted listing data sample:', {
+      id: listingData.id,
+      company_name: listingData.company_name,
+      has_description: !!listingData.description
+    });
+    console.log('Sectors extracted:', sectors);
+    console.log('Use classes extracted:', useClasses);
+
+    // Format the response to match the expected structure
+    const formattedListing = {
+      id: listingData.id,
+      company_name: listingData.company_name,
+      company_domain: listingData.company_domain,
+      clearbit_logo: listingData.clearbit_logo,
+      title: listingData.title,
+      description: listingData.description,
+      site_size_min: listingData.site_size_min,
+      site_size_max: listingData.site_size_max,
+      contact_name: listingData.contact_name,
+      contact_title: listingData.contact_title,
+      contact_email: listingData.contact_email,
+      contact_phone: listingData.contact_phone,
+      contact_area: listingData.contact_area,
+      created_at: listingData.created_at,
+      listing_type: listingData.listing_type,
+      dwelling_count_min: listingData.dwelling_count_min,
+      dwelling_count_max: listingData.dwelling_count_max,
+      site_acreage_min: listingData.site_acreage_min,
+      site_acreage_max: listingData.site_acreage_max,
+      property_page_link: listingData.property_page_link
+    };
+
+    // Debug logging for files
+    if (files && files.length > 0) {
+      console.log(`Files from approved version for listing ${id}:`, files.map((f: any) => `${f.file_type}:${f.file_name}`));
+    }
+
+    // Handle logo logic
+    const logoFile = files.find((f: any) => f.file_type === 'logo');
+    let logoUrl = null;
+    let shouldUseClearbitFallback = false;
+    
+    if (logoFile) {
+      // Use uploaded logo file
+      logoUrl = logoFile.file_path;
+    } else if (formattedListing.clearbit_logo && formattedListing.company_domain) {
+      // Use clearbit logo if enabled and domain available
+      logoUrl = `https://logo.clearbit.com/${formattedListing.company_domain}`;
+    } else {
+      // Use initials fallback
+      shouldUseClearbitFallback = true;
+    }
+
+    // Transform to match EnhancedListingModalContent structure
+    const enhancedResponse: any = {
+      company: {
+        name: formattedListing.company_name || 'Unnamed Company',
+        logo_url: logoUrl,
+        use_clearbit_fallback: shouldUseClearbitFallback,
+        clearbit_logo: formattedListing.clearbit_logo,
+        company_domain: formattedListing.company_domain,
+        brochure_url: files.find((f: any) => f.file_type === 'brochure')?.file_path || null,
+        property_page_link: formattedListing.property_page_link,
+        sectors: sectors.map((s: any) => s.name),
+        use_classes: useClasses.map((uc: any) => `${uc.code} - ${uc.name}`),
+        // Legacy fields
+        sector: sectors[0]?.name || '',
+        use_class: useClasses[0] ? `${useClasses[0].code} - ${useClasses[0].name}` : '',
+        site_size: formattedListing.site_size_min && formattedListing.site_size_max 
+          ? `${formattedListing.site_size_min.toLocaleString()} - ${formattedListing.site_size_max.toLocaleString()} sq ft`
+          : '',
+        dwelling_count: formattedListing.dwelling_count_min && formattedListing.dwelling_count_max
+          ? `${formattedListing.dwelling_count_min} - ${formattedListing.dwelling_count_max} units`
+          : '',
+        site_acreage: formattedListing.site_acreage_min && formattedListing.site_acreage_max
+          ? `${formattedListing.site_acreage_min} - ${formattedListing.site_acreage_max} acres`
+          : ''
+      },
+      contacts: {
+        primary: contacts.find((c: any) => c.is_primary_contact) || contacts[0] 
+          ? {
+              ...contacts.find((c: any) => c.is_primary_contact) || contacts[0],
+              name: contacts.find((c: any) => c.is_primary_contact)?.contact_name || contacts[0]?.contact_name,
+              title: contacts.find((c: any) => c.is_primary_contact)?.contact_title || contacts[0]?.contact_title,
+              email: contacts.find((c: any) => c.is_primary_contact)?.contact_email || contacts[0]?.contact_email,
+              phone: contacts.find((c: any) => c.is_primary_contact)?.contact_phone || contacts[0]?.contact_phone
+            }
+          : null,
+        additional: contacts.filter((c: any) => !c.is_primary_contact).map((c: any) => ({
+          ...c,
+          name: c.contact_name,
+          title: c.contact_title,
+          email: c.contact_email,
+          phone: c.contact_phone
+        }))
+      },
+      locations: {
+        all: locations,
+        is_nationwide: locations.length === 0
+      },
+      faqs: faqs,
+      files: {
+        site_plans: files.filter((f: any) => f.file_type === 'sitePlan' || f.file_type === 'site_plan').map((f: any) => ({
+          ...f,
+          url: f.file_path, // Frontend expects 'url' field
+          name: f.file_name  // Frontend expects 'name' field
+        })),
+        fit_outs: files.filter((f: any) => f.file_type === 'fitOut' || f.file_type === 'fit_out').map((f: any) => ({
+          ...f,
+          url: f.file_path,
+          name: f.file_name
+        })),
+        brochures: files.filter((f: any) => f.file_type === 'brochure').map((f: any) => ({
+          ...f,
+          url: f.file_path,
+          name: f.file_name
+        }))
+      },
+      listing_type: formattedListing.listing_type,
+      description: formattedListing.description,
+      id: formattedListing.id,
+      created_at: formattedListing.created_at
+    };
+    
+    console.log('Final API response:', {
+      companyName: enhancedResponse.company.name,
+      locationsCount: enhancedResponse.locations.all.length,
+      sectorsCount: enhancedResponse.company.sectors.length,
+      filesCount: files.length
+    });
+    
+    return NextResponse.json(enhancedResponse);
+
   } catch (error) {
-    console.error('Unexpected error in detailed listing API:', error);
+    console.error('Error in public listing detail endpoint:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
-}
-
-// Helper function to format size range
-function formatSizeRange(min: number | null, max: number | null): string {
-  if (!min && !max) return 'Size flexible';
-  if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} sq ft`;
-  if (min) return `From ${min.toLocaleString()} sq ft`;
-  if (max) return `Up to ${max.toLocaleString()} sq ft`;
-  return '';
-}
-
-// Helper function to format dwelling count range
-function formatDwellingRange(min: number | null, max: number | null): string {
-  if (!min && !max) return 'Dwelling count flexible';
-  if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} dwellings`;
-  if (min) return `From ${min.toLocaleString()} dwellings`;
-  if (max) return `Up to ${max.toLocaleString()} dwellings`;
-  return '';
-}
-
-// Helper function to format acreage range
-function formatAcreageRange(min: number | null, max: number | null): string {
-  if (!min && !max) return 'Site acreage flexible';
-  if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} acres`;
-  if (min) return `From ${min.toLocaleString()} acres`;
-  if (max) return `Up to ${max.toLocaleString()} acres`;
-  return '';
 }

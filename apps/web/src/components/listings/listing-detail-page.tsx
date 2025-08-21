@@ -50,6 +50,7 @@ import {
 import { toast } from 'sonner';
 
 import { createClientClient } from '@/lib/supabase';
+import { hasListingChanges } from '@/lib/listing-comparison';
 import { getSectors, getUseClasses } from '@/lib/listings';
 import type { WizardFormData } from '@/types/wizard';
 import type { Sector, UseClass } from '@/types/listings';
@@ -221,6 +222,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   const [isRejectionBannerDismissed, setIsRejectionBannerDismissed] = useState(false);
   // Track submission state
   const [submitting, setSubmitting] = useState(false);
+  // Track if there are changes compared to approved version
+  const [hasUnapprovedChanges, setHasUnapprovedChanges] = useState(false);
 
 
 
@@ -261,8 +264,29 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     fetchReferenceData();
   }, []);
 
+  // Check for changes compared to approved version
+  const checkForChanges = async () => {
+    if (!listingId) return;
+    
+    try {
+      const result = await hasListingChanges(listingId);
+      console.log('Changes check result:', result);
+      console.log('Setting hasUnapprovedChanges to:', result.hasChanges);
+      setHasUnapprovedChanges(result.hasChanges);
+      
+      // Force re-render if changes detected
+      if (result.hasChanges && listingData?.status === 'approved') {
+        console.log('Changes detected on approved listing - submit button should appear');
+        console.log('Current hasUnapprovedChanges state will be:', result.hasChanges);
+      }
+    } catch (error) {
+      console.error('Error checking for changes:', error);
+    }
+  };
+
   // Fetch listing data function
   const fetchListingData = async () => {
+    let listingStatus: string | null = null;
     try {
       const supabase = createClientClient();
       
@@ -451,6 +475,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       };
 
       setListingData(transformedData);
+      
+      // Store status for later check
+      listingStatus = listing.status;
 
       // Fetch logo URL based on the new logic
       try {
@@ -473,12 +500,24 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     } finally {
       setLoading(false);
     }
+    
+    // Check for changes after loading data (outside try-finally)
+    if (listingStatus === 'approved') {
+      await checkForChanges();
+    }
   };
 
   // Fetch listing data on component mount
   useEffect(() => {
     fetchListingData();
   }, [listingId, userId]);
+
+  // Debug effect to track hasUnapprovedChanges state
+  useEffect(() => {
+    console.log('hasUnapprovedChanges state updated to:', hasUnapprovedChanges);
+    console.log('Current listing status:', listingData?.status);
+    console.log('Submit button should show:', listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges));
+  }, [hasUnapprovedChanges, listingData?.status]);
 
   // Carousel navigation functions
   const nextSitePlan = () => {
@@ -776,6 +815,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
       // Refresh listing data
       await fetchListingData();
+      await checkForChanges();
       toast.success('Overview updated successfully');
     } catch (error) {
       console.error('Error updating overview:', error);
@@ -812,6 +852,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
       // Refresh listing data
       await fetchListingData();
+      await checkForChanges();
       toast.success('Sectors updated successfully');
     } catch (error) {
       console.error('Error updating sectors:', error);
@@ -848,6 +889,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
       // Refresh listing data
       await fetchListingData();
+      await checkForChanges();
       toast.success('Use classes updated successfully');
     } catch (error) {
       console.error('Error updating use classes:', error);
@@ -882,6 +924,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
       // Refresh listing data
       await fetchListingData();
+      await checkForChanges();
       toast.success('Property size updated successfully');
     } catch (error) {
       console.error('Error updating property size:', error);
@@ -922,6 +965,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
       // Refresh listing data
       await fetchListingData();
+      await checkForChanges();
       toast.success('Locations updated successfully');
     } catch (error) {
       console.error('Error updating locations:', error);
@@ -945,6 +989,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
       // Refresh listing data
       await fetchListingData();
+      await checkForChanges();
       toast.success('Location removed successfully');
     } catch (error) {
       console.error('Error deleting location:', error);
@@ -1039,6 +1084,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
       // Refresh listing data
       await fetchListingData();
+      await checkForChanges();
       toast.success('Contact saved successfully');
     } catch (error) {
       console.error('Error saving contact:', error);
@@ -1136,6 +1182,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
       // Refresh listing data
       await fetchListingData();
+      await checkForChanges();
       toast.success('Contact removed successfully');
     } catch (error) {
       console.error('Error deleting contact:', error);
@@ -1173,6 +1220,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
       // Refresh listing data
       await fetchListingData();
+      await checkForChanges();
       toast.success('FAQs updated successfully');
     } catch (error) {
       console.error('Error updating FAQs:', error);
@@ -2674,7 +2722,15 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           />
           
           {/* Submit for Review Button - Premium Clean Design */}
-          {listingData?.status === 'draft' && (
+          {(() => {
+            console.log('Submit button visibility:', {
+              status: listingData?.status,
+              hasUnapprovedChanges,
+              shouldShow: listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges)
+            });
+            return null;
+          })()}
+          {(listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges)) && (
             <div className="px-4 pb-3">
             <button
               onClick={handleSubmitForReview}
@@ -3886,6 +3942,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                                   
                                                   // Reload the data
                                                   await fetchListingData();
+                                                  await checkForChanges();
                                                   
                                                   // Close edit mode
                                                   setEditingSections((prev: any) => ({ ...prev, [`contact-${contact.id}`]: false }));
@@ -4127,6 +4184,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                                 
                                                 // Reload the data
                                                 await fetchListingData();
+                                                await checkForChanges();
                                                 
                                                 // Clear the form
                                                 setExpandedSections(prev => {
@@ -5706,7 +5764,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           <Eye className="w-4 h-4 mr-2" />
                           Preview
                         </Button>
-                        {listingData?.status === 'draft' && (
+                        {(listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges)) && (
                           <Button
                             size="sm"
                             onClick={handleSubmitForReview}

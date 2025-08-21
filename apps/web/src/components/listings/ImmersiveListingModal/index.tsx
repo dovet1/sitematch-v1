@@ -126,6 +126,12 @@ export function ImmersiveListingModal({
         }
 
         const data = await response.json();
+        console.log('Received listing data in modal:', data);
+        console.log('Company name from data:', data?.company?.name);
+        console.log('Contacts data:', data?.contacts);
+        console.log('Primary contact:', data?.contacts?.primary);
+        console.log('Files data:', data?.files);
+        console.log('Brochures:', data?.files?.brochures);
         setListing(data);
       } catch (err) {
         console.error('Error fetching listing details:', err);
@@ -577,9 +583,19 @@ export function ImmersiveListingModal({
                         src={listing.company?.logo_url}
                         alt={`${listing.company?.name || 'Company'} logo`}
                         className="w-8 h-8 object-contain flex-shrink-0"
+                        onError={(e) => {
+                          // If clearbit logo fails and we should use fallback, show initials
+                          if (listing?.company?.use_clearbit_fallback) {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const fallback = target.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }
+                        }}
                       />
-                    ) : (
-                      <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    ) : null}
+                    {(!listing?.company.logo_url || listing?.company?.use_clearbit_fallback) && (
+                      <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center flex-shrink-0" style={{ display: listing?.company.logo_url ? 'none' : 'flex' }}>
                         <span className="text-white text-xs font-semibold">
                           {listing?.company.name?.charAt(0).toUpperCase() || 'C'}
                         </span>
@@ -699,9 +715,19 @@ export function ImmersiveListingModal({
                             src={listing.company?.logo_url}
                             alt={`${listing.company?.name || 'Company'} logo`}
                             className="w-12 h-12 object-contain"
+                            onError={(e) => {
+                              // If clearbit logo fails and we should use fallback, show initials
+                              if (listing?.company?.use_clearbit_fallback) {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const fallback = target.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                              }
+                            }}
                           />
-                        ) : (
-                          <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center">
+                        ) : null}
+                        {(!listing.company?.logo_url || listing?.company?.use_clearbit_fallback) && (
+                          <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center" style={{ display: listing?.company.logo_url ? 'none' : 'flex' }}>
                             <span className="text-white font-semibold">
                               {listing.company?.name?.charAt(0).toUpperCase() || 'C'}
                             </span>

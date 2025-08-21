@@ -35,9 +35,12 @@ function SearchPageContent() {
     const dwellingMax = searchParams.get('maxDwelling');
     const companyName = searchParams.get('companyName') || '';
     
+    // If viewAll is true, show all listings without location filter
+    // If nationwide is true, actually filter for nationwide listings
+    // These are different concepts!
     return {
-      location,
-      coordinates: lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null,
+      location: viewAll ? '' : location, // Clear location if viewing all
+      coordinates: viewAll ? null : (lat && lng ? { lat: parseFloat(lat), lng: parseFloat(lng) } : null),
       companyName,
       sector: sectors,
       useClass: useClasses,
@@ -48,7 +51,7 @@ function SearchPageContent() {
       acreageMax: acreageMax ? parseFloat(acreageMax) : null,
       dwellingMin: dwellingMin ? parseInt(dwellingMin) : null,
       dwellingMax: dwellingMax ? parseInt(dwellingMax) : null,
-      isNationwide: nationwide || viewAll, // Handle both nationwide and viewAll parameters
+      isNationwide: nationwide && !viewAll, // Only set nationwide if explicitly requested, not for viewAll
     };
   });
 
@@ -187,7 +190,7 @@ function SearchPageContent() {
                   <span className="flex-shrink-0">›</span>
                   <span className="text-foreground font-medium truncate min-w-0">
                     {searchFilters.isNationwide 
-                      ? "Nationwide" 
+                      ? "Nationwide Only" 
                       : `Search: "${searchFilters.location}"`}
                   </span>
                 </>
