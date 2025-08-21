@@ -99,11 +99,27 @@ export async function GET(
       const allSectors = (listingSectors?.map((ls: any) => ls.sectors).filter(Boolean) || []);
       const allUseClasses = (listingUseClasses?.map((luc: any) => luc.use_classes).filter(Boolean) || []);
 
+      // Handle logo logic for fallback
+      const fallbackLogoFile = files?.find((f: any) => f.file_type === 'logo');
+      let fallbackLogoUrl = null;
+      let fallbackShouldUseClearbitFallback = false;
+      
+      if (fallbackLogoFile) {
+        fallbackLogoUrl = fallbackLogoFile.file_path;
+      } else if (currentListing?.clearbit_logo && currentListing?.company_domain) {
+        fallbackLogoUrl = `https://logo.clearbit.com/${currentListing.company_domain}`;
+      } else {
+        fallbackShouldUseClearbitFallback = true;
+      }
+
       // Transform fallback response to enhanced format
       const fallbackResponse = {
         company: {
           name: currentListing?.company_name || 'Unnamed Company',
-          logo_url: null,
+          logo_url: fallbackLogoUrl,
+          use_clearbit_fallback: fallbackShouldUseClearbitFallback,
+          clearbit_logo: currentListing?.clearbit_logo,
+          company_domain: currentListing?.company_domain,
           brochure_url: files?.find((f: any) => f.file_type === 'brochure')?.file_path || null,
           property_page_link: currentListing?.property_page_link,
           sectors: allSectors.map((s: any) => s.name),
@@ -232,11 +248,30 @@ export async function GET(
       console.log(`Files from approved version for listing ${id}:`, files.map((f: any) => `${f.file_type}:${f.file_name}`));
     }
 
+    // Handle logo logic
+    const logoFile = files.find((f: any) => f.file_type === 'logo');
+    let logoUrl = null;
+    let shouldUseClearbitFallback = false;
+    
+    if (logoFile) {
+      // Use uploaded logo file
+      logoUrl = logoFile.file_path;
+    } else if (formattedListing.clearbit_logo && formattedListing.company_domain) {
+      // Use clearbit logo if enabled and domain available
+      logoUrl = `https://logo.clearbit.com/${formattedListing.company_domain}`;
+    } else {
+      // Use initials fallback
+      shouldUseClearbitFallback = true;
+    }
+
     // Transform to match EnhancedListingModalContent structure
     const enhancedResponse: any = {
       company: {
         name: formattedListing.company_name || 'Unnamed Company',
-        logo_url: null, // Would need to fetch from files or separate field
+        logo_url: logoUrl,
+        use_clearbit_fallback: shouldUseClearbitFallback,
+        clearbit_logo: formattedListing.clearbit_logo,
+        company_domain: formattedListing.company_domain,
         brochure_url: files.find((f: any) => f.file_type === 'brochure')?.file_path || null,
         property_page_link: formattedListing.property_page_link,
         sectors: sectors.map((s: any) => s.name),
