@@ -129,6 +129,9 @@ export interface EnhancedListingModalContent {
   company: {
     name: string;
     logo_url?: string;
+    use_clearbit_fallback?: boolean;
+    clearbit_logo?: boolean;
+    company_domain?: string;
     brochure_url?: string;
     property_page_link?: string;
     sectors: string[];
