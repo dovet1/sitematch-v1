@@ -144,23 +144,22 @@ export function createDebouncedLocationSearch(delay: number = 300) {
  * @returns Formatted location string
  */
 export function formatLocationDisplay(location: LocationResult): string {
-  // Extract useful context information
-  const contexts = location.context || [];
-  const region = contexts.find(ctx => ctx.id.startsWith('region'))?.text;
-  const country = contexts.find(ctx => ctx.id.startsWith('country'))?.text;
-
-  // Build display string
-  let display = location.text;
+  // Use the full place_name but remove country parts
+  let displayName = location.place_name;
   
-  if (region && region !== location.text) {
-    display += `, ${region}`;
-  }
+  // Remove country suffixes (", United Kingdom", ", England, United Kingdom", ", UK", etc.)
+  displayName = displayName
+    .replace(/, United Kingdom$/, '')
+    .replace(/, UK$/, '')
+    .replace(/, England, United Kingdom$/, ', England')
+    .replace(/, Scotland, United Kingdom$/, ', Scotland')
+    .replace(/, Wales, United Kingdom$/, ', Wales')
+    .replace(/, Northern Ireland, United Kingdom$/, ', Northern Ireland');
   
-  if (country && country !== region) {
-    display += `, ${country}`;
-  }
-
-  return display;
+  // For Ireland, keep it as context can be helpful
+  displayName = displayName.replace(/, Ireland$/, ', Ireland');
+  
+  return displayName;
 }
 
 /**
