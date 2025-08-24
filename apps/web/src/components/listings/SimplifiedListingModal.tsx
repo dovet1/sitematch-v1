@@ -790,14 +790,14 @@ export function SimplifiedListingModal({
                 )}
 
                 {/* Requirements Brochure Section - Graceful degradation */}
-                {listing.brochure_files && listing.brochure_files.length > 0 && (
+                {listing.files?.brochures && listing.files.brochures.length > 0 && (
                   <div className="premium-section">
                     <h4 className="heading-4 text-foreground flex items-center gap-2 premium-border-accent mb-4">
                       <FileText className="w-4 h-4 text-primary-500" />
                       Requirements Brochure
                     </h4>
                     <div className="space-y-3">
-                      {listing.brochure_files.map((file) => (
+                      {listing.files.brochures.map((file) => (
                         <div key={file.id} className="premium-file-download">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
@@ -808,7 +808,7 @@ export function SimplifiedListingModal({
                                 {file.name}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {(file.file_size / 1024 / 1024).toFixed(1)}MB • PDF
+                                {(file.size / 1024 / 1024).toFixed(1)}MB • PDF
                               </p>
                             </div>
                             <Button

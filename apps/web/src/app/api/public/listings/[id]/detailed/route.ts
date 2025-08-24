@@ -163,18 +163,21 @@ export async function GET(
         files: {
           site_plans: files?.filter((f: any) => f.file_type === 'sitePlan' || f.file_type === 'site_plan').map((f: any) => ({
             ...f,
-            url: f.file_path,
-            name: f.file_name
+            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
+            name: f.file_name,
+            size: f.file_size
           })) || [],
           fit_outs: files?.filter((f: any) => f.file_type === 'fitOut' || f.file_type === 'fit_out').map((f: any) => ({
             ...f,
-            url: f.file_path,
-            name: f.file_name
+            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
+            name: f.file_name,
+            size: f.file_size
           })) || [],
           brochures: files?.filter((f: any) => f.file_type === 'brochure').map((f: any) => ({
             ...f,
-            url: f.file_path,
-            name: f.file_name
+            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
+            name: f.file_name,
+            size: f.file_size
           })) || []
         },
         listing_type: currentListing?.listing_type,
@@ -317,18 +320,21 @@ export async function GET(
       files: {
         site_plans: files.filter((f: any) => f.file_type === 'sitePlan' || f.file_type === 'site_plan').map((f: any) => ({
           ...f,
-          url: f.file_path, // Frontend expects 'url' field
-          name: f.file_name  // Frontend expects 'name' field
+          url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
+          name: f.file_name,
+          size: f.file_size
         })),
         fit_outs: files.filter((f: any) => f.file_type === 'fitOut' || f.file_type === 'fit_out').map((f: any) => ({
           ...f,
-          url: f.file_path,
-          name: f.file_name
+          url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
+          name: f.file_name,
+          size: f.file_size
         })),
         brochures: files.filter((f: any) => f.file_type === 'brochure').map((f: any) => ({
           ...f,
-          url: f.file_path,
-          name: f.file_name
+          url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
+          name: f.file_name,
+          size: f.file_size
         }))
       },
       listing_type: formattedListing.listing_type,
