@@ -21,9 +21,10 @@ export async function GET(
     // First check if listing exists and is approved
     const { data: listing, error: listingError } = await supabase
       .from('listings')
-      .select('id, status, company_name, created_at')
+      .select('id, status, company_name, created_at, linked_agency_id, live_version_id, current_version_id')
       .eq('id', id)
       .single();
+
 
     if (listingError || !listing) {
       return NextResponse.json(
@@ -87,7 +88,15 @@ export async function GET(
           dwelling_count_max,
           site_acreage_min,
           site_acreage_max,
-          property_page_link
+          property_page_link,
+          linked_agency_id,
+          linked_agency:agencies(
+            id,
+            name,
+            logo_url,
+            geographic_patch,
+            classification
+          )
         `).eq('id', id).single(),
         supabase.from('listing_locations').select('id, place_name, coordinates, formatted_address').eq('listing_id', id),
         supabase.from('faqs').select('id, question, answer, display_order').eq('listing_id', id),
@@ -96,6 +105,11 @@ export async function GET(
         supabase.from('listing_sectors').select('sector_id, sectors(id, name)').eq('listing_id', id),
         supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id)
       ]);
+
+      console.log('LINKED_AGENCY_DEBUG:', {
+        linked_agency_id: currentListing?.linked_agency_id,
+        linked_agency: currentListing?.linked_agency
+      });
 
       const allSectors = (listingSectors?.map((ls: any) => ls.sectors).filter(Boolean) || []);
       const allUseClasses = (listingUseClasses?.map((luc: any) => luc.use_classes).filter(Boolean) || []);
@@ -183,7 +197,9 @@ export async function GET(
         listing_type: currentListing?.listing_type,
         description: currentListing?.description,
         id: currentListing?.id,
-        created_at: currentListing?.created_at
+        created_at: currentListing?.created_at,
+        linked_agency_id: currentListing?.linked_agency_id,
+        linked_agency: currentListing?.linked_agency
       };
 
       return NextResponse.json(fallbackResponse);
@@ -195,17 +211,6 @@ export async function GET(
       ? JSON.parse(approvedVersion.content) 
       : approvedVersion.content;
     
-    console.log('Approved version content type:', typeof approvedVersion.content);
-    console.log('Approved version content structure:', {
-      hasListing: !!versionContent.listing,
-      listingKeys: versionContent.listing ? Object.keys(versionContent.listing).slice(0, 5) : [],
-      locationsCount: versionContent.locations?.length || 0,
-      faqsCount: versionContent.faqs?.length || 0,
-      filesCount: versionContent.files?.length || 0,
-      contactsCount: versionContent.contacts?.length || 0,
-      sectorsCount: versionContent.sectors?.length || 0,
-      useClassesCount: versionContent.use_classes?.length || 0
-    });
     
     // Extract data from the version content
     const listingData = versionContent.listing || {};
@@ -216,13 +221,18 @@ export async function GET(
     const sectors = (versionContent.sectors || []).map((s: any) => s.sector).filter(Boolean);
     const useClasses = (versionContent.use_classes || []).map((uc: any) => uc.use_class).filter(Boolean);
     
-    console.log('Extracted listing data sample:', {
-      id: listingData.id,
-      company_name: listingData.company_name,
-      has_description: !!listingData.description
-    });
-    console.log('Sectors extracted:', sectors);
-    console.log('Use classes extracted:', useClasses);
+    // Fix: If version doesn't have linked_agency but has linked_agency_id, fetch it
+    let linkedAgencyData = listingData.linked_agency;
+    if (!linkedAgencyData && listingData.linked_agency_id) {
+      const { data: agency } = await supabase
+        .from('agencies')
+        .select('id, name, logo_url, geographic_patch, classification')
+        .eq('id', listingData.linked_agency_id)
+        .single();
+      
+      linkedAgencyData = agency;
+    }
+    
 
     // Format the response to match the expected structure
     const formattedListing = {
@@ -245,13 +255,11 @@ export async function GET(
       dwelling_count_max: listingData.dwelling_count_max,
       site_acreage_min: listingData.site_acreage_min,
       site_acreage_max: listingData.site_acreage_max,
-      property_page_link: listingData.property_page_link
+      property_page_link: listingData.property_page_link,
+      linked_agency_id: listingData.linked_agency_id,
+      linked_agency: linkedAgencyData
     };
 
-    // Debug logging for files
-    if (files && files.length > 0) {
-      console.log(`Files from approved version for listing ${id}:`, files.map((f: any) => `${f.file_type}:${f.file_name}`));
-    }
 
     // Handle logo logic
     const logoFile = files.find((f: any) => f.file_type === 'logo');
@@ -340,15 +348,11 @@ export async function GET(
       listing_type: formattedListing.listing_type,
       description: formattedListing.description,
       id: formattedListing.id,
-      created_at: formattedListing.created_at
+      created_at: formattedListing.created_at,
+      linked_agency_id: formattedListing.linked_agency_id,
+      linked_agency: formattedListing.linked_agency
     };
     
-    console.log('Final API response:', {
-      companyName: enhancedResponse.company.name,
-      locationsCount: enhancedResponse.locations.all.length,
-      sectorsCount: enhancedResponse.company.sectors.length,
-      filesCount: files.length
-    });
     
     return NextResponse.json(enhancedResponse);
 
