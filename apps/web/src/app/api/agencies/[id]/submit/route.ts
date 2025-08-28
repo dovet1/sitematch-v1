@@ -53,11 +53,7 @@ export async function POST(
         geographic_patch: agency.geographic_patch,
         website: agency.website,
         logo_url: agency.logo_url,
-        office_street_address: agency.office_street_address,
-        office_city: agency.office_city,
-        office_postcode: agency.office_postcode,
-        office_country: agency.office_country,
-        office_coordinates: agency.office_coordinates,
+        office_address: agency.office_address,
         created_at: agency.created_at,
         updated_at: agency.updated_at
       },

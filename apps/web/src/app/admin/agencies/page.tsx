@@ -326,13 +326,13 @@ export default function AdminAgenciesPage() {
                         {/* Logo */}
                         <div className="flex-shrink-0">
                           {agency.logo_url ? (
-                            <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted">
+                            <div className="w-16 h-16 rounded-lg bg-white border border-border p-2 flex items-center justify-center">
                               <Image
                                 src={agency.logo_url}
                                 alt={`${agency.name} logo`}
                                 width={64}
                                 height={64}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-contain"
                               />
                             </div>
                           ) : (

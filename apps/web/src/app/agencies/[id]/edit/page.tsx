@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { TeamManagement } from '@/components/agencies/team-management'
+import { LocationSearch } from '@/components/search/LocationSearch'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -48,10 +49,7 @@ interface Agency {
   geographic_patch?: string
   website?: string
   logo_url?: string
-  office_street_address?: string
-  office_city?: string
-  office_postcode?: string
-  office_country?: string
+  office_address?: string
   created_at: string
   updated_at: string
   agency_team_members?: TeamMember[]
@@ -102,6 +100,43 @@ export default function AgencyEditPage() {
     }
   }
 
+  const saveAllChanges = async () => {
+    if (!agency || !unsavedChanges) return
+    
+    setIsSubmitting(true)
+    try {
+      const updateData = {
+        name: agency.name,
+        description: agency.description || '',
+        classification: agency.classification || '',
+        geographic_patch: agency.geographic_patch || '',
+        contact_email: agency.contact_email,
+        contact_phone: agency.contact_phone,
+        website: agency.website || '',
+        office_address: agency.office_address || ''
+      }
+
+      const response = await fetch(`/api/agencies/${agency.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save changes')
+      }
+
+      setUnsavedChanges(false)
+      toast.success('All changes saved successfully')
+    } catch (err) {
+      toast.error('Failed to save changes')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const updateField = async (field: string, value: string) => {
     if (!agency) return
     
@@ -124,6 +159,20 @@ export default function AgencyEditPage() {
     } catch (err) {
       toast.error('Failed to save changes')
     }
+  }
+
+  const handleLocationSelect = (location: { name: string; coordinates: { lat: number; lng: number } }) => {
+    if (!agency) return
+    
+    setAgency(prev => prev ? { ...prev, office_address: location.name } : null)
+    setUnsavedChanges(true)
+  }
+
+  const handleLocationClear = () => {
+    if (!agency) return
+    
+    setAgency(prev => prev ? { ...prev, office_address: '' } : null)
+    setUnsavedChanges(true)
   }
 
   const handleLogoUpload = async (file: File | null) => {
@@ -209,16 +258,6 @@ export default function AgencyEditPage() {
     }
   }
 
-  const formatAddress = (agency: Agency) => {
-    const parts = [
-      agency.office_street_address,
-      agency.office_city,
-      agency.office_postcode,
-      agency.office_country
-    ].filter(Boolean)
-    
-    return parts.length > 0 ? parts.join(', ') : null
-  }
 
   const getClassificationBadgeColor = (classification?: string) => {
     switch (classification) {
@@ -276,12 +315,29 @@ export default function AgencyEditPage() {
                   Edit Agency Profile
                 </h1>
                 <p className="text-muted-foreground">
-                  Click any field to edit inline - changes save automatically
+                  Make your changes below, then click "Save Changes" to save all updates
                 </p>
               </div>
               
               <div className="flex items-center gap-3">
                 {getStatusBadge(getAgencyStatus(agency))}
+                <Button
+                  onClick={saveAllChanges}
+                  disabled={!unsavedChanges || isSubmitting}
+                  variant="outline"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
                 <Button
                   onClick={submitForReview}
                   disabled={isSubmitting || getAgencyStatus(agency) === 'pending'}
@@ -362,7 +418,6 @@ export default function AgencyEditPage() {
                     setAgency(prev => prev ? { ...prev, name: e.target.value } : null)
                     setUnsavedChanges(true)
                   }}
-                  onBlur={(e) => updateField('name', e.target.value)}
                   className="text-3xl font-bold border-none p-0 bg-transparent focus:bg-muted/20 focus:px-2 focus:py-1 transition-all"
                   placeholder="Agency Name"
                 />
@@ -372,7 +427,10 @@ export default function AgencyEditPage() {
                 {/* Classification - Inline Select */}
                 <Select
                   value={agency.classification || ''}
-                  onValueChange={(value) => updateField('classification', value)}
+                  onValueChange={(value) => {
+                    setAgency(prev => prev ? { ...prev, classification: value } : null)
+                    setUnsavedChanges(true)
+                  }}
                 >
                   <SelectTrigger className={`w-auto border-none p-1 h-auto ${getClassificationBadgeColor(agency.classification)}`}>
                     <SelectValue placeholder="+ Add Classification" />
@@ -384,71 +442,39 @@ export default function AgencyEditPage() {
                   </SelectContent>
                 </Select>
                 
-                {/* Geographic Patch - Inline Edit */}
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <Input
-                    value={agency.geographic_patch || ''}
-                    onChange={(e) => {
-                      setAgency(prev => prev ? { ...prev, geographic_patch: e.target.value } : null)
-                      setUnsavedChanges(true)
-                    }}
-                    onBlur={(e) => updateField('geographic_patch', e.target.value)}
-                    placeholder="Geographic area"
-                    className="border-none p-0 bg-transparent focus:bg-muted/20 focus:px-2 focus:py-1 transition-all h-auto"
-                  />
-                </div>
+                {agency.geographic_patch && (
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span>{agency.geographic_patch}</span>
+                  </div>
+                )}
               </div>
               
-              <div className="flex flex-wrap gap-4">
-                {/* Contact Email - Inline Edit */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4" />
-                  <Input
-                    type="email"
-                    value={agency.contact_email}
-                    onChange={(e) => {
-                      setAgency(prev => prev ? { ...prev, contact_email: e.target.value } : null)
-                      setUnsavedChanges(true)
-                    }}
-                    onBlur={(e) => updateField('contact_email', e.target.value)}
-                    placeholder="contact@agency.com"
-                    className="border-none p-0 bg-transparent focus:bg-muted/20 focus:px-2 focus:py-1 transition-all h-auto w-auto min-w-[200px]"
-                  />
+                  <span>{agency.contact_email}</span>
                 </div>
                 
-                {/* Contact Phone - Inline Edit */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+                <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  <Input
-                    type="tel"
-                    value={agency.contact_phone}
-                    onChange={(e) => {
-                      setAgency(prev => prev ? { ...prev, contact_phone: e.target.value } : null)
-                      setUnsavedChanges(true)
-                    }}
-                    onBlur={(e) => updateField('contact_phone', e.target.value)}
-                    placeholder="Phone number"
-                    className="border-none p-0 bg-transparent focus:bg-muted/20 focus:px-2 focus:py-1 transition-all h-auto w-auto min-w-[150px]"
-                  />
+                  <span>{agency.contact_phone}</span>
                 </div>
                 
-                {/* Website - Inline Edit */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
-                  <Globe className="h-4 w-4" />
-                  <Input
-                    type="url"
-                    value={agency.website || ''}
-                    onChange={(e) => {
-                      setAgency(prev => prev ? { ...prev, website: e.target.value } : null)
-                      setUnsavedChanges(true)
-                    }}
-                    onBlur={(e) => updateField('website', e.target.value)}
-                    placeholder="Website URL"
-                    className="border-none p-0 bg-transparent focus:bg-muted/20 focus:px-2 focus:py-1 transition-all h-auto w-auto min-w-[150px]"
-                  />
-                  {agency.website && <ExternalLink className="h-3 w-3" />}
-                </div>
+                {agency.website && (
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    <a 
+                      href={agency.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="hover:text-primary transition-colors"
+                    >
+                      Website
+                    </a>
+                    <ExternalLink className="h-3 w-3" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -467,7 +493,6 @@ export default function AgencyEditPage() {
                   setAgency(prev => prev ? { ...prev, description: e.target.value } : null)
                   setUnsavedChanges(true)
                 }}
-                onBlur={(e) => updateField('description', e.target.value)}
                 placeholder="Describe your agency, services, and expertise..."
                 className="min-h-[120px] border-none resize-none focus:border-border transition-all"
                 maxLength={500}
@@ -478,66 +503,119 @@ export default function AgencyEditPage() {
             </CardContent>
           </Card>
 
-          {/* Office Location */}
+          {/* Geographic Coverage */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
-                Office Location
+                Geographic Coverage
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <Input
-                value={agency.office_street_address || ''}
-                onChange={(e) => {
-                  setAgency(prev => prev ? { ...prev, office_street_address: e.target.value } : null)
-                  setUnsavedChanges(true)
-                }}
-                onBlur={(e) => updateField('office_street_address', e.target.value)}
-                placeholder="Street address"
-                className="border-none focus:border-border transition-all"
-              />
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <Input
-                  value={agency.office_city || ''}
-                  onChange={(e) => {
-                    setAgency(prev => prev ? { ...prev, office_city: e.target.value } : null)
-                    setUnsavedChanges(true)
+            <CardContent>
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-2 block">Service Areas</Label>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <Input
+                    value={agency.geographic_patch || ''}
+                    onChange={(e) => {
+                      setAgency(prev => prev ? { ...prev, geographic_patch: e.target.value } : null)
+                      setUnsavedChanges(true)
+                    }}
+                    placeholder="Geographic areas you serve (e.g., Central London, Greater Manchester)"
+                    className="flex-1 border-none bg-transparent focus:bg-muted/20 focus:border-border transition-all"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Specify the geographic areas or regions where you provide services
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Office Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Office Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Contact Email */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-2 block">Contact Email</Label>
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <Input
+                    type="email"
+                    value={agency.contact_email}
+                    onChange={(e) => {
+                      setAgency(prev => prev ? { ...prev, contact_email: e.target.value } : null)
+                      setUnsavedChanges(true)
+                    }}
+                    placeholder="contact@agency.com"
+                    className="flex-1 border-none bg-transparent focus:bg-muted/20 focus:border-border transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Contact Phone */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-2 block">Contact Phone</Label>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <Input
+                    type="tel"
+                    value={agency.contact_phone}
+                    onChange={(e) => {
+                      setAgency(prev => prev ? { ...prev, contact_phone: e.target.value } : null)
+                      setUnsavedChanges(true)
+                    }}
+                    placeholder="Phone number"
+                    className="flex-1 border-none bg-transparent focus:bg-muted/20 focus:border-border transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Website */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-2 block">Website</Label>
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <Input
+                    type="url"
+                    value={agency.website || ''}
+                    onChange={(e) => {
+                      setAgency(prev => prev ? { ...prev, website: e.target.value } : null)
+                      setUnsavedChanges(true)
+                    }}
+                    placeholder="Website URL"
+                    className="flex-1 border-none bg-transparent focus:bg-muted/20 focus:border-border transition-all"
+                  />
+                  {agency.website && <ExternalLink className="h-3 w-3 text-muted-foreground" />}
+                </div>
+              </div>
+
+              {/* Office Location */}
+              <div>
+                <Label className="text-sm font-medium text-foreground mb-2 block">Office Location</Label>
+                <LocationSearch
+                  value={agency.office_address || ''}
+                  onChange={(value) => {
+                    if (value === '') {
+                      // If value is empty, trigger clear function
+                      handleLocationClear()
+                    } else {
+                      setAgency(prev => prev ? { ...prev, office_address: value } : null)
+                      setUnsavedChanges(true)
+                    }
                   }}
-                  onBlur={(e) => updateField('office_city', e.target.value)}
-                  placeholder="City"
-                  className="border-none focus:border-border transition-all"
-                />
-                
-                <Input
-                  value={agency.office_postcode || ''}
-                  onChange={(e) => {
-                    setAgency(prev => prev ? { ...prev, office_postcode: e.target.value } : null)
-                    setUnsavedChanges(true)
-                  }}
-                  onBlur={(e) => updateField('office_postcode', e.target.value)}
-                  placeholder="Postcode"
-                  className="border-none focus:border-border transition-all"
-                />
-                
-                <Input
-                  value={agency.office_country || ''}
-                  onChange={(e) => {
-                    setAgency(prev => prev ? { ...prev, office_country: e.target.value } : null)
-                    setUnsavedChanges(true)
-                  }}
-                  onBlur={(e) => updateField('office_country', e.target.value)}
-                  placeholder="Country"
+                  onLocationSelect={handleLocationSelect}
+                  placeholder="Enter office address (e.g., 123 Main St, London)"
                   className="border-none focus:border-border transition-all"
                 />
               </div>
-              
-              {formatAddress(agency) && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  Preview: {formatAddress(agency)}
-                </p>
-              )}
             </CardContent>
           </Card>
 

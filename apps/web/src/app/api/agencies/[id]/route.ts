@@ -135,8 +135,7 @@ export async function PUT(
     const allowedFields = [
       'name', 'contact_email', 'contact_phone', 'description',
       'classification', 'geographic_patch', 'website', 'logo_url',
-      'office_street_address', 'office_city', 'office_postcode',
-      'office_country', 'office_coordinates'
+      'office_address'
     ];
 
     const updateData: any = {};
