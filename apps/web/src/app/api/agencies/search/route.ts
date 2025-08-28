@@ -14,8 +14,15 @@ export async function GET(request: NextRequest) {
     
     let dbQuery = supabase
       .from('agencies')
-      .select('id, name, classification, geographic_patch, logo_url, status')
-      .or('status.eq.approved,created_by.eq.' + (user?.id || 'null'))
+      .select(`
+        id, 
+        name, 
+        classification, 
+        geographic_patch, 
+        logo_url,
+        agency_versions!inner(status)
+      `)
+      .eq('agency_versions.status', 'approved')
       .order('name');
 
     // Apply search filter
