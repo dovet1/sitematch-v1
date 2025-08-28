@@ -9,7 +9,9 @@ export async function GET(
   try {
     const { id } = params;
     const supabase = createServerClient();
+    const user = await getCurrentUser();
 
+    // First fetch the agency with all versions (not just approved)
     const { data: rawAgency, error } = await supabase
       .from('agencies')
       .select(`
@@ -25,7 +27,7 @@ export async function GET(
           headshot_url,
           display_order
         ),
-        agency_versions!inner(
+        agency_versions(
           id,
           version_number,
           data,
@@ -39,7 +41,21 @@ export async function GET(
       return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
     }
 
-    // Check if agency has any approved versions
+    // Check if user is the owner - if so, return agency data as-is for editing
+    const isOwner = user && rawAgency.created_by === user.id;
+    
+    if (isOwner) {
+      // For owners, return the agency with all version info for status display
+      return NextResponse.json({ 
+        data: {
+          ...rawAgency,
+          // Sort team members by display_order
+          agency_team_members: rawAgency.agency_team_members?.sort((a: any, b: any) => a.display_order - b.display_order)
+        }
+      });
+    }
+
+    // For public view, check if agency has any approved versions
     const hasApprovedVersion = rawAgency.agency_versions?.some((version: any) => version.status === 'approved');
     if (!hasApprovedVersion) {
       return NextResponse.json({ error: 'Agency not found' }, { status: 404 });

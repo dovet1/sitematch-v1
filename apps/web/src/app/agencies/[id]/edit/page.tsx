@@ -52,10 +52,14 @@ interface Agency {
   office_city?: string
   office_postcode?: string
   office_country?: string
-  status: 'draft' | 'pending' | 'approved' | 'rejected'
   created_at: string
   updated_at: string
   agency_team_members?: TeamMember[]
+  agency_versions?: Array<{
+    id: string
+    status: 'pending' | 'approved' | 'rejected'
+    version_number: number
+  }>
 }
 
 interface TeamMember {
@@ -173,6 +177,23 @@ export default function AgencyEditPage() {
     }
   }
 
+  const getAgencyStatus = (agency: Agency): 'draft' | 'pending' | 'approved' | 'rejected' => {
+    const versions = agency.agency_versions || []
+    
+    // No versions at all = draft
+    if (versions.length === 0) {
+      return 'draft'
+    }
+    
+    // Find the version with the highest version number
+    const latestVersion = versions.reduce((latest, current) => {
+      return current.version_number > latest.version_number ? current : latest
+    })
+    
+    // Return the status of the latest version
+    return latestVersion.status
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
@@ -260,10 +281,10 @@ export default function AgencyEditPage() {
               </div>
               
               <div className="flex items-center gap-3">
-                {getStatusBadge(agency.status)}
+                {getStatusBadge(getAgencyStatus(agency))}
                 <Button
                   onClick={submitForReview}
-                  disabled={isSubmitting || agency.status === 'pending'}
+                  disabled={isSubmitting || getAgencyStatus(agency) === 'pending'}
                 >
                   {isSubmitting ? (
                     <>
@@ -280,7 +301,7 @@ export default function AgencyEditPage() {
               </div>
             </div>
             
-            {agency.status === 'draft' && (
+            {getAgencyStatus(agency) === 'draft' && (
               <Alert className="mt-4">
                 <Edit className="h-4 w-4" />
                 <AlertDescription>
@@ -297,23 +318,29 @@ export default function AgencyEditPage() {
         <div className="mb-8">
           <div className="flex items-start gap-6 mb-6">
             {/* Logo Upload */}
-            <div className="group relative">
+            <div className="group relative flex-shrink-0">
               {agency.logo_url ? (
-                <div className="w-24 h-24 rounded-xl overflow-hidden bg-muted flex-shrink-0 group-hover:opacity-75 transition-opacity">
+                <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-white border border-border">
                   <Image
                     src={agency.logo_url}
                     alt={`${agency.name} logo`}
                     width={96}
                     height={96}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain p-2"
                   />
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <Upload className="w-6 h-6 text-white" />
+                    <div className="text-center">
+                      <Upload className="w-6 h-6 text-white mx-auto mb-1" />
+                      <span className="text-xs text-white">Change Logo</span>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center flex-shrink-0 group-hover:from-primary/20 group-hover:to-primary/10 transition-colors border-2 border-dashed border-primary/30">
-                  <Upload className="w-8 h-8 text-primary/70" />
+                <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center border-2 border-dashed border-primary/30 group-hover:from-primary/20 group-hover:to-primary/10 transition-colors">
+                  <div className="text-center">
+                    <Upload className="w-8 h-8 text-primary/70 mx-auto mb-1" />
+                    <span className="text-xs text-primary/70">Add Logo</span>
+                  </div>
                 </div>
               )}
               
@@ -533,7 +560,7 @@ export default function AgencyEditPage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   onClick={submitForReview}
-                  disabled={isSubmitting || agency.status === 'pending'}
+                  disabled={isSubmitting || getAgencyStatus(agency) === 'pending'}
                   className="flex-1"
                 >
                   {isSubmitting ? (

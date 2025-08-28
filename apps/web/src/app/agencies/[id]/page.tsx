@@ -146,13 +146,13 @@ export default function AgencyProfilePage() {
               {/* Agency Logo - Enhanced */}
               <div className="flex-shrink-0">
                 {agency.logo_url ? (
-                  <div className="w-32 h-32 lg:w-40 lg:h-40 rounded-2xl overflow-hidden bg-white shadow-lg ring-1 ring-black/5">
+                  <div className="w-32 h-32 lg:w-40 lg:h-40 rounded-2xl bg-white shadow-lg ring-1 ring-black/5 p-4 flex items-center justify-center">
                     <Image
                       src={agency.logo_url}
                       alt={`${agency.name} logo`}
                       width={160}
                       height={160}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                   </div>
                 ) : (
