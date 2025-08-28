@@ -74,6 +74,12 @@ export function UnifiedHeader({
 
   const navigationItems = [
     {
+      href: '/agencies',
+      label: 'Agency Directory',
+      primary: false,
+      showWhen: 'always' as const
+    },
+    {
       href: '/sitesketcher/landing',
       label: 'SiteSketcher',
       primary: false,
