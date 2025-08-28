@@ -232,7 +232,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     { id: 'requirements', label: 'requirements' },
     { id: 'locations', label: 'locations' },
     { id: 'contact', label: 'contact' },
-    { id: 'faqs', label: 'faqs' }
+    { id: 'faqs', label: 'faqs' },
+    { id: 'agent', label: 'agent' }
   ];
 
   // Get company name for tab display
@@ -4808,6 +4809,43 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       })()}
                     </div>
                   )}
+
+                  {activeTab === 'agent' && (
+                    <div className="space-y-4 px-4 pb-4">
+                      {/* Premium Header */}
+                      <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50/50 rounded-2xl border border-blue-100 overflow-hidden shadow-sm">
+                        <div className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+                                <Users className="w-5 h-5 text-white" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-gray-900 text-base">Appointed Agent</h3>
+                                <p className="text-xs text-gray-600">Connect with the agency handling this listing</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Agent Content */}
+                      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                        <div className="p-4">
+                          <div className="text-center py-8">
+                            <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                            <h4 className="font-medium text-gray-900 mb-2">No Agent Added</h4>
+                            <p className="text-sm text-gray-600 mb-4">
+                              Let everyone know the agent working on this company's site requirements. Search the agencies already on SiteMatcher or add a new agency in less than two minutes.
+                            </p>
+                            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors">
+                              Add Agent
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -5802,7 +5840,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                     <div className="relative flex items-center justify-center">
                       <span>
                         {tab.id === 'overview' ? `From ${companyName}` :
-                         tab.id === 'faqs' ? 'FAQs' : 
+                         tab.id === 'faqs' ? 'FAQs' :
+                         tab.id === 'agent' ? 'Agent' : 
                          tab.label.charAt(0).toUpperCase() + tab.label.slice(1)}
                       </span>
                       <CompletionIndicator 
@@ -7043,6 +7082,35 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       </Button>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Agent Tab Content */}
+              {activeTab === 'agent' && (
+                <div className="p-6 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">Appointed Agent</h3>
+                      <p className="text-sm text-gray-600 mt-1">Connect with the agency handling this listing</p>
+                    </div>
+                  </div>
+                  
+                  {/* Agent Content */}
+                  <div className="bg-gray-50 rounded-lg p-8">
+                    <div className="text-center">
+                      <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h4 className="font-semibold text-gray-900 mb-2">No Agent Added</h4>
+                      <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
+                        Let everyone know the agent working on this company's site requirements. Search the agencies already on SiteMatcher or add a new agency in less than two minutes.
+                      </p>
+                      <Button 
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        <Users className="w-4 h-4 mr-2" />
+                        Add Agent
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
 
