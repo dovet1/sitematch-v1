@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { AgencyModal } from '@/components/agencies/AgencyModal';
 import { EnhancedListingModalContent, ListingModalProps } from '@/types/search';
 import { VisualHeroSection } from './components/VisualHeroSection';
 import { useMobileBreakpoint } from './hooks/useMobileBreakpoint';
@@ -36,6 +37,7 @@ export function ImmersiveListingModal({
   const [activeTab, setActiveTab] = useState('overview');
   const { isMobile } = useMobileBreakpoint();
   const router = useRouter();
+  const [selectedAgencyId, setSelectedAgencyId] = useState<string | null>(null);
   
   // Stable callbacks to prevent gesture hook recreation
   const handleClose = useCallback(() => {
@@ -588,7 +590,7 @@ export function ImmersiveListingModal({
                     {/* Enhanced CTA Button */}
                     <div className="flex justify-center sm:justify-start">
                       <button 
-                        onClick={() => router.push(`/agencies/${listing.linked_agency.id}`)}
+                        onClick={() => setSelectedAgencyId(listing.linked_agency.id)}
                         className="group relative overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-violet-700 text-white px-8 py-4 rounded-xl font-semibold hover:from-violet-700 hover:via-purple-700 hover:to-violet-800 transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-violet-500/25 transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-3 min-w-[200px]"
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
@@ -874,6 +876,13 @@ export function ImmersiveListingModal({
           </motion.div>
         </>
       )}
+      
+      {/* Agency Modal */}
+      <AgencyModal 
+        agencyId={selectedAgencyId}
+        isOpen={!!selectedAgencyId}
+        onClose={() => setSelectedAgencyId(null)}
+      />
     </AnimatePresence>
   );
 }

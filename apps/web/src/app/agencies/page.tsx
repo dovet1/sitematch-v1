@@ -22,12 +22,11 @@ import {
   Mail,
   Search,
   Filter,
-  Loader2,
-  ExternalLink
+  Loader2
 } from 'lucide-react'
-import Link from 'next/link'
 import Image from 'next/image'
 import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal'
+import { AgencyModal } from '@/components/agencies/AgencyModal'
 import { useAuth } from '@/contexts/auth-context'
 import { AuthChoiceModal } from '@/components/auth/auth-choice-modal'
 
@@ -63,6 +62,7 @@ export default function AgenciesPage() {
   const [classification, setClassification] = useState('all')
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
+  const [selectedAgencyId, setSelectedAgencyId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAgencies()
@@ -343,11 +343,12 @@ export default function AgenciesPage() {
                         )}
                       </div>
                       
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={`/agencies/${agency.id}`}>
-                          View Profile
-                          <ExternalLink className="h-3 w-3 ml-1" />
-                        </Link>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setSelectedAgencyId(agency.id)}
+                      >
+                        View Profile
                       </Button>
                     </div>
                   </CardContent>
@@ -377,6 +378,13 @@ export default function AgenciesPage() {
           )}
         </div>
       </div>
+      
+      {/* Agency Modal */}
+      <AgencyModal 
+        agencyId={selectedAgencyId}
+        isOpen={!!selectedAgencyId}
+        onClose={() => setSelectedAgencyId(null)}
+      />
     </div>
   )
 }
