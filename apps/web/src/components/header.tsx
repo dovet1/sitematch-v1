@@ -32,6 +32,13 @@ export function Header() {
 
   const navigationItems = [
     {
+      href: '/agencies',
+      label: 'Agency Directory',
+      primary: false,
+      showWhen: 'always',
+      requiresAuth: false
+    },
+    {
       href: '/sitesketcher/landing',
       label: 'SiteSketcher',
       primary: false,

@@ -4,10 +4,11 @@ import { useRouter } from 'next/navigation';
 import { createClientClient } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, FileText, Clock, CheckCircle, AlertTriangle, Eye } from 'lucide-react';
+import { Plus, FileText, Clock, CheckCircle, AlertTriangle, Eye, Building2, Link as LinkIcon } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '../components/StatusBadge';
 import ConsultantProfileCard from '@/components/consultant/consultant-profile-card';
+import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal';
 import { useState, useEffect } from 'react';
 import type { User } from '@supabase/auth-js';
 
@@ -26,9 +27,18 @@ interface Listing {
   };
 }
 
+interface Agency {
+  id: string;
+  name: string;
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at: string;
+}
+
 export default function OccupierDashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [agency, setAgency] = useState<Agency | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -57,6 +67,17 @@ export default function OccupierDashboard() {
       }
 
       setUser(user);
+
+      // Get user's agency
+      const { data: userAgency } = await supabase
+        .from('agencies')
+        .select('id, name, status, created_at, updated_at')
+        .eq('created_by', user.id)
+        .single();
+
+      if (userAgency) {
+        setAgency(userAgency);
+      }
 
       // Get user's listings
       const { data: listings, error } = await supabase
@@ -273,6 +294,62 @@ export default function OccupierDashboard() {
                   </CardContent>
                 </Card>
                 
+                {/* Agency Section */}
+                {!agency ? (
+                  <Card className="violet-bloom-card">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
+                            <Building2 className="w-6 h-6 text-primary-400" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-foreground mb-1">Create Your Agency Profile</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Showcase your agency to connect with property listings
+                            </p>
+                          </div>
+                        </div>
+                        <AgencyCreationModal>
+                          <Button size="sm" variant="outline">
+                            <Building2 className="w-4 h-4 mr-2" />
+                            Create Agency
+                          </Button>
+                        </AgencyCreationModal>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl flex items-center justify-center">
+                            <Building2 className="w-6 h-6 text-emerald-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-foreground mb-1">{agency.name}</h3>
+                            <div className="flex items-center gap-2">
+                              <StatusBadge status={agency.status} className="shadow-sm" />
+                              <span className="text-sm text-muted-foreground">
+                                Created {formatDate(agency.created_at)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/agencies/${agency.id}/edit`}>
+                              <Building2 className="w-4 h-4 mr-2" />
+                              Edit Agency
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Consultant Profile Card */}
                 <ConsultantProfileCard />
               </>
@@ -369,7 +446,7 @@ export default function OccupierDashboard() {
                                         </span>
                                       </p>
                                       <p className="text-sm text-blue-800/90 leading-relaxed">
-                                        Your listing has been submitted and is awaiting admin review. You'll receive feedback shortly.
+                                        Your listing has been submitted and is awaiting admin review. You&apos;ll receive feedback shortly.
                                       </p>
                                       <div className="mt-2 flex items-center gap-1 text-xs text-blue-700/80">
                                         <span>⏱️</span>
@@ -445,6 +522,89 @@ export default function OccupierDashboard() {
                   );
                 })}
                 </div>
+                
+                {/* Agency Section */}
+                {!agency ? (
+                  <Card className="violet-bloom-card">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
+                            <Building2 className="w-6 h-6 text-primary-400" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-foreground mb-1">Create Your Agency Profile</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Showcase your agency to connect with property listings
+                            </p>
+                          </div>
+                        </div>
+                        <AgencyCreationModal>
+                          <Button size="sm" variant="outline">
+                            <Building2 className="w-4 h-4 mr-2" />
+                            Create Agency
+                          </Button>
+                        </AgencyCreationModal>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl flex items-center justify-center">
+                            <Building2 className="w-6 h-6 text-emerald-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-foreground mb-1">{agency.name}</h3>
+                            <div className="flex items-center gap-2">
+                              <StatusBadge status={agency.status} className="shadow-sm" />
+                              <span className="text-sm text-muted-foreground">
+                                Created {formatDate(agency.created_at)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/agencies/${agency.id}/edit`}>
+                              <Building2 className="w-4 h-4 mr-2" />
+                              Edit Agency
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Agency Linking */}
+                {listings.length > 0 && (
+                  <Card className="violet-bloom-card">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
+                            <LinkIcon className="w-6 h-6 text-primary-400" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-foreground mb-1">Link Agencies to Listings</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Connect your listings to agencies for visibility and attribution
+                            </p>
+                          </div>
+                        </div>
+                        <Button asChild size="sm" variant="outline">
+                          <Link href="/occupier/listings-agencies">
+                            <LinkIcon className="w-4 h-4 mr-2" />
+                            Manage Links
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
                 
                 {/* Consultant Profile Card */}
                 <ConsultantProfileCard />
