@@ -5001,7 +5001,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 
                                 {/* Actions */}
                                 <div className="flex gap-2 mt-3">
-                                  <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                                  <button 
+                                    onClick={() => listingData?.linked_agency?.id && router.push(`/agencies/${listingData.linked_agency.id}`)}
+                                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                  >
                                     View Profile
                                   </button>
                                   <span className="text-gray-300">|</span>
@@ -7277,82 +7280,120 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 <div className="p-6 space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-lg font-semibold">Appointed Agent</h3>
-                      <p className="text-sm text-gray-600 mt-1">Connect with the agency handling this listing</p>
+                      <h3 className="text-xl font-bold text-gray-900">Appointed Agent</h3>
+                      <p className="text-gray-600 mt-1">Connect with the agency handling this listing</p>
                     </div>
                   </div>
                   
-                  {/* Agent Content */}
-                  <div className="bg-gray-50 rounded-lg p-6">
+                  {/* Premium Agent Card */}
+                  <div className="relative overflow-hidden">
                     {listingData?.linked_agency ? (
-                      <div className="flex items-center gap-6">
-                        {/* Agency Logo */}
-                        <div className="flex-shrink-0">
-                          {listingData.linked_agency.logo_url ? (
-                            <div className="w-20 h-20 rounded-xl bg-white border border-gray-200 p-3 flex items-center justify-center shadow-sm">
-                              <img
-                                src={listingData.linked_agency.logo_url}
-                                alt={`${listingData.linked_agency.name} logo`}
-                                className="w-full h-full object-contain"
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center shadow-sm">
-                              <Building2 className="w-10 h-10 text-blue-600" />
-                            </div>
-                          )}
-                        </div>
+                      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200/80 shadow-lg shadow-gray-100/50 p-8 transition-all duration-300 hover:shadow-xl hover:shadow-gray-200/60 hover:border-gray-300/60">
                         
-                        {/* Agency Info */}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-gray-900 text-xl mb-2">
-                            {listingData.linked_agency.name}
-                          </h4>
-                          <div className="space-y-1 mb-4">
-                            {listingData.linked_agency.geographic_patch && (
-                              <p className="text-gray-600 flex items-center">
-                                <MapPin className="w-4 h-4 mr-2" />
-                                {listingData.linked_agency.geographic_patch}
-                              </p>
-                            )}
-                            {listingData.linked_agency.classification && (
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                {listingData.linked_agency.classification} Specialist
-                              </span>
+                        <div className="flex items-start gap-8">
+                          {/* Enhanced Agency Logo */}
+                          <div className="flex-shrink-0">
+                            {listingData.linked_agency.logo_url ? (
+                              <div className="relative">
+                                <div className="w-24 h-24 rounded-2xl bg-white border-2 border-gray-100 p-4 flex items-center justify-center shadow-sm ring-1 ring-gray-900/5">
+                                  <img
+                                    src={listingData.linked_agency.logo_url}
+                                    alt={`${listingData.linked_agency.name} logo`}
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                                {/* Subtle glow effect */}
+                                <div className="absolute inset-0 w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 -z-10 blur-sm"></div>
+                              </div>
+                            ) : (
+                              <div className="relative">
+                                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200/50 flex items-center justify-center shadow-sm ring-1 ring-blue-900/5">
+                                  <Building2 className="w-12 h-12 text-blue-600" />
+                                </div>
+                                <div className="absolute inset-0 w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 -z-10 blur-sm"></div>
+                              </div>
                             )}
                           </div>
                           
-                          {/* Actions */}
-                          <div className="flex gap-3">
-                            <Button size="sm" variant="outline">
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              View Profile
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={removeAgent}
-                              className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50"
-                            >
-                              <X className="w-4 h-4 mr-2" />
-                              Remove Agent
-                            </Button>
+                          {/* Enhanced Agency Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="mb-4">
+                              <h4 className="text-2xl font-bold text-gray-900 mb-1 tracking-tight">
+                                {listingData.linked_agency.name}
+                              </h4>
+                            </div>
+                            
+                            <div className="space-y-3 mb-6">
+                              {listingData.linked_agency.geographic_patch && (
+                                <div className="flex items-center text-gray-700">
+                                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center mr-3">
+                                    <MapPin className="w-4 h-4 text-blue-600" />
+                                  </div>
+                                  <span className="font-medium">{listingData.linked_agency.geographic_patch}</span>
+                                </div>
+                              )}
+                              {listingData.linked_agency.classification && (
+                                <div className="flex items-center">
+                                  <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center mr-3">
+                                    <Building2 className="w-4 h-4 text-purple-600" />
+                                  </div>
+                                  <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-100 to-blue-100 text-purple-800 border border-purple-200/50">
+                                    {listingData.linked_agency.classification} Specialist
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Premium Action Buttons */}
+                            <div className="flex gap-3">
+                              <Button 
+                                size="default"
+                                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 px-6"
+                                onClick={() => listingData?.linked_agency?.id && router.push(`/agencies/${listingData.linked_agency.id}`)}
+                              >
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                View Full Profile
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="default"
+                                onClick={removeAgent}
+                                className="border-2 border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-300 px-6"
+                              >
+                                <X className="w-4 h-4 mr-2" />
+                                Remove Agent
+                              </Button>
+                            </div>
                           </div>
                         </div>
+                        
+                        {/* Subtle decorative elements */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50/50 to-purple-50/50 rounded-full -translate-y-16 translate-x-16 blur-3xl"></div>
+                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-emerald-50/50 to-blue-50/50 rounded-full translate-y-12 -translate-x-12 blur-3xl"></div>
                       </div>
                     ) : (
-                      <div className="text-center py-8">
-                        <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                        <h4 className="font-semibold text-gray-900 mb-2">No Agent Added</h4>
-                        <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
-                          Let everyone know the agent working on this company's site requirements. Search the agencies already on SiteMatcher or add a new agency in less than two minutes.
+                      /* Enhanced Empty State */
+                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center transition-all duration-300 hover:border-gray-300 hover:bg-gradient-to-br hover:from-gray-50 hover:to-blue-50/30">
+                        <div className="relative inline-block mb-6">
+                          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-sm">
+                            <Users className="w-10 h-10 text-gray-400" />
+                          </div>
+                          {/* Animated pulse ring */}
+                          <div className="absolute inset-0 w-20 h-20 rounded-2xl border-2 border-blue-300/30 animate-ping"></div>
+                        </div>
+                        
+                        <h4 className="text-xl font-bold text-gray-900 mb-3">No Agent Appointed</h4>
+                        <p className="text-gray-600 max-w-md mx-auto mb-8 leading-relaxed">
+                          Connect with a professional agency to handle your site requirements. Browse our verified partners or add your preferred agency.
                         </p>
+                        
                         <Button 
                           onClick={openAddAgentModal}
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          size="lg"
+                          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-3"
                         >
-                          <Users className="w-4 h-4 mr-2" />
-                          Add Agent
+                          <Users className="w-5 h-5 mr-2" />
+                          Find an Agent
                         </Button>
                       </div>
                     )}
