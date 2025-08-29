@@ -199,12 +199,6 @@ export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
                                 </div>
                               )}
                             </div>
-
-                            {agency.description && (
-                              <p className="text-slate-600 leading-relaxed text-base max-w-3xl">
-                                {agency.description}
-                              </p>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -214,6 +208,19 @@ export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
                     <div className="p-6 bg-slate-50/30">
                       <div className="space-y-8">
 
+                        {/* About Us Section */}
+                        {agency.description && (
+                          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
+                            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                              <Building2 className="h-5 w-5 text-blue-600" />
+                              About Us
+                            </h3>
+                            <p className="text-slate-600 leading-relaxed">
+                              {agency.description}
+                            </p>
+                          </div>
+                        )}
+
                         {/* Premium Team Section */}
                         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
                         <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center gap-2">
@@ -222,61 +229,44 @@ export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
                         </h3>
                         
                         {agency.agency_team_members && agency.agency_team_members.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {agency.agency_team_members.map((member) => (
-                              <div key={member.id} className="group hover:bg-slate-50 rounded-xl p-4 transition-colors">
-                                <div className="flex items-start gap-4">
-                                  {member.headshot_url ? (
-                                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 ring-2 ring-slate-200 group-hover:ring-blue-200 transition-all">
-                                      <Image
-                                        src={member.headshot_url}
-                                        alt={`${member.name} photo`}
-                                        width={56}
-                                        height={56}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0 ring-2 ring-slate-200 group-hover:ring-blue-200 transition-all">
-                                      <Users className="w-7 h-7 text-slate-500" />
-                                    </div>
-                                  )}
+                              <div 
+                                key={member.id} 
+                                className="group cursor-pointer hover:bg-slate-50 rounded-xl p-4 transition-all duration-200 hover:shadow-sm"
+                                onClick={() => {
+                                  // TODO: Open team member detail modal
+                                  console.log('Open team member detail for:', member.id);
+                                }}
+                              >
+                                <div className="text-center">
+                                  {/* Avatar */}
+                                  <div className="mb-3">
+                                    {member.headshot_url ? (
+                                      <div className="w-16 h-16 mx-auto rounded-xl overflow-hidden bg-slate-100 ring-2 ring-slate-200 group-hover:ring-blue-200 transition-all">
+                                        <Image
+                                          src={member.headshot_url}
+                                          alt={`${member.name} photo`}
+                                          width={64}
+                                          height={64}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <div className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center ring-2 ring-slate-200 group-hover:ring-blue-200 transition-all">
+                                        <Users className="w-8 h-8 text-slate-500" />
+                                      </div>
+                                    )}
+                                  </div>
                                   
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-semibold text-slate-900 text-base mb-1">
+                                  {/* Name and Title */}
+                                  <div>
+                                    <h4 className="font-semibold text-slate-900 text-sm mb-1 truncate">
                                       {member.name}
                                     </h4>
-                                    <p className="text-sm text-blue-600 font-medium mb-2">
+                                    <p className="text-xs text-blue-600 font-medium truncate">
                                       {member.title}
                                     </p>
-                                    
-                                    {member.bio && (
-                                      <p className="text-sm text-slate-600 line-clamp-3 mb-3 leading-relaxed">
-                                        {member.bio}
-                                      </p>
-                                    )}
-                                    
-                                    {/* Contact badges */}
-                                    <div className="flex items-center gap-2">
-                                      {member.email && (
-                                        <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded text-xs text-blue-700" title={`Email: ${member.email}`}>
-                                          <Mail className="h-3 w-3" />
-                                          <span>Email</span>
-                                        </div>
-                                      )}
-                                      {member.phone && (
-                                        <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded text-xs text-emerald-700" title={`Phone: ${member.phone}`}>
-                                          <Phone className="h-3 w-3" />
-                                          <span>Phone</span>
-                                        </div>
-                                      )}
-                                      {member.linkedin_url && (
-                                        <div className="flex items-center gap-1 bg-violet-50 px-2 py-1 rounded text-xs text-violet-700" title="LinkedIn Profile">
-                                          <ExternalLink className="h-3 w-3" />
-                                          <span>LinkedIn</span>
-                                        </div>
-                                      )}
-                                    </div>
                                   </div>
                                 </div>
                               </div>
