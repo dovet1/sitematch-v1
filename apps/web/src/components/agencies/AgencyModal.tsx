@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { AgencyModalMobile } from './AgencyModalMobile'
+
+// Desktop version (keeping existing code for now, will extract later)
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -13,48 +15,14 @@ import {
   Phone,
   Mail,
   Loader2,
-  ExternalLink,
   AlertTriangle,
   X
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-
-interface TeamMember {
-  id: string
-  name: string
-  title: string
-  bio?: string
-  email: string
-  phone?: string
-  linkedin_url?: string
-  headshot_url?: string
-  display_order: number
-}
-
-interface LinkedCompany {
-  id: string
-  company_name: string
-  logo_url?: string
-}
-
-interface Agency {
-  id: string
-  name: string
-  description?: string
-  classification?: 'Commercial' | 'Residential' | 'Both'
-  geographic_patch?: string
-  website?: string
-  logo_url?: string
-  contact_email: string
-  contact_phone: string
-  office_address?: string
-  created_at: string
-  updated_at: string
-  agency_team_members?: TeamMember[]
-  linked_companies?: LinkedCompany[]
-}
+import { useAgencyModal } from './shared/useAgencyModal'
+import { AgencyHero } from './shared/AgencyHero'
 
 interface AgencyModalProps {
   agencyId: string | null
@@ -62,52 +30,52 @@ interface AgencyModalProps {
   onClose: () => void
 }
 
-export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
-  const [agency, setAgency] = useState<Agency | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
+// Simple responsive hook
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+  
   useEffect(() => {
-    if (isOpen && agencyId) {
-      fetchAgency()
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024) // lg breakpoint
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+  
+  return isMobile
+}
+
+export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
+  const isMobile = useIsMobile()
+  
+  // Route to appropriate component based on device
+  if (isMobile) {
+    return <AgencyModalMobile agencyId={agencyId} isOpen={isOpen} onClose={onClose} />
+  }
+
+  // Desktop version (keeping existing logic for now)
+  return <AgencyModalDesktop agencyId={agencyId} isOpen={isOpen} onClose={onClose} />
+}
+
+// Desktop component (temporary - will extract to separate file)
+function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
+  const { agency, isLoading, error, formatAddress, getClassificationBadgeColor } = useAgencyModal(agencyId, isOpen)
+
+  // Prevent background scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
     } else {
-      setAgency(null)
-      setError(null)
+      document.body.style.overflow = 'unset'
     }
-  }, [isOpen, agencyId])
 
-  const fetchAgency = async () => {
-    setIsLoading(true)
-    try {
-      const response = await fetch(`/api/agencies/${agencyId}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch agency')
-      }
-      const result = await response.json()
-      setAgency(result.data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load agency')
-    } finally {
-      setIsLoading(false)
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset'
     }
-  }
-
-  const formatAddress = (agency: Agency) => {
-    return agency.office_address || null
-  }
-
-  const getClassificationBadgeColor = (classification?: string) => {
-    switch (classification) {
-      case 'Commercial':
-        return 'bg-blue-100 text-blue-800'
-      case 'Residential':
-        return 'bg-green-100 text-green-800'
-      case 'Both':
-        return 'bg-purple-100 text-purple-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -130,8 +98,9 @@ export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 24 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="relative w-full h-full max-w-7xl max-h-[95vh] m-2 sm:m-4 bg-background rounded-3xl shadow-2xl shadow-black/20 flex flex-col overflow-hidden"
+            className="relative w-full h-full max-w-7xl max-h-[95vh] m-2 sm:m-4 bg-background rounded-3xl shadow-2xl shadow-black/20 flex flex-col"
             onClick={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
           >
             {/* Header - consistent with listing modal */}
             <div className="flex items-center justify-between p-6 border-b border-border">
@@ -146,8 +115,8 @@ export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
               </Button>
             </div>
 
-            {/* Content with Right Panel Layout */}
-            <div className="flex-1 flex overflow-hidden">
+            {/* Content - Mobile: tabs, Desktop: two-panel */}
+            <div className="flex-1 flex flex-col lg:flex-row min-h-0">
               {isLoading ? (
                 <div className="flex-1 flex items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin" />
