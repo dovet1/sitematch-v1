@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Building2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { AgencyModal } from '@/components/agencies/AgencyModal';
@@ -35,6 +35,8 @@ export function ImmersiveListingModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [linkedAgency, setLinkedAgency] = useState<any | null>(null);
+  const [agencyLoading, setAgencyLoading] = useState(false);
   const { isMobile } = useMobileBreakpoint();
   const router = useRouter();
   const [selectedAgencyId, setSelectedAgencyId] = useState<string | null>(null);
@@ -147,6 +149,33 @@ export function ImmersiveListingModal({
 
     fetchListing();
   }, [isOpen, listingId, apiEndpoint]);
+
+  // Fetch linked agency data when listing has linked_agency_id
+  useEffect(() => {
+    if (!listing?.linked_agency_id) {
+      setLinkedAgency(null);
+      return;
+    }
+
+    const fetchAgency = async () => {
+      setAgencyLoading(true);
+      try {
+        const response = await fetch(`/api/agencies/${listing.linked_agency_id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch agency details');
+        }
+        const agencyData = await response.json();
+        setLinkedAgency(agencyData.data);
+      } catch (err) {
+        console.error('Error fetching linked agency:', err);
+        setLinkedAgency(null);
+      } finally {
+        setAgencyLoading(false);
+      }
+    };
+
+    fetchAgency();
+  }, [listing?.linked_agency_id]);
 
   if (!isOpen) return null;
 
@@ -546,18 +575,24 @@ export function ImmersiveListingModal({
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-900">Appointed Agent</h3>
             
-            {listing.linked_agency ? (
+            {agencyLoading ? (
+              <div className="p-6 space-y-4">
+                <div className="h-8 bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+              </div>
+            ) : linkedAgency ? (
               <div className="bg-gradient-to-br from-white via-violet-50/30 to-white rounded-2xl border border-violet-200/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6 sm:p-8 ring-1 ring-violet-100/50 hover:ring-violet-200/70">
                 {/* Mobile-optimized layout */}
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
                   {/* Agency Logo */}
                   <div className="flex-shrink-0">
-                    {listing.linked_agency.logo_url ? (
+                    {linkedAgency.logo_url ? (
                       <div className="relative group">
                         <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border-2 border-violet-100 p-3 flex items-center justify-center shadow-lg ring-2 ring-violet-50 group-hover:ring-violet-100 transition-all duration-300">
                           <img
-                            src={listing.linked_agency.logo_url}
-                            alt={`${listing.linked_agency.name} logo`}
+                            src={linkedAgency.logo_url}
+                            alt={`${linkedAgency.name} logo`}
                             className="w-full h-full object-contain"
                           />
                         </div>
@@ -580,7 +615,7 @@ export function ImmersiveListingModal({
                   <div className="flex-1 min-w-0 text-center sm:text-left">
                     <div className="mb-6">
                       <h4 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">
-                        {listing.linked_agency.name}
+                        {linkedAgency.name}
                       </h4>
                       <p className="text-violet-600 font-medium text-base">
                         Appointed Property Agent
@@ -590,7 +625,7 @@ export function ImmersiveListingModal({
                     {/* Enhanced CTA Button */}
                     <div className="flex justify-center sm:justify-start">
                       <button 
-                        onClick={() => setSelectedAgencyId(listing.linked_agency.id)}
+                        onClick={() => setSelectedAgencyId(linkedAgency.id)}
                         className="group relative overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-violet-700 text-white px-8 py-4 rounded-xl font-semibold hover:from-violet-700 hover:via-purple-700 hover:to-violet-800 transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-violet-500/25 transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-3 min-w-[200px]"
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
@@ -607,10 +642,7 @@ export function ImmersiveListingModal({
               <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center shadow-sm">
                 <div className="relative inline-block mb-6">
                   <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-sm ring-1 ring-gray-300/20">
-                    <svg className="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9 12a1 1 0 002 0V8a1 1 0 00-2 0v4zm1-6a1 1 0 100 2 1 1 0 000-2z" />
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM10 2a8 8 0 110 16 8 8 0 010-16z" clipRule="evenodd" />
-                    </svg>
+                    <Building2 className="w-10 h-10 text-gray-400" />
                   </div>
                 </div>
                 

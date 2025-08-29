@@ -428,7 +428,7 @@ export default function AgencyEditPage() {
                 <Select
                   value={agency.classification || ''}
                   onValueChange={(value) => {
-                    setAgency(prev => prev ? { ...prev, classification: value } : null)
+                    setAgency(prev => prev ? { ...prev, classification: value as 'Commercial' | 'Residential' | 'Both' } : null)
                     setUnsavedChanges(true)
                   }}
                 >
