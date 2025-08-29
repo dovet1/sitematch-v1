@@ -11,7 +11,7 @@ export async function GET(
     const supabase = createServerClient();
     const user = await getCurrentUser();
 
-    // First fetch the agency with all versions (not just approved)
+    // First fetch the agency with all versions and linked companies
     const { data: rawAgency, error } = await supabase
       .from('agencies')
       .select(`
@@ -41,6 +41,22 @@ export async function GET(
       return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
     }
 
+    // Fetch linked companies (listings with this agency)
+    const { data: linkedListings, error: listingsError } = await supabase
+      .from('listings')
+      .select('id, company_name, clearbit_logo, company_domain')
+      .eq('linked_agency_id', id)
+      .not('company_name', 'is', null);
+
+    // Process linked companies with logos
+    const linkedCompanies = linkedListings?.map(listing => ({
+      id: listing.id,
+      company_name: listing.company_name,
+      logo_url: listing.clearbit_logo && listing.company_domain
+        ? `https://logo.clearbit.com/${listing.company_domain}`
+        : null // For now, skip file_uploads lookup
+    })) || [];
+
     // Check if user is the owner - if so, return agency data as-is for editing
     const isOwner = user && rawAgency.created_by === user.id;
     
@@ -50,7 +66,9 @@ export async function GET(
         data: {
           ...rawAgency,
           // Sort team members by display_order
-          agency_team_members: rawAgency.agency_team_members?.sort((a: any, b: any) => a.display_order - b.display_order)
+          agency_team_members: rawAgency.agency_team_members?.sort((a: any, b: any) => a.display_order - b.display_order),
+          // Add linked companies
+          linked_companies: linkedCompanies
         }
       });
     }
@@ -83,6 +101,8 @@ export async function GET(
         ...(versionData.agency || {}),
         // Use team members from version if available, otherwise fall back to agency_team_members
         agency_team_members: versionData.team_members || rawAgency.agency_team_members,
+        // Add linked companies
+        linked_companies: linkedCompanies,
         // Remove the versions array from the response
         agency_versions: undefined
       };
@@ -90,6 +110,7 @@ export async function GET(
       // If no version data, return agency as-is (removing versions array)
       agency = {
         ...rawAgency,
+        linked_companies: linkedCompanies,
         agency_versions: undefined
       };
     }

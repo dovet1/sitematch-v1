@@ -33,6 +33,12 @@ interface TeamMember {
   display_order: number
 }
 
+interface LinkedCompany {
+  id: string
+  company_name: string
+  logo_url?: string
+}
+
 interface Agency {
   id: string
   name: string
@@ -47,6 +53,7 @@ interface Agency {
   created_at: string
   updated_at: string
   agency_team_members?: TeamMember[]
+  linked_companies?: LinkedCompany[]
 }
 
 interface AgencyModalProps {
@@ -291,27 +298,47 @@ export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
                             <Building2 className="h-5 w-5 text-blue-600" />
                             Trusted by Leading Companies
                           </h3>
-                          <div className="relative">
-                            <div className="flex items-center justify-center py-12">
-                              <div className="flex items-center justify-center gap-8 opacity-40">
-                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                                  <Building2 className="w-8 h-8 text-slate-400" />
-                                </div>
-                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                                  <Building2 className="w-8 h-8 text-slate-400" />
-                                </div>
-                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                                  <Building2 className="w-8 h-8 text-slate-400" />
-                                </div>
-                              </div>
+                          
+                          {agency.linked_companies && agency.linked_companies.length > 0 ? (
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                              {agency.linked_companies.map((company) => (
+                                <Link
+                                  key={company.id}
+                                  href={`/search?viewAll=true&companyName=${encodeURIComponent(company.company_name)}`}
+                                  className="group block hover:scale-105 transition-transform duration-200"
+                                >
+                                  <div className="aspect-square bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-center group-hover:border-blue-300 group-hover:shadow-sm transition-colors">
+                                    {company.logo_url ? (
+                                      <Image
+                                        src={company.logo_url}
+                                        alt={`${company.company_name} logo`}
+                                        width={256}
+                                        height={256}
+                                        className="w-full h-full object-contain"
+                                      />
+                                    ) : (
+                                      <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
+                                        <Building2 className="w-5 h-5 text-slate-400" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-slate-600 group-hover:text-blue-600 text-center mt-2 truncate transition-colors" title={company.company_name}>
+                                    {company.company_name}
+                                  </p>
+                                </Link>
+                              ))}
                             </div>
-                            <div className="text-center">
-                              <p className="text-sm text-slate-500 mb-2">Partnership showcase coming soon</p>
+                          ) : (
+                            <div className="text-center py-12">
+                              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mx-auto mb-4">
+                                <Building2 className="h-8 w-8 text-slate-400" />
+                              </div>
+                              <p className="text-sm text-slate-500 mb-2">No partnerships yet</p>
                               <p className="text-xs text-slate-400">
-                                We're building connections with leading property developers and occupiers
+                                Companies will appear here once they work with {agency.name}
                               </p>
                             </div>
-                          </div>
+                          )}
                         </div>
                       </div>
                     </div>
