@@ -43,10 +43,7 @@ interface Agency {
   logo_url?: string
   contact_email: string
   contact_phone: string
-  office_street_address?: string
-  office_city?: string
-  office_postcode?: string
-  office_country?: string
+  office_address?: string
   created_at: string
   updated_at: string
   agency_team_members?: TeamMember[]
@@ -89,14 +86,7 @@ export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
   }
 
   const formatAddress = (agency: Agency) => {
-    const parts = [
-      agency.office_street_address,
-      agency.office_city,
-      agency.office_postcode,
-      agency.office_country
-    ].filter(Boolean)
-    
-    return parts.length > 0 ? parts.join(', ') : null
+    return agency.office_address || null
   }
 
   const getClassificationBadgeColor = (classification?: string) => {
@@ -129,13 +119,14 @@ export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: 0.96, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full h-full max-w-6xl max-h-[90vh] m-4 bg-background rounded-2xl shadow-2xl flex flex-col"
+            exit={{ opacity: 0, scale: 0.96, y: 24 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="relative w-full h-full max-w-7xl max-h-[95vh] m-2 sm:m-4 bg-background rounded-3xl shadow-2xl shadow-black/20 flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header with close button */}
+            {/* Header - consistent with listing modal */}
             <div className="flex items-center justify-between p-6 border-b border-border">
               <h2 className="text-2xl font-bold text-foreground">Agency Profile</h2>
               <Button
@@ -148,14 +139,14 @@ export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
               </Button>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Content with Right Panel Layout */}
+            <div className="flex-1 flex overflow-hidden">
               {isLoading ? (
-                <div className="flex items-center justify-center h-64">
+                <div className="flex-1 flex items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
               ) : error || !agency ? (
-                <div className="p-6">
+                <div className="flex-1 p-6">
                   <Alert>
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>
@@ -164,240 +155,258 @@ export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
                   </Alert>
                 </div>
               ) : (
-                <>
-                  {/* Hero Section */}
-                  <div className="relative bg-gradient-to-br from-primary-50/30 via-background to-primary-50/20 border-b border-border/50">
-                    <div className="p-6 lg:p-8">
-                      <div className="flex flex-col lg:flex-row items-start gap-6 lg:gap-8">
-                        {/* Agency Logo */}
-                        <div className="flex-shrink-0">
-                          {agency.logo_url ? (
-                            <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-2xl bg-white shadow-lg ring-1 ring-black/5 p-3 flex items-center justify-center">
-                              <Image
-                                src={agency.logo_url}
-                                alt={`${agency.name} logo`}
-                                width={120}
-                                height={120}
-                                className="w-full h-full object-contain"
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-primary/20 shadow-lg ring-1 ring-primary/10 flex items-center justify-center">
-                              <Building2 className="w-12 h-12 lg:w-16 lg:h-16 text-primary/60" />
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Agency Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="mb-4">
-                            <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-3 tracking-tight">
-                              {agency.name}
-                            </h1>
-                            
-                            <div className="flex flex-wrap items-center gap-3 mb-3">
+                <div className="flex flex-1">
+                  {/* Main Content Area */}
+                  <div className="flex-1 overflow-y-auto">
+                    {/* Hero Section */}
+                    <div className="relative bg-gradient-to-br from-slate-50 via-white to-slate-50 border-b border-slate-200">
+                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50 via-transparent to-transparent opacity-60" />
+                      <div className="relative p-8">
+                        <div className="flex items-start gap-6">
+                          {/* Agency Logo */}
+                          <div className="flex-shrink-0">
+                            {agency.logo_url ? (
+                              <div className="w-20 h-20 rounded-2xl bg-white shadow-lg border border-slate-200/60 p-3 flex items-center justify-center overflow-hidden backdrop-blur-sm">
+                                <Image
+                                  src={agency.logo_url}
+                                  alt={`${agency.name} logo`}
+                                  width={80}
+                                  height={80}
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 shadow-lg border border-slate-200/60 flex items-center justify-center">
+                                <Building2 className="w-10 h-10 text-slate-600" />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Agency Header Info */}
+                          <div className="flex-1">
+                            <div className="mb-4">
+                              <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
+                                {agency.name}
+                              </h1>
                               {agency.classification && (
-                                <Badge 
-                                  variant="secondary" 
-                                  className={`${getClassificationBadgeColor(agency.classification)} px-3 py-1 font-medium`}
-                                >
-                                  {agency.classification} Property Expert
-                                </Badge>
-                              )}
-                              
-                              {agency.geographic_patch && (
-                                <div className="flex items-center gap-2 text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-1 rounded-lg border">
-                                  <MapPin className="h-4 w-4" />
-                                  <span className="font-medium text-sm">{agency.geographic_patch}</span>
+                                <div className="mb-3">
+                                  <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 font-medium px-3 py-1">
+                                    {agency.classification === 'Both' 
+                                      ? 'Commercial & Residential Specialists'
+                                      : `${agency.classification} Property Specialists`
+                                    }
+                                  </Badge>
                                 </div>
                               )}
                             </div>
 
-                            {/* Agency Description */}
                             {agency.description && (
-                              <p className="text-muted-foreground leading-relaxed max-w-2xl mb-4">
+                              <p className="text-slate-600 leading-relaxed text-base max-w-3xl">
                                 {agency.description}
                               </p>
                             )}
                           </div>
+                        </div>
+                      </div>
+                    </div>
 
-                          {/* Quick Contact */}
-                          <div className="flex flex-col sm:flex-row gap-3">
-                            <Button size="sm" className="shadow-sm" asChild>
-                              <a href={`mailto:${agency.contact_email}?subject=Property Inquiry`}>
-                                <Mail className="h-4 w-4 mr-2" />
-                                Send Email
-                              </a>
-                            </Button>
-                            
-                            <Button size="sm" variant="outline" className="shadow-sm" asChild>
-                              <a href={`tel:${agency.contact_phone}`}>
-                                <Phone className="h-4 w-4 mr-2" />
-                                Call
-                              </a>
-                            </Button>
+                    {/* Main Content Sections */}
+                    <div className="p-6 bg-slate-50/30">
+                      <div className="space-y-8">
 
-                            {agency.website && (
-                              <Button size="sm" variant="ghost" asChild>
-                                <a
-                                  href={agency.website}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <Globe className="h-4 w-4 mr-2" />
-                                  Website
-                                  <ExternalLink className="h-3 w-3 ml-1" />
-                                </a>
-                              </Button>
-                            )}
+                        {/* Premium Team Section */}
+                        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
+                        <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center gap-2">
+                          <Users className="h-5 w-5 text-blue-600" />
+                          Meet the Team
+                        </h3>
+                        
+                        {agency.agency_team_members && agency.agency_team_members.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {agency.agency_team_members.map((member) => (
+                              <div key={member.id} className="group hover:bg-slate-50 rounded-xl p-4 transition-colors">
+                                <div className="flex items-start gap-4">
+                                  {member.headshot_url ? (
+                                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 ring-2 ring-slate-200 group-hover:ring-blue-200 transition-all">
+                                      <Image
+                                        src={member.headshot_url}
+                                        alt={`${member.name} photo`}
+                                        width={56}
+                                        height={56}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0 ring-2 ring-slate-200 group-hover:ring-blue-200 transition-all">
+                                      <Users className="w-7 h-7 text-slate-500" />
+                                    </div>
+                                  )}
+                                  
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-semibold text-slate-900 text-base mb-1">
+                                      {member.name}
+                                    </h4>
+                                    <p className="text-sm text-blue-600 font-medium mb-2">
+                                      {member.title}
+                                    </p>
+                                    
+                                    {member.bio && (
+                                      <p className="text-sm text-slate-600 line-clamp-3 mb-3 leading-relaxed">
+                                        {member.bio}
+                                      </p>
+                                    )}
+                                    
+                                    {/* Contact badges */}
+                                    <div className="flex items-center gap-2">
+                                      {member.email && (
+                                        <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded text-xs text-blue-700" title={`Email: ${member.email}`}>
+                                          <Mail className="h-3 w-3" />
+                                          <span>Email</span>
+                                        </div>
+                                      )}
+                                      {member.phone && (
+                                        <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded text-xs text-emerald-700" title={`Phone: ${member.phone}`}>
+                                          <Phone className="h-3 w-3" />
+                                          <span>Phone</span>
+                                        </div>
+                                      )}
+                                      {member.linkedin_url && (
+                                        <div className="flex items-center gap-1 bg-violet-50 px-2 py-1 rounded text-xs text-violet-700" title="LinkedIn Profile">
+                                          <ExternalLink className="h-3 w-3" />
+                                          <span>LinkedIn</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 to-white p-12 text-center border-2 border-dashed border-slate-300">
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mx-auto mb-6">
+                              <Users className="h-8 w-8 text-slate-400" />
+                            </div>
+                            <h4 className="text-lg font-semibold text-slate-900 mb-3">Team Profiles Coming Soon</h4>
+                            <p className="text-slate-600 max-w-md mx-auto leading-relaxed">
+                              {agency.name} is building their team showcase. Check back soon to meet our property experts.
+                            </p>
+                          </div>
+                        )}
+                        </div>
+
+                        {/* Linked Companies */}
+                        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
+                          <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center gap-2">
+                            <Building2 className="h-5 w-5 text-blue-600" />
+                            Trusted by Leading Companies
+                          </h3>
+                          <div className="relative">
+                            <div className="flex items-center justify-center py-12">
+                              <div className="flex items-center justify-center gap-8 opacity-40">
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                                  <Building2 className="w-8 h-8 text-slate-400" />
+                                </div>
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                                  <Building2 className="w-8 h-8 text-slate-400" />
+                                </div>
+                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                                  <Building2 className="w-8 h-8 text-slate-400" />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-sm text-slate-500 mb-2">Partnership showcase coming soon</p>
+                              <p className="text-xs text-slate-400">
+                                We're building connections with leading property developers and occupiers
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Main Content */}
-                  <div className="p-6 lg:p-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      {/* Team Members */}
-                      <div className="lg:col-span-2">
-                        {agency.agency_team_members && agency.agency_team_members.length > 0 ? (
-                          <div>
-                            <div className="flex items-center gap-3 mb-6">
-                              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Users className="h-5 w-5 text-primary" />
-                              </div>
-                              <div>
-                                <h3 className="text-xl font-semibold text-foreground">Meet Our Team</h3>
-                                <p className="text-muted-foreground text-sm">Expert professionals ready to help you</p>
+                  {/* Right Panel - Agency Information */}
+                  <div className="w-80 border-l border-slate-200 bg-white overflow-y-auto">
+                    <div className="p-6">
+                      <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-blue-600" />
+                        Agency Details
+                      </h3>
+                      
+                      {/* Areas Covered */}
+                      {agency.geographic_patch && (
+                        <div className="space-y-4 mb-6">
+                          <div className="pb-4 border-b border-slate-100">
+                            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Areas Covered</h4>
+                            <p className="text-sm text-slate-900 leading-relaxed">
+                              {agency.geographic_patch}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Contact Information */}
+                      <div className="space-y-4 mb-6">
+                        <div className="pb-4">
+                          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Contact</h4>
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3">
+                              <Mail className="h-4 w-4 text-slate-400 mt-0.5" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-slate-500 mb-0.5">Email</p>
+                                <a href={`mailto:${agency.contact_email}`} className="text-sm text-slate-900 hover:text-blue-600 transition-colors break-all">
+                                  {agency.contact_email}
+                                </a>
                               </div>
                             </div>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {agency.agency_team_members.map((member) => (
-                                <Card key={member.id} className="h-full hover:shadow-md transition-all duration-200">
-                                  <CardContent className="p-4">
-                                    <div className="flex items-start gap-3">
-                                      {member.headshot_url ? (
-                                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                                          <Image
-                                            src={member.headshot_url}
-                                            alt={`${member.name} photo`}
-                                            width={48}
-                                            height={48}
-                                            className="w-full h-full object-cover"
-                                          />
-                                        </div>
-                                      ) : (
-                                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center flex-shrink-0">
-                                          <Users className="w-6 h-6 text-primary/60" />
-                                        </div>
-                                      )}
-                                      
-                                      <div className="flex-1 min-w-0">
-                                        <h4 className="font-semibold text-foreground mb-1">
-                                          {member.name}
-                                        </h4>
-                                        <p className="text-primary/70 font-medium mb-2 text-sm">
-                                          {member.title}
-                                        </p>
-                                        
-                                        {member.bio && (
-                                          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                                            {member.bio}
-                                          </p>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ))}
+                            <div className="flex items-start gap-3">
+                              <Phone className="h-4 w-4 text-slate-400 mt-0.5" />
+                              <div className="flex-1">
+                                <p className="text-xs text-slate-500 mb-0.5">Phone</p>
+                                <a href={`tel:${agency.contact_phone}`} className="text-sm text-slate-900 hover:text-blue-600 transition-colors">
+                                  {agency.contact_phone}
+                                </a>
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <Card className="border-dashed border-2">
-                            <CardContent className="flex flex-col items-center justify-center text-center py-8">
-                              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <Users className="h-6 h-6 text-muted-foreground" />
-                              </div>
-                              <h3 className="font-semibold text-foreground mb-2">Team Coming Soon</h3>
-                              <p className="text-muted-foreground text-sm max-w-md">
-                                This agency is still building their team profile.
-                              </p>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </div>
-
-                      {/* Contact Sidebar */}
-                      <div>
-                        {formatAddress(agency) && (
-                          <Card>
-                            <CardHeader className="pb-3">
-                              <CardTitle className="flex items-center gap-2 text-lg">
-                                <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
-                                  <MapPin className="h-4 w-4 text-primary" />
-                                </div>
-                                Office Location
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                              <div className="p-3 bg-muted/50 rounded-lg">
-                                <p className="text-foreground font-medium text-sm leading-relaxed">
-                                  {formatAddress(agency)}
-                                </p>
-                              </div>
-                              
-                              <div className="pt-2 space-y-2">
-                                <h4 className="font-medium text-foreground text-sm">Get in Touch</h4>
-                                
-                                <a
-                                  href={`mailto:${agency.contact_email}`}
-                                  className="flex items-center gap-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors group"
-                                >
-                                  <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                                    <Mail className="h-3 w-3 text-primary" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-foreground text-xs">Send Email</p>
-                                  </div>
-                                </a>
-                                
-                                <a
-                                  href={`tel:${agency.contact_phone}`}
-                                  className="flex items-center gap-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors group"
-                                >
-                                  <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                                    <Phone className="h-3 w-3 text-primary" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-foreground text-xs">Call Now</p>
-                                  </div>
-                                </a>
-
-                                {agency.website && (
-                                  <a
+                            
+                            {agency.website && (
+                              <div className="flex items-start gap-3">
+                                <Globe className="h-4 w-4 text-slate-400 mt-0.5" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-slate-500 mb-0.5">Website</p>
+                                  <a 
                                     href={agency.website}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors group"
+                                    className="text-sm text-blue-600 hover:text-blue-700 transition-colors break-all"
                                   >
-                                    <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                                      <Globe className="h-3 w-3 text-primary" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="font-medium text-foreground text-xs">Visit Website</p>
-                                    </div>
+                                    {agency.website.replace(/^https?:\/\//, '')}
                                   </a>
-                                )}
+                                </div>
                               </div>
-                            </CardContent>
-                          </Card>
-                        )}
+                            )}
+                            
+                            {/* Office Location */}
+                            {formatAddress(agency) && (
+                              <div className="flex items-start gap-3">
+                                <MapPin className="h-4 w-4 text-slate-400 mt-0.5" />
+                                <div className="flex-1">
+                                  <p className="text-xs text-slate-500 mb-0.5">Office</p>
+                                  <p className="text-sm text-slate-900 leading-relaxed">
+                                    {formatAddress(agency)}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </>
+                </div>
               )}
             </div>
           </motion.div>

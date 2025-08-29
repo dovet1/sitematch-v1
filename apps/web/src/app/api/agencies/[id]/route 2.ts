@@ -9,9 +9,7 @@ export async function GET(
   try {
     const { id } = params;
     const supabase = createServerClient();
-    const user = await getCurrentUser();
 
-    // First fetch the agency with all versions (not just approved)
     const { data: rawAgency, error } = await supabase
       .from('agencies')
       .select(`
@@ -27,7 +25,7 @@ export async function GET(
           headshot_url,
           display_order
         ),
-        agency_versions(
+        agency_versions!inner(
           id,
           version_number,
           data,
@@ -35,29 +33,12 @@ export async function GET(
         )
       `)
       .eq('id', id)
+      .eq('status', 'approved')
+      .eq('agency_versions.status', 'approved')
+      .order('agency_versions.version_number', { ascending: false })
       .single();
 
     if (error || !rawAgency) {
-      return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
-    }
-
-    // Check if user is the owner - if so, return agency data as-is for editing
-    const isOwner = user && rawAgency.created_by === user.id;
-    
-    if (isOwner) {
-      // For owners, return the agency with all version info for status display
-      return NextResponse.json({ 
-        data: {
-          ...rawAgency,
-          // Sort team members by display_order
-          agency_team_members: rawAgency.agency_team_members?.sort((a: any, b: any) => a.display_order - b.display_order)
-        }
-      });
-    }
-
-    // For public view, check if agency has any approved versions
-    const hasApprovedVersion = rawAgency.agency_versions?.some((version: any) => version.status === 'approved');
-    if (!hasApprovedVersion) {
       return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
     }
 
@@ -72,11 +53,7 @@ export async function GET(
     // Merge base agency data with version data if available
     let agency;
     if (latestApprovedVersion?.data) {
-      // Parse the JSON string from the database
-      const versionData = typeof latestApprovedVersion.data === 'string' 
-        ? JSON.parse(latestApprovedVersion.data)
-        : latestApprovedVersion.data;
-      
+      const versionData = latestApprovedVersion.data;
       agency = {
         ...rawAgency,
         // Override with version data where it exists
@@ -139,7 +116,8 @@ export async function PUT(
     const allowedFields = [
       'name', 'contact_email', 'contact_phone', 'description',
       'classification', 'geographic_patch', 'website', 'logo_url',
-      'office_address'
+      'office_street_address', 'office_city', 'office_postcode',
+      'office_country', 'office_coordinates'
     ];
 
     const updateData: any = {};
