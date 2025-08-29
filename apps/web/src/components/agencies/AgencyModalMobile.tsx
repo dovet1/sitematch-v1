@@ -19,6 +19,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAgencyModal } from './shared/useAgencyModal'
 import { AgencyHero } from './shared/AgencyHero'
+import { TeamMemberCard } from './TeamMemberCard'
 
 interface AgencyModalMobileProps {
   agencyId: string | null
@@ -222,36 +223,13 @@ export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobi
                       {activeTab === 'team' && (
                         <div>
                           {agency.agency_team_members && agency.agency_team_members.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-3">
                               {agency.agency_team_members.map((member) => (
-                                <div 
+                                <TeamMemberCard 
                                   key={member.id} 
-                                  className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center"
-                                >
-                                  <div className="mb-3">
-                                    {member.headshot_url ? (
-                                      <div className="w-16 h-16 mx-auto rounded-2xl overflow-hidden bg-slate-100">
-                                        <Image
-                                          src={member.headshot_url}
-                                          alt={`${member.name} photo`}
-                                          width={64}
-                                          height={64}
-                                          className="w-full h-full object-cover"
-                                        />
-                                      </div>
-                                    ) : (
-                                      <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                                        <Users className="w-8 h-8 text-slate-400" />
-                                      </div>
-                                    )}
-                                  </div>
-                                  <h4 className="font-semibold text-slate-900 text-sm mb-1 truncate">
-                                    {member.name}
-                                  </h4>
-                                  <p className="text-xs text-violet-600 font-medium truncate">
-                                    {member.title}
-                                  </p>
-                                </div>
+                                  member={member}
+                                  isMobile={true}
+                                />
                               ))}
                             </div>
                           ) : (

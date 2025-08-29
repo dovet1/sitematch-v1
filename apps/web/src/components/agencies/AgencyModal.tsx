@@ -23,6 +23,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAgencyModal } from './shared/useAgencyModal'
 import { AgencyHero } from './shared/AgencyHero'
+import { TeamMemberCard } from './TeamMemberCard'
 
 interface AgencyModalProps {
   agencyId: string | null
@@ -205,47 +206,13 @@ function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
                         </h3>
                         
                         {agency.agency_team_members && agency.agency_team_members.length > 0 ? (
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                          <div className="space-y-3">
                             {agency.agency_team_members.map((member) => (
-                              <div 
+                              <TeamMemberCard 
                                 key={member.id} 
-                                className="group cursor-pointer hover:bg-slate-50 rounded-xl p-4 transition-all duration-200 hover:shadow-sm"
-                                onClick={() => {
-                                  // TODO: Open team member detail modal
-                                  console.log('Open team member detail for:', member.id);
-                                }}
-                              >
-                                <div className="text-center">
-                                  {/* Avatar */}
-                                  <div className="mb-3">
-                                    {member.headshot_url ? (
-                                      <div className="w-16 h-16 mx-auto rounded-xl overflow-hidden bg-slate-100 ring-2 ring-slate-200 group-hover:ring-blue-200 transition-all">
-                                        <Image
-                                          src={member.headshot_url}
-                                          alt={`${member.name} photo`}
-                                          width={64}
-                                          height={64}
-                                          className="w-full h-full object-cover"
-                                        />
-                                      </div>
-                                    ) : (
-                                      <div className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center ring-2 ring-slate-200 group-hover:ring-blue-200 transition-all">
-                                        <Users className="w-8 h-8 text-slate-500" />
-                                      </div>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Name and Title */}
-                                  <div>
-                                    <h4 className="font-semibold text-slate-900 text-sm mb-1 truncate">
-                                      {member.name}
-                                    </h4>
-                                    <p className="text-xs text-blue-600 font-medium truncate">
-                                      {member.title}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
+                                member={member}
+                                isMobile={false}
+                              />
                             ))}
                           </div>
                         ) : (
