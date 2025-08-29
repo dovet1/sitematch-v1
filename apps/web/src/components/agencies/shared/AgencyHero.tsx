@@ -18,18 +18,18 @@ export function AgencyHero({ agency, getClassificationBadgeColor, isMobile = fal
           {/* Agency Logo - Smaller on mobile */}
           <div className="flex-shrink-0">
             {agency.logo_url ? (
-              <div className={`${isMobile ? 'w-12 h-12' : 'w-20 h-20'} rounded-xl bg-white/90 shadow-md border border-slate-200/80 p-2 flex items-center justify-center overflow-hidden backdrop-blur-sm`}>
+              <div className={`${isMobile ? 'w-12 h-12' : 'w-20 h-20'} bg-white shadow-sm border border-slate-200 flex items-center justify-center overflow-hidden`}>
                 <Image
                   src={agency.logo_url}
                   alt={`${agency.name} logo`}
-                  width={isMobile ? 32 : 80}
-                  height={isMobile ? 32 : 80}
-                  className="w-full h-full object-contain"
+                  width={isMobile ? 44 : 72}
+                  height={isMobile ? 44 : 72}
+                  className={`${isMobile ? 'w-11 h-11' : 'w-18 h-18'} object-contain`}
                 />
               </div>
             ) : (
-              <div className={`${isMobile ? 'w-12 h-12' : 'w-20 h-20'} rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 shadow-md border border-slate-200/80 flex items-center justify-center`}>
-                <Building2 className={`${isMobile ? 'w-5 h-5' : 'w-10 h-10'} text-slate-600`} />
+              <div className={`${isMobile ? 'w-12 h-12' : 'w-20 h-20'} bg-gradient-to-br from-slate-100 to-slate-50 shadow-sm border border-slate-200 flex items-center justify-center`}>
+                <Building2 className={`${isMobile ? 'w-5 h-5' : 'w-10 h-10'} text-slate-500`} />
               </div>
             )}
           </div>

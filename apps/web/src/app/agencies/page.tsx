@@ -158,9 +158,6 @@ export default function AgenciesPage() {
               <div className="flex-1 text-center lg:text-left">
                 <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-4 tracking-tight leading-tight">
                   Agency Directory
-                  <span className="block text-2xl lg:text-3xl font-normal text-slate-600 mt-2">
-                    Premium Property Experts
-                  </span>
                 </h1>
                 <p className="text-slate-600 text-lg max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                   Discover vetted property agencies and connect with expert teams across Commercial and Residential markets
@@ -256,18 +253,18 @@ export default function AgenciesPage() {
                   <CardContent className="relative p-6">
                     <div className="flex items-center gap-4 mb-4">
                       {agency.logo_url ? (
-                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-white shadow-md border border-slate-200/50 flex-shrink-0 group-hover:scale-110 transition-transform duration-300 p-3">
+                        <div className="w-16 h-16 bg-slate-50 shadow-sm border border-slate-200 flex-shrink-0 group-hover:scale-110 transition-transform duration-300 flex items-center justify-center overflow-hidden">
                           <Image
                             src={agency.logo_url}
                             alt={`${agency.name} logo`}
-                            width={40}
-                            height={40}
-                            className="w-full h-full object-contain"
+                            width={56}
+                            height={56}
+                            className="w-14 h-14 object-contain"
                           />
                         </div>
                       ) : (
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center flex-shrink-0 shadow-md border border-primary-200/50 group-hover:scale-110 transition-transform duration-300">
-                          <Building2 className="w-8 h-8 text-primary-600" />
+                        <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center flex-shrink-0 shadow-sm border border-slate-200 group-hover:scale-110 transition-transform duration-300">
+                          <Building2 className="w-8 h-8 text-slate-500" />
                         </div>
                       )}
                       <div className="min-w-0 flex-1">

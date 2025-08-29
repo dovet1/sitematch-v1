@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
           status
         )
       `)
-      .order('name');
 
     // Apply search filter
     if (search) {
@@ -50,8 +49,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Apply pagination
-    query = query.range(offset, offset + limit - 1);
+    // Don't apply pagination yet - we'll randomize first
+    // query = query.range(offset, offset + limit - 1);
 
     const { data: rawAgencies, error } = await query;
 
@@ -94,7 +93,24 @@ export async function GET(request: NextRequest) {
       };
     }) || [];
 
-    return NextResponse.json({ data: agencies });
+    // Randomize the agencies array using a daily seed for consistency
+    const today = new Date().toDateString();
+    const seedHash = today.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    const seededRandom = (seed: number) => {
+      const x = Math.sin(seed++) * 10000;
+      return x - Math.floor(x);
+    };
+    
+    const shuffledAgencies = agencies.sort(() => seededRandom(seedHash) - 0.5);
+
+    // Apply pagination after randomization
+    const paginatedAgencies = shuffledAgencies.slice(offset, offset + limit);
+
+    return NextResponse.json({ data: paginatedAgencies });
   } catch (error) {
     console.error('Error in agencies GET route:', error);
     return NextResponse.json(
