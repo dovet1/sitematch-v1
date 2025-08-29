@@ -41,7 +41,13 @@ export async function GET(request: NextRequest) {
 
     // Apply classification filter
     if (classification && classification !== 'all') {
-      query = query.eq('classification', classification);
+      if (classification === 'Commercial') {
+        query = query.in('classification', ['Commercial', 'Both']);
+      } else if (classification === 'Residential') {
+        query = query.in('classification', ['Residential', 'Both']);
+      } else {
+        query = query.eq('classification', classification);
+      }
     }
 
     // Apply pagination

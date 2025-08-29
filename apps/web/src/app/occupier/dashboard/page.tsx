@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus, FileText, Clock, CheckCircle, AlertTriangle, Eye, Building2, Link as LinkIcon } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '../components/StatusBadge';
-import ConsultantProfileCard from '@/components/consultant/consultant-profile-card';
 import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal';
 import { useState, useEffect } from 'react';
 import type { User } from '@supabase/auth-js';
@@ -350,8 +349,6 @@ export default function OccupierDashboard() {
                   </Card>
                 )}
 
-                {/* Consultant Profile Card */}
-                <ConsultantProfileCard />
               </>
             ) : (
               <>
@@ -606,8 +603,6 @@ export default function OccupierDashboard() {
                   </Card>
                 )}
                 
-                {/* Consultant Profile Card */}
-                <ConsultantProfileCard />
               </>
             )}
           </div>
