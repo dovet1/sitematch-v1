@@ -26,7 +26,7 @@ interface AgencyModalMobileProps {
   onClose: () => void
 }
 
-type TabType = 'about' | 'details' | 'team' | 'companies'
+type TabType = 'about' | 'contact' | 'coverage' | 'team' | 'companies'
 
 export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobileProps) {
   const { agency, isLoading, error, formatAddress, getClassificationBadgeColor } = useAgencyModal(agencyId, isOpen)
@@ -49,8 +49,9 @@ export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobi
   if (!isOpen) return null
 
   const tabs = [
-    { id: 'about' as const, label: 'About Us', icon: Building2 },
-    { id: 'details' as const, label: 'Details', icon: MapPin },
+    { id: 'about' as const, label: 'About', icon: Building2 },
+    { id: 'contact' as const, label: 'Contact', icon: Mail },
+    { id: 'coverage' as const, label: 'Coverage', icon: MapPin },
     { id: 'team' as const, label: 'Team', icon: Users },
     { id: 'companies' as const, label: 'Companies', icon: Building2 },
   ]
@@ -140,153 +141,165 @@ export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobi
                     </div>
                   </div>
 
-                  {/* Tab Content - Scrollable with better spacing */}
+                  {/* Tab Content - Clean content areas */}
                   <div className="flex-1 overflow-y-auto bg-slate-50/20">
-                    <div className="p-5">
+                    <div className="p-6">
                       {activeTab === 'about' && (
-                        <div className="space-y-5">
+                        <div>
                           {agency.description ? (
-                            <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/40 backdrop-blur-sm">
-                              <p className="text-slate-700 leading-relaxed text-sm font-medium">
+                            <div className="prose prose-sm max-w-none">
+                              <p className="text-slate-700 leading-relaxed font-medium text-base">
                                 {agency.description}
                               </p>
                             </div>
                           ) : (
-                            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200/40 text-center backdrop-blur-sm">
-                              <Building2 className="h-10 w-10 text-slate-400 mx-auto mb-4" />
-                              <p className="text-slate-500 text-sm font-medium">No description available</p>
+                            <div className="text-center py-12">
+                              <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-2xl flex items-center justify-center">
+                                <Building2 className="h-8 w-8 text-slate-400" />
+                              </div>
+                              <p className="text-slate-500 font-medium">No description available yet</p>
                             </div>
                           )}
                         </div>
                       )}
 
-                      {activeTab === 'details' && (
+                      {activeTab === 'contact' && (
                         <div className="space-y-5">
-                          {/* Contact Information */}
-                          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/40 backdrop-blur-sm">
-                            <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2.5">
-                              <div className="p-1.5 bg-violet-50 rounded-lg">
-                                <Mail className="h-4 w-4 text-violet-600" />
-                              </div>
-                              Contact Information
-                            </h3>
-                            <div className="space-y-4">
-                              <div>
-                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Email</p>
-                                <p className="text-sm text-slate-900 font-medium">{agency.contact_email}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Phone</p>
-                                <p className="text-sm text-slate-900 font-medium">{agency.contact_phone}</p>
-                              </div>
-                              {agency.website && (
-                                <div>
-                                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Website</p>
-                                  <p className="text-sm text-slate-900 font-medium break-all">{agency.website}</p>
-                                </div>
-                              )}
-                              {formatAddress(agency) && (
-                                <div>
-                                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Office Location</p>
-                                  <p className="text-sm text-slate-900 font-medium">{formatAddress(agency)}</p>
-                                </div>
-                              )}
+                          <div className="flex items-start gap-3">
+                            <Mail className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-xs font-medium text-slate-500 mb-1">Email</p>
+                              <p className="text-slate-900 font-medium">{agency.contact_email}</p>
                             </div>
                           </div>
+                          <div className="flex items-start gap-3">
+                            <Phone className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-xs font-medium text-slate-500 mb-1">Phone</p>
+                              <p className="text-slate-900 font-medium">{agency.contact_phone}</p>
+                            </div>
+                          </div>
+                          {agency.website && (
+                            <div className="flex items-start gap-3">
+                              <Globe className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-xs font-medium text-slate-500 mb-1">Website</p>
+                                <p className="text-slate-900 font-medium break-all">{agency.website}</p>
+                              </div>
+                            </div>
+                          )}
+                          {formatAddress(agency) && (
+                            <div className="flex items-start gap-3">
+                              <MapPin className="h-5 w-5 text-slate-400 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-xs font-medium text-slate-500 mb-1">Office Location</p>
+                                <p className="text-slate-900 font-medium">{formatAddress(agency)}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-                          {agency.geographic_patch && (
-                            <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/40 backdrop-blur-sm">
-                              <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2.5">
-                                <div className="p-1.5 bg-violet-50 rounded-lg">
-                                  <MapPin className="h-4 w-4 text-violet-600" />
-                                </div>
-                                Areas Covered
-                              </h3>
-                              <p className="text-sm text-slate-700 leading-relaxed font-medium">
+                      {activeTab === 'coverage' && (
+                        <div>
+                          {agency.geographic_patch ? (
+                            <div className="prose prose-sm max-w-none">
+                              <p className="text-slate-700 leading-relaxed font-medium text-base">
                                 {agency.geographic_patch}
                               </p>
+                            </div>
+                          ) : (
+                            <div className="text-center py-12">
+                              <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-2xl flex items-center justify-center">
+                                <MapPin className="h-8 w-8 text-slate-400" />
+                              </div>
+                              <p className="text-slate-500 font-medium">Coverage areas not specified</p>
                             </div>
                           )}
                         </div>
                       )}
 
                       {activeTab === 'team' && (
-                        <div className="space-y-4">
+                        <div>
                           {agency.agency_team_members && agency.agency_team_members.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-2 gap-4">
                               {agency.agency_team_members.map((member) => (
                                 <div 
                                   key={member.id} 
-                                  className="bg-white rounded-xl p-3 shadow-sm border border-slate-200/60 text-center"
+                                  className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center"
                                 >
-                                  <div className="mb-2">
+                                  <div className="mb-3">
                                     {member.headshot_url ? (
-                                      <div className="w-12 h-12 mx-auto rounded-xl overflow-hidden bg-slate-100">
+                                      <div className="w-16 h-16 mx-auto rounded-2xl overflow-hidden bg-slate-100">
                                         <Image
                                           src={member.headshot_url}
                                           alt={`${member.name} photo`}
-                                          width={48}
-                                          height={48}
+                                          width={64}
+                                          height={64}
                                           className="w-full h-full object-cover"
                                         />
                                       </div>
                                     ) : (
-                                      <div className="w-12 h-12 mx-auto rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                                        <Users className="w-6 h-6 text-slate-500" />
+                                      <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                                        <Users className="w-8 h-8 text-slate-400" />
                                       </div>
                                     )}
                                   </div>
-                                  <h4 className="font-semibold text-slate-900 text-xs mb-1 truncate">
+                                  <h4 className="font-semibold text-slate-900 text-sm mb-1 truncate">
                                     {member.name}
                                   </h4>
-                                  <p className="text-[10px] text-blue-600 font-medium truncate">
+                                  <p className="text-xs text-violet-600 font-medium truncate">
                                     {member.title}
                                   </p>
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 text-center">
-                              <Users className="h-8 w-8 text-slate-400 mx-auto mb-3" />
-                              <p className="text-slate-500 text-sm">Team profiles coming soon</p>
+                            <div className="text-center py-12">
+                              <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-2xl flex items-center justify-center">
+                                <Users className="h-8 w-8 text-slate-400" />
+                              </div>
+                              <p className="text-slate-500 font-medium">Team profiles coming soon</p>
                             </div>
                           )}
                         </div>
                       )}
 
                       {activeTab === 'companies' && (
-                        <div className="space-y-4">
+                        <div>
                           {agency.linked_companies && agency.linked_companies.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-3 gap-4">
                               {agency.linked_companies.map((company) => (
                                 <Link
                                   key={company.id}
                                   href={`/search?viewAll=true&companyName=${encodeURIComponent(company.company_name)}`}
-                                  className="bg-white rounded-xl p-3 shadow-sm border border-slate-200/60 block hover:scale-105 transition-transform"
+                                  className="bg-white rounded-2xl p-4 block hover:scale-105 transition-transform shadow-sm border border-slate-100"
                                 >
-                                  <div className="aspect-square bg-slate-50 rounded-lg p-2 mb-2 flex items-center justify-center">
+                                  <div className="aspect-square bg-slate-50 rounded-xl p-3 mb-3 flex items-center justify-center">
                                     {company.logo_url ? (
                                       <Image
                                         src={company.logo_url}
                                         alt={`${company.company_name} logo`}
-                                        width={64}
-                                        height={64}
+                                        width={48}
+                                        height={48}
                                         className="w-full h-full object-contain"
                                       />
                                     ) : (
                                       <Building2 className="w-6 h-6 text-slate-400" />
                                     )}
                                   </div>
-                                  <p className="text-[10px] text-slate-600 text-center truncate leading-tight">
+                                  <p className="text-xs text-slate-600 text-center truncate leading-tight font-medium">
                                     {company.company_name}
                                   </p>
                                 </Link>
                               ))}
                             </div>
                           ) : (
-                            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 text-center">
-                              <Building2 className="h-8 w-8 text-slate-400 mx-auto mb-3" />
-                              <p className="text-slate-500 text-sm">No partnerships yet</p>
+                            <div className="text-center py-12">
+                              <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-2xl flex items-center justify-center">
+                                <Building2 className="h-8 w-8 text-slate-400" />
+                              </div>
+                              <p className="text-slate-500 font-medium">No partnerships yet</p>
                             </div>
                           )}
                         </div>
