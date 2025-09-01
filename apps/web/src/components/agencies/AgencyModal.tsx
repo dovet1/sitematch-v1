@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { AgencyModalMobile } from './AgencyModalMobile'
+import { CompanyListingLink } from './CompanyListingLink'
+import { ListingModal } from '@/components/listings/ListingModal'
 
 // Desktop version (keeping existing code for now, will extract later)
 import { Badge } from '@/components/ui/badge'
@@ -63,6 +65,7 @@ export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
 // Desktop component (temporary - will extract to separate file)
 function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
   const { agency, isLoading, error, formatAddress, getClassificationBadgeColor, getCompanyLogo } = useAgencyModal(agencyId, isOpen)
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(null)
 
   // Prevent background scrolling when modal is open
   useEffect(() => {
@@ -238,30 +241,13 @@ function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
                           {agency.linked_companies && agency.linked_companies.length > 0 ? (
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                               {agency.linked_companies.map((company) => (
-                                <Link
+                                <CompanyListingLink
                                   key={company.id}
-                                  href={`/search?viewAll=true&companyName=${encodeURIComponent(company.company_name)}`}
-                                  className="group block hover:scale-105 transition-transform duration-200"
-                                >
-                                  <div className="aspect-square bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-center group-hover:border-blue-300 group-hover:shadow-sm transition-colors">
-                                    {getCompanyLogo(company) ? (
-                                      <Image
-                                        src={getCompanyLogo(company)!}
-                                        alt={`${company.company_name} logo`}
-                                        width={256}
-                                        height={256}
-                                        className="w-full h-full object-contain"
-                                      />
-                                    ) : (
-                                      <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
-                                        <Building2 className="w-5 h-5 text-slate-400" />
-                                      </div>
-                                    )}
-                                  </div>
-                                  <p className="text-xs text-slate-600 group-hover:text-blue-600 text-center mt-2 truncate transition-colors" title={company.company_name}>
-                                    {company.company_name}
-                                  </p>
-                                </Link>
+                                  company={company}
+                                  agencyId={agency.id}
+                                  getCompanyLogo={getCompanyLogo}
+                                  onListingClick={setSelectedListingId}
+                                />
                               ))}
                             </div>
                           ) : (
@@ -365,6 +351,13 @@ function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
           </motion.div>
         </div>
       )}
+      
+      {/* Listing Modal */}
+      <ListingModal
+        listingId={selectedListingId}
+        isOpen={!!selectedListingId}
+        onClose={() => setSelectedListingId(null)}
+      />
     </AnimatePresence>
   )
 }

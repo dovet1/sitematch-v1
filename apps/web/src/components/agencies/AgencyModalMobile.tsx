@@ -20,6 +20,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAgencyModal } from './shared/useAgencyModal'
 import { AgencyHero } from './shared/AgencyHero'
 import { TeamMemberCard } from './TeamMemberCard'
+import { CompanyListingLink } from './CompanyListingLink'
+import { ListingModal } from '@/components/listings/ListingModal'
 
 interface AgencyModalMobileProps {
   agencyId: string | null
@@ -32,6 +34,7 @@ type TabType = 'about' | 'contact' | 'coverage' | 'team' | 'companies'
 export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobileProps) {
   const { agency, isLoading, error, formatAddress, getClassificationBadgeColor, getCompanyLogo } = useAgencyModal(agencyId, isOpen)
   const [activeTab, setActiveTab] = useState<TabType>('about')
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(null)
 
   // Prevent background scrolling when modal is open
   useEffect(() => {
@@ -248,28 +251,13 @@ export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobi
                           {agency.linked_companies && agency.linked_companies.length > 0 ? (
                             <div className="grid grid-cols-3 gap-4">
                               {agency.linked_companies.map((company) => (
-                                <Link
+                                <CompanyListingLink
                                   key={company.id}
-                                  href={`/search?viewAll=true&companyName=${encodeURIComponent(company.company_name)}`}
-                                  className="bg-white rounded-2xl p-4 block hover:scale-105 transition-transform shadow-sm border border-slate-100"
-                                >
-                                  <div className="aspect-square bg-slate-50 rounded-xl p-3 mb-3 flex items-center justify-center">
-                                    {getCompanyLogo(company) ? (
-                                      <Image
-                                        src={getCompanyLogo(company)!}
-                                        alt={`${company.company_name} logo`}
-                                        width={48}
-                                        height={48}
-                                        className="w-full h-full object-contain"
-                                      />
-                                    ) : (
-                                      <Building2 className="w-6 h-6 text-slate-400" />
-                                    )}
-                                  </div>
-                                  <p className="text-xs text-slate-600 text-center truncate leading-tight font-medium">
-                                    {company.company_name}
-                                  </p>
-                                </Link>
+                                  company={company}
+                                  agencyId={agency.id}
+                                  getCompanyLogo={getCompanyLogo}
+                                  onListingClick={setSelectedListingId}
+                                />
                               ))}
                             </div>
                           ) : (
@@ -290,6 +278,13 @@ export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobi
           </motion.div>
         </div>
       )}
+      
+      {/* Listing Modal */}
+      <ListingModal
+        listingId={selectedListingId}
+        isOpen={!!selectedListingId}
+        onClose={() => setSelectedListingId(null)}
+      />
     </AnimatePresence>
   )
 }
