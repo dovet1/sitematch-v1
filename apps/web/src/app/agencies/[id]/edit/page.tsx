@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { TeamManagement } from '@/components/agencies/team-management'
+import { CompanyLinking } from '@/components/agencies/company-linking'
 import { LocationSearch } from '@/components/search/LocationSearch'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -539,6 +540,13 @@ export default function AgencyEditPage() {
                     agencyId={agency.id}
                     initialTeamMembers={agency.agency_team_members || []}
                   />
+                </div>
+              </div>
+
+              {/* Client Companies Section */}
+              <div className="bg-white/70 backdrop-blur-xl rounded-xl border border-violet-200/40 shadow-lg shadow-violet-500/5">
+                <div className="p-6">
+                  <CompanyLinking agencyId={agency.id} />
                 </div>
               </div>
 
