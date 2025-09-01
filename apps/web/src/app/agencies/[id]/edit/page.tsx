@@ -528,80 +528,110 @@ export default function AgencyEditPage() {
             </div>
           </div>
 
-          {/* Compact Sidebar */}
-          <div className="w-72 border-l border-violet-200/40 bg-white/60 backdrop-blur-xl overflow-y-auto">
-            <div className="p-4">
-              <h3 className="text-lg font-bold text-slate-900 mb-4">Contact Details</h3>
+          {/* Enhanced Agency Details Sidebar */}
+          <div className="w-96 border-l border-violet-200/40 bg-white/60 backdrop-blur-xl overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-slate-900 mb-6">Agency Details</h2>
               
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-violet-700 mb-1">Service Areas</label>
+              {/* Areas Covered Section */}
+              <div className="mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPin className="h-4 w-4 text-violet-600" />
+                  <h3 className="text-base font-semibold text-slate-800">Areas Covered</h3>
+                </div>
+                <div className="pl-6">
                   <Textarea
                     value={agency.geographic_patch || ''}
                     onChange={(e) => {
                       setAgency(prev => prev ? { ...prev, geographic_patch: e.target.value } : null)
                       setUnsavedChanges(true)
                     }}
-                    placeholder="Central London, Greater Manchester..."
-                    className="w-full min-h-[60px] border-none bg-violet-50/50 text-slate-700 placeholder-violet-400 resize-none focus:outline-none focus:bg-violet-50/80 p-2.5 rounded-lg backdrop-blur-xl transition-all text-sm"
-                    rows={2}
+                    placeholder="e.g., United Kingdom, Central London, Greater Manchester..."
+                    className="w-full min-h-[80px] border border-violet-200/50 bg-white/70 text-slate-700 placeholder-violet-400/60 resize-none focus:outline-none focus:bg-white focus:border-violet-400 p-3 rounded-lg transition-all"
+                    rows={3}
                   />
+                  <p className="text-xs text-violet-600/60 mt-2">
+                    List the geographic areas your agency serves
+                  </p>
+                </div>
+              </div>
+              
+              {/* Contact Details Section */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Phone className="h-4 w-4 text-violet-600" />
+                  <h3 className="text-base font-semibold text-slate-800">Contact Details</h3>
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-semibold text-violet-700 mb-1">Email</label>
-                  <Input
-                    type="email"
-                    value={agency.contact_email}
-                    onChange={(e) => {
-                      setAgency(prev => prev ? { ...prev, contact_email: e.target.value } : null)
-                      setUnsavedChanges(true)
-                    }}
-                    className="bg-violet-50/50 border-none text-slate-700 placeholder-violet-400 p-2.5 rounded-lg backdrop-blur-xl focus:outline-none focus:bg-violet-50/80 transition-all text-sm"
-                    placeholder="hello@agency.com"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-violet-700 mb-1">Phone</label>
-                  <Input
-                    type="tel"
-                    value={agency.contact_phone}
-                    onChange={(e) => {
-                      setAgency(prev => prev ? { ...prev, contact_phone: e.target.value } : null)
-                      setUnsavedChanges(true)
-                    }}
-                    className="bg-violet-50/50 border-none text-slate-700 placeholder-violet-400 p-2.5 rounded-lg backdrop-blur-xl focus:outline-none focus:bg-violet-50/80 transition-all text-sm"
-                    placeholder="+44 20 7xxx xxxx"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-violet-700 mb-1">Website</label>
-                  <Input
-                    type="url"
-                    value={agency.website || ''}
-                    onChange={(e) => {
-                      setAgency(prev => prev ? { ...prev, website: e.target.value } : null)
-                      setUnsavedChanges(true)
-                    }}
-                    placeholder="https://agency.com"
-                    className="bg-violet-50/50 border-none text-slate-700 placeholder-violet-400 p-2.5 rounded-lg backdrop-blur-xl focus:outline-none focus:bg-violet-50/80 transition-all text-sm"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-violet-700 mb-1">Office Location</label>
-                  <LocationSearch
-                    value={agency.office_address || ''}
-                    onChange={(value) => {
-                      setAgency(prev => prev ? { ...prev, office_address: value } : null)
-                      setUnsavedChanges(true)
-                    }}
-                    onLocationSelect={handleLocationSelect}
-                    placeholder="Search for office address..."
-                    className="bg-violet-50/50 border-none text-slate-700 placeholder-violet-400 p-2.5 rounded-lg backdrop-blur-xl focus:outline-none focus:bg-violet-50/80 transition-all text-sm"
-                  />
+                <div className="pl-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      <Mail className="inline h-3 w-3 mr-1 text-violet-500" />
+                      Email Address
+                    </label>
+                    <Input
+                      type="email"
+                      value={agency.contact_email}
+                      onChange={(e) => {
+                        setAgency(prev => prev ? { ...prev, contact_email: e.target.value } : null)
+                        setUnsavedChanges(true)
+                      }}
+                      className="border border-violet-200/50 bg-white/70 text-slate-700 placeholder-violet-400/60 p-3 rounded-lg focus:outline-none focus:bg-white focus:border-violet-400 transition-all"
+                      placeholder="hello@agency.com"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      <Phone className="inline h-3 w-3 mr-1 text-violet-500" />
+                      Phone Number
+                    </label>
+                    <Input
+                      type="tel"
+                      value={agency.contact_phone}
+                      onChange={(e) => {
+                        setAgency(prev => prev ? { ...prev, contact_phone: e.target.value } : null)
+                        setUnsavedChanges(true)
+                      }}
+                      className="border border-violet-200/50 bg-white/70 text-slate-700 placeholder-violet-400/60 p-3 rounded-lg focus:outline-none focus:bg-white focus:border-violet-400 transition-all"
+                      placeholder="+44 20 7xxx xxxx"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      <Globe className="inline h-3 w-3 mr-1 text-violet-500" />
+                      Website
+                    </label>
+                    <Input
+                      type="url"
+                      value={agency.website || ''}
+                      onChange={(e) => {
+                        setAgency(prev => prev ? { ...prev, website: e.target.value } : null)
+                        setUnsavedChanges(true)
+                      }}
+                      placeholder="https://agency.com"
+                      className="border border-violet-200/50 bg-white/70 text-slate-700 placeholder-violet-400/60 p-3 rounded-lg focus:outline-none focus:bg-white focus:border-violet-400 transition-all"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      <Building2 className="inline h-3 w-3 mr-1 text-violet-500" />
+                      Office Address
+                    </label>
+                    <LocationSearch
+                      value={agency.office_address || ''}
+                      onChange={(value) => {
+                        setAgency(prev => prev ? { ...prev, office_address: value } : null)
+                        setUnsavedChanges(true)
+                      }}
+                      onLocationSelect={handleLocationSelect}
+                      placeholder="Search for office address..."
+                      className="border border-violet-200/50 bg-white/70 text-slate-700 placeholder-violet-400/60 rounded-lg focus:outline-none focus:bg-white focus:border-violet-400 transition-all"
+                      hideIcon={false}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
