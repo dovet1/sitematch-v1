@@ -246,15 +246,15 @@ export function AgencyEditMobile({
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto bg-slate-50/20">
-        <div className="p-4 space-y-6">
+        <div className="space-y-6">
           {activeTab === 'info' && (
-            <div className="space-y-6">
+            <div className="p-4 space-y-8">
               {/* Logo & Name */}
-              <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-violet-200/40 p-6">
-                <div className="flex items-center gap-4 mb-4">
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
                   <div className="group relative">
                     {agency.logo_url ? (
-                      <div className="w-16 h-16 rounded-xl bg-white border border-violet-200/60 p-2 flex items-center justify-center shadow-lg">
+                      <div className="w-16 h-16 rounded-xl bg-white border border-violet-200/60 p-2 flex items-center justify-center shadow-sm">
                         <Image
                           src={agency.logo_url}
                           alt={`${agency.name} logo`}
@@ -264,7 +264,7 @@ export function AgencyEditMobile({
                         />
                       </div>
                     ) : (
-                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 border border-violet-200/60 flex items-center justify-center shadow-lg">
+                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 border border-violet-200/60 flex items-center justify-center shadow-sm">
                         <Building2 className="w-8 h-8 text-violet-400" />
                       </div>
                     )}
@@ -287,7 +287,7 @@ export function AgencyEditMobile({
                     <Input
                       value={agency.name}
                       onChange={(e) => onUpdate('name', e.target.value)}
-                      className="text-lg font-semibold border-violet-200/50 bg-white/70 focus:border-violet-400"
+                      className="text-lg font-semibold border-slate-200 bg-white focus:border-violet-400 focus:ring-violet-400"
                       placeholder="Your Agency Name"
                     />
                   </div>
@@ -295,9 +295,9 @@ export function AgencyEditMobile({
               </div>
 
               {/* Classification */}
-              <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-violet-200/40 p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Specialization</h3>
-                <p className="text-sm text-slate-600 mb-3">We specialise in</p>
+              <div className="border-t border-slate-100 pt-6 space-y-4">
+                <h3 className="text-lg font-semibold text-slate-900">Specialization</h3>
+                <p className="text-sm text-slate-600">We specialise in</p>
                 <div className="space-y-2">
                   {['Commercial', 'Residential', 'Both'].map((type) => (
                     <button
@@ -306,8 +306,8 @@ export function AgencyEditMobile({
                       onClick={() => onUpdate('classification', type)}
                       className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 text-left ${
                         agency.classification === type
-                          ? 'bg-violet-100 border-violet-300 text-violet-800 font-medium'
-                          : 'bg-white/70 border-violet-200/50 text-slate-600 hover:bg-violet-50'
+                          ? 'bg-violet-50 border-violet-300 text-violet-800 font-medium'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                       }`}
                     >
                       {type === 'Both' ? 'Both Commercial & Residential' : `${type} Properties`}
@@ -319,54 +319,54 @@ export function AgencyEditMobile({
           )}
 
           {activeTab === 'about' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-violet-200/40 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">About Your Agency</h3>
+            <div className="p-4 space-y-4">
+              <h3 className="text-lg font-semibold text-slate-900">About Your Agency</h3>
               <Textarea
                 value={agency.description || ''}
                 onChange={(e) => onUpdate('description', e.target.value)}
                 placeholder="Describe your agency's unique value proposition, expertise, and what sets you apart..."
-                className="w-full min-h-[200px] border-violet-200/50 bg-white/70 resize-none focus:border-violet-400"
+                className="w-full min-h-[200px] border-slate-200 bg-white resize-none focus:border-violet-400 focus:ring-violet-400"
                 maxLength={500}
               />
-              <div className="text-xs text-violet-400 text-right mt-2">
+              <div className="text-xs text-slate-500 text-right">
                 {agency.description?.length || 0}/500 characters
               </div>
             </div>
           )}
 
           {activeTab === 'contact' && (
-            <div className="space-y-4">
-              <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-violet-200/40 p-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <Mail className="inline h-4 w-4 mr-2 text-violet-500" />
+            <div className="p-4 space-y-6">
+              <div className="space-y-3">
+                <label className="flex items-center text-sm font-medium text-slate-700">
+                  <Mail className="h-4 w-4 mr-2 text-violet-500" />
                   Email Address
                 </label>
                 <Input
                   type="email"
                   value={agency.contact_email}
                   onChange={(e) => onUpdate('contact_email', e.target.value)}
-                  className="border-violet-200/50 bg-white/70 focus:border-violet-400"
+                  className="border-slate-200 bg-white focus:border-violet-400 focus:ring-violet-400"
                   placeholder="hello@agency.com"
                 />
               </div>
 
-              <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-violet-200/40 p-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <Phone className="inline h-4 w-4 mr-2 text-violet-500" />
+              <div className="border-t border-slate-100 pt-6 space-y-3">
+                <label className="flex items-center text-sm font-medium text-slate-700">
+                  <Phone className="h-4 w-4 mr-2 text-violet-500" />
                   Phone Number
                 </label>
                 <Input
                   type="tel"
                   value={agency.contact_phone}
                   onChange={(e) => onUpdate('contact_phone', e.target.value)}
-                  className="border-violet-200/50 bg-white/70 focus:border-violet-400"
+                  className="border-slate-200 bg-white focus:border-violet-400 focus:ring-violet-400"
                   placeholder="+44 20 7xxx xxxx"
                 />
               </div>
 
-              <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-violet-200/40 p-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <Globe className="inline h-4 w-4 mr-2 text-violet-500" />
+              <div className="border-t border-slate-100 pt-6 space-y-3">
+                <label className="flex items-center text-sm font-medium text-slate-700">
+                  <Globe className="h-4 w-4 mr-2 text-violet-500" />
                   Website
                 </label>
                 <Input
@@ -374,13 +374,13 @@ export function AgencyEditMobile({
                   value={agency.website || ''}
                   onChange={(e) => onUpdate('website', e.target.value)}
                   placeholder="https://agency.com"
-                  className="border-violet-200/50 bg-white/70 focus:border-violet-400"
+                  className="border-slate-200 bg-white focus:border-violet-400 focus:ring-violet-400"
                 />
               </div>
 
-              <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-violet-200/40 p-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <Building2 className="inline h-4 w-4 mr-2 text-violet-500" />
+              <div className="border-t border-slate-100 pt-6 space-y-3">
+                <label className="flex items-center text-sm font-medium text-slate-700">
+                  <Building2 className="h-4 w-4 mr-2 text-violet-500" />
                   Office Address
                 </label>
                 <LocationSearch
@@ -388,7 +388,7 @@ export function AgencyEditMobile({
                   onChange={(value) => onUpdate('office_address', value)}
                   onLocationSelect={handleLocationSelect}
                   placeholder="Search for office address..."
-                  className="border-violet-200/50 bg-white/70 focus:border-violet-400"
+                  className="border-slate-200 bg-white focus:border-violet-400 focus:ring-violet-400"
                   hideIcon={false}
                 />
               </div>
@@ -396,23 +396,23 @@ export function AgencyEditMobile({
           )}
 
           {activeTab === 'areas' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-violet-200/40 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Areas Covered</h3>
+            <div className="p-4 space-y-4">
+              <h3 className="text-lg font-semibold text-slate-900">Areas Covered</h3>
               <Textarea
                 value={agency.geographic_patch || ''}
                 onChange={(e) => onUpdate('geographic_patch', e.target.value)}
                 placeholder="e.g., Central London, Greater Manchester, United Kingdom..."
-                className="w-full min-h-[120px] border-violet-200/50 bg-white/70 resize-none focus:border-violet-400"
+                className="w-full min-h-[120px] border-slate-200 bg-white resize-none focus:border-violet-400 focus:ring-violet-400"
                 rows={5}
               />
-              <p className="text-xs text-violet-600/60 mt-2">
+              <p className="text-xs text-slate-500">
                 List the geographic areas your agency serves
               </p>
             </div>
           )}
 
           {activeTab === 'team' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-violet-200/40 p-6">
+            <div className="p-4">
               <TeamManagement 
                 agencyId={agency.id}
                 initialTeamMembers={agency.agency_team_members || []}
@@ -421,7 +421,7 @@ export function AgencyEditMobile({
           )}
 
           {activeTab === 'companies' && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-xl border border-violet-200/40 p-6">
+            <div className="p-4">
               <CompanyLinking agencyId={agency.id} />
             </div>
           )}

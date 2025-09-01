@@ -394,23 +394,26 @@ export function CompanyLinking({ agencyId }: CompanyLinkingProps) {
                         
                         {/* Footer Actions */}
                         {selectedForLinking.length > 0 && (
-                          <div className="border-t pt-4 flex items-center justify-between">
-                            <div className="text-sm text-slate-600">
-                              {selectedForLinking.length} companies selected
+                          <div className="border-t pt-4 space-y-3">
+                            <div className="text-sm text-slate-600 text-center">
+                              {selectedForLinking.length === 1 
+                                ? '1 company selected'
+                                : `${selectedForLinking.length} companies selected`
+                              }
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-3">
                               <Button
                                 variant="outline"
-                                size="sm"
                                 onClick={() => setSelectedForLinking([])}
                                 disabled={isBulkLinking}
+                                className="flex-1"
                               >
                                 Clear Selection
                               </Button>
                               <Button
                                 onClick={handleBulkLink}
                                 disabled={isBulkLinking || selectedForLinking.length === 0}
-                                className="bg-violet-600 hover:bg-violet-700 text-white"
+                                className="flex-1 bg-violet-600 hover:bg-violet-700 text-white"
                               >
                                 {isBulkLinking ? (
                                   <>
@@ -420,7 +423,7 @@ export function CompanyLinking({ agencyId }: CompanyLinkingProps) {
                                 ) : (
                                   <>
                                     <LinkIcon className="h-4 w-4 mr-2" />
-                                    Link {selectedForLinking.length} Companies
+                                    Link {selectedForLinking.length}
                                   </>
                                 )}
                               </Button>
@@ -606,23 +609,26 @@ export function CompanyLinking({ agencyId }: CompanyLinkingProps) {
                       
                       {/* Footer Actions */}
                       {selectedForLinking.length > 0 && (
-                        <div className="border-t pt-4 flex items-center justify-between">
-                          <div className="text-sm text-slate-600">
-                            {selectedForLinking.length} companies selected
+                        <div className="border-t pt-4 space-y-3">
+                          <div className="text-sm text-slate-600 text-center">
+                            {selectedForLinking.length === 1 
+                              ? '1 company selected'
+                              : `${selectedForLinking.length} companies selected`
+                            }
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-3">
                             <Button
                               variant="outline"
-                              size="sm"
                               onClick={() => setSelectedForLinking([])}
                               disabled={isBulkLinking}
+                              className="flex-1"
                             >
                               Clear Selection
                             </Button>
                             <Button
                               onClick={handleBulkLink}
                               disabled={isBulkLinking || selectedForLinking.length === 0}
-                              className="bg-violet-600 hover:bg-violet-700 text-white"
+                              className="flex-1 bg-violet-600 hover:bg-violet-700 text-white"
                             >
                               {isBulkLinking ? (
                                 <>
@@ -632,7 +638,7 @@ export function CompanyLinking({ agencyId }: CompanyLinkingProps) {
                               ) : (
                                 <>
                                   <LinkIcon className="h-4 w-4 mr-2" />
-                                  Link {selectedForLinking.length} Companies
+                                  Link {selectedForLinking.length}
                                 </>
                               )}
                             </Button>
