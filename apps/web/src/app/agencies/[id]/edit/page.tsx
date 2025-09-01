@@ -462,22 +462,53 @@ export default function AgencyEditPage() {
                     className="text-3xl font-bold text-slate-900 border-none p-0 bg-transparent focus:outline-none placeholder-violet-300 mb-2"
                     placeholder="Your Agency Name"
                   />
-                  <Select
-                    value={agency.classification || ''}
-                    onValueChange={(value) => {
-                      setAgency(prev => prev ? { ...prev, classification: value as 'Commercial' | 'Residential' | 'Both' } : null)
-                      setUnsavedChanges(true)
-                    }}
-                  >
-                    <SelectTrigger className="bg-violet-50/80 text-violet-700 border-violet-200/60 hover:bg-violet-100/80 font-medium px-4 py-2 rounded-lg transition-all duration-200 backdrop-blur-sm shadow-sm w-fit">
-                      <SelectValue placeholder="Choose your specialization" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-violet-200">
-                      <SelectItem value="Commercial" className="hover:bg-violet-50">Commercial Property</SelectItem>
-                      <SelectItem value="Residential" className="hover:bg-violet-50">Residential Property</SelectItem>
-                      <SelectItem value="Both" className="hover:bg-violet-50">Commercial & Residential</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <p className="text-sm text-slate-600 mb-1">
+                    We specialise in
+                  </p>
+                  <div className="inline-flex gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAgency(prev => prev ? { ...prev, classification: 'Commercial' } : null)
+                        setUnsavedChanges(true)
+                      }}
+                      className={`px-4 py-2 rounded-lg border transition-all duration-200 ${
+                        agency.classification === 'Commercial'
+                          ? 'bg-violet-100 border-violet-300 text-violet-800 font-medium shadow-sm'
+                          : 'bg-white/70 border-violet-200/50 text-slate-600 hover:bg-violet-50 hover:border-violet-300'
+                      }`}
+                    >
+                      Commercial Properties
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAgency(prev => prev ? { ...prev, classification: 'Residential' } : null)
+                        setUnsavedChanges(true)
+                      }}
+                      className={`px-4 py-2 rounded-lg border transition-all duration-200 ${
+                        agency.classification === 'Residential'
+                          ? 'bg-violet-100 border-violet-300 text-violet-800 font-medium shadow-sm'
+                          : 'bg-white/70 border-violet-200/50 text-slate-600 hover:bg-violet-50 hover:border-violet-300'
+                      }`}
+                    >
+                      Residential Properties
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAgency(prev => prev ? { ...prev, classification: 'Both' } : null)
+                        setUnsavedChanges(true)
+                      }}
+                      className={`px-4 py-2 rounded-lg border transition-all duration-200 ${
+                        agency.classification === 'Both'
+                          ? 'bg-violet-100 border-violet-300 text-violet-800 font-medium shadow-sm'
+                          : 'bg-white/70 border-violet-200/50 text-slate-600 hover:bg-violet-50 hover:border-violet-300'
+                      }`}
+                    >
+                      Both Commercial & Residential
+                    </button>
+                  </div>
                 </div>
               </div>
 
