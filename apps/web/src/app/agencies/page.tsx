@@ -139,45 +139,86 @@ export default function AgenciesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Optimized Compact Header */}
-      <div className="relative overflow-hidden border-b border-slate-200/60 bg-gradient-to-br from-primary-50 via-white to-primary-50/50">
+      {/* Dynamic Collapsing Header - Adapts based on view mode */}
+      <div className={`relative overflow-hidden border-b border-slate-200/60 bg-gradient-to-br from-primary-50 via-white to-primary-50/50 transition-all duration-300 ${
+        isMapView ? 'py-3' : ''
+      }`}>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary-100/40 via-transparent to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-blue-500/5" />
         
-        <div className="relative container mx-auto px-4 py-6 md:py-8">
+        <div className={`relative container mx-auto px-4 transition-all duration-300 ${
+          isMapView ? 'py-2' : 'py-6 md:py-8'
+        }`}>
           <div className="max-w-5xl mx-auto">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6">
-              <div className="flex-1 text-center lg:text-left">
-                <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-2 tracking-tight leading-tight">
-                  Agency Directory
-                </h1>
-                <p className="text-slate-600 text-base md:text-lg max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                  Discover vetted property agencies and connect with expert teams across Commercial and Residential markets
-                </p>
+            {isMapView ? (
+              /* Condensed Header for Map View */
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-primary" />
+                  </div>
+                  <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                    Agency Directory
+                  </h1>
+                </div>
+                
+                <div className="flex justify-end">
+                  {user ? (
+                    <AgencyCreationModal>
+                      <Button size="sm" className="shadow-md hover:shadow-lg transition-all duration-200 bg-primary hover:bg-primary/90 text-white border-0 px-4 py-2">
+                        <Building2 className="w-3.5 h-3.5 mr-1.5" />
+                        Join Directory
+                      </Button>
+                    </AgencyCreationModal>
+                  ) : (
+                    <AuthChoiceModal
+                      redirectTo="/occupier/dashboard"
+                      title="Create Your Agency Profile"
+                      description="Sign up to showcase your agency in our directory"
+                    >
+                      <Button size="sm" className="shadow-md hover:shadow-lg transition-all duration-200 bg-primary hover:bg-primary/90 text-white border-0 px-4 py-2">
+                        <Building2 className="w-3.5 h-3.5 mr-1.5" />
+                        Join Directory
+                      </Button>
+                    </AuthChoiceModal>
+                  )}
+                </div>
               </div>
-              
-              <div className="flex justify-center lg:justify-end">
-                {user ? (
-                  <AgencyCreationModal>
-                    <Button className="shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 bg-primary hover:bg-primary/90 text-white border-0 px-6 py-2.5">
-                      <Building2 className="w-4 h-4 mr-2" />
-                      Join Directory
-                    </Button>
-                  </AgencyCreationModal>
-                ) : (
-                  <AuthChoiceModal
-                    redirectTo="/occupier/dashboard"
-                    title="Create Your Agency Profile"
-                    description="Sign up to showcase your agency in our directory"
-                  >
-                    <Button className="shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 bg-primary hover:bg-primary/90 text-white border-0 px-6 py-2.5">
-                      <Building2 className="w-4 h-4 mr-2" />
-                      Join Directory
-                    </Button>
-                  </AuthChoiceModal>
-                )}
+            ) : (
+              /* Full Header for List View */
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6">
+                <div className="flex-1 text-center lg:text-left">
+                  <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-2 tracking-tight leading-tight">
+                    Agency Directory
+                  </h1>
+                  <p className="text-slate-600 text-base md:text-lg max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                    Discover vetted property agencies and connect with expert teams across Commercial and Residential markets
+                  </p>
+                </div>
+                
+                <div className="flex justify-center lg:justify-end">
+                  {user ? (
+                    <AgencyCreationModal>
+                      <Button className="shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 bg-primary hover:bg-primary/90 text-white border-0 px-6 py-2.5">
+                        <Building2 className="w-4 h-4 mr-2" />
+                        Join Directory
+                      </Button>
+                    </AgencyCreationModal>
+                  ) : (
+                    <AuthChoiceModal
+                      redirectTo="/occupier/dashboard"
+                      title="Create Your Agency Profile"
+                      description="Sign up to showcase your agency in our directory"
+                    >
+                      <Button className="shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 bg-primary hover:bg-primary/90 text-white border-0 px-6 py-2.5">
+                        <Building2 className="w-4 h-4 mr-2" />
+                        Join Directory
+                      </Button>
+                    </AuthChoiceModal>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -197,7 +238,9 @@ export default function AgenciesPage() {
 
           {/* Results */}
           {isMapView ? (
-            <div className="h-[600px] rounded-2xl overflow-hidden border border-slate-200 shadow-lg">
+            <div className={`rounded-2xl overflow-hidden border border-slate-200 shadow-lg ${
+              isMapView ? 'h-[calc(100vh-200px)]' : 'h-[600px]'
+            } transition-all duration-300`}>
               <AgencyMapSimple
                 search={search}
                 classification={classification}
