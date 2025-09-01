@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { createClientClient } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, FileText, Clock, CheckCircle, AlertTriangle, Eye, Building2, Link as LinkIcon } from 'lucide-react';
+import { Plus, FileText, Clock, CheckCircle, AlertTriangle, Eye, Building2 } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '../components/StatusBadge';
 import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal';
@@ -576,32 +576,6 @@ export default function OccupierDashboard() {
                   </Card>
                 )}
 
-                {/* Agency Linking */}
-                {listings.length > 0 && (
-                  <Card className="violet-bloom-card">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
-                            <LinkIcon className="w-6 h-6 text-primary-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-foreground mb-1">Link Agencies to Listings</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Connect your listings to agencies for visibility and attribution
-                            </p>
-                          </div>
-                        </div>
-                        <Button asChild size="sm" variant="outline">
-                          <Link href="/occupier/listings-agencies">
-                            <LinkIcon className="w-4 h-4 mr-2" />
-                            Manage Links
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
                 
               </>
             )}

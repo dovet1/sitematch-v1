@@ -2,7 +2,13 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { ChevronDown, Mail, Phone, Linkedin, User } from 'lucide-react'
+import { ChevronDown, ChevronUp, Mail, Phone, Linkedin, User, Edit, Trash2, MoreVertical } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
 interface TeamMember {
@@ -19,9 +25,26 @@ interface TeamMember {
 interface TeamMemberCardProps {
   member: TeamMember
   isMobile?: boolean
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+  canMoveUp?: boolean
+  canMoveDown?: boolean
+  isEdit?: boolean
+  onEdit?: () => void
+  onDelete?: () => void
 }
 
-export function TeamMemberCard({ member, isMobile = false }: TeamMemberCardProps) {
+export function TeamMemberCard({ 
+  member, 
+  isMobile = false,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = true,
+  canMoveDown = true,
+  isEdit = false,
+  onEdit,
+  onDelete
+}: TeamMemberCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const handleEmailClick = () => {
@@ -47,6 +70,152 @@ export function TeamMemberCard({ member, isMobile = false }: TeamMemberCardProps
     }
   }
 
+  // Mobile Option 2 Design: Horizontal layout with progressive disclosure
+  if (isMobile) {
+    return (
+      <div className="border border-slate-200 rounded-lg bg-white">
+        {/* Main Content Row */}
+        <div className="p-4">
+          <div className="flex items-center gap-3">
+            {/* Headshot */}
+            <div className="flex-shrink-0">
+              {member.headshot_url ? (
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 border border-slate-200">
+                  <Image
+                    src={member.headshot_url}
+                    alt={`${member.name} headshot`}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                  <User className="w-6 h-6 text-slate-500" />
+                </div>
+              )}
+            </div>
+
+            {/* Name & Title */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-slate-900 text-base truncate">{member.name}</h3>
+              <p className="text-sm text-slate-600 truncate">{member.title}</p>
+            </div>
+
+            {/* Context Menu (Edit Mode) - Clean single button */}
+            {isEdit && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
+                    aria-label="More options"
+                  >
+                    <MoreVertical className="h-5 w-5 text-slate-600" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault()
+                      onEdit?.()
+                    }}
+                    className="flex items-center gap-3 py-2.5 cursor-pointer"
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span>Edit Member</span>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (canMoveUp && onMoveUp) {
+                        onMoveUp()
+                      }
+                    }}
+                    disabled={!canMoveUp}
+                    className="flex items-center gap-3 py-2.5 cursor-pointer"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                    <span>Move Up</span>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (canMoveDown && onMoveDown) {
+                        onMoveDown()
+                      }
+                    }}
+                    disabled={!canMoveDown}
+                    className="flex items-center gap-3 py-2.5 cursor-pointer"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                    <span>Move Down</span>
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault()
+                      onDelete?.()
+                    }}
+                    className="flex items-center gap-3 py-2.5 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Delete</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+
+          {/* Contact Pills Row */}
+          {(member.email || member.phone || member.linkedin_url) && (
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-slate-500 font-medium">Contact:</span>
+                {member.email && (
+                  <button
+                    onClick={handleEmailClick}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full transition-colors"
+                  >
+                    <Mail className="w-3 h-3" />
+                    Email
+                  </button>
+                )}
+                {member.phone && (
+                  <button
+                    onClick={handlePhoneClick}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full transition-colors"
+                  >
+                    <Phone className="w-3 h-3" />
+                    Call
+                  </button>
+                )}
+                {member.linkedin_url && (
+                  <button
+                    onClick={handleLinkedInClick}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full transition-colors"
+                  >
+                    <Linkedin className="w-3 h-3" />
+                    LinkedIn
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Bio (if exists) */}
+          {member.bio && (
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <p className="text-sm text-slate-700 leading-relaxed line-clamp-3">{member.bio}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Desktop Version (existing expandable design)
   return (
     <div className="border border-slate-200 rounded-lg bg-white hover:shadow-md transition-all duration-300">
       {/* Always Visible Header */}

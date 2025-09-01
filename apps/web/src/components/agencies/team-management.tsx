@@ -18,6 +18,7 @@ import {
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { TeamMemberForm } from './team-member-form'
+import { TeamMemberCard } from './TeamMemberCard'
 import {
   DndContext,
   DragEndEvent,
@@ -61,11 +62,15 @@ interface TeamManagementProps {
   initialTeamMembers?: TeamMember[]
 }
 
-function SortableTeamMemberCard({ member, onEdit, onDelete, isMobile }: {
+function SortableTeamMemberCard({ member, onEdit, onDelete, isMobile, onMoveUp, onMoveDown, canMoveUp, canMoveDown }: {
   member: TeamMember
   onEdit: () => void
   onDelete: () => void
   isMobile: boolean
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+  canMoveUp?: boolean
+  canMoveDown?: boolean
 }) {
   const {
     attributes,
@@ -175,7 +180,8 @@ function SortableTeamMemberCard({ member, onEdit, onDelete, isMobile }: {
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0"
-                    onClick={() => {/* Handle move up */}}
+                    onClick={onMoveUp}
+                    disabled={!canMoveUp}
                   >
                     <ChevronUp className="h-3 w-3" />
                   </Button>
@@ -183,7 +189,8 @@ function SortableTeamMemberCard({ member, onEdit, onDelete, isMobile }: {
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0"
-                    onClick={() => {/* Handle move down */}}
+                    onClick={onMoveDown}
+                    disabled={!canMoveDown}
                   >
                     <ChevronDown className="h-3 w-3" />
                   </Button>
@@ -256,15 +263,26 @@ export function TeamManagement({ agencyId, initialTeamMembers = [] }: TeamManage
       return
     }
 
-    const oldIndex = teamMembers.findIndex(member => member.id === active.id)
-    const newIndex = teamMembers.findIndex(member => member.id === over.id)
+    // Work with the sorted array that's being displayed
+    const sortedMembers = [...teamMembers].sort((a, b) => a.display_order - b.display_order)
+    const oldIndex = sortedMembers.findIndex(member => member.id === active.id)
+    const newIndex = sortedMembers.findIndex(member => member.id === over.id)
 
-    const newTeamMembers = arrayMove(teamMembers, oldIndex, newIndex)
-    setTeamMembers(newTeamMembers)
+    // Reorder the array
+    const newTeamMembers = arrayMove(sortedMembers, oldIndex, newIndex)
+    
+    // Update display_order for all members based on new positions
+    const updatedMembers = newTeamMembers.map((member, index) => ({
+      ...member,
+      display_order: index
+    }))
+    
+    // Update state immediately for instant UI feedback
+    setTeamMembers(updatedMembers)
 
     // Update server
     try {
-      const reorderedIds = newTeamMembers.map(member => member.id)
+      const reorderedIds = updatedMembers.map(member => member.id)
       const response = await fetch(`/api/agencies/${agencyId}/team/reorder`, {
         method: 'PUT',
         headers: {
@@ -283,6 +301,69 @@ export function TeamManagement({ agencyId, initialTeamMembers = [] }: TeamManage
       // Revert the change
       fetchTeamMembers()
     }
+  }
+
+  const updateOrder = async (newTeamMembers: TeamMember[]) => {
+    try {
+      const reorderedIds = newTeamMembers.map(member => member.id)
+      const response = await fetch(`/api/agencies/${agencyId}/team/reorder`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ teamMemberIds: reorderedIds }),
+      })
+      if (!response.ok) {
+        throw new Error('Failed to update order')
+      }
+      toast.success('Team member order updated')
+    } catch (error) {
+      toast.error('Failed to update order')
+      // Revert the change
+      fetchTeamMembers()
+    }
+  }
+
+  const handleMoveUp = async (memberId: string) => {
+    const currentMembers = [...teamMembers].sort((a, b) => a.display_order - b.display_order)
+    const memberIndex = currentMembers.findIndex(m => m.id === memberId)
+    if (memberIndex <= 0) return // Can't move up if already at top
+    
+    // Swap with previous member
+    const newTeamMembers = [...currentMembers]
+    const temp = newTeamMembers[memberIndex]
+    newTeamMembers[memberIndex] = newTeamMembers[memberIndex - 1]
+    newTeamMembers[memberIndex - 1] = temp
+    
+    // Update display_order for all members
+    const updatedMembers = newTeamMembers.map((member, index) => ({
+      ...member,
+      display_order: index
+    }))
+    
+    setTeamMembers(updatedMembers)
+    await updateOrder(updatedMembers)
+  }
+
+  const handleMoveDown = async (memberId: string) => {
+    const currentMembers = [...teamMembers].sort((a, b) => a.display_order - b.display_order)
+    const memberIndex = currentMembers.findIndex(m => m.id === memberId)
+    if (memberIndex >= currentMembers.length - 1) return // Can't move down if already at bottom
+    
+    // Swap with next member
+    const newTeamMembers = [...currentMembers]
+    const temp = newTeamMembers[memberIndex]
+    newTeamMembers[memberIndex] = newTeamMembers[memberIndex + 1]
+    newTeamMembers[memberIndex + 1] = temp
+    
+    // Update display_order for all members
+    const updatedMembers = newTeamMembers.map((member, index) => ({
+      ...member,
+      display_order: index
+    }))
+    
+    setTeamMembers(updatedMembers)
+    await updateOrder(updatedMembers)
   }
 
   const handleDelete = async (member: TeamMember) => {
@@ -346,15 +427,20 @@ export function TeamManagement({ agencyId, initialTeamMembers = [] }: TeamManage
           ) : (
             <div className="space-y-4">
               {isMobile ? (
-                // Mobile: Simple list without drag-drop
+                // Mobile: Simple list without drag-drop using new design
                 <div className="space-y-4">
-                  {sortedTeamMembers.map((member) => (
-                    <SortableTeamMemberCard
+                  {sortedTeamMembers.map((member, index) => (
+                    <TeamMemberCard
                       key={member.id}
                       member={member}
+                      isMobile={true}
+                      onMoveUp={() => handleMoveUp(member.id)}
+                      onMoveDown={() => handleMoveDown(member.id)}
+                      canMoveUp={index > 0}
+                      canMoveDown={index < sortedTeamMembers.length - 1}
+                      isEdit={true}
                       onEdit={() => setEditingMember(member)}
                       onDelete={() => setDeletingMember(member)}
-                      isMobile={true}
                     />
                   ))}
                 </div>

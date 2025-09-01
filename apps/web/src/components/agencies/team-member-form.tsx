@@ -306,11 +306,20 @@ export function TeamMemberForm({
           </div>
         </form>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+        <DialogFooter className="flex-col sm:flex-row gap-3 sm:gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleClose} 
+            disabled={isLoading}
+            className="w-full sm:w-auto"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSubmit(onSubmit)} disabled={isLoading}>
+          <Button 
+            onClick={handleSubmit(onSubmit)} 
+            disabled={isLoading}
+            className="w-full sm:w-auto"
+          >
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

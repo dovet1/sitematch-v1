@@ -41,6 +41,10 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { AgencyModal } from '@/components/agencies/AgencyModal'
 import { AgencyEditMobile } from '@/components/agencies/AgencyEditMobile'
+import { 
+  AgencySubmissionSuccessTransition, 
+  useAgencySuccessTransition 
+} from '@/components/agencies/agency-submission-success-transition'
 
 interface Agency {
   id: string
@@ -102,6 +106,14 @@ export default function AgencyEditPage() {
   const [unsavedChanges, setUnsavedChanges] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const isMobile = useIsMobile()
+
+  // Add success transition hook
+  const { 
+    isVisible: showSuccessTransition, 
+    data: successData, 
+    showSuccess, 
+    hideSuccess 
+  } = useAgencySuccessTransition()
 
   useEffect(() => {
     fetchAgency()
@@ -248,8 +260,16 @@ export default function AgencyEditPage() {
         throw new Error('Failed to submit for review')
       }
 
-      toast.success('Agency submitted for review successfully')
-      router.push('/occupier/dashboard')
+      // Refresh agency data to show updated status
+      await fetchAgency()
+      
+      // Show success transition
+      showSuccess(
+        agency.id,
+        agency.name,
+        agency.logo_url || undefined
+      )
+      
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to submit for review')
     } finally {
@@ -325,17 +345,42 @@ export default function AgencyEditPage() {
   // Route to appropriate component based on device
   if (isMobile) {
     return (
-      <AgencyEditMobile
-        agency={agency!}
-        onUpdate={handleUpdate}
-        onSave={saveAllChanges}
-        onSubmit={submitForReview}
-        onBack={handleBack}
-        isSubmitting={isSubmitting}
-        unsavedChanges={unsavedChanges}
-        showPreview={showPreview}
-        onPreviewToggle={() => setShowPreview(!showPreview)}
-      />
+      <>
+        <AgencyEditMobile
+          agency={agency!}
+          onUpdate={handleUpdate}
+          onSave={saveAllChanges}
+          onSubmit={submitForReview}
+          onBack={handleBack}
+          isSubmitting={isSubmitting}
+          unsavedChanges={unsavedChanges}
+          showPreview={showPreview}
+          onPreviewToggle={() => setShowPreview(!showPreview)}
+        />
+
+        {/* Success transition overlay for mobile */}
+        {successData && (
+          <AgencySubmissionSuccessTransition
+            isVisible={showSuccessTransition}
+            agencyId={successData.agencyId}
+            agencyName={successData.agencyName}
+            agencyLogo={successData.agencyLogo}
+            onViewDashboard={() => {
+              hideSuccess()
+              router.push('/occupier/dashboard')
+            }}
+            onEditAgency={() => {
+              hideSuccess()
+              // Stay on current page
+            }}
+            onPreviewAgency={() => {
+              hideSuccess()
+              setShowPreview(true)
+            }}
+            autoRedirectAfter={0} // No auto-redirect, let user manually dismiss
+          />
+        )}
+      </>
     )
   }
 
@@ -729,6 +774,29 @@ export default function AgencyEditPage() {
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
       />
+
+      {/* Success transition overlay */}
+      {successData && (
+        <AgencySubmissionSuccessTransition
+          isVisible={showSuccessTransition}
+          agencyId={successData.agencyId}
+          agencyName={successData.agencyName}
+          agencyLogo={successData.agencyLogo}
+          onViewDashboard={() => {
+            hideSuccess()
+            router.push('/occupier/dashboard')
+          }}
+          onEditAgency={() => {
+            hideSuccess()
+            // Stay on current page
+          }}
+          onPreviewAgency={() => {
+            hideSuccess()
+            setShowPreview(true)
+          }}
+          autoRedirectAfter={0} // No auto-redirect, let user manually dismiss
+        />
+      )}
     </div>
   )
 }

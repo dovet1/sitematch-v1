@@ -350,7 +350,7 @@ export function AgencyEditMobile({
                 />
               </div>
 
-              <div className="border-t border-slate-100 pt-6 space-y-3">
+              <div className="space-y-3">
                 <label className="flex items-center text-sm font-medium text-slate-700">
                   <Phone className="h-4 w-4 mr-2 text-violet-500" />
                   Phone Number
@@ -364,7 +364,7 @@ export function AgencyEditMobile({
                 />
               </div>
 
-              <div className="border-t border-slate-100 pt-6 space-y-3">
+              <div className="space-y-3">
                 <label className="flex items-center text-sm font-medium text-slate-700">
                   <Globe className="h-4 w-4 mr-2 text-violet-500" />
                   Website
@@ -378,7 +378,7 @@ export function AgencyEditMobile({
                 />
               </div>
 
-              <div className="border-t border-slate-100 pt-6 space-y-3">
+              <div className="space-y-3">
                 <label className="flex items-center text-sm font-medium text-slate-700">
                   <Building2 className="h-4 w-4 mr-2 text-violet-500" />
                   Office Address
