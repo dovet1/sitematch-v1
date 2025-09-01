@@ -122,7 +122,6 @@ export default function OccupierDashboard() {
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session?.user?.id);
       if (event === 'SIGNED_IN' && session) {
         fetchData();
       } else if (event === 'SIGNED_OUT') {

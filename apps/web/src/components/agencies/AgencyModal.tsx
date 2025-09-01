@@ -86,7 +86,7 @@ function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div key={`agency-modal-${agencyId}`} className="fixed inset-0 z-50 flex items-center justify-center">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -353,11 +353,14 @@ function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
       )}
       
       {/* Listing Modal */}
-      <ListingModal
-        listingId={selectedListingId}
-        isOpen={!!selectedListingId}
-        onClose={() => setSelectedListingId(null)}
-      />
+      {selectedListingId && (
+        <ListingModal
+          key={`agency-listing-modal-${selectedListingId}`}
+          listingId={selectedListingId}
+          isOpen={!!selectedListingId}
+          onClose={() => setSelectedListingId(null)}
+        />
+      )}
     </AnimatePresence>
   )
 }

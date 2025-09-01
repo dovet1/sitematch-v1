@@ -29,19 +29,14 @@ export function CompanyListingLink({ company, agencyId, getCompanyLogo, onListin
     async function fetchListingId() {
       try {
         const url = `/api/public/listings?companyName=${encodeURIComponent(company.company_name)}&limit=1`
-        console.log('🔍 Fetching listing for:', company.company_name, 'URL:', url)
         
         const response = await fetch(url)
         const result = await response.json()
         
-        console.log('API response:', result)
-        
         if (response.ok && result.results && result.results.length > 0) {
           const listingId = result.results[0].id
           setListingId(listingId)
-          console.log('Found listing ID:', listingId)
         } else {
-          console.log('No listing found for company:', company.company_name)
           setListingId(null)
         }
       } catch (error) {

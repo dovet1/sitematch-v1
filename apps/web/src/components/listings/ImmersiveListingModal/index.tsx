@@ -133,11 +133,6 @@ export function ImmersiveListingModal({
         }
 
         const data = await response.json();
-        console.log('MODAL_DEBUG - Received listing data:', {
-          company_name: data?.company?.name,
-          linked_agency_id: data?.linked_agency_id,
-          linked_agency: data?.linked_agency
-        });
         setListing(data);
       } catch (err) {
         console.error('Error fetching listing details:', err);
@@ -675,7 +670,7 @@ export function ImmersiveListingModal({
     return (
       <AnimatePresence>
         {isOpen && (
-          <>
+          <React.Fragment key={`listing-modal-mobile-${listingId}`}>
             {/* Mobile Backdrop */}
             <motion.div
               className={styles.backdrop}
@@ -774,7 +769,7 @@ export function ImmersiveListingModal({
                 }
               />
             </div>
-          </>
+          </React.Fragment>
         )}
       </AnimatePresence>
     );
@@ -784,7 +779,7 @@ export function ImmersiveListingModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <React.Fragment key={`listing-modal-desktop-${listingId}`}>
           {/* Premium Backdrop */}
           <motion.div
             className={styles.backdrop}
@@ -906,15 +901,18 @@ export function ImmersiveListingModal({
               </div>
             </div>
           </motion.div>
-        </>
+        </React.Fragment>
       )}
       
       {/* Agency Modal */}
-      <AgencyModal 
-        agencyId={selectedAgencyId}
-        isOpen={!!selectedAgencyId}
-        onClose={() => setSelectedAgencyId(null)}
-      />
+      {selectedAgencyId && (
+        <AgencyModal 
+          key={`listing-agency-modal-${selectedAgencyId}`}
+          agencyId={selectedAgencyId}
+          isOpen={!!selectedAgencyId}
+          onClose={() => setSelectedAgencyId(null)}
+        />
+      )}
     </AnimatePresence>
   );
 }

@@ -63,7 +63,7 @@ export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobi
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div key={`agency-modal-mobile-${agencyId}`} className="fixed inset-0 z-50 flex items-center justify-center">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -280,11 +280,14 @@ export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobi
       )}
       
       {/* Listing Modal */}
-      <ListingModal
-        listingId={selectedListingId}
-        isOpen={!!selectedListingId}
-        onClose={() => setSelectedListingId(null)}
-      />
+      {selectedListingId && (
+        <ListingModal
+          key={`agency-mobile-listing-modal-${selectedListingId}`}
+          listingId={selectedListingId}
+          isOpen={!!selectedListingId}
+          onClose={() => setSelectedListingId(null)}
+        />
+      )}
     </AnimatePresence>
   )
 }

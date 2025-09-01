@@ -285,15 +285,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     
     try {
       const result = await hasListingChanges(listingId);
-      console.log('Changes check result:', result);
-      console.log('Setting hasUnapprovedChanges to:', result.hasChanges);
       setHasUnapprovedChanges(result.hasChanges);
-      
-      // Force re-render if changes detected
-      if (result.hasChanges && listingData?.status === 'approved') {
-        console.log('Changes detected on approved listing - submit button should appear');
-        console.log('Current hasUnapprovedChanges state will be:', result.hasChanges);
-      }
     } catch (error) {
       console.error('Error checking for changes:', error);
     }
@@ -322,9 +314,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         .eq('created_by', userId)
         .single();
 
-      // Debug logging can be removed once migration is applied
-      console.log('Listing data:', listing);
-      console.log('Linked agency data:', listing?.linked_agency);
 
       if (listingError) {
         throw new Error(listingError.message);
@@ -362,8 +351,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         
       setLatestVersion(latestVersionData);
       
-      console.log('Fetched contacts from DB:', contacts);
-      console.log('First contact headshot_url:', contacts?.[0]?.headshot_url);
 
       // Transform data to match WizardFormData structure
       const transformedData: ListingData = {
@@ -434,7 +421,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
         // Additional contacts
         additionalContacts: contacts?.filter(c => !c.is_primary_contact).map(contact => {
-          console.log('Mapping additional contact:', contact.contact_name, 'headshot_url:', contact.headshot_url);
           return {
             id: contact.id,
             contactName: contact.contact_name,
@@ -544,12 +530,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     fetchListingData();
   }, [listingId, userId]);
 
-  // Debug effect to track hasUnapprovedChanges state
-  useEffect(() => {
-    console.log('hasUnapprovedChanges state updated to:', hasUnapprovedChanges);
-    console.log('Current listing status:', listingData?.status);
-    console.log('Submit button should show:', listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges));
-  }, [hasUnapprovedChanges, listingData?.status]);
 
   // Carousel navigation functions
   const nextSitePlan = () => {
@@ -1263,7 +1243,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   };
 
   const handleDeleteContact = async (contactId: string) => {
-    console.log('handleDeleteContact called with contactId:', contactId);
     try {
       const supabase = createClientClient();
       
@@ -1275,11 +1254,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
       if (countError) throw countError;
       
-      console.log('Existing contacts count:', existingContacts?.length);
-
       // Prevent deletion if this is the only contact
       if (existingContacts && existingContacts.length <= 1) {
-        console.log('Preventing deletion - only one contact remaining');
         
         // Show toast message
         toast.error('You must have at least one contact. Please add another contact before deleting this one.', {
@@ -1394,13 +1370,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
     setSubmitting(true);
     try {
-      console.log('Submitting listing for review:', listingId);
       
       // Use the version management system to create a proper submission
       const { submitListingForReviewAction } = await import('@/lib/actions/submit-listing-for-review');
       const result = await submitListingForReviewAction(listingId);
       
-      console.log('Submit result:', result);
       
       if (result.success) {
         toast.success('Listing submitted for review!');
@@ -1438,12 +1412,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   // Quick Add Modal functions
   const openQuickAddModal = (type: keyof typeof quickAddModals) => {
-    console.log('openQuickAddModal called with:', type);
-    setQuickAddModals(prev => {
-      const newState = { ...prev, [type]: true };
-      console.log('quickAddModals updated:', newState);
-      return newState;
-    });
+    setQuickAddModals(prev => ({ ...prev, [type]: true }));
   };
 
   const closeQuickAddModal = (type: keyof typeof quickAddModals) => {
@@ -2768,12 +2737,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         validation.warnings.forEach(warning => toast.warning(warning));
       }
       
-      console.log(`Uploading ${files.length} ${type} files:`, files.map(f => f.name));
-      
       // Upload files using the real upload function with listing ID
-      const uploadedFiles = await uploadFiles(files, fileUploadType, user.id, listingId, (progress) => {
-        console.log(`Upload progress: ${progress}%`);
-      });
+      const uploadedFiles = await uploadFiles(files, fileUploadType, user.id, listingId);
       
       // Update the listing data with real uploaded files
       if (type === 'siteplans') {
@@ -2854,14 +2819,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           />
           
           {/* Submit for Review Button - Premium Clean Design */}
-          {(() => {
-            console.log('Submit button visibility:', {
-              status: listingData?.status,
-              hasUnapprovedChanges,
-              shouldShow: listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges)
-            });
-            return null;
-          })()}
           {(listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges)) && (
             <div className="px-4 pb-3">
             <button
@@ -2907,15 +2864,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
             isLoading={loading}
             onAddLocations={() => openModal('locations')}
             onAddSitePlans={() => {
-              console.log('Mobile: Add Site Plans clicked');
               openQuickAddModal('uploadSitePlans');
             }}
             onAddFitOuts={() => {
-              console.log('Mobile: Add Fit Outs clicked');
               openQuickAddModal('uploadFitOuts');
             }}
             onDeleteSitePlan={(index, file) => {
-              console.log('Mobile: Delete site plan clicked', { index, file });
               // Use the mobile delete function (skips confirm dialog)
               const actualFile = listingData?.sitePlanFiles?.[index];
               if (actualFile) {
@@ -2923,7 +2877,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               }
             }}
             onDeleteFitOut={(index, file) => {
-              console.log('Mobile: Delete fit-out clicked', { index, file });
               // Use the mobile delete function (skips confirm dialog)
               const actualFile = listingData?.fitOutFiles?.[index];
               if (actualFile) {
@@ -4572,7 +4525,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                             <button
                                               onClick={async () => {
                                                 if (index > 0) {
-                                                  console.log('Moving FAQ up from index', index, 'to', index - 1);
                                                   // Move FAQ up by swapping with previous
                                                   const reorderedFaqs = [...allFaqs];
                                                   [reorderedFaqs[index - 1], reorderedFaqs[index]] = [reorderedFaqs[index], reorderedFaqs[index - 1]];
@@ -4586,7 +4538,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                                   
                                                   try {
                                                     await handleFAQsSave({ faqs: updatedFaqs });
-                                                    console.log('FAQ moved up successfully');
                                                   } catch (error) {
                                                     console.error('Error moving FAQ up:', error);
                                                   }
@@ -4605,7 +4556,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                             <button
                                               onClick={async () => {
                                                 if (index < allFaqs.length - 1) {
-                                                  console.log('Moving FAQ down from index', index, 'to', index + 1);
                                                   // Move FAQ down by swapping with next
                                                   const reorderedFaqs = [...allFaqs];
                                                   [reorderedFaqs[index], reorderedFaqs[index + 1]] = [reorderedFaqs[index + 1], reorderedFaqs[index]];
@@ -4619,7 +4569,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                                   
                                                   try {
                                                     await handleFAQsSave({ faqs: updatedFaqs });
-                                                    console.log('FAQ moved down successfully');
                                                   } catch (error) {
                                                     console.error('Error moving FAQ down:', error);
                                                   }
