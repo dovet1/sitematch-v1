@@ -3,7 +3,7 @@
 import { Popup } from 'react-map-gl/mapbox';
 import { Building2, MapPin, X } from 'lucide-react';
 import { MapCluster } from '@/hooks/useMapClustering';
-import { AgencyMapData } from '@/components/agencies/AgencyMap';
+import { AgencyMapData } from '@/components/agencies/AgencyMapSimple';
 import Image from 'next/image';
 
 interface MultiAgencyClusterPopupProps {

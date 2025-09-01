@@ -5,7 +5,7 @@ import { Building2 } from 'lucide-react';
 import { MapCluster } from '@/hooks/useMapClustering';
 import { getSearchResultLogoUrl } from '@/lib/search-logo-utils';
 import { cn } from '@/lib/utils';
-import { AgencyMapData } from '@/components/agencies/AgencyMap';
+import { AgencyMapData } from '@/components/agencies/AgencyMapSimple';
 
 interface MapMarkerProps {
   type: 'listing' | 'listing-cluster' | 'agency' | 'agency-cluster';

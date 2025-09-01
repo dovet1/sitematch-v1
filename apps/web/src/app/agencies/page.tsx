@@ -2,17 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import {
   Building2,
   MapPin,
@@ -20,16 +11,13 @@ import {
   Globe,
   Phone,
   Mail,
-  Search,
-  Filter,
-  Loader2,
-  List,
-  Map
+  Loader2
 } from 'lucide-react'
 import Image from 'next/image'
 import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal'
 import { AgencyModal } from '@/components/agencies/AgencyModal'
 import { AgencyMapSimple } from '@/components/agencies/AgencyMapSimple'
+import { AgencySearchHeader } from '@/components/agencies/AgencySearchHeader'
 import { useAuth } from '@/contexts/auth-context'
 import { AuthChoiceModal } from '@/components/auth/auth-choice-modal'
 
@@ -151,19 +139,19 @@ export default function AgenciesPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Premium Header with Glassmorphism */}
+      {/* Optimized Compact Header */}
       <div className="relative overflow-hidden border-b border-slate-200/60 bg-gradient-to-br from-primary-50 via-white to-primary-50/50">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary-100/40 via-transparent to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-transparent to-blue-500/5" />
         
-        <div className="relative container mx-auto px-4 py-12">
+        <div className="relative container mx-auto px-4 py-6 md:py-8">
           <div className="max-w-5xl mx-auto">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6">
               <div className="flex-1 text-center lg:text-left">
-                <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-4 tracking-tight leading-tight">
+                <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-2 tracking-tight leading-tight">
                   Agency Directory
                 </h1>
-                <p className="text-slate-600 text-lg max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                <p className="text-slate-600 text-base md:text-lg max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                   Discover vetted property agencies and connect with expert teams across Commercial and Residential markets
                 </p>
               </div>
@@ -171,8 +159,8 @@ export default function AgenciesPage() {
               <div className="flex justify-center lg:justify-end">
                 {user ? (
                   <AgencyCreationModal>
-                    <Button size="lg" className="shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 bg-primary hover:bg-primary/90 text-white border-0 px-8 py-3">
-                      <Building2 className="w-5 h-5 mr-2" />
+                    <Button className="shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 bg-primary hover:bg-primary/90 text-white border-0 px-6 py-2.5">
+                      <Building2 className="w-4 h-4 mr-2" />
                       Join Directory
                     </Button>
                   </AgencyCreationModal>
@@ -182,8 +170,8 @@ export default function AgenciesPage() {
                     title="Create Your Agency Profile"
                     description="Sign up to showcase your agency in our directory"
                   >
-                    <Button size="lg" className="shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 bg-primary hover:bg-primary/90 text-white border-0 px-8 py-3">
-                      <Building2 className="w-5 h-5 mr-2" />
+                    <Button className="shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 bg-primary hover:bg-primary/90 text-white border-0 px-6 py-2.5">
+                      <Building2 className="w-4 h-4 mr-2" />
                       Join Directory
                     </Button>
                   </AuthChoiceModal>
@@ -194,72 +182,18 @@ export default function AgenciesPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      {/* Search Header - Exact /search page design */}
+      <AgencySearchHeader
+        search={search}
+        classification={classification}
+        onSearchChange={handleSearch}
+        onClassificationChange={handleClassificationChange}
+        isMapView={isMapView}
+        onMapViewToggle={setIsMapView}
+      />
+
+      <div className="container mx-auto px-4 py-6">
         <div className="max-w-6xl mx-auto">
-          {/* Premium Search and Filters */}
-          <div className="mb-12">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-6">
-              <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-                <div className="flex-1">
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                      <Search className="h-5 w-5 text-slate-400" />
-                    </div>
-                    <Input
-                      placeholder="Search agencies by name..."
-                      value={search}
-                      onChange={(e) => handleSearch(e.target.value)}
-                      className="pl-12 pr-4 py-3 text-base border-2 border-transparent bg-slate-50 hover:bg-white focus:bg-white focus:border-primary-300 focus:shadow-lg transition-all duration-200 rounded-xl"
-                    />
-                  </div>
-                </div>
-                
-                <div className="w-full lg:w-64">
-                  <Select value={classification} onValueChange={handleClassificationChange}>
-                    <SelectTrigger className="w-full py-3 px-4 text-base border-2 border-transparent bg-slate-50 hover:bg-white focus:border-primary-300 focus:shadow-lg transition-all duration-200 rounded-xl">
-                      <div className="flex items-center gap-2">
-                        <Filter className="h-4 w-4 text-slate-500" />
-                        <SelectValue placeholder="Filter by type" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent className="border-slate-200 shadow-xl">
-                      <SelectItem value="all" className="text-base">All Types</SelectItem>
-                      <SelectItem value="Commercial" className="text-base">Commercial</SelectItem>
-                      <SelectItem value="Residential" className="text-base">Residential</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              {/* View Toggle */}
-              <div className="flex items-center justify-center pt-4 border-t border-slate-200">
-                <div className="flex rounded-lg bg-slate-100 p-1">
-                  <button
-                    onClick={() => setIsMapView(false)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      !isMapView 
-                        ? 'bg-white text-slate-900 shadow-sm' 
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <List className="h-4 w-4" />
-                    List View
-                  </button>
-                  <button
-                    onClick={() => setIsMapView(true)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isMapView 
-                        ? 'bg-white text-slate-900 shadow-sm' 
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <Map className="h-4 w-4" />
-                    Map View
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Results */}
           {isMapView ? (
