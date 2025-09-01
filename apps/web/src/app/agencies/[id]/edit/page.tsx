@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ImageUpload } from '@/components/ui/image-upload'
 import {
@@ -31,7 +29,8 @@ import {
   ExternalLink,
   Loader2,
   Upload,
-  X
+  X,
+  Save
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { TeamManagement } from '@/components/agencies/team-management'
@@ -184,7 +183,7 @@ export default function AgencyEditPage() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('type', 'logo') // Specify the file type for proper bucket routing
+      formData.append('type', 'logo')
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -197,7 +196,7 @@ export default function AgencyEditPage() {
       }
 
       const result = await response.json()
-      updateField('logo_url', result.file.url) // Use the correct path from the response
+      updateField('logo_url', result.file.url)
     } catch (err) {
       console.error('Logo upload error:', err)
       toast.error(err instanceof Error ? err.message : 'Failed to upload logo')
@@ -218,7 +217,7 @@ export default function AgencyEditPage() {
       }
 
       toast.success('Agency submitted for review successfully')
-      router.push('/occupier/dashboard') // Redirect to dashboard
+      router.push('/occupier/dashboard')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to submit for review')
     } finally {
@@ -229,17 +228,14 @@ export default function AgencyEditPage() {
   const getAgencyStatus = (agency: Agency): 'draft' | 'pending' | 'approved' | 'rejected' => {
     const versions = agency.agency_versions || []
     
-    // No versions at all = draft
     if (versions.length === 0) {
       return 'draft'
     }
     
-    // Find the version with the highest version number
     const latestVersion = versions.reduce((latest, current) => {
       return current.version_number > latest.version_number ? current : latest
     })
     
-    // Return the status of the latest version
     return latestVersion.status
   }
 
@@ -257,7 +253,6 @@ export default function AgencyEditPage() {
         return null
     }
   }
-
 
   const getClassificationBadgeColor = (classification?: string) => {
     switch (classification) {
@@ -296,257 +291,218 @@ export default function AgencyEditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Status Header */}
-      <div className="border-b border-border bg-gradient-to-b from-primary-50/30 to-background">
-        <div className="container mx-auto px-4 py-6">
-          <div className="max-w-4xl mx-auto">
-            <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
-              <Link href="/occupier/dashboard" className="hover:text-foreground">
-                Dashboard
-              </Link>
-              <span>/</span>
-              <span className="text-foreground">Edit Agency</span>
-            </nav>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-foreground mb-2">
-                  Edit Agency Profile
-                </h1>
-                <p className="text-muted-foreground">
-                  Make your changes below, then click "Save Changes" to save all updates
-                </p>
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50">
+      {/* Violet Bloom Floating Actions */}
+      {unsavedChanges && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl p-1 border border-violet-200/60 shadow-2xl shadow-violet-500/10">
+            <Button
+              onClick={saveAllChanges}
+              disabled={isSubmitting}
+              className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-200 hover:scale-105"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Full-Screen Layout with Violet Bloom */}
+      <div className="min-h-screen flex flex-col">
+        {/* Premium Header with Violet Theme */}
+        <div className="relative border-b border-violet-200/40 bg-white/80 backdrop-blur-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-violet-600/5 to-purple-600/5" />
+          <div className="relative px-8 py-6">
+            <div className="max-w-7xl mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <Link 
+                  href="/occupier/dashboard"
+                  className="text-violet-600/70 hover:text-violet-700 transition-colors flex items-center gap-2 text-sm font-medium"
+                >
+                  <X className="h-4 w-4" />
+                  Close
+                </Link>
+                <div className="h-6 w-px bg-violet-200" />
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900">Edit Agency Profile</h1>
+                  <p className="text-violet-600/70 text-sm mt-1">Create your premium agency presence</p>
+                </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 {getStatusBadge(getAgencyStatus(agency))}
-                <Button
-                  onClick={saveAllChanges}
-                  disabled={!unsavedChanges || isSubmitting}
-                  variant="outline"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
                 <Button
                   onClick={submitForReview}
                   disabled={isSubmitting || getAgencyStatus(agency) === 'pending'}
+                  className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-6 py-2 rounded-xl font-medium shadow-lg transition-all duration-200 hover:scale-105"
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
+                      Publishing...
                     </>
                   ) : (
                     <>
                       <CheckCircle className="mr-2 h-4 w-4" />
-                      Submit for Review
+                      Publish Profile
                     </>
                   )}
                 </Button>
               </div>
             </div>
-            
-            {getAgencyStatus(agency) === 'draft' && (
-              <Alert className="mt-4">
-                <Edit className="h-4 w-4" />
-                <AlertDescription>
-                  Your agency is in draft status. Make any changes you&apos;d like, then submit for review when ready.
-                </AlertDescription>
-              </Alert>
-            )}
           </div>
         </div>
-      </div>
 
-      <div className="container mx-auto p-6 max-w-4xl">
-        {/* Header - Inline Editable */}
-        <div className="mb-8">
-          <div className="flex items-start gap-6 mb-6">
-            {/* Logo Upload */}
-            <div className="group relative flex-shrink-0">
-              {agency.logo_url ? (
-                <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-white border border-border">
-                  <Image
-                    src={agency.logo_url}
-                    alt={`${agency.name} logo`}
-                    width={96}
-                    height={96}
-                    className="w-full h-full object-contain p-2"
-                  />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <div className="text-center">
-                      <Upload className="w-6 h-6 text-white mx-auto mb-1" />
-                      <span className="text-xs text-white">Change Logo</span>
+        {/* Premium Main Content with Violet Bloom Styling */}
+        <div className="flex-1 flex">
+          {/* Primary Content Area */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-4xl mx-auto p-4 space-y-6">
+              
+              {/* Compact Agency Header */}
+              <div className="flex items-center gap-6 py-6">
+                {/* Logo Section */}
+                <div className="group relative">
+                  <div className="relative">
+                    {agency.logo_url ? (
+                      <div className="w-16 h-16 rounded-xl bg-white/80 backdrop-blur-xl border border-violet-200/60 p-2 flex items-center justify-center shadow-lg shadow-violet-500/10">
+                        <Image
+                          src={agency.logo_url}
+                          alt={`${agency.name} logo`}
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-100/80 to-purple-100/80 border border-violet-200/60 flex items-center justify-center shadow-lg shadow-violet-500/10 backdrop-blur-xl">
+                        <Building2 className="w-8 h-8 text-violet-400" />
+                      </div>
+                    )}
+                    
+                    <div className="absolute inset-0 bg-violet-600/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-300 rounded-xl cursor-pointer">
+                      <Upload className="w-4 h-4 text-white" />
                     </div>
+                    
+                    <ImageUpload
+                      value={agency.logo_url || ''}
+                      onChange={handleLogoUpload}
+                      maxSize={5 * 1024 * 1024}
+                      acceptedTypes={['image/png', 'image/jpeg', 'image/jpg']}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
                   </div>
                 </div>
-              ) : (
-                <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center border-2 border-dashed border-primary/30 group-hover:from-primary/20 group-hover:to-primary/10 transition-colors">
-                  <div className="text-center">
-                    <Upload className="w-8 h-8 text-primary/70 mx-auto mb-1" />
-                    <span className="text-xs text-primary/70">Add Logo</span>
+                
+                {/* Agency Name & Classification */}
+                <div className="flex-1">
+                  <Input
+                    value={agency.name}
+                    onChange={(e) => {
+                      setAgency(prev => prev ? { ...prev, name: e.target.value } : null)
+                      setUnsavedChanges(true)
+                    }}
+                    className="text-3xl font-bold text-slate-900 border-none p-0 bg-transparent focus:outline-none placeholder-violet-300 mb-2"
+                    placeholder="Your Agency Name"
+                  />
+                  <Select
+                    value={agency.classification || ''}
+                    onValueChange={(value) => {
+                      setAgency(prev => prev ? { ...prev, classification: value as 'Commercial' | 'Residential' | 'Both' } : null)
+                      setUnsavedChanges(true)
+                    }}
+                  >
+                    <SelectTrigger className="bg-violet-50/80 text-violet-700 border-violet-200/60 hover:bg-violet-100/80 font-medium px-4 py-2 rounded-lg transition-all duration-200 backdrop-blur-sm shadow-sm w-fit">
+                      <SelectValue placeholder="Choose your specialization" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-violet-200">
+                      <SelectItem value="Commercial" className="hover:bg-violet-50">Commercial Property</SelectItem>
+                      <SelectItem value="Residential" className="hover:bg-violet-50">Residential Property</SelectItem>
+                      <SelectItem value="Both" className="hover:bg-violet-50">Commercial & Residential</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* About Section */}
+              <div className="bg-white/70 backdrop-blur-xl rounded-xl border border-violet-200/40 shadow-lg shadow-violet-500/5">
+                <div className="p-6">
+                  <h2 className="text-xl font-bold text-slate-900 mb-3">Tell Your Story</h2>
+                  <Textarea
+                    value={agency.description || ''}
+                    onChange={(e) => {
+                      setAgency(prev => prev ? { ...prev, description: e.target.value } : null)
+                      setUnsavedChanges(true)
+                    }}
+                    placeholder="Describe your agency's unique value proposition, expertise, and what sets you apart in the market..."
+                    className="w-full min-h-[120px] border-none bg-transparent text-slate-700 placeholder-violet-400 resize-none focus:outline-none"
+                    maxLength={500}
+                  />
+                  <div className="text-xs text-violet-400 text-right mt-2">
+                    {agency.description?.length || 0}/500 words
                   </div>
+                </div>
+              </div>
+
+              {/* Team Section */}
+              <div className="bg-white/70 backdrop-blur-xl rounded-xl border border-violet-200/40 shadow-lg shadow-violet-500/5">
+                <div className="p-6">
+                  <TeamManagement 
+                    agencyId={agency.id}
+                    initialTeamMembers={agency.agency_team_members || []}
+                  />
+                </div>
+              </div>
+
+              {/* Call-to-Action */}
+              {getAgencyStatus(agency) === 'draft' && (
+                <div className="text-center py-6">
+                  <h3 className="text-2xl font-bold text-slate-900 mb-3">Ready to Launch?</h3>
+                  <p className="text-violet-600/80 mb-6">
+                    Submit for review and go live within 24-48 hours.
+                  </p>
+                  <Button asChild className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-6 py-2 rounded-xl font-semibold shadow-lg transition-all duration-200 hover:scale-105">
+                    <Link href={`/agencies/${agency.id}`}>
+                      Preview Your Profile
+                    </Link>
+                  </Button>
                 </div>
               )}
-              
-              <ImageUpload
-                value={agency.logo_url || ''}
-                onChange={handleLogoUpload}
-                maxSize={5 * 1024 * 1024}
-                acceptedTypes={['image/png', 'image/jpeg', 'image/jpg']}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-              />
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              {/* Agency Name - Inline Edit */}
-              <div className="mb-2">
-                <Input
-                  value={agency.name}
-                  onChange={(e) => {
-                    setAgency(prev => prev ? { ...prev, name: e.target.value } : null)
-                    setUnsavedChanges(true)
-                  }}
-                  className="text-3xl font-bold border-none p-0 bg-transparent focus:bg-muted/20 focus:px-2 focus:py-1 transition-all"
-                  placeholder="Agency Name"
-                />
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-3 mb-4">
-                {/* Classification - Inline Select */}
-                <Select
-                  value={agency.classification || ''}
-                  onValueChange={(value) => {
-                    setAgency(prev => prev ? { ...prev, classification: value as 'Commercial' | 'Residential' | 'Both' } : null)
-                    setUnsavedChanges(true)
-                  }}
-                >
-                  <SelectTrigger className={`w-auto border-none p-1 h-auto ${getClassificationBadgeColor(agency.classification)}`}>
-                    <SelectValue placeholder="+ Add Classification" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Commercial">Commercial</SelectItem>
-                    <SelectItem value="Residential">Residential</SelectItem>
-                    <SelectItem value="Both">Both</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                {agency.geographic_patch && (
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span>{agency.geographic_patch}</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  <span>{agency.contact_email}</span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  <span>{agency.contact_phone}</span>
-                </div>
-                
-                {agency.website && (
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4" />
-                    <a 
-                      href={agency.website} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="hover:text-primary transition-colors"
-                    >
-                      Website
-                    </a>
-                    <ExternalLink className="h-3 w-3" />
-                  </div>
-                )}
-              </div>
             </div>
           </div>
-        </div>
 
-        <div className="grid gap-6">
-          {/* Description */}
-          <Card>
-            <CardHeader>
-              <CardTitle>About {agency.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={agency.description || ''}
-                onChange={(e) => {
-                  setAgency(prev => prev ? { ...prev, description: e.target.value } : null)
-                  setUnsavedChanges(true)
-                }}
-                placeholder="Describe your agency, services, and expertise..."
-                className="min-h-[120px] border-none resize-none focus:border-border transition-all"
-                maxLength={500}
-              />
-              <p className="text-xs text-muted-foreground mt-2">
-                {agency.description?.length || 0}/500 characters
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Geographic Coverage */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Geographic Coverage
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div>
-                <Label className="text-sm font-medium text-foreground mb-2 block">Service Areas</Label>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <Input
+          {/* Compact Sidebar */}
+          <div className="w-72 border-l border-violet-200/40 bg-white/60 backdrop-blur-xl overflow-y-auto">
+            <div className="p-4">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">Contact Details</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-violet-700 mb-1">Service Areas</label>
+                  <Textarea
                     value={agency.geographic_patch || ''}
                     onChange={(e) => {
                       setAgency(prev => prev ? { ...prev, geographic_patch: e.target.value } : null)
                       setUnsavedChanges(true)
                     }}
-                    placeholder="Geographic areas you serve (e.g., Central London, Greater Manchester)"
-                    className="flex-1 border-none bg-transparent focus:bg-muted/20 focus:border-border transition-all"
+                    placeholder="Central London, Greater Manchester..."
+                    className="w-full min-h-[60px] border-none bg-violet-50/50 text-slate-700 placeholder-violet-400 resize-none focus:outline-none focus:bg-violet-50/80 p-2.5 rounded-lg backdrop-blur-xl transition-all text-sm"
+                    rows={2}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Specify the geographic areas or regions where you provide services
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Office Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Office Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Contact Email */}
-              <div>
-                <Label className="text-sm font-medium text-foreground mb-2 block">Contact Email</Label>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                
+                <div>
+                  <label className="block text-sm font-semibold text-violet-700 mb-1">Email</label>
                   <Input
                     type="email"
                     value={agency.contact_email}
@@ -554,17 +510,13 @@ export default function AgencyEditPage() {
                       setAgency(prev => prev ? { ...prev, contact_email: e.target.value } : null)
                       setUnsavedChanges(true)
                     }}
-                    placeholder="contact@agency.com"
-                    className="flex-1 border-none bg-transparent focus:bg-muted/20 focus:border-border transition-all"
+                    className="bg-violet-50/50 border-none text-slate-700 placeholder-violet-400 p-2.5 rounded-lg backdrop-blur-xl focus:outline-none focus:bg-violet-50/80 transition-all text-sm"
+                    placeholder="hello@agency.com"
                   />
                 </div>
-              </div>
-
-              {/* Contact Phone */}
-              <div>
-                <Label className="text-sm font-medium text-foreground mb-2 block">Contact Phone</Label>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                
+                <div>
+                  <label className="block text-sm font-semibold text-violet-700 mb-1">Phone</label>
                   <Input
                     type="tel"
                     value={agency.contact_phone}
@@ -572,17 +524,13 @@ export default function AgencyEditPage() {
                       setAgency(prev => prev ? { ...prev, contact_phone: e.target.value } : null)
                       setUnsavedChanges(true)
                     }}
-                    placeholder="Phone number"
-                    className="flex-1 border-none bg-transparent focus:bg-muted/20 focus:border-border transition-all"
+                    className="bg-violet-50/50 border-none text-slate-700 placeholder-violet-400 p-2.5 rounded-lg backdrop-blur-xl focus:outline-none focus:bg-violet-50/80 transition-all text-sm"
+                    placeholder="+44 20 7xxx xxxx"
                   />
                 </div>
-              </div>
-
-              {/* Website */}
-              <div>
-                <Label className="text-sm font-medium text-foreground mb-2 block">Website</Label>
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                
+                <div>
+                  <label className="block text-sm font-semibold text-violet-700 mb-1">Website</label>
                   <Input
                     type="url"
                     value={agency.website || ''}
@@ -590,87 +538,27 @@ export default function AgencyEditPage() {
                       setAgency(prev => prev ? { ...prev, website: e.target.value } : null)
                       setUnsavedChanges(true)
                     }}
-                    placeholder="Website URL"
-                    className="flex-1 border-none bg-transparent focus:bg-muted/20 focus:border-border transition-all"
+                    placeholder="https://agency.com"
+                    className="bg-violet-50/50 border-none text-slate-700 placeholder-violet-400 p-2.5 rounded-lg backdrop-blur-xl focus:outline-none focus:bg-violet-50/80 transition-all text-sm"
                   />
-                  {agency.website && <ExternalLink className="h-3 w-3 text-muted-foreground" />}
                 </div>
-              </div>
-
-              {/* Office Location */}
-              <div>
-                <Label className="text-sm font-medium text-foreground mb-2 block">Office Location</Label>
-                <LocationSearch
-                  value={agency.office_address || ''}
-                  onChange={(value) => {
-                    if (value === '') {
-                      // If value is empty, trigger clear function
-                      handleLocationClear()
-                    } else {
+                
+                <div>
+                  <label className="block text-sm font-semibold text-violet-700 mb-1">Office Location</label>
+                  <LocationSearch
+                    value={agency.office_address || ''}
+                    onChange={(value) => {
                       setAgency(prev => prev ? { ...prev, office_address: value } : null)
                       setUnsavedChanges(true)
-                    }
-                  }}
-                  onLocationSelect={handleLocationSelect}
-                  placeholder="Enter office address (e.g., 123 Main St, London)"
-                  className="border-none focus:border-border transition-all"
-                />
+                    }}
+                    onLocationSelect={handleLocationSelect}
+                    placeholder="Search for office address..."
+                    className="bg-violet-50/50 border-none text-slate-700 placeholder-violet-400 p-2.5 rounded-lg backdrop-blur-xl focus:outline-none focus:bg-violet-50/80 transition-all text-sm"
+                  />
+                </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Team Members */}
-          <TeamManagement 
-            agencyId={agency.id}
-            initialTeamMembers={agency.agency_team_members || []}
-          />
-
-          {/* Actions */}
-          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-            <CardHeader>
-              <CardTitle>Ready to Publish?</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                When you&apos;re satisfied with your agency profile, submit it for review. Our team will review and approve it within 1-2 business days.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  onClick={submitForReview}
-                  disabled={isSubmitting || getAgencyStatus(agency) === 'pending'}
-                  className="flex-1"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Submit for Review
-                    </>
-                  )}
-                </Button>
-                
-                <Button asChild variant="outline" className="flex-1">
-                  <Link href={`/agencies/${agency.id}`}>
-                    Preview Public Profile
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Back to Dashboard */}
-        <div className="mt-8 text-center">
-          <Button asChild variant="outline">
-            <Link href="/occupier/dashboard">
-              ← Back to Dashboard
-            </Link>
-          </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

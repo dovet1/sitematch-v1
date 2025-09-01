@@ -317,20 +317,20 @@ export function TeamManagement({ agencyId, initialTeamMembers = [] }: TeamManage
 
   return (
     <>
-      <Card>
-        <CardHeader>
+      <div>
+        <div className="mb-6">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
+            <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
               <Users className="h-5 w-5" />
               Our Team ({teamMembers.length})
-            </CardTitle>
+            </h3>
             <Button onClick={() => setIsFormOpen(true)} size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Add Member
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div>
           {sortedTeamMembers.length === 0 ? (
             <div className="text-center py-8">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -384,8 +384,8 @@ export function TeamManagement({ agencyId, initialTeamMembers = [] }: TeamManage
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Add/Edit Form */}
       <TeamMemberForm
