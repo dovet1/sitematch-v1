@@ -94,6 +94,14 @@ interface ListingData extends WizardFormData {
   created_at: string;
   updated_at: string;
   completion_percentage?: number;
+  linked_agency_id?: string;
+  linked_agency?: {
+    id: string;
+    name: string;
+    logo_url?: string;
+    geographic_patch?: string;
+    classification?: string;
+  };
 }
 
 export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: ListingDetailPageProps) {
@@ -183,10 +191,16 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     contacts: false,
     faqs: false,
     preview: false,
-    companyProfile: false
+    companyProfile: false,
+    addAgent: false
   });
 
   const [editingContactData, setEditingContactData] = useState<any>(null);
+
+  // Agent states
+  const [searchAgencyTerm, setSearchAgencyTerm] = useState('');
+  const [searchAgencyResults, setSearchAgencyResults] = useState<any[]>([]);
+  const [isSearchingAgencies, setIsSearchingAgencies] = useState(false);
 
   // FAQ accordion state
   const [expandedFAQs, setExpandedFAQs] = useState<Set<string>>(new Set());
@@ -232,7 +246,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     { id: 'requirements', label: 'requirements' },
     { id: 'locations', label: 'locations' },
     { id: 'contact', label: 'contact' },
-    { id: 'faqs', label: 'faqs' }
+    { id: 'faqs', label: 'faqs' },
+    { id: 'agent', label: 'agent' }
   ];
 
   // Get company name for tab display
@@ -270,15 +285,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     
     try {
       const result = await hasListingChanges(listingId);
-      console.log('Changes check result:', result);
-      console.log('Setting hasUnapprovedChanges to:', result.hasChanges);
       setHasUnapprovedChanges(result.hasChanges);
-      
-      // Force re-render if changes detected
-      if (result.hasChanges && listingData?.status === 'approved') {
-        console.log('Changes detected on approved listing - submit button should appear');
-        console.log('Current hasUnapprovedChanges state will be:', result.hasChanges);
-      }
     } catch (error) {
       console.error('Error checking for changes:', error);
     }
@@ -290,13 +297,23 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     try {
       const supabase = createClientClient();
       
-      // Fetch main listing data
+      // Fetch main listing data with linked agency
       const { data: listing, error: listingError } = await supabase
         .from('listings')
-        .select('*')
+        .select(`
+          *,
+          linked_agency:agencies(
+            id,
+            name,
+            logo_url,
+            geographic_patch,
+            classification
+          )
+        `)
         .eq('id', listingId)
         .eq('created_by', userId)
         .single();
+
 
       if (listingError) {
         throw new Error(listingError.message);
@@ -334,8 +351,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         
       setLatestVersion(latestVersionData);
       
-      console.log('Fetched contacts from DB:', contacts);
-      console.log('First contact headshot_url:', contacts?.[0]?.headshot_url);
 
       // Transform data to match WizardFormData structure
       const transformedData: ListingData = {
@@ -346,6 +361,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         created_at: listing.created_at,
         updated_at: listing.updated_at,
         completion_percentage: listing.completion_percentage || 20,
+        
+        // Linked agency data
+        linked_agency_id: listing.linked_agency_id,
+        linked_agency: listing.linked_agency,
         
         // Primary contact from listing_contacts table
         primaryContact: (() => {
@@ -402,7 +421,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
         // Additional contacts
         additionalContacts: contacts?.filter(c => !c.is_primary_contact).map(contact => {
-          console.log('Mapping additional contact:', contact.contact_name, 'headshot_url:', contact.headshot_url);
           return {
             id: contact.id,
             contactName: contact.contact_name,
@@ -512,12 +530,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     fetchListingData();
   }, [listingId, userId]);
 
-  // Debug effect to track hasUnapprovedChanges state
-  useEffect(() => {
-    console.log('hasUnapprovedChanges state updated to:', hasUnapprovedChanges);
-    console.log('Current listing status:', listingData?.status);
-    console.log('Submit button should show:', listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges));
-  }, [hasUnapprovedChanges, listingData?.status]);
 
   // Carousel navigation functions
   const nextSitePlan = () => {
@@ -561,6 +573,106 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     setModalStates(prev => ({ ...prev, [modalType]: false }));
     if (modalType === 'contacts') {
       setEditingContactData(null);
+    }
+    if (modalType === 'addAgent') {
+      setSearchAgencyTerm('');
+      setSearchAgencyResults([]);
+    }
+  };
+
+  // Agent functions
+  const openAddAgentModal = () => {
+    setModalStates(prev => ({ ...prev, addAgent: true }));
+  };
+
+  const searchAgencies = async (term: string) => {
+    if (term.length < 2) {
+      setSearchAgencyResults([]);
+      return;
+    }
+
+    setIsSearchingAgencies(true);
+    try {
+      const response = await fetch(`/api/agencies/search?q=${encodeURIComponent(term)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSearchAgencyResults(data.data || data.agencies || []);
+      }
+    } catch (error) {
+      console.error('Error searching agencies:', error);
+      setSearchAgencyResults([]);
+    } finally {
+      setIsSearchingAgencies(false);
+    }
+  };
+
+  const handleAgencySearch = (term: string) => {
+    setSearchAgencyTerm(term);
+    const timeoutId = setTimeout(() => {
+      searchAgencies(term);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  };
+
+  const selectAgency = async (agency: any) => {
+    if (!listingId) return;
+    
+    // Debug logging - can be removed once migration is applied
+    
+    try {
+      const response = await fetch(`/api/occupier/listings/${listingId}/link-agency`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ agencyId: agency.id }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to link agency');
+      }
+
+      const result = await response.json();
+      
+      // Refresh the listing data to show the linked agency
+      await fetchListingData();
+      
+      closeModal('addAgent');
+      toast.success(result.message || `Selected ${agency.name} as your agent`);
+    } catch (error) {
+      console.error('Error selecting agency:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to select agency');
+    }
+  };
+
+  const goToCreateAgency = () => {
+    closeModal('addAgent');
+    router.push('/occupier/create-agency');
+  };
+
+  const removeAgent = async () => {
+    if (!listingId) return;
+    
+    try {
+      const response = await fetch(`/api/occupier/listings/${listingId}/link-agency`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove agent');
+      }
+
+      const result = await response.json();
+      
+      // Refresh the listing data to remove the linked agency
+      await fetchListingData();
+      
+      toast.success(result.message || 'Agent removed successfully');
+    } catch (error) {
+      console.error('Error removing agent:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to remove agent');
     }
   };
 
@@ -1131,7 +1243,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   };
 
   const handleDeleteContact = async (contactId: string) => {
-    console.log('handleDeleteContact called with contactId:', contactId);
     try {
       const supabase = createClientClient();
       
@@ -1143,11 +1254,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
       if (countError) throw countError;
       
-      console.log('Existing contacts count:', existingContacts?.length);
-
       // Prevent deletion if this is the only contact
       if (existingContacts && existingContacts.length <= 1) {
-        console.log('Preventing deletion - only one contact remaining');
         
         // Show toast message
         toast.error('You must have at least one contact. Please add another contact before deleting this one.', {
@@ -1262,13 +1370,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
     setSubmitting(true);
     try {
-      console.log('Submitting listing for review:', listingId);
       
       // Use the version management system to create a proper submission
       const { submitListingForReviewAction } = await import('@/lib/actions/submit-listing-for-review');
       const result = await submitListingForReviewAction(listingId);
       
-      console.log('Submit result:', result);
       
       if (result.success) {
         toast.success('Listing submitted for review!');
@@ -1306,12 +1412,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   // Quick Add Modal functions
   const openQuickAddModal = (type: keyof typeof quickAddModals) => {
-    console.log('openQuickAddModal called with:', type);
-    setQuickAddModals(prev => {
-      const newState = { ...prev, [type]: true };
-      console.log('quickAddModals updated:', newState);
-      return newState;
-    });
+    setQuickAddModals(prev => ({ ...prev, [type]: true }));
   };
 
   const closeQuickAddModal = (type: keyof typeof quickAddModals) => {
@@ -2636,12 +2737,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         validation.warnings.forEach(warning => toast.warning(warning));
       }
       
-      console.log(`Uploading ${files.length} ${type} files:`, files.map(f => f.name));
-      
       // Upload files using the real upload function with listing ID
-      const uploadedFiles = await uploadFiles(files, fileUploadType, user.id, listingId, (progress) => {
-        console.log(`Upload progress: ${progress}%`);
-      });
+      const uploadedFiles = await uploadFiles(files, fileUploadType, user.id, listingId);
       
       // Update the listing data with real uploaded files
       if (type === 'siteplans') {
@@ -2722,14 +2819,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           />
           
           {/* Submit for Review Button - Premium Clean Design */}
-          {(() => {
-            console.log('Submit button visibility:', {
-              status: listingData?.status,
-              hasUnapprovedChanges,
-              shouldShow: listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges)
-            });
-            return null;
-          })()}
           {(listingData?.status === 'draft' || (listingData?.status === 'approved' && hasUnapprovedChanges)) && (
             <div className="px-4 pb-3">
             <button
@@ -2775,15 +2864,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
             isLoading={loading}
             onAddLocations={() => openModal('locations')}
             onAddSitePlans={() => {
-              console.log('Mobile: Add Site Plans clicked');
               openQuickAddModal('uploadSitePlans');
             }}
             onAddFitOuts={() => {
-              console.log('Mobile: Add Fit Outs clicked');
               openQuickAddModal('uploadFitOuts');
             }}
             onDeleteSitePlan={(index, file) => {
-              console.log('Mobile: Delete site plan clicked', { index, file });
               // Use the mobile delete function (skips confirm dialog)
               const actualFile = listingData?.sitePlanFiles?.[index];
               if (actualFile) {
@@ -2791,7 +2877,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               }
             }}
             onDeleteFitOut={(index, file) => {
-              console.log('Mobile: Delete fit-out clicked', { index, file });
               // Use the mobile delete function (skips confirm dialog)
               const actualFile = listingData?.fitOutFiles?.[index];
               if (actualFile) {
@@ -4440,7 +4525,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                             <button
                                               onClick={async () => {
                                                 if (index > 0) {
-                                                  console.log('Moving FAQ up from index', index, 'to', index - 1);
                                                   // Move FAQ up by swapping with previous
                                                   const reorderedFaqs = [...allFaqs];
                                                   [reorderedFaqs[index - 1], reorderedFaqs[index]] = [reorderedFaqs[index], reorderedFaqs[index - 1]];
@@ -4454,7 +4538,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                                   
                                                   try {
                                                     await handleFAQsSave({ faqs: updatedFaqs });
-                                                    console.log('FAQ moved up successfully');
                                                   } catch (error) {
                                                     console.error('Error moving FAQ up:', error);
                                                   }
@@ -4473,7 +4556,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                             <button
                                               onClick={async () => {
                                                 if (index < allFaqs.length - 1) {
-                                                  console.log('Moving FAQ down from index', index, 'to', index + 1);
                                                   // Move FAQ down by swapping with next
                                                   const reorderedFaqs = [...allFaqs];
                                                   [reorderedFaqs[index], reorderedFaqs[index + 1]] = [reorderedFaqs[index + 1], reorderedFaqs[index]];
@@ -4487,7 +4569,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                                   
                                                   try {
                                                     await handleFAQsSave({ faqs: updatedFaqs });
-                                                    console.log('FAQ moved down successfully');
                                                   } catch (error) {
                                                     console.error('Error moving FAQ down:', error);
                                                   }
@@ -4806,6 +4887,102 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           </>
                         );
                       })()}
+                    </div>
+                  )}
+
+                  {activeTab === 'agent' && (
+                    <div className="space-y-4 px-4 pb-4">
+                      {/* Premium Header */}
+                      <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50/50 rounded-2xl border border-blue-100 overflow-hidden shadow-sm">
+                        <div className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+                                <Users className="w-5 h-5 text-white" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-gray-900 text-base">Appointed Agent</h3>
+                                <p className="text-xs text-gray-600">Connect with the agency handling this listing</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Agent Content */}
+                      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                        <div className="p-4">
+                          {(listingData?.linked_agency && listingData.linked_agency.id) ? (
+                            <div className="flex items-center gap-4 py-4">
+                              {/* Agency Logo */}
+                              <div className="flex-shrink-0">
+                                {listingData.linked_agency.logo_url ? (
+                                  <div className="w-16 h-16 rounded-xl bg-white border border-gray-200 p-2 flex items-center justify-center">
+                                    <img
+                                      src={listingData.linked_agency.logo_url}
+                                      alt={`${listingData.linked_agency.name} logo`}
+                                      className="w-full h-full object-contain"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                                    <Building2 className="w-8 h-8 text-blue-600" />
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Agency Info */}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-gray-900 text-lg mb-1">
+                                  {listingData.linked_agency.name}
+                                </h4>
+                                {listingData.linked_agency.geographic_patch && (
+                                  <p className="text-sm text-gray-600 mb-2 flex items-center">
+                                    <MapPin className="w-3 h-3 mr-1" />
+                                    {listingData.linked_agency.geographic_patch}
+                                  </p>
+                                )}
+                                {listingData.linked_agency.classification && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {listingData.linked_agency.classification}
+                                  </span>
+                                )}
+                                
+                                {/* Actions */}
+                                <div className="flex gap-2 mt-3">
+                                  <button 
+                                    onClick={() => listingData?.linked_agency?.id && router.push(`/agencies/${listingData.linked_agency.id}`)}
+                                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                  >
+                                    View Profile
+                                  </button>
+                                  <span className="text-gray-300">|</span>
+                                  <button 
+                                    onClick={removeAgent}
+                                    className="text-xs text-red-600 hover:text-red-700 font-medium"
+                                  >
+                                    Remove Agent
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8">
+                              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                              <h4 className="font-medium text-gray-900 mb-2">No Agent Added</h4>
+                              <p className="text-sm text-gray-600 mb-4">
+                                Let everyone know the agent working on this company's site requirements. Search the agencies already on SiteMatcher or add a new agency in less than two minutes.
+                              </p>
+                              <button 
+                                onClick={openAddAgentModal}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+                              >
+                                Add Agent
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -5802,7 +5979,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                     <div className="relative flex items-center justify-center">
                       <span>
                         {tab.id === 'overview' ? `From ${companyName}` :
-                         tab.id === 'faqs' ? 'FAQs' : 
+                         tab.id === 'faqs' ? 'FAQs' :
+                         tab.id === 'agent' ? 'Agent' : 
                          tab.label.charAt(0).toUpperCase() + tab.label.slice(1)}
                       </span>
                       <CompletionIndicator 
@@ -7046,6 +7224,132 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 </div>
               )}
 
+              {/* Agent Tab Content */}
+              {activeTab === 'agent' && (
+                <div className="p-6 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Appointed Agent</h3>
+                      <p className="text-gray-600 mt-1">Connect with the agency handling this listing</p>
+                    </div>
+                  </div>
+                  
+                  {/* Premium Agent Card */}
+                  <div className="relative overflow-hidden">
+                    {listingData?.linked_agency ? (
+                      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200/80 shadow-lg shadow-gray-100/50 p-8 transition-all duration-300 hover:shadow-xl hover:shadow-gray-200/60 hover:border-gray-300/60">
+                        
+                        <div className="flex items-start gap-8">
+                          {/* Enhanced Agency Logo */}
+                          <div className="flex-shrink-0">
+                            {listingData.linked_agency.logo_url ? (
+                              <div className="relative">
+                                <div className="w-24 h-24 rounded-2xl bg-white border-2 border-gray-100 p-4 flex items-center justify-center shadow-sm ring-1 ring-gray-900/5">
+                                  <img
+                                    src={listingData.linked_agency.logo_url}
+                                    alt={`${listingData.linked_agency.name} logo`}
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                                {/* Subtle glow effect */}
+                                <div className="absolute inset-0 w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 -z-10 blur-sm"></div>
+                              </div>
+                            ) : (
+                              <div className="relative">
+                                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200/50 flex items-center justify-center shadow-sm ring-1 ring-blue-900/5">
+                                  <Building2 className="w-12 h-12 text-blue-600" />
+                                </div>
+                                <div className="absolute inset-0 w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 -z-10 blur-sm"></div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Enhanced Agency Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="mb-4">
+                              <h4 className="text-2xl font-bold text-gray-900 mb-1 tracking-tight">
+                                {listingData.linked_agency.name}
+                              </h4>
+                            </div>
+                            
+                            <div className="space-y-3 mb-6">
+                              {listingData.linked_agency.geographic_patch && (
+                                <div className="flex items-center text-gray-700">
+                                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center mr-3">
+                                    <MapPin className="w-4 h-4 text-blue-600" />
+                                  </div>
+                                  <span className="font-medium">{listingData.linked_agency.geographic_patch}</span>
+                                </div>
+                              )}
+                              {listingData.linked_agency.classification && (
+                                <div className="flex items-center">
+                                  <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center mr-3">
+                                    <Building2 className="w-4 h-4 text-purple-600" />
+                                  </div>
+                                  <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-100 to-blue-100 text-purple-800 border border-purple-200/50">
+                                    {listingData.linked_agency.classification} Specialist
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Premium Action Buttons */}
+                            <div className="flex gap-3">
+                              <Button 
+                                size="default"
+                                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 px-6"
+                                onClick={() => listingData?.linked_agency?.id && router.push(`/agencies/${listingData.linked_agency.id}`)}
+                              >
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                View Full Profile
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="default"
+                                onClick={removeAgent}
+                                className="border-2 border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-300 px-6"
+                              >
+                                <X className="w-4 h-4 mr-2" />
+                                Remove Agent
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Subtle decorative elements */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50/50 to-purple-50/50 rounded-full -translate-y-16 translate-x-16 blur-3xl"></div>
+                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-emerald-50/50 to-blue-50/50 rounded-full translate-y-12 -translate-x-12 blur-3xl"></div>
+                      </div>
+                    ) : (
+                      /* Enhanced Empty State */
+                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center transition-all duration-300 hover:border-gray-300 hover:bg-gradient-to-br hover:from-gray-50 hover:to-blue-50/30">
+                        <div className="relative inline-block mb-6">
+                          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-sm">
+                            <Users className="w-10 h-10 text-gray-400" />
+                          </div>
+                          {/* Animated pulse ring */}
+                          <div className="absolute inset-0 w-20 h-20 rounded-2xl border-2 border-blue-300/30 animate-ping"></div>
+                        </div>
+                        
+                        <h4 className="text-xl font-bold text-gray-900 mb-3">No Agent Appointed</h4>
+                        <p className="text-gray-600 max-w-md mx-auto mb-8 leading-relaxed">
+                          Connect with a professional agency to handle your site requirements. Browse our verified partners or add your preferred agency.
+                        </p>
+                        
+                        <Button 
+                          onClick={openAddAgentModal}
+                          size="lg"
+                          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-3"
+                        >
+                          <Users className="w-5 h-5 mr-2" />
+                          Find an Agent
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
             </div>
         </div>
       </div>
@@ -7164,6 +7468,124 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         listingId={listingId}
         apiEndpoint={`/api/occupier/listings/${listingId}/detailed`}
       />
+
+      {/* Add Agent Modal */}
+      {modalStates.addAgent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Add Agent</h2>
+                <p className="text-sm text-gray-600 mt-1">Choose how you'd like to add an agent</p>
+              </div>
+              <button
+                onClick={() => closeModal('addAgent')}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Search Existing Agencies */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="font-medium text-gray-900 mb-2 flex items-center">
+                  <Building2 className="w-5 h-5 mr-2 text-blue-600" />
+                  Search existing agencies on SiteMatcher
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Find an agency that's already on our platform
+                </p>
+                
+                <div className="space-y-3">
+                  <Input
+                    placeholder="Search agencies by name..."
+                    value={searchAgencyTerm}
+                    onChange={(e) => handleAgencySearch(e.target.value)}
+                    className="w-full"
+                  />
+                  
+                  {/* Search Results */}
+                  {isSearchingAgencies && (
+                    <div className="text-center py-4">
+                      <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
+                    </div>
+                  )}
+                  
+                  {searchAgencyResults.length > 0 && (
+                    <div className="max-h-48 overflow-y-auto border border-gray-100 rounded-lg">
+                      {searchAgencyResults.map((agency) => (
+                        <button
+                          key={agency.id}
+                          onClick={() => selectAgency(agency)}
+                          className="w-full flex items-center p-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
+                        >
+                          {agency.logo_url ? (
+                            <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 p-1.5 flex items-center justify-center mr-3 flex-shrink-0">
+                              <img
+                                src={agency.logo_url}
+                                alt={`${agency.name} logo`}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center mr-3 flex-shrink-0">
+                              <Building2 className="w-5 h-5 text-gray-500" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{agency.name}</p>
+                            {agency.geographic_patch && (
+                              <p className="text-sm text-gray-600 truncate">{agency.geographic_patch}</p>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {searchAgencyTerm.length >= 2 && searchAgencyResults.length === 0 && !isSearchingAgencies && (
+                    <div className="text-center py-4 text-gray-500">
+                      <Building2 className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                      <p className="text-sm">No agencies found matching "{searchAgencyTerm}"</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* OR Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-3 bg-white text-gray-500">OR</span>
+                </div>
+              </div>
+
+              {/* Add New Agency */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="font-medium text-gray-900 mb-2 flex items-center">
+                  <Plus className="w-5 h-5 mr-2 text-green-600" />
+                  Add New Agency
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Create a new agency profile in less than two minutes
+                </p>
+                <Button
+                  onClick={goToCreateAgency}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create New Agency
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </>
   );

@@ -1,73 +1,104 @@
 import { useMemo } from 'react';
 import { SearchResult } from '@/types/search';
 
-export interface MapCluster {
+export interface MapCluster<T = SearchResult> {
   id: string;
   type: 'single' | 'cluster';
   coordinates: { lat: number; lng: number };
   count: number;
-  listings: SearchResult[];
+  listings?: SearchResult[];  // Keep for backward compatibility
+  agencies?: T[];  // Generic items when T is not SearchResult
+  items: T[];  // Generic items
 }
 
-interface ClusteringOptions {
-  enabled: boolean;
-  minZoom: number;
-  maxDistance: number; // in pixels at zoom level 14
+interface ClusteringOptions<T = SearchResult> {
+  enabled?: boolean;
+  minZoom?: number;
+  maxDistance?: number; // in pixels at zoom level 14
+  getCoordinates?: (item: T) => [number, number] | null;
+  maxZoom?: number;
+  clusterRadius?: number;
 }
 
-const DEFAULT_OPTIONS: ClusteringOptions = {
+const DEFAULT_OPTIONS: Required<ClusteringOptions<any>> = {
   enabled: true,
   minZoom: 10,
-  maxDistance: 50
+  maxDistance: 50,
+  getCoordinates: (item: any) => 
+    item.coordinates?.lat && item.coordinates?.lng 
+      ? [item.coordinates.lng, item.coordinates.lat] 
+      : null,
+  maxZoom: 12,
+  clusterRadius: 50
 };
 
+// Backward compatible function for listings
 export function useMapClustering(
   listings: SearchResult[],
   zoom: number,
   options: Partial<ClusteringOptions> = {}
-): MapCluster[] {
+): MapCluster<SearchResult>[] {
+  return useGenericMapClustering(listings, zoom, options);
+}
+
+// Generic clustering function
+export function useGenericMapClustering<T>(
+  items: T[],
+  zoom: number,
+  options: Partial<ClusteringOptions<T>> = {}
+): MapCluster<T>[] {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
   return useMemo(() => {
-    // Filter listings with valid coordinates
-    const validListings = listings.filter(
-      listing => listing.coordinates?.lat && listing.coordinates?.lng
-    );
+    // Filter items with valid coordinates
+    const validItems = items.filter(item => {
+      const coords = opts.getCoordinates!(item);
+      return coords !== null;
+    });
 
-    // If clustering is disabled or there's only one listing, return individual markers
-    if (!opts.enabled || validListings.length <= 1) {
-      return validListings.map(listing => ({
-        id: `${listing.id}-${(listing as any).location_id || 'default'}`,
-        type: 'single' as const,
-        coordinates: listing.coordinates!,
-        count: 1,
-        listings: [listing]
-      }));
+    // If clustering is disabled or there's only one item, return individual markers
+    if (!opts.enabled || validItems.length <= 1) {
+      return validItems.map(item => {
+        const coords = opts.getCoordinates!(item)!;
+        return {
+          id: `${(item as any).id}-${(item as any).location_id || 'default'}`,
+          type: 'single' as const,
+          coordinates: { lng: coords[0], lat: coords[1] },
+          count: 1,
+          items: [item],
+          // Backward compatibility
+          listings: Array.isArray((item as any).listings) ? (item as any).listings : [item as any],
+          agencies: [item]
+        };
+      });
     }
     
     // If zoom is too high, still cluster exact location matches
     const shouldClusterOnlyExactMatches = zoom >= opts.minZoom;
 
-    // Group listings by proximity
-    const clusters: MapCluster[] = [];
+    // Group items by proximity
+    const clusters: MapCluster<T>[] = [];
     const processed = new Set<string>();
 
-    for (let i = 0; i < validListings.length; i++) {
-      const listing = validListings[i];
-      const uniqueKey = `${listing.id}-${(listing as any).location_id || 'default'}`;
+    for (let i = 0; i < validItems.length; i++) {
+      const item = validItems[i];
+      const uniqueKey = `${(item as any).id}-${(item as any).location_id || 'default'}`;
       
       if (processed.has(uniqueKey)) continue;
 
-      // Find nearby listings
-      const nearby = validListings.filter((other, j) => {
+      const itemCoords = opts.getCoordinates!(item)!;
+
+      // Find nearby items
+      const nearby = validItems.filter((other, j) => {
         if (i === j) return false;
         
-        const otherKey = `${other.id}-${(other as any).location_id || 'default'}`;
+        const otherKey = `${(other as any).id}-${(other as any).location_id || 'default'}`;
         if (processed.has(otherKey)) return false;
         
+        const otherCoords = opts.getCoordinates!(other)!;
         const distance = calculateDistance(
-          listing.coordinates!,
-          other.coordinates!
+          { lat: itemCoords[1], lng: itemCoords[0] },
+          { lat: otherCoords[1], lng: otherCoords[0] }
         );
         
         // If zoom is high, only cluster exact location matches (very small threshold for floating point precision)
@@ -82,38 +113,45 @@ export function useMapClustering(
 
       if (nearby.length > 0) {
         // Create cluster
-        const clusterListings = [listing, ...nearby];
-        const center = calculateCenterPoint(clusterListings);
+        const clusterItems = [item, ...nearby];
+        const center = calculateGenericCenterPoint(clusterItems, opts.getCoordinates!);
         
-        // Get unique listing IDs for cluster naming
-        const uniqueListingIds = Array.from(new Set(clusterListings.map(l => l.id)));
+        // Get unique item IDs for cluster naming
+        const uniqueItemIds = Array.from(new Set(clusterItems.map(i => (i as any).id)));
         
         clusters.push({
-          id: `cluster-${uniqueListingIds.join('-')}-${i}`,
+          id: `cluster-${uniqueItemIds.join('-')}-${i}`,
           type: 'cluster',
           coordinates: center,
-          count: clusterListings.length,
-          listings: clusterListings
+          count: clusterItems.length,
+          items: clusterItems,
+          // Backward compatibility
+          listings: Array.isArray((clusterItems[0] as any).listings) ? clusterItems as any : clusterItems as any,
+          agencies: clusterItems
         });
 
-        // Mark all listings as processed
+        // Mark all items as processed
         processed.add(uniqueKey);
-        nearby.forEach(l => processed.add(`${l.id}-${(l as any).location_id || 'default'}`));
+        nearby.forEach(i => processed.add(`${(i as any).id}-${(i as any).location_id || 'default'}`));
       } else {
-        // Single listing
+        // Single item
+        const coords = opts.getCoordinates!(item)!;
         clusters.push({
           id: uniqueKey,
           type: 'single',
-          coordinates: listing.coordinates!,
+          coordinates: { lat: coords[1], lng: coords[0] },
           count: 1,
-          listings: [listing]
+          items: [item],
+          // Backward compatibility
+          listings: Array.isArray((item as any).listings) ? [(item as any)] : [item as any],
+          agencies: [item]
         });
         processed.add(uniqueKey);
       }
     }
 
     return clusters;
-  }, [listings, zoom, opts.enabled, opts.minZoom, opts.maxDistance]);
+  }, [items, zoom, opts.enabled, opts.minZoom, opts.maxDistance]);
 }
 
 function calculateDistance(
@@ -141,5 +179,28 @@ function calculateCenterPoint(listings: SearchResult[]): { lat: number; lng: num
   return {
     lat: totalLat / listings.length,
     lng: totalLng / listings.length
+  };
+}
+
+function calculateGenericCenterPoint<T>(
+  items: T[], 
+  getCoordinates: (item: T) => [number, number] | null
+): { lat: number; lng: number } {
+  let totalLat = 0;
+  let totalLng = 0;
+  let count = 0;
+  
+  items.forEach(item => {
+    const coords = getCoordinates(item);
+    if (coords) {
+      totalLng += coords[0];
+      totalLat += coords[1];
+      count++;
+    }
+  });
+  
+  return {
+    lat: totalLat / count,
+    lng: totalLng / count
   };
 }

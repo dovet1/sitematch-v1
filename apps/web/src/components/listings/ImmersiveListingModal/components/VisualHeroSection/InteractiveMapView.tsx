@@ -32,12 +32,6 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
   // Memoize locations to prevent unnecessary re-renders
   const stableLocations = useMemo(() => locations, [JSON.stringify(locations)]);
 
-  // Debug state changes
-  useEffect(() => {
-    console.log('=== STATE CHANGE ===');
-    console.log('mapLoaded:', mapLoaded);
-    console.log('useMapbox:', useMapbox);
-  }, [mapLoaded, useMapbox]);
 
   // Notify parent of map state changes
   useEffect(() => {
@@ -52,29 +46,16 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
         // Check if we have a Mapbox token
         const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
         
-        console.log('=== MAP INITIALIZATION START ===');
-        console.log('Mapbox token available:', !!mapboxToken);
-        console.log('Window defined:', typeof window !== 'undefined');
-        console.log('Locations:', stableLocations);
-        console.log('Map container exists:', !!mapContainer.current);
-        console.log('Map already created:', !!map.current);
         
         if (mapboxToken && typeof window !== 'undefined') {
           // Dynamically import mapbox-gl
           mapboxgl = (await import('mapbox-gl')).default;
           
           if (mapContainer.current && !map.current) {
-            console.log('Initializing Mapbox map...');
             mapboxgl.accessToken = mapboxToken;
             
             // Helper function to get coordinates
             const getCoordinates = (location: Location) => {
-              console.log('Processing location:', {
-                place_name: location.place_name,
-                coordinates: location.coordinates,
-                coordinates_type: typeof location.coordinates,
-                isArray: Array.isArray(location.coordinates)
-              });
               
               // Handle JSONB coordinates from database
               if (location.coordinates) {
@@ -83,54 +64,38 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
                   const [lng, lat] = location.coordinates;
                   if (typeof lng === 'number' && typeof lat === 'number' &&
                       !isNaN(lng) && !isNaN(lat)) {
-                    console.log('Found valid coordinates (GeoJSON array):', lat, lng);
                     return { lat, lng };
-                  } else {
-                    console.log('Array coordinates are not valid numbers:', location.coordinates);
                   }
                 }
                 // Handle object format: {lat, lng} or {latitude, longitude}
                 else if (typeof location.coordinates === 'object' && location.coordinates !== null) {
                   const coords = location.coordinates as any;
-                  console.log('Coordinates object keys:', Object.keys(coords));
                   
                   if (coords.lat !== undefined && coords.lng !== undefined && 
                       coords.lat !== null && coords.lng !== null &&
                       typeof coords.lat === 'number' && typeof coords.lng === 'number') {
-                    console.log('Found valid coordinates (lat/lng):', coords.lat, coords.lng);
                     return { lat: coords.lat, lng: coords.lng };
                   } else if (coords.latitude !== undefined && coords.longitude !== undefined && 
                              coords.latitude !== null && coords.longitude !== null &&
                              typeof coords.latitude === 'number' && typeof coords.longitude === 'number') {
-                    console.log('Found valid coordinates (latitude/longitude):', coords.latitude, coords.longitude);
                     return { lat: coords.latitude, lng: coords.longitude };
-                  } else {
-                    console.log('Coordinates object exists but values are invalid:', coords);
                   }
-                } else {
-                  console.log('Coordinates is not a valid object or array:', location.coordinates);
                 }
-              } else {
-                console.log('No coordinates field found');
               }
               
               // Legacy direct properties
               if (typeof location.latitude === 'number' && typeof location.longitude === 'number' &&
                   location.latitude !== null && location.longitude !== null) {
-                console.log('Found valid legacy coordinates:', location.latitude, location.longitude);
                 return { lat: location.latitude, lng: location.longitude };
               }
               
-              console.log('No valid coordinates found for location:', location.place_name);
               return null;
             };
 
             // Filter locations with valid coordinates
             const validLocations = stableLocations.filter(loc => getCoordinates(loc) !== null);
-            console.log('Valid locations with coordinates:', validLocations.length, 'out of', stableLocations.length);
 
             if (validLocations.length === 0) {
-              console.log('No valid coordinates found, using placeholder');
               setMapLoaded(true);
               setUseMapbox(false);
               return;
@@ -146,7 +111,6 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
                 Math.min(...lngs), Math.min(...lats),
                 Math.max(...lngs), Math.max(...lats)
               ];
-              console.log('Calculated bounds:', bounds);
             }
 
             try {
@@ -163,10 +127,7 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
               map.current.getContainer().style.width = '100%';
               map.current.getContainer().style.height = '100%';
 
-              console.log('Map created successfully');
-
               map.current.on('load', () => {
-                console.log('Map loaded successfully');
                 setMapLoaded(true);
                 setUseMapbox(true);
                 
@@ -221,38 +182,29 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
             });
 
             map.current.on('error', (e: any) => {
-              console.error('Mapbox error:', e);
-              console.log('=== MAPBOX ERROR - REVERTING TO PLACEHOLDER ===');
               setMapLoaded(true);
               setUseMapbox(false);
             });
           } catch (mapError) {
-            console.error('Failed to create map:', mapError);
-            console.log('=== MAP CREATION FAILED - USING PLACEHOLDER ===');
             setMapLoaded(true);
             setUseMapbox(false);
           }
         } else if (!mapContainer.current) {
-          console.log('=== MAP CONTAINER NOT READY - USING PLACEHOLDER ===');
           setTimeout(() => {
             setMapLoaded(true);
             setUseMapbox(false);
           }, 1000);
         } else if (map.current) {
-          console.log('=== MAP ALREADY EXISTS - PRESERVING EXISTING MAP ===');
           setMapLoaded(true);
           setUseMapbox(true); // Keep using the existing map
         }
       } else {
-        console.log('=== NO TOKEN OR NOT IN BROWSER - USING PLACEHOLDER ===');
         setTimeout(() => {
           setMapLoaded(true);
           setUseMapbox(false);
         }, 1000);
       }
     } catch (error) {
-      console.error('Failed to load Mapbox, using placeholder:', error);
-      console.log('=== GENERAL ERROR - USING PLACEHOLDER ===');
       setTimeout(() => {
         setMapLoaded(true);
         setUseMapbox(false);
@@ -263,9 +215,7 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
     initializeMap();
 
     return () => {
-      console.log('=== CLEANUP TRIGGERED ===');
       if (map.current) {
-        console.log('=== REMOVING MAP ===');
         map.current.remove();
         map.current = null;
       }

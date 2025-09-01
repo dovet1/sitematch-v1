@@ -18,7 +18,7 @@ export function MultiListingPopup({ cluster, onListingClick, onClose }: MultiLis
   const [selectedListings, setSelectedListings] = useState<Set<string>>(new Set());
   
   const isSingle = cluster.type === 'single';
-  const listings = cluster.listings;
+  const listings = cluster.listings || [];
   const firstListing = listings[0];
 
   const toggleSelection = (listingId: string) => {

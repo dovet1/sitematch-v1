@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Building2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { AgencyModal } from '@/components/agencies/AgencyModal';
 import { EnhancedListingModalContent, ListingModalProps } from '@/types/search';
 import { VisualHeroSection } from './components/VisualHeroSection';
 import { useMobileBreakpoint } from './hooks/useMobileBreakpoint';
@@ -33,7 +35,11 @@ export function ImmersiveListingModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [linkedAgency, setLinkedAgency] = useState<any | null>(null);
+  const [agencyLoading, setAgencyLoading] = useState(false);
   const { isMobile } = useMobileBreakpoint();
+  const router = useRouter();
+  const [selectedAgencyId, setSelectedAgencyId] = useState<string | null>(null);
   
   // Stable callbacks to prevent gesture hook recreation
   const handleClose = useCallback(() => {
@@ -50,7 +56,8 @@ export function ImmersiveListingModal({
     { id: 'requirements', label: 'requirements' },
     { id: 'locations', label: 'locations' },
     { id: 'contact', label: 'contact' },
-    { id: 'faqs', label: 'faqs' }
+    { id: 'faqs', label: 'faqs' },
+    { id: 'agent', label: 'agent' }
   ], []);
 
 
@@ -126,12 +133,6 @@ export function ImmersiveListingModal({
         }
 
         const data = await response.json();
-        console.log('Received listing data in modal:', data);
-        console.log('Company name from data:', data?.company?.name);
-        console.log('Contacts data:', data?.contacts);
-        console.log('Primary contact:', data?.contacts?.primary);
-        console.log('Files data:', data?.files);
-        console.log('Brochures:', data?.files?.brochures);
         setListing(data);
       } catch (err) {
         console.error('Error fetching listing details:', err);
@@ -143,6 +144,33 @@ export function ImmersiveListingModal({
 
     fetchListing();
   }, [isOpen, listingId, apiEndpoint]);
+
+  // Fetch linked agency data when listing has linked_agency_id
+  useEffect(() => {
+    if (!listing?.linked_agency_id) {
+      setLinkedAgency(null);
+      return;
+    }
+
+    const fetchAgency = async () => {
+      setAgencyLoading(true);
+      try {
+        const response = await fetch(`/api/agencies/${listing.linked_agency_id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch agency details');
+        }
+        const agencyData = await response.json();
+        setLinkedAgency(agencyData.data);
+      } catch (err) {
+        console.error('Error fetching linked agency:', err);
+        setLinkedAgency(null);
+      } finally {
+        setAgencyLoading(false);
+      }
+    };
+
+    fetchAgency();
+  }, [listing?.linked_agency_id]);
 
   if (!isOpen) return null;
 
@@ -538,6 +566,100 @@ export function ImmersiveListingModal({
             </div>
           </div>
         )}
+        {activeTab === 'agent' && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900">Appointed Agent</h3>
+            
+            {agencyLoading ? (
+              <div className="p-6 space-y-4">
+                <div className="h-8 bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+              </div>
+            ) : linkedAgency ? (
+              <div className="bg-gradient-to-br from-white via-violet-50/30 to-white rounded-2xl border border-violet-200/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6 sm:p-8 ring-1 ring-violet-100/50 hover:ring-violet-200/70">
+                {/* Mobile-optimized layout */}
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                  {/* Agency Logo */}
+                  <div className="flex-shrink-0">
+                    {linkedAgency.logo_url ? (
+                      <div className="relative group">
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border-2 border-violet-100 p-3 flex items-center justify-center shadow-lg ring-2 ring-violet-50 group-hover:ring-violet-100 transition-all duration-300">
+                          <img
+                            src={linkedAgency.logo_url}
+                            alt={`${linkedAgency.name} logo`}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        {/* Enhanced glow effect */}
+                        <div className="absolute inset-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 -z-10 blur-sm group-hover:from-violet-500/30 group-hover:to-purple-500/30 transition-all duration-300"></div>
+                      </div>
+                    ) : (
+                      <div className="relative group">
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 border-2 border-violet-200/50 flex items-center justify-center shadow-lg ring-2 ring-violet-100/50">
+                          <svg className="w-10 h-10 sm:w-12 sm:h-12 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 5a2 2 0 114 0v1h-4V9zM8 5a1 1 0 100 2h4a1 1 0 100-2H8z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="absolute inset-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 -z-10 blur-sm"></div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Agency Info */}
+                  <div className="flex-1 min-w-0 text-center sm:text-left">
+                    <div className="mb-6">
+                      <h4 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">
+                        {linkedAgency.name}
+                      </h4>
+                      <p className="text-violet-600 font-medium text-base">
+                        Appointed Property Agent
+                      </p>
+                    </div>
+                    
+                    {/* Enhanced CTA Button */}
+                    <div className="flex justify-center sm:justify-start">
+                      <button 
+                        onClick={() => setSelectedAgencyId(linkedAgency.id)}
+                        className="group relative overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-violet-700 text-white px-8 py-4 rounded-xl font-semibold hover:from-violet-700 hover:via-purple-700 hover:to-violet-800 transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-violet-500/25 transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-3 min-w-[200px]"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                        <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
+                        </svg>
+                        <span className="relative z-10">View Agency Profile</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center shadow-sm">
+                <div className="relative inline-block mb-6">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-sm ring-1 ring-gray-300/20">
+                    <Building2 className="w-10 h-10 text-gray-400" />
+                  </div>
+                </div>
+                
+                <h4 className="text-xl font-bold text-gray-900 mb-3">No Agent Appointed</h4>
+                <p className="text-gray-600 max-w-md mx-auto mb-6 leading-relaxed">
+                  This property requirement is being handled directly by the company. 
+                </p>
+                
+                <button
+                  onClick={() => setActiveTab('contact')}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors font-medium"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                  </svg>
+                  Contact Company Directly
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -548,7 +670,7 @@ export function ImmersiveListingModal({
     return (
       <AnimatePresence>
         {isOpen && (
-          <>
+          <React.Fragment key={`listing-modal-mobile-${listingId}`}>
             {/* Mobile Backdrop */}
             <motion.div
               className={styles.backdrop}
@@ -647,7 +769,7 @@ export function ImmersiveListingModal({
                 }
               />
             </div>
-          </>
+          </React.Fragment>
         )}
       </AnimatePresence>
     );
@@ -657,7 +779,7 @@ export function ImmersiveListingModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <React.Fragment key={`listing-modal-desktop-${listingId}`}>
           {/* Premium Backdrop */}
           <motion.div
             className={styles.backdrop}
@@ -753,7 +875,7 @@ export function ImmersiveListingModal({
 
                     {/* Tab Navigation */}
                     <div className={styles.tabNavigation}>
-                      {['overview', 'requirements', 'locations', 'contact', 'faqs'].map((tab) => (
+                      {['overview', 'requirements', 'locations', 'contact', 'faqs', 'agent'].map((tab) => (
                         <button
                           key={tab}
                           onClick={() => setActiveTab(tab)}
@@ -763,7 +885,8 @@ export function ImmersiveListingModal({
                           )}
                         >
                           {tab === 'overview' ? `From ${listing?.company?.name || 'Company'}` :
-                           tab === 'faqs' ? 'FAQs' : 
+                           tab === 'faqs' ? 'FAQs' :
+                           tab === 'agent' ? 'Agent' : 
                            tab.charAt(0).toUpperCase() + tab.slice(1)}
                         </button>
                       ))}
@@ -778,7 +901,17 @@ export function ImmersiveListingModal({
               </div>
             </div>
           </motion.div>
-        </>
+        </React.Fragment>
+      )}
+      
+      {/* Agency Modal */}
+      {selectedAgencyId && (
+        <AgencyModal 
+          key={`listing-agency-modal-${selectedAgencyId}`}
+          agencyId={selectedAgencyId}
+          isOpen={!!selectedAgencyId}
+          onClose={() => setSelectedAgencyId(null)}
+        />
       )}
     </AnimatePresence>
   );

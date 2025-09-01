@@ -14,6 +14,23 @@ const nextConfig = {
   },
   // Enable standalone output for better deployment
   output: 'standalone',
+  // Configure images for Supabase storage and external services
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'nunvbolbcekvtlwuacul.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'logo.clearbit.com',
+        port: '',
+        pathname: '/**',
+      }
+    ],
+  },
   // Configure for Supabase
   async redirects() {
     return []

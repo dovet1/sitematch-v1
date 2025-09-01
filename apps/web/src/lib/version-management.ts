@@ -21,10 +21,19 @@ export async function createListingVersion(
   try {
     const client = supabase || createServerClient();
 
-    // First get the main listing data
+    // First get the main listing data including linked agency
     const { data: listing, error: listingError } = await client
       .from('listings')
-      .select('*')
+      .select(`
+        *,
+        linked_agency:agencies(
+          id,
+          name,
+          logo_url,
+          geographic_patch,
+          classification
+        )
+      `)
       .eq('id', listingId)
       .single();
 
@@ -308,7 +317,16 @@ async function getCurrentDatabaseState(listingId: string): Promise<any> {
     { data: useClasses },
     { data: files }
   ] = await Promise.all([
-    supabase.from('listings').select('*').eq('id', listingId).single(),
+    supabase.from('listings').select(`
+      *,
+      linked_agency:agencies(
+        id,
+        name,
+        logo_url,
+        geographic_patch,
+        classification
+      )
+    `).eq('id', listingId).single(),
     supabase.from('listing_contacts').select('*').eq('listing_id', listingId),
     supabase.from('listing_locations').select('*').eq('listing_id', listingId),
     supabase.from('faqs').select('*').eq('listing_id', listingId),

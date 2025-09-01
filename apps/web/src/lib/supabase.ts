@@ -163,6 +163,7 @@ export interface Database {
           created_at: string
           updated_at: string
           org_id: string | null
+          linked_agency_id: string | null
         }
         Insert: {
           id?: string
@@ -185,6 +186,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           org_id?: string | null
+          linked_agency_id?: string | null
         }
         Update: {
           id?: string
@@ -205,6 +207,7 @@ export interface Database {
           status?: 'draft' | 'pending' | 'approved' | 'rejected' | 'archived'
           updated_at?: string
           org_id?: string | null
+          linked_agency_id?: string | null
         }
       }
       sectors: {

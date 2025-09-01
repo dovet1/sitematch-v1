@@ -50,7 +50,15 @@ export async function GET(
         site_acreage_min,
         site_acreage_max,
         property_page_link,
-        created_by
+        created_by,
+        linked_agency_id,
+        linked_agency:agencies(
+          id,
+          name,
+          logo_url,
+          geographic_patch,
+          classification
+        )
       `)
       .eq('id', id)
       .single();
@@ -173,6 +181,10 @@ export async function GET(
         site_acreage: formatAcreageRange(listing.site_acreage_min, listing.site_acreage_max),
         property_page_link: listing.property_page_link
       },
+      
+      // Linked agency data
+      linked_agency_id: listing.linked_agency_id,
+      linked_agency: listing.linked_agency,
       
       // Contact information from listing_contacts table only
       contacts: {

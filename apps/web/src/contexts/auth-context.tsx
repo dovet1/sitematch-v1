@@ -54,10 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = async () => {
     try {
-      console.log('Auth context refresh called')
       const { data: { user: authUser }, error } = await supabase.auth.getUser()
-      
-      console.log('getUser result:', { user: !!authUser, error: error?.message })
       
       if (error) {
         // Only log errors that aren't "Auth session missing" (which is normal on first load)
