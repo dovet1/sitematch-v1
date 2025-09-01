@@ -40,6 +40,7 @@ import { LocationSearch } from '@/components/search/LocationSearch'
 import Image from 'next/image'
 import Link from 'next/link'
 import { AgencyModal } from '@/components/agencies/AgencyModal'
+import { AgencyEditMobile } from '@/components/agencies/AgencyEditMobile'
 
 interface Agency {
   id: string
@@ -74,6 +75,23 @@ interface TeamMember {
   display_order: number
 }
 
+// Simple responsive hook
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024) // lg breakpoint
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+  
+  return isMobile
+}
+
 export default function AgencyEditPage() {
   const params = useParams()
   const router = useRouter()
@@ -83,6 +101,7 @@ export default function AgencyEditPage() {
   const [error, setError] = useState<string | null>(null)
   const [unsavedChanges, setUnsavedChanges] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     fetchAgency()
@@ -162,6 +181,15 @@ export default function AgencyEditPage() {
     } catch (err) {
       toast.error('Failed to save changes')
     }
+  }
+
+  const handleUpdate = (field: string, value: string) => {
+    setAgency(prev => prev ? { ...prev, [field]: value } : null)
+    setUnsavedChanges(true)
+  }
+
+  const handleBack = () => {
+    router.push('/occupier/dashboard')
   }
 
   const handleLocationSelect = (location: { name: string; coordinates: { lat: number; lng: number } }) => {
@@ -291,6 +319,23 @@ export default function AgencyEditPage() {
           </AlertDescription>
         </Alert>
       </div>
+    )
+  }
+
+  // Route to appropriate component based on device
+  if (isMobile) {
+    return (
+      <AgencyEditMobile
+        agency={agency!}
+        onUpdate={handleUpdate}
+        onSave={saveAllChanges}
+        onSubmit={submitForReview}
+        onBack={handleBack}
+        isSubmitting={isSubmitting}
+        unsavedChanges={unsavedChanges}
+        showPreview={showPreview}
+        onPreviewToggle={() => setShowPreview(!showPreview)}
+      />
     )
   }
 
