@@ -267,8 +267,16 @@ export async function GET(
     let shouldUseClearbitFallback = false;
     
     if (logoFile) {
-      // Use uploaded logo file
-      logoUrl = logoFile.file_path;
+      // Use uploaded logo file - convert file path to full Supabase storage URL
+      if (logoFile.file_path.startsWith('http')) {
+        // Already a full URL
+        logoUrl = logoFile.file_path;
+      } else {
+        // Convert file path to Supabase storage URL
+        const bucket = logoFile.bucket_name || 'listings'; // fallback to listings if no bucket specified
+        const { data } = supabase.storage.from(bucket).getPublicUrl(logoFile.file_path);
+        logoUrl = data.publicUrl;
+      }
     } else if (formattedListing.clearbit_logo && formattedListing.company_domain) {
       // Use clearbit logo if enabled and domain available
       logoUrl = `https://logo.clearbit.com/${formattedListing.company_domain}`;
