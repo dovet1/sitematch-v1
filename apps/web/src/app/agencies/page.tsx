@@ -22,11 +22,14 @@ import {
   Mail,
   Search,
   Filter,
-  Loader2
+  Loader2,
+  List,
+  Map
 } from 'lucide-react'
 import Image from 'next/image'
 import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal'
 import { AgencyModal } from '@/components/agencies/AgencyModal'
+import { AgencyMapSimple } from '@/components/agencies/AgencyMapSimple'
 import { useAuth } from '@/contexts/auth-context'
 import { AuthChoiceModal } from '@/components/auth/auth-choice-modal'
 
@@ -63,6 +66,7 @@ export default function AgenciesPage() {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [selectedAgencyId, setSelectedAgencyId] = useState<string | null>(null)
+  const [isMapView, setIsMapView] = useState(false)
 
   useEffect(() => {
     fetchAgencies()
@@ -226,83 +230,123 @@ export default function AgenciesPage() {
                   </Select>
                 </div>
               </div>
+              
+              {/* View Toggle */}
+              <div className="flex items-center justify-center pt-4 border-t border-slate-200">
+                <div className="flex rounded-lg bg-slate-100 p-1">
+                  <button
+                    onClick={() => setIsMapView(false)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      !isMapView 
+                        ? 'bg-white text-slate-900 shadow-sm' 
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <List className="h-4 w-4" />
+                    List View
+                  </button>
+                  <button
+                    onClick={() => setIsMapView(true)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isMapView 
+                        ? 'bg-white text-slate-900 shadow-sm' 
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Map className="h-4 w-4" />
+                    Map View
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Results */}
-          {isLoading && page === 1 ? (
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : agencies.length === 0 ? (
-            <div className="text-center py-12">
-              <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No agencies found</h3>
-              <p className="text-muted-foreground">
-                {search || classification !== 'all' 
-                  ? 'Try adjusting your search or filters'
-                  : 'No agencies are currently available'
-                }
-              </p>
+          {isMapView ? (
+            <div className="h-[600px] rounded-2xl overflow-hidden border border-slate-200 shadow-lg">
+              <AgencyMapSimple
+                search={search}
+                classification={classification}
+                onAgencyClick={setSelectedAgencyId}
+              />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {agencies.map((agency) => (
-                <Card key={agency.id} className="group relative bg-white/50 backdrop-blur-sm border border-slate-200/60 hover:border-primary-200 hover:shadow-2xl hover:shadow-primary-500/10 transition-all duration-300 hover:-translate-y-2 overflow-hidden rounded-2xl cursor-pointer" onClick={() => setSelectedAgencyId(agency.id)}>
-                  <div className="absolute inset-0 bg-gradient-to-br from-white via-transparent to-primary-50/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <CardContent className="relative p-6">
-                    <div className="flex items-center gap-4 mb-4">
-                      {agency.logo_url ? (
-                        <div className="w-16 h-16 bg-slate-50 shadow-sm border border-slate-200 flex-shrink-0 group-hover:scale-110 transition-transform duration-300 flex items-center justify-center overflow-hidden">
-                          <Image
-                            src={agency.logo_url}
-                            alt={`${agency.name} logo`}
-                            width={56}
-                            height={56}
-                            className="w-14 h-14 object-contain"
-                          />
+            <>
+              {isLoading && page === 1 ? (
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : agencies.length === 0 ? (
+                <div className="text-center py-12">
+                  <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No agencies found</h3>
+                  <p className="text-muted-foreground">
+                    {search || classification !== 'all' 
+                      ? 'Try adjusting your search or filters'
+                      : 'No agencies are currently available'
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {agencies.map((agency) => (
+                    <Card key={agency.id} className="group relative bg-white/50 backdrop-blur-sm border border-slate-200/60 hover:border-primary-200 hover:shadow-2xl hover:shadow-primary-500/10 transition-all duration-300 hover:-translate-y-2 overflow-hidden rounded-2xl cursor-pointer" onClick={() => setSelectedAgencyId(agency.id)}>
+                      <div className="absolute inset-0 bg-gradient-to-br from-white via-transparent to-primary-50/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <CardContent className="relative p-6">
+                        <div className="flex items-center gap-4 mb-4">
+                          {agency.logo_url ? (
+                            <div className="w-16 h-16 bg-slate-50 shadow-sm border border-slate-200 flex-shrink-0 group-hover:scale-110 transition-transform duration-300 flex items-center justify-center overflow-hidden">
+                              <Image
+                                src={agency.logo_url}
+                                alt={`${agency.name} logo`}
+                                width={56}
+                                height={56}
+                                className="w-14 h-14 object-contain"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center flex-shrink-0 shadow-sm border border-slate-200 group-hover:scale-110 transition-transform duration-300">
+                              <Building2 className="w-8 h-8 text-slate-500" />
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-bold text-slate-900 text-lg group-hover:text-primary-700 transition-colors duration-200 line-clamp-2 leading-tight">
+                              {agency.name}
+                            </h3>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center flex-shrink-0 shadow-sm border border-slate-200 group-hover:scale-110 transition-transform duration-300">
-                          <Building2 className="w-8 h-8 text-slate-500" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-slate-900 text-lg group-hover:text-primary-700 transition-colors duration-200 line-clamp-2 leading-tight">
-                          {agency.name}
-                        </h3>
-                      </div>
-                    </div>
 
-                    {agency.classification && (
-                      <div className="mb-4">
-                        <Badge 
-                          className={`font-medium text-xs px-3 py-1 ${getClassificationBadgeColor(agency.classification)}`}
-                        >
-                          {agency.classification === 'Both' 
-                            ? 'Commercial & Residential Specialists'
-                            : `${agency.classification} Property Specialists`
-                          }
-                        </Badge>
-                      </div>
-                    )}
+                        {agency.classification && (
+                          <div className="mb-4">
+                            <Badge 
+                              className={`font-medium text-xs px-3 py-1 ${getClassificationBadgeColor(agency.classification)}`}
+                            >
+                              {agency.classification === 'Both' 
+                                ? 'Commercial & Residential Specialists'
+                                : `${agency.classification} Property Specialists`
+                              }
+                            </Badge>
+                          </div>
+                        )}
 
-                    {agency.geographic_patch && (
-                      <div className="flex items-start gap-3">
-                        <MapPin className="h-4 w-4 text-slate-500 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-slate-600 font-medium line-clamp-2 leading-relaxed">
-                          {agency.geographic_patch}
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                        {agency.geographic_patch && (
+                          <div className="flex items-start gap-3">
+                            <MapPin className="h-4 w-4 text-slate-500 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-slate-600 font-medium line-clamp-2 leading-relaxed">
+                              {agency.geographic_patch}
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
-          {/* Premium Load More */}
-          {hasMore && agencies.length > 0 && (
+          {/* Premium Load More - Only show in list view */}
+          {!isMapView && hasMore && agencies.length > 0 && (
             <div className="flex justify-center mt-12">
               <Button
                 onClick={loadMore}

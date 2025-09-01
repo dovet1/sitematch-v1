@@ -246,8 +246,8 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
 
   const handleClusterClick = (cluster: MapCluster, event: React.MouseEvent) => {
     // If it's a single listing, directly open the listing details
-    if (cluster.type === 'single' && cluster.listings.length === 1) {
-      onListingClick(cluster.listings[0].id);
+    if (cluster.type === 'single' && cluster.listings && cluster.listings.length === 1) {
+      onListingClick(cluster.listings![0].id);
     } else {
       // For multiple listings, show the cluster popup
       const markerRect = event.currentTarget.getBoundingClientRect();
@@ -312,6 +312,9 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
             anchor="bottom"
           >
             <MapMarker
+              type={cluster.type === 'single' ? 'listing' : 'listing-cluster'}
+              count={cluster.count}
+              isSelected={selectedCluster?.id === cluster.id}
               cluster={cluster}
               onClick={(event) => handleClusterClick(cluster, event)}
             />
@@ -324,7 +327,7 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
       {/* Multi-listing cluster popup */}
       {selectedCluster && (
         <MultiListingClusterPopup
-          listings={selectedCluster.listings}
+          listings={selectedCluster.listings || []}
           isOpen={true}
           onClose={handleClusterPopupClose}
           onListingClick={onListingClick}
