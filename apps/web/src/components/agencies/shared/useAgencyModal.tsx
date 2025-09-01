@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createClientClient } from '@/lib/supabase'
 
 interface TeamMember {
   id: string
@@ -16,6 +17,9 @@ interface LinkedCompany {
   id: string
   company_name: string
   logo_url?: string
+  logo_bucket?: string
+  clearbit_logo?: boolean
+  company_domain?: string
 }
 
 interface Agency {
@@ -84,12 +88,31 @@ export function useAgencyModal(agencyId: string | null, isOpen: boolean) {
     }
   }
 
+  const getCompanyLogo = (company: LinkedCompany) => {
+    if (company.logo_url) {
+      // If it's already a full URL, use as-is
+      if (company.logo_url.startsWith('http')) {
+        return company.logo_url
+      }
+      
+      // If it's a file path, convert to Supabase storage URL using the correct bucket
+      const supabase = createClientClient()
+      const bucket = company.logo_bucket || 'listings' // fallback to listings if no bucket specified
+      const { data } = supabase.storage.from(bucket).getPublicUrl(company.logo_url)
+      return data.publicUrl
+    } else if (company.clearbit_logo && company.company_domain) {
+      return `https://logo.clearbit.com/${company.company_domain}`
+    }
+    return null
+  }
+
   return {
     agency,
     isLoading,
     error,
     formatAddress,
-    getClassificationBadgeColor
+    getClassificationBadgeColor,
+    getCompanyLogo
   }
 }
 

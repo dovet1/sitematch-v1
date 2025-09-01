@@ -30,7 +30,7 @@ interface AgencyModalMobileProps {
 type TabType = 'about' | 'contact' | 'coverage' | 'team' | 'companies'
 
 export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobileProps) {
-  const { agency, isLoading, error, formatAddress, getClassificationBadgeColor } = useAgencyModal(agencyId, isOpen)
+  const { agency, isLoading, error, formatAddress, getClassificationBadgeColor, getCompanyLogo } = useAgencyModal(agencyId, isOpen)
   const [activeTab, setActiveTab] = useState<TabType>('about')
 
   // Prevent background scrolling when modal is open
@@ -254,9 +254,9 @@ export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobi
                                   className="bg-white rounded-2xl p-4 block hover:scale-105 transition-transform shadow-sm border border-slate-100"
                                 >
                                   <div className="aspect-square bg-slate-50 rounded-xl p-3 mb-3 flex items-center justify-center">
-                                    {company.logo_url ? (
+                                    {getCompanyLogo(company) ? (
                                       <Image
-                                        src={company.logo_url}
+                                        src={getCompanyLogo(company)!}
                                         alt={`${company.company_name} logo`}
                                         width={48}
                                         height={48}

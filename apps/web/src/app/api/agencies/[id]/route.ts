@@ -48,14 +48,33 @@ export async function GET(
       .eq('linked_agency_id', id)
       .not('company_name', 'is', null);
 
+    // Get logos for linked companies
+    const listingIds = linkedListings?.map(l => l.id) || []
+    let logos: any[] = []
+    
+    if (listingIds.length > 0) {
+      const { data: logoFiles } = await supabase
+        .from('file_uploads')
+        .select('listing_id, file_path, bucket_name')
+        .in('listing_id', listingIds)
+        .eq('file_type', 'logo')
+      
+      logos = logoFiles || []
+    }
+
     // Process linked companies with logos
-    const linkedCompanies = linkedListings?.map(listing => ({
-      id: listing.id,
-      company_name: listing.company_name,
-      logo_url: listing.clearbit_logo && listing.company_domain
-        ? `https://logo.clearbit.com/${listing.company_domain}`
-        : null // For now, skip file_uploads lookup
-    })) || [];
+    const linkedCompanies = linkedListings?.map(listing => {
+      const logo = logos.find(l => l.listing_id === listing.id)
+      
+      return {
+        id: listing.id,
+        company_name: listing.company_name,
+        logo_url: logo?.file_path || null,
+        logo_bucket: logo?.bucket_name || null,
+        clearbit_logo: listing.clearbit_logo || false,
+        company_domain: listing.company_domain
+      }
+    }) || [];
 
     // Check if user is the owner - if so, return agency data as-is for editing
     const isOwner = user && rawAgency.created_by === user.id;

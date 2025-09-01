@@ -62,7 +62,7 @@ export function AgencyModal({ agencyId, isOpen, onClose }: AgencyModalProps) {
 
 // Desktop component (temporary - will extract to separate file)
 function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
-  const { agency, isLoading, error, formatAddress, getClassificationBadgeColor } = useAgencyModal(agencyId, isOpen)
+  const { agency, isLoading, error, formatAddress, getClassificationBadgeColor, getCompanyLogo } = useAgencyModal(agencyId, isOpen)
 
   // Prevent background scrolling when modal is open
   useEffect(() => {
@@ -244,9 +244,9 @@ function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
                                   className="group block hover:scale-105 transition-transform duration-200"
                                 >
                                   <div className="aspect-square bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-center group-hover:border-blue-300 group-hover:shadow-sm transition-colors">
-                                    {company.logo_url ? (
+                                    {getCompanyLogo(company) ? (
                                       <Image
-                                        src={company.logo_url}
+                                        src={getCompanyLogo(company)!}
                                         alt={`${company.company_name} logo`}
                                         width={256}
                                         height={256}

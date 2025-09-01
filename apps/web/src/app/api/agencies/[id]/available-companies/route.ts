@@ -70,7 +70,7 @@ export async function GET(
     if (listingIds.length > 0) {
       const { data: logoFiles } = await supabase
         .from('file_uploads')
-        .select('listing_id, file_path')
+        .select('listing_id, file_path, bucket_name')
         .in('listing_id', listingIds)
         .eq('file_type', 'logo')
       
@@ -87,6 +87,7 @@ export async function GET(
         company_domain: listing.company_domain,
         clearbit_logo: listing.clearbit_logo || false,
         logo_url: logo?.file_path || null,
+        logo_bucket: logo?.bucket_name || null,
         linked: listing.linked_agency_id === params.id
       }
     })

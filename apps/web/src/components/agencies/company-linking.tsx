@@ -30,6 +30,7 @@ interface Company {
   company_domain?: string
   clearbit_logo: boolean
   logo_url?: string
+  logo_bucket?: string
   linked: boolean
 }
 
@@ -208,9 +209,10 @@ export function CompanyLinking({ agencyId }: CompanyLinkingProps) {
         return company.logo_url
       }
       
-      // If it's a file path, convert to Supabase storage URL
+      // If it's a file path, convert to Supabase storage URL using the correct bucket
       const supabase = createClientClient()
-      const { data } = supabase.storage.from('listings').getPublicUrl(company.logo_url)
+      const bucket = company.logo_bucket || 'listings' // fallback to listings if no bucket specified
+      const { data } = supabase.storage.from(bucket).getPublicUrl(company.logo_url)
       return data.publicUrl
     } else if (company.clearbit_logo && company.company_domain) {
       return `https://logo.clearbit.com/${company.company_domain}`
