@@ -30,13 +30,15 @@ import {
   Loader2,
   Upload,
   X,
-  Save
+  Save,
+  Eye
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { TeamManagement } from '@/components/agencies/team-management'
 import { LocationSearch } from '@/components/search/LocationSearch'
 import Image from 'next/image'
 import Link from 'next/link'
+import { AgencyModal } from '@/components/agencies/AgencyModal'
 
 interface Agency {
   id: string
@@ -79,6 +81,7 @@ export default function AgencyEditPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [unsavedChanges, setUnsavedChanges] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
 
   useEffect(() => {
     fetchAgency()
@@ -292,73 +295,117 @@ export default function AgencyEditPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50">
-      {/* Violet Bloom Floating Actions */}
-      {unsavedChanges && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl p-1 border border-violet-200/60 shadow-2xl shadow-violet-500/10">
-            <Button
-              onClick={saveAllChanges}
-              disabled={isSubmitting}
-              className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-200 hover:scale-105"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Premium Full-Screen Layout with Violet Bloom */}
       <div className="min-h-screen flex flex-col">
-        {/* Premium Header with Violet Theme */}
-        <div className="relative border-b border-violet-200/40 bg-white/80 backdrop-blur-xl">
+        {/* Enhanced Hero Section with Better UX */}
+        <div className="relative bg-white/80 backdrop-blur-xl border-b border-violet-200/40">
           <div className="absolute inset-0 bg-gradient-to-r from-violet-600/5 to-purple-600/5" />
-          <div className="relative px-8 py-6">
+          
+          {/* Top Navigation Bar */}
+          <div className="relative px-6 py-4 border-b border-violet-100/50">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <Link 
-                  href="/occupier/dashboard"
-                  className="text-violet-600/70 hover:text-violet-700 transition-colors flex items-center gap-2 text-sm font-medium"
+              <Link 
+                href="/occupier/dashboard"
+                className="group flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-50/50 hover:bg-violet-100/70 text-violet-700 hover:text-violet-800 transition-all duration-200 text-sm font-medium border border-violet-200/50 hover:border-violet-300/70 hover:shadow-sm"
+              >
+                <svg 
+                  className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
                 >
-                  <X className="h-4 w-4" />
-                  Close
-                </Link>
-                <div className="h-6 w-px bg-violet-200" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Dashboard
+              </Link>
+              
+              {/* Status Indicator */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600">Status:</span>
+                {getStatusBadge(getAgencyStatus(agency))}
+              </div>
+            </div>
+          </div>
+          
+          {/* Main Hero Content */}
+          <div className="relative px-6 py-6">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900">Edit Agency Profile</h1>
-                  <p className="text-violet-600/70 text-sm mt-1">Create your premium agency presence</p>
+                  <h1 className="text-2xl font-bold text-slate-900 mb-1">Edit Agency Profile</h1>
+                  <p className="text-violet-600/70 text-sm">Manage your agency's public presence and team information</p>
+                </div>
+                
+                {/* Action Buttons Group */}
+                <div className="flex items-center gap-3">
+                  {/* Save Button - Always visible, disabled when no changes */}
+                  <Button
+                    onClick={saveAllChanges}
+                    disabled={!unsavedChanges || isSubmitting}
+                    variant="outline"
+                    className={`${
+                      unsavedChanges 
+                        ? 'border-violet-300 text-violet-700 hover:bg-violet-50' 
+                        : 'border-slate-200 text-slate-400 cursor-not-allowed'
+                    } transition-all duration-200`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        {unsavedChanges ? 'Save Changes' : 'All Saved'}
+                      </>
+                    )}
+                  </Button>
+                  
+                  {/* Preview Button */}
+                  <Button
+                    onClick={() => setShowPreview(true)}
+                    variant="outline"
+                    className="border-violet-300 text-violet-700 hover:bg-violet-50 transition-all duration-200"
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    Preview
+                  </Button>
+                  
+                  {/* Publish Button */}
+                  <Button
+                    onClick={submitForReview}
+                    disabled={isSubmitting || getAgencyStatus(agency) === 'pending' || unsavedChanges}
+                    className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-6 py-2 rounded-xl font-medium shadow-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Publishing...
+                      </>
+                    ) : getAgencyStatus(agency) === 'pending' ? (
+                      <>
+                        <Clock className="mr-2 h-4 w-4" />
+                        Under Review
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Publish Profile
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
               
-              <div className="flex items-center gap-4">
-                {getStatusBadge(getAgencyStatus(agency))}
-                <Button
-                  onClick={submitForReview}
-                  disabled={isSubmitting || getAgencyStatus(agency) === 'pending'}
-                  className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-6 py-2 rounded-xl font-medium shadow-lg transition-all duration-200 hover:scale-105"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Publishing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Publish Profile
-                    </>
-                  )}
-                </Button>
-              </div>
+              {/* Unsaved Changes Warning */}
+              {unsavedChanges && (
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                  <p className="text-sm text-amber-800">You have unsaved changes. Save before publishing or they will be lost.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -561,6 +608,13 @@ export default function AgencyEditPage() {
           </div>
         </div>
       </div>
+      
+      {/* Agency Preview Modal - Shows live data from database */}
+      <AgencyModal 
+        agencyId={agency?.id || null}
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+      />
     </div>
   )
 }
