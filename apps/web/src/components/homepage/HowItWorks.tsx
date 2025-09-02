@@ -8,17 +8,17 @@ export function HowItWorks() {
     {
       icon: FileText,
       title: 'Put your needs on the map - literally',
-      description: 'Post your site and location requirements—searchable, filterable, and ready to be discovered by the property industry. Get seen, get shortlisted, and get ahead when the right opportunities land.',
+      description: 'Companies post site and location requirements—searchable, filterable, and ready to be discovered by the property industry.',
     },
     {
       icon: Shield,
       title: 'Free to view - no barriers',
-      description: 'Requirements are visible to everyone, with no paywalls, no hidden fees, and no restrictions. Maximum exposure, zero cost.',
+      description: 'Requirements are visible to everyone, with no paywalls, no hidden fees, and no restrictions.',
     },
     {
       icon: Users,
-      title: 'Tools that drive daily visitors',
-      description: 'We offer powerful, no-cost tools like SiteSketcher—a fast, intuitive way to create site feasibility drawings. This attracts hundreds of agents, landlords, developers, and occupiers who use it to sketch ideas, assess potential, and share concepts.',
+      title: 'From listed to landed',
+      description: 'We bring the market to you - and make deals happen.',
     },
   ];
 
@@ -27,7 +27,7 @@ export function HowItWorks() {
       <div className="how-it-works__container max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="how-it-works__title text-3xl font-bold text-gray-800 mb-4">
-            Are you buying or leasing sites?
+            How it works
           </h2>
         </div>
 

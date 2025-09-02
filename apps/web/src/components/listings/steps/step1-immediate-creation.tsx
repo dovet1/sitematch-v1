@@ -421,7 +421,7 @@ export function Step1ImmediateCreation({
       {/* Listing Type Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Listing Type</CardTitle>
+          <CardTitle className="text-lg">Listing type</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -431,27 +431,21 @@ export function Step1ImmediateCreation({
               onValueChange={(value) => setValue('listingType', value as 'residential' | 'commercial')}
               className="space-y-3"
             >
-              <div className="flex items-start space-x-3 p-3 sm:p-4 rounded-lg border border-muted hover:bg-muted/30 transition-colors">
-                <RadioGroupItem value="commercial" id="commercial" className="mt-0.5" />
+              <div className="flex items-center space-x-3 p-3 sm:p-4 rounded-lg border border-muted hover:bg-muted/30 transition-colors">
+                <RadioGroupItem value="commercial" id="commercial" />
                 <div className="flex-1 space-y-1">
                   <Label htmlFor="commercial" className="text-sm font-medium cursor-pointer">
                     Commercial
                   </Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Office spaces, retail units, industrial sites, and other business properties
-                  </p>
                 </div>
               </div>
               
-              <div className="flex items-start space-x-3 p-3 sm:p-4 rounded-lg border border-muted hover:bg-muted/30 transition-colors">
-                <RadioGroupItem value="residential" id="residential" className="mt-0.5" />
+              <div className="flex items-center space-x-3 p-3 sm:p-4 rounded-lg border border-muted hover:bg-muted/30 transition-colors">
+                <RadioGroupItem value="residential" id="residential" />
                 <div className="flex-1 space-y-1">
                   <Label htmlFor="residential" className="text-sm font-medium cursor-pointer">
                     Residential
                   </Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Houses, apartments, condos, and other living spaces
-                  </p>
                 </div>
               </div>
             </RadioGroup>
@@ -462,12 +456,12 @@ export function Step1ImmediateCreation({
       {/* Company Details Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Company Details</CardTitle>
+          <CardTitle className="text-lg">Company details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="companyName" className="text-sm font-medium">
-              Company Name *
+              Company name *
             </Label>
             <Input
               id="companyName"
@@ -501,7 +495,7 @@ export function Step1ImmediateCreation({
       {/* Company Logo Section - Same as original */}
       <Card>
         <CardHeader>
-          <CardTitle>Company Logo</CardTitle>
+          <CardTitle>Company logo</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-4">
@@ -551,7 +545,7 @@ export function Step1ImmediateCreation({
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="companyDomain" className="text-sm font-medium leading-relaxed">
-                  Company Domain
+                  Company domain
                 </Label>
                 <Input
                   id="companyDomain"
@@ -670,13 +664,13 @@ export function Step1ImmediateCreation({
       {/* Requirements Brochure Section - Same as original */}
       <Card>
         <CardHeader>
-          <CardTitle>Requirements Material</CardTitle>
+          <CardTitle>Requirements material</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label className="text-sm font-medium">
-              Requirements Brochure
-              <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+              Requirements brochure
+              <span className="text-gray-500 font-normal ml-1">(optional)</span>
             </Label>
             <DocumentUpload
               type="brochure"
@@ -705,8 +699,8 @@ export function Step1ImmediateCreation({
           
           <div className="space-y-2">
             <Label htmlFor="propertyPageLink" className="text-sm font-medium">
-              Property Page Link
-              <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+              Property page link
+              <span className="text-gray-500 font-normal ml-1">(optional)</span>
             </Label>
             <Input
               id="propertyPageLink"
@@ -731,7 +725,7 @@ export function Step1ImmediateCreation({
               </p>
             )}
             <p className="text-xs text-muted-foreground">
-              Link to the occupier's property page or additional information
+              Link to your property page or additional information
             </p>
           </div>
         </CardContent>
@@ -740,12 +734,12 @@ export function Step1ImmediateCreation({
       {/* Contact Information Section - Same as original */}
       <Card>
         <CardHeader>
-          <CardTitle>Contact Information</CardTitle>
+          <CardTitle>Contact information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="contactName">
-              Contact Name *
+              Contact name *
             </Label>
             <Input
               id="contactName"
@@ -760,7 +754,7 @@ export function Step1ImmediateCreation({
                   message: 'Contact name must be no more than 100 characters'
                 }
               })}
-              placeholder="Enter the contact name"
+              placeholder="Enter the main contact for the listing"
               className={
                 formErrors.primaryContact?.contactName || errors?.contactName
                   ? 'violet-bloom-error'
@@ -776,7 +770,7 @@ export function Step1ImmediateCreation({
 
           <div className="space-y-2">
             <Label htmlFor="contactTitle">
-              Contact Title *
+              Contact title *
             </Label>
             <Input
               id="contactTitle"
@@ -791,7 +785,7 @@ export function Step1ImmediateCreation({
                   message: 'Contact title must be no more than 100 characters'
                 }
               })}
-              placeholder="e.g., Property Manager, Facilities Director"
+              placeholder="e.g., Acquisitions Manager, Agent"
               className={
                 formErrors.primaryContact?.contactTitle || errors?.contactTitle
                   ? 'violet-bloom-error'
@@ -807,7 +801,7 @@ export function Step1ImmediateCreation({
 
           <div className="space-y-2">
             <Label htmlFor="contactEmail" className="text-sm font-medium">
-              Contact Email *
+              Contact email *
             </Label>
             <Input
               id="contactEmail"
@@ -836,8 +830,8 @@ export function Step1ImmediateCreation({
 
           <div className="space-y-2">
             <Label htmlFor="contactPhone" className="text-sm font-medium">
-              Contact Phone
-              <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+              Contact phone
+              <span className="text-gray-500 font-normal ml-1">(optional)</span>
             </Label>
             <Input
               id="contactPhone"
@@ -865,8 +859,8 @@ export function Step1ImmediateCreation({
 
           <div className="space-y-2">
             <Label htmlFor="contactArea" className="text-sm font-medium">
-              Coverage Area
-              <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+              Coverage area
+              <span className="text-gray-500 font-normal ml-1">(optional)</span>
             </Label>
             <Input
               id="contactArea"
@@ -894,7 +888,7 @@ export function Step1ImmediateCreation({
           <div className="space-y-2">
             <Label className="text-sm font-medium">
               Headshot
-              <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+              <span className="text-gray-500 font-normal ml-1">(optional)</span>
             </Label>
             <ImageUpload
               value={watchedValues.primaryContact?.headshotPreview || watchedValues.primaryContact?.headshotFile}
@@ -937,7 +931,7 @@ export function Step1ImmediateCreation({
             ) : (
               <>
                 <Sparkles className="w-4 h-4 mr-2" />
-                Create My Listing
+                Create my listing
               </>
             )}
           </Button>

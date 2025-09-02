@@ -92,7 +92,7 @@ export function LocationsModal({
                   Target Your Reach
                 </h3>
                 <p className="text-white/90 text-sm leading-relaxed">
-                  Select specific areas to focus your opportunities, or go nationwide for maximum exposure
+                  Select specific target locations which will then be added to our map
                 </p>
               </div>
             </div>

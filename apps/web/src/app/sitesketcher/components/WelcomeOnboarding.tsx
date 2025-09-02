@@ -49,7 +49,7 @@ const steps = [
   },
   {
     id: 2,
-    title: 'Are you buying or leasing sites?',
+    title: 'How it works',
     icon: Play,
     content: {
       title: 'Three Simple Steps',

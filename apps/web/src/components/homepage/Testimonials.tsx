@@ -118,7 +118,7 @@ export function Testimonials() {
     <section className="testimonials py-20 bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="testimonials__container max-w-7xl mx-auto px-6">
         <h2 className="testimonials__title text-3xl font-bold text-gray-800 text-center mb-16">
-          What Our Users Say
+          What our users say
         </h2>
 
         {/* Carousel */}

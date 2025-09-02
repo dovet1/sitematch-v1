@@ -642,7 +642,7 @@ export function Step1CompanyInfo({
       {/* Requirements Brochure Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Requirements Material</CardTitle>
+          <CardTitle>Requirements material</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Requirements Brochure Upload */}

@@ -107,14 +107,6 @@ export function SiteSizeModal({
               />
             </div>
 
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>{formatSiteSize(siteSize[0])} sq ft</span>
-              <span>{formatSiteSize(siteSize[1])} sq ft</span>
-            </div>
-
-            <div className="text-xs text-gray-500">
-              Set the minimum and maximum size for properties you're interested in.
-            </div>
           </div>
         ) : (
           <div className="space-y-8">

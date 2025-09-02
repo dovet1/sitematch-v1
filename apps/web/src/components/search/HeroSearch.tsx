@@ -63,7 +63,7 @@ export function HeroSearch({ searchFilters }: HeroSearchProps) {
           
           {/* Subtitle */}
           <p className="body-large text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Discover property requirements from leading companies looking for their next location
+            Discover property requirements from companies looking for their next location
 
           </p>
           

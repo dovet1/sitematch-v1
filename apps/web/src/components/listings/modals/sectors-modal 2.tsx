@@ -77,7 +77,7 @@ export function SectorsModal({
         )}
 
         <div className="text-xs text-gray-500">
-          Choose multiple sectors to show agents the types of properties you're interested in.
+          You may select more than one.
         </div>
       </div>
     </BaseCrudModal>
