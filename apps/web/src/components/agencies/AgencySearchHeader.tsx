@@ -242,7 +242,7 @@ export function AgencySearchHeader({
                     {classification && classification !== 'all' && (
                       <div className="inline-flex items-center gap-1 px-3 py-1 bg-violet-100 text-violet-800 rounded-full text-sm font-medium">
                         <Filter className="h-3 w-3" />
-                        {classification === 'Both' ? 'Commercial & Residential' : `${classification} Property`}
+                        {`${classification} Property`}
                         <button
                           onClick={handleRemoveClassificationFilter}
                           className="ml-1 p-0.5 hover:bg-violet-200 rounded-full transition-colors"
