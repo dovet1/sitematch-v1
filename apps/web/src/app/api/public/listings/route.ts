@@ -214,14 +214,6 @@ export async function GET(request: NextRequest) {
     const { data: listings, error, count } = await query;
 
     console.log('Database query result count:', listings?.length);
-    if (acreageMin !== null || acreageMax !== null) {
-      console.log('Sample listing acreage values:', listings?.slice(0, 3).map(l => ({
-        id: l.id.slice(0, 8),
-        company: l.company_name,
-        acreage_min: l.site_acreage_min,
-        acreage_max: l.site_acreage_max
-      })));
-    }
 
     if (error) {
       console.error('Error fetching public listings:', error);
@@ -233,7 +225,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('Raw listings data:', JSON.stringify(listings, null, 2));
 
     // Fetch logo files for all listings
     const listingIds = listings?.map(l => l.id) || [];
@@ -259,11 +250,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Transform data to match SearchResult interface with logo fetching
-    console.log('Processing', listings?.length, 'listings');
-    console.log('Logo map:', logoMap);
-    
     let results = listings?.map(listing => {
-      console.log('Processing listing:', listing.company_name, 'has logo:', !!logoMap[listing.id]);
       const locations = (listing.listing_locations as any) || [];
       const primaryLocation = locations[0];
       const sectors = (listing.listing_sectors as any) || [];
@@ -387,77 +374,20 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Check for null/undefined results before randomization
-    const invalidResults = results.filter(result => !result || !result.id);
-    console.log('DEBUGGING: Invalid results found:', invalidResults.length, 'out of', results.length);
-    if (invalidResults.length > 0) {
-      console.log('DEBUGGING: Sample invalid results:', invalidResults.slice(0, 3));
-    }
-    
-    const validResults = results.filter(result => result && result.id);
-    console.log('Valid results count:', validResults.length, 'out of', results.length);
-    
-    // Randomize the results array using a daily seed for consistency
-    console.log('Before randomization - first 3 results:', validResults.slice(0, 3).map(r => ({ id: r.id.slice(0, 8), company: r.company_name })));
-    
-    const today = new Date().toDateString();
-    let seedHash = today.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    console.log('Randomization seed hash:', seedHash, 'for date:', today);
-    
-    // Proper seeded random number generator
-    const seededRandom = () => {
-      seedHash = (seedHash * 9301 + 49297) % 233280;
-      return seedHash / 233280;
-    };
-    
-    // Fisher-Yates shuffle with seeded random
-    const shuffledResults = [...validResults];
-    for (let i = shuffledResults.length - 1; i > 0; i--) {
-      const j = Math.floor(seededRandom() * (i + 1));
-      [shuffledResults[i], shuffledResults[j]] = [shuffledResults[j], shuffledResults[i]];
-    }
-    
-    console.log('After randomization - first 3 results:', shuffledResults.slice(0, 3).map(r => ({ id: r.id.slice(0, 8), company: r.company_name })));
-
-    // Apply pagination after randomization
+    // Apply pagination
     const startIndex = (page - 1) * limit;
-    const paginatedResults = shuffledResults.slice(startIndex, startIndex + limit);
-    
-    // Final validation before returning
-    console.log('Final paginated results count:', paginatedResults.length);
-    console.log('Final paginated results sample:', paginatedResults.slice(0, 2).map(r => ({ 
-      id: r?.id?.slice(0, 8) || 'NO_ID', 
-      company: r?.company_name || 'NO_COMPANY',
-      hasId: !!r?.id 
-    })));
-    
-    // Check for any null results after pagination
-    const nullResultsAfterPagination = paginatedResults.filter(result => !result || !result.id);
-    if (nullResultsAfterPagination.length > 0) {
-      console.log('DEBUGGING: Found null results after pagination:', nullResultsAfterPagination.length);
-      console.log('DEBUGGING: Sample null results:', nullResultsAfterPagination.slice(0, 2));
-    }
-    
-    // Filter out any remaining null results as final safety check  
-    const safeResults = paginatedResults.filter(result => result && result.id);
-    console.log('DEBUGGING: Safe results after final filter:', safeResults.length, 'out of', paginatedResults.length);
+    const endIndex = Math.min(startIndex + limit, results.length);
+    const paginatedResults = results.slice(startIndex, endIndex);
 
-    // Get total count for pagination
-    const { count: totalCount } = await supabase
-      .from('listings')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'approved');
+    // Use the actual filtered count for pagination
+    const totalFilteredCount = results.length;
 
     const response: SearchResponse = {
-      results: safeResults,
-      total: totalCount || 0,
+      results: paginatedResults,
+      total: totalFilteredCount,
       page,
       limit,
-      hasMore: (page * limit) < (totalCount || 0)
+      hasMore: (page * limit) < totalFilteredCount
     };
 
     return NextResponse.json(response);
