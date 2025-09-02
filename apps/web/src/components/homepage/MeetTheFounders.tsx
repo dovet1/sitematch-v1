@@ -14,7 +14,7 @@ export function MeetTheFounders() {
       photo: null,
     },
     {
-      name: 'Tom',
+      name: 'Tom Dove',
       role: 'Co-Founder & CTO',
       background: 'Technology & Product Development',
       description: 'As CTO and co-founder, Tom draws on his background in software engineering, product management, and operations to build a platform that delivers real results for occupiers. He’s worked on B2B and B2C products and advised VC firms on technical due diligence, backing businesses ready to scale.',

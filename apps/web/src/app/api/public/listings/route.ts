@@ -85,9 +85,7 @@ export async function GET(request: NextRequest) {
           country
         )
       `)
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .range((page - 1) * limit, page * limit - 1);
+      .eq('status', 'approved');
 
     // Apply location filtering
     if (location && !isNationwide) {
@@ -216,14 +214,6 @@ export async function GET(request: NextRequest) {
     const { data: listings, error, count } = await query;
 
     console.log('Database query result count:', listings?.length);
-    if (acreageMin !== null || acreageMax !== null) {
-      console.log('Sample listing acreage values:', listings?.slice(0, 3).map(l => ({
-        id: l.id.slice(0, 8),
-        company: l.company_name,
-        acreage_min: l.site_acreage_min,
-        acreage_max: l.site_acreage_max
-      })));
-    }
 
     if (error) {
       console.error('Error fetching public listings:', error);
@@ -235,7 +225,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('Raw listings data:', JSON.stringify(listings, null, 2));
 
     // Fetch logo files for all listings
     const listingIds = listings?.map(l => l.id) || [];
@@ -261,11 +250,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Transform data to match SearchResult interface with logo fetching
-    console.log('Processing', listings?.length, 'listings');
-    console.log('Logo map:', logoMap);
-    
     let results = listings?.map(listing => {
-      console.log('Processing listing:', listing.company_name, 'has logo:', !!logoMap[listing.id]);
       const locations = (listing.listing_locations as any) || [];
       const primaryLocation = locations[0];
       const sectors = (listing.listing_sectors as any) || [];
@@ -389,18 +374,20 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get total count for pagination
-    const { count: totalCount } = await supabase
-      .from('listings')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'approved');
+    // Apply pagination
+    const startIndex = (page - 1) * limit;
+    const endIndex = Math.min(startIndex + limit, results.length);
+    const paginatedResults = results.slice(startIndex, endIndex);
+
+    // Use the actual filtered count for pagination
+    const totalFilteredCount = results.length;
 
     const response: SearchResponse = {
-      results,
-      total: totalCount || 0,
+      results: paginatedResults,
+      total: totalFilteredCount,
       page,
       limit,
-      hasMore: (page * limit) < (totalCount || 0)
+      hasMore: (page * limit) < totalFilteredCount
     };
 
     return NextResponse.json(response);

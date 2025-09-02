@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LocationSuggestion } from '@/types/search';
-import { searchLocations } from '@/lib/mapbox';
+import { searchLocations, formatLocationDisplay } from '@/lib/mapbox';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       const suggestions: LocationSuggestion[] = mapboxResults.map(result => ({
         id: result.id,
         name: result.text,
-        description: result.place_name,
+        description: formatLocationDisplay(result), // Use formatLocationDisplay to clean up the location name
         coordinates: {
           lat: result.center[1], // Mapbox uses [lng, lat], we use {lat, lng}
           lng: result.center[0]

@@ -7,7 +7,7 @@ export function HowItWorks() {
   const steps = [
     {
       icon: FileText,
-      title: 'Put your needs on the map - literally',
+      title: 'Put your needs on the map',
       description: 'Companies post site and location requirements—searchable, filterable, and ready to be discovered by the property industry.',
     },
     {

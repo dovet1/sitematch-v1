@@ -63,7 +63,7 @@ export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobi
   return (
     <AnimatePresence>
       {isOpen && (
-        <div key={`agency-modal-mobile-${agencyId}`} className="fixed inset-0 z-50 flex items-center justify-center">
+        <div key={`agency-modal-mobile-${agencyId}`} className="fixed inset-0 z-[1050] flex items-center justify-center">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
