@@ -85,9 +85,7 @@ export async function GET(request: NextRequest) {
           country
         )
       `)
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .range((page - 1) * limit, page * limit - 1);
+      .eq('status', 'approved');
 
     // Apply location filtering
     if (location && !isNationwide) {
@@ -389,6 +387,65 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Check for null/undefined results before randomization
+    const invalidResults = results.filter(result => !result || !result.id);
+    console.log('DEBUGGING: Invalid results found:', invalidResults.length, 'out of', results.length);
+    if (invalidResults.length > 0) {
+      console.log('DEBUGGING: Sample invalid results:', invalidResults.slice(0, 3));
+    }
+    
+    const validResults = results.filter(result => result && result.id);
+    console.log('Valid results count:', validResults.length, 'out of', results.length);
+    
+    // Randomize the results array using a daily seed for consistency
+    console.log('Before randomization - first 3 results:', validResults.slice(0, 3).map(r => ({ id: r.id.slice(0, 8), company: r.company_name })));
+    
+    const today = new Date().toDateString();
+    let seedHash = today.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    console.log('Randomization seed hash:', seedHash, 'for date:', today);
+    
+    // Proper seeded random number generator
+    const seededRandom = () => {
+      seedHash = (seedHash * 9301 + 49297) % 233280;
+      return seedHash / 233280;
+    };
+    
+    // Fisher-Yates shuffle with seeded random
+    const shuffledResults = [...validResults];
+    for (let i = shuffledResults.length - 1; i > 0; i--) {
+      const j = Math.floor(seededRandom() * (i + 1));
+      [shuffledResults[i], shuffledResults[j]] = [shuffledResults[j], shuffledResults[i]];
+    }
+    
+    console.log('After randomization - first 3 results:', shuffledResults.slice(0, 3).map(r => ({ id: r.id.slice(0, 8), company: r.company_name })));
+
+    // Apply pagination after randomization
+    const startIndex = (page - 1) * limit;
+    const paginatedResults = shuffledResults.slice(startIndex, startIndex + limit);
+    
+    // Final validation before returning
+    console.log('Final paginated results count:', paginatedResults.length);
+    console.log('Final paginated results sample:', paginatedResults.slice(0, 2).map(r => ({ 
+      id: r?.id?.slice(0, 8) || 'NO_ID', 
+      company: r?.company_name || 'NO_COMPANY',
+      hasId: !!r?.id 
+    })));
+    
+    // Check for any null results after pagination
+    const nullResultsAfterPagination = paginatedResults.filter(result => !result || !result.id);
+    if (nullResultsAfterPagination.length > 0) {
+      console.log('DEBUGGING: Found null results after pagination:', nullResultsAfterPagination.length);
+      console.log('DEBUGGING: Sample null results:', nullResultsAfterPagination.slice(0, 2));
+    }
+    
+    // Filter out any remaining null results as final safety check  
+    const safeResults = paginatedResults.filter(result => result && result.id);
+    console.log('DEBUGGING: Safe results after final filter:', safeResults.length, 'out of', paginatedResults.length);
+
     // Get total count for pagination
     const { count: totalCount } = await supabase
       .from('listings')
@@ -396,7 +453,7 @@ export async function GET(request: NextRequest) {
       .eq('status', 'approved');
 
     const response: SearchResponse = {
-      results,
+      results: safeResults,
       total: totalCount || 0,
       page,
       limit,
