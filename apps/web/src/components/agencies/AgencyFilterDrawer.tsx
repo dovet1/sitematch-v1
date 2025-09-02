@@ -37,10 +37,9 @@ export function AgencyFilterDrawer({
   };
 
   const classificationOptions = [
-    { value: 'all', label: 'All Specializations', description: 'Show all agency types' },
-    { value: 'Commercial', label: 'Commercial Property', description: 'Offices, retail, industrial spaces' },
-    { value: 'Residential', label: 'Residential Property', description: 'Houses, apartments, residential developments' },
-    { value: 'Both', label: 'Commercial & Residential', description: 'Full-service property agencies' }
+    { value: 'all', label: 'All Specialisations', description: 'Show all agency types' },
+    { value: 'Commercial', label: 'Commercial Property', description: 'Agencies specialising in commercial properties' },
+    { value: 'Residential', label: 'Residential Property', description: 'Agencies specialising in residential properties' }
   ];
 
   if (!isOpen) return null;
