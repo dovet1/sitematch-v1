@@ -5,10 +5,10 @@ import { Building, Code } from 'lucide-react';
 export function MeetTheFounders() {
   const founders = [
     {
-      name: 'Rob',
+      name: 'Rob Lithgow',
       role: 'Co-Founder & CEO',
       background: 'Property Acquisition Expert',
-      description: 'As a former Property Director at Aldi and Head of Acquisitions at Marks & Spencer, Rob knows the impact of getting property requirements in front of the right audience. He set out to build a simple, fast, and targeted platform that helps the industry to close deals and bring exceptional spaces to life.',
+      description: 'As a former Property Director with Aldi and Head of Acquisitions with Marks & Spencer, Rob knows the impact of getting your property requirements in front of the right audience. He set out to build a simple, fast, and targeted platform that helps the industry to close deals and bring exceptional spaces to life.',
       expertise: ['Commercial Property', 'Retail Expansion', 'Location Strategy', 'Market Analysis'],
       linkedin: '#',
       photo: null,
@@ -17,7 +17,7 @@ export function MeetTheFounders() {
       name: 'Tom',
       role: 'Co-Founder & CTO',
       background: 'Technology & Product Development',
-      description: 'As CTO and co-founder, Tom draws on his background in software engineering, product management, and operations to build a platform that delivers real results for commercial occupiers. He’s worked on B2B and B2C products and advised VC firms on technical due diligence, backing businesses ready to scale.',
+      description: 'As CTO and co-founder, Tom draws on his background in software engineering, product management, and operations to build a platform that delivers real results for occupiers. He’s worked on B2B and B2C products and advised VC firms on technical due diligence, backing businesses ready to scale.',
       expertise: ['Full-Stack Development', 'Product Strategy', 'Platform Architecture', 'PropTech Innovation'],
       linkedin: '#',
       photo: null,

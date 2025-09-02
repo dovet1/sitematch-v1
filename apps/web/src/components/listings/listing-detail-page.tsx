@@ -7039,7 +7039,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200 border-dashed">
                           <Users className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                           <p className="text-sm text-gray-600">No contacts added yet</p>
-                          <p className="text-xs text-gray-500 mt-1">Add a contact to help agents reach the right person</p>
+                          <p className="text-xs text-gray-500 mt-1">Add a contact so that site opportunities reach the right person</p>
                         </div>
                       );
                     })()}

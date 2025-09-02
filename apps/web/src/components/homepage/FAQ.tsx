@@ -105,7 +105,7 @@ export function FAQ() {
               href="mailto:hello@sitematch.co.uk"
               className="inline-flex items-center justify-center px-6 py-3 bg-violet-600 text-white rounded-lg font-semibold hover:bg-violet-700 transition-colors duration-200 text-sm md:text-base"
             >
-              Contact Support
+              Contact support
             </a>
           </div>
         </div>

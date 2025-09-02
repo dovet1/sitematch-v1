@@ -44,7 +44,7 @@ export default async function QuickCreateListingPage() {
               </Link>
               <span className="text-muted-foreground">/</span>
               <span className="text-foreground font-medium">
-                Create New Listing
+                Create new listing
               </span>
             </nav>
           </div>
@@ -57,7 +57,7 @@ export default async function QuickCreateListingPage() {
           {/* Page Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">
-              Create Your Property Listing
+              Create your property listing
             </h1>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Get started with your basic information. We'll create your listing immediately, 
