@@ -151,10 +151,13 @@ export function formatLocationDisplay(location: LocationResult): string {
   displayName = displayName
     .replace(/, United Kingdom$/, '')
     .replace(/, UK$/, '')
-    .replace(/, England, United Kingdom$/, ', England')
-    .replace(/, Scotland, United Kingdom$/, ', Scotland')
-    .replace(/, Wales, United Kingdom$/, ', Wales')
-    .replace(/, Northern Ireland, United Kingdom$/, ', Northern Ireland');
+    .replace(/, England, United Kingdom$/, '')  // Remove "England, United Kingdom" entirely
+    .replace(/, Scotland, United Kingdom$/, '')  // Remove "Scotland, United Kingdom" entirely
+    .replace(/, Wales, United Kingdom$/, '')  // Remove "Wales, United Kingdom" entirely
+    .replace(/, Northern Ireland, United Kingdom$/, ', Northern Ireland')
+    .replace(/, England$/, '')  // Remove standalone "England"
+    .replace(/, Scotland$/, '')  // Remove standalone "Scotland"  
+    .replace(/, Wales$/, '')  // Remove standalone "Wales";
   
   // For Ireland, keep it as context can be helpful
   displayName = displayName.replace(/, Ireland$/, ', Ireland');
