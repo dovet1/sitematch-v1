@@ -235,7 +235,7 @@ function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
                         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60">
                           <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center gap-2">
                             <Building2 className="h-5 w-5 text-blue-600" />
-                            Trusted by Leading Companies
+                            Our Listings
                           </h3>
                           
                           {agency.linked_companies && agency.linked_companies.length > 0 ? (
