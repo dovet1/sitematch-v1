@@ -122,10 +122,10 @@ export async function createListingImmediate(rawData: any): Promise<{ success: b
         contact_name: data.primaryContact.contactName || '',
         contact_title: data.primaryContact.contactTitle || '',
         contact_email: data.primaryContact.contactEmail || currentUser.email || '',
-        contact_phone: data.primaryContact.contactPhone,
-        contact_area: data.primaryContact.contactArea,
+        contact_phone: data.primaryContact.contactPhone || null,
+        contact_area: data.primaryContact.contactArea || null,
         is_primary_contact: true,
-        headshot_url: data.primaryContact.headshotUrl
+        headshot_url: data.primaryContact.headshotUrl || null
       };
 
       const { error: contactError } = await supabase
