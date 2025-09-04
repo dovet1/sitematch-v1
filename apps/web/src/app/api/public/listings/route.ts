@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
         clearbit_logo,
         company_domain,
         created_at,
+        current_version_id,
         listing_sectors(
           sector:sectors(
             id,
@@ -211,7 +212,7 @@ export async function GET(request: NextRequest) {
     // Note: Nationwide filtering is handled client-side after fetching locations
     // A listing is nationwide if it has no linked listing_locations
 
-    const { data: listings, error, count } = await query;
+    const { data: listings, error } = await query;
 
     console.log('Database query result count:', listings?.length);
 
@@ -226,8 +227,31 @@ export async function GET(request: NextRequest) {
     }
 
 
-    // Fetch logo files for all listings
+    // Fetch the highest approved version for each listing
     const listingIds = listings?.map(l => l.id) || [];
+    
+    let versionMap: Record<string, any> = {};
+    if (listingIds.length > 0) {
+      const { data: versions } = await supabase
+        .from('listing_versions')
+        .select('listing_id, content, version_number')
+        .in('listing_id', listingIds)
+        .eq('status', 'approved')
+        .order('version_number', { ascending: false });
+      
+      // Keep only the highest version number per listing
+      const highestVersions = new Map<string, any>();
+      versions?.forEach(version => {
+        if (!highestVersions.has(version.listing_id)) {
+          const content = typeof version.content === 'string' ? JSON.parse(version.content) : version.content;
+          highestVersions.set(version.listing_id, content);
+        }
+      });
+      
+      versionMap = Object.fromEntries(highestVersions);
+    }
+    
+    // Fetch logo files for all listings
     let logoFiles: any[] = [];
     
     if (listingIds.length > 0) {
@@ -251,34 +275,63 @@ export async function GET(request: NextRequest) {
 
     // Transform data to match SearchResult interface with logo fetching
     let results = listings?.map(listing => {
-      const locations = (listing.listing_locations as any) || [];
-      const primaryLocation = locations[0];
-      const sectors = (listing.listing_sectors as any) || [];
-      const useClasses = (listing.listing_use_classes as any) || [];
+      // Check if this listing has versioned data
+      const versionContent = versionMap[listing.id];
+      let listingData = listing;
+      let locations = (listing.listing_locations as any) || [];
+      let sectors = (listing.listing_sectors as any) || [];
+      let useClasses = (listing.listing_use_classes as any) || [];
       
-      // Get the uploaded logo URL from our map
-      const uploadedLogoUrl = logoMap[listing.id] || null;
+      // If version exists, use version data instead
+      if (versionContent) {
+        // Override with versioned data
+        if (versionContent.listing) {
+          listingData = { ...listing, ...versionContent.listing };
+        }
+        if (versionContent.locations) {
+          locations = versionContent.locations;
+        }
+        if (versionContent.sectors) {
+          sectors = versionContent.sectors.map((s: any) => ({ sector: s.sector }));
+        }
+        if (versionContent.use_classes) {
+          useClasses = versionContent.use_classes.map((uc: any) => ({ use_class: uc.use_class }));
+        }
+      }
+      
+      const primaryLocation = locations[0];
+      
+      // Get the uploaded logo URL from our map or version files
+      let uploadedLogoUrl = logoMap[listing.id] || null;
+      
+      // Check version files for logo if available
+      if (versionContent?.files) {
+        const logoFile = versionContent.files.find((f: any) => f.file_type === 'logo');
+        if (logoFile?.file_path && logoFile?.bucket_name) {
+          uploadedLogoUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${logoFile.bucket_name}/${logoFile.file_path}`;
+        }
+      }
       
       return {
         id: listing.id,
-        company_name: listing.company_name,
-        title: listing.title,
-        description: listing.description,
-        site_size_min: listing.site_size_min,
-        site_size_max: listing.site_size_max,
-        site_acreage_min: listing.site_acreage_min,
-        site_acreage_max: listing.site_acreage_max,
-        dwelling_count_min: listing.dwelling_count_min,
-        dwelling_count_max: listing.dwelling_count_max,
+        company_name: listingData.company_name,
+        title: listingData.title,
+        description: listingData.description,
+        site_size_min: listingData.site_size_min,
+        site_size_max: listingData.site_size_max,
+        site_acreage_min: listingData.site_acreage_min,
+        site_acreage_max: listingData.site_acreage_max,
+        dwelling_count_min: listingData.dwelling_count_min,
+        dwelling_count_max: listingData.dwelling_count_max,
         sectors: sectors.map((ls: any) => ls.sector).filter(Boolean),
         use_classes: useClasses.map((luc: any) => luc.use_class).filter(Boolean),
         // Legacy single values for backwards compatibility
         sector: sectors.length > 0 ? sectors[0].sector?.name : null,
         use_class: useClasses.length > 0 ? useClasses[0].use_class?.name : null,
-        contact_name: listing.contact_name,
-        contact_title: listing.contact_title,
-        contact_email: listing.contact_email,
-        contact_phone: listing.contact_phone,
+        contact_name: listingData.contact_name,
+        contact_title: listingData.contact_title,
+        contact_email: listingData.contact_email,
+        contact_phone: listingData.contact_phone,
         is_nationwide: locations.length === 0, // Treat as nationwide if no locations
         // Multiple locations support
         locations: locations.map((loc: any) => ({
@@ -297,9 +350,9 @@ export async function GET(request: NextRequest) {
         // 2. If clearbit_logo is false, use uploaded logo from file_uploads table
         // 3. If no uploaded logo exists, fall back to initials
         logo_url: uploadedLogoUrl,
-        clearbit_logo: listing.clearbit_logo || false,
-        company_domain: listing.company_domain,
-        created_at: listing.created_at
+        clearbit_logo: listingData.clearbit_logo || false,
+        company_domain: listingData.company_domain,
+        created_at: listingData.created_at
       };
     }) || [];
 
