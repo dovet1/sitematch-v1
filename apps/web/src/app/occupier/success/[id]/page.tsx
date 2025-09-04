@@ -236,13 +236,16 @@ export default async function ListingSuccessPage({ params }: PageProps) {
           <CardContent className="p-8 text-center">
             <Mail className="w-12 h-12 text-blue-600 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Questions About Your Submission?</h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            <p className="text-gray-600 mb-4 max-w-md mx-auto">
               Our support team is here to help if you need to make changes or have questions about the review process.
             </p>
-            <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
+            <a 
+              href="mailto:rob@sitematcher.co.uk" 
+              className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium"
+            >
               <Mail className="w-4 h-4 mr-2" />
-              Contact Support
-            </Button>
+              rob@sitematcher.co.uk
+            </a>
           </CardContent>
         </Card>
       </div>
