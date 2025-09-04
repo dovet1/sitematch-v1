@@ -196,7 +196,7 @@ export default function TermsOfUsePage() {
               <h2 className="text-2xl font-semibold mb-4">8. Privacy Policy</h2>
               <p className="mb-4">
                 We care about data privacy and security. Please review our Privacy Policy: 
-                <a href="/privacy" className="text-blue-600 hover:underline"> https://sitematcher.co.uk/privacy</a>. 
+                <a href="https://app.termly.io/policy-viewer/policy.html?policyUUID=70f2f9d5-072f-443a-944d-39630c45252c" className="text-blue-600 hover:underline"> https://app.termly.io/policy-viewer/policy.html?policyUUID=70f2f9d5-072f-443a-944d-39630c45252c</a>. 
                 By using the Services, you agree to be bound by our Privacy Policy, which is incorporated into these Legal Terms.
               </p>
             </section>

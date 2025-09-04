@@ -385,11 +385,11 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
 
           <p className="text-xs text-muted-foreground text-center mt-4">
             By creating an account, you agree to our{' '}
-            <a href="/terms" className="underline hover:text-primary">
+            <a href="https://app.termly.io/policy-viewer/policy.html?policyUUID=0d60ea82-ecb7-43d4-bf2d-a3ea5a0900c6" className="underline hover:text-primary">
               Terms of Service
             </a>{' '}
             and{' '}
-            <a href="/privacy" className="underline hover:text-primary">
+            <a href="https://app.termly.io/policy-viewer/policy.html?policyUUID=70f2f9d5-072f-443a-944d-39630c45252c" className="underline hover:text-primary">
               Privacy Policy
             </a>
             .
