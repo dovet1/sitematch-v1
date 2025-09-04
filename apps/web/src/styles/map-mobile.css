@@ -77,7 +77,11 @@
   .map-marker-button {
     min-width: 44px !important;
     min-height: 44px !important;
-    padding: 6px;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+    outline: none !important;
   }
 
   /* Mobile popup optimizations */

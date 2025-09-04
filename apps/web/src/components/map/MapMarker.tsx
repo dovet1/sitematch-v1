@@ -53,7 +53,7 @@ export const MapMarker = forwardRef<HTMLButtonElement, MapMarkerProps>(
     return (
       <button
         ref={ref}
-        className="map-marker-button relative cursor-pointer group focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-full"
+        className="map-marker-button relative cursor-pointer group focus:outline-none"
         onClick={(event) => onClick?.(event)}
         aria-label={
           isSingle 

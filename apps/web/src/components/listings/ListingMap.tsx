@@ -32,19 +32,33 @@ const DEFAULT_VIEW_STATE: MapViewState = {
 // Mapbox token must be provided via environment variables
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-// Helper function to calculate map bounds from current view state
-function calculateBounds(viewState: MapViewState) {
-  // Calculate approximate bounds based on zoom level and center point
-  // This is a simplified calculation - in production you'd use map.getBounds()
-  const latDelta = 180 / Math.pow(2, viewState.zoom + 1);
-  const lngDelta = 360 / Math.pow(2, viewState.zoom + 1);
+// Helper function to calculate map bounds from current view state with buffer
+function calculateBounds(viewState: MapViewState, bufferPercent: number = 0.2) {
+  // Calculate bounds with buffer to preload nearby areas for smooth panning
+  const latDelta = (180 / Math.pow(2, viewState.zoom + 1)) * (1 + bufferPercent);
+  const lngDelta = (360 / Math.pow(2, viewState.zoom + 1)) * (1 + bufferPercent);
   
   return {
-    north: viewState.latitude + latDelta,
-    south: viewState.latitude - latDelta,
+    north: Math.min(85, viewState.latitude + latDelta),    // Cap at max lat
+    south: Math.max(-85, viewState.latitude - latDelta),   // Cap at min lat
     east: viewState.longitude + lngDelta,
     west: viewState.longitude - lngDelta
   };
+}
+
+// Helper to determine if we should fetch new data based on zoom change
+function shouldRefreshData(oldZoom: number, newZoom: number): boolean {
+  const zoomDiff = Math.abs(newZoom - oldZoom);
+  
+  // Refresh on significant zoom changes or crossing clustering thresholds
+  if (zoomDiff > 1) return true;
+  
+  // Refresh when crossing clustering boundaries for better UX
+  const clusteringBoundaries = [6, 10, 13, 16];
+  const oldBoundary = clusteringBoundaries.find(b => oldZoom < b);
+  const newBoundary = clusteringBoundaries.find(b => newZoom < b);
+  
+  return oldBoundary !== newBoundary;
 }
 
 export function ListingMap({ filters, onListingClick }: ListingMapProps) {
@@ -55,6 +69,7 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedCluster, setSelectedCluster] = useState<MapCluster | null>(null);
   const [clusterPopupPosition, setClusterPopupPosition] = useState({ x: 0, y: 0 });
+  const [lastFetchedZoom, setLastFetchedZoom] = useState<number>(DEFAULT_VIEW_STATE.zoom);
 
   // Filter listings that have coordinates
   const mappableListings = useMemo(() => 
@@ -65,23 +80,15 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
   // Initialize cache
   const mapCache = useMapCache();
 
-  // Create clusters based on current zoom level
+  // Create clusters based on current zoom level - increased clustering
   const clusters = useMapClustering(mappableListings, viewState.zoom, {
     enabled: true,
-    minZoom: 12,
-    maxDistance: 60
+    minZoom: 8,   // Start clustering at lower zoom level
+    maxDistance: 100,  // Increased distance for more aggressive clustering
+    maxZoom: 18,  // Continue clustering to very high zoom levels
+    clusterRadius: 80  // Larger radius to group more pins together
   });
 
-  // Debug logging
-  useEffect(() => {
-    console.log('Map debug:', {
-      totalListings: listings.length,
-      mappableListings: mappableListings.length,
-      clusters: clusters.length,
-      zoom: viewState.zoom,
-      viewState
-    });
-  }, [listings, mappableListings, clusters, viewState]);
 
   // Track the current location to detect changes
   const [currentLocationKey, setCurrentLocationKey] = useState<string>('');
@@ -110,8 +117,17 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
     }
   }, [filters.coordinates, filters.isNationwide, currentLocationKey]);
 
-  // Fetch listings data
+  // Fetch listings data with smart refresh logic
   useEffect(() => {
+    // Skip fetch if only minor zoom changes that don't affect clustering
+    const shouldSkipFetch = !shouldRefreshData(lastFetchedZoom, viewState.zoom) && 
+                           !isInitialLoad && 
+                           Math.abs(viewState.zoom - lastFetchedZoom) < 0.8;
+    
+    if (shouldSkipFetch) {
+      return;
+    }
+    
     const fetchListings = async () => {
       setIsLoading(true);
       setError(null);
@@ -156,16 +172,20 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
 
         const data = await response.json();
         const results = data.listings || data.results || []; // Support both new and old API response format
-        console.log('Map API response:', { 
-          total: results.length, 
-          hasCoordinates: results.filter((r: any) => r.coordinates).length,
-          firstFew: results.slice(0, 3).map((r: any) => ({ 
-            id: r.id, 
-            company: r.company_name, 
-            coords: r.coordinates 
-          }))
-        });
-        setListings(results);
+        
+        // Implement hierarchical loading - limit data based on zoom level for performance
+        let filteredResults = results;
+        if (viewState.zoom < 8) {
+          // At country level, show only major listings (simplified dataset)
+          filteredResults = results.filter((_: any, index: number) => index % 3 === 0); // Every 3rd listing
+        } else if (viewState.zoom < 10) {
+          // At regional level, show 70% of listings
+          filteredResults = results.filter((_: any, index: number) => index % 3 !== 2); // Skip every 3rd
+        }
+        // At city level (zoom >= 10), show all listings
+        
+        setListings(filteredResults);
+        setLastFetchedZoom(viewState.zoom); // Track the zoom level we fetched at
         
         // Cache the results
         mapCache.setCachedData(cacheKey, results, bounds);
@@ -240,7 +260,7 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
     };
 
     // Debounce the fetch to avoid too many requests while panning/zooming
-    const timeoutId = setTimeout(fetchListings, 300);
+    const timeoutId = setTimeout(fetchListings, 800);
     return () => clearTimeout(timeoutId);
   }, [filters, viewState.latitude, viewState.longitude, viewState.zoom]);
 

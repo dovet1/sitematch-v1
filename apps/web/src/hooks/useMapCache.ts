@@ -19,8 +19,8 @@ interface MapCacheHook {
   generateCacheKey: (filters: SearchFilters, bounds: any) => string;
 }
 
-const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
-const MAX_CACHE_SIZE = 50;
+const CACHE_EXPIRY = 10 * 60 * 1000; // 10 minutes - longer for map data
+const MAX_CACHE_SIZE = 100; // Larger cache for better map performance
 
 export function useMapCache(): MapCacheHook {
   const cacheRef = useRef<Map<string, CacheEntry>>(new Map());
@@ -43,12 +43,15 @@ export function useMapCache(): MapCacheHook {
   };
 
   const setCachedData = (cacheKey: string, data: SearchResult[], bounds: any) => {
-    // Enforce cache size limit
+    // Enforce cache size limit with LRU eviction
     if (cacheRef.current.size >= MAX_CACHE_SIZE) {
-      // Remove oldest entry
-      const firstKey = cacheRef.current.keys().next().value;
-      if (firstKey) {
-        cacheRef.current.delete(firstKey);
+      // Remove oldest entries (LRU)
+      let entriesToRemove = Math.floor(MAX_CACHE_SIZE * 0.2); // Remove 20% when full
+      const sortedEntries = Array.from(cacheRef.current.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+      
+      for (let i = 0; i < entriesToRemove && i < sortedEntries.length; i++) {
+        cacheRef.current.delete(sortedEntries[i][0]);
       }
     }
 
@@ -75,12 +78,12 @@ export function useMapCache(): MapCacheHook {
       filters.isNationwide ? '1' : '0'
     ].join('|');
 
-    // Round bounds to reduce cache misses from tiny movements
+    // Round bounds more aggressively to improve cache hit rate
     const roundedBounds = [
-      Math.round(bounds.north * 1000) / 1000,
-      Math.round(bounds.south * 1000) / 1000,
-      Math.round(bounds.east * 1000) / 1000,
-      Math.round(bounds.west * 1000) / 1000
+      Math.round(bounds.north * 100) / 100,  // Round to 2 decimal places for better cache hits
+      Math.round(bounds.south * 100) / 100,
+      Math.round(bounds.east * 100) / 100,
+      Math.round(bounds.west * 100) / 100
     ].join(',');
 
     return `${filterKey}:${roundedBounds}`;

@@ -290,7 +290,6 @@ export async function GET(request: NextRequest) {
       
       // If no locations, skip this listing
       if (locations.length === 0) {
-        console.warn(`Listing ${listing.id} has no locations, skipping`);
         return;
       }
       
@@ -308,7 +307,6 @@ export async function GET(request: NextRequest) {
         
         // Validate coordinates
         if (!coordinates) {
-          console.warn(`Location ${location.id} for listing ${listing.id} missing coordinates, skipping`);
           return;
         }
         
@@ -329,7 +327,6 @@ export async function GET(request: NextRequest) {
             throw new Error('Coordinates out of valid range');
           }
         } catch (coordError) {
-          console.warn(`Invalid coordinates for location ${location.id}:`, coordError);
           return;
         }
         
