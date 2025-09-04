@@ -66,7 +66,7 @@ export function HowItWorks() {
             asChild 
             className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-3 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
           >
-            <a href="/occupier/create-listing?fresh=true">
+            <a href="/occupier/create-listing-quick">
               Post Your Requirement
             </a>
           </Button>
