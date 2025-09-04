@@ -65,11 +65,13 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
   // Initialize cache
   const mapCache = useMapCache();
 
-  // Create clusters based on current zoom level
+  // Create clusters based on current zoom level - increased clustering
   const clusters = useMapClustering(mappableListings, viewState.zoom, {
     enabled: true,
-    minZoom: 12,
-    maxDistance: 60
+    minZoom: 8,   // Start clustering at lower zoom level
+    maxDistance: 100,  // Increased distance for more aggressive clustering
+    maxZoom: 18,  // Continue clustering to very high zoom levels
+    clusterRadius: 80  // Larger radius to group more pins together
   });
 
   // Debug logging
