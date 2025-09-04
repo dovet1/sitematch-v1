@@ -80,6 +80,12 @@ export function UnifiedHeader({
       showWhen: 'always' as const
     },
     {
+      href: '/search',
+      label: 'Requirements',
+      primary: false,
+      showWhen: 'always' as const
+    },
+    {
       href: '/sitesketcher/landing',
       label: 'SiteSketcher',
       primary: false,
