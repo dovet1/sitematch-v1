@@ -1,4 +1,9 @@
-import * as turf from '@turf/turf';
+import { polygon, point } from '@turf/helpers';
+import area from '@turf/area';
+import distance from '@turf/distance';
+import centroid from '@turf/centroid';
+import booleanValid from '@turf/boolean-valid';
+import simplify from '@turf/simplify';
 import type { AreaMeasurement, MapboxDrawPolygon } from '@/types/sitesketcher';
 
 export function calculatePolygonArea(coordinates: number[][]): AreaMeasurement {
@@ -20,21 +25,21 @@ export function calculatePolygonArea(coordinates: number[][]): AreaMeasurement {
       }
     }
     
-    const polygon = turf.polygon([coordinates]);
-    const area = turf.area(polygon); // Returns square meters
+    const poly = polygon([coordinates]);
+    const polygonArea = area(poly); // Returns square meters
     
     // Calculate side lengths
     const sideLengths: number[] = [];
     for (let i = 0; i < coordinates.length - 1; i++) {
-      const from = turf.point(coordinates[i]);
-      const to = turf.point(coordinates[i + 1]);
-      const length = turf.distance(from, to, { units: 'meters' });
+      const from = point(coordinates[i]);
+      const to = point(coordinates[i + 1]);
+      const length = distance(from, to, { units: 'meters' });
       sideLengths.push(Math.round(length));
     }
     
     return {
-      squareMeters: Math.round(area),
-      squareFeet: Math.round(area * 10.764),
+      squareMeters: Math.round(polygonArea),
+      squareFeet: Math.round(polygonArea * 10.764),
       sideLengths
     };
   } catch (error) {
@@ -57,9 +62,9 @@ export function calculateDistance(point1: [number, number], point2: [number, num
       return 0;
     }
     
-    const from = turf.point(point1);
-    const to = turf.point(point2);
-    return turf.distance(from, to, { units: 'meters' });
+    const from = point(point1);
+    const to = point(point2);
+    return distance(from, to, { units: 'meters' });
   } catch (error) {
     console.error('Error calculating distance:', error);
     return 0;
@@ -102,18 +107,18 @@ export function formatDistance(distance: number, unit: 'metric' | 'imperial'): s
 // Remove walking time calculation - not needed in simplified version
 
 export function calculatePolygonCenter(coordinates: number[][]): [number, number] {
-  const polygon = turf.polygon([coordinates]);
-  const centroid = turf.centroid(polygon);
-  return centroid.geometry.coordinates as [number, number];
+  const poly = polygon([coordinates]);
+  const center = centroid(poly);
+  return center.geometry.coordinates as [number, number];
 }
 
 export function isValidPolygon(coordinates: number[][]): boolean {
   if (coordinates.length < 4) return false; // Need at least 3 vertices + closing point
   
   try {
-    const polygon = turf.polygon([coordinates]);
+    const poly = polygon([coordinates]);
     // Check if polygon is valid (no self-intersections, proper winding)
-    return turf.booleanValid(polygon);
+    return booleanValid(poly);
   } catch {
     return false;
   }
@@ -121,8 +126,8 @@ export function isValidPolygon(coordinates: number[][]): boolean {
 
 export function simplifyPolygon(coordinates: number[][], tolerance = 0.01): number[][] {
   try {
-    const polygon = turf.polygon([coordinates]);
-    const simplified = turf.simplify(polygon, { tolerance, highQuality: true });
+    const poly = polygon([coordinates]);
+    const simplified = simplify(poly, { tolerance, highQuality: true });
     return simplified.geometry.coordinates[0];
   } catch {
     return coordinates;
