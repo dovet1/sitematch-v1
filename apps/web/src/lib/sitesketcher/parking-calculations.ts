@@ -1,4 +1,6 @@
-import * as turf from '@turf/turf';
+import { polygon } from '@turf/helpers';
+import area from '@turf/area';
+import centroid from '@turf/centroid';
 import type { ParkingOverlay, ParkingConfiguration } from '@/types/sitesketcher';
 import { PARKING_SIZES } from '@/types/sitesketcher';
 
@@ -81,8 +83,8 @@ export function calculateParkingCapacity(
   parkingConfig: ParkingConfiguration
 ): number {
   try {
-    const polygon = turf.polygon([polygonCoordinates]);
-    const polygonArea = turf.area(polygon); // Square meters
+    const poly = polygon([polygonCoordinates]);
+    const polygonArea = area(poly); // Square meters
     
     const { width, length } = parkingConfig.dimensions;
     const spaceArea = width * length;
@@ -104,8 +106,8 @@ export function generateParkingLayout(
   parkingConfig: ParkingConfiguration
 ): ParkingOverlay[] {
   try {
-    const polygon = turf.polygon([polygonCoordinates]);
-    const center = turf.centroid(polygon);
+    const poly = polygon([polygonCoordinates]);
+    const center = centroid(poly);
     const [centerLng, centerLat] = center.geometry.coordinates;
     
     const { width, length } = parkingConfig.dimensions;
