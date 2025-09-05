@@ -272,18 +272,18 @@ export default function OccupierDashboard() {
                     <p className="text-sm text-muted-foreground mb-3">
                       Get started by creating your first property requirement or setting up your agency profile.
                     </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                      <div className="flex items-center gap-2 bg-white/60 rounded-lg p-2">
-                        <MapPin className="w-4 h-4 text-blue-600" />
-                        <span>Specify your location needs</span>
+                    <div className="flex flex-wrap gap-3 justify-center text-xs">
+                      <div className="inline-flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
+                        <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                        <span className="whitespace-nowrap">Specify your location needs</span>
                       </div>
-                      <div className="flex items-center gap-2 bg-white/60 rounded-lg p-2">
-                        <Users className="w-4 h-4 text-blue-600" />
-                        <span>Promote your agency</span>
+                      <div className="inline-flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
+                        <Users className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                        <span className="whitespace-nowrap">Promote your agency</span>
                       </div>
-                      <div className="flex items-center gap-2 bg-white/60 rounded-lg p-2">
-                        <TrendingUp className="w-4 h-4 text-blue-600" />
-                        <span>Increase deal flow</span>
+                      <div className="inline-flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
+                        <TrendingUp className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                        <span className="whitespace-nowrap">Increase deal flow</span>
                       </div>
                     </div>
                   </div>
