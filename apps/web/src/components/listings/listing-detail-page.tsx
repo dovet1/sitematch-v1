@@ -4843,14 +4843,32 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               </div>
                             ) : (
                               /* Empty State */
-                              <div className="bg-gradient-to-br from-purple-50 via-white to-purple-50/50 rounded-2xl border-2 border-dashed border-purple-200 p-8 text-center">
-                                <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                                  <HelpCircle className="w-8 h-8 text-purple-600" />
+                              <div className="bg-gradient-to-br from-violet-50 via-white to-purple-50 rounded-xl border-2 border-dashed border-violet-200 p-6">
+                                <div className="w-14 h-14 bg-gradient-to-br from-violet-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                  <HelpCircle className="w-7 h-7 text-violet-600" />
                                 </div>
-                                <h4 className="font-semibold text-gray-900 mb-2">No FAQs Yet</h4>
-                                <p className="text-sm text-gray-600 mb-6 max-w-xs mx-auto">
-                                  Answer common questions to help people understand your requirements better
-                                </p>
+                                <h4 className="font-semibold text-gray-900 text-base mb-3 text-center">No FAQs Yet</h4>
+                                <div className="mb-5 space-y-3">
+                                  <p className="text-sm text-gray-600 text-center">Create your own question to help people understand what you're looking for, such as:</p>
+                                  <div className="bg-white/80 rounded-lg p-3 space-y-2.5 border border-violet-100">
+                                    <div className="flex items-start gap-2.5">
+                                      <span className="flex-shrink-0 w-5 h-5 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center text-xs font-semibold">1</span>
+                                      <p className="text-xs text-gray-700">What sites have you recently acquired?</p>
+                                    </div>
+                                    <div className="flex items-start gap-2.5">
+                                      <span className="flex-shrink-0 w-5 h-5 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center text-xs font-semibold">2</span>
+                                      <p className="text-xs text-gray-700">Do you require specialised facilities (cold storage, loading docks, high ceilings, reinforced floors)?</p>
+                                    </div>
+                                    <div className="flex items-start gap-2.5">
+                                      <span className="flex-shrink-0 w-5 h-5 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center text-xs font-semibold">3</span>
+                                      <p className="text-xs text-gray-700">What are your car parking requirements?</p>
+                                    </div>
+                                    <div className="flex items-start gap-2.5">
+                                      <span className="flex-shrink-0 w-5 h-5 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center text-xs font-semibold">4</span>
+                                      <p className="text-xs text-gray-700">Are you looking for a lease, freehold purchase, or other arrangement?</p>
+                                    </div>
+                                  </div>
+                                </div>
                                 <button
                                   onClick={() => {
                                     const newFaqId = `faq-${Date.now()}`;
@@ -7203,22 +7221,41 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       </div>
                     </>
                   ) : (
-                    <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
-                      <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <MessageSquare className="w-8 h-8 text-violet-500" />
+                    <div className="p-8 rounded-xl bg-gradient-to-br from-violet-50 via-white to-purple-50 border-2 border-dashed border-violet-200">
+                      <div className="w-16 h-16 bg-gradient-to-br from-violet-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                        <MessageSquare className="w-8 h-8 text-violet-600" />
                       </div>
-                      <h4 className="font-semibold text-gray-900 mb-2">No FAQs Available</h4>
-                      <p className="text-gray-600 text-sm max-w-sm mx-auto mb-4">
-                        Add frequently asked questions to help agents understand your requirements better.
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        className="text-violet-600 border-violet-600 hover:bg-violet-50"
-                        onClick={addNewFAQ}
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Your First FAQ
-                      </Button>
+                      <h4 className="font-semibold text-gray-900 text-lg mb-3 text-center">No FAQs Available</h4>
+                      <div className="max-w-lg mx-auto mb-6 space-y-4">
+                        <p className="text-gray-600 text-sm text-center">Create your own question to help people understand what you're looking for, such as:</p>
+                        <div className="bg-white/80 rounded-lg p-4 space-y-3 border border-violet-100">
+                          <div className="flex items-start gap-3">
+                            <span className="flex-shrink-0 w-6 h-6 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center text-xs font-semibold">1</span>
+                            <p className="text-sm text-gray-700">What sites have you recently acquired?</p>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <span className="flex-shrink-0 w-6 h-6 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center text-xs font-semibold">2</span>
+                            <p className="text-sm text-gray-700">Do you require specialised facilities (cold storage, loading docks, high ceilings, reinforced floors)?</p>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <span className="flex-shrink-0 w-6 h-6 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center text-xs font-semibold">3</span>
+                            <p className="text-sm text-gray-700">What are your car parking requirements?</p>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <span className="flex-shrink-0 w-6 h-6 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center text-xs font-semibold">4</span>
+                            <p className="text-sm text-gray-700">Are you looking for a lease, freehold purchase, or other arrangement?</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <Button 
+                          className="bg-violet-600 hover:bg-violet-700 text-white border-0 shadow-sm"
+                          onClick={addNewFAQ}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Your First FAQ
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
