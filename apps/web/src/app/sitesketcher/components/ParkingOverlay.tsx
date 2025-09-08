@@ -47,8 +47,8 @@ export function ParkingOverlay({
   const [isOpen, setIsOpen] = useState(false);
   const [config, setConfig] = useState<ParkingConfiguration>({
     type: 'single',
-    size: 'standard',
-    dimensions: PARKING_SIZES.standard,
+    size: 'compact',
+    dimensions: PARKING_SIZES.compact,
     quantity: 10
   });
   
@@ -228,13 +228,13 @@ export function ParkingOverlay({
                   <SelectContent>
                     <SelectItem value="standard" className="py-3">
                       <div className="flex items-center justify-between w-full">
-                        <span className="font-medium">Standard</span>
+                        <span className="font-medium">Larger</span>
                         <span className="text-sm text-muted-foreground ml-3">2.7m × 5.0m</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="compact" className="py-3">
                       <div className="flex items-center justify-between w-full">
-                        <span className="font-medium">Compact</span>
+                        <span className="font-medium">Standard</span>
                         <span className="text-sm text-muted-foreground ml-3">2.4m × 4.8m</span>
                       </div>
                     </SelectItem>
