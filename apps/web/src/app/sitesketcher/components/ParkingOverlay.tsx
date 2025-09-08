@@ -114,6 +114,17 @@ export function ParkingOverlay({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="px-4 pb-4 space-y-4">
+            {/* Total Spaces Added */}
+            {parkingOverlays.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Total Spaces Added
+                </Label>
+                <div className="text-lg font-semibold text-foreground">
+                  {parkingOverlays.reduce((sum, overlay) => sum + overlay.quantity, 0)}
+                </div>
+              </div>
+            )}
         {/* Show message only if no polygons AND no existing parking overlays */}
         {!hasPolygons && parkingOverlays.length === 0 && (
           <div className="text-center py-6 px-2">
