@@ -380,14 +380,20 @@ export async function GET(request: NextRequest) {
     if (location && !isNationwide) {
       console.log('Applying location filter for:', location);
       const locationLower = location.toLowerCase();
-      results = results.filter(listing => {
-        // Include nationwide listings (they match all locations)
+      
+      // Separate listings into those with matching locations and nationwide
+      const listingsWithMatchingLocations: any[] = [];
+      const nationwideListings: any[] = [];
+      
+      results.forEach(listing => {
+        // Nationwide listings go to separate array
         if (listing.is_nationwide) {
-          return true;
+          nationwideListings.push(listing);
+          return;
         }
         
         // Check if any of the listing's locations match the search location
-        return listing.locations.some((loc: any) => {
+        const hasMatchingLocation = listing.locations.some((loc: any) => {
           if (!loc.place_name) return false;
           
           const placeName = loc.place_name.toLowerCase();
@@ -401,8 +407,17 @@ export async function GET(request: NextRequest) {
                  region.includes(locationLower) ||
                  country.includes(locationLower);
         });
+        
+        if (hasMatchingLocation) {
+          listingsWithMatchingLocations.push(listing);
+        }
       });
-      console.log('After location filtering:', results.length, 'results');
+      
+      // Combine results: location-specific first, then nationwide
+      results = [...listingsWithMatchingLocations, ...nationwideListings];
+      console.log('After location filtering and sorting:', results.length, 'results');
+      console.log('Location-specific listings:', listingsWithMatchingLocations.length);
+      console.log('Nationwide listings:', nationwideListings.length);
     }
     
     // Apply nationwide filtering if requested
@@ -414,10 +429,15 @@ export async function GET(request: NextRequest) {
     if (lat !== null && lng !== null) {
       const searchCoords: [number, number] = [lng, lat]; // [longitude, latitude]
       
-      results = results.filter(listing => {
-        // Always include nationwide listings (listings without locations)
+      // Separate listings into those within radius and nationwide
+      const listingsWithinRadius: any[] = [];
+      const nationwideListings: any[] = [];
+      
+      results.forEach(listing => {
+        // Nationwide listings go to separate array
         if (listing.is_nationwide) {
-          return true;
+          nationwideListings.push(listing);
+          return;
         }
         
         // Check if any of the listing's locations are within radius
@@ -447,8 +467,16 @@ export async function GET(request: NextRequest) {
           return distanceKm <= 5;
         });
         
-        return hasLocationInRadius;
+        if (hasLocationInRadius) {
+          listingsWithinRadius.push(listing);
+        }
       });
+      
+      // Combine results: location-specific first, then nationwide
+      results = [...listingsWithinRadius, ...nationwideListings];
+      console.log('After coordinate filtering:', results.length, 'results');
+      console.log('Listings within radius:', listingsWithinRadius.length);
+      console.log('Nationwide listings:', nationwideListings.length);
     }
 
     // Apply pagination
