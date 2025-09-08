@@ -301,6 +301,15 @@ export async function GET(request: NextRequest) {
       
       const primaryLocation = locations[0];
       
+      // Parse coordinates if they're stored as a JSON string
+      if (primaryLocation && typeof primaryLocation.coordinates === 'string') {
+        try {
+          primaryLocation.coordinates = JSON.parse(primaryLocation.coordinates);
+        } catch (e) {
+          console.error('Failed to parse coordinates for listing:', listing.id, e);
+        }
+      }
+      
       // Get the uploaded logo URL from our map or version files
       let uploadedLogoUrl = logoMap[listing.id] || null;
       
@@ -334,14 +343,25 @@ export async function GET(request: NextRequest) {
         contact_phone: listingData.contact_phone,
         is_nationwide: locations.length === 0, // Treat as nationwide if no locations
         // Multiple locations support
-        locations: locations.map((loc: any) => ({
-          id: loc.id,
-          place_name: loc.place_name,
-          coordinates: loc.coordinates,
-          formatted_address: loc.formatted_address,
-          region: loc.region,
-          country: loc.country
-        })),
+        locations: locations.map((loc: any) => {
+          // Parse coordinates if stored as JSON string
+          let coords = loc.coordinates;
+          if (typeof coords === 'string') {
+            try {
+              coords = JSON.parse(coords);
+            } catch (e) {
+              console.error('Failed to parse location coordinates:', loc.id, e);
+            }
+          }
+          return {
+            id: loc.id,
+            place_name: loc.place_name,
+            coordinates: coords,
+            formatted_address: loc.formatted_address,
+            region: loc.region,
+            country: loc.country
+          };
+        }),
         // Legacy single location fields for backwards compatibility
         place_name: primaryLocation?.place_name || null,
         coordinates: primaryLocation?.coordinates || null,
@@ -360,14 +380,20 @@ export async function GET(request: NextRequest) {
     if (location && !isNationwide) {
       console.log('Applying location filter for:', location);
       const locationLower = location.toLowerCase();
-      results = results.filter(listing => {
-        // Include nationwide listings (they match all locations)
+      
+      // Separate listings into those with matching locations and nationwide
+      const listingsWithMatchingLocations: any[] = [];
+      const nationwideListings: any[] = [];
+      
+      results.forEach(listing => {
+        // Nationwide listings go to separate array
         if (listing.is_nationwide) {
-          return true;
+          nationwideListings.push(listing);
+          return;
         }
         
         // Check if any of the listing's locations match the search location
-        return listing.locations.some((loc: any) => {
+        const hasMatchingLocation = listing.locations.some((loc: any) => {
           if (!loc.place_name) return false;
           
           const placeName = loc.place_name.toLowerCase();
@@ -381,8 +407,17 @@ export async function GET(request: NextRequest) {
                  region.includes(locationLower) ||
                  country.includes(locationLower);
         });
+        
+        if (hasMatchingLocation) {
+          listingsWithMatchingLocations.push(listing);
+        }
       });
-      console.log('After location filtering:', results.length, 'results');
+      
+      // Combine results: location-specific first, then nationwide
+      results = [...listingsWithMatchingLocations, ...nationwideListings];
+      console.log('After location filtering and sorting:', results.length, 'results');
+      console.log('Location-specific listings:', listingsWithMatchingLocations.length);
+      console.log('Nationwide listings:', nationwideListings.length);
     }
     
     // Apply nationwide filtering if requested
@@ -394,37 +429,54 @@ export async function GET(request: NextRequest) {
     if (lat !== null && lng !== null) {
       const searchCoords: [number, number] = [lng, lat]; // [longitude, latitude]
       
-      results = results.filter(listing => {
-        // Always include nationwide listings (listings without locations)
+      // Separate listings into those within radius and nationwide
+      const listingsWithinRadius: any[] = [];
+      const nationwideListings: any[] = [];
+      
+      results.forEach(listing => {
+        // Nationwide listings go to separate array
         if (listing.is_nationwide) {
-          return true;
+          nationwideListings.push(listing);
+          return;
         }
         
-        // Check if listing has coordinates
-        if (!listing.coordinates) {
-          return false;
+        // Check if any of the listing's locations are within radius
+        const hasLocationInRadius = listing.locations.some((loc: any) => {
+          if (!loc.coordinates) return false;
+          
+          let listingLat, listingLng;
+          
+          // Handle different coordinate formats
+          if (Array.isArray(loc.coordinates)) {
+            // Array format [lng, lat]
+            listingLng = loc.coordinates[0];
+            listingLat = loc.coordinates[1];
+          } else if (loc.coordinates.lat && loc.coordinates.lng) {
+            // Object format {lat, lng}
+            listingLat = loc.coordinates.lat;
+            listingLng = loc.coordinates.lng;
+          } else {
+            return false;
+          }
+          
+          // Calculate distance using Mapbox utility
+          const listingCoords: [number, number] = [listingLng, listingLat];
+          const distanceKm = calculateDistance(searchCoords, listingCoords);
+          
+          // Filter by 5km radius
+          return distanceKm <= 5;
+        });
+        
+        if (hasLocationInRadius) {
+          listingsWithinRadius.push(listing);
         }
-        
-        // Extract coordinates from JSONB format
-        let listingLat, listingLng;
-        if (listing.coordinates.lat && listing.coordinates.lng) {
-          listingLat = listing.coordinates.lat;
-          listingLng = listing.coordinates.lng;
-        } else if (Array.isArray(listing.coordinates)) {
-          // Handle array format [lng, lat]
-          listingLng = listing.coordinates[0];
-          listingLat = listing.coordinates[1];
-        } else {
-          return false;
-        }
-        
-        // Calculate distance using Mapbox utility
-        const listingCoords: [number, number] = [listingLng, listingLat];
-        const distanceKm = calculateDistance(searchCoords, listingCoords);
-        
-        // Filter by 5km radius (as specified in requirements)
-        return distanceKm <= 5;
       });
+      
+      // Combine results: location-specific first, then nationwide
+      results = [...listingsWithinRadius, ...nationwideListings];
+      console.log('After coordinate filtering:', results.length, 'results');
+      console.log('Listings within radius:', listingsWithinRadius.length);
+      console.log('Nationwide listings:', nationwideListings.length);
     }
 
     // Apply pagination

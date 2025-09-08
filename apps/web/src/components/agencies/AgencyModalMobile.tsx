@@ -79,7 +79,7 @@ export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobi
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 24 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="relative w-full h-full max-w-md max-h-[95vh] m-2 bg-white rounded-3xl shadow-2xl shadow-black/25 border border-slate-200/50 flex flex-col overflow-hidden"
+            className="relative w-full h-full bg-white shadow-2xl shadow-black/25 flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
             onWheel={(e) => e.stopPropagation()}
           >

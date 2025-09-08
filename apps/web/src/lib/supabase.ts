@@ -19,39 +19,47 @@ export const supabase = browserClient
 // Default createClient export for API routes
 export const createClient = () => createBrowserClient(supabaseUrl, supabaseAnonKey)
 
-// Server component client (for use in Server Components)
+// Server component client (for use in Server Components and API Routes)
 export const createServerClient = () => {
-  const { cookies } = require('next/headers')
-  const cookieStore = cookies()
-  return createSSRServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
+  try {
+    const { cookies } = require('next/headers')
+    const cookieStore = cookies()
+    
+    return createSSRServerClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        cookies: {
+          get(name: string) {
+            try {
+              return cookieStore.get(name)?.value
+            } catch (error) {
+              console.warn('Error getting cookie:', name, error)
+              return undefined
+            }
+          },
+          set(name: string, value: string, options: any) {
+            try {
+              cookieStore.set({ name, value, ...options })
+            } catch (error) {
+              console.warn('Error setting cookie:', name, error)
+            }
+          },
+          remove(name: string, options: any) {
+            try {
+              cookieStore.set({ name, value: '', ...options })
+            } catch (error) {
+              console.warn('Error removing cookie:', name, error)
+            }
+          },
         },
-        set(name: string, value: string, options: any) {
-          try {
-            cookieStore.set({ name, value, ...options })
-          } catch (error) {
-            // The `set` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-        remove(name: string, options: any) {
-          try {
-            cookieStore.set({ name, value: '', ...options })
-          } catch (error) {
-            // The `delete` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-      },
-    }
-  )
+      }
+    )
+  } catch (error) {
+    console.error('Error creating server client:', error)
+    // Fallback to regular client if server client fails
+    return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  }
 }
 
 // Admin client (server-side only)

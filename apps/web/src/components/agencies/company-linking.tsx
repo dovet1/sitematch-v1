@@ -70,7 +70,6 @@ export function CompanyLinking({ agencyId }: CompanyLinkingProps) {
       }
       
       const result = await response.json()
-      console.log('Fetched companies:', result) // Debug log
       const companiesList = result.data || []
       
       // Separate linked and unlinked companies
