@@ -550,7 +550,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           filter: ['==', ['geometry-type'], 'Polygon'],
           paint: {
             'line-color': '#1f2937', // Dark gray border
-            'line-width': 3,
+            'line-width': 1.5,
             'line-opacity': 1
           }
         });
