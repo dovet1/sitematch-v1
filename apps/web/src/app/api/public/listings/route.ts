@@ -301,6 +301,15 @@ export async function GET(request: NextRequest) {
       
       const primaryLocation = locations[0];
       
+      // Parse coordinates if they're stored as a JSON string
+      if (primaryLocation && typeof primaryLocation.coordinates === 'string') {
+        try {
+          primaryLocation.coordinates = JSON.parse(primaryLocation.coordinates);
+        } catch (e) {
+          console.error('Failed to parse coordinates for listing:', listing.id, e);
+        }
+      }
+      
       // Get the uploaded logo URL from our map or version files
       let uploadedLogoUrl = logoMap[listing.id] || null;
       
@@ -334,14 +343,25 @@ export async function GET(request: NextRequest) {
         contact_phone: listingData.contact_phone,
         is_nationwide: locations.length === 0, // Treat as nationwide if no locations
         // Multiple locations support
-        locations: locations.map((loc: any) => ({
-          id: loc.id,
-          place_name: loc.place_name,
-          coordinates: loc.coordinates,
-          formatted_address: loc.formatted_address,
-          region: loc.region,
-          country: loc.country
-        })),
+        locations: locations.map((loc: any) => {
+          // Parse coordinates if stored as JSON string
+          let coords = loc.coordinates;
+          if (typeof coords === 'string') {
+            try {
+              coords = JSON.parse(coords);
+            } catch (e) {
+              console.error('Failed to parse location coordinates:', loc.id, e);
+            }
+          }
+          return {
+            id: loc.id,
+            place_name: loc.place_name,
+            coordinates: coords,
+            formatted_address: loc.formatted_address,
+            region: loc.region,
+            country: loc.country
+          };
+        }),
         // Legacy single location fields for backwards compatibility
         place_name: primaryLocation?.place_name || null,
         coordinates: primaryLocation?.coordinates || null,
@@ -400,30 +420,34 @@ export async function GET(request: NextRequest) {
           return true;
         }
         
-        // Check if listing has coordinates
-        if (!listing.coordinates) {
-          return false;
-        }
+        // Check if any of the listing's locations are within radius
+        const hasLocationInRadius = listing.locations.some((loc: any) => {
+          if (!loc.coordinates) return false;
+          
+          let listingLat, listingLng;
+          
+          // Handle different coordinate formats
+          if (Array.isArray(loc.coordinates)) {
+            // Array format [lng, lat]
+            listingLng = loc.coordinates[0];
+            listingLat = loc.coordinates[1];
+          } else if (loc.coordinates.lat && loc.coordinates.lng) {
+            // Object format {lat, lng}
+            listingLat = loc.coordinates.lat;
+            listingLng = loc.coordinates.lng;
+          } else {
+            return false;
+          }
+          
+          // Calculate distance using Mapbox utility
+          const listingCoords: [number, number] = [listingLng, listingLat];
+          const distanceKm = calculateDistance(searchCoords, listingCoords);
+          
+          // Filter by 5km radius
+          return distanceKm <= 5;
+        });
         
-        // Extract coordinates from JSONB format
-        let listingLat, listingLng;
-        if (listing.coordinates.lat && listing.coordinates.lng) {
-          listingLat = listing.coordinates.lat;
-          listingLng = listing.coordinates.lng;
-        } else if (Array.isArray(listing.coordinates)) {
-          // Handle array format [lng, lat]
-          listingLng = listing.coordinates[0];
-          listingLat = listing.coordinates[1];
-        } else {
-          return false;
-        }
-        
-        // Calculate distance using Mapbox utility
-        const listingCoords: [number, number] = [listingLng, listingLat];
-        const distanceKm = calculateDistance(searchCoords, listingCoords);
-        
-        // Filter by 5km radius (as specified in requirements)
-        return distanceKm <= 5;
+        return hasLocationInRadius;
       });
     }
 
