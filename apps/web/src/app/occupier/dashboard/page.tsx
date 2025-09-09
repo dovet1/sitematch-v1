@@ -72,13 +72,13 @@ export default function OccupierDashboard() {
       setUser(user);
 
       // Get user's agency
-      const { data: userAgency } = await supabase
+      const { data: userAgency, error: agencyError } = await supabase
         .from('agencies')
         .select('id, name, status, created_at, updated_at')
         .eq('created_by', user.id)
-        .single();
+        .maybeSingle();
 
-      if (userAgency) {
+      if (userAgency && !agencyError) {
         setAgency(userAgency);
       }
 

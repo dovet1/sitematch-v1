@@ -21,6 +21,7 @@ export interface UserProfile {
   email: string
   role: UserRole
   user_type: UserType
+  newsletter_opt_in?: boolean
   created_at: string
   updated_at: string
 }
@@ -30,7 +31,7 @@ export interface AuthContextType {
   profile: UserProfile | null
   loading: boolean
   signIn: (email: string, password: string, redirectTo?: string) => Promise<void>
-  signUp: (email: string, password: string, userType?: string, redirectTo?: string) => Promise<void>
+  signUp: (email: string, password: string, userType?: string, redirectTo?: string, newsletterOptIn?: boolean) => Promise<void>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
   updatePassword: (newPassword: string) => Promise<void>
