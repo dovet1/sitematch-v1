@@ -82,7 +82,7 @@ export async function GET(
     // Format the response
     const companies = approvedListings.map(listing => {
       const logo = logos.find(l => l.listing_id === listing.id)
-      const isLinkedToThisAgency = listing.listing_agents?.some(agent => agent.agency_id === params.id) || false
+      const isLinkedToThisAgency = listing.listing_agents?.some((agent: any) => agent.agency_id === params.id) || false
       
       return {
         id: listing.id,
