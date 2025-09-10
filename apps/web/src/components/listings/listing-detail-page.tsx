@@ -7376,7 +7376,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                     </div>
                   )}
                   
-                  {searchAgencyTerm.length >= 2 && searchAgencyResults.length === 0 && !isSearchingAgencies && (
+                  {searchAgencyTerm.length >= 2 && searchedAgencies.length === 0 && !isSearchingAgencies && (
                     <div className="text-center py-4 text-gray-500">
                       <Building2 className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                       <p className="text-sm">No agencies found matching "{searchAgencyTerm}"</p>
