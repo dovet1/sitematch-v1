@@ -221,7 +221,7 @@ export function EnhancedListingModal({
           description: 'We are seeking a modern, flexible office space in a prime central location. The space should accommodate our growing team of 50+ professionals with room for expansion.',
           created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
           listing_type: 'commercial',
-          linked_agency_id: null
+          listing_agents: []
         };
         setListing(mockListing);
       } finally {

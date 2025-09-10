@@ -41,11 +41,17 @@ export async function GET(
       return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
     }
 
-    // Fetch linked companies (listings with this agency)
+    // Fetch linked companies (listings with this agency) via junction table
     const { data: linkedListings, error: listingsError } = await supabase
       .from('listings')
-      .select('id, company_name, clearbit_logo, company_domain')
-      .eq('linked_agency_id', id)
+      .select(`
+        id, 
+        company_name, 
+        clearbit_logo, 
+        company_domain,
+        listing_agents!inner(agency_id)
+      `)
+      .eq('listing_agents.agency_id', id)
       .not('company_name', 'is', null);
 
     // Get logos for linked companies

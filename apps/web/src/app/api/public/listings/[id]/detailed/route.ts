@@ -21,7 +21,7 @@ export async function GET(
     // First check if listing exists and is approved
     const { data: listing, error: listingError } = await supabase
       .from('listings')
-      .select('id, status, company_name, created_at, linked_agency_id, live_version_id, current_version_id')
+      .select('id, status, company_name, created_at, live_version_id, current_version_id')
       .eq('id', id)
       .single();
 
@@ -89,13 +89,17 @@ export async function GET(
           site_acreage_min,
           site_acreage_max,
           property_page_link,
-          linked_agency_id,
-          linked_agency:agencies(
+          listing_agents(
             id,
-            name,
-            logo_url,
-            geographic_patch,
-            classification
+            agency_id,
+            added_at,
+            agency:agencies(
+              id,
+              name,
+              logo_url,
+              geographic_patch,
+              classification
+            )
           )
         `).eq('id', id).single(),
         supabase.from('listing_locations').select('id, place_name, coordinates, formatted_address').eq('listing_id', id),
@@ -106,9 +110,8 @@ export async function GET(
         supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id)
       ]);
 
-      console.log('LINKED_AGENCY_DEBUG:', {
-        linked_agency_id: currentListing?.linked_agency_id,
-        linked_agency: currentListing?.linked_agency
+      console.log('LISTING_AGENTS_DEBUG:', {
+        listing_agents: currentListing?.listing_agents
       });
 
       const allSectors = (listingSectors?.map((ls: any) => ls.sectors).filter(Boolean) || []);
@@ -198,8 +201,7 @@ export async function GET(
         description: currentListing?.description,
         id: currentListing?.id,
         created_at: currentListing?.created_at,
-        linked_agency_id: currentListing?.linked_agency_id,
-        linked_agency: currentListing?.linked_agency
+        listing_agents: currentListing?.listing_agents
       };
 
       return NextResponse.json(fallbackResponse);
@@ -221,17 +223,22 @@ export async function GET(
     const sectors = (versionContent.sectors || []).map((s: any) => s.sector).filter(Boolean);
     const useClasses = (versionContent.use_classes || []).map((uc: any) => uc.use_class).filter(Boolean);
     
-    // Fix: If version doesn't have linked_agency but has linked_agency_id, fetch it
-    let linkedAgencyData = listingData.linked_agency;
-    if (!linkedAgencyData && listingData.linked_agency_id) {
-      const { data: agency } = await supabase
-        .from('agencies')
-        .select('id, name, logo_url, geographic_patch, classification')
-        .eq('id', listingData.linked_agency_id)
-        .single();
-      
-      linkedAgencyData = agency;
-    }
+    // Get current listing agents from junction table
+    const { data: listingAgents } = await supabase
+      .from('listing_agents')
+      .select(`
+        id,
+        agency_id,
+        added_at,
+        agency:agencies(
+          id,
+          name,
+          logo_url,
+          geographic_patch,
+          classification
+        )
+      `)
+      .eq('listing_id', id);
     
 
     // Format the response to match the expected structure
@@ -256,8 +263,7 @@ export async function GET(
       site_acreage_min: listingData.site_acreage_min,
       site_acreage_max: listingData.site_acreage_max,
       property_page_link: listingData.property_page_link,
-      linked_agency_id: listingData.linked_agency_id,
-      linked_agency: linkedAgencyData
+      listing_agents: listingAgents
     };
 
 
@@ -357,8 +363,7 @@ export async function GET(
       description: formattedListing.description,
       id: formattedListing.id,
       created_at: formattedListing.created_at,
-      linked_agency_id: formattedListing.linked_agency_id,
-      linked_agency: formattedListing.linked_agency
+      listing_agents: formattedListing.listing_agents
     };
     
     

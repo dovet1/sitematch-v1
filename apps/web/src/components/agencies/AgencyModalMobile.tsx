@@ -57,7 +57,7 @@ export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobi
     { id: 'contact' as const, label: 'Contact', icon: Mail },
     { id: 'coverage' as const, label: 'Coverage', icon: MapPin },
     { id: 'team' as const, label: 'Team', icon: Users },
-    { id: 'companies' as const, label: 'Companies', icon: Building2 },
+    { id: 'companies' as const, label: 'Our Listings', icon: Building2 },
   ]
 
   return (
@@ -265,7 +265,7 @@ export function AgencyModalMobile({ agencyId, isOpen, onClose }: AgencyModalMobi
                               <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-2xl flex items-center justify-center">
                                 <Building2 className="h-8 w-8 text-slate-400" />
                               </div>
-                              <p className="text-slate-500 font-medium">No partnerships yet</p>
+                              <p className="text-slate-500 font-medium">No listings added yet</p>
                             </div>
                           )}
                         </div>

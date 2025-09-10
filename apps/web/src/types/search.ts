@@ -183,7 +183,18 @@ export interface EnhancedListingModalContent {
   description: string;
   created_at: string;
   listing_type: 'residential' | 'commercial';
-  linked_agency_id: string | null;
+  listing_agents?: Array<{
+    id: string;
+    agency_id: string;
+    added_at: string;
+    agency: {
+      id: string;
+      name: string;
+      logo_url?: string;
+      geographic_patch?: string;
+      classification?: string;
+    };
+  }>;
 }
 
 export interface ListingModalProps {
