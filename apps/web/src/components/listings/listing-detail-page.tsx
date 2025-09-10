@@ -74,6 +74,9 @@ import { SectorsModal } from '@/components/listings/modals/sectors-modal';
 import { UseClassesModal } from '@/components/listings/modals/use-classes-modal';
 import { SiteSizeModal } from '@/components/listings/modals/site-size-modal';
 
+// Import agents components
+import { MultipleAgentsDisplay } from '@/components/listings/multiple-agents-display';
+
 // Import mobile components
 import { useMobileBreakpoint } from '@/components/listings/ImmersiveListingModal/hooks/useMobileBreakpoint';
 import { MobileVisualHero } from '@/components/listings/ImmersiveListingModal/MobileVisualHero';
@@ -94,14 +97,21 @@ interface ListingData extends WizardFormData {
   created_at: string;
   updated_at: string;
   completion_percentage?: number;
-  linked_agency_id?: string;
-  linked_agency?: {
+  listing_agents?: Array<{
     id: string;
-    name: string;
-    logo_url?: string;
-    geographic_patch?: string;
-    classification?: string;
-  };
+    listing_id: string;
+    agency_id: string;
+    added_at: string;
+    agency: {
+      id: string;
+      name: string;
+      logo_url?: string;
+      geographic_patch?: string;
+      classification?: string;
+      contact_email?: string;
+      contact_phone?: string;
+    };
+  }>;
 }
 
 export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: ListingDetailPageProps) {
@@ -197,10 +207,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   const [editingContactData, setEditingContactData] = useState<any>(null);
 
-  // Agent states
+  // Agency search state
   const [searchAgencyTerm, setSearchAgencyTerm] = useState('');
-  const [searchAgencyResults, setSearchAgencyResults] = useState<any[]>([]);
   const [isSearchingAgencies, setIsSearchingAgencies] = useState(false);
+  const [searchedAgencies, setSearchedAgencies] = useState<any[]>([]);
 
   // FAQ accordion state
   const [expandedFAQs, setExpandedFAQs] = useState<Set<string>>(new Set());
@@ -247,7 +257,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     { id: 'locations', label: 'locations' },
     { id: 'contact', label: 'contact' },
     { id: 'faqs', label: 'faqs' },
-    { id: 'agent', label: 'agent' }
+    { id: 'agent', label: 'agents' }
   ];
 
   // Get company name for tab display
@@ -297,17 +307,25 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     try {
       const supabase = createClientClient();
       
-      // Fetch main listing data with linked agency
+      // Fetch main listing data with agents via junction table
       const { data: listing, error: listingError } = await supabase
         .from('listings')
         .select(`
           *,
-          linked_agency:agencies(
+          listing_agents(
             id,
-            name,
-            logo_url,
-            geographic_patch,
-            classification
+            listing_id,
+            agency_id,
+            added_at,
+            agency:agencies(
+              id,
+              name,
+              logo_url,
+              geographic_patch,
+              classification,
+              contact_email,
+              contact_phone
+            )
           )
         `)
         .eq('id', listingId)
@@ -362,9 +380,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         updated_at: listing.updated_at,
         completion_percentage: listing.completion_percentage || 20,
         
-        // Linked agency data
-        linked_agency_id: listing.linked_agency_id,
-        linked_agency: listing.linked_agency,
+        // Agents data from junction table
+        listing_agents: listing.listing_agents,
         
         // Primary contact from listing_contacts table
         primaryContact: (() => {
@@ -574,106 +591,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     if (modalType === 'contacts') {
       setEditingContactData(null);
     }
-    if (modalType === 'addAgent') {
-      setSearchAgencyTerm('');
-      setSearchAgencyResults([]);
-    }
-  };
-
-  // Agent functions
-  const openAddAgentModal = () => {
-    setModalStates(prev => ({ ...prev, addAgent: true }));
-  };
-
-  const searchAgencies = async (term: string) => {
-    if (term.length < 2) {
-      setSearchAgencyResults([]);
-      return;
-    }
-
-    setIsSearchingAgencies(true);
-    try {
-      const response = await fetch(`/api/agencies/search?q=${encodeURIComponent(term)}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSearchAgencyResults(data.data || data.agencies || []);
-      }
-    } catch (error) {
-      console.error('Error searching agencies:', error);
-      setSearchAgencyResults([]);
-    } finally {
-      setIsSearchingAgencies(false);
-    }
-  };
-
-  const handleAgencySearch = (term: string) => {
-    setSearchAgencyTerm(term);
-    const timeoutId = setTimeout(() => {
-      searchAgencies(term);
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  };
-
-  const selectAgency = async (agency: any) => {
-    if (!listingId) return;
-    
-    // Debug logging - can be removed once migration is applied
-    
-    try {
-      const response = await fetch(`/api/occupier/listings/${listingId}/link-agency`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ agencyId: agency.id }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to link agency');
-      }
-
-      const result = await response.json();
-      
-      // Refresh the listing data to show the linked agency
-      await fetchListingData();
-      
-      closeModal('addAgent');
-      toast.success(result.message || `Selected ${agency.name} as your agent`);
-    } catch (error) {
-      console.error('Error selecting agency:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to select agency');
-    }
-  };
-
-  const goToCreateAgency = () => {
-    closeModal('addAgent');
-    router.push('/occupier/create-agency');
-  };
-
-  const removeAgent = async () => {
-    if (!listingId) return;
-    
-    try {
-      const response = await fetch(`/api/occupier/listings/${listingId}/link-agency`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to remove agent');
-      }
-
-      const result = await response.json();
-      
-      // Refresh the listing data to remove the linked agency
-      await fetchListingData();
-      
-      toast.success(result.message || 'Agent removed successfully');
-    } catch (error) {
-      console.error('Error removing agent:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to remove agent');
-    }
   };
 
   // FAQ accordion toggle function
@@ -721,6 +638,68 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       console.error('Error reordering FAQs:', error);
       toast.error('Failed to reorder FAQs');
     }
+  };
+
+  // Agency search handler
+  const handleAgencySearch = async (searchTerm: string) => {
+    setSearchAgencyTerm(searchTerm);
+    
+    if (searchTerm.trim().length < 2) {
+      setSearchedAgencies([]);
+      setIsSearchingAgencies(false);
+      return;
+    }
+
+    setIsSearchingAgencies(true);
+    
+    try {
+      const response = await fetch(`/api/agencies?search=${encodeURIComponent(searchTerm)}&limit=10`);
+      if (response.ok) {
+        const result = await response.json();
+        setSearchedAgencies(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error searching agencies:', error);
+      setSearchedAgencies([]);
+    } finally {
+      setIsSearchingAgencies(false);
+    }
+  };
+
+  // Select agency handler
+  const selectAgency = async (agency: any) => {
+    try {
+      const response = await fetch(`/api/listings/${listingId}/agents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          agency_id: agency.id
+        })
+      });
+
+      if (response.ok) {
+        // Refresh listing data to show the new agent
+        fetchListingData();
+        // Clear search and close modal
+        setSearchAgencyTerm('');
+        setSearchedAgencies([]);
+        closeModal('addAgent');
+        toast.success('Agent added successfully');
+      } else {
+        const result = await response.json();
+        toast.error(result.error || 'Failed to add agent');
+      }
+    } catch (error) {
+      console.error('Error adding agent:', error);
+      toast.error('Failed to add agent');
+    }
+  };
+
+  // Navigate to create agency page
+  const goToCreateAgency = () => {
+    router.push('/agencies/create');
   };
 
   const handleDragStart = (e: React.DragEvent, faqId: string) => {
@@ -4909,96 +4888,29 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   )}
 
                   {activeTab === 'agent' && (
-                    <div className="space-y-4 px-4 pb-4">
-                      {/* Premium Header */}
-                      <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50/50 rounded-2xl border border-blue-100 overflow-hidden shadow-sm">
+                    <div className="space-y-4">
+                      {/* Premium Header - Consistent with other tabs */}
+                      <div className="bg-gradient-to-br from-violet-50 via-white to-violet-50/50 rounded-2xl border border-violet-100 overflow-hidden shadow-sm">
                         <div className="p-4">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+                              <div className="w-10 h-10 bg-gradient-to-r from-violet-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
                                 <Users className="w-5 h-5 text-white" />
                               </div>
                               <div>
-                                <h3 className="font-semibold text-gray-900 text-base">Appointed Agent</h3>
-                                <p className="text-xs text-gray-600">Connect with the agency handling this listing</p>
+                                <h3 className="font-semibold text-gray-900 text-base">Appointed Agents</h3>
+                                <p className="text-xs text-violet-600/70">Agencies handling this listing</p>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-
-                      {/* Agent Content */}
-                      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                        <div className="p-4">
-                          {(listingData?.linked_agency && listingData.linked_agency.id) ? (
-                            <div className="flex items-center gap-4 py-4">
-                              {/* Agency Logo */}
-                              <div className="flex-shrink-0">
-                                {listingData.linked_agency.logo_url ? (
-                                  <div className="w-16 h-16 rounded-xl bg-white border border-gray-200 p-2 flex items-center justify-center">
-                                    <img
-                                      src={listingData.linked_agency.logo_url}
-                                      alt={`${listingData.linked_agency.name} logo`}
-                                      className="w-full h-full object-contain"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                                    <Building2 className="w-8 h-8 text-blue-600" />
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Agency Info */}
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-gray-900 text-lg mb-1">
-                                  {listingData.linked_agency.name}
-                                </h4>
-                                {listingData.linked_agency.geographic_patch && (
-                                  <p className="text-sm text-gray-600 mb-2 flex items-center">
-                                    <MapPin className="w-3 h-3 mr-1" />
-                                    {listingData.linked_agency.geographic_patch}
-                                  </p>
-                                )}
-                                {listingData.linked_agency.classification && (
-                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    {listingData.linked_agency.classification}
-                                  </span>
-                                )}
-                                
-                                {/* Actions */}
-                                <div className="flex gap-2 mt-3">
-                                  <button 
-                                    onClick={() => listingData?.linked_agency?.id && router.push(`/agencies/${listingData.linked_agency.id}`)}
-                                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                                  >
-                                    View Profile
-                                  </button>
-                                  <span className="text-gray-300">|</span>
-                                  <button 
-                                    onClick={removeAgent}
-                                    className="text-xs text-red-600 hover:text-red-700 font-medium"
-                                  >
-                                    Remove Agent
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-center py-8">
-                              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                              <h4 className="font-medium text-gray-900 mb-2">No Agent Added</h4>
-                              <p className="text-sm text-gray-600 mb-4">
-                                Let everyone know the agent working on this company's site requirements. Search the agencies already on SiteMatcher or add a new agency in less than two minutes.
-                              </p>
-                              <button 
-                                onClick={openAddAgentModal}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
-                              >
-                                Add Agent
-                              </button>
-                            </div>
-                          )}
+                          
+                          <MultipleAgentsDisplay
+                            listingId={listingId}
+                            agents={listingData?.listing_agents || []}
+                            onAgentsUpdated={fetchListingData}
+                            onCreateAgency={() => router.push('/occupier/create-agency')}
+                            className="mt-4"
+                          />
                         </div>
                       </div>
                     </div>
@@ -5998,7 +5910,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       <span>
                         {tab.id === 'overview' ? `From ${companyName}` :
                          tab.id === 'faqs' ? 'FAQs' :
-                         tab.id === 'agent' ? 'Agent' : 
+                         tab.id === 'agent' ? 'Agents' : 
                          tab.label.charAt(0).toUpperCase() + tab.label.slice(1)}
                       </span>
                       <CompletionIndicator 
@@ -7261,129 +7173,15 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 </div>
               )}
 
-              {/* Agent Tab Content */}
+              {/* Agents Tab Content */}
               {activeTab === 'agent' && (
-                <div className="p-6 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">Appointed Agent</h3>
-                      <p className="text-gray-600 mt-1">Connect with the agency handling this listing</p>
-                    </div>
-                  </div>
-                  
-                  {/* Premium Agent Card */}
-                  <div className="relative overflow-hidden">
-                    {listingData?.linked_agency ? (
-                      <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200/80 shadow-lg shadow-gray-100/50 p-8 transition-all duration-300 hover:shadow-xl hover:shadow-gray-200/60 hover:border-gray-300/60">
-                        
-                        <div className="flex items-start gap-8">
-                          {/* Enhanced Agency Logo */}
-                          <div className="flex-shrink-0">
-                            {listingData.linked_agency.logo_url ? (
-                              <div className="relative">
-                                <div className="w-24 h-24 rounded-2xl bg-white border-2 border-gray-100 p-4 flex items-center justify-center shadow-sm ring-1 ring-gray-900/5">
-                                  <img
-                                    src={listingData.linked_agency.logo_url}
-                                    alt={`${listingData.linked_agency.name} logo`}
-                                    className="w-full h-full object-contain"
-                                  />
-                                </div>
-                                {/* Subtle glow effect */}
-                                <div className="absolute inset-0 w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 -z-10 blur-sm"></div>
-                              </div>
-                            ) : (
-                              <div className="relative">
-                                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200/50 flex items-center justify-center shadow-sm ring-1 ring-blue-900/5">
-                                  <Building2 className="w-12 h-12 text-blue-600" />
-                                </div>
-                                <div className="absolute inset-0 w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 -z-10 blur-sm"></div>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Enhanced Agency Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="mb-4">
-                              <h4 className="text-2xl font-bold text-gray-900 mb-1 tracking-tight">
-                                {listingData.linked_agency.name}
-                              </h4>
-                            </div>
-                            
-                            <div className="space-y-3 mb-6">
-                              {listingData.linked_agency.geographic_patch && (
-                                <div className="flex items-center text-gray-700">
-                                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center mr-3">
-                                    <MapPin className="w-4 h-4 text-blue-600" />
-                                  </div>
-                                  <span className="font-medium">{listingData.linked_agency.geographic_patch}</span>
-                                </div>
-                              )}
-                              {listingData.linked_agency.classification && (
-                                <div className="flex items-center">
-                                  <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center mr-3">
-                                    <Building2 className="w-4 h-4 text-purple-600" />
-                                  </div>
-                                  <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-100 to-blue-100 text-purple-800 border border-purple-200/50">
-                                    {listingData.linked_agency.classification} Specialist
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Premium Action Buttons */}
-                            <div className="flex gap-3">
-                              <Button 
-                                size="default"
-                                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 px-6"
-                                onClick={() => listingData?.linked_agency?.id && router.push(`/agencies/${listingData.linked_agency.id}`)}
-                              >
-                                <ExternalLink className="w-4 h-4 mr-2" />
-                                View Full Profile
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="default"
-                                onClick={removeAgent}
-                                className="border-2 border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-300 px-6"
-                              >
-                                <X className="w-4 h-4 mr-2" />
-                                Remove Agent
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Subtle decorative elements */}
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50/50 to-purple-50/50 rounded-full -translate-y-16 translate-x-16 blur-3xl"></div>
-                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-emerald-50/50 to-blue-50/50 rounded-full translate-y-12 -translate-x-12 blur-3xl"></div>
-                      </div>
-                    ) : (
-                      /* Enhanced Empty State */
-                      <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center transition-all duration-300 hover:border-gray-300 hover:bg-gradient-to-br hover:from-gray-50 hover:to-blue-50/30">
-                        <div className="relative inline-block mb-6">
-                          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-sm">
-                            <Users className="w-10 h-10 text-gray-400" />
-                          </div>
-                          {/* Animated pulse ring */}
-                          <div className="absolute inset-0 w-20 h-20 rounded-2xl border-2 border-blue-300/30 animate-ping"></div>
-                        </div>
-                        
-                        <h4 className="text-xl font-bold text-gray-900 mb-3">No Agent Appointed</h4>
-                        <p className="text-gray-600 max-w-md mx-auto mb-8 leading-relaxed">
-                          Connect with a professional agency to handle your site requirements. Browse our verified partners or add your preferred agency.
-                        </p>
-                        
-                        <Button 
-                          onClick={openAddAgentModal}
-                          size="lg"
-                          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-3"
-                        >
-                          <Users className="w-5 h-5 mr-2" />
-                          Find an Agent
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                <div className="p-6">
+                  <MultipleAgentsDisplay
+                    listingId={listingId}
+                    agents={listingData?.listing_agents || []}
+                    onAgentsUpdated={fetchListingData}
+                    onCreateAgency={() => router.push('/occupier/create-agency')}
+                  />
                 </div>
               )}
 
@@ -7551,9 +7349,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                     </div>
                   )}
                   
-                  {searchAgencyResults.length > 0 && (
+                  {searchedAgencies.length > 0 && (
                     <div className="max-h-48 overflow-y-auto border border-gray-100 rounded-lg">
-                      {searchAgencyResults.map((agency) => (
+                      {searchedAgencies.map((agency) => (
                         <button
                           key={agency.id}
                           onClick={() => selectAgency(agency)}
@@ -7583,7 +7381,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                     </div>
                   )}
                   
-                  {searchAgencyTerm.length >= 2 && searchAgencyResults.length === 0 && !isSearchingAgencies && (
+                  {searchAgencyTerm.length >= 2 && searchedAgencies.length === 0 && !isSearchingAgencies && (
                     <div className="text-center py-4 text-gray-500">
                       <Building2 className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                       <p className="text-sm">No agencies found matching "{searchAgencyTerm}"</p>
