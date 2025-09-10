@@ -54,7 +54,7 @@ export async function POST(
     const targetListings = new Set(companyIds)
     
     // Find listings to link and unlink
-    const toLink = companyIds.filter(id => !currentlyLinkedListings.has(id))
+    const toLink = companyIds.filter((id: string) => !currentlyLinkedListings.has(id))
     const toUnlink = userListings?.filter(listing => 
       currentlyLinkedListings.has(listing.id) && !targetListings.has(listing.id)
     ).map(listing => listing.id) || []
