@@ -63,7 +63,7 @@ export async function POST(
 
     // Add new links
     if (toLink.length > 0) {
-      const linksToInsert = toLink.map(listingId => ({
+      const linksToInsert = toLink.map((listingId: string) => ({
         listing_id: listingId,
         agency_id: params.id
       }))
