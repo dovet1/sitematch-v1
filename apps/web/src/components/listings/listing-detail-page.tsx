@@ -201,7 +201,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     contacts: false,
     faqs: false,
     preview: false,
-    companyProfile: false
+    companyProfile: false,
+    addAgent: false
   });
 
   const [editingContactData, setEditingContactData] = useState<any>(null);
