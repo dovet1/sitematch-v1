@@ -697,6 +697,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     }
   };
 
+  // Navigate to create agency page
+  const goToCreateAgency = () => {
+    router.push('/agencies/create');
+  };
+
   const handleDragStart = (e: React.DragEvent, faqId: string) => {
     setDraggedFAQ(faqId);
     e.dataTransfer.effectAllowed = 'move';
