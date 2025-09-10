@@ -207,6 +207,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   const [editingContactData, setEditingContactData] = useState<any>(null);
 
+  // Agency search state
+  const [searchAgencyTerm, setSearchAgencyTerm] = useState('');
+  const [isSearchingAgencies, setIsSearchingAgencies] = useState(false);
+  const [searchedAgencies, setSearchedAgencies] = useState<any[]>([]);
+
   // FAQ accordion state
   const [expandedFAQs, setExpandedFAQs] = useState<Set<string>>(new Set());
   const [draggedFAQ, setDraggedFAQ] = useState<string | null>(null);
@@ -632,6 +637,32 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     } catch (error) {
       console.error('Error reordering FAQs:', error);
       toast.error('Failed to reorder FAQs');
+    }
+  };
+
+  // Agency search handler
+  const handleAgencySearch = async (searchTerm: string) => {
+    setSearchAgencyTerm(searchTerm);
+    
+    if (searchTerm.trim().length < 2) {
+      setSearchedAgencies([]);
+      setIsSearchingAgencies(false);
+      return;
+    }
+
+    setIsSearchingAgencies(true);
+    
+    try {
+      const response = await fetch(`/api/agencies?search=${encodeURIComponent(searchTerm)}&limit=10`);
+      if (response.ok) {
+        const result = await response.json();
+        setSearchedAgencies(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error searching agencies:', error);
+      setSearchedAgencies([]);
+    } finally {
+      setIsSearchingAgencies(false);
     }
   };
 
