@@ -666,6 +666,37 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     }
   };
 
+  // Select agency handler
+  const selectAgency = async (agency: any) => {
+    try {
+      const response = await fetch(`/api/listings/${listingId}/agents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          agency_id: agency.id
+        })
+      });
+
+      if (response.ok) {
+        // Refresh listing data to show the new agent
+        fetchListingData();
+        // Clear search and close modal
+        setSearchAgencyTerm('');
+        setSearchedAgencies([]);
+        closeModal('addAgent');
+        toast.success('Agent added successfully');
+      } else {
+        const result = await response.json();
+        toast.error(result.error || 'Failed to add agent');
+      }
+    } catch (error) {
+      console.error('Error adding agent:', error);
+      toast.error('Failed to add agent');
+    }
+  };
+
   const handleDragStart = (e: React.DragEvent, faqId: string) => {
     setDraggedFAQ(faqId);
     e.dataTransfer.effectAllowed = 'move';
@@ -7313,9 +7344,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                     </div>
                   )}
                   
-                  {searchAgencyResults.length > 0 && (
+                  {searchedAgencies.length > 0 && (
                     <div className="max-h-48 overflow-y-auto border border-gray-100 rounded-lg">
-                      {searchAgencyResults.map((agency) => (
+                      {searchedAgencies.map((agency) => (
                         <button
                           key={agency.id}
                           onClick={() => selectAgency(agency)}
