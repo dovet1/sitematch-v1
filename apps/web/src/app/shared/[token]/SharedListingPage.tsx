@@ -193,133 +193,146 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
 
         {activeTab === 'requirements' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Property Requirements</h3>
+            <h3 className="text-lg font-semibold">Requirements</h3>
             
-            {/* Site Plans */}
-            {listing.files?.site_plans && listing.files.site_plans.length > 0 && (
-              <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 flex items-center gap-2">
+            {/* Site Size Requirements */}
+            {listing.listing_type === 'commercial' && listing.company?.site_size && (
+              <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                   <span className="text-violet-500">📐</span>
-                  Site Plans & Layouts
+                  Site Size
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {listing.files.site_plans.map((file: any, index: number) => (
-                    <a
+                <p className="text-gray-700">{listing.company?.site_size}</p>
+              </div>
+            )}
+
+            {/* Dwelling Count (for residential) */}
+            {listing.listing_type === 'residential' && listing.company?.dwelling_count && (
+              <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                  <span className="text-violet-500">🏠</span>
+                  Dwelling Count
+                </h4>
+                <p className="text-gray-700">{listing.company?.dwelling_count}</p>
+              </div>
+            )}
+
+            {/* Site Acreage (for residential) */}
+            {listing.listing_type === 'residential' && listing.company?.site_acreage && (
+              <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                  <span className="text-violet-500">🌾</span>
+                  Site Acreage
+                </h4>
+                <p className="text-gray-700">{listing.company?.site_acreage}</p>
+              </div>
+            )}
+
+            {/* Sectors */}
+            {listing.listing_type === 'commercial' && listing.company?.sectors && listing.company.sectors.length > 0 && (
+              <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="text-blue-500">🏢</span>
+                  Sectors
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {listing.company?.sectors?.map((sector, index) => (
+                    <span
                       key={index}
-                      href={file.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-4 border rounded-lg hover:border-violet-300 transition-colors"
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-violet-100 rounded-lg flex items-center justify-center">
-                          <span className="text-violet-600 font-medium text-sm">PDF</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{file.name}</p>
-                          <p className="text-sm text-gray-500">
-                            {file.size && `${Math.round(file.size / 1024)} KB`}
-                          </p>
-                        </div>
-                        <ExternalLink className="w-4 h-4 text-gray-400" />
-                      </div>
-                    </a>
+                      {sector}
+                    </span>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Fit-out Examples */}
-            {listing.files?.fit_outs && listing.files.fit_outs.length > 0 && (
-              <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                  <span className="text-green-500">🏢</span>
-                  Fit-out Examples
+            {/* Use Classes */}
+            {listing.listing_type === 'commercial' && listing.company?.use_classes && listing.company.use_classes.length > 0 && (
+              <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="text-green-500">🏗️</span>
+                  Use Classes
                 </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {listing.files.fit_outs.map((file: any, index: number) => (
-                    <a
+                <div className="flex flex-wrap gap-2">
+                  {listing.company?.use_classes?.map((useClass, index) => (
+                    <span
                       key={index}
-                      href={file.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="aspect-square rounded-lg overflow-hidden border hover:border-green-300 transition-colors"
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200"
                     >
-                      <img
-                        src={file.url}
-                        alt={file.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </a>
+                      {useClass}
+                    </span>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Requirements Summary */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              {listing.company.site_size && (
-                <div className="p-4 rounded-lg bg-violet-50 border border-violet-200">
-                  <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
-                    <span className="text-violet-500">📐</span>
-                    Site Size
-                  </h4>
-                  <p className="text-gray-700">{listing.company.site_size}</p>
+            {/* Empty state */}
+            {((listing.listing_type === 'commercial' && 
+               !listing.company?.site_size && 
+               (!listing.company?.sectors || listing.company.sectors?.length === 0) && 
+               (!listing.company?.use_classes || listing.company.use_classes?.length === 0)) ||
+              (listing.listing_type === 'residential' && 
+               !listing.company?.dwelling_count && 
+               !listing.company?.site_acreage)) && (
+              <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
+                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 1h6v4H7V5zm8 8v2a1 1 0 01-1 1H6a1 1 0 01-1-1v-2h8z" clipRule="evenodd"/>
+                  </svg>
                 </div>
-              )}
-
-              {listing.company.sectors?.length > 0 && (
-                <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-                  <h4 className="font-medium text-gray-900 mb-2">Sectors</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {listing.company.sectors.map((sector, index) => (
-                      <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                        {sector}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {listing.company.use_classes?.length > 0 && (
-                <div className="p-4 rounded-lg bg-green-50 border border-green-200 sm:col-span-2">
-                  <h4 className="font-medium text-gray-900 mb-2">Use Classes</h4>
-                  <div className="space-y-1">
-                    {listing.company.use_classes.map((useClass, index) => (
-                      <div key={index} className="text-sm text-gray-700">
-                        {useClass}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+                <h4 className="font-semibold text-gray-900 mb-2">Requirements Not Specified</h4>
+                <p className="text-gray-600 text-sm max-w-sm mx-auto">
+                  This listing hasn't specified detailed requirements yet. 
+                  <br />Please contact the team directly for more information.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'locations' && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Target Locations</h3>
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Locations</h3>
             
-            {listing.locations?.is_nationwide ? (
-              <div className="text-center py-8">
-                <Globe className="w-16 h-16 mx-auto mb-4 text-violet-500" />
-                <h4 className="text-xl font-semibold mb-2">Nationwide Search</h4>
-                <p className="text-gray-600">This company is open to locations across the entire country.</p>
-              </div>
-            ) : listing.locations?.all?.length > 0 ? (
+            {listing.locations?.all && listing.locations.all.length > 0 ? (
               <div className="space-y-3">
                 {listing.locations.all.map((location: any, index: number) => (
-                  <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-                    <MapPin className="w-5 h-5 text-violet-500 flex-shrink-0" />
-                    <span className="text-gray-900">{location.place_name}</span>
+                  <div 
+                    key={index} 
+                    className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-200 transition-all duration-200"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 leading-snug">
+                          {location.place_name || 'Unknown location'}
+                        </h4>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <MapPin className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <p>No specific locations specified</p>
+              <div className="p-6 rounded-lg bg-gradient-to-br from-violet-50 via-white to-blue-50/30 border border-violet-100 shadow-sm">
+                <div className="text-center">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center mx-auto mb-3 shadow-sm">
+                    <span className="text-2xl">🌍</span>
+                  </div>
+                  <h4 className="font-semibold text-gray-900 mb-1">Nationwide Coverage</h4>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Open to opportunities across the UK & Ireland
+                  </p>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-100 rounded-full">
+                    <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-medium text-violet-700">National Reach</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -442,64 +455,153 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
           <div className="space-y-6">
             <h3 className="text-lg font-semibold">Frequently Asked Questions</h3>
             
-            {listing.faqs?.length > 0 ? (
-              <div className="space-y-4">
-                {listing.faqs.map((faq: any, index: number) => (
-                  <div key={index} className="p-4 rounded-lg border bg-white">
-                    <h4 className="font-medium text-gray-900 mb-2">{faq.question}</h4>
-                    <p className="text-gray-700 text-sm leading-relaxed">{faq.answer}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Globe className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <p>No frequently asked questions available</p>
+            <div className="space-y-3">
+              {(listing.faqs || []).map((faq) => (
+                <div
+                  key={faq.id}
+                  className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:border-violet-200 transition-colors"
+                >
+                  <h4 className="font-semibold text-gray-900 mb-2 flex items-start gap-2">
+                    <span className="text-violet-500 font-bold text-lg">Q:</span>
+                    {faq.question}
+                  </h4>
+                  <p className="text-gray-600 text-sm leading-relaxed pl-6">
+                    <span className="text-violet-500 font-bold mr-1">A:</span>
+                    {faq.answer}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {(!listing.faqs || listing.faqs.length === 0) && (
+              <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
+                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-2">No FAQs Available</h4>
+                <p className="text-gray-600 text-sm max-w-sm mx-auto">
+                  No frequently asked questions have been added for this listing yet. 
+                  <br />Please contact our team directly for any specific questions.
+                </p>
               </div>
             )}
+
+            <div className="mt-6 p-4 rounded-lg bg-violet-50 border border-violet-200">
+              <h4 className="font-semibold text-violet-900 mb-2 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+                Still have questions?
+              </h4>
+              <button
+                onClick={() => setActiveTab('contact')}
+                className="text-violet-700 text-sm hover:text-violet-800 underline transition-colors"
+              >
+                Contact {listing.company?.name || 'the team'} to find out more
+              </button>
+            </div>
           </div>
         )}
 
         {activeTab === 'agent' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Appointed Agents</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{listing.listing_agents?.length === 1 ? 'Appointed Agent' : 'Appointed Agents'}</h3>
             
-            {listing.listing_agents?.length ? (
+            {listing.listing_agents?.length > 0 ? (
               <div className="space-y-4">
-                {listing.listing_agents?.map((agent: any, index: number) => (
-                  <div key={index} className="p-4 rounded-lg border bg-white">
-                    <div className="flex items-start gap-4">
-                      {agent.agency?.logo_url ? (
-                        <img
-                          src={agent.agency.logo_url}
-                          alt={`${agent.agency.name} logo`}
-                          className="w-16 h-16 rounded-lg object-contain border"
-                        />
-                      ) : (
-                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Building2 className="w-8 h-8 text-gray-400" />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <h4 className="text-lg font-semibold text-gray-900">{agent.agency?.name}</h4>
-                        {agent.agency?.classification && (
-                          <p className="text-gray-600 mb-2">{agent.agency.classification}</p>
-                        )}
-                        {agent.agency?.geographic_patch && (
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-gray-400" />
-                            <span className="text-gray-600 text-sm">{agent.agency.geographic_patch}</span>
+                {listing.listing_agents?.map((agent: any) => (
+                  <div key={agent.id} className="bg-gradient-to-br from-white via-violet-50/30 to-white rounded-2xl border border-violet-200/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6 sm:p-8 ring-1 ring-violet-100/50 hover:ring-violet-200/70">
+                    {/* Mobile-optimized layout */}
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                      {/* Agency Logo */}
+                      <div className="flex-shrink-0">
+                        {agent.agency.logo_url ? (
+                          <div className="relative group">
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border-2 border-violet-100 p-3 flex items-center justify-center shadow-lg ring-2 ring-violet-50 group-hover:ring-violet-100 transition-all duration-300">
+                              <img
+                                src={agent.agency.logo_url}
+                                alt={`${agent.agency.name} logo`}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            {/* Enhanced glow effect */}
+                            <div className="absolute inset-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 -z-10 blur-sm group-hover:from-violet-500/30 group-hover:to-purple-500/30 transition-all duration-300"></div>
+                          </div>
+                        ) : (
+                          <div className="relative group">
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 border-2 border-violet-200/50 flex items-center justify-center shadow-lg ring-2 ring-violet-100/50">
+                              <svg className="w-10 h-10 sm:w-12 sm:h-12 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 5a2 2 0 114 0v1h-4V9zM8 5a1 1 0 100 2h4a1 1 0 100-2H8z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <div className="absolute inset-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 -z-10 blur-sm"></div>
                           </div>
                         )}
+                      </div>
+                      
+                      {/* Agency Info */}
+                      <div className="flex-1 min-w-0 text-center sm:text-left">
+                        <div className="mb-6">
+                          <h4 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">
+                            {agent.agency.name}
+                          </h4>
+                          <p className="text-violet-600 font-medium text-base">
+                            Appointed Property Agent
+                          </p>
+                          {agent.agency.geographic_patch && (
+                            <p className="text-gray-600 text-sm mt-1">
+                              {agent.agency.geographic_patch}
+                            </p>
+                          )}
+                          {agent.agency.classification && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-800 mt-2">
+                              {agent.agency.classification === 'Both' ? 'Commercial and Residential' : agent.agency.classification}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Enhanced CTA Button */}
+                        <div className="flex justify-center sm:justify-start">
+                          <button 
+                            className="group relative overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-violet-700 text-white px-8 py-4 rounded-xl font-semibold hover:from-violet-700 hover:via-purple-700 hover:to-violet-800 transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-violet-500/25 transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-3 min-w-[200px]"
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                            <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
+                            </svg>
+                            <span className="relative z-10">View Agency Profile</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Building2 className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <p>No appointed agents</p>
+              <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center shadow-sm">
+                <div className="relative inline-block mb-6">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-sm ring-1 ring-gray-300/20">
+                    <Building2 className="w-10 h-10 text-gray-400" />
+                  </div>
+                </div>
+                
+                <h4 className="text-xl font-bold text-gray-900 mb-3">No Agents Appointed</h4>
+                <p className="text-gray-600 max-w-md mx-auto mb-6 leading-relaxed">
+                  This property requirement is being handled directly by the company. 
+                </p>
+                
+                <button
+                  onClick={() => setActiveTab('contact')}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors font-medium"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                  </svg>
+                  Contact Company Directly
+                </button>
               </div>
             )}
           </div>

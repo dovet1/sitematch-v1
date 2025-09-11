@@ -134,7 +134,7 @@ export async function GET(
           brochure_url: files?.find((f: any) => f.file_type === 'brochure')?.file_path || null,
           property_page_link: currentListing?.property_page_link,
           sectors: allSectors.map((s: any) => s.name),
-          use_classes: allUseClasses.map((uc: any) => `${uc.code} - ${uc.name}`),
+          use_classes: allUseClasses.map((uc: any) => uc.code),
           sector: allSectors[0]?.name || '',
           use_class: allUseClasses[0] ? `${allUseClasses[0].code} - ${allUseClasses[0].name}` : '',
           site_size: currentListing?.site_size_min && currentListing?.site_size_max 
@@ -289,7 +289,7 @@ export async function GET(
         brochure_url: files.find((f: any) => f.file_type === 'brochure')?.file_path || null,
         property_page_link: formattedListing.property_page_link,
         sectors: sectors.map((s: any) => s.name),
-        use_classes: useClasses.map((uc: any) => `${uc.code} - ${uc.name}`),
+        use_classes: useClasses.map((uc: any) => uc.code),
         sector: sectors[0]?.name || '',
         use_class: useClasses[0] ? `${useClasses[0].code} - ${useClasses[0].name}` : '',
         site_size: formattedListing.site_size_min && formattedListing.site_size_max 
