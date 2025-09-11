@@ -11,6 +11,7 @@ interface MobileHeaderProps {
   status: 'draft' | 'pending' | 'approved' | 'rejected';
   onBack: () => void;
   onPreview: () => void;
+  shareButton?: React.ReactNode;
 }
 
 export function MobileHeader({
@@ -18,7 +19,8 @@ export function MobileHeader({
   companyLogo,
   status,
   onBack,
-  onPreview
+  onPreview,
+  shareButton
 }: MobileHeaderProps) {
   // Status configuration
   const statusConfig = {
@@ -98,14 +100,20 @@ export function MobileHeader({
               </div>
             </div>
 
-            {/* Preview button */}
-            <button
-              onClick={onPreview}
-              className="p-2.5 rounded-2xl bg-gradient-to-br from-violet-50 to-violet-100/50 hover:from-violet-100 hover:to-violet-100 active:from-violet-200 active:to-violet-200 transition-all duration-200"
-              style={{ touchAction: 'manipulation' }}
-            >
-              <Eye className="w-5 h-5 text-violet-700" />
-            </button>
+            {/* Action buttons */}
+            <div className="flex items-center gap-2">
+              {/* Share button (if provided) */}
+              {shareButton}
+              
+              {/* Preview button */}
+              <button
+                onClick={onPreview}
+                className="p-2.5 rounded-2xl bg-gradient-to-br from-violet-50 to-violet-100/50 hover:from-violet-100 hover:to-violet-100 active:from-violet-200 active:to-violet-200 transition-all duration-200"
+                style={{ touchAction: 'manipulation' }}
+              >
+                <Eye className="w-5 h-5 text-violet-700" />
+              </button>
+            </div>
           </div>
 
           {/* Bottom row - Status badge */}
