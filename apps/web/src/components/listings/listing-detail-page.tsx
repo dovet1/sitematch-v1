@@ -77,6 +77,9 @@ import { SiteSizeModal } from '@/components/listings/modals/site-size-modal';
 // Import agents components
 import { MultipleAgentsDisplay } from '@/components/listings/multiple-agents-display';
 
+// Import sharing components
+import { ShareButton } from '@/components/listings/ShareButton';
+
 // Import mobile components
 import { useMobileBreakpoint } from '@/components/listings/ImmersiveListingModal/hooks/useMobileBreakpoint';
 import { MobileVisualHero } from '@/components/listings/ImmersiveListingModal/MobileVisualHero';
@@ -2786,7 +2789,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   if (isMobile) {
     return (
       <>
-      <div className={`h-screen bg-violet-900 relative overflow-hidden flex flex-col ${modalStates.preview ? 'hidden' : ''}`}>
+      <div className={`min-h-screen pt-4 bg-violet-900 relative overflow-hidden flex flex-col ${modalStates.preview ? 'hidden' : ''}`}>
         {/* Mobile Header */}
         <div className="bg-white">
           <MobileHeader
@@ -2795,6 +2798,16 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
             status={listingData?.status || 'draft'}
             onBack={() => router.push('/occupier/dashboard')}
             onPreview={() => openModal('preview')}
+            shareButton={listingData?.status === 'approved' ? (
+              <ShareButton
+                listingId={listingId}
+                listingTitle={`Commercial Property Requirement from ${companyName}`}
+                companyName={companyName}
+                variant="ghost"
+                size="sm"
+                className="p-2.5 rounded-2xl bg-gradient-to-br from-green-50 to-green-100/50 hover:from-green-100 hover:to-green-100 active:from-green-200 active:to-green-200 transition-all duration-200"
+              />
+            ) : undefined}
           />
           
           {/* Submit for Review Button - Premium Clean Design */}
@@ -5328,7 +5341,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   return (
     <>
       {/* Fixed Layout Container - Below navbar */}
-      <div className="fixed top-16 left-0 right-0 bottom-0 flex">
+      <div className="fixed top-16 left-0 right-0 bottom-0 flex bg-gray-50">
         {/* Visual Hero Section - Fixed, no scroll */}
         <div className="w-2/5 xl:w-[35%] 2xl:w-[30%] h-full bg-gradient-to-br from-violet-900 to-violet-700 overflow-hidden flex-shrink-0 relative">
             <div className="absolute inset-0 bg-black/20" />
@@ -5863,6 +5876,17 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       </div>
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2">
+                        {/* Share Button - Only show for approved listings */}
+                        {listingData?.status === 'approved' && (
+                          <ShareButton
+                            listingId={listingId}
+                            listingTitle={`Commercial Property Requirement from ${companyName}`}
+                            companyName={companyName}
+                            variant="outline"
+                            size="sm"
+                          />
+                        )}
+                        
                         <Button
                           variant="outline"
                           size="sm"
