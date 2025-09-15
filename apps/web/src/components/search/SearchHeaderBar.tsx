@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Filter, Globe, MapPin, List, X, ChevronDown } from 'lucide-react';
+import { Search, Filter, Globe, MapPin, List, X, ChevronDown, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LocationSearch } from './LocationSearch';
+import { UnifiedSearch } from './UnifiedSearch';
 import { FilterDrawer } from './FilterDrawer';
 import { FilterPill } from './FilterPill';
 import { AnimatedFilterPill, FilterPillsContainer } from './AnimatedFilterPill';
@@ -14,7 +15,6 @@ import { cn } from '@/lib/utils';
 interface SearchHeaderBarProps {
   searchFilters: SearchFilters;
   onFiltersChange: (filters: SearchFilters) => void;
-  onLocationSelect: (locationData: { name: string; coordinates: { lat: number; lng: number } }) => void;
   isMapView?: boolean;
   onMapViewToggle?: (isMapView: boolean) => void;
   showViewToggle?: boolean;
@@ -24,7 +24,6 @@ interface SearchHeaderBarProps {
 export function SearchHeaderBar({
   searchFilters,
   onFiltersChange,
-  onLocationSelect,
   isMapView = false,
   onMapViewToggle,
   showViewToggle = false,
@@ -80,17 +79,42 @@ export function SearchHeaderBar({
     searchFilters.dwellingMin !== null || searchFilters.dwellingMax !== null,
   ].filter(Boolean).length;
 
-  // Track local location state without triggering search
-  const [localLocation, setLocalLocation] = useState(searchFilters.location);
-  
-  // Update local state when location changes from parent
+  // Track local search state without triggering search
+  const [localSearchValue, setLocalSearchValue] = useState(
+    searchFilters.location || searchFilters.companyName || ''
+  );
+
+  // Update local state when search filters change from parent
   useEffect(() => {
-    setLocalLocation(searchFilters.location);
-  }, [searchFilters.location]);
-  
-  const handleLocationChange = (location: string) => {
+    const newValue = searchFilters.location || searchFilters.companyName || '';
+    setLocalSearchValue(newValue);
+  }, [searchFilters.location, searchFilters.companyName]);
+
+  const handleSearchChange = (value: string) => {
     // Only update local state, don't trigger search
-    setLocalLocation(location);
+    setLocalSearchValue(value);
+  };
+
+  const handleLocationSelect = (location: { name: string; coordinates: { lat: number; lng: number } }) => {
+    const newFilters = {
+      ...searchFilters,
+      location: location.name,
+      coordinates: location.coordinates,
+      companyName: '', // Clear company name when location is selected
+      isNationwide: false,
+    };
+    onFiltersChange(newFilters);
+  };
+
+  const handleCompanySelect = (companyName: string) => {
+    const newFilters = {
+      ...searchFilters,
+      companyName: companyName,
+      location: '', // Clear location when company is selected
+      coordinates: null,
+      isNationwide: false,
+    };
+    onFiltersChange(newFilters);
   };
 
   const handleClearFilters = () => {
@@ -202,30 +226,37 @@ export function SearchHeaderBar({
               >
                 <Search className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
-                  {searchFilters.location || "Search location..."}
+                  {searchFilters.location || searchFilters.companyName || "Search location or company..."}
                 </span>
               </Button>
             ) : (
-              /* Full Search Bar */
+              /* Full Unified Search Bar */
               <div className="flex-1 relative">
-                <div 
+                <div
                   className={cn(
                     "flex items-center gap-4 bg-white rounded-full border-2 transition-all duration-200",
-                    isLocationFocused 
-                      ? "border-primary-300 shadow-lg ring-4 ring-primary-100" 
+                    isLocationFocused
+                      ? "border-primary-300 shadow-lg ring-4 ring-primary-100"
                       : "border-gray-200 hover:border-gray-300 shadow-sm"
                   )}
                 >
                 <div className="flex-1 px-4 py-3">
                   <div className="relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <LocationSearch
-                      value={localLocation}
-                      onChange={handleLocationChange}
-                      onLocationSelect={onLocationSelect}
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <UnifiedSearch
+                      value={localSearchValue}
+                      onChange={handleSearchChange}
+                      onLocationSelect={handleLocationSelect}
+                      onCompanySelect={handleCompanySelect}
                       onEnterKey={() => {
-                        if (localLocation.trim()) {
-                          onFiltersChange({ ...searchFilters, location: localLocation.trim() });
+                        if (localSearchValue.trim()) {
+                          // Determine if it looks more like a location or company name
+                          // For now, treat as generic search and let the user select from suggestions
+                          onFiltersChange({
+                            ...searchFilters,
+                            location: localSearchValue.trim(),
+                            companyName: ''
+                          });
                         }
                       }}
                       onFocus={() => setIsLocationFocused(true)}
@@ -236,20 +267,24 @@ export function SearchHeaderBar({
                           setTimeout(() => setForceExpanded(false), 1000);
                         }
                       }}
-                      placeholder="Where are you looking?"
+                      placeholder="Search location or company name"
                       className="w-full border-0 outline-none bg-transparent text-gray-700 placeholder-gray-400 font-medium pl-12 pr-4"
                       hideIcon={true}
                     />
                   </div>
                 </div>
-                
+
                 {/* Search Button */}
                 <button
                   type="button"
                   onClick={() => {
-                    if (localLocation.trim()) {
-                      // Trigger search with the current local location
-                      onFiltersChange({ ...searchFilters, location: localLocation.trim() });
+                    if (localSearchValue.trim()) {
+                      // Default to location search when user clicks search button
+                      onFiltersChange({
+                        ...searchFilters,
+                        location: localSearchValue.trim(),
+                        companyName: ''
+                      });
                     }
                   }}
                   className="violet-bloom-touch flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 hover:bg-primary-700 transition-colors shrink-0 mr-2"
@@ -345,9 +380,9 @@ export function SearchHeaderBar({
               >
                 <Search className="w-4 h-4 mr-3 text-gray-400" />
                 <span className="text-left text-gray-600 font-medium truncate">
-                  {searchFilters.isNationwide 
-                    ? "Nationwide search" 
-                    : localLocation || searchFilters.location || "Where are you looking?"}
+                  {searchFilters.isNationwide
+                    ? "Nationwide search"
+                    : localSearchValue || searchFilters.location || searchFilters.companyName || "Search location or company..."}
                 </span>
               </Button>
 
@@ -506,7 +541,7 @@ export function SearchHeaderBar({
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Search location</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Search</h2>
               <Button
                 variant="ghost"
                 size="sm"
@@ -516,43 +551,47 @@ export function SearchHeaderBar({
                 <X className="w-5 h-5" />
               </Button>
             </div>
-            
+
             {/* Search Content */}
             <div className="flex-1 p-4 space-y-4">
               <div className="space-y-3">
-                <LocationSearch
-                  value={localLocation}
-                  onChange={handleLocationChange}
+                <UnifiedSearch
+                  value={localSearchValue}
+                  onChange={handleSearchChange}
                   onLocationSelect={(location) => {
-                    onLocationSelect(location);
+                    handleLocationSelect(location);
+                    setIsLocationFocused(false);
+                  }}
+                  onCompanySelect={(companyName) => {
+                    handleCompanySelect(companyName);
                     setIsLocationFocused(false);
                   }}
                   onEnterKey={() => {
-                    if (localLocation.trim()) {
-                      onFiltersChange({ ...searchFilters, location: localLocation.trim() });
+                    if (localSearchValue.trim()) {
+                      onFiltersChange({ ...searchFilters, location: localSearchValue.trim() });
                       setIsLocationFocused(false);
                     }
                   }}
-                  placeholder="Enter location"
+                  placeholder="Search location or company"
                   className="w-full pl-12 pr-10 py-4 border border-gray-200 rounded-lg text-lg"
                   autoFocus
                 />
-                
-                {/* Search Button for typed location */}
-                {localLocation.trim() && (
+
+                {/* Search Button for typed text */}
+                {localSearchValue.trim() && (
                   <button
                     type="button"
                     onClick={() => {
-                      onFiltersChange({ ...searchFilters, location: localLocation.trim() });
+                      onFiltersChange({ ...searchFilters, location: localSearchValue.trim() });
                       setIsLocationFocused(false);
                     }}
                     className="w-full p-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
                   >
-                    Search in {localLocation}
+                    Search for "{localSearchValue}"
                   </button>
                 )}
               </div>
-              
+
               {/* Browse All Option */}
               <button
                 type="button"
