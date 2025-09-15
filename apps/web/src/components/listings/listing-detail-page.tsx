@@ -2789,7 +2789,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   if (isMobile) {
     return (
       <>
-      <div className={`h-screen bg-violet-900 relative overflow-hidden flex flex-col ${modalStates.preview ? 'hidden' : ''}`}>
+      <div className={`min-h-screen pt-4 bg-violet-900 relative overflow-hidden flex flex-col ${modalStates.preview ? 'hidden' : ''}`}>
         {/* Mobile Header */}
         <div className="bg-white">
           <MobileHeader
@@ -5341,7 +5341,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   return (
     <>
       {/* Fixed Layout Container - Below navbar */}
-      <div className="fixed top-16 left-0 right-0 bottom-0 flex">
+      <div className="fixed top-16 left-0 right-0 bottom-0 flex bg-gray-50">
         {/* Visual Hero Section - Fixed, no scroll */}
         <div className="w-2/5 xl:w-[35%] 2xl:w-[30%] h-full bg-gradient-to-br from-violet-900 to-violet-700 overflow-hidden flex-shrink-0 relative">
             <div className="absolute inset-0 bg-black/20" />
