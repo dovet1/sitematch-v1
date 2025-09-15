@@ -33,24 +33,34 @@ export async function GET(request: NextRequest) {
       );
     }
     
+    // First, get listing IDs that have approved versions (same logic as public listings API)
+    const { data: approvedVersions, error: versionError } = await supabase
+      .from('listing_versions')
+      .select('listing_id')
+      .eq('status', 'approved');
+    
+    if (versionError) {
+      console.error('Error fetching approved versions:', versionError);
+      return NextResponse.json(
+        { error: 'Failed to fetch listings', details: versionError.message },
+        { status: 500 }
+      );
+    }
+    
+    const approvedListingIds = approvedVersions?.map(v => v.listing_id) || [];
+    
     // Get counts for each sector and use class through junction tables
     // First get sector counts from junction table
     const { data: sectorJunctions, error: sectorJunctionsError } = await supabase
       .from('listing_sectors')
-      .select(`
-        sector_id,
-        listing:listings!inner(status)
-      `)
-      .eq('listing.status', 'approved');
+      .select('sector_id, listing_id')
+      .in('listing_id', approvedListingIds);
       
     // Get use class counts from junction table
     const { data: useClassJunctions, error: useClassJunctionsError } = await supabase
       .from('listing_use_classes')
-      .select(`
-        use_class_id,
-        listing:listings!inner(status)
-      `)
-      .eq('listing.status', 'approved');
+      .select('use_class_id, listing_id')
+      .in('listing_id', approvedListingIds);
       
     if (sectorJunctionsError) {
       console.error('Error fetching sector junction counts:', sectorJunctionsError);
