@@ -19,9 +19,12 @@ import {
   ExternalLink, 
   MessageCircle,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Sparkles,
+  Link2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -89,15 +92,22 @@ export function ShareModal({
     try {
       await navigator.clipboard.writeText(shareData.share_url);
       setCopySuccess(true);
-      toast.success('Link copied to clipboard!');
-      setTimeout(() => setCopySuccess(false), 2000);
+      toast.success('Link Copied!', {
+        icon: '✨',
+        style: {
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          border: 'none',
+        },
+      });
+      setTimeout(() => setCopySuccess(false), 3000);
     } catch (err) {
       toast.error('Failed to copy link');
     }
   };
 
   const generateSocialMessage = () => {
-    return `Check out this commercial property requirement from ${companyName}: "${listingTitle}"`;
+    return `Check out this site requirement from ${companyName} on SiteMatcher here:`;
   };
 
   const shareToLinkedIn = () => {
@@ -112,7 +122,7 @@ export function ShareModal({
     if (!shareData?.share_url) return;
     
     const message = generateSocialMessage();
-    const whatsAppUrl = `https://wa.me/?text=${encodeURIComponent(`${message}\n\n${shareData.share_url}`)}`;
+    const whatsAppUrl = `https://wa.me/?text=${encodeURIComponent(`${message} ${shareData.share_url}`)}`;
     window.open(whatsAppUrl, '_blank');
   };
 
@@ -125,126 +135,221 @@ export function ShareModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5" />
-            Share Requirement
-          </DialogTitle>
-          <DialogDescription>
-            Share this property requirement with others. Anyone with the link can view it.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {isLoading && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-muted-foreground">Generating share link...</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-md">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm">{error}</span>
-            </div>
-          )}
-
-          {shareData && (
-            <>
-              {/* Share Link Section */}
-              <div className="space-y-2">
-                <Label htmlFor="share-link">Share Link</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="share-link"
-                    value={shareData.share_url}
-                    readOnly
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={copyToClipboard}
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0"
-                  >
-                    {copySuccess ? (
-                      <Check className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
+      <DialogContent className="w-[calc(100vw-16px)] max-w-2xl sm:w-full max-h-[90vh] sm:max-h-[80vh] !border-0 !outline-0 !ring-0 bg-transparent shadow-2xl p-0 gap-0 overflow-hidden rounded-lg flex flex-col [&>button]:!opacity-100 [&>button]:bg-transparent [&>button]:w-8 [&>button]:h-8 [&>button]:right-3 [&>button]:top-3 [&>button]:focus:ring-white/50 [&>button]:focus:ring-2 [&>button]:focus:ring-offset-0 [&>button>svg]:text-white [&>button>svg]:w-4 [&>button>svg]:h-4 [&>button>svg]:stroke-2" style={{ border: 'none', outline: 'none', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', margin: '0' }}>
+        {/* Premium Header with Gradient */}
+        <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-violet-700 px-6 py-6 sm:py-8 pr-14 text-white flex-shrink-0">
+          <DialogHeader className="space-y-4">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="flex items-center gap-3"
+            >
+              <Share2 className="h-6 w-6" />
+              <div>
+                <DialogTitle className="text-xl font-bold">Share Your Requirement</DialogTitle>
+                <DialogDescription className="text-violet-100 mt-1">
+                  Share this site requirement from {companyName} for maximum exposure
+                </DialogDescription>
               </div>
-
-              <Separator />
-
-              {/* Social Media Sharing */}
-              <div className="space-y-3">
-                <Label>Share on Social Media</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    onClick={shareToLinkedIn}
-                    variant="outline"
-                    className="flex items-center gap-2 justify-start"
-                  >
-                    <div className="w-4 h-4 bg-[#0A66C2] rounded-sm flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">in</span>
-                    </div>
-                    LinkedIn
-                    <ExternalLink className="h-3 w-3 ml-auto" />
-                  </Button>
-
-                  <Button
-                    onClick={shareToWhatsApp}
-                    variant="outline"
-                    className="flex items-center gap-2 justify-start"
-                  >
-                    <MessageCircle className="h-4 w-4 text-[#25D366]" />
-                    WhatsApp
-                    <ExternalLink className="h-3 w-3 ml-auto" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Preview Message */}
-              <div className="space-y-2">
-                <Label>Message Preview</Label>
-                <div className="p-3 bg-muted rounded-md text-sm">
-                  {generateSocialMessage()}
-                </div>
-              </div>
-
-              {/* Privacy Notice */}
-              <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
-                <p className="font-medium mb-1">Privacy Notice:</p>
-                <p>
-                  This link allows anyone to view your commercial property requirement. 
-                  To remove the requirement from public view contact us using rob@sitematcher.co.uk
-                </p>
-              </div>
-            </>
-          )}
+            </motion.div>
+          </DialogHeader>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={handleClose}>
+        <div className="space-y-6 p-6 bg-white flex-1 overflow-y-auto">
+          <AnimatePresence mode="wait">
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="flex flex-col items-center justify-center py-12"
+              >
+                <div className="relative">
+                  <Loader2 className="h-12 w-12 animate-spin text-violet-500" />
+                  <div className="absolute inset-0 h-12 w-12 animate-ping rounded-full bg-violet-500/20"></div>
+                </div>
+                <p className="mt-4 text-sm font-medium text-gray-600">Creating your share link...</p>
+                <p className="text-xs text-gray-400">This will only take a moment</p>
+              </motion.div>
+            )}
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4"
+              >
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <div>
+                  <p className="font-medium text-red-900">Unable to generate share link</p>
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              </motion.div>
+            )}
+
+            {shareData && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="space-y-6"
+              >
+                {/* Primary Share Link Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Link2 className="h-4 w-4 text-violet-600" />
+                    <Label className="font-medium text-gray-900">Your Shareable Link</Label>
+                  </div>
+                  
+                  <div className="group relative">
+                    <Input
+                      value={shareData.share_url}
+                      readOnly
+                      className="pr-24 font-mono text-sm border-gray-200 bg-gray-50/50 focus:bg-white transition-colors"
+                    />
+                    <Button
+                      onClick={copyToClipboard}
+                      size="sm"
+                      className={`absolute right-1 top-1/2 -translate-y-1/2 h-7 transition-all duration-300 ${
+                        copySuccess
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-violet-600 hover:bg-violet-700'
+                      }`}
+                    >
+                      <AnimatePresence mode="wait">
+                        {copySuccess ? (
+                          <motion.div
+                            key="success"
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.8, opacity: 0 }}
+                            className="flex items-center gap-1"
+                          >
+                            <Check className="h-3 w-3" />
+                            <span className="text-xs hidden sm:inline">Copied!</span>
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key="copy"
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.8, opacity: 0 }}
+                            className="flex items-center gap-1"
+                          >
+                            <Copy className="h-3 w-3" />
+                            <span className="text-xs hidden sm:inline">Copy</span>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator className="bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+                {/* Enhanced Social Media Sharing */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-violet-600" />
+                    <Label className="font-medium text-gray-900">Share on Social Media</Label>
+                  </div>
+                  
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Button
+                      onClick={shareToLinkedIn}
+                      variant="outline"
+                      className="group flex h-12 items-center justify-start gap-3 border-blue-200 bg-gradient-to-r from-blue-50 to-blue-50/50 hover:from-blue-100 hover:to-blue-100/50 transition-all duration-200"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded bg-[#0A66C2]">
+                        <span className="text-xs font-bold text-white">in</span>
+                      </div>
+                      <span className="font-medium text-blue-900">LinkedIn</span>
+                      <ExternalLink className="ml-auto h-3 w-3 text-blue-600 group-hover:scale-110 transition-transform" />
+                    </Button>
+
+                    <Button
+                      onClick={shareToWhatsApp}
+                      variant="outline"
+                      className="group flex h-12 items-center justify-start gap-3 border-green-200 bg-gradient-to-r from-green-50 to-green-50/50 hover:from-green-100 hover:to-green-100/50 transition-all duration-200"
+                    >
+                      <MessageCircle className="h-6 w-6 text-[#25D366]" />
+                      <span className="font-medium text-green-900">WhatsApp</span>
+                      <ExternalLink className="ml-auto h-3 w-3 text-green-600 group-hover:scale-110 transition-transform" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Message Preview */}
+                <div className="space-y-3">
+                  <Label className="font-medium text-gray-900">Message Preview</Label>
+                  <div className="rounded-lg border-l-4 border-l-violet-500 bg-violet-50/50 p-4">
+                    <p className="text-sm text-gray-700 italic">
+                      "{generateSocialMessage()}"
+                    </p>
+                  </div>
+                </div>
+
+                {/* Enhanced Privacy Notice */}
+                <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-amber-200 p-1">
+                      <AlertTriangle className="h-3 w-3 text-amber-700" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-amber-900">Privacy & Control</p>
+                      <p className="text-xs text-amber-800 leading-relaxed">
+                        Anyone with this link can view your requirement. To remove from public view, 
+                        contact us at <span className="font-medium">rob@sitematcher.co.uk</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Enhanced Footer */}
+        <div className="flex flex-col-reverse gap-3 border-t bg-gray-50/50 px-6 py-4 sm:flex-row sm:justify-between sm:items-center flex-shrink-0">
+          <Button variant="ghost" onClick={handleClose} className="text-gray-600 hover:text-gray-900">
             Close
           </Button>
+          
           {shareData && (
-            <Button onClick={copyToClipboard} className="gap-2">
-              {copySuccess ? (
-                <>
-                  <Check className="h-4 w-4" />
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <Copy className="h-4 w-4" />
-                  Copy Link
-                </>
-              )}
+            <Button 
+              onClick={copyToClipboard} 
+              className={`gap-2 transition-all duration-300 ${
+                copySuccess 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700'
+              }`}
+            >
+              <AnimatePresence mode="wait">
+                {copySuccess ? (
+                  <motion.div
+                    key="copied"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    className="flex items-center gap-2"
+                  >
+                    <Check className="h-4 w-4" />
+                    <span>Successfully Copied!</span>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="copy"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    className="flex items-center gap-2"
+                  >
+                    <Copy className="h-4 w-4" />
+                    <span>Copy Share Link</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </Button>
           )}
         </div>
