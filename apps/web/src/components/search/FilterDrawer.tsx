@@ -91,8 +91,8 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
           setUseClasses(referenceData.useClasses?.filter((uc: UseClassOption) => (uc.count || 0) > 0) || []);
         }
 
-        // Fetch company names from published listings
-        const listingsResponse = await fetch('/api/public/listings?limit=100');
+        // Fetch company names from published listings - use high limit to get all listings
+        const listingsResponse = await fetch('/api/public/listings?limit=1000');
         if (listingsResponse.ok) {
           const listingsData = await listingsResponse.json();
           const uniqueCompanyNames = Array.from(new Set(
@@ -260,7 +260,7 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
                 />
               </div>
               {expandedSections.company && (
-                <div className="max-h-32 overflow-y-auto border border-border rounded-lg">
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
                   {isLoadingData ? (
                     <div className="px-3 py-2 text-sm text-muted-foreground">
                       Loading company names...
@@ -274,7 +274,7 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
                       No companies found matching "{companySearchValue}"
                     </div>
                   ) : (
-                    filteredCompanyNames.slice(0, 10).map((name, index) => (
+                    filteredCompanyNames.map((name, index) => (
                       <button
                         key={index}
                         onClick={() => handleCompanySelect(name)}

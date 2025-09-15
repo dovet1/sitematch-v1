@@ -37,12 +37,39 @@ export async function GET(request: NextRequest) {
     console.log('=== STARTING FILTER APPLICATION ===');
     const isNationwide = searchParams.get('isNationwide') === 'true' || searchParams.get('nationwide') === 'true';
     const page = Number(searchParams.get('page')) || 1;
-    const limit = Math.min(Number(searchParams.get('limit')) || 20, 100); // Max 100 results per page
+    const limit = Math.min(Number(searchParams.get('limit')) || 20, 1000); // Max 1000 results per page for comprehensive search
     
     const supabase = createClient();
     
     
-    // Build the query with many-to-many junction tables
+    // First, get listing IDs that have approved versions
+    const { data: approvedVersions, error: versionError } = await supabase
+      .from('listing_versions')
+      .select('listing_id')
+      .eq('status', 'approved');
+    
+    if (versionError) {
+      console.error('Error fetching approved versions:', versionError);
+      return NextResponse.json(
+        { error: 'Failed to fetch listings', details: versionError.message },
+        { status: 500 }
+      );
+    }
+    
+    const approvedListingIds = approvedVersions?.map(v => v.listing_id) || [];
+    
+    if (approvedListingIds.length === 0) {
+      // No approved versions exist, return empty result
+      return NextResponse.json({
+        results: [],
+        total: 0,
+        page,
+        limit,
+        hasMore: false
+      });
+    }
+
+    // Build the query - simplified to avoid relationship issues
     let query = supabase
       .from('listings')
       .select(`
@@ -63,30 +90,10 @@ export async function GET(request: NextRequest) {
         clearbit_logo,
         company_domain,
         created_at,
-        current_version_id,
-        listing_sectors(
-          sector:sectors(
-            id,
-            name
-          )
-        ),
-        listing_use_classes(
-          use_class:use_classes(
-            id,
-            name,
-            code
-          )
-        ),
-        listing_locations(
-          id,
-          place_name,
-          coordinates,
-          formatted_address,
-          region,
-          country
-        )
+        current_version_id
       `)
-      .eq('status', 'approved');
+      .in('id', approvedListingIds);
+
 
     // Apply location filtering
     if (location && !isNationwide) {
@@ -152,7 +159,14 @@ export async function GET(request: NextRequest) {
     // Apply the filtered listing IDs to the main query
     if (validListingIds !== null) {
       if (validListingIds.length > 0) {
-        query = query.in('id', validListingIds);
+        // Further filter by intersection with approved listing IDs
+        const filteredIds = approvedListingIds.filter(id => validListingIds.includes(id));
+        if (filteredIds.length > 0) {
+          query = query.in('id', filteredIds);
+        } else {
+          // No valid listings found, return empty result
+          query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+        }
       } else {
         // No valid listings found, return empty result
         query = query.eq('id', '00000000-0000-0000-0000-000000000000');
@@ -214,8 +228,6 @@ export async function GET(request: NextRequest) {
 
     const { data: listings, error } = await query;
 
-    console.log('Database query result count:', listings?.length);
-
     if (error) {
       console.error('Error fetching public listings:', error);
       console.error('Error details:', error.message);
@@ -273,14 +285,61 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Fetch relationships separately to avoid query issues
+    const currentListingIds = listings?.map(l => l.id) || [];
+    
+    // Fetch sectors
+    const { data: sectorData } = await supabase
+      .from('listing_sectors')
+      .select('listing_id, sectors(id, name)')
+      .in('listing_id', currentListingIds);
+    
+    // Fetch use classes  
+    const { data: useClassData } = await supabase
+      .from('listing_use_classes')
+      .select('listing_id, use_classes(id, name, code)')
+      .in('listing_id', currentListingIds);
+      
+    // Fetch locations
+    const { data: locationData } = await supabase
+      .from('listing_locations')
+      .select('listing_id, id, place_name, coordinates, formatted_address, region, country')
+      .in('listing_id', currentListingIds);
+    
+    // Create lookup maps
+    const sectorMap = new Map();
+    const useClassMap = new Map();
+    const locationMap = new Map();
+    
+    sectorData?.forEach(item => {
+      if (!sectorMap.has(item.listing_id)) {
+        sectorMap.set(item.listing_id, []);
+      }
+      sectorMap.get(item.listing_id).push(item);
+    });
+    
+    useClassData?.forEach(item => {
+      if (!useClassMap.has(item.listing_id)) {
+        useClassMap.set(item.listing_id, []);
+      }
+      useClassMap.get(item.listing_id).push(item);
+    });
+    
+    locationData?.forEach(item => {
+      if (!locationMap.has(item.listing_id)) {
+        locationMap.set(item.listing_id, []);
+      }
+      locationMap.get(item.listing_id).push(item);
+    });
+
     // Transform data to match SearchResult interface with logo fetching
     let results = listings?.map(listing => {
       // Check if this listing has versioned data
       const versionContent = versionMap[listing.id];
       let listingData = listing;
-      let locations = (listing.listing_locations as any) || [];
-      let sectors = (listing.listing_sectors as any) || [];
-      let useClasses = (listing.listing_use_classes as any) || [];
+      let locations = locationMap.get(listing.id) || [];
+      let sectors = sectorMap.get(listing.id) || [];
+      let useClasses = useClassMap.get(listing.id) || [];
       
       // If version exists, use version data instead
       if (versionContent) {
@@ -292,10 +351,10 @@ export async function GET(request: NextRequest) {
           locations = versionContent.locations;
         }
         if (versionContent.sectors) {
-          sectors = versionContent.sectors.map((s: any) => ({ sector: s.sector }));
+          sectors = versionContent.sectors.map((s: any) => ({ sectors: s.sector }));
         }
         if (versionContent.use_classes) {
-          useClasses = versionContent.use_classes.map((uc: any) => ({ use_class: uc.use_class }));
+          useClasses = versionContent.use_classes.map((uc: any) => ({ use_classes: uc.use_class }));
         }
       }
       
@@ -332,11 +391,11 @@ export async function GET(request: NextRequest) {
         site_acreage_max: listingData.site_acreage_max,
         dwelling_count_min: listingData.dwelling_count_min,
         dwelling_count_max: listingData.dwelling_count_max,
-        sectors: sectors.map((ls: any) => ls.sector).filter(Boolean),
-        use_classes: useClasses.map((luc: any) => luc.use_class).filter(Boolean),
+        sectors: sectors.map((ls: any) => ls.sectors).filter(Boolean),
+        use_classes: useClasses.map((luc: any) => luc.use_classes).filter(Boolean),
         // Legacy single values for backwards compatibility
-        sector: sectors.length > 0 ? sectors[0].sector?.name : null,
-        use_class: useClasses.length > 0 ? useClasses[0].use_class?.name : null,
+        sector: sectors.length > 0 ? sectors[0].sectors?.name : null,
+        use_class: useClasses.length > 0 ? useClasses[0].use_classes?.name : null,
         contact_name: listingData.contact_name,
         contact_title: listingData.contact_title,
         contact_email: listingData.contact_email,
