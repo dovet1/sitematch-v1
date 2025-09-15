@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 interface UnifiedHeaderProps {
   searchFilters: SearchFilters;
   onFiltersChange: (filters: SearchFilters) => void;
-  onLocationSelect: (locationData: { name: string; coordinates: { lat: number; lng: number } }) => void;
   isMapView?: boolean;
   onMapViewToggle?: (isMapView: boolean) => void;
   showViewToggle?: boolean;
@@ -24,7 +23,6 @@ interface UnifiedHeaderProps {
 export function UnifiedHeader({
   searchFilters,
   onFiltersChange,
-  onLocationSelect,
   isMapView = false,
   onMapViewToggle,
   showViewToggle = false
@@ -268,7 +266,6 @@ export function UnifiedHeader({
       <SearchHeaderBar
         searchFilters={searchFilters}
         onFiltersChange={onFiltersChange}
-        onLocationSelect={onLocationSelect}
         isMapView={isMapView}
         onMapViewToggle={onMapViewToggle}
         showViewToggle={showViewToggle}
