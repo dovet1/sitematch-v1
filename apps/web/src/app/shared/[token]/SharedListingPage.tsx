@@ -10,17 +10,11 @@ import {
   AlertTriangle,
   Loader2,
   Building2,
-  MapPin,
-  Clock,
-  User,
-  Phone,
-  Mail,
-  Globe,
-  X
+  Globe
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EnhancedListingModalContent } from '@/types/search';
-import { toast } from 'sonner';
+import { toast, Toaster } from 'sonner';
 import { cn } from '@/lib/utils';
 
 // Import the same components used in the modal
@@ -39,6 +33,7 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showToast, setShowToast] = useState(false);
   const { isMobile } = useMobileBreakpoint();
   const router = useRouter();
 
@@ -83,27 +78,24 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
   const copyShareLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      toast.success('Link copied to clipboard!');
+      
+      // Show desktop toast or mobile button feedback
+      if (window.innerWidth >= 768) {
+        // Desktop: use sonner toast
+        toast.success('Link Copied!');
+      } else {
+        // Mobile: use button feedback
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 2000);
+      }
     } catch (err) {
-      toast.error('Failed to copy link');
+      console.error('Failed to copy link:', err);
+      if (window.innerWidth >= 768) {
+        toast.error('Failed to copy link');
+      }
     }
   };
 
-  const shareToLinkedIn = () => {
-    const message = listing ? 
-      `Check out this property requirement from ${listing.company.name}` :
-      'Check out this property requirement';
-    const linkedInUrl = `https://www.linkedin.com/feed/update/urn:li:share:?text=${encodeURIComponent(`${message} ${window.location.href}`)}`;
-    window.open(linkedInUrl, '_blank');
-  };
-
-  const shareToWhatsApp = () => {
-    const message = listing ? 
-      `Check out this property requirement from ${listing.company.name}` :
-      'Check out this property requirement';
-    const whatsAppUrl = `https://wa.me/?text=${encodeURIComponent(`${message}\n\n${window.location.href}`)}`;
-    window.open(whatsAppUrl, '_blank');
-  };
 
   // Render tab content (same as modal)
   const renderTabContent = () => {
@@ -339,49 +331,55 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
         )}
 
         {activeTab === 'contact' && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Contact Information</h3>
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Contact</h3>
             
             {listing.contacts?.primary ? (
               <div className="space-y-4">
-                <div className="p-4 rounded-lg border bg-white">
+                <div className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-200 transition-all duration-200">
                   <div className="flex items-start gap-4">
                     {listing.contacts.primary.headshot_url ? (
                       <img
                         src={listing.contacts.primary.headshot_url}
                         alt={listing.contacts.primary.name}
-                        className="w-16 h-16 rounded-full object-cover"
+                        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                       />
                     ) : (
-                      <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center">
-                        <User className="w-8 h-8 text-violet-600" />
+                      <div className="w-12 h-12 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
+                        <span className="text-violet-600 text-lg font-medium">
+                          {listing.contacts.primary.name ? listing.contacts.primary.name.charAt(0).toUpperCase() : 'C'}
+                        </span>
                       </div>
                     )}
                     <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-gray-900">{listing.contacts.primary.name}</h4>
-                      {listing.contacts.primary.title && (
-                        <p className="text-gray-600 mb-3">{listing.contacts.primary.title}</p>
+                      <h4 className="font-semibold text-gray-900">{listing.contacts.primary.name}</h4>
+                      <p className="text-sm text-gray-600 mt-1">{listing.contacts.primary.title}</p>
+                      {listing.contacts.primary.contact_area && (
+                        <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full mt-1">
+                          {listing.contacts.primary.contact_area}
+                        </span>
                       )}
-                      
-                      <div className="space-y-2">
-                        {listing.contacts.primary.email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="w-4 h-4 text-gray-400" />
-                            <a 
-                              href={`mailto:${listing.contacts.primary.email}`}
-                              className="text-violet-600 hover:underline"
-                            >
-                              {listing.contacts.primary.email}
-                            </a>
-                          </div>
-                        )}
-                        
+                      <div className="mt-3 space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                          </svg>
+                          <a 
+                            href={`mailto:${listing.contacts.primary.email}`} 
+                            className="text-violet-600 hover:text-violet-700 transition-colors duration-200 font-medium"
+                          >
+                            {listing.contacts.primary.email}
+                          </a>
+                        </div>
                         {listing.contacts.primary.phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="w-4 h-4 text-gray-400" />
+                          <div className="flex items-center gap-2 text-sm">
+                            <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+                            </svg>
                             <a 
-                              href={`tel:${listing.contacts.primary.phone}`}
-                              className="text-violet-600 hover:underline"
+                              href={`tel:${listing.contacts.primary.phone}`} 
+                              className="text-violet-600 hover:text-violet-700 transition-colors duration-200 font-medium"
                             >
                               {listing.contacts.primary.phone}
                             </a>
@@ -393,44 +391,50 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
                 </div>
 
                 {listing.contacts.additional?.map((contact: any, index: number) => (
-                  <div key={index} className="p-4 rounded-lg border bg-gray-50">
+                  <div key={contact.id || index} className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-200 transition-all duration-200">
                     <div className="flex items-start gap-4">
                       {contact.headshot_url ? (
                         <img
                           src={contact.headshot_url}
                           alt={contact.name}
-                          className="w-12 h-12 rounded-full object-cover"
+                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                          <User className="w-6 h-6 text-gray-500" />
+                        <div className="w-12 h-12 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-violet-600 text-lg font-medium">
+                            {contact.name ? contact.name.charAt(0).toUpperCase() : 'C'}
+                          </span>
                         </div>
                       )}
                       <div className="flex-1">
-                        <h5 className="font-medium text-gray-900">{contact.name}</h5>
-                        {contact.title && (
-                          <p className="text-gray-600 text-sm mb-2">{contact.title}</p>
+                        <h4 className="font-semibold text-gray-900">{contact.name}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{contact.title}</p>
+                        {contact.contact_area && (
+                          <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full mt-1">
+                            {contact.contact_area}
+                          </span>
                         )}
-                        
-                        <div className="space-y-1">
-                          {contact.email && (
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-3 h-3 text-gray-400" />
-                              <a 
-                                href={`mailto:${contact.email}`}
-                                className="text-violet-600 hover:underline text-sm"
-                              >
-                                {contact.email}
-                              </a>
-                            </div>
-                          )}
-                          
+                        <div className="mt-3 space-y-2">
+                          <div className="flex items-center gap-2 text-sm">
+                            <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                            </svg>
+                            <a 
+                              href={`mailto:${contact.email}`} 
+                              className="text-violet-600 hover:text-violet-700 transition-colors duration-200 font-medium"
+                            >
+                              {contact.email}
+                            </a>
+                          </div>
                           {contact.phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="w-3 h-3 text-gray-400" />
+                            <div className="flex items-center gap-2 text-sm">
+                              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+                              </svg>
                               <a 
-                                href={`tel:${contact.phone}`}
-                                className="text-violet-600 hover:underline text-sm"
+                                href={`tel:${contact.phone}`} 
+                                className="text-violet-600 hover:text-violet-700 transition-colors duration-200 font-medium"
                               >
                                 {contact.phone}
                               </a>
@@ -443,9 +447,17 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <User className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <p>No contact information available</p>
+              <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
+                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 1h6v4H7V5zm8 8v2a1 1 0 01-1 1H6a1 1 0 01-1-1v-2h8z" clipRule="evenodd"/>
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-2">Contact Team</h4>
+                <p className="text-gray-600 text-sm max-w-sm mx-auto">
+                  Our property specialists are preparing their contact information. 
+                  <br />Please check back shortly or reach out via our general inquiry system.
+                </p>
               </div>
             )}
           </div>
@@ -507,9 +519,9 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
 
         {activeTab === 'agent' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900">{listing.listing_agents?.length === 1 ? 'Appointed Agent' : 'Appointed Agents'}</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{(listing.listing_agents?.length || 0) === 1 ? 'Appointed Agent' : 'Appointed Agents'}</h3>
             
-            {listing.listing_agents?.length > 0 ? (
+            {(listing.listing_agents?.length || 0) > 0 ? (
               <div className="space-y-4">
                 {listing.listing_agents?.map((agent: any) => (
                   <div key={agent.id} className="bg-gradient-to-br from-white via-violet-50/30 to-white rounded-2xl border border-violet-200/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6 sm:p-8 ring-1 ring-violet-100/50 hover:ring-violet-200/70">
@@ -694,8 +706,14 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
           
           {/* Share actions */}
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={copyShareLink}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={copyShareLink}
+              style={{ backgroundColor: showToast ? '#10b981' : 'transparent', color: showToast ? 'white' : 'inherit' }}
+            >
               <Share2 className="h-4 w-4" />
+              {showToast && <span className="ml-1 text-xs">✓</span>}
             </Button>
           </div>
         </div>
@@ -770,7 +788,16 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
 
   // Desktop Layout (identical to modal desktop layout)
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <>
+      {/* Toast for desktop */}
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+        }}
+      />
+      
+      <div className="min-h-screen bg-white flex flex-col">
       {/* Header Bar - Same as modal */}
       <div className="flex items-center justify-between px-6 py-4 bg-white/95 backdrop-blur-md border-b border-gray-200">
         <Button 
@@ -793,18 +820,6 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
           <Button variant="outline" size="sm" onClick={copyShareLink}>
             <Share2 className="h-4 w-4 mr-2" />
             Copy Link
-          </Button>
-          <Button variant="outline" size="sm" onClick={shareToLinkedIn}>
-            <div className="w-3 h-3 bg-[#0A66C2] rounded-sm flex items-center justify-center mr-2">
-              <span className="text-white text-xs font-bold">in</span>
-            </div>
-            LinkedIn
-          </Button>
-          <Button variant="outline" size="sm" onClick={shareToWhatsApp}>
-            <svg className="h-4 w-4 mr-2" fill="#25D366" viewBox="0 0 24 24">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
-            </svg>
-            WhatsApp
           </Button>
         </div>
       </div>
@@ -895,5 +910,6 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }
