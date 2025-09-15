@@ -81,12 +81,10 @@ export function Step6SupportingDocuments({
     });
     
     if (shouldUpdateSitePlans) {
-      console.log('Initializing Step6 site plans:', data.sitePlanFiles);
       setSitePlanFiles(data.sitePlanFiles || []);
     }
     
     if (shouldUpdateFitOuts) {
-      console.log('Initializing Step6 fit-outs:', data.fitOutFiles);
       const transformedFitOutFiles = (data.fitOutFiles || []).map(file => ({
         ...file,
         isVideo: file.isVideo || false
