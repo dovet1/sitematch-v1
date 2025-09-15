@@ -104,15 +104,6 @@ export async function GET(
       supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id)
     ]);
 
-    // Debug logging
-    if (files && files.length > 0) {
-      console.log(`Owner preview - Files found for listing ${id}:`, files.map(f => `${f.file_type}:${f.file_name}`));
-      console.log(`All unique file types:`, Array.from(new Set(files.map(f => f.file_type))));
-      console.log(`Filtered fit outs:`, files.filter(f => f.file_type === 'fitOut' || f.file_type === 'fit_out'));
-      console.log(`Filtered site plans:`, files.filter(f => f.file_type === 'sitePlan' || f.file_type === 'site_plan'));
-    } else {
-      console.log(`Owner preview - No files found for listing ${id}`);
-    }
 
     // Get sectors and use classes
     const allSectors = (listingSectors?.map((ls: any) => ls.sectors).filter(Boolean) || []);

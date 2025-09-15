@@ -8,11 +8,12 @@ interface AnimatedFilterPillProps {
   id: string;
 }
 
-export const AnimatedFilterPill: React.FC<AnimatedFilterPillProps> = ({ 
+export const AnimatedFilterPill = React.forwardRef<HTMLDivElement, AnimatedFilterPillProps>(({ 
   children, 
   id 
-}) => (
+}, ref) => (
   <motion.div
+    ref={ref}
     key={id}
     initial={{ opacity: 0, x: -10, scale: 0.95 }}
     animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -33,7 +34,9 @@ export const AnimatedFilterPill: React.FC<AnimatedFilterPillProps> = ({
   >
     {children}
   </motion.div>
-);
+));
+
+AnimatedFilterPill.displayName = 'AnimatedFilterPill';
 
 interface FilterPillsContainerProps {
   children: React.ReactNode;

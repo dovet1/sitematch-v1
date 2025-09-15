@@ -44,12 +44,26 @@ export async function GET(
     // Get the latest approved version
     const { data: approvedVersion, error: versionError } = await supabase
       .from('listing_versions')
-      .select('content')
+      .select('content, version_number, created_at')
       .eq('listing_id', id)
       .eq('status', 'approved')
       .order('version_number', { ascending: false })
       .limit(1)
       .single();
+    
+    // Temporary debug for production issue
+    const isDebug = request.nextUrl.searchParams.get('debug');
+    if (isDebug) {
+      return NextResponse.json({
+        debug: true,
+        listing_id: id,
+        version_found: !!approvedVersion,
+        version_number: approvedVersion?.version_number,
+        created_at: approvedVersion?.created_at,
+        has_locations: !!approvedVersion?.content && JSON.parse(approvedVersion.content).locations?.length,
+        location_count: approvedVersion?.content ? JSON.parse(approvedVersion.content).locations?.length : 0
+      });
+    }
 
     if (versionError || !approvedVersion) {
       // Fallback to current database state if no approved version exists
@@ -204,7 +218,14 @@ export async function GET(
         listing_agents: currentListing?.listing_agents
       };
 
-      return NextResponse.json(fallbackResponse);
+      const fallbackResponseWithHeaders = NextResponse.json(fallbackResponse);
+      
+      // Prevent caching of dynamic listing data
+      fallbackResponseWithHeaders.headers.set('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate');
+      fallbackResponseWithHeaders.headers.set('Pragma', 'no-cache');
+      fallbackResponseWithHeaders.headers.set('Expires', '0');
+      
+      return fallbackResponseWithHeaders;
     }
 
     // Use the approved version content
@@ -367,7 +388,14 @@ export async function GET(
     };
     
     
-    return NextResponse.json(enhancedResponse);
+    const response = NextResponse.json(enhancedResponse);
+    
+    // Prevent caching of dynamic listing data
+    response.headers.set('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    
+    return response;
 
   } catch (error) {
     console.error('Error in public listing detail endpoint:', error);
