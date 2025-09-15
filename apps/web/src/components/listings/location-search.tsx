@@ -162,7 +162,7 @@ export function LocationSearch({
       // Simple callback interface (used by modal)
       onLocationSelect({
         id: location.id,
-        name: location.place_name,
+        name: formatLocationDisplay(location),
         coordinates: location.center,
         region: location.context?.find(ctx => ctx.id.startsWith('region'))?.text,
         country: location.context?.find(ctx => ctx.id.startsWith('country'))?.text
