@@ -77,7 +77,7 @@ export function LoginModal({ children, redirectTo }: LoginModalProps) {
       <DialogPortal>
         <DialogOverlay />
         <DialogContent 
-          className="sm:max-w-[420px] max-h-[85vh] overflow-y-auto p-0 bg-gradient-to-br from-white via-violet-50/20 to-white border-0 shadow-2xl [&>button]:absolute [&>button]:right-4 [&>button]:top-4 [&>button]:z-50 [&>button]:h-10 [&>button]:w-10 [&>button]:rounded-xl [&>button]:bg-white/10 [&>button]:backdrop-blur-sm [&>button]:border [&>button]:border-white/20 [&>button]:text-white [&>button]:hover:bg-white/20 [&>button]:hover:border-white/30 [&>button]:transition-all [&>button]:duration-200 [&>button]:flex [&>button]:items-center [&>button]:justify-center"
+          className="sm:max-w-[420px] max-h-[85vh] overflow-y-auto p-0 bg-gradient-to-br from-white via-violet-50/20 to-white !border-0 !outline-0 !ring-0 shadow-2xl [&>button]:absolute [&>button]:right-4 [&>button]:top-4 [&>button]:z-50 [&>button]:h-10 [&>button]:w-10 [&>button]:rounded-xl [&>button]:bg-white/10 [&>button]:backdrop-blur-sm [&>button]:border [&>button]:border-white/20 [&>button]:text-white [&>button]:hover:bg-white/20 [&>button]:hover:border-white/30 [&>button]:transition-all [&>button]:duration-200 [&>button]:flex [&>button]:items-center [&>button]:justify-center"
         >
           {/* Premium Header with Violet Bloom Gradient */}
           <div className="relative px-8 pt-8 pb-6 bg-gradient-to-r from-violet-900 via-purple-800 to-violet-900 text-white overflow-hidden">
