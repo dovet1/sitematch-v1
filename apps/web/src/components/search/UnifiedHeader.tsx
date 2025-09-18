@@ -90,7 +90,7 @@ export function UnifiedHeader({
       showWhen: 'always' as const
     },
     {
-      href: '/occupier/create-listing?fresh=true',
+      href: '/occupier/create-listing-quick',
       label: 'Post Requirement',
       primary: true,
       showWhen: 'always' as const
