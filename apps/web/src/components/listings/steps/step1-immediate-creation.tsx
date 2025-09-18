@@ -650,7 +650,7 @@ export function Step1ImmediateCreation({
           {/* File Upload Method */}
           {watchedValues.logoMethod === 'upload' && (
             <ImageUpload
-              value={watchedValues.logoFile || watchedValues.logoPreview}
+              value={watchedValues.logoPreview || watchedValues.logoFile}
               onChange={handleLogoFileUpload}
               onPreviewChange={handleLogoPreviewChange}
               placeholder="Upload your company logo"
