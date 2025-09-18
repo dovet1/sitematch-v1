@@ -190,39 +190,29 @@ export function ImmersiveListingModal({
               <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <span className="text-blue-500">📋</span>
-                  Requirements {listing.files.brochures.length > 1 ? 'Materials' : 'Brochure'}
+                  Requirements Brochure
                 </h4>
-                <div className="space-y-2">
-                  {listing.files.brochures.map((brochure: any) => (
-                    <a
-                      key={brochure.id}
-                      href={brochure.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 rounded-lg bg-white border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
-                        <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 2v8h8V6H6z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {brochure.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {brochure.caption || 'View detailed property requirements'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 text-blue-600 group-hover:text-blue-700">
-                        <span className="text-xs font-medium">Download</span>
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    </a>
-                  ))}
-                </div>
+                <button
+                  onClick={() => window.open(listing.files.brochures[0].url, '_blank')}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-white border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group w-full"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
+                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 2v8h8V6H6z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-medium text-gray-900">
+                      {listing?.company?.name || 'Company'}'s Requirement Brochure
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-blue-600 group-hover:text-blue-700">
+                    <span className="text-xs font-medium">Download</span>
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                </button>
               </div>
             )}
 
