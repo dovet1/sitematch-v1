@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServerClient();
     
-    // Get agencies with approved versions only
+    // Get agencies that are approved or have approved versions
     let query = supabase
       .from('agencies')
       .select(`
@@ -19,12 +19,12 @@ export async function GET(request: NextRequest) {
         contact_email,
         contact_phone,
         logo_url,
-        agency_versions!inner(
+        status,
+        agency_versions(
           id,
           status
         )
       `)
-      .eq('agency_versions.status', 'approved')
       .order('name');
 
     // Apply search filter if provided
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     // Apply limit
     query = query.limit(limit);
 
-    const { data: agencies, error } = await query;
+    const { data: rawAgencies, error } = await query;
 
     if (error) {
       console.error('Error searching agencies:', error);
@@ -45,14 +45,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Filter agencies that are approved or have approved versions
+    const filteredAgencies = rawAgencies?.filter(agency => {
+      return agency.status === 'approved' ||
+             agency.agency_versions?.some((version: any) => version.status === 'approved');
+    }) || [];
+
     // Clean up the response - remove agency_versions and flatten
-    const cleanedAgencies = agencies?.map(agency => ({
+    const cleanedAgencies = filteredAgencies.map(agency => ({
       id: agency.id,
       name: agency.name,
       contact_email: agency.contact_email,
       contact_phone: agency.contact_phone,
       logo_url: agency.logo_url
-    })) || [];
+    }));
 
     return NextResponse.json({
       success: true,

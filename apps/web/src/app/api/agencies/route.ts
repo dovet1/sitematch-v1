@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServerClient();
     
-    // Get agencies that have at least one approved version
+    // Get agencies that are approved or have approved versions
     let query = supabase
       .from('agencies')
       .select(`
@@ -61,8 +61,11 @@ export async function GET(request: NextRequest) {
 
     // Process agencies to merge with their latest approved version data
     const agencies = rawAgencies?.filter(agency => {
-      // Only include agencies that have at least one approved version
-      return agency.agency_versions?.some((version: any) => version.status === 'approved');
+      // Include agencies that are either:
+      // 1. Have at least one approved version, OR
+      // 2. Have status 'approved' (for agencies without versions)
+      return agency.status === 'approved' ||
+             agency.agency_versions?.some((version: any) => version.status === 'approved');
     }).map(agency => {
       // Find the highest version number approved version
       const latestApprovedVersion = agency.agency_versions?.reduce((latest: any, version: any) => {
