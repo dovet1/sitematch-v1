@@ -51,9 +51,13 @@ export async function GET(request: NextRequest) {
         classification,
         geographic_patch,
         logo_url,
-        office_address
+        office_address,
+        status,
+        agency_versions(
+          id,
+          status
+        )
       `)
-      .eq('status', 'approved')
       .not('office_address', 'is', null);
 
     // Apply search filter
@@ -72,7 +76,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const { data: agencies, error } = await query;
+    const { data: rawAgencies, error } = await query;
 
     if (error) {
       console.error('Error fetching agencies for map:', error);
@@ -82,8 +86,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Filter agencies that are approved or have approved versions
+    const approvedAgencies = rawAgencies?.filter(agency => {
+      return agency.status === 'approved' ||
+             agency.agency_versions?.some((version: any) => version.status === 'approved');
+    }) || [];
+
     // Geocode addresses to get coordinates
-    const mapAgencies = await Promise.all((agencies || []).map(async (agency) => {
+    const mapAgencies = await Promise.all(approvedAgencies.map(async (agency) => {
       let coordinates = null;
       
       if (agency.office_address) {
