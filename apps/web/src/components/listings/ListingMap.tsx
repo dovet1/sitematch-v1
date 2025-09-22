@@ -158,8 +158,11 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
 
           console.log('[DEBUG] Cluster leaves result:', clusterLeaves);
 
-          // Extract listing data from cluster features
-          const listings = (clusterLeaves as any[]).map(leaf => leaf.properties);
+          // Extract listing data from cluster features with coordinates
+          const listings = (clusterLeaves as any[]).map(leaf => ({
+            ...leaf.properties,
+            coordinates: leaf.geometry?.coordinates // [lng, lat] format
+          }));
           console.log('[DEBUG] Extracted listings:', listings);
 
           // Calculate smart popup position that stays within viewport
@@ -383,7 +386,42 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
                   <div className="w-2 h-2 bg-white rounded"></div>
                 </div>
                 <h3 className="font-semibold text-gray-900">
-                  {clusterPopup.listings.length} Properties
+                  {(() => {
+                    // Check if all listings have the same coordinates
+                    if (clusterPopup.listings.length > 1) {
+                      // Get coordinates from each listing to check if they're identical
+                      const coordinates = clusterPopup.listings
+                        .filter(listing => listing.coordinates && Array.isArray(listing.coordinates))
+                        .map(listing => ({
+                          lng: listing.coordinates[0], // GeoJSON format [lng, lat]
+                          lat: listing.coordinates[1]
+                        }));
+
+                      if (coordinates.length > 0 && coordinates.length === clusterPopup.listings.length) {
+                        // Check if all coordinates are the same (within a small tolerance)
+                        const firstCoord = coordinates[0];
+                        const tolerance = 0.0001; // Small tolerance for floating point comparison
+
+                        const allSameLocation = coordinates.every(coord =>
+                          Math.abs(coord.lat - firstCoord.lat) < tolerance &&
+                          Math.abs(coord.lng - firstCoord.lng) < tolerance
+                        );
+
+                        if (allSameLocation) {
+                          // Find the first place_name available and truncate it
+                          const firstPlaceName = clusterPopup.listings.find(listing => listing.place_name)?.place_name;
+                          if (firstPlaceName) {
+                            // Take only the first two parts (e.g., "Whitstable, Kent" instead of "Whitstable, Kent, England, United Kingdom")
+                            const parts = firstPlaceName.split(', ');
+                            return parts.slice(0, 2).join(', ');
+                          }
+                        }
+                      }
+                    }
+
+                    // Default to showing property count
+                    return `${clusterPopup.listings.length} Properties`;
+                  })()}
                 </h3>
               </div>
               <button
