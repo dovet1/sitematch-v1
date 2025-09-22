@@ -6,6 +6,7 @@ import { X, ExternalLink } from 'lucide-react';
 import '@/styles/map-mobile.css';
 import { SearchFilters } from '@/types/search';
 import { MapLoadingSkeleton } from '@/components/map/MapLoadingSkeleton';
+import { getClearbitLogoUrl } from '@/lib/clearbit-logo';
 
 interface ListingMapProps {
   filters: SearchFilters;
@@ -293,11 +294,11 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
       'circle-color': [
         'step',
         ['get', 'point_count'],
-        '#51bbd6', // Color for clusters with < 100 points
+        '#a78bfa', // Lighter violet for small clusters (< 100 points)
         100,
-        '#f1f075', // Color for clusters with 100-750 points
+        '#8b5cf6', // Primary violet for medium clusters
         750,
-        '#f28cb1'  // Color for clusters with > 750 points
+        '#7c3aed'  // Deeper violet for large clusters (> 750 points)
       ],
       'circle-radius': [
         'step',
@@ -319,7 +320,8 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
     layout: {
       'text-field': '{point_count_abbreviated}',
       'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-      'text-size': 12
+      'text-size': 14,
+      'text-allow-overlap': true
     },
     paint: {
       'text-color': '#ffffff'
@@ -332,7 +334,7 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
     source: 'listings',
     filter: ['!', ['has', 'point_count']],
     paint: {
-      'circle-color': '#11b4da',
+      'circle-color': '#8b5cf6',
       'circle-radius': 8,
       'circle-stroke-width': 1,
       'circle-stroke-color': '#fff'
@@ -443,10 +445,30 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
                     setClusterPopup({ isOpen: false, listings: [], position: { x: 0, y: 0 } });
                   }}
                 >
-                  <div className="flex items-start gap-3">
-                    {/* Logo placeholder */}
-                    <div className="w-10 h-10 bg-gray-200 rounded flex-shrink-0 flex items-center justify-center">
-                      <span className="text-xs font-medium text-gray-600">
+                  <div className="flex items-center gap-3">
+                    {/* Company Logo */}
+                    <div className="w-10 h-10 bg-gray-200 rounded flex-shrink-0 flex items-center justify-center overflow-hidden">
+                      {listing.clearbit_logo && listing.company_domain ? (
+                        <img
+                          src={getClearbitLogoUrl(listing.company_domain, 128) || ''}
+                          alt={`${listing.company_name} logo`}
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            // If clearbit fails, show fallback
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const fallback = target.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      {/* Fallback initials */}
+                      <span
+                        className="text-xs font-medium text-gray-600"
+                        style={{
+                          display: (listing.clearbit_logo && listing.company_domain) ? 'none' : 'flex'
+                        }}
+                      >
                         {listing.company_name?.charAt(0) || '?'}
                       </span>
                     </div>
