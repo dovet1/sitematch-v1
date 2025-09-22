@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Map, Source, Layer } from 'react-map-gl/mapbox';
+import { X, ExternalLink } from 'lucide-react';
 import '@/styles/map-mobile.css';
 import { SearchFilters } from '@/types/search';
 import { MapLoadingSkeleton } from '@/components/map/MapLoadingSkeleton';
@@ -45,6 +46,12 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [clusterPopup, setClusterPopup] = useState<{
+    isOpen: boolean;
+    listings: any[];
+    position: { x: number; y: number };
+  }>({ isOpen: false, listings: [], position: { x: 0, y: 0 } });
+  const mapRef = useRef<any>(null);
 
   // Navigate map when location coordinates change
   useEffect(() => {
@@ -109,25 +116,150 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
   }, [filters]); // ONLY filters dependency - no viewState
 
   // Handle map clicks
-  const handleMapClick = (event: any) => {
+  const handleMapClick = async (event: any) => {
+    console.log('[DEBUG] Map click event:', event);
     const features = event.features;
+    console.log('[DEBUG] Features:', features);
+
     if (!features || features.length === 0) return;
 
     const feature = features[0];
+    console.log('[DEBUG] Feature clicked:', feature);
 
     if (feature.layer.id === 'clusters') {
-      // Clicked on a cluster - zoom in
+      console.log('[DEBUG] Cluster clicked, properties:', feature.properties);
       const clusterId = feature.properties.cluster_id;
-      // In a real implementation, you'd get the cluster expansion zoom
-      // For now, just zoom in by 2 levels
-      setViewState(prev => ({
-        ...prev,
-        longitude: feature.geometry.coordinates[0],
-        latitude: feature.geometry.coordinates[1],
-        zoom: Math.min(prev.zoom + 2, 20)
-      }));
+      const pointCount = feature.properties.point_count;
+      const map = mapRef.current?.getMap();
+
+      if (map && map.getSource('listings')) {
+        try {
+          console.log('[DEBUG] Getting cluster leaves for cluster:', clusterId, 'count:', pointCount);
+
+          // Get all points in this cluster using the source directly
+          const source = map.getSource('listings');
+
+          const clusterLeaves = await new Promise((resolve) => {
+            source.getClusterLeaves(
+              clusterId,
+              pointCount,
+              0,
+              (error: any, clusterFeatures: any) => {
+                console.log('[DEBUG] Cluster leaves callback - error:', error, 'features:', clusterFeatures);
+                if (error) {
+                  console.error('Error getting cluster leaves:', error);
+                  resolve([]);
+                } else {
+                  resolve(clusterFeatures || []);
+                }
+              }
+            );
+          });
+
+          console.log('[DEBUG] Cluster leaves result:', clusterLeaves);
+
+          // Extract listing data from cluster features
+          const listings = (clusterLeaves as any[]).map(leaf => leaf.properties);
+          console.log('[DEBUG] Extracted listings:', listings);
+
+          // Calculate smart popup position that stays within viewport
+          const mapContainer = document.querySelector('.map-container');
+          const mapRect = mapContainer?.getBoundingClientRect();
+
+          // Get header height to avoid overlap - try multiple selectors
+          const headerSelectors = [
+            '.UnifiedHeader',
+            'header',
+            '[data-testid="header"]',
+            '.search-header',
+            '.navbar',
+            '.top-nav'
+          ];
+
+          let headerHeight = 120; // Conservative default for search bars
+          for (const selector of headerSelectors) {
+            const element = document.querySelector(selector);
+            if (element) {
+              headerHeight = Math.max(headerHeight, element.getBoundingClientRect().height + 20);
+              console.log(`[DEBUG] Found header element with selector "${selector}":`, element.getBoundingClientRect().height);
+              break;
+            }
+          }
+
+          console.log(`[DEBUG] Using header height: ${headerHeight}px`);
+
+          const popupWidth = 320; // w-80 = 320px
+          const availableHeight = window.innerHeight - headerHeight - 40; // Account for header + margins
+          const maxPopupHeight = Math.min(400, availableHeight); // Respect available space
+          const popupHeight = Math.min(maxPopupHeight, listings.length * 60 + 80); // Dynamic height
+          const margin = 20; // margin from screen edge
+
+          // Start with click position relative to viewport
+          let x = event.point.x + (mapRect?.left || 0);
+          let y = event.point.y + (mapRect?.top || 0);
+
+          // Horizontal positioning - prefer right of click, then left, then force fit
+          if (x + popupWidth + margin > window.innerWidth) {
+            // Try positioning to the left of click point
+            x = x - popupWidth - 20;
+
+            // If still off-screen, force it to fit within viewport
+            if (x < margin) {
+              x = window.innerWidth - popupWidth - margin;
+            }
+          }
+
+          // Ensure minimum left margin
+          if (x < margin) {
+            x = margin;
+          }
+
+          // Vertical positioning - account for header and prefer below click
+          const minY = headerHeight + margin; // Don't go above header
+          const maxY = window.innerHeight - popupHeight - margin;
+
+          if (y + popupHeight > window.innerHeight - margin) {
+            // Try positioning above click point
+            y = y - popupHeight - 20;
+          }
+
+          // Force within bounds accounting for header
+          if (y < minY) {
+            y = minY;
+          }
+          if (y > maxY) {
+            y = maxY;
+          }
+
+          console.log('[DEBUG] Smart popup position:', {
+            x, y,
+            popupWidth, popupHeight,
+            windowWidth: window.innerWidth,
+            windowHeight: window.innerHeight,
+            clickPoint: event.point,
+            mapRect
+          });
+
+          setClusterPopup({
+            isOpen: true,
+            listings,
+            position: { x, y }
+          });
+        } catch (error) {
+          console.error('Error handling cluster click:', error);
+          // Fallback to zoom
+          setViewState(prev => ({
+            ...prev,
+            longitude: feature.geometry.coordinates[0],
+            latitude: feature.geometry.coordinates[1],
+            zoom: Math.min(prev.zoom + 2, 20)
+          }));
+        }
+      } else {
+        console.error('[DEBUG] Map or source not available');
+      }
     } else if (feature.layer.id === 'unclustered-point') {
-      // Clicked on individual point - open listing modal
+      console.log('[DEBUG] Individual point clicked:', feature.properties.id);
       const listingId = feature.properties.id;
       onListingClick(listingId);
     }
@@ -208,6 +340,7 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
     <div className="map-wrapper relative h-full">
       <div className="map-container relative h-[calc(100vh-120px)] md:h-[calc(100vh-100px)] w-full md:rounded-lg overflow-hidden md:border md:border-border">
         <Map
+          ref={mapRef}
           {...viewState}
           onMove={evt => setViewState(evt.viewState)}
           mapboxAccessToken={MAPBOX_TOKEN}
@@ -232,6 +365,69 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
             </Source>
           )}
         </Map>
+
+        {/* Cluster Popup */}
+        {clusterPopup.isOpen && (
+          <div
+            className="fixed bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-w-sm w-80 flex flex-col"
+            style={{
+              left: clusterPopup.position.x,
+              top: clusterPopup.position.y,
+              maxHeight: `${Math.min(400, window.innerHeight - 140)}px` // Dynamic max height
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-orange-500 rounded flex items-center justify-center">
+                  <div className="w-2 h-2 bg-white rounded"></div>
+                </div>
+                <h3 className="font-semibold text-gray-900">
+                  {clusterPopup.listings.length} Properties
+                </h3>
+              </div>
+              <button
+                onClick={() => setClusterPopup({ isOpen: false, listings: [], position: { x: 0, y: 0 } })}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Listings */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {clusterPopup.listings.map((listing, index) => (
+                <div
+                  key={listing.id || index}
+                  className="p-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer transition-colors"
+                  onClick={() => {
+                    onListingClick(listing.id);
+                    setClusterPopup({ isOpen: false, listings: [], position: { x: 0, y: 0 } });
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Logo placeholder */}
+                    <div className="w-10 h-10 bg-gray-200 rounded flex-shrink-0 flex items-center justify-center">
+                      <span className="text-xs font-medium text-gray-600">
+                        {listing.company_name?.charAt(0) || '?'}
+                      </span>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 text-sm">
+                        {listing.company_name || 'Unknown Company'}
+                      </h4>
+                    </div>
+
+                    {/* External link icon */}
+                    <ExternalLink size={16} className="text-gray-400 flex-shrink-0" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
