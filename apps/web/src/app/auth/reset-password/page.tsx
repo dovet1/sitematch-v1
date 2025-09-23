@@ -153,7 +153,7 @@ export default function ResetPasswordPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
-            Create New Password
+            Create New Password (v2.0)
           </CardTitle>
           <CardDescription>
             Enter your new password below. Make sure it's secure and memorable.
