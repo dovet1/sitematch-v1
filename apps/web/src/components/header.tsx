@@ -39,6 +39,13 @@ export function Header() {
       requiresAuth: false
     },
     {
+      href: '/search',
+      label: 'Requirements',
+      primary: false,
+      showWhen: 'always',
+      requiresAuth: false
+    },
+    {
       href: '/sitesketcher/landing',
       label: 'SiteSketcher',
       primary: false,

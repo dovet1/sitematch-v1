@@ -26,7 +26,7 @@ export async function GET(
       return NextResponse.json({ error: 'Agency not found or unauthorized' }, { status: 404 })
     }
 
-    // Get listings owned by the user
+    // Get listings owned by the user with their agency links
     const { data: listings, error: listingsError } = await supabase
       .from('listings')
       .select(`
@@ -34,7 +34,9 @@ export async function GET(
         company_name,
         company_domain,
         clearbit_logo,
-        linked_agency_id
+        listing_agents(
+          agency_id
+        )
       `)
       .eq('created_by', user.id)
 
@@ -80,6 +82,7 @@ export async function GET(
     // Format the response
     const companies = approvedListings.map(listing => {
       const logo = logos.find(l => l.listing_id === listing.id)
+      const isLinkedToThisAgency = listing.listing_agents?.some((agent: any) => agent.agency_id === params.id) || false
       
       return {
         id: listing.id,
@@ -88,7 +91,7 @@ export async function GET(
         clearbit_logo: listing.clearbit_logo || false,
         logo_url: logo?.file_path || null,
         logo_bucket: logo?.bucket_name || null,
-        linked: listing.linked_agency_id === params.id
+        linked: isLinkedToThisAgency
       }
     })
 

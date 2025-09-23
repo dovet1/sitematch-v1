@@ -6,8 +6,9 @@
 /**
  * Domain validation regex pattern
  * Validates standard domain format (e.g., company.com)
+ * Fixed to properly handle domains like eatcommonroom.com
  */
-const DOMAIN_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9.-]{0,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
+const DOMAIN_REGEX = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
 
 /**
  * Cache for storing logo lookup results

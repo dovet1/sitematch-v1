@@ -235,9 +235,9 @@
     --space-24: 6rem;    /* 96px */
     
     /* Typography scale (fluid) */
-    --font-sans: var(--font-sans), 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    --font-serif: var(--font-serif), 'Lora', Georgia, serif;
-    --font-mono: var(--font-mono), 'IBM Plex Mono', Menlo, Monaco, 'Courier New', monospace;
+    --font-sans: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-serif: 'Lora', Georgia, serif;
+    --font-mono: 'IBM Plex Mono', Menlo, Monaco, 'Courier New', monospace;
     
     --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
     --text-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);

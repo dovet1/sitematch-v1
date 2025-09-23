@@ -41,11 +41,17 @@ export async function GET(
       return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
     }
 
-    // Fetch linked companies (listings with this agency)
+    // Fetch linked companies (listings with this agency) via junction table
     const { data: linkedListings, error: listingsError } = await supabase
       .from('listings')
-      .select('id, company_name, clearbit_logo, company_domain')
-      .eq('linked_agency_id', id)
+      .select(`
+        id, 
+        company_name, 
+        clearbit_logo, 
+        company_domain,
+        listing_agents!inner(agency_id)
+      `)
+      .eq('listing_agents.agency_id', id)
       .not('company_name', 'is', null);
 
     // Get logos for linked companies
@@ -154,25 +160,47 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log('PUT /api/agencies/[id] - Starting request');
+    
     const user = await getCurrentUser();
+    console.log('User check:', user ? 'User found' : 'No user');
+    
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = params;
+    console.log('Agency ID:', id);
+    
     const body = await request.json();
+    console.log('Request body keys:', Object.keys(body));
 
     const supabase = createServerClient();
+    console.log('Supabase client created');
 
     // Check if user owns this agency
+    console.log('Checking agency ownership for user:', user.id);
     const { data: agency, error: fetchError } = await supabase
       .from('agencies')
       .select('created_by')
       .eq('id', id)
       .single();
 
-    if (fetchError || !agency || agency.created_by !== user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    console.log('Agency fetch result:', { agency, fetchError });
+    
+    if (fetchError) {
+      console.error('Database fetch error:', fetchError);
+      return NextResponse.json({ error: 'Database error: ' + fetchError.message }, { status: 500 });
+    }
+    
+    if (!agency) {
+      console.log('Agency not found');
+      return NextResponse.json({ error: 'Agency not found' }, { status: 404 });
+    }
+    
+    if (agency.created_by !== user.id) {
+      console.log('User does not own agency. Agency owner:', agency.created_by, 'Current user:', user.id);
+      return NextResponse.json({ error: 'Forbidden - not the agency owner' }, { status: 403 });
     }
 
     // Validate and update agency
@@ -185,7 +213,12 @@ export async function PUT(
     const updateData: any = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
-        updateData[field] = body[field];
+        // Convert empty strings to null for database fields that have constraints
+        if (typeof body[field] === 'string' && body[field].trim() === '') {
+          updateData[field] = null;
+        } else {
+          updateData[field] = body[field];
+        }
       }
     }
 
@@ -204,9 +237,9 @@ export async function PUT(
       );
     }
 
-    if (updateData.classification && !['Commercial', 'Residential', 'Both'].includes(updateData.classification)) {
+    if (updateData.classification !== null && updateData.classification && !['Commercial', 'Residential', 'Both'].includes(updateData.classification)) {
       return NextResponse.json(
-        { error: 'Invalid classification' },
+        { error: 'Classification must be one of: Commercial, Residential, Both, or empty' },
         { status: 400 }
       );
     }
@@ -221,6 +254,8 @@ export async function PUT(
       }
     }
 
+    console.log('Updating agency with data:', updateData);
+    
     const { data: updatedAgency, error: updateError } = await supabase
       .from('agencies')
       .update(updateData)
@@ -230,11 +265,19 @@ export async function PUT(
 
     if (updateError) {
       console.error('Error updating agency:', updateError);
+      console.error('Update error details:', {
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+        code: updateError.code
+      });
       return NextResponse.json(
-        { error: 'Failed to update agency' },
+        { error: 'Database update failed: ' + updateError.message },
         { status: 500 }
       );
     }
+    
+    console.log('Agency updated successfully:', updatedAgency?.id);
 
     return NextResponse.json({ 
       data: updatedAgency,
@@ -242,8 +285,15 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Error in agency PUT route:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: errorMessage,
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }

@@ -86,7 +86,7 @@ export function HomeCTA() {
 
             <div className="space-y-3">
               <Link
-                href="/occupier/create-listing?fresh=true"
+                href="/occupier/create-listing-quick"
                 className="w-full inline-flex items-center justify-center px-6 py-3 bg-secondary-600 text-white rounded-lg font-semibold hover:bg-secondary-700 transition-colors group"
               >
                 Post a Requirement

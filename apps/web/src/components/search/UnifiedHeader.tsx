@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 interface UnifiedHeaderProps {
   searchFilters: SearchFilters;
   onFiltersChange: (filters: SearchFilters) => void;
-  onLocationSelect: (locationData: { name: string; coordinates: { lat: number; lng: number } }) => void;
   isMapView?: boolean;
   onMapViewToggle?: (isMapView: boolean) => void;
   showViewToggle?: boolean;
@@ -24,7 +23,6 @@ interface UnifiedHeaderProps {
 export function UnifiedHeader({
   searchFilters,
   onFiltersChange,
-  onLocationSelect,
   isMapView = false,
   onMapViewToggle,
   showViewToggle = false
@@ -80,13 +78,19 @@ export function UnifiedHeader({
       showWhen: 'always' as const
     },
     {
+      href: '/search',
+      label: 'Requirements',
+      primary: false,
+      showWhen: 'always' as const
+    },
+    {
       href: '/sitesketcher/landing',
       label: 'SiteSketcher',
       primary: false,
       showWhen: 'always' as const
     },
     {
-      href: '/occupier/create-listing?fresh=true',
+      href: '/occupier/create-listing-quick',
       label: 'Post Requirement',
       primary: true,
       showWhen: 'always' as const
@@ -262,7 +266,6 @@ export function UnifiedHeader({
       <SearchHeaderBar
         searchFilters={searchFilters}
         onFiltersChange={onFiltersChange}
-        onLocationSelect={onLocationSelect}
         isMapView={isMapView}
         onMapViewToggle={onMapViewToggle}
         showViewToggle={showViewToggle}

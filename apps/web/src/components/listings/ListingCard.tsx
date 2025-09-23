@@ -1,6 +1,6 @@
 'use client';
 
-import { MapPin, Building2, Briefcase } from 'lucide-react';
+import { MapPin, Building2, Briefcase, Ruler } from 'lucide-react';
 import { SearchResult } from '@/types/search';
 import { cn } from '@/lib/utils';
 import { getSearchResultLogoUrl } from '@/lib/search-logo-utils';
@@ -104,10 +104,34 @@ function formatLocations(listing: SearchResult): string {
   return 'Location not specified';
 }
 
+function formatSiteSize(listing: SearchResult): string {
+  const min = listing.site_size_min;
+  const max = listing.site_size_max;
+  
+  if (!min && !max) {
+    return 'No site size preference';
+  }
+  
+  // Format numbers with commas
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat('en-GB').format(num);
+  };
+  
+  if (min && max) {
+    return `${formatNumber(min)} - ${formatNumber(max)} sq ft`;
+  } else if (min) {
+    return `Min ${formatNumber(min)} sq ft`;
+  } else if (max) {
+    return `Max ${formatNumber(max)} sq ft`;
+  }
+  
+  return 'No site size preference';
+}
+
 export function ListingCard({ listing, onClick }: ListingCardProps) {
   // Get the appropriate logo URL based on clearbit_logo flag and available data
   const logoUrl = getSearchResultLogoUrl(listing);
-  const locationText = formatLocations(listing);
+  const siteSizeText = formatSiteSize(listing);
   const [imageLoaded, setImageLoaded] = useState(false);
   
   return (
@@ -185,10 +209,10 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
           {listing.company_name}
         </h3>
         
-        {/* Location */}
+        {/* Site Size */}
         <div className="flex items-center gap-1 text-sm text-gray-500 mb-3">
-          <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="line-clamp-1">{locationText}</span>
+          <Ruler className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="line-clamp-1">{siteSizeText}</span>
         </div>
         
         {/* Sectors and Use Classes Pills */}
@@ -265,7 +289,7 @@ export function ListingCardSkeleton() {
         {/* Company name skeleton */}
         <div className="h-5 bg-gray-200 rounded animate-pulse w-3/4 mb-2" />
         
-        {/* Location skeleton */}
+        {/* Site size skeleton */}
         <div className="flex items-center gap-1 mb-3">
           <div className="w-3.5 h-3.5 bg-gray-200 rounded animate-pulse" />
           <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2" />

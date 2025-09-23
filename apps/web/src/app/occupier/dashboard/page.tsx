@@ -4,12 +4,14 @@ import { useRouter } from 'next/navigation';
 import { createClientClient } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, FileText, Clock, CheckCircle, AlertTriangle, Eye, Building2 } from 'lucide-react';
+import { Plus, FileText, Clock, CheckCircle, AlertTriangle, Eye, Building2, TrendingUp, Users, MapPin, X } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '../components/StatusBadge';
 import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal';
 import { useState, useEffect } from 'react';
 import type { User } from '@supabase/auth-js';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 
 interface Listing {
   id: string;
@@ -39,6 +41,8 @@ export default function OccupierDashboard() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [agency, setAgency] = useState<Agency | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('requirements');
+  const [showWelcomeTip, setShowWelcomeTip] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -68,13 +72,13 @@ export default function OccupierDashboard() {
       setUser(user);
 
       // Get user's agency
-      const { data: userAgency } = await supabase
+      const { data: userAgency, error: agencyError } = await supabase
         .from('agencies')
         .select('id, name, status, created_at, updated_at')
         .eq('created_by', user.id)
-        .single();
+        .maybeSingle();
 
-      if (userAgency) {
+      if (userAgency && !agencyError) {
         setAgency(userAgency);
       }
 
@@ -245,25 +249,9 @@ export default function OccupierDashboard() {
                   Welcome back!
                 </h1>
                 <p className="body-base text-muted-foreground mt-1">
-                  {listings.length === 0 
-                    ? 'Create your first property requirement'
-                    : `${listings.length} property requirement${listings.length > 1 ? 's' : ''}`
-                  }
+                  Manage your property requirements and agency profile
                 </p>
               </div>
-              
-              {!hasRejectedListings && (
-                <Button 
-                  asChild 
-                  size="lg"
-                  className="violet-bloom-button violet-bloom-touch shadow-sm hover:shadow-md transition-all"
-                >
-                  <Link href="/occupier/create-listing-quick">
-                    <Plus className="w-5 h-5 mr-2" />
-                    Create New Listing
-                  </Link>
-                </Button>
-              )}
             </div>
           </div>
         </div>
@@ -271,84 +259,133 @@ export default function OccupierDashboard() {
 
       <div className="container mx-auto px-4 py-6 sm:py-8">
         <div className="max-w-4xl mx-auto">
-          <div className="space-y-6">
-            {listings.length === 0 ? (
-              <>
-                <Card className="violet-bloom-card">
-                  <CardContent className="p-8 sm:p-12 text-center">
-                    <div className="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <FileText className="w-10 h-10 text-primary-400" />
-                    </div>
-                    <h3 className="heading-4 text-foreground mb-2">Start Your Property Search</h3>
-                    <p className="body-base text-muted-foreground mb-6 max-w-sm mx-auto">
-                      Create your first listing to connect with agents and find your ideal property.
+          {/* Welcome Tip for New Users */}
+          {showWelcomeTip && listings.length === 0 && !agency && (
+            <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <TrendingUp className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground mb-1">Welcome to Your Dashboard!</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Get started by creating your first property requirement or setting up your agency profile.
                     </p>
-                    <Button asChild size="lg" className="violet-bloom-button violet-bloom-touch">
-                      <Link href="/occupier/create-listing-quick">
-                        <Plus className="w-5 h-5 mr-2" />
-                        Create Your First Listing
-                      </Link>
-                    </Button>
+                    <div className="flex flex-wrap gap-3 justify-center text-xs">
+                      <div className="inline-flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
+                        <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                        <span className="whitespace-nowrap">Specify your location needs</span>
+                      </div>
+                      <div className="inline-flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
+                        <Users className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                        <span className="whitespace-nowrap">Promote your agency</span>
+                      </div>
+                      <div className="inline-flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
+                        <TrendingUp className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                        <span className="whitespace-nowrap">Increase deal flow</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowWelcomeTip(false)}
+                    className="p-1 rounded-lg hover:bg-white/60 transition-colors"
+                    aria-label="Dismiss tip"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tabbed Interface for Better Content Organization */}
+          <Tabs defaultValue="requirements" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 h-12">
+              <TabsTrigger value="requirements" className="relative">
+                <FileText className="w-4 h-4 mr-2" />
+                Requirements
+                {listings.length > 0 ? (
+                  <Badge variant="secondary" className="ml-2 px-1.5 py-0 h-5 text-xs">
+                    {listings.length}
+                  </Badge>
+                ) : (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full" />
+                )}
+                {hasRejectedListings && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="agency" className="relative">
+                <Building2 className="w-4 h-4 mr-2" />
+                Agency
+                {agency ? (
+                  <Badge variant={agency.status === 'approved' ? 'default' : 'outline'} className="ml-2 px-1.5 py-0 h-5 text-xs">
+                    {agency.status === 'approved' ? '✓' : '!'}
+                  </Badge>
+                ) : (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full" />
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Requirements Tab */}
+            <TabsContent value="requirements" className="space-y-4">
+              {/* Action Bar for Requirements */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Property Requirements</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {listings.length === 0 
+                      ? 'Post your property needs to connect with agents'
+                      : `${listings.length} active requirement${listings.length > 1 ? 's' : ''}`
+                    }
+                  </p>
+                </div>
+                {!hasRejectedListings && (
+                  <Button 
+                    asChild 
+                    size="default"
+                    className="violet-bloom-button violet-bloom-touch shadow-sm hover:shadow-md transition-all w-full sm:w-auto"
+                  >
+                    <Link href="/occupier/create-listing-quick">
+                      <Plus className="w-4 h-4 mr-2" />
+                      New Requirement
+                    </Link>
+                  </Button>
+                )}
+              </div>
+
+              {listings.length === 0 ? (
+                /* Empty State for Requirements */
+                <Card className="violet-bloom-card border-dashed">
+                  <CardContent className="p-8 sm:p-10 text-center">
+                    <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FileText className="w-8 h-8 text-primary-500" />
+                    </div>
+                    <h3 className="heading-4 text-foreground mb-2">No Requirements Yet</h3>
+                    <p className="body-base text-muted-foreground mb-6 max-w-sm mx-auto">
+                      Post your first property requirement to start receiving proposals from agents.
+                    </p>
+                    <div className="space-y-4">
+                      <Button asChild size="lg" className="violet-bloom-button violet-bloom-touch w-full sm:w-auto">
+                        <Link href="/occupier/create-listing-quick">
+                          <Plus className="w-5 h-5 mr-2" />
+                          Create Your First Requirement
+                        </Link>
+                      </Button>
+                      <div className="flex flex-col sm:flex-row gap-2 items-center justify-center text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> Takes 2 minutes
+                        </span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="flex items-center gap-1">
+                          <Eye className="w-3 h-3" /> Instant visibility
+                        </span>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
-                
-                {/* Agency Section */}
-                {!agency ? (
-                  <Card className="violet-bloom-card">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
-                            <Building2 className="w-6 h-6 text-primary-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-foreground mb-1">Create Your Agency Profile</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Showcase your agency to connect with property listings
-                            </p>
-                          </div>
-                        </div>
-                        <AgencyCreationModal>
-                          <Button size="sm" variant="outline">
-                            <Building2 className="w-4 h-4 mr-2" />
-                            Create Agency
-                          </Button>
-                        </AgencyCreationModal>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl flex items-center justify-center">
-                            <Building2 className="w-6 h-6 text-emerald-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-foreground mb-1">{agency.name}</h3>
-                            <div className="flex items-center gap-2">
-                              <StatusBadge status={agency.status} className="shadow-sm" />
-                              <span className="text-sm text-muted-foreground">
-                                Created {formatDate(agency.created_at)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/agencies/${agency.id}/edit`}>
-                              <Building2 className="w-4 h-4 mr-2" />
-                              Edit Agency
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-              </>
             ) : (
               <>
                 <div className="space-y-4">
@@ -518,70 +555,136 @@ export default function OccupierDashboard() {
                   );
                 })}
                 </div>
-                
-                {/* Agency Section */}
-                {!agency ? (
-                  <Card className="violet-bloom-card">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
-                            <Building2 className="w-6 h-6 text-primary-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-foreground mb-1">Create Your Agency Profile</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Showcase your agency to connect with property listings
-                            </p>
-                          </div>
+              </>
+            )}
+            </TabsContent>
+
+            {/* Agency Tab */}
+            <TabsContent value="agency" className="space-y-4">
+              {/* Action Bar for Agency */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Agency Profile</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {agency 
+                      ? 'Manage your agency listing and visibility'
+                      : 'Create your agency profile to showcase your services'
+                    }
+                  </p>
+                </div>
+                {!agency && (
+                  <AgencyCreationModal>
+                    <Button 
+                      size="default"
+                      className="violet-bloom-button violet-bloom-touch shadow-sm hover:shadow-md transition-all w-full sm:w-auto"
+                    >
+                      <Building2 className="w-4 h-4 mr-2" />
+                      Create Agency
+                    </Button>
+                  </AgencyCreationModal>
+                )}
+              </div>
+
+              {!agency ? (
+                /* Empty State for Agency */
+                <Card className="violet-bloom-card border-dashed">
+                  <CardContent className="p-8 sm:p-10">
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-primary-50 to-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Building2 className="w-10 h-10 text-primary-500" />
+                      </div>
+                      <div className="flex-1 text-center md:text-left">
+                        <h3 className="heading-4 text-foreground mb-2">No Agency Profile</h3>
+                        <p className="body-base text-muted-foreground mb-4">
+                          Create your agency profile to increase visibility and build trust with potential clients.
+                        </p>
+                        <div className="flex flex-wrap gap-2 justify-center md:justify-start text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1 bg-muted/50 rounded-full px-3 py-1">
+                            <CheckCircle className="w-3 h-3 text-emerald-600" /> Verified badge
+                          </span>
+                          <span className="flex items-center gap-1 bg-muted/50 rounded-full px-3 py-1">
+                            <Eye className="w-3 h-3 text-blue-600" /> Public listing
+                          </span>
+                          <span className="flex items-center gap-1 bg-muted/50 rounded-full px-3 py-1">
+                            <FileText className="w-3 h-3 text-purple-600" /> Contact details
+                          </span>
                         </div>
+                      </div>
+                      <div className="flex flex-col gap-2 w-full md:w-auto">
                         <AgencyCreationModal>
-                          <Button size="sm" variant="outline">
-                            <Building2 className="w-4 h-4 mr-2" />
-                            Create Agency
+                          <Button size="lg" className="violet-bloom-button violet-bloom-touch w-full md:w-auto">
+                            <Plus className="w-5 h-5 mr-2" />
+                            Create Agency Profile
                           </Button>
                         </AgencyCreationModal>
+                        <p className="text-xs text-center text-muted-foreground">
+                          Takes 3 minutes
+                        </p>
                       </div>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl flex items-center justify-center">
-                            <Building2 className="w-6 h-6 text-emerald-600" />
-                          </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                /* Agency Card */
+                <Card className="overflow-hidden">
+                  <div className="h-24 bg-gradient-to-r from-primary-100 via-primary-50 to-purple-50" />
+                  <CardContent className="p-6 -mt-12">
+                    <div className="flex flex-col sm:flex-row gap-4 items-start">
+                      <div className="w-20 h-20 bg-white rounded-xl shadow-md border-4 border-white flex items-center justify-center">
+                        <Building2 className="w-10 h-10 text-primary-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                           <div>
-                            <h3 className="font-semibold text-foreground mb-1">{agency.name}</h3>
-                            <div className="flex items-center gap-2">
+                            <h3 className="text-xl font-bold text-foreground mb-1">{agency.name}</h3>
+                            <div className="flex items-center gap-2 mb-3">
                               <StatusBadge status={agency.status} className="shadow-sm" />
                               <span className="text-sm text-muted-foreground">
                                 Created {formatDate(agency.created_at)}
                               </span>
                             </div>
+                            {agency.status === 'approved' && (
+                              <div className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">
+                                <CheckCircle className="w-3 h-3" />
+                                Verified agency profile
+                              </div>
+                            )}
+                            {agency.status === 'pending' && (
+                              <div className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                                <Clock className="w-3 h-3" />
+                                Under review - typically takes 24 hours
+                              </div>
+                            )}
+                            {agency.status === 'rejected' && (
+                              <div className="inline-flex items-center gap-1 text-xs text-red-700 bg-red-50 px-2 py-1 rounded-full">
+                                <AlertTriangle className="w-3 h-3" />
+                                Requires changes before approval
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button asChild size="sm" variant="outline">
+                              <Link href={`/agencies/${agency.id}`}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Preview
+                              </Link>
+                            </Button>
+                            <Button asChild size="sm">
+                              <Link href={`/agencies/${agency.id}/edit`}>
+                                Edit Profile
+                              </Link>
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/agencies/${agency.id}/edit`}>
-                              <Building2 className="w-4 h-4 mr-2" />
-                              Edit Agency
-                            </Link>
-                          </Button>
-                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                
-              </>
-            )}
-          </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
-
     </div>
   );
 }

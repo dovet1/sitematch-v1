@@ -35,7 +35,7 @@ export function ImmersiveListingModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
-  const [linkedAgency, setLinkedAgency] = useState<any | null>(null);
+  const [listingAgents, setListingAgents] = useState<any[]>([]);
   const [agencyLoading, setAgencyLoading] = useState(false);
   const { isMobile } = useMobileBreakpoint();
   const router = useRouter();
@@ -145,32 +145,15 @@ export function ImmersiveListingModal({
     fetchListing();
   }, [isOpen, listingId, apiEndpoint]);
 
-  // Fetch linked agency data when listing has linked_agency_id
+  // Set listing agents from the listing data
   useEffect(() => {
-    if (!listing?.linked_agency_id) {
-      setLinkedAgency(null);
-      return;
+    if (listing?.listing_agents) {
+      setListingAgents(listing.listing_agents);
+    } else {
+      setListingAgents([]);
     }
-
-    const fetchAgency = async () => {
-      setAgencyLoading(true);
-      try {
-        const response = await fetch(`/api/agencies/${listing.linked_agency_id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch agency details');
-        }
-        const agencyData = await response.json();
-        setLinkedAgency(agencyData.data);
-      } catch (err) {
-        console.error('Error fetching linked agency:', err);
-        setLinkedAgency(null);
-      } finally {
-        setAgencyLoading(false);
-      }
-    };
-
-    fetchAgency();
-  }, [listing?.linked_agency_id]);
+    setAgencyLoading(false);
+  }, [listing?.listing_agents]);
 
   if (!isOpen) return null;
 
@@ -207,39 +190,29 @@ export function ImmersiveListingModal({
               <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                   <span className="text-blue-500">📋</span>
-                  Requirements {listing.files.brochures.length > 1 ? 'Materials' : 'Brochure'}
+                  Requirements Brochure
                 </h4>
-                <div className="space-y-2">
-                  {listing.files.brochures.map((brochure: any) => (
-                    <a
-                      key={brochure.id}
-                      href={brochure.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-3 rounded-lg bg-white border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
-                        <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 2v8h8V6H6z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {brochure.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {brochure.caption || 'View detailed property requirements'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 text-blue-600 group-hover:text-blue-700">
-                        <span className="text-xs font-medium">Download</span>
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    </a>
-                  ))}
-                </div>
+                <button
+                  onClick={() => window.open(listing.files.brochures[0].url, '_blank')}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-white border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group w-full"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
+                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 2v8h8V6H6z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-medium text-gray-900">
+                      {listing?.company?.name || 'Company'}'s Requirement Brochure
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-blue-600 group-hover:text-blue-700">
+                    <span className="text-xs font-medium">Download</span>
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                </button>
               </div>
             )}
 
@@ -568,7 +541,7 @@ export function ImmersiveListingModal({
         )}
         {activeTab === 'agent' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900">Appointed Agent</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{listingAgents.length === 1 ? 'Appointed Agent' : 'Appointed Agents'}</h3>
             
             {agencyLoading ? (
               <div className="p-6 space-y-4">
@@ -576,62 +549,76 @@ export function ImmersiveListingModal({
                 <div className="h-4 bg-gray-200 rounded animate-pulse" />
                 <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
               </div>
-            ) : linkedAgency ? (
-              <div className="bg-gradient-to-br from-white via-violet-50/30 to-white rounded-2xl border border-violet-200/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6 sm:p-8 ring-1 ring-violet-100/50 hover:ring-violet-200/70">
-                {/* Mobile-optimized layout */}
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-                  {/* Agency Logo */}
-                  <div className="flex-shrink-0">
-                    {linkedAgency.logo_url ? (
-                      <div className="relative group">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border-2 border-violet-100 p-3 flex items-center justify-center shadow-lg ring-2 ring-violet-50 group-hover:ring-violet-100 transition-all duration-300">
-                          <img
-                            src={linkedAgency.logo_url}
-                            alt={`${linkedAgency.name} logo`}
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                        {/* Enhanced glow effect */}
-                        <div className="absolute inset-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 -z-10 blur-sm group-hover:from-violet-500/30 group-hover:to-purple-500/30 transition-all duration-300"></div>
+            ) : listingAgents.length > 0 ? (
+              <div className="space-y-4">
+                {listingAgents.map((agent) => (
+                  <div key={agent.id} className="bg-gradient-to-br from-white via-violet-50/30 to-white rounded-2xl border border-violet-200/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6 sm:p-8 ring-1 ring-violet-100/50 hover:ring-violet-200/70">
+                    {/* Mobile-optimized layout */}
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                      {/* Agency Logo */}
+                      <div className="flex-shrink-0">
+                        {agent.agency.logo_url ? (
+                          <div className="relative group">
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border-2 border-violet-100 p-3 flex items-center justify-center shadow-lg ring-2 ring-violet-50 group-hover:ring-violet-100 transition-all duration-300">
+                              <img
+                                src={agent.agency.logo_url}
+                                alt={`${agent.agency.name} logo`}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            {/* Enhanced glow effect */}
+                            <div className="absolute inset-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 -z-10 blur-sm group-hover:from-violet-500/30 group-hover:to-purple-500/30 transition-all duration-300"></div>
+                          </div>
+                        ) : (
+                          <div className="relative group">
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 border-2 border-violet-200/50 flex items-center justify-center shadow-lg ring-2 ring-violet-100/50">
+                              <svg className="w-10 h-10 sm:w-12 sm:h-12 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 5a2 2 0 114 0v1h-4V9zM8 5a1 1 0 100 2h4a1 1 0 100-2H8z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <div className="absolute inset-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 -z-10 blur-sm"></div>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="relative group">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 border-2 border-violet-200/50 flex items-center justify-center shadow-lg ring-2 ring-violet-100/50">
-                          <svg className="w-10 h-10 sm:w-12 sm:h-12 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 5a2 2 0 114 0v1h-4V9zM8 5a1 1 0 100 2h4a1 1 0 100-2H8z" clipRule="evenodd" />
-                          </svg>
+                      
+                      {/* Agency Info */}
+                      <div className="flex-1 min-w-0 text-center sm:text-left">
+                        <div className="mb-6">
+                          <h4 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">
+                            {agent.agency.name}
+                          </h4>
+                          <p className="text-violet-600 font-medium text-base">
+                            Appointed Property Agent
+                          </p>
+                          {agent.agency.geographic_patch && (
+                            <p className="text-gray-600 text-sm mt-1">
+                              {agent.agency.geographic_patch}
+                            </p>
+                          )}
+                          {agent.agency.classification && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-800 mt-2">
+                              {agent.agency.classification === 'Both' ? 'Commercial and Residential' : agent.agency.classification}
+                            </span>
+                          )}
                         </div>
-                        <div className="absolute inset-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 -z-10 blur-sm"></div>
+                        
+                        {/* Enhanced CTA Button */}
+                        <div className="flex justify-center sm:justify-start">
+                          <button 
+                            onClick={() => setSelectedAgencyId(agent.agency.id)}
+                            className="group relative overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-violet-700 text-white px-8 py-4 rounded-xl font-semibold hover:from-violet-700 hover:via-purple-700 hover:to-violet-800 transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-violet-500/25 transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-3 min-w-[200px]"
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                            <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
+                            </svg>
+                            <span className="relative z-10">View Agency Profile</span>
+                          </button>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  
-                  {/* Agency Info */}
-                  <div className="flex-1 min-w-0 text-center sm:text-left">
-                    <div className="mb-6">
-                      <h4 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">
-                        {linkedAgency.name}
-                      </h4>
-                      <p className="text-violet-600 font-medium text-base">
-                        Appointed Property Agent
-                      </p>
-                    </div>
-                    
-                    {/* Enhanced CTA Button */}
-                    <div className="flex justify-center sm:justify-start">
-                      <button 
-                        onClick={() => setSelectedAgencyId(linkedAgency.id)}
-                        className="group relative overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-violet-700 text-white px-8 py-4 rounded-xl font-semibold hover:from-violet-700 hover:via-purple-700 hover:to-violet-800 transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-violet-500/25 transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-3 min-w-[200px]"
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-                        <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"/>
-                        </svg>
-                        <span className="relative z-10">View Agency Profile</span>
-                      </button>
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
             ) : (
               <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl border-2 border-dashed border-gray-200 p-8 text-center shadow-sm">
@@ -641,7 +628,7 @@ export function ImmersiveListingModal({
                   </div>
                 </div>
                 
-                <h4 className="text-xl font-bold text-gray-900 mb-3">No Agent Appointed</h4>
+                <h4 className="text-xl font-bold text-gray-900 mb-3">No Agents Appointed</h4>
                 <p className="text-gray-600 max-w-md mx-auto mb-6 leading-relaxed">
                   This property requirement is being handled directly by the company. 
                 </p>
@@ -886,7 +873,7 @@ export function ImmersiveListingModal({
                         >
                           {tab === 'overview' ? `From ${listing?.company?.name || 'Company'}` :
                            tab === 'faqs' ? 'FAQs' :
-                           tab === 'agent' ? 'Agent' : 
+                           tab === 'agent' ? 'Agents' : 
                            tab.charAt(0).toUpperCase() + tab.slice(1)}
                         </button>
                       ))}

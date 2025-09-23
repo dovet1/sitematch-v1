@@ -797,32 +797,15 @@ export function SimplifiedListingModal({
                       Requirements Brochure
                     </h4>
                     <div className="space-y-3">
-                      {listing.files.brochures.map((file) => (
-                        <div key={file.id} className="premium-file-download">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
-                              <FileText className="w-4 h-4 text-primary-500" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate">
-                                {file.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {(file.size / 1024 / 1024).toFixed(1)}MB • PDF
-                              </p>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="premium-button-elevation"
-                              onClick={() => window.open(file.url, '_blank')}
-                            >
-                              <Download className="w-4 h-4 mr-1" />
-                              Download
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="premium-button-elevation"
+                        onClick={() => window.open(listing.files.brochures[0].url, '_blank')}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Requirement Brochure
+                      </Button>
                     </div>
                   </div>
                 )}

@@ -640,20 +640,6 @@ export default function AgencyEditPage() {
                 </div>
               </div>
 
-              {/* Call-to-Action */}
-              {getAgencyStatus(agency) === 'draft' && (
-                <div className="text-center py-6">
-                  <h3 className="text-2xl font-bold text-slate-900 mb-3">Ready to Launch?</h3>
-                  <p className="text-violet-600/80 mb-6">
-                    Submit for review and go live within 24-48 hours.
-                  </p>
-                  <Button asChild className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-6 py-2 rounded-xl font-semibold shadow-lg transition-all duration-200 hover:scale-105">
-                    <Link href={`/agencies/${agency.id}`}>
-                      Preview Your Profile
-                    </Link>
-                  </Button>
-                </div>
-              )}
             </div>
           </div>
 

@@ -20,7 +20,7 @@ export function EnhancedCTA() {
             asChild 
             className="additional-cta__button additional-cta__button--primary bg-white text-violet-700 hover:bg-gray-50 px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto"
           >
-            <a href="/occupier/create-listing?fresh=true" className="flex items-center justify-center gap-2">
+            <a href="/occupier/create-listing-quick" className="flex items-center justify-center gap-2">
               <span>Post Your Requirement</span>
               <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
             </a>

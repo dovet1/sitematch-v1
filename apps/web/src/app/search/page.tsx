@@ -103,15 +103,6 @@ function SearchPageContent() {
     updateURL(searchFilters, mapView);
   };
 
-  const handleLocationSelect = (locationData: { name: string; coordinates: { lat: number; lng: number } }) => {
-    const newFilters = {
-      ...searchFilters,
-      location: locationData.name,
-      coordinates: locationData.coordinates,
-      isNationwide: false,
-    };
-    handleFiltersChange(newFilters);
-  };
 
 
   const handleListingClick = (listingId: string) => {
@@ -148,7 +139,6 @@ function SearchPageContent() {
         <UnifiedHeader
           searchFilters={searchFilters}
           onFiltersChange={handleFiltersChange}
-          onLocationSelect={handleLocationSelect}
           isMapView={isMapView}
           onMapViewToggle={handleViewToggle}
           showViewToggle={false}
@@ -174,7 +164,6 @@ function SearchPageContent() {
       <UnifiedHeader
         searchFilters={searchFilters}
         onFiltersChange={handleFiltersChange}
-        onLocationSelect={handleLocationSelect}
         isMapView={isMapView}
         onMapViewToggle={handleViewToggle}
         showViewToggle={true}

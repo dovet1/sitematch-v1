@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { AgencyModalMobile } from './AgencyModalMobile'
 import { CompanyListingLink } from './CompanyListingLink'
 import { ListingModal } from '@/components/listings/ListingModal'
@@ -83,10 +84,10 @@ function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
 
   if (!isOpen) return null
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div key={`agency-modal-${agencyId}`} className="fixed inset-0 z-[1050] flex items-center justify-center">
+        <div key={`agency-modal-${agencyId}`} className="fixed inset-0 z-[9999] flex items-center justify-center">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -255,7 +256,7 @@ function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
                               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mx-auto mb-4">
                                 <Building2 className="h-8 w-8 text-slate-400" />
                               </div>
-                              <p className="text-sm text-slate-500 mb-2">No partnerships yet</p>
+                              <p className="text-sm text-slate-500 mb-2">No listings added yet</p>
                               <p className="text-xs text-slate-400">
                                 Companies will appear here once they work with {agency.name}
                               </p>
@@ -361,6 +362,7 @@ function AgencyModalDesktop({ agencyId, isOpen, onClose }: AgencyModalProps) {
           onClose={() => setSelectedListingId(null)}
         />
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

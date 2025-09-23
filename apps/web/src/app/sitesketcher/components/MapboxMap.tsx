@@ -310,16 +310,32 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
               'line-width': 3
             }
           },
-          // Vertex points
+          // Vertex points - larger hit areas for easier selection
+          // Use larger circles as the primary interactive elements
           {
             id: 'gl-draw-polygon-vertex-stroke-inactive',
             type: 'circle',
             filter: ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point']],
             paint: {
-              'circle-radius': 5,
-              'circle-color': '#ffffff',
+              // Much larger radius for easier clicking - this becomes the actual hit area
+              'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                10, 16, // At zoom 10, hit area = 16px radius
+                18, 20  // At zoom 18, hit area = 20px radius
+              ],
+              // Transparent fill with just a border for the visual indicator
+              'circle-color': 'transparent',
               'circle-stroke-color': '#2563eb',
-              'circle-stroke-width': 2
+              'circle-stroke-width': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                10, 2,  // At zoom 10, stroke = 2px
+                18, 3   // At zoom 18, stroke = 3px
+              ],
+              'circle-stroke-opacity': 0.3 // Subtle ring to show hit area
             }
           },
           {
@@ -327,10 +343,97 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             type: 'circle',
             filter: ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['==', 'active', 'true']],
             paint: {
-              'circle-radius': 6,
+              // Even larger when active/selected
+              'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                10, 18, // At zoom 10, hit area = 18px radius
+                18, 22  // At zoom 18, hit area = 22px radius
+              ],
+              'circle-color': 'transparent',
+              'circle-stroke-color': '#3b82f6',
+              'circle-stroke-width': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                10, 3,  // At zoom 10, stroke = 3px
+                18, 4   // At zoom 18, stroke = 4px
+              ],
+              'circle-stroke-opacity': 0.5 // More visible when active
+            }
+          },
+          // Add visible center dots to show exact vertex position
+          {
+            id: 'gl-draw-polygon-vertex-center-inactive',
+            type: 'circle',
+            filter: ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point']],
+            paint: {
+              // Small solid circle for precise visual reference
+              'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                10, 4,  // At zoom 10, center dot = 4px
+                18, 6   // At zoom 18, center dot = 6px
+              ],
+              'circle-color': '#ffffff',
+              'circle-stroke-color': '#2563eb',
+              'circle-stroke-width': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                10, 2,  // At zoom 10, stroke = 2px
+                18, 2   // At zoom 18, stroke = 2px
+              ],
+              'circle-opacity': 0.95,
+              'circle-stroke-opacity': 0.9
+            }
+          },
+          {
+            id: 'gl-draw-polygon-vertex-center-active',
+            type: 'circle',
+            filter: ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['==', 'active', 'true']],
+            paint: {
+              // Slightly larger center dot when active
+              'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                10, 5,  // At zoom 10, center dot = 5px
+                18, 7   // At zoom 18, center dot = 7px
+              ],
               'circle-color': '#ffffff',
               'circle-stroke-color': '#3b82f6',
-              'circle-stroke-width': 3
+              'circle-stroke-width': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                10, 2,  // At zoom 10, stroke = 2px
+                18, 3   // At zoom 18, stroke = 3px
+              ],
+              'circle-opacity': 1,
+              'circle-stroke-opacity': 1
+            }
+          },
+          // Add a subtle glow effect for better polygon visibility on hover
+          {
+            id: 'gl-draw-polygon-vertex-glow',
+            type: 'circle',
+            filter: ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point']],
+            paint: {
+              'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                10, 12, // Slightly larger than main vertex
+                18, 18  
+              ],
+              'circle-color': 'rgba(59, 130, 246, 0.2)', // Subtle blue glow
+              'circle-opacity': 0, // Hidden by default
+              'circle-stroke-color': 'rgba(59, 130, 246, 0.3)',
+              'circle-stroke-width': 1,
+              'circle-stroke-opacity': 0 // Hidden by default
             }
           }
         ]
@@ -447,7 +550,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           filter: ['==', ['geometry-type'], 'Polygon'],
           paint: {
             'line-color': '#1f2937', // Dark gray border
-            'line-width': 3,
+            'line-width': 1.5,
             'line-opacity': 1
           }
         });
@@ -997,6 +1100,61 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           drawingSource.setData({ type: 'FeatureCollection', features: [] });
         }
       });
+
+      // Add vertex hover enhancement for better UX
+      let hoveredVertexId: string | null = null;
+      
+      // Enhanced vertex hover with glow effect
+      const showVertexGlow = (e: any) => {
+        map.getCanvas().style.cursor = 'pointer';
+        // Show glow effect for all vertices of the polygon
+        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-opacity', 0.6);
+        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-stroke-opacity', 0.8);
+      };
+      
+      const hideVertexGlow = (e: any) => {
+        map.getCanvas().style.cursor = '';
+        // Hide glow effect
+        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-opacity', 0);
+        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-stroke-opacity', 0);
+      };
+      
+      // Apply hover effects to all vertex layers (both inactive and active)
+      map.on('mouseenter', 'gl-draw-polygon-vertex-stroke-inactive', showVertexGlow);
+      map.on('mouseleave', 'gl-draw-polygon-vertex-stroke-inactive', hideVertexGlow);
+      map.on('mouseenter', 'gl-draw-polygon-vertex-active', showVertexGlow);
+      map.on('mouseleave', 'gl-draw-polygon-vertex-active', hideVertexGlow);
+      
+      // Also apply to the center dots for complete coverage
+      map.on('mouseenter', 'gl-draw-polygon-vertex-center-inactive', showVertexGlow);
+      map.on('mouseleave', 'gl-draw-polygon-vertex-center-inactive', hideVertexGlow);
+      map.on('mouseenter', 'gl-draw-polygon-vertex-center-active', showVertexGlow);
+      map.on('mouseleave', 'gl-draw-polygon-vertex-center-active', hideVertexGlow);
+      
+      // Add polygon hover highlighting - show all corners when hovering over polygon
+      const highlightPolygonCorners = () => {
+        // Make hit areas more visible when hovering over polygon edges
+        map.setPaintProperty('gl-draw-polygon-vertex-stroke-inactive', 'circle-stroke-opacity', 0.6);
+        map.setPaintProperty('gl-draw-polygon-vertex-center-inactive', 'circle-opacity', 1);
+        map.setPaintProperty('gl-draw-polygon-vertex-center-inactive', 'circle-stroke-opacity', 1);
+        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-opacity', 0.3);
+        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-stroke-opacity', 0.4);
+      };
+      
+      const unhighlightPolygonCorners = () => {
+        // Return to normal visibility
+        map.setPaintProperty('gl-draw-polygon-vertex-stroke-inactive', 'circle-stroke-opacity', 0.3);
+        map.setPaintProperty('gl-draw-polygon-vertex-center-inactive', 'circle-opacity', 0.95);
+        map.setPaintProperty('gl-draw-polygon-vertex-center-inactive', 'circle-stroke-opacity', 0.9);
+        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-opacity', 0);
+        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-stroke-opacity', 0);
+      };
+      
+      // Apply to polygon stroke layers
+      map.on('mouseenter', 'gl-draw-polygon-stroke-active', highlightPolygonCorners);
+      map.on('mouseleave', 'gl-draw-polygon-stroke-active', unhighlightPolygonCorners);
+      map.on('mouseenter', 'gl-draw-polygon-stroke-inactive', highlightPolygonCorners);
+      map.on('mouseleave', 'gl-draw-polygon-stroke-inactive', unhighlightPolygonCorners);
       
 
 

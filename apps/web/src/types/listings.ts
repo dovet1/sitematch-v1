@@ -3,6 +3,8 @@
 // Generated types for listings database schema
 // =====================================================
 
+import type { ListingAgentWithAgency } from './agencies';
+
 export interface Sector {
   id: string;
   name: string;
@@ -178,6 +180,7 @@ export interface ListingWithDetails extends Listing {
   listing_documents: ListingDocument[];
   listing_galleries: ListingGallery[];
   faqs: FAQ[];
+  listing_agents: ListingAgentWithAgency[];
 }
 
 // =====================================================

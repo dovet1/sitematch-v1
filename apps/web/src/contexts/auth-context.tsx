@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AuthContextType, AuthUser, UserProfile, UserRole } from '@/types/auth'
+import { AuthContextType, AuthUser, UserProfile, UserRole, UserType } from '@/types/auth'
 import { createClientClient } from '@/lib/supabase'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Shorter timeout for better UX - 3 seconds should be plenty
       const profilePromise = supabase
         .from('users')
-        .select('id, email, role, user_type, created_at, updated_at')
+        .select('id, email, role, user_type, newsletter_opt_in, created_at, updated_at')
         .eq('id', userId)
         .single()
 
@@ -61,14 +61,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error.message !== 'Auth session missing!') {
           console.error('Error getting user:', error)
         }
-        console.log('No user found, checking session')
-        
         // Also try getSession as backup
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        console.log('getSession result:', { session: !!session, error: sessionError?.message })
         
         if (session?.user) {
-          console.log('Found user in session, setting user')
           const authUserWithMetadata = session.user as AuthUser
           setUser(authUserWithMetadata)
           setLoading(false)
@@ -214,8 +210,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, userType?: string, redirectTo?: string) => {
-    const { error } = await supabase.auth.signUp({
+  const signUp = async (email: string, password: string, userType?: string, redirectTo?: string, newsletterOptIn?: boolean) => {
+    console.log('signUp called with:', {
+      email,
+      userType,
+      newsletterOptIn,
+      newsletterOptInType: typeof newsletterOptIn
+    })
+    
+    // First, sign up the user
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -226,6 +230,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       console.error('Supabase signup error:', error)
       throw error
+    }
+
+    // If signup was successful and we have a user, create their profile
+    if (data.user) {
+      const profileData = {
+        id: data.user.id,
+        email: data.user.email!,
+        role: 'occupier' as UserRole,
+        user_type: userType as UserType || 'Other',
+        newsletter_opt_in: newsletterOptIn || false,
+      }
+      
+      console.log('Creating user profile with data:', profileData)
+      
+      const { error: profileError } = await supabase
+        .from('users')
+        .upsert([profileData], {
+          onConflict: 'id'
+        })
+
+      if (profileError) {
+        console.error('Error creating user profile:', profileError)
+        // Don't throw here - the auth signup was successful, profile creation is secondary
+      } else {
+        console.log('User profile created successfully')
+      }
     }
 
     // Auto sign in after successful signup

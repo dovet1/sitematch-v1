@@ -30,31 +30,69 @@ export default function ResetPasswordPage() {
   } = useForm<ResetPasswordFormData>()
 
   useEffect(() => {
-    // Simple session check - just like the working test page
-    const checkSession = async () => {
+    const handlePasswordReset = async () => {
+      console.log('🔧 NEW PASSWORD RESET FLOW STARTING - Version 2.0');
       const { createClientClient } = await import('@/lib/supabase')
       const supabase = createClientClient()
-      
-      console.log('Direct Supabase session check...')
-      const { data: { session }, error } = await supabase.auth.getSession()
-      
-      console.log('Session result:', { 
-        hasSession: !!session, 
-        hasUser: !!session?.user, 
-        error: error?.message 
-      })
-      
-      if (session?.user) {
-        console.log('✅ Session found! User can reset password.')
-        setError(null)
-      } else {
-        console.log('❌ No session found')
+
+      try {
+        // Handle the auth callback (this processes URL fragments and tokens)
+        const { data, error } = await supabase.auth.getSession()
+
+        console.log('Session check result:', {
+          hasSession: !!data.session,
+          hasUser: !!data.session?.user,
+          error: error?.message
+        })
+
+        console.log('Environment info:', {
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+          currentUrl: window.location.href,
+          fullParams: window.location.search,
+          fullHash: window.location.hash
+        })
+
+        if (data.session?.user) {
+          console.log('✅ Valid session found, user can reset password')
+          setError(null)
+        } else {
+          // Try to get URL parameters
+          const urlParams = new URLSearchParams(window.location.search)
+          const hashParams = new URLSearchParams(window.location.hash.substring(1))
+
+          const accessToken = urlParams.get('access_token') || hashParams.get('access_token')
+          const refreshToken = urlParams.get('refresh_token') || hashParams.get('refresh_token')
+          const type = urlParams.get('type') || hashParams.get('type')
+
+          console.log('URL parameters:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type })
+
+          if (accessToken && type === 'recovery') {
+            console.log('Found recovery tokens, setting session...')
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken || ''
+            })
+
+            if (sessionError) {
+              console.error('Error setting session:', sessionError)
+              setError(`Reset link error: ${sessionError.message}. This may be due to environment mismatch or expired token.`)
+            } else {
+              console.log('✅ Session set successfully')
+              setError(null)
+            }
+          } else {
+            console.log('❌ No valid session or recovery tokens found')
+            setError('Invalid reset link. Please request a new password reset from this environment.')
+          }
+        }
+      } catch (err) {
+        console.error('Error in password reset flow:', err)
         setError('Invalid reset link. Please request a new password reset.')
       }
     }
-    
+
     if (typeof window !== 'undefined') {
-      checkSession()
+      handlePasswordReset()
     }
   }, [])
 
@@ -115,7 +153,7 @@ export default function ResetPasswordPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
-            Create New Password
+            Create New Password (v2.0)
           </CardTitle>
           <CardDescription>
             Enter your new password below. Make sure it's secure and memorable.

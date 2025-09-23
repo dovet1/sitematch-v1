@@ -37,12 +37,39 @@ export async function GET(request: NextRequest) {
     console.log('=== STARTING FILTER APPLICATION ===');
     const isNationwide = searchParams.get('isNationwide') === 'true' || searchParams.get('nationwide') === 'true';
     const page = Number(searchParams.get('page')) || 1;
-    const limit = Math.min(Number(searchParams.get('limit')) || 20, 100); // Max 100 results per page
+    const limit = Math.min(Number(searchParams.get('limit')) || 20, 1000); // Max 1000 results per page for comprehensive search
     
     const supabase = createClient();
     
     
-    // Build the query with many-to-many junction tables
+    // First, get listing IDs that have approved versions
+    const { data: approvedVersions, error: versionError } = await supabase
+      .from('listing_versions')
+      .select('listing_id')
+      .eq('status', 'approved');
+    
+    if (versionError) {
+      console.error('Error fetching approved versions:', versionError);
+      return NextResponse.json(
+        { error: 'Failed to fetch listings', details: versionError.message },
+        { status: 500 }
+      );
+    }
+    
+    const approvedListingIds = approvedVersions?.map(v => v.listing_id) || [];
+    
+    if (approvedListingIds.length === 0) {
+      // No approved versions exist, return empty result
+      return NextResponse.json({
+        results: [],
+        total: 0,
+        page,
+        limit,
+        hasMore: false
+      });
+    }
+
+    // Build the query - simplified to avoid relationship issues
     let query = supabase
       .from('listings')
       .select(`
@@ -63,29 +90,10 @@ export async function GET(request: NextRequest) {
         clearbit_logo,
         company_domain,
         created_at,
-        listing_sectors(
-          sector:sectors(
-            id,
-            name
-          )
-        ),
-        listing_use_classes(
-          use_class:use_classes(
-            id,
-            name,
-            code
-          )
-        ),
-        listing_locations(
-          id,
-          place_name,
-          coordinates,
-          formatted_address,
-          region,
-          country
-        )
+        current_version_id
       `)
-      .eq('status', 'approved');
+      .in('id', approvedListingIds);
+
 
     // Apply location filtering
     if (location && !isNationwide) {
@@ -151,7 +159,14 @@ export async function GET(request: NextRequest) {
     // Apply the filtered listing IDs to the main query
     if (validListingIds !== null) {
       if (validListingIds.length > 0) {
-        query = query.in('id', validListingIds);
+        // Further filter by intersection with approved listing IDs
+        const filteredIds = approvedListingIds.filter(id => validListingIds.includes(id));
+        if (filteredIds.length > 0) {
+          query = query.in('id', filteredIds);
+        } else {
+          // No valid listings found, return empty result
+          query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+        }
       } else {
         // No valid listings found, return empty result
         query = query.eq('id', '00000000-0000-0000-0000-000000000000');
@@ -211,9 +226,7 @@ export async function GET(request: NextRequest) {
     // Note: Nationwide filtering is handled client-side after fetching locations
     // A listing is nationwide if it has no linked listing_locations
 
-    const { data: listings, error, count } = await query;
-
-    console.log('Database query result count:', listings?.length);
+    const { data: listings, error } = await query;
 
     if (error) {
       console.error('Error fetching public listings:', error);
@@ -226,8 +239,31 @@ export async function GET(request: NextRequest) {
     }
 
 
-    // Fetch logo files for all listings
+    // Fetch the highest approved version for each listing
     const listingIds = listings?.map(l => l.id) || [];
+    
+    let versionMap: Record<string, any> = {};
+    if (listingIds.length > 0) {
+      const { data: versions } = await supabase
+        .from('listing_versions')
+        .select('listing_id, content, version_number')
+        .in('listing_id', listingIds)
+        .eq('status', 'approved')
+        .order('version_number', { ascending: false });
+      
+      // Keep only the highest version number per listing
+      const highestVersions = new Map<string, any>();
+      versions?.forEach(version => {
+        if (!highestVersions.has(version.listing_id)) {
+          const content = typeof version.content === 'string' ? JSON.parse(version.content) : version.content;
+          highestVersions.set(version.listing_id, content);
+        }
+      });
+      
+      versionMap = Object.fromEntries(highestVersions);
+    }
+    
+    // Fetch logo files for all listings
     let logoFiles: any[] = [];
     
     if (listingIds.length > 0) {
@@ -249,46 +285,142 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Fetch relationships separately to avoid query issues
+    const currentListingIds = listings?.map(l => l.id) || [];
+    
+    // Fetch sectors
+    const { data: sectorData } = await supabase
+      .from('listing_sectors')
+      .select('listing_id, sectors(id, name)')
+      .in('listing_id', currentListingIds);
+    
+    // Fetch use classes  
+    const { data: useClassData } = await supabase
+      .from('listing_use_classes')
+      .select('listing_id, use_classes(id, name, code)')
+      .in('listing_id', currentListingIds);
+      
+    // Fetch locations
+    const { data: locationData } = await supabase
+      .from('listing_locations')
+      .select('listing_id, id, place_name, coordinates, formatted_address, region, country')
+      .in('listing_id', currentListingIds);
+    
+    // Create lookup maps
+    const sectorMap = new Map();
+    const useClassMap = new Map();
+    const locationMap = new Map();
+    
+    sectorData?.forEach(item => {
+      if (!sectorMap.has(item.listing_id)) {
+        sectorMap.set(item.listing_id, []);
+      }
+      sectorMap.get(item.listing_id).push(item);
+    });
+    
+    useClassData?.forEach(item => {
+      if (!useClassMap.has(item.listing_id)) {
+        useClassMap.set(item.listing_id, []);
+      }
+      useClassMap.get(item.listing_id).push(item);
+    });
+    
+    locationData?.forEach(item => {
+      if (!locationMap.has(item.listing_id)) {
+        locationMap.set(item.listing_id, []);
+      }
+      locationMap.get(item.listing_id).push(item);
+    });
+
     // Transform data to match SearchResult interface with logo fetching
     let results = listings?.map(listing => {
-      const locations = (listing.listing_locations as any) || [];
-      const primaryLocation = locations[0];
-      const sectors = (listing.listing_sectors as any) || [];
-      const useClasses = (listing.listing_use_classes as any) || [];
+      // Check if this listing has versioned data
+      const versionContent = versionMap[listing.id];
+      let listingData = listing;
+      let locations = locationMap.get(listing.id) || [];
+      let sectors = sectorMap.get(listing.id) || [];
+      let useClasses = useClassMap.get(listing.id) || [];
       
-      // Get the uploaded logo URL from our map
-      const uploadedLogoUrl = logoMap[listing.id] || null;
+      // If version exists, use version data instead
+      if (versionContent) {
+        // Override with versioned data
+        if (versionContent.listing) {
+          listingData = { ...listing, ...versionContent.listing };
+        }
+        if (versionContent.locations) {
+          locations = versionContent.locations;
+        }
+        if (versionContent.sectors) {
+          sectors = versionContent.sectors.map((s: any) => ({ sectors: s.sector }));
+        }
+        if (versionContent.use_classes) {
+          useClasses = versionContent.use_classes.map((uc: any) => ({ use_classes: uc.use_class }));
+        }
+      }
+      
+      const primaryLocation = locations[0];
+      
+      // Parse coordinates if they're stored as a JSON string
+      if (primaryLocation && typeof primaryLocation.coordinates === 'string') {
+        try {
+          primaryLocation.coordinates = JSON.parse(primaryLocation.coordinates);
+        } catch (e) {
+          console.error('Failed to parse coordinates for listing:', listing.id, e);
+        }
+      }
+      
+      // Get the uploaded logo URL from our map or version files
+      let uploadedLogoUrl = logoMap[listing.id] || null;
+      
+      // Check version files for logo if available
+      if (versionContent?.files) {
+        const logoFile = versionContent.files.find((f: any) => f.file_type === 'logo');
+        if (logoFile?.file_path && logoFile?.bucket_name) {
+          uploadedLogoUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${logoFile.bucket_name}/${logoFile.file_path}`;
+        }
+      }
       
       return {
         id: listing.id,
-        company_name: listing.company_name,
-        title: listing.title,
-        description: listing.description,
-        site_size_min: listing.site_size_min,
-        site_size_max: listing.site_size_max,
-        site_acreage_min: listing.site_acreage_min,
-        site_acreage_max: listing.site_acreage_max,
-        dwelling_count_min: listing.dwelling_count_min,
-        dwelling_count_max: listing.dwelling_count_max,
-        sectors: sectors.map((ls: any) => ls.sector).filter(Boolean),
-        use_classes: useClasses.map((luc: any) => luc.use_class).filter(Boolean),
+        company_name: listingData.company_name,
+        title: listingData.title,
+        description: listingData.description,
+        site_size_min: listingData.site_size_min,
+        site_size_max: listingData.site_size_max,
+        site_acreage_min: listingData.site_acreage_min,
+        site_acreage_max: listingData.site_acreage_max,
+        dwelling_count_min: listingData.dwelling_count_min,
+        dwelling_count_max: listingData.dwelling_count_max,
+        sectors: sectors.map((ls: any) => ls.sectors).filter(Boolean),
+        use_classes: useClasses.map((luc: any) => luc.use_classes).filter(Boolean),
         // Legacy single values for backwards compatibility
-        sector: sectors.length > 0 ? sectors[0].sector?.name : null,
-        use_class: useClasses.length > 0 ? useClasses[0].use_class?.name : null,
-        contact_name: listing.contact_name,
-        contact_title: listing.contact_title,
-        contact_email: listing.contact_email,
-        contact_phone: listing.contact_phone,
+        sector: sectors.length > 0 ? sectors[0].sectors?.name : null,
+        use_class: useClasses.length > 0 ? useClasses[0].use_classes?.name : null,
+        contact_name: listingData.contact_name,
+        contact_title: listingData.contact_title,
+        contact_email: listingData.contact_email,
+        contact_phone: listingData.contact_phone,
         is_nationwide: locations.length === 0, // Treat as nationwide if no locations
         // Multiple locations support
-        locations: locations.map((loc: any) => ({
-          id: loc.id,
-          place_name: loc.place_name,
-          coordinates: loc.coordinates,
-          formatted_address: loc.formatted_address,
-          region: loc.region,
-          country: loc.country
-        })),
+        locations: locations.map((loc: any) => {
+          // Parse coordinates if stored as JSON string
+          let coords = loc.coordinates;
+          if (typeof coords === 'string') {
+            try {
+              coords = JSON.parse(coords);
+            } catch (e) {
+              console.error('Failed to parse location coordinates:', loc.id, e);
+            }
+          }
+          return {
+            id: loc.id,
+            place_name: loc.place_name,
+            coordinates: coords,
+            formatted_address: loc.formatted_address,
+            region: loc.region,
+            country: loc.country
+          };
+        }),
         // Legacy single location fields for backwards compatibility
         place_name: primaryLocation?.place_name || null,
         coordinates: primaryLocation?.coordinates || null,
@@ -297,9 +429,9 @@ export async function GET(request: NextRequest) {
         // 2. If clearbit_logo is false, use uploaded logo from file_uploads table
         // 3. If no uploaded logo exists, fall back to initials
         logo_url: uploadedLogoUrl,
-        clearbit_logo: listing.clearbit_logo || false,
-        company_domain: listing.company_domain,
-        created_at: listing.created_at
+        clearbit_logo: listingData.clearbit_logo || false,
+        company_domain: listingData.company_domain,
+        created_at: listingData.created_at
       };
     }) || [];
 
@@ -307,14 +439,20 @@ export async function GET(request: NextRequest) {
     if (location && !isNationwide) {
       console.log('Applying location filter for:', location);
       const locationLower = location.toLowerCase();
-      results = results.filter(listing => {
-        // Include nationwide listings (they match all locations)
+      
+      // Separate listings into those with matching locations and nationwide
+      const listingsWithMatchingLocations: any[] = [];
+      const nationwideListings: any[] = [];
+      
+      results.forEach(listing => {
+        // Nationwide listings go to separate array
         if (listing.is_nationwide) {
-          return true;
+          nationwideListings.push(listing);
+          return;
         }
         
         // Check if any of the listing's locations match the search location
-        return listing.locations.some((loc: any) => {
+        const hasMatchingLocation = listing.locations.some((loc: any) => {
           if (!loc.place_name) return false;
           
           const placeName = loc.place_name.toLowerCase();
@@ -328,8 +466,17 @@ export async function GET(request: NextRequest) {
                  region.includes(locationLower) ||
                  country.includes(locationLower);
         });
+        
+        if (hasMatchingLocation) {
+          listingsWithMatchingLocations.push(listing);
+        }
       });
-      console.log('After location filtering:', results.length, 'results');
+      
+      // Combine results: location-specific first, then nationwide
+      results = [...listingsWithMatchingLocations, ...nationwideListings];
+      console.log('After location filtering and sorting:', results.length, 'results');
+      console.log('Location-specific listings:', listingsWithMatchingLocations.length);
+      console.log('Nationwide listings:', nationwideListings.length);
     }
     
     // Apply nationwide filtering if requested
@@ -341,37 +488,54 @@ export async function GET(request: NextRequest) {
     if (lat !== null && lng !== null) {
       const searchCoords: [number, number] = [lng, lat]; // [longitude, latitude]
       
-      results = results.filter(listing => {
-        // Always include nationwide listings (listings without locations)
+      // Separate listings into those within radius and nationwide
+      const listingsWithinRadius: any[] = [];
+      const nationwideListings: any[] = [];
+      
+      results.forEach(listing => {
+        // Nationwide listings go to separate array
         if (listing.is_nationwide) {
-          return true;
+          nationwideListings.push(listing);
+          return;
         }
         
-        // Check if listing has coordinates
-        if (!listing.coordinates) {
-          return false;
+        // Check if any of the listing's locations are within radius
+        const hasLocationInRadius = listing.locations.some((loc: any) => {
+          if (!loc.coordinates) return false;
+          
+          let listingLat, listingLng;
+          
+          // Handle different coordinate formats
+          if (Array.isArray(loc.coordinates)) {
+            // Array format [lng, lat]
+            listingLng = loc.coordinates[0];
+            listingLat = loc.coordinates[1];
+          } else if (loc.coordinates.lat && loc.coordinates.lng) {
+            // Object format {lat, lng}
+            listingLat = loc.coordinates.lat;
+            listingLng = loc.coordinates.lng;
+          } else {
+            return false;
+          }
+          
+          // Calculate distance using Mapbox utility
+          const listingCoords: [number, number] = [listingLng, listingLat];
+          const distanceKm = calculateDistance(searchCoords, listingCoords);
+          
+          // Filter by 5km radius
+          return distanceKm <= 5;
+        });
+        
+        if (hasLocationInRadius) {
+          listingsWithinRadius.push(listing);
         }
-        
-        // Extract coordinates from JSONB format
-        let listingLat, listingLng;
-        if (listing.coordinates.lat && listing.coordinates.lng) {
-          listingLat = listing.coordinates.lat;
-          listingLng = listing.coordinates.lng;
-        } else if (Array.isArray(listing.coordinates)) {
-          // Handle array format [lng, lat]
-          listingLng = listing.coordinates[0];
-          listingLat = listing.coordinates[1];
-        } else {
-          return false;
-        }
-        
-        // Calculate distance using Mapbox utility
-        const listingCoords: [number, number] = [listingLng, listingLat];
-        const distanceKm = calculateDistance(searchCoords, listingCoords);
-        
-        // Filter by 5km radius (as specified in requirements)
-        return distanceKm <= 5;
       });
+      
+      // Combine results: location-specific first, then nationwide
+      results = [...listingsWithinRadius, ...nationwideListings];
+      console.log('After coordinate filtering:', results.length, 'results');
+      console.log('Listings within radius:', listingsWithinRadius.length);
+      console.log('Nationwide listings:', nationwideListings.length);
     }
 
     // Apply pagination

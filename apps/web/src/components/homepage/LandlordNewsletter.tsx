@@ -163,7 +163,7 @@ export function LandlordNewsletter() {
                     <input type="checkbox" required disabled={isSubmitting} className="mt-1" />
                     <span>
                       I agree to receive marketing emails and acknowledge the{' '}
-                      <a href="/privacy" className="text-violet-600 hover:underline">
+                      <a href="https://app.termly.io/policy-viewer/policy.html?policyUUID=70f2f9d5-072f-443a-944d-39630c45252c" className="text-violet-600 hover:underline">
                         privacy policy
                       </a>
                     </span>
