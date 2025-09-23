@@ -182,6 +182,24 @@ export async function GET(request: NextRequest) {
 
     const { data: listings, error } = await query;
 
+    // Fetch uploaded logos for listings that don't use Clearbit
+    let logoData: Record<string, string> = {};
+    if (listings && listings.length > 0) {
+      const listingIds = listings.map(l => l.id);
+      const { data: logoFiles } = await supabase
+        .from('file_uploads')
+        .select('listing_id, file_path')
+        .in('listing_id', listingIds)
+        .eq('file_type', 'logo')
+        .eq('is_primary', true);
+
+      if (logoFiles) {
+        logoData = Object.fromEntries(
+          logoFiles.map(file => [file.listing_id, file.file_path])
+        );
+      }
+    }
+
     if (error) {
       console.error('Database error fetching map listings:', error);
       console.error('Error details:', {
@@ -302,6 +320,7 @@ export async function GET(request: NextRequest) {
             listing_type: listing.listing_type || 'commercial',
             clearbit_logo: listing.clearbit_logo,
             company_domain: listing.company_domain,
+            logo_url: logoData[listing.id] || null,
             sector: primarySector,
             use_class: primaryUseClass,
             site_size_min: listing.site_size_min,
@@ -340,6 +359,7 @@ export async function GET(request: NextRequest) {
               listing_type: 'commercial',
               clearbit_logo: true,
               company_domain: 'google.com',
+              logo_url: null,
               sector: 'Technology',
               use_class: 'Office',
               site_size_min: 2000,
@@ -359,6 +379,7 @@ export async function GET(request: NextRequest) {
               listing_type: 'commercial',
               clearbit_logo: true,
               company_domain: 'microsoft.com',
+              logo_url: null,
               sector: 'Technology',
               use_class: 'Office',
               site_size_min: 1500,

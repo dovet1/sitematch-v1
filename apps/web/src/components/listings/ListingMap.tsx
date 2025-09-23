@@ -92,6 +92,10 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
         if (filters.listingType.length > 0) params.set('listingType', filters.listingType.join(','));
         if (filters.sizeMin) params.set('sizeMin', filters.sizeMin.toString());
         if (filters.sizeMax) params.set('sizeMax', filters.sizeMax.toString());
+        if (filters.acreageMin) params.set('minAcreage', filters.acreageMin.toString());
+        if (filters.acreageMax) params.set('maxAcreage', filters.acreageMax.toString());
+        if (filters.dwellingMin) params.set('minDwelling', filters.dwellingMin.toString());
+        if (filters.dwellingMax) params.set('maxDwelling', filters.dwellingMax.toString());
         if (filters.isNationwide) params.set('isNationwide', 'true');
 
         const response = await fetch(`/api/public/listings/map?${params.toString()}`);
@@ -361,7 +365,7 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
               type="geojson"
               data={geoJsonData}
               cluster={true}
-              clusterMaxZoom={14}
+              clusterMaxZoom={22}
               clusterRadius={50}
             >
               <Layer {...clusterLayer} />
@@ -461,12 +465,25 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
                             if (fallback) fallback.style.display = 'flex';
                           }}
                         />
+                      ) : !listing.clearbit_logo && listing.logo_url ? (
+                        <img
+                          src={listing.logo_url}
+                          alt={`${listing.company_name} logo`}
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            // If uploaded logo fails, show fallback
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const fallback = target.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
                       ) : null}
                       {/* Fallback initials */}
                       <span
                         className="text-xs font-medium text-gray-600"
                         style={{
-                          display: (listing.clearbit_logo && listing.company_domain) ? 'none' : 'flex'
+                          display: ((listing.clearbit_logo && listing.company_domain) || (!listing.clearbit_logo && listing.logo_url)) ? 'none' : 'flex'
                         }}
                       >
                         {listing.company_name?.charAt(0) || '?'}
