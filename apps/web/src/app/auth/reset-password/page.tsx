@@ -31,6 +31,7 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const handlePasswordReset = async () => {
+      console.log('🔧 NEW PASSWORD RESET FLOW STARTING - Version 2.0');
       const { createClientClient } = await import('@/lib/supabase')
       const supabase = createClientClient()
 
