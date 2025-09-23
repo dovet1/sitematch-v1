@@ -31,12 +31,12 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const handlePasswordReset = async () => {
-      console.log('🔧 NEW PASSWORD RESET FLOW STARTING - Version 2.0');
+      console.log('🔧 NEW PASSWORD RESET FLOW STARTING - Version 3.0');
       const { createClientClient } = await import('@/lib/supabase')
       const supabase = createClientClient()
 
       try {
-        // Handle the auth callback (this processes URL fragments and tokens)
+        // First check if we already have a session
         const { data, error } = await supabase.auth.getSession()
 
         console.log('Session check result:', {
@@ -55,35 +55,53 @@ export default function ResetPasswordPage() {
         if (data.session?.user) {
           console.log('✅ Valid session found, user can reset password')
           setError(null)
-        } else {
-          // Try to get URL parameters
-          const urlParams = new URLSearchParams(window.location.search)
-          const hashParams = new URLSearchParams(window.location.hash.substring(1))
+          return
+        }
 
-          const accessToken = urlParams.get('access_token') || hashParams.get('access_token')
-          const refreshToken = urlParams.get('refresh_token') || hashParams.get('refresh_token')
-          const type = urlParams.get('type') || hashParams.get('type')
+        // Check for code parameter (modern Supabase flow)
+        const urlParams = new URLSearchParams(window.location.search)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
 
-          console.log('URL parameters:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type })
+        const code = urlParams.get('code') || hashParams.get('code')
+        const accessToken = urlParams.get('access_token') || hashParams.get('access_token')
+        const refreshToken = urlParams.get('refresh_token') || hashParams.get('refresh_token')
+        const type = urlParams.get('type') || hashParams.get('type')
 
-          if (accessToken && type === 'recovery') {
-            console.log('Found recovery tokens, setting session...')
-            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken || ''
-            })
+        console.log('URL parameters:', {
+          code: !!code,
+          accessToken: !!accessToken,
+          refreshToken: !!refreshToken,
+          type
+        })
 
-            if (sessionError) {
-              console.error('Error setting session:', sessionError)
-              setError(`Reset link error: ${sessionError.message}. This may be due to environment mismatch or expired token.`)
-            } else {
-              console.log('✅ Session set successfully')
-              setError(null)
-            }
+        if (code) {
+          console.log('Found code parameter, exchanging for session...')
+          const { data: sessionData, error: codeError } = await supabase.auth.exchangeCodeForSession(code)
+
+          if (codeError) {
+            console.error('Error exchanging code for session:', codeError)
+            setError(`Reset link error: ${codeError.message}. Please request a new password reset.`)
           } else {
-            console.log('❌ No valid session or recovery tokens found')
-            setError('Invalid reset link. Please request a new password reset from this environment.')
+            console.log('✅ Session established from code')
+            setError(null)
           }
+        } else if (accessToken && type === 'recovery') {
+          console.log('Found recovery tokens, setting session...')
+          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || ''
+          })
+
+          if (sessionError) {
+            console.error('Error setting session:', sessionError)
+            setError(`Reset link error: ${sessionError.message}. This may be due to environment mismatch or expired token.`)
+          } else {
+            console.log('✅ Session set successfully')
+            setError(null)
+          }
+        } else {
+          console.log('❌ No valid session, code, or recovery tokens found')
+          setError('Invalid reset link. Please request a new password reset from this environment.')
         }
       } catch (err) {
         console.error('Error in password reset flow:', err)
@@ -153,7 +171,7 @@ export default function ResetPasswordPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
-            Create New Password (v2.0)
+            Create New Password (v3.0)
           </CardTitle>
           <CardDescription>
             Enter your new password below. Make sure it's secure and memorable.
