@@ -31,7 +31,6 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const handlePasswordReset = async () => {
-      console.log('🔧 NEW PASSWORD RESET FLOW STARTING - Version 3.0');
       const { createClientClient } = await import('@/lib/supabase')
       const supabase = createClientClient()
 
@@ -39,21 +38,7 @@ export default function ResetPasswordPage() {
         // First check if we already have a session
         const { data, error } = await supabase.auth.getSession()
 
-        console.log('Session check result:', {
-          hasSession: !!data.session,
-          hasUser: !!data.session?.user,
-          error: error?.message
-        })
-
-        console.log('Environment info:', {
-          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-          currentUrl: window.location.href,
-          fullParams: window.location.search,
-          fullHash: window.location.hash
-        })
-
         if (data.session?.user) {
-          console.log('✅ Valid session found, user can reset password')
           setError(null)
           return
         }
@@ -67,44 +52,29 @@ export default function ResetPasswordPage() {
         const refreshToken = urlParams.get('refresh_token') || hashParams.get('refresh_token')
         const type = urlParams.get('type') || hashParams.get('type')
 
-        console.log('URL parameters:', {
-          code: !!code,
-          accessToken: !!accessToken,
-          refreshToken: !!refreshToken,
-          type
-        })
-
         if (code) {
-          console.log('Found code parameter, exchanging for session...')
           const { data: sessionData, error: codeError } = await supabase.auth.exchangeCodeForSession(code)
 
           if (codeError) {
-            console.error('Error exchanging code for session:', codeError)
             setError(`Reset link error: ${codeError.message}. Please request a new password reset.`)
           } else {
-            console.log('✅ Session established from code')
             setError(null)
           }
         } else if (accessToken && type === 'recovery') {
-          console.log('Found recovery tokens, setting session...')
           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || ''
           })
 
           if (sessionError) {
-            console.error('Error setting session:', sessionError)
             setError(`Reset link error: ${sessionError.message}. This may be due to environment mismatch or expired token.`)
           } else {
-            console.log('✅ Session set successfully')
             setError(null)
           }
         } else {
-          console.log('❌ No valid session, code, or recovery tokens found')
           setError('Invalid reset link. Please request a new password reset from this environment.')
         }
       } catch (err) {
-        console.error('Error in password reset flow:', err)
         setError('Invalid reset link. Please request a new password reset.')
       }
     }
@@ -123,7 +93,6 @@ export default function ResetPasswordPage() {
       const { createClientClient } = await import('@/lib/supabase')
       const supabase = createClientClient()
       
-      console.log('Updating password directly with Supabase...')
       const { error } = await supabase.auth.updateUser({
         password: data.password
       })
@@ -132,14 +101,12 @@ export default function ResetPasswordPage() {
         throw error
       }
       
-      console.log('✅ Password updated successfully!')
       setSuccess(true)
       // Redirect after 3 seconds
       setTimeout(() => {
         router.push('/occupier/dashboard')
       }, 3000)
     } catch (err) {
-      console.error('Password update failed:', err)
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setIsLoading(false)
@@ -171,7 +138,7 @@ export default function ResetPasswordPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
-            Create New Password (v3.0)
+            Create New Password
           </CardTitle>
           <CardDescription>
             Enter your new password below. Make sure it's secure and memorable.
