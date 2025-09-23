@@ -44,6 +44,13 @@ export default function ResetPasswordPage() {
           error: error?.message
         })
 
+        console.log('Environment info:', {
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+          currentUrl: window.location.href,
+          fullParams: window.location.search,
+          fullHash: window.location.hash
+        })
+
         if (data.session?.user) {
           console.log('✅ Valid session found, user can reset password')
           setError(null)
@@ -67,14 +74,14 @@ export default function ResetPasswordPage() {
 
             if (sessionError) {
               console.error('Error setting session:', sessionError)
-              setError('Invalid reset link. Please request a new password reset.')
+              setError(`Reset link error: ${sessionError.message}. This may be due to environment mismatch or expired token.`)
             } else {
               console.log('✅ Session set successfully')
               setError(null)
             }
           } else {
             console.log('❌ No valid session or recovery tokens found')
-            setError('Invalid reset link. Please request a new password reset.')
+            setError('Invalid reset link. Please request a new password reset from this environment.')
           }
         }
       } catch (err) {
