@@ -23,20 +23,25 @@ export async function PATCH(
 ) {
   try {
     const user = await getCurrentUser();
+    console.log('🔐 getCurrentUser result:', { user, hasUser: !!user, role: user?.role });
+
     if (!user) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: 'Unauthorized - No user found' },
         { status: 401 }
       );
     }
 
     // Only admins can update listing status
     if (user.role !== 'admin') {
+      console.log('❌ Access denied - user role:', user.role, 'required: admin');
       return NextResponse.json(
-        { success: false, error: 'Admin access required' },
+        { success: false, error: `Admin access required. Current role: ${user.role}` },
         { status: 403 }
       );
     }
+
+    console.log('✅ Admin access confirmed for user:', user.email);
 
     const listingId = params.id;
 
