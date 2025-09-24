@@ -24,7 +24,9 @@ export async function GET(
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const supabase = createServerClient();
+    // Use admin client to bypass RLS for admin users
+    const { createAdminClient } = await import('@/lib/supabase');
+    const supabase = createAdminClient();
     const { searchParams } = new URL(request.url);
     
     // Extract query parameters

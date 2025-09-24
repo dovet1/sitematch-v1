@@ -43,42 +43,55 @@ export function ModerationQueue({ listings: initialListings }: ModerationQueuePr
   const router = useRouter()
 
   const handleStatusUpdate = async (listingId: string, status: 'approved' | 'rejected' | 'archived') => {
+    console.log('🔵 handleStatusUpdate called:', { listingId, status })
     setIsLoading(listingId)
     try {
       if (status === 'approved') {
+        console.log('📋 Starting approval process...')
         // Use the versioning system for approval
         const { approveListingAction } = await import('@/lib/actions/submit-listing-for-review')
-        
+        console.log('✅ approveListingAction imported')
+
         // Find the listing and get its latest pending review version
         const listing = listings.find(l => l.id === listingId)
-        
+        console.log('📝 Found listing:', listing)
+
         // Try to get version ID from the listing data first
         let versionId = listing?.pending_version_id || listing?.latest_version_id
-        
+        console.log('🔑 Initial version ID:', versionId)
+
         // If no version ID, we need to fetch the latest pending_review version
         if (!versionId) {
+          console.log('🔍 Fetching version from API...')
           try {
             const response = await fetch(`/api/listings/${listingId}/versions?status=pending_review&limit=1`)
+            console.log('📡 Version fetch response:', response.status)
             if (response.ok) {
               const versionsData = await response.json()
+              console.log('📦 Versions data:', versionsData)
               if (versionsData.versions && versionsData.versions.length > 0) {
                 versionId = versionsData.versions[0].id
+                console.log('✅ Got version ID from API:', versionId)
               }
             }
           } catch (err) {
-            console.error('Failed to fetch version:', err)
+            console.error('❌ Failed to fetch version:', err)
           }
         }
-        
+
         if (versionId) {
+          console.log('🚀 Calling approveListingAction with:', { listingId, versionId })
           const result = await approveListingAction(listingId, versionId)
+          console.log('📋 Approval result:', result)
           if (result.success) {
             toast.success('Listing approved successfully')
             router.refresh()
           } else {
+            console.error('❌ Approval failed:', result.error)
             toast.error(result.error || 'Failed to approve listing')
           }
         } else {
+          console.error('❌ No version ID found')
           toast.error('No pending review version found')
         }
       } else {
