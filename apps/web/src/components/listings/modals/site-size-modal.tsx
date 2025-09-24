@@ -33,7 +33,7 @@ export function SiteSizeModal({
   // Commercial fields
   const [siteSize, setSiteSize] = useState<[number, number]>([
     currentData?.siteSizeMin || 0,
-    currentData?.siteSizeMax || 50000
+    currentData?.siteSizeMax || 300000
   ]);
 
   // Residential fields
@@ -99,7 +99,7 @@ export function SiteSizeModal({
             <div className="px-4">
               <RangeSlider
                 min={0}
-                max={50000}
+                max={300000}
                 step={100}
                 value={siteSize}
                 onChange={setSiteSize}

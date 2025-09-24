@@ -327,7 +327,7 @@ export function Step2RequirementDetails({
                 value={siteSize}
                 onChange={handleSiteSizeChange}
                 min={0}
-                max={50000}
+                max={300000}
                 step={100}
                 unit="sq ft"
                 showInputs={true}
