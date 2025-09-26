@@ -25,6 +25,7 @@ interface TrialSignupFormData {
   email: string
   password: string
   userType: UserType
+  newsletterOptIn: boolean
 }
 
 interface TrialSignupModalProps {
@@ -82,12 +83,12 @@ const contextConfig = {
     }
   },
   general: {
-    headline: 'Find Your Perfect Property Site',
+    headline: 'Find matches for your site',
     subtext: 'Access professional tools and thousands of opportunities',
     cta: 'Start Free Trial - No Charge',
     testimonial: {
-      quote: 'Game-changer for our property search process',
-      author: 'Mike T., Facilities Manager',
+      quote: 'SiteMatcher changed my life.',
+      author: 'Rob L. Property Acquisitions, Lidl',
       rating: 5
     }
   }
@@ -116,7 +117,8 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
     defaultValues: {
       email: '',
       password: '',
-      userType: undefined
+      userType: undefined,
+      newsletterOptIn: false
     },
     mode: 'onChange'
   })
@@ -133,7 +135,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
       setLoadingStage('creating_account')
       if (mode === 'signup') {
         // Pass 'SKIP_REDIRECT' to prevent automatic dashboard redirect
-        await signUp(data.email, data.password, data.userType, 'SKIP_REDIRECT')
+        await signUp(data.email, data.password, data.userType, 'SKIP_REDIRECT', data.newsletterOptIn)
       } else {
         // Pass 'SKIP_REDIRECT' to prevent automatic dashboard redirect
         await signIn(data.email, data.password, 'SKIP_REDIRECT')
@@ -252,9 +254,9 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
       </DialogTrigger>
       <DialogPortal>
         <DialogOverlay />
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-0 bg-white shadow-2xl">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-0 bg-white shadow-2xl !border-0 [&>button]:text-white [&>button]:hover:text-white/80">
           {/* Header */}
-          <div className="relative px-6 pt-6 pb-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+          <div className="relative px-6 pt-6 pb-4 bg-gradient-to-r from-violet-600 to-purple-700 text-white">
             <DialogHeader className="space-y-3 text-center">
               <div className="mx-auto w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-2">
                 <Zap className="h-6 w-6 text-white" />
@@ -262,7 +264,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
               <DialogTitle className="text-xl font-bold text-white">
                 {mode === 'signup' ? config.headline : 'Welcome Back!'}
               </DialogTitle>
-              <DialogDescription className="text-blue-100 text-sm max-w-md mx-auto">
+              <DialogDescription className="text-violet-100 text-sm max-w-md mx-auto">
                 {mode === 'signup' ? config.subtext : 'Sign in to continue with your free trial'}
               </DialogDescription>
             </DialogHeader>
@@ -270,7 +272,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
             {/* Pricing highlight */}
             <div className="text-center mt-4 p-3 bg-white/10 backdrop-blur-sm rounded-lg">
               <div className="text-lg font-semibold">£975/year - 30 days free</div>
-              <div className="text-xs text-blue-100">Add payment method, cancel anytime</div>
+              <div className="text-xs text-violet-100">Add payment method, cancel anytime</div>
             </div>
           </div>
 
@@ -282,7 +284,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
                 onClick={() => setMode('signup')}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
                   mode === 'signup'
-                    ? 'bg-white text-blue-600 shadow-sm'
+                    ? 'bg-white text-violet-600 shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
                 disabled={isLoading}
@@ -295,7 +297,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
                 onClick={() => setMode('login')}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
                   mode === 'login'
-                    ? 'bg-white text-blue-600 shadow-sm'
+                    ? 'bg-white text-violet-600 shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
                 disabled={isLoading}
@@ -355,32 +357,55 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
                 </div>
 
                 {mode === 'signup' && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Professional role</Label>
-                    <Select
-                      onValueChange={(value: UserType) => {
-                        setValue('userType', value);
-                        clearErrors('userType');
-                      }}
-                      value={selectedUserType}
-                    >
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Select your role..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.userType && (
-                      <p className="text-sm text-red-500" role="alert">
-                        {errors.userType.message}
-                      </p>
-                    )}
-                  </div>
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Professional role</Label>
+                      <Select
+                        onValueChange={(value: UserType) => {
+                          setValue('userType', value);
+                          clearErrors('userType');
+                        }}
+                        value={selectedUserType}
+                      >
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Select your role..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {userTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.userType && (
+                        <p className="text-sm text-red-500" role="alert">
+                          {errors.userType.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Newsletter Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-start space-x-3 p-3 bg-violet-50/30 rounded-lg border border-violet-200/40">
+                        <input
+                          id="newsletter-opt-in"
+                          type="checkbox"
+                          {...register('newsletterOptIn')}
+                          disabled={isLoading}
+                          className="mt-0.5 h-4 w-4 rounded border-violet-300 text-violet-600 focus:ring-violet-500/20 focus:ring-1"
+                        />
+                        <div className="flex-1">
+                          <Label htmlFor="newsletter-opt-in" className="text-sm font-medium text-slate-700 cursor-pointer">
+                            Send me the newest site requirements, market insights and partner offers
+                          </Label>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Unsubscribe at anytime
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -392,7 +417,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
 
               <Button
                 type="submit"
-                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                className="w-full h-11 bg-violet-600 hover:bg-violet-700 text-white font-medium"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -422,6 +447,9 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
             {displayTestimonial && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
                 <div className="flex items-start space-x-3">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                    {displayTestimonial.author.split(' ')[0][0]}{displayTestimonial.author.split(' ')[1] ? displayTestimonial.author.split(' ')[1][0] : ''}
+                  </div>
                   <div className="flex-1">
                     <div className="flex items-center mb-1">
                       {[...Array(displayTestimonial.rating)].map((_, i) => (
