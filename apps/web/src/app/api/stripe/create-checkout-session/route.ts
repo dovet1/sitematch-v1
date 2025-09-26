@@ -1,0 +1,153 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { stripe, SUBSCRIPTION_CONFIG } from '@/lib/stripe'
+
+export async function POST(request: NextRequest) {
+  try {
+    const { userId, userType, redirectPath } = await request.json()
+    console.log('API called with userId:', userId)
+
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID required' }, { status: 400 })
+    }
+
+    // Create admin client with service role key for database operations
+    const adminSupabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
+
+    // Get user details using admin client to bypass RLS
+    const { data: user, error: userError } = await adminSupabase
+      .from('users')
+      .select('email, stripe_customer_id')
+      .eq('id', userId)
+      .single()
+
+    console.log('Database query result:', { user, userError })
+
+    if (userError || !user) {
+      console.log('User not found in database:', userError)
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Create or get Stripe customer
+    let customerId = user.stripe_customer_id
+
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.email, // Use email as name since full_name doesn't exist
+        metadata: {
+          user_id: userId,
+          user_type: userType || 'unknown'
+        }
+      })
+      customerId = customer.id
+
+      // Save customer ID to user record using admin client
+      await adminSupabase
+        .from('users')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', userId)
+    }
+
+    // Get base URL for redirects
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+
+    // Determine success redirect based on user journey
+    let successUrl = `${baseUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`
+    if (redirectPath) {
+      successUrl += `&redirect=${encodeURIComponent(redirectPath)}`
+    }
+
+    // Customize messaging based on user type
+    const getCustomText = (userType?: string) => {
+      switch (userType) {
+        case 'agency':
+          return {
+            description: 'Showcase your properties to qualified occupiers',
+            custom_text: 'Start your 30-day free trial and begin showcasing properties to qualified occupiers'
+          }
+        case 'sitesketcher':
+          return {
+            description: 'Visualize and plan your property projects',
+            custom_text: 'Start your 30-day free trial and access SiteSketcher visualization tools'
+          }
+        case 'searcher':
+        default:
+          return {
+            description: 'Access thousands of property listings',
+            custom_text: 'Start your 30-day free trial and search thousands of properties'
+          }
+      }
+    }
+
+    const customText = getCustomText(userType)
+
+    // Create Stripe Checkout session
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: SUBSCRIPTION_CONFIG.PRICE_ID,
+          quantity: 1,
+        },
+      ],
+      subscription_data: {
+        trial_period_days: SUBSCRIPTION_CONFIG.TRIAL_DAYS,
+        trial_settings: {
+          end_behavior: {
+            missing_payment_method: 'cancel',
+          },
+        },
+        metadata: {
+          user_id: userId,
+          user_type: userType || 'unknown'
+        }
+      },
+      success_url: successUrl,
+      cancel_url: `${baseUrl}/pricing`,
+      allow_promotion_codes: false,
+      billing_address_collection: 'required',
+      phone_number_collection: {
+        enabled: true,
+      },
+      consent_collection: {
+        terms_of_service: 'required'
+      },
+      custom_text: {
+        submit: {
+          message: customText.custom_text
+        },
+        terms_of_service_acceptance: {
+          message: 'I agree to the Terms of Service and understand I can cancel anytime during my trial'
+        }
+      },
+      metadata: {
+        user_id: userId,
+        user_type: userType || 'unknown'
+      }
+    })
+
+    return NextResponse.json({
+      sessionId: session.id,
+      url: session.url
+    })
+
+  } catch (error) {
+    console.error('Error creating checkout session:', error)
+    return NextResponse.json(
+      { error: 'Failed to create checkout session' },
+      { status: 500 }
+    )
+  }
+}

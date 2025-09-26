@@ -1,0 +1,162 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { CheckCircle, ArrowRight, Calendar, CreditCard } from 'lucide-react'
+
+export default function SubscriptionSuccessPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(true)
+  const [trialEndDate, setTrialEndDate] = useState<string>('')
+
+  const sessionId = searchParams?.get('session_id')
+  const redirectPath = searchParams?.get('redirect')
+
+  useEffect(() => {
+    // Simulate fetching subscription details
+    // In a real implementation, you'd verify the session and get trial details
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + 30)
+    setTrialEndDate(endDate.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    }))
+    setIsLoading(false)
+  }, [sessionId])
+
+  const handleContinue = () => {
+    if (redirectPath) {
+      router.push(decodeURIComponent(redirectPath))
+    } else {
+      router.push('/dashboard')
+    }
+  }
+
+  const handleExploreFeatures = () => {
+    router.push('/search')
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
+      <div className="px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl">
+          {/* Success Icon */}
+          <div className="text-center mb-8">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <Badge variant="secondary" className="bg-green-100 text-green-700">
+              Trial Started
+            </Badge>
+          </div>
+
+          {/* Main Card */}
+          <Card className="border-2 border-green-200 bg-green-50/30">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold text-green-800">
+                Welcome to SiteMatcher!
+              </CardTitle>
+              <CardDescription className="text-base text-green-600">
+                Your free trial has started successfully
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              {/* Trial Details */}
+              <div className="bg-white rounded-lg p-4 border border-green-200">
+                <div className="flex items-center gap-3 mb-3">
+                  <Calendar className="h-5 w-5 text-green-600" />
+                  <h3 className="font-semibold">Your Trial Details</h3>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <p className="text-gray-600">
+                    <strong>Trial Period:</strong> 30 days (ends {trialEndDate})
+                  </p>
+                  <p className="text-gray-600">
+                    <strong>Next Billing:</strong> £975 on {trialEndDate} (unless cancelled)
+                  </p>
+                  <p className="text-green-600 font-medium">
+                    ✓ Full access to all premium features during trial
+                  </p>
+                </div>
+              </div>
+
+              {/* What's Included */}
+              <div className="bg-white rounded-lg p-4 border border-green-200">
+                <h3 className="font-semibold mb-3">What's included in your trial:</h3>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span>Unlimited access to our curated directory of requirement listings</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span>Full access to SiteMatcher tools</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span>Add a listing for your agency on our Agency Directory and link your agency to published listings</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span>Our latest requirement listings direct to your inbox</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Management Info */}
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div className="flex items-center gap-3 mb-2">
+                  <CreditCard className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold text-blue-800">Manage Your Subscription</h3>
+                </div>
+                <p className="text-sm text-blue-600">
+                  You can cancel anytime before your trial ends through your account settings.
+                  No charges will be made if you cancel during the trial period.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-3 pt-4">
+                <Button
+                  onClick={handleExploreFeatures}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  size="lg"
+                >
+                  <ArrowRight className="mr-2 h-5 w-5" />
+                  Start exploring requirements
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleContinue}
+                  className="w-full"
+                >
+                  {redirectPath ? 'Continue to Your Destination' : 'Go to Dashboard'}
+                </Button>
+              </div>
+
+              {/* Footer */}
+              <div className="text-center text-xs text-gray-500 pt-4 border-t">
+                Questions? Contact us anytime.
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}

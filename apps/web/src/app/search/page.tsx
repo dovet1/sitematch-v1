@@ -131,26 +131,7 @@ function SearchPageContent() {
     );
   }
 
-  // Show auth wall if not authenticated
-  if (!user) {
-    const query = searchParams.get('query') || searchFilters.location || searchFilters.companyName;
-    return (
-      <div className="min-h-screen bg-background">
-        <UnifiedHeader
-          searchFilters={searchFilters}
-          onFiltersChange={handleFiltersChange}
-          isMapView={isMapView}
-          onMapViewToggle={handleViewToggle}
-          showViewToggle={false}
-        />
-        <AuthWall 
-          searchQuery={query}
-          // TODO: Get actual result count from API
-          resultCount={undefined}
-        />
-      </div>
-    );
-  }
+  // Remove auth wall - let middleware handle subscription check instead
 
   return (
     <div className="min-h-screen bg-background">

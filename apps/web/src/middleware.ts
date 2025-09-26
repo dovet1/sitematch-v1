@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { checkSubscriptionAccess } from '@/lib/subscription'
 
 export async function middleware(request: NextRequest) {
   // Skip middleware for auth routes
@@ -111,6 +112,61 @@ export async function middleware(request: NextRequest) {
   if (protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))) {
     if (!user) {
       return NextResponse.redirect(new URL('/?login=1', request.url))
+    }
+  }
+
+  // Subscription-protected routes
+  const subscriptionRoutes = ['/search', '/sitesketcher', '/agencies/create']
+  const isSubscriptionRoute = subscriptionRoutes.some(route =>
+    request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route + '/')
+  )
+
+  // Check individual listing pages (except user's own listings)
+  const isListingPage = request.nextUrl.pathname.match(/^\/listings\/[^/]+$/)
+
+  // For subscription routes, always redirect to pricing if no subscription
+  // (whether logged in or not, since subscription is required)
+  if (isSubscriptionRoute || isListingPage) {
+    if (user) {
+      // Logged in user - check subscription
+      try {
+        const hasAccess = await checkSubscriptionAccess(user.id)
+
+        if (!hasAccess) {
+          // Special handling for individual listings - check if user owns it
+          if (isListingPage) {
+            const listingId = request.nextUrl.pathname.split('/')[2]
+            const { data: listing } = await supabase
+              .from('listings')
+              .select('user_id')
+              .eq('id', listingId)
+              .single()
+
+            // Allow access to own listings
+            if (listing?.user_id === user.id) {
+              return response
+            }
+          }
+
+          // Redirect to pricing with return URL
+          const pricingUrl = new URL('/pricing', request.url)
+          pricingUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
+          pricingUrl.searchParams.set('reason', 'subscription_required')
+          return NextResponse.redirect(pricingUrl)
+        }
+      } catch (error) {
+        console.error('Subscription check error:', error)
+        // On error, redirect to pricing to be safe
+        const pricingUrl = new URL('/pricing', request.url)
+        pricingUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
+        return NextResponse.redirect(pricingUrl)
+      }
+    } else {
+      // Not logged in - redirect to pricing (they'll need to sign up for subscription anyway)
+      const pricingUrl = new URL('/pricing', request.url)
+      pricingUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
+      pricingUrl.searchParams.set('reason', 'subscription_required')
+      return NextResponse.redirect(pricingUrl)
     }
   }
 
