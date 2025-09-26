@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Zap } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
-import { AuthChoiceModal } from '@/components/auth/auth-choice-modal'
+import { TrialSignupModal } from '@/components/TrialSignupModal'
+import { PaywallModal } from '@/components/PaywallModal'
 import { useAuth } from '@/contexts/auth-context'
 
 interface StartTrialButtonProps {
@@ -22,8 +23,24 @@ export function StartTrialButton({
   redirectPath
 }: StartTrialButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [isSignupLoading, setIsSignupLoading] = useState(false)
+  const isSignupInProgress = useRef(false)
   const { user } = useAuth()
   const router = useRouter()
+
+  // When signup loading starts, set the ref immediately to prevent modal switch
+  const handleLoadingChange = (loading: boolean) => {
+    setIsSignupLoading(loading)
+    if (loading) {
+      // Set ref immediately to prevent component switch on next render
+      isSignupInProgress.current = true
+    } else {
+      // Only clear after a delay to ensure redirect happens
+      setTimeout(() => {
+        isSignupInProgress.current = false
+      }, 1000)
+    }
+  }
 
   const handleStartTrial = async () => {
     if (!user) {
@@ -86,19 +103,27 @@ export function StartTrialButton({
     </Button>
   )
 
-  // If user is not authenticated, wrap with auth modal
-  if (!user) {
+  // If user is not authenticated OR signup is in progress (using ref for immediate response), use TrialSignupModal
+  if (!user || isSignupInProgress.current) {
     return (
-      <AuthChoiceModal
-        redirectTo="/pricing"
-        title="Start Your Free Trial"
-        description="Sign in to start your 30-day free trial and access premium features"
+      <TrialSignupModal
+        context={userType === 'searcher' ? 'search' : userType === 'agency' ? 'agency' : userType === 'sitesketcher' ? 'sitesketcher' : 'general'}
+        redirectPath={redirectPath}
+        forceOpen={isSignupInProgress.current}
+        onLoadingChange={handleLoadingChange}
       >
         {trialButton}
-      </AuthChoiceModal>
+      </TrialSignupModal>
     )
   }
 
-  // If user is authenticated, show the trial button directly
-  return trialButton
+  // If user is authenticated, use PaywallModal for existing users
+  return (
+    <PaywallModal
+      context={userType === 'searcher' ? 'search' : userType === 'agency' ? 'agency' : userType === 'sitesketcher' ? 'sitesketcher' : 'general'}
+      redirectTo={redirectPath}
+    >
+      {trialButton}
+    </PaywallModal>
+  )
 }

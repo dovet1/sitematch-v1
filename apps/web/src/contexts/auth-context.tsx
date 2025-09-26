@@ -203,11 +203,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Handle redirect after successful sign in
-    if (redirectTo) {
+    if (redirectTo && redirectTo !== 'SKIP_REDIRECT') {
       router.push(redirectTo)
-    } else {
+    } else if (!redirectTo || redirectTo !== 'SKIP_REDIRECT') {
       router.push('/occupier/dashboard')
     }
+    // If redirectTo === 'SKIP_REDIRECT', don't redirect anywhere
   }
 
   const signUp = async (email: string, password: string, userType?: string, redirectTo?: string, newsletterOptIn?: boolean) => {

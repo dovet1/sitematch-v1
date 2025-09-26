@@ -142,11 +142,11 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       break
     case 'active':
       status = 'active'
-      if (fullSubscription.current_period_start) {
-        updates.subscription_start_date = new Date(fullSubscription.current_period_start * 1000).toISOString()
+      if ((fullSubscription as any).current_period_start) {
+        updates.subscription_start_date = new Date((fullSubscription as any).current_period_start * 1000).toISOString()
       }
-      if (fullSubscription.current_period_end) {
-        updates.next_billing_date = new Date(fullSubscription.current_period_end * 1000).toISOString()
+      if ((fullSubscription as any).current_period_end) {
+        updates.next_billing_date = new Date((fullSubscription as any).current_period_end * 1000).toISOString()
       }
       break
     case 'past_due':
@@ -184,7 +184,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
-  const subscriptionId = invoice.subscription as string
+  const subscriptionId = (invoice as any).subscription as string
   if (!subscriptionId) return
 
   const subscription = await stripe.subscriptions.retrieve(subscriptionId)
@@ -196,11 +196,11 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   }
 
   // Check if this is the first payment (trial conversion)
-  if (invoice.billing_reason === 'subscription_cycle') {
+  if ((invoice as any).billing_reason === 'subscription_cycle') {
     const success = await updateUserSubscriptionStatus(userId, 'active', {
       subscription_start_date: new Date().toISOString(),
-      next_billing_date: subscription.current_period_end
-        ? new Date(subscription.current_period_end * 1000).toISOString()
+      next_billing_date: (subscription as any).current_period_end
+        ? new Date((subscription as any).current_period_end * 1000).toISOString()
         : undefined
     })
 
@@ -214,7 +214,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  const subscriptionId = invoice.subscription as string
+  const subscriptionId = (invoice as any).subscription as string
   if (!subscriptionId) return
 
   const subscription = await stripe.subscriptions.retrieve(subscriptionId)

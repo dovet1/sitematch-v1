@@ -1,27 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase'
+import { createServerClient } from '@supabase/ssr'
 import { stripe, SUBSCRIPTION_CONFIG } from '@/lib/stripe'
+import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, userType, redirectPath } = await request.json()
-    console.log('API called with userId:', userId)
+    const { userId: providedUserId, userType, redirectPath } = await request.json()
+    console.log('API called with userId:', providedUserId)
+
+    let userId = providedUserId
+
+    // If no userId provided, try to get it from the session
+    if (!userId) {
+      const cookieStore = cookies()
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get(name: string) {
+              return cookieStore.get(name)?.value
+            },
+          },
+        }
+      )
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !user) {
+        return NextResponse.json({ error: 'User authentication required' }, { status: 401 })
+      }
+
+      userId = user.id
+      console.log('Got userId from session:', userId)
+    }
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 })
     }
 
     // Create admin client with service role key for database operations
-    const adminSupabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
+    const adminSupabase = createAdminClient()
 
     // Get user details using admin client to bypass RLS
     const { data: user, error: userError } = await adminSupabase
