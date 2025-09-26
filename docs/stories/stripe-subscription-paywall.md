@@ -704,7 +704,73 @@ Once this story is approved:
 
 ---
 
-**Story Status**: ✅ **READY FOR REVIEW**
+## 🛠️ Dev Agent Record
+
+### Implementation Tasks
+- [x] Database schema updates (including payment tracking fields)
+- [ ] Stripe product/price setup with 30-day trial configuration
+- [x] Checkout session API with trial period and payment collection
+- [x] Webhook endpoint for subscription lifecycle events
+- [x] Subscription status checking middleware with Redis caching
+- [ ] Integrate Stripe Checkout into signup flow
+- [x] Trial start logic after payment method collection
+- [x] Cancellation API and Customer Portal integration
+- [x] Access control implementation on protected routes
+- [x] Paywall modal component for expired/non-subscribers
+- [x] Pricing page design with payment upfront messaging
+- [x] Subscription status indicators in UI
+- [x] Subscription success page
+- [ ] Email templates for payment upfront flow
+- [ ] Automated email sending based on trial timeline
+- [ ] Payment failure handling at trial end
+- [ ] Trial cancellation and access management
+- [ ] Error handling and edge cases
+- [ ] End-to-end testing: signup → trial → conversion/cancellation
+- [ ] Analytics tracking implementation
+
+### Debug Log
+| Task | File | Change | Reverted? |
+|------|------|--------|-----------|
+
+### Completion Notes
+- Database migration completed by user in Supabase
+- Core Stripe integration implemented with payment upfront approach
+- Access control middleware protecting routes: /search, /listings/[id], /sitesketcher, /agencies/create
+- Redis caching implemented for subscription status (5-minute TTL)
+- Comprehensive webhook handling for subscription lifecycle
+- User journey differentiation by entry point (searcher, agency, sitesketcher, requirement poster)
+- TypeScript compilation issues resolved for new Stripe files
+
+### Remaining Work (Next Phase)
+- Email templates and automation system
+- Integration into signup flow (need auth context)
+- End-to-end testing with Stripe test mode
+- Production environment variable configuration
+- Stripe product/price setup in dashboard
+
+### Change Log
+None
+
+### File List
+Files created/modified during implementation:
+- Database: users table schema updated (completed by user)
+- `apps/web/src/lib/stripe.ts` - Stripe configuration and constants
+- `apps/web/src/lib/subscription.ts` - Subscription utilities with Redis caching
+- `apps/web/src/app/api/stripe/create-checkout-session/route.ts` - Stripe Checkout API
+- `apps/web/src/app/api/stripe/create-portal-session/route.ts` - Customer Portal API
+- `apps/web/src/app/api/stripe/subscription-status/route.ts` - Subscription status API
+- `apps/web/src/app/api/webhooks/stripe/route.ts` - Stripe webhooks handler
+- `apps/web/src/lib/middleware/subscription.ts` - Subscription middleware utilities
+- `apps/web/src/middleware.ts` - Updated main middleware with subscription checks
+- `apps/web/src/components/PaywallModal.tsx` - Paywall modal component
+- `apps/web/src/components/SubscriptionStatus.tsx` - Subscription status indicator
+- `apps/web/src/app/pricing/page.tsx` - Pricing page with conversion-optimized design
+- `apps/web/src/app/subscription/success/page.tsx` - Trial started success page
+- `apps/web/package.json` - Added Stripe dependencies
+
+---
+
+**Story Status**: 🚧 **IN DEVELOPMENT**
 
 **Created**: 2025-09-24
 **Last Updated**: 2025-09-24 (Updated for Payment Upfront Approach)
