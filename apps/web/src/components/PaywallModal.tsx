@@ -37,11 +37,11 @@ const contextConfig = {
     }
   },
   sitesketcher: {
-    headline: 'Unlock Professional Visualization Tools',
-    subtext: 'Advanced property planning and project visualization',
-    cta: 'Start Free Trial - Try SiteSketcher',
+    headline: 'Access SiteSketcher Pro Tools',
+    subtext: 'Advanced property assessment and visualization tools for commercial real estate professionals',
+    cta: 'Start Free Trial - Access SiteSketcher',
     testimonial: {
-      quote: 'SiteSketcher helped us visualize our expansion plans perfectly',
+      quote: 'SiteSketcher saved us hours of manual site analysis - invaluable for property evaluation',
       author: 'Emma C., Development Manager',
       rating: 5
     }

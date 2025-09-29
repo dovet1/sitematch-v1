@@ -127,7 +127,7 @@ export function LoginModal({ children, redirectTo }: LoginModalProps) {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="Enter password"
                   {...register('password', {
                     required: 'Password is required'
                   })}

@@ -63,11 +63,11 @@ const contextConfig = {
     }
   },
   sitesketcher: {
-    headline: 'Unlock Professional Visualization Tools',
-    subtext: 'Advanced property planning and project visualization',
-    cta: 'Start Free Trial - Try SiteSketcher',
+    headline: 'Access SiteSketcher Pro Tools',
+    subtext: 'Advanced property assessment and visualization tools for commercial real estate professionals',
+    cta: 'Start Free Trial - Access SiteSketcher',
     testimonial: {
-      quote: 'SiteSketcher helped us visualize our expansion plans perfectly',
+      quote: 'SiteSketcher saved us hours of manual site analysis - invaluable for property evaluation',
       author: 'Emma C., Development Manager',
       rating: 5
     }
@@ -256,27 +256,29 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
         <DialogOverlay />
         <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-0 bg-white shadow-2xl !border-0 [&>button]:text-white [&>button]:hover:text-white/80">
           {/* Header */}
-          <div className="relative px-6 pt-6 pb-4 bg-gradient-to-r from-violet-600 to-purple-700 text-white">
-            <DialogHeader className="space-y-3 text-center">
-              <div className="mx-auto w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-2">
-                <Zap className="h-6 w-6 text-white" />
+          <div className="relative px-4 pt-4 pb-3 bg-gradient-to-r from-violet-600 to-purple-700 text-white">
+            <DialogHeader className="space-y-2 text-center">
+              <div className="mx-auto w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center mb-1">
+                <Zap className="h-5 w-5 text-white" />
               </div>
-              <DialogTitle className="text-xl font-bold text-white">
+              <DialogTitle className="text-lg font-bold text-white">
                 {mode === 'signup' ? config.headline : 'Welcome Back!'}
               </DialogTitle>
-              <DialogDescription className="text-violet-100 text-sm max-w-md mx-auto">
-                {mode === 'signup' ? config.subtext : 'Sign in to continue with your free trial'}
-              </DialogDescription>
+              {mode === 'signup' && (
+                <DialogDescription className="text-violet-100 text-sm max-w-md mx-auto">
+                  {config.subtext}
+                </DialogDescription>
+              )}
             </DialogHeader>
 
             {/* Pricing highlight */}
-            <div className="text-center mt-4 p-3 bg-white/10 backdrop-blur-sm rounded-lg">
-              <div className="text-lg font-semibold">£975/year - 30 days free</div>
+            <div className="text-center mt-3 p-2 bg-white/10 backdrop-blur-sm rounded-lg">
+              <div className="text-base font-semibold">£975/year - 30 days free</div>
               <div className="text-xs text-violet-100">Add payment method, cancel anytime</div>
             </div>
           </div>
 
-          <div className="px-6 py-5">
+          <div className="px-4 py-4">
             {/* Mode Toggle */}
             <div className="flex bg-gray-100 rounded-lg p-1 mb-4">
               <button
@@ -307,9 +309,10 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
               </button>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+              {/* Email and Password - Separate Lines */}
               <div className="space-y-3">
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="trial-email" className="text-sm font-medium">Email address</Label>
                   <Input
                     id="trial-email"
@@ -324,7 +327,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
                     })}
                     disabled={isLoading}
                     autoFocus
-                    className="h-10"
+                    className="h-9"
                   />
                   {errors.email && (
                     <p className="text-sm text-red-500" role="alert">
@@ -333,12 +336,12 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
                   )}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="trial-password" className="text-sm font-medium">Password</Label>
                   <Input
                     id="trial-password"
                     type="password"
-                    placeholder="Create a secure password"
+                    placeholder={mode === 'signup' ? "Create a secure password" : "Enter your password"}
                     {...register('password', {
                       required: 'Password is required',
                       minLength: mode === 'signup' ? {
@@ -347,7 +350,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
                       } : undefined
                     })}
                     disabled={isLoading}
-                    className="h-10"
+                    className="h-9"
                   />
                   {errors.password && (
                     <p className="text-sm text-red-500" role="alert">
@@ -355,6 +358,9 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
                     </p>
                   )}
                 </div>
+              </div>
+
+              <div className="space-y-3">
 
                 {mode === 'signup' && (
                   <>
@@ -417,7 +423,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
 
               <Button
                 type="submit"
-                className="w-full h-11 bg-violet-600 hover:bg-violet-700 text-white font-medium"
+                className="w-full h-10 bg-violet-600 hover:bg-violet-700 text-white font-medium"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -435,7 +441,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
                     ) : (
                       <>
                         <LogIn className="mr-2 h-4 w-4" />
-                        Sign In & Start Trial
+                        Sign In
                       </>
                     )}
                   </>
@@ -445,9 +451,9 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
 
             {/* Testimonial */}
             {displayTestimonial && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
                 <div className="flex items-start space-x-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                     {displayTestimonial.author.split(' ')[0][0]}{displayTestimonial.author.split(' ')[1] ? displayTestimonial.author.split(' ')[1][0] : ''}
                   </div>
                   <div className="flex-1">
@@ -467,7 +473,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
               </div>
             )}
 
-            <div className="text-center mt-4">
+            <div className="text-center mt-3">
               <p className="text-xs text-gray-500">
                 By continuing, you agree to our{' '}
                 <a href="https://app.termly.io/policy-viewer/policy.html?policyUUID=0d60ea82-ecb7-43d4-bf2d-a3ea5a0900c6" className="underline">

@@ -117,9 +117,27 @@ export async function middleware(request: NextRequest) {
 
   // Subscription-protected routes
   const subscriptionRoutes = ['/search', '/sitesketcher', '/agencies/create']
+
+  // Allow access to SiteSketcher landing page for unpaid users only
+  const isLandingPage = request.nextUrl.pathname === '/sitesketcher/landing'
+
+  // For paid users accessing landing page, redirect to tool directly
+  if (isLandingPage && user) {
+    try {
+      const hasAccess = await checkSubscriptionAccess(user.id)
+      if (hasAccess) {
+        // Paid user should skip landing and go straight to tool
+        return NextResponse.redirect(new URL('/sitesketcher', request.url))
+      }
+    } catch (error) {
+      console.error('Subscription check error for landing page:', error)
+      // On error, allow access to landing page (safer fallback)
+    }
+  }
+
   const isSubscriptionRoute = subscriptionRoutes.some(route =>
     request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route + '/')
-  )
+  ) && !isLandingPage
 
   // Check individual listing pages (except user's own listings)
   const isListingPage = request.nextUrl.pathname.match(/^\/listings\/[^/]+$/)
