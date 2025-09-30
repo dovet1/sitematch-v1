@@ -14,7 +14,6 @@ export default function SubscriptionSuccessPage() {
   const [trialEndDate, setTrialEndDate] = useState<string>('')
 
   const sessionId = searchParams?.get('session_id')
-  const redirectPath = searchParams?.get('redirect')
 
   useEffect(() => {
     // Simulate fetching subscription details
@@ -28,14 +27,6 @@ export default function SubscriptionSuccessPage() {
     }))
     setIsLoading(false)
   }, [sessionId])
-
-  const handleContinue = () => {
-    if (redirectPath) {
-      router.push(decodeURIComponent(redirectPath))
-    } else {
-      router.push('/dashboard')
-    }
-  }
 
   const handleExploreFeatures = () => {
     router.push('/search')
@@ -130,7 +121,7 @@ export default function SubscriptionSuccessPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="space-y-3 pt-4">
+              <div className="pt-4">
                 <Button
                   onClick={handleExploreFeatures}
                   className="w-full bg-green-600 hover:bg-green-700"
@@ -138,14 +129,6 @@ export default function SubscriptionSuccessPage() {
                 >
                   <ArrowRight className="mr-2 h-5 w-5" />
                   Start exploring requirements
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={handleContinue}
-                  className="w-full"
-                >
-                  {redirectPath ? 'Continue to Your Destination' : 'Go to Dashboard'}
                 </Button>
               </div>
 

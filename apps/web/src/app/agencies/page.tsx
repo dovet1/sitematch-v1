@@ -14,12 +14,10 @@ import {
   Loader2
 } from 'lucide-react'
 import Image from 'next/image'
-import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal'
 import { AgencyModal } from '@/components/agencies/AgencyModal'
 import { AgencyMapSimple } from '@/components/agencies/AgencyMapSimple'
 import { AgencySearchHeader } from '@/components/agencies/AgencySearchHeader'
-import { useAuth } from '@/contexts/auth-context'
-import { AuthChoiceModal } from '@/components/auth/auth-choice-modal'
+import { StartAgencyButton } from '@/components/StartAgencyButton'
 
 interface Agency {
   id: string
@@ -46,7 +44,6 @@ interface Agency {
 }
 
 export default function AgenciesPage() {
-  const { user } = useAuth()
   const [agencies, setAgencies] = useState<Agency[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -163,25 +160,13 @@ export default function AgenciesPage() {
                 </div>
                 
                 <div className="flex justify-end">
-                  {user ? (
-                    <AgencyCreationModal>
-                      <Button size="sm" className="shadow-md hover:shadow-lg transition-all duration-200 bg-primary hover:bg-primary/90 text-white border-0 px-4 py-2">
-                        <Building2 className="w-3.5 h-3.5 mr-1.5" />
-                        Join Directory
-                      </Button>
-                    </AgencyCreationModal>
-                  ) : (
-                    <AuthChoiceModal
-                      redirectTo="/occupier/dashboard"
-                      title="Create Your Agency Profile"
-                      description="Sign up to showcase your agency in our directory"
-                    >
-                      <Button size="sm" className="shadow-md hover:shadow-lg transition-all duration-200 bg-primary hover:bg-primary/90 text-white border-0 px-4 py-2">
-                        <Building2 className="w-3.5 h-3.5 mr-1.5" />
-                        Join Directory
-                      </Button>
-                    </AuthChoiceModal>
-                  )}
+                  <StartAgencyButton
+                    size="sm"
+                    className="shadow-md hover:shadow-lg transition-all duration-200 bg-primary hover:bg-primary/90 text-white border-0 px-4 py-2"
+                  >
+                    <Building2 className="w-3.5 h-3.5 mr-1.5" />
+                    Join Directory
+                  </StartAgencyButton>
                 </div>
               </div>
             ) : (
@@ -197,25 +182,12 @@ export default function AgenciesPage() {
                 </div>
                 
                 <div className="flex justify-center lg:justify-end">
-                  {user ? (
-                    <AgencyCreationModal>
-                      <Button className="shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 bg-primary hover:bg-primary/90 text-white border-0 px-6 py-2.5">
-                        <Building2 className="w-4 h-4 mr-2" />
-                        Join Directory
-                      </Button>
-                    </AgencyCreationModal>
-                  ) : (
-                    <AuthChoiceModal
-                      redirectTo="/occupier/dashboard"
-                      title="Create Your Agency Profile"
-                      description="Sign up to showcase your agency in our directory"
-                    >
-                      <Button className="shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 bg-primary hover:bg-primary/90 text-white border-0 px-6 py-2.5">
-                        <Building2 className="w-4 h-4 mr-2" />
-                        Join Directory
-                      </Button>
-                    </AuthChoiceModal>
-                  )}
+                  <StartAgencyButton
+                    className="shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 bg-primary hover:bg-primary/90 text-white border-0 px-6 py-2.5"
+                  >
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Join Directory
+                  </StartAgencyButton>
                 </div>
               </div>
             )}

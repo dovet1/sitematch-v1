@@ -38,6 +38,7 @@ interface TrialSignupModalProps {
     rating: number
   }
   forceOpen?: boolean
+  onClose?: () => void
   onLoadingChange?: (loading: boolean) => void
 }
 
@@ -57,8 +58,8 @@ const contextConfig = {
     subtext: 'Connect directly with qualified occupiers actively seeking space',
     cta: 'Start Free Trial - View Requirements',
     testimonial: {
-      quote: 'Found our 50,000 sq ft warehouse in just 3 weeks through SiteMatcher',
-      author: 'Sarah M., Operations Director',
+      quote: 'SiteMatcher is the best source of real estate requirements on the internet.',
+      author: 'Rob L., Property Acquisitions, Lidl',
       rating: 5
     }
   },
@@ -94,7 +95,7 @@ const contextConfig = {
   }
 }
 
-export function TrialSignupModal({ children, context, redirectPath, testimonial, forceOpen, onLoadingChange }: TrialSignupModalProps) {
+export function TrialSignupModal({ children, context, redirectPath, testimonial, forceOpen, onClose, onLoadingChange }: TrialSignupModalProps) {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -231,6 +232,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
       setError(null)
       setMode('signup')
       setLoadingStage('creating_account')
+      onClose?.()
     }
   }
 
@@ -248,7 +250,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
   }
 
   return (
-    <Dialog open={forceOpen || open} onOpenChange={forceOpen ? undefined : handleOpenChange}>
+    <Dialog open={forceOpen || open} onOpenChange={forceOpen ? (open: boolean) => !open && onClose?.() : handleOpenChange}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
@@ -273,8 +275,20 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
 
             {/* Pricing highlight */}
             <div className="text-center mt-3 p-2 bg-white/10 backdrop-blur-sm rounded-lg">
-              <div className="text-base font-semibold">£975/year - 30 days free</div>
-              <div className="text-xs text-violet-100">Add payment method, cancel anytime</div>
+              {context === 'search' ? (
+                <div className="text-base font-semibold">
+                  <span className="line-through text-white/70">£975</span>{' '}
+                  <span className="text-white">£487.50/year</span> - 30 days free
+                </div>
+              ) : (
+                <div className="text-base font-semibold">£975/year - 30 days free</div>
+              )}
+              <div className="text-xs text-violet-100 mb-1">Add payment method, cancel anytime</div>
+              {context === 'search' && (
+                <div className="text-xs text-violet-100">
+                  50% off with code <span className="bg-white/20 text-white px-2 py-0.5 rounded-full font-mono">SITEMATCHERINTRO</span>
+                </div>
+              )}
             </div>
           </div>
 

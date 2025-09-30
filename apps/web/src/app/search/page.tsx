@@ -11,11 +11,18 @@ import { useAuth } from '@/contexts/auth-context';
 import { AuthWall } from '@/components/auth/auth-wall';
 import { SearchContextToast } from '@/components/search/search-context-toast';
 import { UserTypeModal } from '@/components/auth/user-type-modal';
+import { TrialSignupModal } from '@/components/TrialSignupModal';
+import { PaywallModal } from '@/components/PaywallModal';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { hasAccess, loading: subscriptionLoading } = useSubscriptionAccess();
+  const [showTrialModal, setShowTrialModal] = useState(false);
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
+  const [isSignupInProgress, setIsSignupInProgress] = useState(false);
   
   // Parse URL parameters into SearchFilters
   const [searchFilters, setSearchFilters] = useState<SearchFilters>(() => {
@@ -117,8 +124,47 @@ function SearchPageContent() {
     }, 300);
   };
 
+  const handleTrialModalClose = () => {
+    setShowTrialModal(false);
+    // Redirect back to home page when user closes modal
+    router.push('/');
+  };
+
+  const handlePaywallModalClose = () => {
+    setShowPaywallModal(false);
+    // Redirect back to home page when user closes modal
+    router.push('/');
+  };
+
+  const handleSignupStarted = (loading: boolean) => {
+    // When signup starts (loading = true), immediately close the modal and prevent it from reappearing
+    if (loading) {
+      setShowTrialModal(false);
+      setIsSignupInProgress(true);
+    }
+  };
+
+  // Check subscription access and show appropriate modal
+  useEffect(() => {
+    if (!loading && !subscriptionLoading && !isSignupInProgress) {
+      if (!user) {
+        // User not logged in - show trial signup modal
+        setShowTrialModal(true);
+        setShowPaywallModal(false);
+      } else if (user && !hasAccess) {
+        // User logged in but no subscription - show paywall modal
+        setShowTrialModal(false);
+        setShowPaywallModal(true);
+      } else {
+        // User has access - hide both modals
+        setShowTrialModal(false);
+        setShowPaywallModal(false);
+      }
+    }
+  }, [user, hasAccess, loading, subscriptionLoading, isSignupInProgress]);
+
   // Show loading state while checking auth
-  if (loading) {
+  if (loading || subscriptionLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -133,14 +179,17 @@ function SearchPageContent() {
 
   // Remove auth wall - let middleware handle subscription check instead
 
+  // Show access modal for non-paid users
+  const showAccessDenied = !user || (user && !hasAccess)
+
   return (
     <div className="min-h-screen bg-background">
       {/* User Type Modal for existing users without type */}
       <UserTypeModal />
-      
+
       {/* Search Context Toast */}
       <SearchContextToast />
-      
+
       {/* Unified Header with Search */}
       <UnifiedHeader
         searchFilters={searchFilters}
@@ -150,8 +199,9 @@ function SearchPageContent() {
         showViewToggle={true}
       />
 
-      {/* Main Content */}
-      <div className={isMapView ? "map-view-container" : "container mx-auto px-4 py-6"}>
+      {/* Main Content - Only show if user has access */}
+      {!showAccessDenied ? (
+        <div className={isMapView ? "map-view-container" : "container mx-auto px-4 py-6"}>
         {/* Results Header - Only show in list view */}
         {!isMapView && (
           <div className="mb-6 space-y-4">
@@ -195,15 +245,51 @@ function SearchPageContent() {
             />
           )}
         </div>
-      </div>
+        </div>
+      ) : (
+        /* Placeholder content for non-paid users */
+        <div className="container mx-auto px-4 py-6">
+          <div className="text-center py-12">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-1/2 mx-auto"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-64 bg-gray-200 rounded-lg"></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Listing Modal */}
-      <ListingModal
-        listingId={selectedListingId}
-        isOpen={!!selectedListingId}
-        onClose={handleModalClose}
-        searchState={searchFilters}
-        scrollPosition={previousScrollPosition}
+      {/* Listing Modal - Only show if user has access */}
+      {!showAccessDenied && (
+        <ListingModal
+          listingId={selectedListingId}
+          isOpen={!!selectedListingId}
+          onClose={handleModalClose}
+          searchState={searchFilters}
+          scrollPosition={previousScrollPosition}
+        />
+      )}
+
+      {/* Trial Modal for non-authenticated users */}
+      <TrialSignupModal
+        context="search"
+        forceOpen={showTrialModal && !isSignupInProgress}
+        onClose={handleTrialModalClose}
+        onLoadingChange={handleSignupStarted}
+      >
+        <div />
+      </TrialSignupModal>
+
+      {/* Paywall Modal for authenticated users without subscription */}
+      <PaywallModal
+        context="search"
+        isOpen={showPaywallModal}
+        onClose={handlePaywallModalClose}
+        redirectTo="/search"
       />
     </div>
   );

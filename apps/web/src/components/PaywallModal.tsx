@@ -31,8 +31,8 @@ const contextConfig = {
     subtext: 'Connect directly with qualified occupiers actively seeking space',
     cta: 'Start Free Trial - View Requirements',
     testimonial: {
-      quote: 'Found our perfect warehouse in 2 weeks through SiteMatcher',
-      author: 'Sarah K., Logistics Director',
+      quote: 'SiteMatcher changed the way we find occupants for sites.',
+      author: 'Rob L., Property Acquisitions, Lidl',
       rating: 5
     }
   },
@@ -156,34 +156,46 @@ export function PaywallModal({
       )}
       <DialogPortal>
         <DialogOverlay />
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-0 bg-white shadow-2xl">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-0 bg-white shadow-2xl !border-0 [&>button]:text-white [&>button]:hover:text-white/80">
           {/* Header */}
-          <div className="relative px-6 pt-6 pb-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-            <DialogHeader className="space-y-3 text-center">
-              <div className="mx-auto w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-2">
-                <Zap className="h-6 w-6 text-white" />
+          <div className="relative px-4 pt-4 pb-3 bg-gradient-to-r from-violet-600 to-purple-700 text-white">
+            <DialogHeader className="space-y-2 text-center">
+              <div className="mx-auto w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center mb-1">
+                <Zap className="h-5 w-5 text-white" />
               </div>
-              <DialogTitle className="text-xl font-bold text-white">
+              <DialogTitle className="text-lg font-bold text-white">
                 {config.headline}
               </DialogTitle>
-              <DialogDescription className="text-blue-100 text-sm max-w-md mx-auto">
+              <DialogDescription className="text-violet-100 text-sm max-w-md mx-auto">
                 {config.subtext}
               </DialogDescription>
             </DialogHeader>
 
             {/* Pricing highlight */}
-            <div className="text-center mt-4 p-3 bg-white/10 backdrop-blur-sm rounded-lg">
-              <div className="text-lg font-semibold">£975/year - 30 days free</div>
-              <div className="text-xs text-blue-100">Add payment method, cancel anytime</div>
+            <div className="text-center mt-3 p-2 bg-white/10 backdrop-blur-sm rounded-lg">
+              {context === 'search' ? (
+                <div className="text-base font-semibold">
+                  <span className="line-through text-white/70">£975</span>{' '}
+                  <span className="text-white">£487.50/year</span> - 30 days free
+                </div>
+              ) : (
+                <div className="text-base font-semibold">£975/year - 30 days free</div>
+              )}
+              <div className="text-xs text-violet-100 mb-1">Add payment method, cancel anytime</div>
+              {context === 'search' && (
+                <div className="text-xs text-violet-100">
+                  50% off with code <span className="bg-white/20 text-white px-2 py-0.5 rounded-full font-mono">SITEMATCHERINTRO</span>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="px-6 py-5 space-y-4">
+          <div className="px-4 py-4 space-y-4">
             {/* Primary CTA */}
             <Button
               onClick={handleStartTrial}
               disabled={isLoading}
-              className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+              className="w-full h-10 bg-violet-600 hover:bg-violet-700 text-white font-medium"
             >
               {isLoading ? (
                 'Loading...'
@@ -196,17 +208,22 @@ export function PaywallModal({
             </Button>
 
             {/* Secondary CTA */}
-            <Button
-              variant="outline"
-              onClick={handleViewFeatures}
-              className="w-full h-10"
-            >
-              View All Features
-            </Button>
+            {context === 'search' && (
+              <Button
+                variant="outline"
+                onClick={handleViewFeatures}
+                className="w-full h-10"
+              >
+                See Full Pricing Details
+              </Button>
+            )}
 
             {/* Testimonial */}
-            <div className="p-4 bg-gray-50 rounded-lg border">
+            <div className="p-3 bg-gray-50 rounded-lg border">
               <div className="flex items-start space-x-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                  {config.testimonial.author.split(' ')[0][0]}{config.testimonial.author.split(' ')[1] ? config.testimonial.author.split(' ')[1][0] : ''}
+                </div>
                 <div className="flex-1">
                   <div className="flex items-center mb-1">
                     {[...Array(config.testimonial.rating)].map((_, i) => (
@@ -223,22 +240,19 @@ export function PaywallModal({
               </div>
             </div>
 
-            {/* Tertiary option */}
-            <div className="text-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleContinueToFree}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                Continue to Free Features
-                <ArrowRight className="ml-1 h-3 w-3" />
-              </Button>
+            {/* Terms and Privacy */}
+            <div className="text-center mt-3">
+              <p className="text-xs text-gray-500">
+                By continuing, you agree to our{' '}
+                <a href="https://app.termly.io/policy-viewer/policy.html?policyUUID=0d60ea82-ecb7-43d4-bf2d-a3ea5a0900c6" className="underline">
+                  Terms of Service
+                </a>{' '}
+                and{' '}
+                <a href="https://app.termly.io/policy-viewer/policy.html?policyUUID=70f2f9d5-072f-443a-944d-39630c45252c" className="underline">
+                  Privacy Policy
+                </a>
+              </p>
             </div>
-
-            <p className="text-xs text-gray-500 text-center">
-              Add payment method, cancel anytime before trial ends
-            </p>
           </div>
         </DialogContent>
       </DialogPortal>

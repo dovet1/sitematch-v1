@@ -115,8 +115,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Subscription-protected routes
-  const subscriptionRoutes = ['/search', '/sitesketcher', '/agencies/create']
+  // Subscription-protected routes (excluding search and agencies/create which we handle differently)
+  const subscriptionRoutes = ['/sitesketcher']
 
   // Allow access to SiteSketcher landing page for unpaid users only
   const isLandingPage = request.nextUrl.pathname === '/sitesketcher/landing'
@@ -141,6 +141,9 @@ export async function middleware(request: NextRequest) {
 
   // Check individual listing pages (except user's own listings)
   const isListingPage = request.nextUrl.pathname.match(/^\/listings\/[^/]+$/)
+
+  // Handle search page differently - allow access but client will show modal if no subscription
+  const isSearchPage = request.nextUrl.pathname === '/search'
 
   // For subscription routes, always redirect to pricing if no subscription
   // (whether logged in or not, since subscription is required)
