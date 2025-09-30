@@ -7,29 +7,99 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, ArrowRight, Calendar, CreditCard } from 'lucide-react'
 
+// Whitelist of allowed redirect paths for security
+const ALLOWED_REDIRECTS = ['/search', '/agencies/create', '/sitesketcher']
+
+// Get button configuration based on redirect destination
+const getButtonConfig = (redirectPath: string | null) => {
+  // Validate and sanitize redirect path
+  const validatedPath = redirectPath && ALLOWED_REDIRECTS.includes(redirectPath)
+    ? redirectPath
+    : '/search' // Default fallback
+
+  // Return button text and path based on destination
+  switch (validatedPath) {
+    case '/agencies/create':
+      return {
+        text: 'Complete your agency profile',
+        path: '/agencies'
+      }
+    case '/sitesketcher':
+      return {
+        text: 'Start using SiteSketcher',
+        path: '/sitesketcher'
+      }
+    case '/search':
+    default:
+      return {
+        text: 'Start exploring requirements',
+        path: '/search'
+      }
+  }
+}
+
 export default function SubscriptionSuccessPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [trialEndDate, setTrialEndDate] = useState<string>('')
+  const [subscriptionAmount, setSubscriptionAmount] = useState<number>(975)
 
   const sessionId = searchParams?.get('session_id')
+  const redirectParam = searchParams?.get('redirect')
+
+  // Get validated button configuration
+  const buttonConfig = getButtonConfig(redirectParam)
 
   useEffect(() => {
-    // Simulate fetching subscription details
-    // In a real implementation, you'd verify the session and get trial details
-    const endDate = new Date()
-    endDate.setDate(endDate.getDate() + 30)
-    setTrialEndDate(endDate.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    }))
-    setIsLoading(false)
+    async function fetchSessionDetails() {
+      if (!sessionId) {
+        // Fallback if no session ID
+        const endDate = new Date()
+        endDate.setDate(endDate.getDate() + 30)
+        setTrialEndDate(endDate.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        }))
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/stripe/session?session_id=${sessionId}`)
+        if (response.ok) {
+          const data = await response.json()
+          const endDate = new Date(data.trialEndDate)
+          setTrialEndDate(endDate.toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          }))
+          setSubscriptionAmount(data.amount)
+        } else {
+          throw new Error('Failed to fetch session')
+        }
+      } catch (error) {
+        console.error('Error fetching session details:', error)
+        // Fallback to default values
+        const endDate = new Date()
+        endDate.setDate(endDate.getDate() + 30)
+        setTrialEndDate(endDate.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        }))
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchSessionDetails()
   }, [sessionId])
 
-  const handleExploreFeatures = () => {
-    router.push('/search')
+  const handleContinue = () => {
+    router.push(buttonConfig.path)
   }
 
   if (isLoading) {
@@ -77,7 +147,7 @@ export default function SubscriptionSuccessPage() {
                     <strong>Trial Period:</strong> 30 days (ends {trialEndDate})
                   </p>
                   <p className="text-gray-600">
-                    <strong>Next Billing:</strong> £975 on {trialEndDate} (unless cancelled)
+                    <strong>Next Billing:</strong> £{subscriptionAmount.toFixed(2)} on {trialEndDate} (unless cancelled)
                   </p>
                   <p className="text-green-600 font-medium">
                     ✓ Full access to all premium features during trial
@@ -99,7 +169,7 @@ export default function SubscriptionSuccessPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>Add a listing for your agency on our Agency Directory and link your agency to published listings</span>
+                    <span>Add your agency to our Agency Directory and link it to published listings</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -123,12 +193,12 @@ export default function SubscriptionSuccessPage() {
               {/* Action Buttons */}
               <div className="pt-4">
                 <Button
-                  onClick={handleExploreFeatures}
+                  onClick={handleContinue}
                   className="w-full bg-green-600 hover:bg-green-700"
                   size="lg"
                 >
                   <ArrowRight className="mr-2 h-5 w-5" />
-                  Start exploring requirements
+                  {buttonConfig.text}
                 </Button>
               </div>
 

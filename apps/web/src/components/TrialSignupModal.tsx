@@ -74,12 +74,12 @@ const contextConfig = {
     }
   },
   agency: {
-    headline: 'Showcase Properties to Active Buyers',
-    subtext: 'Connect your listings with pre-qualified occupiers',
+    headline: 'Add your agency profile',
+    subtext: "Connect your agency to your client's requirements",
     cta: 'Start Free Trial - Create Agency Profile',
     testimonial: {
-      quote: 'Our properties get 3x more qualified leads through SiteMatcher',
-      author: 'David P., Senior Partner',
+      quote: "SiteMatcher provides agencies the opportunity to show their client's requirements to an active community of property professionals",
+      author: 'Rob L., Property Acquisitions, Lidl',
       rating: 5
     }
   },
@@ -275,7 +275,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
 
             {/* Pricing highlight */}
             <div className="text-center mt-3 p-2 bg-white/10 backdrop-blur-sm rounded-lg">
-              {context === 'search' ? (
+              {(context === 'search' || context === 'agency') ? (
                 <div className="text-base font-semibold">
                   <span className="line-through text-white/70">£975</span>{' '}
                   <span className="text-white">£487.50/year</span> - 30 days free
@@ -284,7 +284,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
                 <div className="text-base font-semibold">£975/year - 30 days free</div>
               )}
               <div className="text-xs text-violet-100 mb-1">Add payment method, cancel anytime</div>
-              {context === 'search' && (
+              {(context === 'search' || context === 'agency') && (
                 <div className="text-xs text-violet-100">
                   50% off with code <span className="bg-white/20 text-white px-2 py-0.5 rounded-full font-mono">SITEMATCHERINTRO</span>
                 </div>

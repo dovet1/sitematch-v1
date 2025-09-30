@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
       },
       success_url: successUrl,
       cancel_url: `${baseUrl}/pricing`,
-      allow_promotion_codes: false,
+      allow_promotion_codes: true,
       billing_address_collection: 'required',
       phone_number_collection: {
         enabled: true,

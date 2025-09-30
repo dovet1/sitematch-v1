@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Building2 } from 'lucide-react'
 import { TrialSignupModal } from '@/components/TrialSignupModal'
 import { PaywallModal } from '@/components/PaywallModal'
+import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal'
 import { useAuth } from '@/contexts/auth-context'
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess'
 
@@ -42,17 +43,8 @@ export function StartAgencyButton({
     }
   }
 
-  const handleClick = () => {
-    if (user && hasAccess) {
-      // Paid user - redirect to create page
-      router.push('/agencies/create')
-    }
-    // For non-authenticated or free users, the modal will handle it
-  }
-
   const agencyButton = (
     <Button
-      onClick={handleClick}
       className={className}
       size={size}
       variant={variant}
@@ -92,6 +84,10 @@ export function StartAgencyButton({
     )
   }
 
-  // User is authenticated and has subscription - just return the button
-  return agencyButton
+  // User is authenticated and has subscription - show agency creation modal
+  return (
+    <AgencyCreationModal>
+      {agencyButton}
+    </AgencyCreationModal>
+  )
 }
