@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
         case 'agency':
           return {
             description: 'Showcase your properties to qualified occupiers',
-            custom_text: 'Start your 30-day free trial and begin showcasing properties to qualified occupiers'
+            custom_text: 'Start your 30-day free trial and browse thousands of active requirements'
           }
         case 'sitesketcher':
           return {

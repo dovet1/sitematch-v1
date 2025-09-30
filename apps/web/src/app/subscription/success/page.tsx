@@ -68,6 +68,7 @@ export default function SubscriptionSuccessPage() {
 
       try {
         const response = await fetch(`/api/stripe/session?session_id=${sessionId}`)
+
         if (response.ok) {
           const data = await response.json()
           const endDate = new Date(data.trialEndDate)

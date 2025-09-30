@@ -12,7 +12,11 @@ export async function GET(request: NextRequest) {
 
     // Retrieve the checkout session from Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['subscription', 'subscription.latest_invoice']
+      expand: [
+        'subscription',
+        'subscription.discounts',
+        'subscription.items.data.price'
+      ]
     })
 
     if (!session) {
@@ -21,11 +25,26 @@ export async function GET(request: NextRequest) {
 
     // Get subscription details
     const subscription = session.subscription as any
-    const invoice = subscription?.latest_invoice as any
 
-    // Calculate the amount (in pounds, Stripe uses pence)
-    const amount = invoice?.total ? invoice.total / 100 : 975
-    const discount = invoice?.discount || invoice?.total_discount_amounts?.[0]
+    // Get the base price from subscription items
+    const baseAmount = subscription?.items?.data?.[0]?.price?.unit_amount
+      ? subscription.items.data[0].price.unit_amount / 100
+      : 975
+
+    // Check if there's a discount/coupon applied
+    const discount = subscription?.discounts?.[0]
+    let finalAmount = baseAmount
+
+    if (discount?.coupon) {
+      const coupon = discount.coupon
+      if (coupon.percent_off) {
+        // Percentage discount
+        finalAmount = baseAmount * (1 - coupon.percent_off / 100)
+      } else if (coupon.amount_off) {
+        // Fixed amount discount (in pence)
+        finalAmount = baseAmount - (coupon.amount_off / 100)
+      }
+    }
 
     // Get trial end date
     const trialEnd = subscription?.trial_end
@@ -33,10 +52,10 @@ export async function GET(request: NextRequest) {
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
     return NextResponse.json({
-      amount,
+      amount: finalAmount,
       trialEndDate: trialEnd.toISOString(),
       hasDiscount: !!discount,
-      originalAmount: 975
+      originalAmount: baseAmount
     })
 
   } catch (error) {

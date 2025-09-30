@@ -166,7 +166,7 @@ export function PaywallModal({
               <DialogTitle className="text-lg font-bold text-white">
                 {config.headline}
               </DialogTitle>
-              <DialogDescription className="text-violet-100 text-sm max-w-md mx-auto">
+              <DialogDescription className={`text-violet-100 text-sm max-w-md mx-auto ${context === 'agency' ? 'text-left' : ''}`}>
                 {config.subtext}
               </DialogDescription>
             </DialogHeader>
