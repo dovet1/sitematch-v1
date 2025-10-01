@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { LoginModal } from '@/components/auth/login-modal'
@@ -74,15 +75,19 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link 
-              href="/" 
-              className="flex items-center space-x-2 violet-bloom-link hover:opacity-80 transition-opacity"
+            <Link
+              href="/"
+              className="flex items-center violet-bloom-link hover:opacity-80 transition-opacity"
               aria-label="SiteMatcher Home"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-sm">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
-              <span className="heading-4 font-bold text-foreground">SiteMatcher</span>
+              <Image
+                src="/logos/logo.svg"
+                alt="SiteMatcher"
+                width={160}
+                height={32}
+                className="h-8 w-auto"
+                priority
+              />
             </Link>
           </div>
 

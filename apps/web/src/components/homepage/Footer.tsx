@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Building, Mail, MapPin, Phone } from 'lucide-react';
 
 export function Footer() {
@@ -9,11 +10,14 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center">
-                <Building className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-xl font-bold text-white">SiteMatcher</span>
+            <div className="mb-4">
+              <Image
+                src="/logos/logo.svg"
+                alt="SiteMatcher"
+                width={160}
+                height={32}
+                className="h-8 w-auto brightness-0 invert"
+              />
             </div>
             <p className="text-sm text-gray-400 mb-4">
               Connecting commercial occupiers with the right property opportunities across the UK & Ireland.
