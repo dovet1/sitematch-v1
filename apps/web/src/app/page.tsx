@@ -1,6 +1,8 @@
 import { HeroSearch } from '@/components/search/HeroSearch';
 import { CompanyCarousel } from '@/components/homepage/CompanyCarousel';
-import { HowItWorks } from '@/components/homepage/HowItWorks';
+import { PostRequirements } from '@/components/homepage/PostRequirements';
+import { BrowseRequirements } from '@/components/homepage/BrowseRequirements';
+import { SiteSketcherSection } from '@/components/homepage/SiteSketcherSection';
 import { Testimonials } from '@/components/homepage/Testimonials';
 import { FAQ } from '@/components/homepage/FAQ';
 import { MeetTheFounders } from '@/components/homepage/MeetTheFounders';
@@ -15,8 +17,14 @@ export default function Home() {
       {/* Company Carousel */}
       <CompanyCarousel />
 
-      {/* How It Works */}
-      <HowItWorks />
+      {/* Browse Requirements - Primary Action */}
+      <BrowseRequirements />
+
+      {/* Post Requirements - Secondary Action */}
+      <PostRequirements />
+
+      {/* SiteSketcher */}
+      <SiteSketcherSection />
 
       {/* Testimonials */}
       <Testimonials />

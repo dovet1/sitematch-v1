@@ -267,7 +267,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
                 {mode === 'signup' ? config.headline : 'Welcome Back!'}
               </DialogTitle>
               {mode === 'signup' && (
-                <DialogDescription className={`text-violet-100 text-sm max-w-md mx-auto ${context === 'agency' ? 'text-left' : ''}`}>
+                <DialogDescription className={`text-violet-100 text-sm max-w-md ${context === 'agency' ? 'text-left' : 'mx-auto'}`}>
                   {config.subtext}
                 </DialogDescription>
               )}
