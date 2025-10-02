@@ -33,15 +33,8 @@ export function Header() {
 
   const navigationItems = [
     {
-      href: '/agencies',
-      label: 'Agency Directory',
-      primary: false,
-      showWhen: 'always',
-      requiresAuth: false
-    },
-    {
       href: '/search',
-      label: 'Requirements',
+      label: 'Browse Requirements',
       primary: false,
       showWhen: 'always',
       requiresAuth: false
@@ -56,6 +49,7 @@ export function Header() {
     {
       href: '/occupier/create-listing-quick',
       label: 'Post Requirement',
+      badge: '(Free!)',
       primary: true,
       showWhen: 'always',
       requiresAuth: true
@@ -96,8 +90,8 @@ export function Header() {
             {navigationItems.map((item) => (
               shouldShowNavItem(item) && (
                 item.requiresAuth && !user ? (
-                  <AuthChoiceModal 
-                    key={item.href} 
+                  <AuthChoiceModal
+                    key={item.href}
                     redirectTo={item.href}
                     title="Sign in to post requirements"
                     description="Access your account to create and manage property listings"
@@ -105,14 +99,14 @@ export function Header() {
                     <button
                       className={`
                         px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch cursor-pointer
-                        ${item.primary 
-                          ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800' 
+                        ${item.primary
+                          ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                         }
                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
                       `}
                     >
-                      {item.label}
+                      {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
                     </button>
                   </AuthChoiceModal>
                 ) : (
@@ -121,14 +115,14 @@ export function Header() {
                     href={item.href}
                     className={`
                       px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch cursor-pointer
-                      ${item.primary 
-                        ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800' 
+                      ${item.primary
+                        ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                       }
                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
                     `}
                   >
-                    {item.label}
+                    {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
                   </Link>
                 )
               )
@@ -198,8 +192,8 @@ export function Header() {
             {navigationItems.map((item) => (
               shouldShowNavItem(item) && (
                 item.requiresAuth && !user ? (
-                  <AuthChoiceModal 
-                    key={item.href} 
+                  <AuthChoiceModal
+                    key={item.href}
                     redirectTo={item.href}
                     title="Sign in to post requirements"
                     description="Access your account to create and manage property listings"
@@ -208,14 +202,14 @@ export function Header() {
                       onClick={closeMobileMenu}
                       className={`
                         w-full text-left block px-4 py-3 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
-                        ${item.primary 
-                          ? 'bg-primary-50 text-primary-700 hover:bg-primary-100' 
+                        ${item.primary
+                          ? 'bg-primary-50 text-primary-700 hover:bg-primary-100'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                         }
                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
                       `}
                     >
-                      {item.label}
+                      {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
                     </button>
                   </AuthChoiceModal>
                 ) : (
@@ -225,14 +219,14 @@ export function Header() {
                     onClick={closeMobileMenu}
                     className={`
                       block px-4 py-3 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
-                      ${item.primary 
-                        ? 'bg-primary-50 text-primary-700 hover:bg-primary-100' 
+                      ${item.primary
+                        ? 'bg-primary-50 text-primary-700 hover:bg-primary-100'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                       }
                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
                     `}
                   >
-                    {item.label}
+                    {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
                   </Link>
                 )
               )

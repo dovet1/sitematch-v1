@@ -1,6 +1,7 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
@@ -9,6 +10,40 @@ import Link from 'next/link';
 
 export function Pricing() {
   const { user } = useAuth();
+  const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
+
+  const handleProCheckout = async () => {
+    if (!user) return;
+
+    setIsLoadingCheckout(true);
+    try {
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          userType: 'search',
+          redirectPath: '/search'
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Checkout session error:', errorData);
+        throw new Error(errorData.details || errorData.error || 'Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      setIsLoadingCheckout(false);
+    }
+  };
   const plans = [
     {
       name: 'Free',
@@ -122,6 +157,25 @@ export function Pricing() {
                     </Button>
                   </AuthChoiceModal>
                 )
+              ) : user ? (
+                <Button
+                  onClick={handleProCheckout}
+                  disabled={isLoadingCheckout}
+                  className={`w-full mb-6 py-6 text-lg font-semibold rounded-xl ${
+                    plan.highlighted
+                      ? 'bg-white text-violet-700 hover:bg-violet-50'
+                      : 'bg-violet-600 text-white hover:bg-violet-700'
+                  }`}
+                >
+                  {isLoadingCheckout ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    plan.cta
+                  )}
+                </Button>
               ) : (
                 <TrialSignupModal context="search" redirectPath="/search">
                   <Button
@@ -153,15 +207,7 @@ export function Pricing() {
 
         {/* Additional info */}
         <div className="text-center mt-12">
-          <div className="inline-flex items-center gap-2 px-6 py-3 bg-orange-50 border border-orange-200 rounded-xl mb-4">
-            <svg className="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clipRule="evenodd" />
-            </svg>
-            <span className="text-sm font-semibold text-gray-700">
-              50% introductory discount automatically applied at checkout
-            </span>
-          </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-base text-gray-600">
             Prefer to pay by bank transfer? Contact us at{' '}
             <a href="mailto:tom@sitematcher.co.uk" className="text-violet-600 font-semibold hover:underline">
               tom@sitematcher.co.uk

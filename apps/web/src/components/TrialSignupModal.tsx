@@ -373,12 +373,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
               ) : (
                 <div className="text-base font-semibold">£975/year - 30 days free</div>
               )}
-              <div className="text-xs text-violet-100 mb-1">Add payment method, cancel anytime</div>
-              {(context === 'search' || context === 'agency') && (
-                <div className="text-xs text-violet-100">
-                  50% off with code <span className="bg-white/20 text-white px-2 py-0.5 rounded-full font-mono">SITEMATCHERINTRO</span>
-                </div>
-              )}
+              <div className="text-xs text-violet-100">Add payment method, cancel anytime</div>
             </div>
           </div>
 

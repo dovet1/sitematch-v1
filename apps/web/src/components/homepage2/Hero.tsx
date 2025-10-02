@@ -30,8 +30,8 @@ export function Hero() {
 
             {/* Main headline */}
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Connect your site with verified occupiers{' '}
-              <span className="text-violet-600">actively seeking space</span>
+              Connect your sites with verified companies{' '}
+              <span className="text-violet-600">actively seeking their next location</span>
             </h1>
 
             {/* Subheadline */}
