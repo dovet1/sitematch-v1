@@ -83,9 +83,9 @@ export function Header() {
               <Image
                 src="/logos/logo.svg"
                 alt="SiteMatcher"
-                width={160}
-                height={32}
-                className="h-8 w-auto"
+                width={200}
+                height={40}
+                className="h-10 w-auto"
                 priority
               />
             </Link>

@@ -1,30 +1,30 @@
-import { HeroSearch } from '@/components/search/HeroSearch';
-import { CompanyCarousel } from '@/components/homepage/CompanyCarousel';
-import { PostRequirements } from '@/components/homepage/PostRequirements';
-import { BrowseRequirements } from '@/components/homepage/BrowseRequirements';
-import { SiteSketcherSection } from '@/components/homepage/SiteSketcherSection';
-import { Testimonials } from '@/components/homepage/Testimonials';
-import { FAQ } from '@/components/homepage/FAQ';
-import { MeetTheFounders } from '@/components/homepage/MeetTheFounders';
-import { Footer } from '@/components/homepage/Footer';
+import { Hero } from '@/components/homepage2/Hero';
+import { Partners } from '@/components/homepage2/Partners';
+import { Benefits } from '@/components/homepage2/Benefits';
+import { HowItWorks } from '@/components/homepage2/HowItWorks';
+import { Pricing } from '@/components/homepage2/Pricing';
+import { Testimonials } from '@/components/homepage2/Testimonials';
+import { FAQ } from '@/components/homepage2/FAQ';
+import { FinalCTA } from '@/components/homepage2/FinalCTA';
+import { Footer } from '@/components/homepage2/Footer';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-white">
       {/* Hero Section */}
-      <HeroSearch />
+      <Hero />
 
-      {/* Company Carousel */}
-      <CompanyCarousel />
+      {/* Partners Section */}
+      <Partners />
 
-      {/* Browse Requirements - Primary Action */}
-      <BrowseRequirements />
+      {/* Benefits Section */}
+      <Benefits />
 
-      {/* Post Requirements - Secondary Action */}
-      <PostRequirements />
+      {/* How It Works */}
+      <HowItWorks />
 
-      {/* SiteSketcher */}
-      <SiteSketcherSection />
+      {/* Pricing Section */}
+      <Pricing />
 
       {/* Testimonials */}
       <Testimonials />
@@ -32,8 +32,8 @@ export default function Home() {
       {/* FAQ */}
       <FAQ />
 
-      {/* Meet the Founders */}
-      <MeetTheFounders />
+      {/* Final CTA */}
+      <FinalCTA />
 
       {/* Footer */}
       <Footer />

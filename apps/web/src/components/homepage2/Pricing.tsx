@@ -3,8 +3,12 @@
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
+import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
+import { useAuth } from '@/contexts/auth-context';
+import Link from 'next/link';
 
 export function Pricing() {
+  const { user } = useAuth();
   const plans = [
     {
       name: 'Free',
@@ -100,12 +104,24 @@ export function Pricing() {
 
               {/* CTA */}
               {plan.isFree ? (
-                <Button
-                  asChild
-                  className="w-full mb-6 py-6 text-lg font-semibold rounded-xl bg-violet-600 text-white hover:bg-violet-700"
-                >
-                  <a href="/occupier/create-listing-quick">{plan.cta}</a>
-                </Button>
+                user ? (
+                  <Button
+                    asChild
+                    className="w-full mb-6 py-6 text-lg font-semibold rounded-xl bg-violet-600 text-white hover:bg-violet-700"
+                  >
+                    <Link href="/occupier/create-listing-quick">{plan.cta}</Link>
+                  </Button>
+                ) : (
+                  <AuthChoiceModal
+                    redirectTo="/occupier/create-listing-quick"
+                    title="Sign in to post requirements"
+                    description="Access your account to create and manage property listings"
+                  >
+                    <Button className="w-full mb-6 py-6 text-lg font-semibold rounded-xl bg-violet-600 text-white hover:bg-violet-700">
+                      {plan.cta}
+                    </Button>
+                  </AuthChoiceModal>
+                )
               ) : (
                 <TrialSignupModal context="search" redirectPath="/search">
                   <Button

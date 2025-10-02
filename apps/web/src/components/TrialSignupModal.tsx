@@ -55,8 +55,8 @@ const userTypes: { value: UserType; label: string }[] = [
 const contextConfig = {
   search: {
     headline: 'Access 1000+ Property Requirements',
-    subtext: 'Connect directly with qualified occupiers actively seeking space',
-    cta: 'Start Free Trial - View Requirements',
+    subtext: 'Connect directly with qualified businesses actively seeking space',
+    cta: 'Start Free Trial',
     testimonial: {
       quote: 'SiteMatcher is the best source of real estate requirements on the internet.',
       author: 'Rob L., Property Acquisitions, Lidl',

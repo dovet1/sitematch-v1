@@ -2,9 +2,12 @@
 
 import { Button } from '@/components/ui/button';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
+import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
+import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
 
 export function Hero() {
+  const { user } = useAuth();
   return (
     <section className="relative bg-gradient-to-br from-slate-50 to-white py-12 md:py-16 overflow-hidden">
       {/* Background decoration */}
@@ -57,16 +60,31 @@ export function Hero() {
             {/* Secondary CTA for occupiers */}
             <div className="mt-8">
               <div className="inline-flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-orange-50 to-orange-100/50 rounded-xl border border-orange-200/60">
-                <p className="text-sm text-gray-600">Looking for commercial space?</p>
-                <Link
-                  href="/occupier/create-listing-quick"
-                  className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1"
-                >
-                  Post for free
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
+                <p className="text-sm text-gray-600">Looking to buy or lease a site?</p>
+                {user ? (
+                  <Link
+                    href="/occupier/create-listing-quick"
+                    className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1"
+                  >
+                    Post for free
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                ) : (
+                  <AuthChoiceModal
+                    redirectTo="/occupier/create-listing-quick"
+                    title="Sign in to post requirements"
+                    description="Access your account to create and manage property listings"
+                  >
+                    <button className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1">
+                      Post for free
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </AuthChoiceModal>
+                )}
               </div>
             </div>
           </div>

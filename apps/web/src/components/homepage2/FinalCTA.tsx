@@ -15,7 +15,7 @@ export function FinalCTA() {
 
       <div className="relative max-w-5xl mx-auto px-6 text-center">
         <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
-          Ready to find the perfect requirement for your site?
+          Ready to find the perfect match for your site?
         </h2>
         <p className="text-xl md:text-2xl text-violet-100 mb-10 max-w-3xl mx-auto">
           Join our community of property professionals who've found qualified requirements through SiteMatcher
