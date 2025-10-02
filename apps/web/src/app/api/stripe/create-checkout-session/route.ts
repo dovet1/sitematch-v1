@@ -111,8 +111,15 @@ export async function POST(request: NextRequest) {
 
     const customText = getCustomText(userType)
 
-    // Create Stripe Checkout session
-    const session = await stripe.checkout.sessions.create({
+    // Prepare discount configuration
+    const couponId = 'sQIge0HV' // SITEMATCHERINTRO coupon (50% off once)
+
+    console.log('Creating checkout session for user:', userId)
+    console.log('Using price:', SUBSCRIPTION_CONFIG.PRICE_ID)
+    console.log('Applying coupon:', couponId)
+
+    // Create Stripe Checkout session with discount at top level
+    let sessionConfig: any = {
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -120,6 +127,11 @@ export async function POST(request: NextRequest) {
         {
           price: SUBSCRIPTION_CONFIG.PRICE_ID,
           quantity: 1,
+        },
+      ],
+      discounts: [
+        {
+          coupon: couponId, // Apply coupon directly to checkout session
         },
       ],
       subscription_data: {
@@ -136,7 +148,6 @@ export async function POST(request: NextRequest) {
       },
       success_url: successUrl,
       cancel_url: `${baseUrl}/pricing`,
-      allow_promotion_codes: true,
       billing_address_collection: 'required',
       phone_number_collection: {
         enabled: true,
@@ -156,7 +167,10 @@ export async function POST(request: NextRequest) {
         user_id: userId,
         user_type: userType || 'unknown'
       }
-    })
+    }
+
+    // Create session with coupon applied to subscription
+    const session = await stripe.checkout.sessions.create(sessionConfig)
 
     return NextResponse.json({
       sessionId: session.id,
@@ -165,8 +179,16 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating checkout session:', error)
+    // Log more details for debugging
+    if (error instanceof Error) {
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      {
+        error: 'Failed to create checkout session',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
