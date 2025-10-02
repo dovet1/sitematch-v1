@@ -59,12 +59,12 @@ export function Hero() {
 
             {/* Secondary CTA for occupiers */}
             <div className="mt-8">
-              <div className="inline-flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-orange-50 to-orange-100/50 rounded-xl border border-orange-200/60">
-                <p className="text-sm text-gray-600">Looking to buy or lease a site?</p>
+              <div className="inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-3 px-5 py-3 bg-gradient-to-r from-orange-50 to-orange-100/50 rounded-xl border border-orange-200/60">
+                <p className="text-sm text-gray-600 text-center sm:text-left">Looking to buy or lease a site?</p>
                 {user ? (
                   <Link
                     href="/occupier/create-listing-quick"
-                    className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1"
+                    className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1 whitespace-nowrap"
                   >
                     Post for free
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,7 +77,7 @@ export function Hero() {
                     title="Sign in to post requirements"
                     description="Access your account to create and manage property listings"
                   >
-                    <button className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1">
+                    <button className="text-sm font-semibold text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1 whitespace-nowrap">
                       Post for free
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -107,8 +107,8 @@ export function Hero() {
               </div>
             </div>
 
-            {/* Floating stats cards */}
-            <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-4 border border-gray-100">
+            {/* Floating stats cards - Hidden on mobile to prevent overflow */}
+            <div className="hidden md:block absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-4 border border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                   <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">

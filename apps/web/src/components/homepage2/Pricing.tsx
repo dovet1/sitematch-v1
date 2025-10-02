@@ -62,14 +62,14 @@ export function Pricing() {
               key={plan.name}
               className={`relative rounded-3xl p-8 ${
                 plan.highlighted
-                  ? 'bg-gradient-to-br from-violet-600 to-purple-700 text-white border-4 border-violet-400 shadow-2xl scale-105'
+                  ? 'bg-gradient-to-br from-violet-600 to-purple-700 text-white border-4 border-violet-400 shadow-2xl md:scale-105'
                   : 'bg-white border-2 border-gray-200'
               }`}
             >
               {/* Badge */}
               {plan.badge && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-orange-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                  <span className="bg-orange-500 text-white px-4 py-1 rounded-full text-sm font-semibold whitespace-nowrap">
                     {plan.badge}
                   </span>
                 </div>
