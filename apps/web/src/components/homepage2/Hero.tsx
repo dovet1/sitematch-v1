@@ -1,13 +1,88 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
+import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
 
 export function Hero() {
   const { user } = useAuth();
+  const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<'active' | 'trialing' | null>(null);
+  const [showAlreadySubscribed, setShowAlreadySubscribed] = useState(false);
+
+  // Fetch subscription status when component mounts and user is logged in
+  useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      if (!user?.id) {
+        setSubscriptionStatus(null);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/user/subscription-status');
+        if (response.ok) {
+          const data = await response.json();
+          setSubscriptionStatus(data.subscriptionStatus);
+        }
+      } catch (error) {
+        console.error('Error fetching subscription status:', error);
+      }
+    };
+
+    fetchSubscriptionStatus();
+  }, [user?.id]);
+
+  const handleProCheckout = async () => {
+    if (!user) return;
+
+    // First check if user is already subscribed
+    if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') {
+      setShowAlreadySubscribed(true);
+      return;
+    }
+
+    setIsLoadingCheckout(true);
+    try {
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          userType: 'search',
+          redirectPath: '/search'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.subscriptionStatus === 'active' || data.subscriptionStatus === 'trialing') {
+          setSubscriptionStatus(data.subscriptionStatus);
+          setShowAlreadySubscribed(true);
+          setIsLoadingCheckout(false);
+          return;
+        }
+
+        console.error('Checkout session error:', data);
+        throw new Error(data.details || data.error || 'Failed to create checkout session');
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      setIsLoadingCheckout(false);
+    }
+  };
+
   return (
     <section className="relative bg-gradient-to-br from-slate-50 to-white py-12 md:py-16 overflow-hidden">
       {/* Background decoration */}
@@ -41,11 +116,29 @@ export function Hero() {
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <TrialSignupModal context="search" redirectPath="/search">
-                <Button size="lg" className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300">
-                  Start Free Trial
+              {user ? (
+                <Button
+                  onClick={handleProCheckout}
+                  disabled={isLoadingCheckout}
+                  size="lg"
+                  className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300"
+                >
+                  {isLoadingCheckout ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Start Free Trial'
+                  )}
                 </Button>
-              </TrialSignupModal>
+              ) : (
+                <TrialSignupModal context="search" redirectPath="/search">
+                  <Button size="lg" className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300">
+                    Start Free Trial
+                  </Button>
+                </TrialSignupModal>
+              )}
 
               <Button
                 asChild
@@ -124,6 +217,15 @@ export function Hero() {
           </div>
         </div>
       </div>
+
+      {/* Already Subscribed Modal */}
+      {subscriptionStatus && (
+        <AlreadySubscribedModal
+          open={showAlreadySubscribed}
+          onClose={() => setShowAlreadySubscribed(false)}
+          subscriptionStatus={subscriptionStatus}
+        />
+      )}
     </section>
   );
 }

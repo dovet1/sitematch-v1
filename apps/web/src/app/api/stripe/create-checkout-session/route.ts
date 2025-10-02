@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     // Get user details using admin client to bypass RLS
     const { data: user, error: userError } = await adminSupabase
       .from('users')
-      .select('email, stripe_customer_id')
+      .select('email, stripe_customer_id, subscription_status')
       .eq('id', userId)
       .single()
 
@@ -55,6 +55,19 @@ export async function POST(request: NextRequest) {
     if (userError || !user) {
       console.log('User not found in database:', userError)
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Check if user already has an active subscription or trial
+    if (user.subscription_status === 'active' || user.subscription_status === 'trialing') {
+      console.log(`User ${userId} already has ${user.subscription_status} subscription`)
+      return NextResponse.json(
+        {
+          error: 'Already subscribed',
+          subscriptionStatus: user.subscription_status,
+          message: 'You already have an active subscription'
+        },
+        { status: 400 }
+      )
     }
 
     // Create or get Stripe customer

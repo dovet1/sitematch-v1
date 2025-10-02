@@ -1,19 +1,51 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
+import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
 
 export default function PricingPage() {
   const { user } = useAuth();
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<'active' | 'trialing' | null>(null);
+  const [showAlreadySubscribed, setShowAlreadySubscribed] = useState(false);
+
+  // Fetch subscription status when component mounts and user is logged in
+  useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      if (!user?.id) {
+        setSubscriptionStatus(null);
+        return;
+      }
+
+      try {
+        // Check subscription status from user profile
+        const response = await fetch('/api/user/subscription-status');
+        if (response.ok) {
+          const data = await response.json();
+          setSubscriptionStatus(data.subscriptionStatus);
+        }
+      } catch (error) {
+        console.error('Error fetching subscription status:', error);
+      }
+    };
+
+    fetchSubscriptionStatus();
+  }, [user?.id]);
 
   const handleProCheckout = async () => {
     if (!user) return;
+
+    // First check if user is already subscribed (use cached status or fetch)
+    if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') {
+      setShowAlreadySubscribed(true);
+      return;
+    }
 
     setIsLoadingCheckout(true);
     try {
@@ -29,15 +61,23 @@ export default function PricingPage() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Checkout session error:', errorData);
-        throw new Error(errorData.details || errorData.error || 'Failed to create checkout session');
+        // Check if user is already subscribed
+        if (data.subscriptionStatus === 'active' || data.subscriptionStatus === 'trialing') {
+          setSubscriptionStatus(data.subscriptionStatus);
+          setShowAlreadySubscribed(true);
+          setIsLoadingCheckout(false);
+          return;
+        }
+
+        console.error('Checkout session error:', data);
+        throw new Error(data.details || data.error || 'Failed to create checkout session');
       }
 
-      const { url } = await response.json();
-      if (url) {
-        window.location.href = url;
+      if (data.url) {
+        window.location.href = data.url;
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
@@ -217,6 +257,15 @@ export default function PricingPage() {
             </p>
           </div>
         </div>
+
+        {/* Already Subscribed Modal */}
+        {subscriptionStatus && (
+          <AlreadySubscribedModal
+            open={showAlreadySubscribed}
+            onClose={() => setShowAlreadySubscribed(false)}
+            subscriptionStatus={subscriptionStatus}
+          />
+        )}
       </section>
     </div>
   );

@@ -182,75 +182,74 @@ export function Header() {
 
       {/* Mobile Navigation Menu */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           id="mobile-menu"
           className="md:hidden bg-background border-t border-border shadow-lg"
           role="navigation"
           aria-label="Mobile navigation"
         >
-          <div className="px-4 py-3 space-y-1">
-            {navigationItems.map((item) => (
-              shouldShowNavItem(item) && (
-                item.requiresAuth && !user ? (
-                  <AuthChoiceModal
-                    key={item.href}
-                    redirectTo={item.href}
-                    title="Sign in to post requirements"
-                    description="Access your account to create and manage property listings"
-                  >
-                    <button
-                      onClick={closeMobileMenu}
-                      className={`
-                        w-full text-left block px-4 py-3 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
-                        ${item.primary
-                          ? 'bg-primary-50 text-primary-700 hover:bg-primary-100'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                        }
-                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
-                      `}
-                    >
-                      {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
-                    </button>
-                  </AuthChoiceModal>
-                ) : (
-                  <Link
-                    key={item.href}
-                    href={item.href}
+          <div className="px-4 pt-4 pb-3">
+            {/* Secondary Navigation Links */}
+            <nav className="space-y-1 mb-4">
+              {navigationItems.filter(item => !item.primary && shouldShowNavItem(item)).map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeMobileMenu}
+                  className="block px-4 py-3.5 rounded-xl text-base font-medium text-foreground hover:bg-muted/60 transition-all duration-200 violet-bloom-touch active:scale-[0.98]"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+
+            {/* Primary CTA - Prominent */}
+            {navigationItems.filter(item => item.primary && shouldShowNavItem(item)).map((item) => (
+              item.requiresAuth && !user ? (
+                <AuthChoiceModal
+                  key={item.href}
+                  redirectTo={item.href}
+                  title="Sign in to post requirements"
+                  description="Access your account to create and manage property listings"
+                >
+                  <button
                     onClick={closeMobileMenu}
-                    className={`
-                      block px-4 py-3 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
-                      ${item.primary
-                        ? 'bg-primary-50 text-primary-700 hover:bg-primary-100'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                      }
-                      focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
-                    `}
+                    className="w-full px-5 py-4 rounded-xl font-semibold text-base bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 violet-bloom-touch"
                   >
                     {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
-                  </Link>
-                )
+                  </button>
+                </AuthChoiceModal>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeMobileMenu}
+                  className="block w-full px-5 py-4 rounded-xl font-semibold text-base text-center bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 violet-bloom-touch"
+                >
+                  {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
+                </Link>
               )
             ))}
           </div>
 
           {/* Mobile Auth Section */}
-          <div className="px-4 py-3 border-t border-border bg-muted/30">
+          <div className="px-4 py-4 border-t border-border/60">
             {loading && !user ? (
-              <div className="space-y-2">
-                <div className="h-10 bg-muted animate-pulse rounded-md violet-bloom-loading" />
-                <div className="h-10 bg-muted animate-pulse rounded-md violet-bloom-loading" />
+              <div className="space-y-2.5">
+                <div className="h-11 bg-muted animate-pulse rounded-xl violet-bloom-loading" />
+                <div className="h-11 bg-muted animate-pulse rounded-xl violet-bloom-loading" />
               </div>
             ) : user ? (
               <MobileUserSection onClose={closeMobileMenu} />
             ) : (
-              <div className="flex flex-col space-y-2">
+              <div className="space-y-2.5">
                 <LoginModal>
-                  <Button variant="ghost" className="w-full justify-start font-medium violet-bloom-touch">
+                  <Button variant="ghost" className="w-full h-11 justify-center text-base font-medium violet-bloom-touch rounded-xl">
                     Sign In
                   </Button>
                 </LoginModal>
                 <SignUpModalEnhanced>
-                  <Button className="w-full font-medium shadow-sm violet-bloom-touch">
+                  <Button className="w-full h-11 text-base font-semibold shadow-sm violet-bloom-touch rounded-xl">
                     Sign Up
                   </Button>
                 </SignUpModalEnhanced>
@@ -301,46 +300,47 @@ function MobileUserSection({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-3">
       {/* User Info Header */}
-      <div className="flex items-center gap-3 px-4 py-2 bg-background rounded-lg border">
+      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-primary-50 to-primary-100/50 rounded-xl border border-primary-200/50">
         <MobileUserAvatar email={profile.email} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">
+          <p className="text-sm font-semibold text-foreground truncate">
             {profile.email}
           </p>
+          <p className="text-xs text-muted-foreground">Account</p>
         </div>
       </div>
 
       {/* Menu Items */}
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         <Link
           href="/occupier/dashboard"
           onClick={onClose}
-          className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent transition-colors"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/60 transition-all duration-200 active:scale-[0.98] violet-bloom-touch"
         >
-          <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Dashboard</span>
+          <LayoutDashboard className="h-5 w-5 text-primary-600" />
+          <span className="text-base font-medium text-foreground">Dashboard</span>
         </Link>
 
         {isAdmin && (
           <Link
             href="/admin"
             onClick={onClose}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent transition-colors"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/60 transition-all duration-200 active:scale-[0.98] violet-bloom-touch"
           >
-            <Shield className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Admin</span>
+            <Shield className="h-5 w-5 text-primary-600" />
+            <span className="text-base font-medium text-foreground">Admin</span>
           </Link>
         )}
 
         <button
           onClick={handleSignOut}
           disabled={isLoading}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-destructive/10 transition-colors text-destructive"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-destructive/10 transition-all duration-200 text-destructive active:scale-[0.98] violet-bloom-touch"
         >
-          <LogOut className="h-4 w-4" />
-          <span className="text-sm font-medium">
+          <LogOut className="h-5 w-5" />
+          <span className="text-base font-medium">
             {isLoading ? 'Signing out...' : 'Sign out'}
           </span>
         </button>
