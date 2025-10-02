@@ -1,35 +1,73 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
+import { createServerClient } from '@supabase/ssr'
+import { createAdminClient } from '@/lib/supabase'
+import { cookies } from 'next/headers'
 import { stripe } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await request.json()
+    // Get authenticated user from session
+    const cookieStore = cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+        },
+      }
+    )
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 })
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'User authentication required' },
+        { status: 401 }
+      )
     }
 
-    const supabase = createClient()
-
-    // Get user's Stripe customer ID
-    const { data: user, error: userError } = await supabase
+    // Get user's Stripe customer ID using admin client
+    const adminSupabase = createAdminClient()
+    const { data: userData, error: userError } = await adminSupabase
       .from('users')
-      .select('stripe_customer_id')
-      .eq('id', userId)
+      .select('stripe_customer_id, email')
+      .eq('id', user.id)
       .single()
 
-    if (userError || !user || !user.stripe_customer_id) {
-      return NextResponse.json({ error: 'No Stripe customer found' }, { status: 404 })
+    if (userError || !userData) {
+      console.error('Error fetching user data:', userError)
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // If no Stripe customer exists yet, create one
+    let customerId = userData.stripe_customer_id
+    if (!customerId) {
+      console.log('Creating Stripe customer for user:', user.id)
+      const customer = await stripe.customers.create({
+        email: userData.email,
+        metadata: {
+          user_id: user.id,
+        },
+      })
+      customerId = customer.id
+
+      // Save customer ID to database
+      await adminSupabase
+        .from('users')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', user.id)
     }
 
     // Get base URL for return URL
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+    const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
     // Create customer portal session
     const session = await stripe.billingPortal.sessions.create({
-      customer: user.stripe_customer_id,
-      return_url: `${baseUrl}/account/subscription`,
+      customer: customerId,
+      return_url: `${baseUrl}/occupier/dashboard`,
     })
 
     return NextResponse.json({
@@ -38,8 +76,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating portal session:', error)
+
+    // Provide helpful error message
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create portal session'
+
     return NextResponse.json(
-      { error: 'Failed to create portal session' },
+      {
+        error: 'Failed to create portal session',
+        details: errorMessage
+      },
       { status: 500 }
     )
   }
