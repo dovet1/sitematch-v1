@@ -5,7 +5,6 @@ import Link from 'next/link';
 export function Footer() {
   const footerLinks = {
     product: [
-      { label: 'Features', href: '/features' },
       { label: 'Pricing', href: '/pricing' },
       { label: 'SiteSketcher', href: '/sitesketcher/landing' },
       { label: 'Search Requirements', href: '/search' },
@@ -13,12 +12,10 @@ export function Footer() {
     company: [
       { label: 'About Us', href: '/about' },
       { label: 'Contact', href: 'mailto:rob@sitematcher.co.uk' },
-      { label: 'Blog', href: '/blog' },
     ],
     legal: [
       { label: 'Terms of Service', href: 'https://app.termly.io/policy-viewer/policy.html?policyUUID=0d60ea82-ecb7-43d4-bf2d-a3ea5a0900c6' },
       { label: 'Privacy Policy', href: 'https://app.termly.io/policy-viewer/policy.html?policyUUID=70f2f9d5-072f-443a-944d-39630c45252c' },
-      { label: 'Cookie Policy', href: '/cookies' },
     ],
   };
 
