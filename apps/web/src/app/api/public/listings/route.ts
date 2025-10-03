@@ -487,24 +487,26 @@ export async function GET(request: NextRequest) {
     // Apply location-based filtering if coordinates are provided
     if (lat !== null && lng !== null) {
       const searchCoords: [number, number] = [lng, lat]; // [longitude, latitude]
-      
+
       // Separate listings into those within radius and nationwide
-      const listingsWithinRadius: any[] = [];
+      const listingsWithDistances: { listing: any; distance: number }[] = [];
       const nationwideListings: any[] = [];
-      
+
       results.forEach(listing => {
         // Nationwide listings go to separate array
         if (listing.is_nationwide) {
           nationwideListings.push(listing);
           return;
         }
-        
-        // Check if any of the listing's locations are within radius
-        const hasLocationInRadius = listing.locations.some((loc: any) => {
-          if (!loc.coordinates) return false;
-          
+
+        // Calculate minimum distance to any of the listing's locations
+        let minDistance = Infinity;
+
+        listing.locations.forEach((loc: any) => {
+          if (!loc.coordinates) return;
+
           let listingLat, listingLng;
-          
+
           // Handle different coordinate formats
           if (Array.isArray(loc.coordinates)) {
             // Array format [lng, lat]
@@ -515,26 +517,37 @@ export async function GET(request: NextRequest) {
             listingLat = loc.coordinates.lat;
             listingLng = loc.coordinates.lng;
           } else {
-            return false;
+            return;
           }
-          
+
           // Calculate distance using Mapbox utility
           const listingCoords: [number, number] = [listingLng, listingLat];
           const distanceKm = calculateDistance(searchCoords, listingCoords);
-          
-          // Filter by 5km radius
-          return distanceKm <= 5;
+
+          if (distanceKm < minDistance) {
+            minDistance = distanceKm;
+          }
         });
-        
-        if (hasLocationInRadius) {
-          listingsWithinRadius.push(listing);
+
+        // Filter by 5km radius
+        if (minDistance <= 5) {
+          listingsWithDistances.push({ listing, distance: minDistance });
         }
       });
-      
-      // Combine results: location-specific first, then nationwide
-      results = [...listingsWithinRadius, ...nationwideListings];
+
+      // Sort by distance (closest first)
+      listingsWithDistances.sort((a, b) => a.distance - b.distance);
+
+      // Extract sorted listings and add distance metadata
+      const sortedListingsWithinRadius = listingsWithDistances.map(item => ({
+        ...item.listing,
+        _distance: item.distance // Add distance for potential client-side use
+      }));
+
+      // Combine results: location-specific (sorted by distance) first, then nationwide
+      results = [...sortedListingsWithinRadius, ...nationwideListings];
       console.log('After coordinate filtering:', results.length, 'results');
-      console.log('Listings within radius:', listingsWithinRadius.length);
+      console.log('Listings within radius (sorted by distance):', sortedListingsWithinRadius.length);
       console.log('Nationwide listings:', nationwideListings.length);
     }
 
