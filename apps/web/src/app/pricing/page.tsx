@@ -199,24 +199,37 @@ export default function PricingPage() {
                     </AuthChoiceModal>
                   )
                 ) : user ? (
-                  <Button
-                    onClick={handleProCheckout}
-                    disabled={isLoadingCheckout}
-                    className={`w-full mb-6 py-6 text-lg font-semibold rounded-xl ${
-                      plan.highlighted
-                        ? 'bg-white text-violet-700 hover:bg-violet-50'
-                        : 'bg-violet-600 text-white hover:bg-violet-700'
-                    }`}
-                  >
-                    {isLoadingCheckout ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      plan.cta
-                    )}
-                  </Button>
+                  subscriptionStatus === 'active' || subscriptionStatus === 'trialing' ? (
+                    <Button
+                      asChild
+                      className={`w-full mb-6 py-6 text-lg font-semibold rounded-xl ${
+                        plan.highlighted
+                          ? 'bg-white text-violet-700 hover:bg-violet-50'
+                          : 'bg-violet-600 text-white hover:bg-violet-700'
+                      }`}
+                    >
+                      <Link href="/search">Explore requirements</Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleProCheckout}
+                      disabled={isLoadingCheckout}
+                      className={`w-full mb-6 py-6 text-lg font-semibold rounded-xl ${
+                        plan.highlighted
+                          ? 'bg-white text-violet-700 hover:bg-violet-50'
+                          : 'bg-violet-600 text-white hover:bg-violet-700'
+                      }`}
+                    >
+                      {isLoadingCheckout ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        plan.cta
+                      )}
+                    </Button>
+                  )
                 ) : (
                   <TrialSignupModal context="search" redirectPath="/search">
                     <Button

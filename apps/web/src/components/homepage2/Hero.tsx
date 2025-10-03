@@ -117,37 +117,58 @@ export function Hero() {
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               {user ? (
-                <Button
-                  onClick={handleProCheckout}
-                  disabled={isLoadingCheckout}
-                  size="lg"
-                  className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300"
-                >
-                  {isLoadingCheckout ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    'Start Free Trial'
-                  )}
-                </Button>
-              ) : (
-                <TrialSignupModal context="search" redirectPath="/search">
-                  <Button size="lg" className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300">
-                    Start Free Trial
+                subscriptionStatus === 'active' || subscriptionStatus === 'trialing' ? (
+                  <Button
+                    asChild
+                    size="lg"
+                    className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300"
+                  >
+                    <Link href="/search">Explore requirements</Link>
                   </Button>
-                </TrialSignupModal>
+                ) : (
+                  <>
+                    <Button
+                      onClick={handleProCheckout}
+                      disabled={isLoadingCheckout}
+                      size="lg"
+                      className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300"
+                    >
+                      {isLoadingCheckout ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        'Start Free Trial'
+                      )}
+                    </Button>
+                    <Button
+                      asChild
+                      size="lg"
+                      variant="outline"
+                      className="border-2 border-gray-300 hover:border-violet-400 hover:bg-violet-50 px-8 py-6 text-lg font-semibold rounded-xl"
+                    >
+                      <Link href="/pricing">View Pricing</Link>
+                    </Button>
+                  </>
+                )
+              ) : (
+                <>
+                  <TrialSignupModal context="search" redirectPath="/search">
+                    <Button size="lg" className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300">
+                      Start Free Trial
+                    </Button>
+                  </TrialSignupModal>
+                  <Button
+                    asChild
+                    size="lg"
+                    variant="outline"
+                    className="border-2 border-gray-300 hover:border-violet-400 hover:bg-violet-50 px-8 py-6 text-lg font-semibold rounded-xl"
+                  >
+                    <Link href="/pricing">View Pricing</Link>
+                  </Button>
+                </>
               )}
-
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-2 border-gray-300 hover:border-violet-400 hover:bg-violet-50 px-8 py-6 text-lg font-semibold rounded-xl"
-              >
-                <Link href="/pricing">View Pricing</Link>
-              </Button>
             </div>
 
             {/* Secondary CTA for occupiers */}

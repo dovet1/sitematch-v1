@@ -6,6 +6,7 @@ import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import { useAuth } from '@/contexts/auth-context';
 import { ArrowRight, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 export function FinalCTA() {
   const { user } = useAuth();
@@ -99,24 +100,37 @@ export function FinalCTA() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           {user ? (
-            <Button
-              onClick={handleProCheckout}
-              disabled={isLoadingCheckout}
-              size="lg"
-              className="bg-white text-violet-700 hover:bg-violet-50 px-10 py-7 text-lg font-semibold rounded-xl shadow-2xl hover:shadow-white/20 transition-all duration-300 hover:scale-105"
-            >
-              {isLoadingCheckout ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                <>
-                  Start Free Trial
+            subscriptionStatus === 'active' || subscriptionStatus === 'trialing' ? (
+              <Button
+                asChild
+                size="lg"
+                className="bg-white text-violet-700 hover:bg-violet-50 px-10 py-7 text-lg font-semibold rounded-xl shadow-2xl hover:shadow-white/20 transition-all duration-300 hover:scale-105"
+              >
+                <Link href="/search">
+                  Explore requirements
                   <ArrowRight className="w-5 h-5 ml-2" />
-                </>
-              )}
-            </Button>
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                onClick={handleProCheckout}
+                disabled={isLoadingCheckout}
+                size="lg"
+                className="bg-white text-violet-700 hover:bg-violet-50 px-10 py-7 text-lg font-semibold rounded-xl shadow-2xl hover:shadow-white/20 transition-all duration-300 hover:scale-105"
+              >
+                {isLoadingCheckout ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Start Free Trial
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </>
+                )}
+              </Button>
+            )
           ) : (
             <TrialSignupModal context="search" redirectPath="/search">
               <Button

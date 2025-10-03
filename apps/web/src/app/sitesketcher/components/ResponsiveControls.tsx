@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -27,6 +27,105 @@ import { TouchOptimizedButton } from './TouchOptimizedButton';
 import { ParkingOverlay as ParkingOverlayComponent } from './ParkingOverlay';
 import { RectangleDimensionsModal } from './RectangleDimensionsModal';
 import { cn } from '@/lib/utils';
+
+// Memoized rectangle inputs to prevent re-renders from parent
+const RectangleInputs = memo(function RectangleInputs({
+  measurementUnit,
+  onSubmit
+}: {
+  measurementUnit: MeasurementUnit;
+  onSubmit: (width: number, length: number) => void;
+}) {
+  const [rectangleWidth, setRectangleWidth] = useState<string>('10');
+  const [rectangleLength, setRectangleLength] = useState<string>('20');
+  const widthInputRef = useRef<HTMLInputElement>(null);
+  const lengthInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = () => {
+    const widthNum = parseFloat(rectangleWidth);
+    const lengthNum = parseFloat(rectangleLength);
+
+    if (isNaN(widthNum) || isNaN(lengthNum) || widthNum <= 0 || lengthNum <= 0) {
+      alert('Please enter valid positive numbers for width and length');
+      return;
+    }
+
+    onSubmit(widthNum, lengthNum);
+
+    // Reset for next time
+    setRectangleWidth('10');
+    setRectangleLength('20');
+  };
+
+  return (
+    <div key="rectangle-inputs-mobile" className="space-y-3 p-4 bg-muted/50 rounded-lg border border-border">
+      <div className="text-sm font-medium text-foreground">
+        Rectangle Dimensions ({measurementUnit === 'metric' ? 'metres' : 'feet'})
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label htmlFor="rectangle-width-mobile" className="text-xs text-muted-foreground">Width</label>
+          <input
+            ref={widthInputRef}
+            id="rectangle-width-mobile"
+            type="text"
+            inputMode="decimal"
+            value={rectangleWidth}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setRectangleWidth(value);
+              }
+            }}
+            onBlur={(e) => {
+              const num = parseFloat(e.target.value);
+              if (isNaN(num) || num <= 0) {
+                setRectangleWidth('10');
+              }
+            }}
+            className="w-full px-3 py-2 text-base border border-input rounded-md bg-background"
+            placeholder="Width"
+            autoComplete="off"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="rectangle-length-mobile" className="text-xs text-muted-foreground">Length</label>
+          <input
+            ref={lengthInputRef}
+            id="rectangle-length-mobile"
+            type="text"
+            inputMode="decimal"
+            value={rectangleLength}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setRectangleLength(value);
+              }
+            }}
+            onBlur={(e) => {
+              const num = parseFloat(e.target.value);
+              if (isNaN(num) || num <= 0) {
+                setRectangleLength('20');
+              }
+            }}
+            className="w-full px-3 py-2 text-base border border-input rounded-md bg-background"
+            placeholder="Length"
+            autoComplete="off"
+          />
+        </div>
+      </div>
+
+      <Button
+        onClick={handleSubmit}
+        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+      >
+        Place on Map
+      </Button>
+    </div>
+  );
+});
 
 interface ResponsiveControlsProps {
   measurement: AreaMeasurement | null;
@@ -94,8 +193,6 @@ export function ResponsiveControls({
   const [mobileSheetHeight, setMobileSheetHeight] = useState<'collapsed' | 'halfway' | 'expanded'>('collapsed');
   const [isRectangleModalOpen, setIsRectangleModalOpen] = useState(false);
   const [showRectangleInputs, setShowRectangleInputs] = useState(false);
-  const [rectangleWidth, setRectangleWidth] = useState<string>('10');
-  const [rectangleLength, setRectangleLength] = useState<string>('20');
 
   // Reset selectedPolygonId if the selected polygon no longer exists
   useEffect(() => {
@@ -123,21 +220,9 @@ export function ResponsiveControls({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleRectangleSubmit = () => {
-    const widthNum = parseFloat(rectangleWidth);
-    const lengthNum = parseFloat(rectangleLength);
-
-    if (isNaN(widthNum) || isNaN(lengthNum) || widthNum <= 0 || lengthNum <= 0) {
-      alert('Please enter valid positive numbers for width and length');
-      return;
-    }
-
-    onAddRectangle(widthNum, lengthNum);
+  const handleRectangleSubmit = (width: number, length: number) => {
+    onAddRectangle(width, length);
     setShowRectangleInputs(false);
-
-    // Reset for next time
-    setRectangleWidth('10');
-    setRectangleLength('20');
   };
 
   const handleRectangleButtonClick = () => {
@@ -191,46 +276,10 @@ export function ResponsiveControls({
 
             {/* Inline Rectangle Inputs (Mobile Only) */}
             {showRectangleInputs && isMobile && (
-              <div className="space-y-3 p-4 bg-muted/50 rounded-lg border border-border">
-                <div className="text-sm font-medium text-foreground">
-                  Rectangle Dimensions ({measurementUnit === 'metric' ? 'm' : 'ft'})
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Width</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0.1"
-                      value={rectangleWidth}
-                      onChange={(e) => setRectangleWidth(e.target.value)}
-                      className="w-full px-3 py-2 text-base border border-input rounded-md bg-background"
-                      placeholder="Width"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Length</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0.1"
-                      value={rectangleLength}
-                      onChange={(e) => setRectangleLength(e.target.value)}
-                      className="w-full px-3 py-2 text-base border border-input rounded-md bg-background"
-                      placeholder="Length"
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleRectangleSubmit}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  Place on Map
-                </Button>
-              </div>
+              <RectangleInputs
+                measurementUnit={measurementUnit}
+                onSubmit={handleRectangleSubmit}
+              />
             )}
           </>
         )}
