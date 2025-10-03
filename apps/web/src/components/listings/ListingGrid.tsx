@@ -200,18 +200,76 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange }: Listin
     );
   }
 
+  // Separate local and nationwide listings for visual delineation
+  const localListings = listings.filter(listing => !listing.is_nationwide);
+  const nationwideListings = listings.filter(listing => listing.is_nationwide);
+  const hasLocationFilter = filters.coordinates !== null || filters.location !== '';
+  const showDelineation = hasLocationFilter && localListings.length > 0 && nationwideListings.length > 0;
+
   return (
     <div className="space-y-8">
-      {/* Listings Grid */}
-      <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {listings.map((listing) => (
-          <ListingCard
-            key={listing.id}
-            listing={listing}
-            onClick={() => onListingClick(listing.id)}
-          />
-        ))}
-      </div>
+      {/* Local Listings */}
+      {localListings.length > 0 && (
+        <div className="space-y-4">
+          {showDelineation && (
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Near {filters.location || 'your search location'}
+              </h2>
+              <span className="text-sm text-gray-500">({localListings.length})</span>
+            </div>
+          )}
+          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {localListings.map((listing) => (
+              <ListingCard
+                key={listing.id}
+                listing={listing}
+                onClick={() => onListingClick(listing.id)}
+                searchCoordinates={filters.coordinates}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Nationwide Listings Divider */}
+      {showDelineation && (
+        <div className="relative py-8">
+          <div className="absolute inset-0 flex items-center" aria-hidden="true">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-background px-4 text-sm font-medium text-gray-500 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Nationwide Listings
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Nationwide Listings */}
+      {nationwideListings.length > 0 && (
+        <div className="space-y-4">
+          {!showDelineation && nationwideListings.length === listings.length && (
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900">All Listings</h2>
+              <span className="text-sm text-gray-500">({nationwideListings.length})</span>
+            </div>
+          )}
+          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {nationwideListings.map((listing) => (
+              <ListingCard
+                key={listing.id}
+                listing={listing}
+                onClick={() => onListingClick(listing.id)}
+                searchCoordinates={filters.coordinates}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Loading More Indicator */}
       {isLoadingMore && (

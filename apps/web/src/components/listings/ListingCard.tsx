@@ -9,6 +9,7 @@ import { useState } from 'react';
 interface ListingCardProps {
   listing: SearchResult;
   onClick: () => void;
+  searchCoordinates?: { lat: number; lng: number } | null;
 }
 
 function getInitials(companyName: string): string {
@@ -58,49 +59,90 @@ function formatUseClassName(useClass: string): string {
     .join(' ');
 }
 
-function formatLocations(listing: SearchResult): string {
+function normalizeCoordinates(coords: any): { lat: number; lng: number } | null {
+  if (!coords) return null;
+
+  // Handle array format [lng, lat]
+  if (Array.isArray(coords) && coords.length === 2) {
+    return { lat: coords[1], lng: coords[0] };
+  }
+
+  // Handle object format {lat, lng}
+  if (typeof coords === 'object' && 'lat' in coords && 'lng' in coords) {
+    return { lat: coords.lat, lng: coords.lng };
+  }
+
+  return null;
+}
+
+function calculateDistance(
+  coord1: { lat: number; lng: number },
+  coord2: { lat: number; lng: number }
+): number {
+  // Haversine formula to calculate distance in km
+  const R = 6371; // Earth's radius in km
+  const dLat = (coord2.lat - coord1.lat) * Math.PI / 180;
+  const dLon = (coord2.lng - coord1.lng) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(coord1.lat * Math.PI / 180) * Math.cos(coord2.lat * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function formatLocations(
+  listing: SearchResult,
+  searchCoordinates?: { lat: number; lng: number } | null
+): string {
   if (listing.is_nationwide) {
     return 'Nationwide';
   }
-  
+
   // Use multiple locations if available
   if (listing.locations && listing.locations.length > 0) {
-    const formattedLocations = listing.locations.map(loc => {
-      // If we have region, use it with place_name
-      if (loc.region && loc.place_name) {
-        // Remove region/country from place_name if it's already included
-        const placeParts = loc.place_name.split(',').map(p => p.trim());
-        const cityName = placeParts[0];
-        
-        // Check if region is already in place_name to avoid duplication
-        if (placeParts.some(part => part.toLowerCase() === loc.region?.toLowerCase())) {
-          return loc.place_name.split(',').slice(0, 2).join(', ');
-        }
-        
-        return `${cityName}, ${loc.region}`;
-      }
-      
-      // Fallback to extracting from place_name
-      const parts = loc.place_name.split(',').map(part => part.trim());
-      return parts.slice(0, 2).join(', ');
+    let locations = [...listing.locations];
+
+    // Sort by distance to search coordinates if available
+    if (searchCoordinates) {
+      locations = locations.sort((a, b) => {
+        const aNormalized = normalizeCoordinates(a.coordinates);
+        const bNormalized = normalizeCoordinates(b.coordinates);
+
+        // Handle missing coordinates
+        if (!aNormalized) return 1;
+        if (!bNormalized) return -1;
+
+        // Calculate distances
+        const aDist = calculateDistance(searchCoordinates, aNormalized);
+        const bDist = calculateDistance(searchCoordinates, bNormalized);
+
+        return aDist - bDist;
+      });
+    }
+
+    const formattedLocations = locations.map(loc => {
+      // Extract just the first part (city/town name)
+      const placeParts = loc.place_name.split(',').map(p => p.trim());
+      return placeParts[0];
     });
-    
+
     // Return formatted locations
     if (formattedLocations.length === 1) {
       return formattedLocations[0];
     } else if (formattedLocations.length === 2) {
       return formattedLocations.join(' & ');
     } else {
-      return `${formattedLocations[0]} & ${formattedLocations.length - 1} more`;
+      return `${formattedLocations[0]} + ${formattedLocations.length - 1} more`;
     }
   }
-  
+
   // Fallback to legacy place_name field
   if (listing.place_name) {
     const parts = listing.place_name.split(',').map(part => part.trim());
-    return parts.slice(0, 2).join(', ');
+    return parts[0];
   }
-  
+
   return 'Location not specified';
 }
 
@@ -128,10 +170,11 @@ function formatSiteSize(listing: SearchResult): string {
   return 'No site size preference';
 }
 
-export function ListingCard({ listing, onClick }: ListingCardProps) {
+export function ListingCard({ listing, onClick, searchCoordinates }: ListingCardProps) {
   // Get the appropriate logo URL based on clearbit_logo flag and available data
   const logoUrl = getSearchResultLogoUrl(listing);
   const siteSizeText = formatSiteSize(listing);
+  const locationText = formatLocations(listing, searchCoordinates);
   const [imageLoaded, setImageLoaded] = useState(false);
   
   return (
@@ -208,7 +251,13 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
         <h3 className="text-base font-semibold text-gray-900 mb-1 line-clamp-1">
           {listing.company_name}
         </h3>
-        
+
+        {/* Location */}
+        <div className="flex items-center gap-1 text-sm text-gray-600 mb-2">
+          <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="line-clamp-1">{locationText}</span>
+        </div>
+
         {/* Site Size */}
         <div className="flex items-center gap-1 text-sm text-gray-500 mb-3">
           <Ruler className="w-3.5 h-3.5 flex-shrink-0" />
