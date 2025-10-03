@@ -11,6 +11,13 @@ export const metadata: Metadata = {
   title: 'SiteMatcher - Commercial Directory',
   description: 'Find and list commercial space with SiteMatcher',
   viewport: 'width=device-width, initial-scale=1',
+  icons: {
+    icon: [
+      { url: '/favicon.png', sizes: 'any' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export default function RootLayout({

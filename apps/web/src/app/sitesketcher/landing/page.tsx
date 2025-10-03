@@ -20,8 +20,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
-import { SignUpModalEnhanced } from '@/components/auth/signup-modal-enhanced';
-import { LoginModal } from '@/components/auth/login-modal';
+import { StartTrialButton } from '@/components/StartTrialButton';
 import '@/styles/sitesketcher-landing.css';
 import dynamic from 'next/dynamic';
 
@@ -99,26 +98,6 @@ export default function SiteSketcherLanding() {
   const [demoState, setDemoState] = useState<DemoState>({ isPlaying: false, currentStep: 0 });
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const handleGetStarted = () => {
-    if (user) {
-      // User is authenticated, redirect to tool with onboarding check
-      const isNewUser = !localStorage.getItem('sitesketcher-visited');
-      if (isNewUser) {
-        localStorage.setItem('sitesketcher-visited', 'true');
-        window.location.href = '/sitesketcher?welcome=true';
-      } else {
-        window.location.href = '/sitesketcher';
-      }
-    }
-    // If not authenticated, the SignUpModalEnhanced will handle the signup flow
-  };
-
-  const handleDirectToSiteSketcher = () => {
-    if (user) {
-      window.location.href = '/sitesketcher';
-    }
-    // If not authenticated, the LoginModal will handle the login flow
-  };
 
   const handleTryDemo = () => {
     if (!demoState.isPlaying) {
@@ -157,26 +136,12 @@ export default function SiteSketcherLanding() {
             {/* CTA Buttons - Stacked Hierarchy */}
             <div className="cta-buttons flex flex-col gap-4 justify-center items-center mb-12 max-w-sm mx-auto">
               {/* Primary Action - Full Width */}
-              {user ? (
-                <Button 
-                  size="lg" 
-                  onClick={handleGetStarted}
-                  className="cta-button cta-button-primary touch-button w-full bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold"
-                >
-                  Get Started Free
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              ) : (
-                <SignUpModalEnhanced redirectTo="/sitesketcher?welcome=true">
-                  <Button 
-                    size="lg" 
-                    className="cta-button cta-button-primary touch-button w-full bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg font-semibold"
-                  >
-                    Get Started Free
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </SignUpModalEnhanced>
-              )}
+              <StartTrialButton
+                size="lg"
+                userType="sitesketcher"
+                redirectPath="/sitesketcher?welcome=true"
+                className="cta-button cta-button-primary touch-button w-full text-white px-8 py-4 text-lg font-semibold"
+              />
               
               {/* Secondary Action */}
               <Button 
@@ -191,17 +156,14 @@ export default function SiteSketcherLanding() {
               </Button>
               
               {/* Tertiary Action - Text Link Style */}
-              {!user && (
-                <LoginModal redirectTo="/sitesketcher">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="cta-button touch-button text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm underline-offset-4 hover:underline"
-                  >
-                    Already have an account? Sign In
-                  </Button>
-                </LoginModal>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.href = '/pricing'}
+                className="cta-button touch-button text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm underline-offset-4 hover:underline"
+              >
+                View Pricing & Features
+              </Button>
             </div>
 
             {/* Trust Indicators */}
@@ -374,26 +336,12 @@ export default function SiteSketcherLanding() {
           <p className="text-xl text-blue-100 mb-8">
             Join commercial real estate professionals who trust SiteSketcher for property evaluation
           </p>
-          {user ? (
-            <Button 
-              size="lg" 
-              onClick={handleGetStarted}
-              className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 text-lg"
-            >
-              Get Started Free
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          ) : (
-            <SignUpModalEnhanced redirectTo="/sitesketcher?welcome=true">
-              <Button 
-                size="lg" 
-                className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 text-lg"
-              >
-                Get Started Free
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </SignUpModalEnhanced>
-          )}
+          <StartTrialButton
+            size="lg"
+            userType="sitesketcher"
+            redirectPath="/sitesketcher?welcome=true"
+            className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 text-lg"
+          />
         </div>
       </section>
 
