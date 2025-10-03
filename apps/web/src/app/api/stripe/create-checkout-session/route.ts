@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     const customText = getCustomText(userType)
 
     // Prepare discount configuration
-    const couponId = 'sQIge0HV' // SITEMATCHERINTRO coupon (50% off once)
+    const couponId = process.env.STRIPE_COUPON_ID // SITEMATCHERINTRO coupon (50% off once)
 
     console.log('Creating checkout session for user:', userId)
     console.log('Using price:', SUBSCRIPTION_CONFIG.PRICE_ID)
