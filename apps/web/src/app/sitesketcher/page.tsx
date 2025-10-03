@@ -476,7 +476,7 @@ function SiteSketcherContent() {
               <div>
                 <h1 className="text-xl font-bold text-primary">SiteSketcher</h1>
                 <p className="text-sm text-muted-foreground">
-                  Free site drawing tool
+                  Site drawing tool
                 </p>
               </div>
             </div>
