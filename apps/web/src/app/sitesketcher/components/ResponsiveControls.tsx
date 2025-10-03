@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { 
-  ChevronUp, 
+import {
+  ChevronUp,
   ChevronDown,
   ChevronRight,
   Maximize2,
@@ -15,7 +15,8 @@ import {
   Plus,
   Pencil,
   MousePointer,
-  Settings
+  Settings,
+  Square
 } from 'lucide-react';
 import { ModeToggleSwitch } from './ModeToggleSwitch';
 import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode } from '@/types/sitesketcher';
@@ -24,6 +25,7 @@ import { formatArea, calculatePolygonArea } from '@/lib/sitesketcher/measurement
 import { MobileBottomSheet } from './MobileBottomSheet';
 import { TouchOptimizedButton } from './TouchOptimizedButton';
 import { ParkingOverlay as ParkingOverlayComponent } from './ParkingOverlay';
+import { RectangleDimensionsModal } from './RectangleDimensionsModal';
 import { cn } from '@/lib/utils';
 
 interface ResponsiveControlsProps {
@@ -42,6 +44,8 @@ interface ResponsiveControlsProps {
   // Polygon-specific toggles
   onPolygonUnitToggle: (polygonId: string) => void;
   onPolygonSideLengthToggle: (polygonId: string) => void;
+  // Rectangle props
+  onAddRectangle: (width: number, length: number) => void;
   // Parking props
   parkingOverlays: ParkingOverlay[];
   selectedOverlayId: string | null;
@@ -70,6 +74,7 @@ export function ResponsiveControls({
   onToggleSideLengths,
   onPolygonUnitToggle,
   onPolygonSideLengthToggle,
+  onAddRectangle,
   parkingOverlays,
   selectedOverlayId,
   onAddOverlay,
@@ -87,6 +92,10 @@ export function ResponsiveControls({
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(true); // Always open on mobile
   const [mobileSheetHeight, setMobileSheetHeight] = useState<'collapsed' | 'halfway' | 'expanded'>('collapsed');
+  const [isRectangleModalOpen, setIsRectangleModalOpen] = useState(false);
+  const [showRectangleInputs, setShowRectangleInputs] = useState(false);
+  const [rectangleWidth, setRectangleWidth] = useState<string>('10');
+  const [rectangleLength, setRectangleLength] = useState<string>('20');
 
   // Reset selectedPolygonId if the selected polygon no longer exists
   useEffect(() => {
@@ -107,12 +116,39 @@ export function ResponsiveControls({
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  const handleRectangleSubmit = () => {
+    const widthNum = parseFloat(rectangleWidth);
+    const lengthNum = parseFloat(rectangleLength);
+
+    if (isNaN(widthNum) || isNaN(lengthNum) || widthNum <= 0 || lengthNum <= 0) {
+      alert('Please enter valid positive numbers for width and length');
+      return;
+    }
+
+    onAddRectangle(widthNum, lengthNum);
+    setShowRectangleInputs(false);
+
+    // Reset for next time
+    setRectangleWidth('10');
+    setRectangleLength('20');
+  };
+
+  const handleRectangleButtonClick = () => {
+    if (isMobile) {
+      // On mobile, toggle inline inputs
+      setShowRectangleInputs(!showRectangleInputs);
+    } else {
+      // On desktop, open modal
+      setIsRectangleModalOpen(true);
+    }
+  };
 
   function MobileContent() {
     return (
@@ -133,13 +169,71 @@ export function ResponsiveControls({
       <div className="space-y-4">
         {/* Mode Toggle Switch */}
         <div className="flex justify-center overflow-visible">
-          <ModeToggleSwitch 
+          <ModeToggleSwitch
             mode={drawingMode}
             onToggle={onModeToggle}
             size={isMobile ? "large" : "default"}
             className="w-full max-w-xs"
           />
         </div>
+
+        {/* Add Rectangle Button - Only show in draw mode */}
+        {drawingMode === 'draw' && (
+          <>
+            <Button
+              onClick={handleRectangleButtonClick}
+              variant="outline"
+              className="w-full flex items-center gap-2 justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
+            >
+              <Square className="h-4 w-4" />
+              {showRectangleInputs && isMobile ? 'Cancel Rectangle' : 'Add Rectangle'}
+            </Button>
+
+            {/* Inline Rectangle Inputs (Mobile Only) */}
+            {showRectangleInputs && isMobile && (
+              <div className="space-y-3 p-4 bg-muted/50 rounded-lg border border-border">
+                <div className="text-sm font-medium text-foreground">
+                  Rectangle Dimensions ({measurementUnit === 'metric' ? 'm' : 'ft'})
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Width</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      value={rectangleWidth}
+                      onChange={(e) => setRectangleWidth(e.target.value)}
+                      className="w-full px-3 py-2 text-base border border-input rounded-md bg-background"
+                      placeholder="Width"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Length</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      value={rectangleLength}
+                      onChange={(e) => setRectangleLength(e.target.value)}
+                      className="w-full px-3 py-2 text-base border border-input rounded-md bg-background"
+                      placeholder="Length"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleRectangleSubmit}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  Place on Map
+                </Button>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Measurements Section */}
         <Card>
@@ -547,6 +641,14 @@ export function ResponsiveControls({
       />
 
       <DesktopSections />
+
+      {/* Rectangle Dimensions Modal */}
+      <RectangleDimensionsModal
+        isOpen={isRectangleModalOpen}
+        onClose={() => setIsRectangleModalOpen(false)}
+        onSubmit={onAddRectangle}
+        measurementUnit={measurementUnit}
+      />
     </div>
   );
 }

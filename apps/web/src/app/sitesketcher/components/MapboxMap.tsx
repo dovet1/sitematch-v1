@@ -6,6 +6,7 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { createMapboxMap, getMapboxToken, flyToLocation, addGridOverlay, removeGridOverlay } from '@/lib/sitesketcher/mapbox-utils';
 import type { MapboxDrawPolygon, ParkingOverlay, SearchResult, AreaMeasurement, MeasurementUnit, DrawingMode } from '@/types/sitesketcher';
 import { calculateDistance, formatDistance, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
+import { createRectangleCoordinates, feetToMeters } from '@/lib/sitesketcher/rectangle-utils';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
@@ -29,6 +30,8 @@ interface MapboxMapProps {
   measurementUnit: MeasurementUnit;
   drawingMode: DrawingMode;
   showSideLengths: boolean;
+  rectangleToPlace?: { width: number; length: number } | null;
+  onRectanglePlaced?: () => void;
   className?: string;
 }
 
@@ -59,6 +62,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   measurementUnit,
   drawingMode,
   showSideLengths,
+  rectangleToPlace,
+  onRectanglePlaced,
   className = ''
 }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -80,6 +85,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   const showSideLengthsRef = useRef<boolean>(showSideLengths);
   const keydownHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
   const keyupHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
+  const rectangleToPlaceRef = useRef<{ width: number; length: number } | null>(rectangleToPlace || null);
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
@@ -811,13 +817,17 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       map.on('draw.modechange', (e: any) => {
         // Don't interfere with mode changes in select mode
         if (drawingModeRef.current === 'select') return;
-        
-        // In draw mode, always return to draw_polygon
+
+
+        // In draw mode, return to draw_polygon UNLESS we're placing a rectangle
         if (drawingModeRef.current === 'draw' && e.mode !== 'draw_polygon') {
-          requestAnimationFrame(() => {
-            draw.changeMode('draw_polygon');
-            map.getCanvas().style.cursor = 'crosshair';
-          });
+          // Don't force draw_polygon mode if we're in rectangle placement mode
+          if (!rectangleToPlaceRef.current) {
+            requestAnimationFrame(() => {
+              draw.changeMode('draw_polygon');
+              map.getCanvas().style.cursor = 'crosshair';
+            });
+          }
         }
       });
 
@@ -1266,13 +1276,101 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         map.getCanvas().style.cursor = 'crosshair';
       });
 
+      // Function to handle rectangle placement (shared between click and touch)
+      const placeRectangle = (lngLat: { lng: number; lat: number }) => {
+        if (!rectangleToPlaceRef.current || drawingModeRef.current !== 'draw') return false;
+
+        const { width, length } = rectangleToPlaceRef.current;
+
+        // Convert to meters if needed
+        const widthMeters = measurementUnitRef.current === 'imperial' ? feetToMeters(width) : width;
+        const lengthMeters = measurementUnitRef.current === 'imperial' ? feetToMeters(length) : length;
+
+        // Create rectangle coordinates
+        const coordinates = createRectangleCoordinates(
+          [lngLat.lng, lngLat.lat],
+          widthMeters,
+          lengthMeters,
+          0 // No rotation by default
+        );
+
+        // Create polygon object
+        const rectanglePolygon: MapboxDrawPolygon = {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: coordinates
+          },
+          properties: {}
+        };
+
+        // Add to Mapbox Draw
+        if (drawRef.current) {
+          const featureIds = drawRef.current.add(rectanglePolygon);
+          const addedFeature = drawRef.current.get(featureIds[0]);
+
+          if (addedFeature) {
+            // Call parent callback
+            onPolygonCreate(addedFeature as MapboxDrawPolygon);
+          }
+        }
+
+        // Clear rectangle placement mode
+        if (onRectanglePlaced) {
+          onRectanglePlaced();
+        }
+
+        return true;
+      };
+
+      // Handle touch events for mobile rectangle placement
+      let rectangleTouchStart: { x: number; y: number; time: number } | null = null;
+
+      map.on('touchstart', (e) => {
+        if (rectangleToPlaceRef.current && drawingModeRef.current === 'draw') {
+          const touch = (e.originalEvent as TouchEvent).touches[0];
+          if (touch) {
+            rectangleTouchStart = {
+              x: touch.clientX,
+              y: touch.clientY,
+              time: Date.now()
+            };
+          }
+        }
+      });
+
+      map.on('touchend', (e) => {
+        if (rectangleToPlaceRef.current && drawingModeRef.current === 'draw' && rectangleTouchStart) {
+          const touch = (e.originalEvent as TouchEvent).changedTouches[0];
+          if (touch) {
+            const touchDuration = Date.now() - rectangleTouchStart.time;
+            const distance = Math.sqrt(
+              Math.pow(touch.clientX - rectangleTouchStart.x, 2) +
+              Math.pow(touch.clientY - rectangleTouchStart.y, 2)
+            );
+
+            // If it was a quick tap (not a drag), place the rectangle
+            if (touchDuration < 300 && distance < 10) {
+              placeRectangle(e.lngLat);
+              e.preventDefault();
+            }
+          }
+          rectangleTouchStart = null;
+        }
+      });
+
       // Handle clicks on empty map areas to deselect all shapes
       map.on('click', (e) => {
+        // Handle rectangle placement if we have a rectangle ready to place
+        if (placeRectangle(e.lngLat)) {
+          return;
+        }
+
         // Only handle deselection in select mode
         if (drawingModeRef.current !== 'select') {
           return;
         }
-        
+
         // Query for features at the clicked point
         const features = map.queryRenderedFeatures(e.point, {
           layers: ['parking-overlays-fill', 'polygon-rotation-handles', 'parking-rotation-handles']
@@ -3080,12 +3178,68 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     return calculatePolygonCenterLocal(coordinates);
   }, []);
 
+  // Update rectangleToPlace ref when prop changes
+  useEffect(() => {
+    rectangleToPlaceRef.current = rectangleToPlace || null;
+  }, [rectangleToPlace]);
+
+  // Effect to switch drawing mode when rectangle placement is active
+  useEffect(() => {
+    if (!drawRef.current || !isMapLoaded) return;
+
+    const draw = drawRef.current;
+
+    if (rectangleToPlace && drawingMode === 'draw') {
+      // Switch to simple_select to prevent polygon drawing
+      // This allows the map click handler to catch clicks for rectangle placement
+      if (draw.getMode() !== 'simple_select') {
+        draw.changeMode('simple_select');
+      }
+    } else if (!rectangleToPlace && drawingMode === 'draw') {
+      // Return to draw_polygon mode when not placing rectangles
+      if (draw.getMode() !== 'draw_polygon') {
+        draw.changeMode('draw_polygon');
+      }
+    }
+  }, [rectangleToPlace, drawingMode, isMapLoaded]);
+
+  // Effect to change cursor when rectangle placement mode is active
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const map = mapRef.current;
+
+    if (rectangleToPlace && drawingMode === 'draw') {
+      // Show crosshair cursor with a visual indication we're in rectangle placement mode
+      map.getCanvas().style.cursor = 'crosshair';
+      map.getCanvas().title = `Click to place ${rectangleToPlace.width} x ${rectangleToPlace.length} ${measurementUnit === 'metric' ? 'm' : 'ft'} rectangle`;
+    } else {
+      map.getCanvas().title = '';
+    }
+  }, [rectangleToPlace, drawingMode, measurementUnit]);
+
   return (
-    <div 
-      ref={mapContainer} 
-      className={`w-full h-full ${className}`}
-      style={{ minHeight: '400px' }}
-    />
+    <div className="relative w-full h-full">
+      <div
+        ref={mapContainer}
+        className={`w-full h-full ${className}`}
+        style={{ minHeight: '400px' }}
+      />
+
+      {/* Rectangle Placement Instruction Banner */}
+      {rectangleToPlace && drawingMode === 'draw' && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
+          <div className="bg-primary text-primary-foreground px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+            </svg>
+            <span className="font-semibold">
+              Click on the map to place your {rectangleToPlace.width} × {rectangleToPlace.length} {measurementUnit === 'metric' ? 'm' : 'ft'} rectangle
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 });
 
