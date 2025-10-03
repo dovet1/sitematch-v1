@@ -53,6 +53,7 @@ function SiteSketcherContent() {
   const [mapboxError, setMapboxError] = useState<string | null>(null);
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(showWelcome);
+  const [rectangleToPlace, setRectangleToPlace] = useState<{ width: number; length: number } | null>(null);
   const mapRef = useRef<MapboxMapRef>(null);
   const originalMeasurementsRef = useRef<AreaMeasurement | null>(null);
 
@@ -398,6 +399,11 @@ function SiteSketcherContent() {
     window.history.replaceState({}, '', url.toString());
   }, []);
 
+  const handleAddRectangle = useCallback((width: number, length: number) => {
+    // Store rectangle dimensions for placement
+    setRectangleToPlace({ width, length });
+  }, []);
+
   // Show loading while checking authentication
   if (loading) {
     return (
@@ -505,6 +511,7 @@ function SiteSketcherContent() {
                 onToggleSideLengths={handleToggleSideLengths}
                 onPolygonUnitToggle={handlePolygonUnitToggle}
                 onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
+                onAddRectangle={handleAddRectangle}
               />
             </div>
           </div>
@@ -532,6 +539,8 @@ function SiteSketcherContent() {
               measurementUnit={state.measurementUnit}
               drawingMode={state.drawingMode}
               showSideLengths={state.showSideLengths}
+              rectangleToPlace={rectangleToPlace}
+              onRectanglePlaced={() => setRectangleToPlace(null)}
               className="w-full h-full"
             />
             
@@ -584,6 +593,8 @@ function SiteSketcherContent() {
             measurementUnit={state.measurementUnit}
             drawingMode={state.drawingMode}
             showSideLengths={state.showSideLengths}
+            rectangleToPlace={rectangleToPlace}
+            onRectanglePlaced={() => setRectangleToPlace(null)}
             className="w-full h-full"
           />
         </div>
@@ -613,6 +624,7 @@ function SiteSketcherContent() {
             onToggleSideLengths={handleToggleSideLengths}
             onPolygonUnitToggle={handlePolygonUnitToggle}
             onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
+            onAddRectangle={handleAddRectangle}
           />
         </div>
       </div>

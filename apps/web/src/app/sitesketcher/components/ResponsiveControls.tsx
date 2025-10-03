@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { 
-  ChevronUp, 
+import {
+  ChevronUp,
   ChevronDown,
   ChevronRight,
   Maximize2,
@@ -15,7 +15,8 @@ import {
   Plus,
   Pencil,
   MousePointer,
-  Settings
+  Settings,
+  Square
 } from 'lucide-react';
 import { ModeToggleSwitch } from './ModeToggleSwitch';
 import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode } from '@/types/sitesketcher';
@@ -24,6 +25,7 @@ import { formatArea, calculatePolygonArea } from '@/lib/sitesketcher/measurement
 import { MobileBottomSheet } from './MobileBottomSheet';
 import { TouchOptimizedButton } from './TouchOptimizedButton';
 import { ParkingOverlay as ParkingOverlayComponent } from './ParkingOverlay';
+import { RectangleDimensionsModal } from './RectangleDimensionsModal';
 import { cn } from '@/lib/utils';
 
 interface ResponsiveControlsProps {
@@ -42,6 +44,8 @@ interface ResponsiveControlsProps {
   // Polygon-specific toggles
   onPolygonUnitToggle: (polygonId: string) => void;
   onPolygonSideLengthToggle: (polygonId: string) => void;
+  // Rectangle props
+  onAddRectangle: (width: number, length: number) => void;
   // Parking props
   parkingOverlays: ParkingOverlay[];
   selectedOverlayId: string | null;
@@ -70,6 +74,7 @@ export function ResponsiveControls({
   onToggleSideLengths,
   onPolygonUnitToggle,
   onPolygonSideLengthToggle,
+  onAddRectangle,
   parkingOverlays,
   selectedOverlayId,
   onAddOverlay,
@@ -87,6 +92,7 @@ export function ResponsiveControls({
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(true); // Always open on mobile
   const [mobileSheetHeight, setMobileSheetHeight] = useState<'collapsed' | 'halfway' | 'expanded'>('collapsed');
+  const [isRectangleModalOpen, setIsRectangleModalOpen] = useState(false);
 
   // Reset selectedPolygonId if the selected polygon no longer exists
   useEffect(() => {
@@ -133,13 +139,25 @@ export function ResponsiveControls({
       <div className="space-y-4">
         {/* Mode Toggle Switch */}
         <div className="flex justify-center overflow-visible">
-          <ModeToggleSwitch 
+          <ModeToggleSwitch
             mode={drawingMode}
             onToggle={onModeToggle}
             size={isMobile ? "large" : "default"}
             className="w-full max-w-xs"
           />
         </div>
+
+        {/* Add Rectangle Button - Only show in draw mode */}
+        {drawingMode === 'draw' && (
+          <Button
+            onClick={() => setIsRectangleModalOpen(true)}
+            variant="outline"
+            className="w-full flex items-center gap-2 justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
+          >
+            <Square className="h-4 w-4" />
+            Add Rectangle
+          </Button>
+        )}
 
         {/* Measurements Section */}
         <Card>
@@ -547,6 +565,14 @@ export function ResponsiveControls({
       />
 
       <DesktopSections />
+
+      {/* Rectangle Dimensions Modal */}
+      <RectangleDimensionsModal
+        isOpen={isRectangleModalOpen}
+        onClose={() => setIsRectangleModalOpen(false)}
+        onSubmit={onAddRectangle}
+        measurementUnit={measurementUnit}
+      />
     </div>
   );
 }
