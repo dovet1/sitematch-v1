@@ -24,7 +24,7 @@ export function RectangleDimensionsModal({
   const [width, setWidth] = useState<string>('10');
   const [length, setLength] = useState<string>('20');
 
-  const unitLabel = measurementUnit === 'metric' ? 'm' : 'ft';
+  const unitLabel = measurementUnit === 'metric' ? 'metres' : 'feet';
   const unitName = measurementUnit === 'metric' ? 'meters' : 'feet';
 
   const handleSubmit = (e: React.FormEvent) => {

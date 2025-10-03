@@ -120,7 +120,7 @@ export default function SiteSketcherLanding() {
           <div className="text-center fade-in">
             <Badge variant="outline" className="mb-4">
               <Zap className="w-3 h-3 mr-1" />
-              Free Commercial Property Assessment Tool
+              Commercial Property Assessment Tool
             </Badge>
             
             <h1 className="hero-title text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-6 text-contrast">
@@ -164,22 +164,6 @@ export default function SiteSketcherLanding() {
               >
                 View Pricing & Features
               </Button>
-            </div>
-
-            {/* Trust Indicators */}
-            <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-gray-500">
-              <div className="flex items-center">
-                <Shield className="w-4 h-4 mr-1" />
-                Secure & Private
-              </div>
-              <div className="flex items-center">
-                <Clock className="w-4 h-4 mr-1" />
-                Instant Results
-              </div>
-              <div className="flex items-center">
-                <CheckCircle className="w-4 h-4 mr-1" />
-                No Credit Card Required
-              </div>
             </div>
           </div>
         </div>
@@ -253,42 +237,6 @@ export default function SiteSketcherLanding() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
                 <p className="text-gray-600">{feature.description}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Commercial User Types */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Built for Commercial Real Estate Professionals
-            </h2>
-            <p className="text-lg text-gray-600">
-              Tailored workflows for every type of commercial property professional
-            </p>
-          </div>
-
-          <div className="user-type-grid grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {commercialUserTypes.map((userType, index) => (
-              <Card key={index} className="user-type-card p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center mb-4">
-                  <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg mr-3">
-                    <userType.icon className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">{userType.title}</h3>
-                </div>
-                <p className="text-gray-600 mb-4">{userType.description}</p>
-                <ul className="space-y-2">
-                  {userType.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center text-sm text-gray-600">
-                      <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
               </Card>
             ))}
           </div>
