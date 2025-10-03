@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Favicons</title>
+</head>
+<body>
+    <h1>Favicon Generator</h1>
+    <p>This page will generate PNG favicons from your SVG. Open browser console to download files.</p>
+
+    <canvas id="canvas32" width="32" height="32" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+    <canvas id="canvas180" width="180" height="180" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+    <canvas id="canvas512" width="512" height="512" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+
+    <script>
+        const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="#7033ff">
+  <path d="M2.61,37.02a1.45852,1.45852,0,0,1-.11-.55V4A1.498,1.498,0,0,1,4,2.5H15.77a1.50728,1.50728,0,0,1,1.06.44L27.18,13.29a1.49682,1.49682,0,0,1,0,2.12L5.06,37.53A1.50653,1.50653,0,0,1,2.61,37.02Z"/>
+  <path d="M61.5,4V15.77a1.809,1.809,0,0,1-.11.57,1.62577,1.62577,0,0,1-.33.49L50.71,27.18a1.50713,1.50713,0,0,1-2.12,0L26.47,5.06a1.5155,1.5155,0,0,1,.4901-2.45,1.79313,1.79313,0,0,1,.57-.11L60,2.5A1.498,1.498,0,0,1,61.5,4Z"/>
+  <path d="M61.39,26.98a1.45841,1.45841,0,0,1,.11.55V60A1.498,1.498,0,0,1,60,61.5H48.23a1.50747,1.50747,0,0,1-1.06-.44L36.82,50.71a1.49678,1.49678,0,0,1,0-2.12L58.94,26.47A1.50658,1.50658,0,0,1,61.39,26.98Z"/>
+  <path d="M19.17,30.94,30.94,19.17a1.509,1.509,0,0,1,2.12,0L44.83,30.94a1.50907,1.50907,0,0,1,0,2.12L33.06,44.83a1.51876,1.51876,0,0,1-2.12,0L19.17,33.06A1.50906,1.50906,0,0,1,19.17,30.94Z"/>
+  <path d="M37.86,59.45a1.50661,1.50661,0,0,1-1.39,2.05L4,61.5A1.498,1.498,0,0,1,2.5,60V48.23a1.81029,1.81029,0,0,1,.11-.57,1.62669,1.62669,0,0,1,.33-.49L13.29,36.82a1.54761,1.54761,0,0,1,2.12,0L37.53,58.94A1.28931,1.28931,0,0,1,37.86,59.45Z"/>
+</svg>`;
+
+        function downloadCanvas(canvas, filename) {
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = url;
+                link.click();
+                console.log(`Downloaded ${filename}`);
+            });
+        }
+
+        function renderSvgToCanvas(canvasId, size, filename) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+
+            const img = new Image();
+            const blob = new Blob([svgContent], {type: 'image/svg+xml'});
+            const url = URL.createObjectURL(blob);
+
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, size, size);
+                URL.revokeObjectURL(url);
+
+                // Auto-download
+                setTimeout(() => downloadCanvas(canvas, filename), 500);
+            };
+
+            img.src = url;
+        }
+
+        // Generate all sizes
+        window.onload = function() {
+            console.log('Generating favicons...');
+            renderSvgToCanvas('canvas32', 32, 'favicon.png');
+            setTimeout(() => renderSvgToCanvas('canvas180', 180, 'apple-touch-icon.png'), 1000);
+            setTimeout(() => renderSvgToCanvas('canvas512', 512, 'icon-512.png'), 2000);
+
+            console.log('Downloads will start automatically. Save them to the /public folder.');
+        };
+    </script>
+</body>
+</html>
