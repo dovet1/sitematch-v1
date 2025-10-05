@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
 import { SearchFilters, SearchResponse } from '@/types/search';
 import { calculateDistance } from '@/lib/mapbox';
 
@@ -8,24 +8,25 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     console.log('=== API ROUTE CALLED ===');
     console.log('Full URL:', request.url);
-    
+
     // Parse query parameters
     const location = searchParams.get('location') || '';
     const lat = searchParams.get('lat') ? Number(searchParams.get('lat')) : null;
     const lng = searchParams.get('lng') ? Number(searchParams.get('lng')) : null;
-    const radius = Number(searchParams.get('radius') || 5); // Default 5 miles radius
+    const radiusMiles = Number(searchParams.get('radius') || 5); // Default 5 miles radius
+    const radius = radiusMiles * 1.60934; // Convert miles to kilometers for distance comparison
     const companyName = searchParams.get('companyName') || '';
     const sector = [...searchParams.getAll('sector'), ...searchParams.getAll('sectors[]')];
     const useClass = [...searchParams.getAll('useClass'), ...searchParams.getAll('useClasses[]')];
     const listingType = [...searchParams.getAll('listingType'), ...searchParams.getAll('listingTypes[]')];
-    
+
     const sizeMin = searchParams.get('sizeMin') ? Number(searchParams.get('sizeMin')) : null;
     const sizeMax = searchParams.get('sizeMax') ? Number(searchParams.get('sizeMax')) : null;
     const acreageMin = searchParams.get('minAcreage') ? Number(searchParams.get('minAcreage')) : null;
     const acreageMax = searchParams.get('maxAcreage') ? Number(searchParams.get('maxAcreage')) : null;
     const dwellingMin = searchParams.get('minDwelling') ? Number(searchParams.get('minDwelling')) : null;
     const dwellingMax = searchParams.get('maxDwelling') ? Number(searchParams.get('maxDwelling')) : null;
-    
+
     console.log('All URL params:', Object.fromEntries(searchParams.entries()));
     console.log('Filter params:', { acreageMin, acreageMax, dwellingMin, dwellingMax });
     console.log('Raw params:', {
@@ -38,61 +39,32 @@ export async function GET(request: NextRequest) {
     const isNationwide = searchParams.get('isNationwide') === 'true' || searchParams.get('nationwide') === 'true';
     const page = Number(searchParams.get('page')) || 1;
     const limit = Math.min(Number(searchParams.get('limit')) || 20, 1000); // Max 1000 results per page for comprehensive search
-    
-    const supabase = createClient();
-    
-    
-    // First, get listing IDs that have approved versions
-    const { data: approvedVersions, error: versionError } = await supabase
-      .from('listing_versions')
-      .select('listing_id')
-      .eq('status', 'approved');
-    
-    if (versionError) {
-      console.error('Error fetching approved versions:', versionError);
-      return NextResponse.json(
-        { error: 'Failed to fetch listings', details: versionError.message },
-        { status: 500 }
-      );
-    }
-    
-    const approvedListingIds = approvedVersions?.map(v => v.listing_id) || [];
-    
-    if (approvedListingIds.length === 0) {
-      // No approved versions exist, return empty result
-      return NextResponse.json({
-        results: [],
-        total: 0,
-        page,
-        limit,
-        hasMore: false
-      });
-    }
 
-    // Build the query - simplified to avoid relationship issues
+    const supabase = createServerClient();
+
+    // Build the query - RLS policies will handle filtering for approved listings
     let query = supabase
       .from('listings')
       .select(`
-        id, 
-        company_name, 
-        title, 
+        id,
+        company_name,
+        title,
         description,
-        site_size_min, 
+        site_size_min,
         site_size_max,
         site_acreage_min,
         site_acreage_max,
         dwelling_count_min,
         dwelling_count_max,
-        contact_name, 
-        contact_title, 
-        contact_email, 
+        contact_name,
+        contact_title,
+        contact_email,
         contact_phone,
         clearbit_logo,
         company_domain,
         created_at,
         current_version_id
-      `)
-      .in('id', approvedListingIds);
+      `);
 
 
     // Apply location filtering
@@ -159,14 +131,7 @@ export async function GET(request: NextRequest) {
     // Apply the filtered listing IDs to the main query
     if (validListingIds !== null) {
       if (validListingIds.length > 0) {
-        // Further filter by intersection with approved listing IDs
-        const filteredIds = approvedListingIds.filter(id => validListingIds.includes(id));
-        if (filteredIds.length > 0) {
-          query = query.in('id', filteredIds);
-        } else {
-          // No valid listings found, return empty result
-          query = query.eq('id', '00000000-0000-0000-0000-000000000000');
-        }
+        query = query.in('id', validListingIds);
       } else {
         // No valid listings found, return empty result
         query = query.eq('id', '00000000-0000-0000-0000-000000000000');
@@ -241,25 +206,39 @@ export async function GET(request: NextRequest) {
 
     // Fetch the highest approved version for each listing
     const listingIds = listings?.map(l => l.id) || [];
-    
+
+    console.log(`About to fetch versions for ${listingIds.length} listings`);
+
     let versionMap: Record<string, any> = {};
     if (listingIds.length > 0) {
-      const { data: versions } = await supabase
+      // Fetch ALL approved versions - RLS will filter appropriately
+      // Removed .in() filter to avoid PostgREST query size limits with large listing ID arrays
+      const { data: versions, error: versionsError } = await supabase
         .from('listing_versions')
         .select('listing_id, content, version_number')
-        .in('listing_id', listingIds)
         .eq('status', 'approved')
-        .order('version_number', { ascending: false });
-      
-      // Keep only the highest version number per listing
+        .order('version_number', { ascending: false })
+        .limit(100000); // Fetch up to 100k versions to ensure we get all
+
+      if (versionsError) {
+        console.error('Error fetching versions:', versionsError);
+      }
+
+      console.log(`Fetched ${versions?.length || 0} approved versions total`);
+
+      // Keep only the highest version number per listing, and only for listings we actually have
+      const listingIdSet = new Set(listingIds);
       const highestVersions = new Map<string, any>();
       versions?.forEach(version => {
-        if (!highestVersions.has(version.listing_id)) {
+        // Only include versions for listings in our current set
+        if (listingIdSet.has(version.listing_id) && !highestVersions.has(version.listing_id)) {
           const content = typeof version.content === 'string' ? JSON.parse(version.content) : version.content;
           highestVersions.set(version.listing_id, content);
         }
       });
-      
+
+      console.log(`Kept ${highestVersions.size} versions for our ${listingIds.length} listings`);
+
       versionMap = Object.fromEntries(highestVersions);
     }
     
@@ -300,12 +279,42 @@ export async function GET(request: NextRequest) {
       .select('listing_id, use_classes(id, name, code)')
       .in('listing_id', currentListingIds);
       
-    // Fetch locations
-    const { data: locationData } = await supabase
-      .from('listing_locations')
-      .select('listing_id, id, place_name, coordinates, formatted_address, region, country')
-      .in('listing_id', currentListingIds);
-    
+    // Fetch ALL listing_locations - RLS will filter to only show locations for approved listings
+    // This avoids the .in() query limit issue
+    // Note: PostgREST has a hard limit of 1000 rows per request, so we need to paginate
+    let locationData: any[] = [];
+    let locationError: any = null;
+    let locationPage = 0;
+    const locationPageSize = 1000;
+    let hasMoreLocations = true;
+
+    while (hasMoreLocations) {
+      const { data, error } = await supabase
+        .from('listing_locations')
+        .select('listing_id, id, place_name, coordinates, formatted_address, region, country')
+        .range(locationPage * locationPageSize, (locationPage + 1) * locationPageSize - 1);
+
+      if (error) {
+        locationError = error;
+        break;
+      }
+
+      if (data && data.length > 0) {
+        locationData = [...locationData, ...data];
+        hasMoreLocations = data.length === locationPageSize;
+        locationPage++;
+      } else {
+        hasMoreLocations = false;
+      }
+    }
+
+    console.log('Location data fetch (paginated):', {
+      requestedListings: currentListingIds.length,
+      locationsReturned: locationData?.length || 0,
+      pages: locationPage,
+      error: locationError?.message
+    });
+
     // Create lookup maps
     const sectorMap = new Map();
     const useClassMap = new Map();
@@ -332,6 +341,21 @@ export async function GET(request: NextRequest) {
       locationMap.get(item.listing_id).push(item);
     });
 
+    // Debug: Check specific Canterbury listings
+    const canterburyListingIds = [
+      'b0a58b89-16fe-463c-b1ba-87bc3aaf3cc4', // B&B Hotels
+      '7cb0d79f-e84e-4ad2-bd68-42f7d5a9563d'  // British Heart Foundation
+    ];
+    canterburyListingIds.forEach(id => {
+      const inLocationMap = locationMap.has(id);
+      const inListings = listings?.some(l => l.id === id);
+      console.log(`Canterbury listing ${id.substring(0, 8)}: inListings=${inListings}, inLocationMap=${inLocationMap}, locations=${locationMap.get(id)?.length || 0}`);
+    });
+
+    console.log(`Location map has ${locationMap.size} listings with location data`);
+    console.log(`Processing ${listings?.length || 0} total listings`);
+    console.log(`Version map has ${Object.keys(versionMap).length} listings with approved versions`);
+
     // Transform data to match SearchResult interface with logo fetching
     let results = listings?.map(listing => {
       // Check if this listing has versioned data
@@ -347,8 +371,11 @@ export async function GET(request: NextRequest) {
         if (versionContent.listing) {
           listingData = { ...listing, ...versionContent.listing };
         }
-        if (versionContent.locations) {
+        if (versionContent.locations && versionContent.locations.length > 0) {
           locations = versionContent.locations;
+        } else {
+          // Debug: Version exists but has no locations - this is the 587 listings issue!
+          // Silently continue - these are the transferred listings with empty location arrays
         }
         if (versionContent.sectors) {
           sectors = versionContent.sectors.map((s: any) => ({ sectors: s.sector }));
@@ -487,16 +514,27 @@ export async function GET(request: NextRequest) {
     // Apply location-based filtering if coordinates are provided
     if (lat !== null && lng !== null) {
       const searchCoords: [number, number] = [lng, lat]; // [longitude, latitude]
+      console.log(`Using radius: ${radius.toFixed(2)}km (${radiusMiles} miles)`);
 
       // Separate listings into those within radius and nationwide
       const listingsWithDistances: { listing: any; distance: number }[] = [];
       const nationwideListings: any[] = [];
+      let nationwideCount = 0;
+      let noLocationsCount = 0;
 
       results.forEach(listing => {
-        // Nationwide listings go to separate array
-        if (listing.is_nationwide) {
+        // Check if listing has any valid locations
+        if (!listing.locations || listing.locations.length === 0) {
+          // No location data - treat as nationwide
+          noLocationsCount++;
           nationwideListings.push(listing);
           return;
+        }
+
+        // Debug: Log first 5 listings with locations
+        if (listingsWithDistances.length + nationwideListings.length < 5) {
+          console.log(`Listing "${listing.title}": ${listing.locations.length} locations`,
+            listing.locations.map((l: any) => ({ place_name: l.place_name, has_coords: !!l.coordinates })));
         }
 
         // Calculate minimum distance to any of the listing's locations
@@ -529,9 +567,12 @@ export async function GET(request: NextRequest) {
           }
         });
 
-        // Filter by 5km radius
-        if (minDistance <= 5) {
+        // Filter by radius (converted from miles to km)
+        if (minDistance <= radius) {
           listingsWithDistances.push({ listing, distance: minDistance });
+        } else {
+          // Beyond radius - treat as nationwide
+          nationwideListings.push(listing);
         }
       });
 
@@ -543,6 +584,17 @@ export async function GET(request: NextRequest) {
         ...item.listing,
         _distance: item.distance // Add distance for potential client-side use
       }));
+
+      // Debug: Log the closest listings
+      console.log('Closest listings:', listingsWithDistances.slice(0, 10).map(item => ({
+        title: item.listing.title,
+        distance: `${item.distance.toFixed(2)}km`
+      })));
+
+      console.log('Location filtering breakdown:');
+      console.log(`- No location data (treated as nationwide): ${noLocationsCount}`);
+      console.log(`- Within ${radius.toFixed(2)}km radius: ${listingsWithDistances.length}`);
+      console.log(`- Beyond radius (treated as nationwide): ${nationwideListings.length - noLocationsCount}`);
 
       // Combine results: location-specific (sorted by distance) first, then nationwide
       results = [...sortedListingsWithinRadius, ...nationwideListings];
