@@ -109,6 +109,9 @@ export function createMapboxMap(
     center: [DEFAULT_VIEWPORT.longitude, DEFAULT_VIEWPORT.latitude],
     zoom: DEFAULT_VIEWPORT.zoom,
     accessToken: getMapboxToken(),
+    pitchWithRotate: true,
+    dragRotate: true,
+    touchPitch: true,
     ...options
   });
 }
