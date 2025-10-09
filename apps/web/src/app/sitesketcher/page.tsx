@@ -9,6 +9,7 @@ import { ModeIndicator } from './components/ModeIndicator';
 import { MobileFAB } from './components/MobileFAB';
 import { FloatingModeIndicator } from './components/FloatingModeIndicator';
 import WelcomeOnboarding from './components/WelcomeOnboarding';
+import { CuboidStorySelector } from './components/CuboidStorySelector';
 import { AlertTriangle, Pencil, MousePointer, ArrowLeft } from 'lucide-react';
 import type { 
   MapboxDrawPolygon, 
@@ -39,11 +40,15 @@ function SiteSketcherContent() {
   const [state, setState] = useState<SiteSketcherState>({
     polygons: [],
     parkingOverlays: [],
+    cuboids: [],
     measurements: null,
     selectedPolygonId: null,
     selectedParkingId: null,
+    selectedCuboidId: null,
     measurementUnit: 'metric',
     drawingMode: 'draw',
+    viewMode: '2D',
+    show3DBuildings: false,
     recentSearches: [],
     snapToGrid: false,
     gridSize: 10,
@@ -54,6 +59,8 @@ function SiteSketcherContent() {
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(showWelcome);
   const [rectangleToPlace, setRectangleToPlace] = useState<{ width: number; length: number } | null>(null);
+  const [showCuboidSelector, setShowCuboidSelector] = useState(false);
+  const [pendingCuboidPolygon, setPendingCuboidPolygon] = useState<MapboxDrawPolygon | null>(null);
   const mapRef = useRef<MapboxMapRef>(null);
   const originalMeasurementsRef = useRef<AreaMeasurement | null>(null);
 
@@ -104,17 +111,20 @@ function SiteSketcherContent() {
       const stateToSave = {
         polygons: state.polygons,
         parkingOverlays: state.parkingOverlays,
+        cuboids: state.cuboids,
         measurementUnit: state.measurementUnit,
         snapToGrid: state.snapToGrid,
         gridSize: state.gridSize,
         drawingMode: state.drawingMode, // Save drawing mode preference
+        viewMode: state.viewMode,
+        show3DBuildings: state.show3DBuildings,
         showSideLengths: state.showSideLengths
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
     } catch (error) {
       console.warn('Failed to save state:', error);
     }
-  }, [state.polygons, state.parkingOverlays, state.measurementUnit, state.snapToGrid, state.gridSize, state.drawingMode, state.showSideLengths]);
+  }, [state.polygons, state.parkingOverlays, state.cuboids, state.measurementUnit, state.snapToGrid, state.gridSize, state.drawingMode, state.viewMode, state.show3DBuildings, state.showSideLengths]);
 
   // Recalculate measurements when polygons or selection changes
   useEffect(() => {
@@ -306,17 +316,19 @@ function SiteSketcherContent() {
     if (confirm('Clear all drawings and measurements? This cannot be undone.')) {
       // Clear from map
       mapRef.current?.clearAllDrawings();
-      
+
       // Clear from state
       setState(prev => ({
         ...prev,
         polygons: [],
         parkingOverlays: [],
+        cuboids: [],
         measurements: null,
         selectedPolygonId: null,
-        selectedParkingId: null
+        selectedParkingId: null,
+        selectedCuboidId: null
       }));
-      
+
       // Clear original measurements reference
       originalMeasurementsRef.current = null;
     }
@@ -338,6 +350,54 @@ function SiteSketcherContent() {
       drawingMode: prev.drawingMode === 'draw' ? 'select' : 'draw'
     }));
   }, []);
+
+  const handleViewModeToggle = useCallback(() => {
+    setState(prev => {
+      const newMode = prev.viewMode === '2D' ? '3D' : '2D';
+      // Call map ref to update camera
+      mapRef.current?.setViewMode(newMode);
+      return {
+        ...prev,
+        viewMode: newMode
+      };
+    });
+  }, []);
+
+  const handleToggle3DBuildings = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      show3DBuildings: !prev.show3DBuildings
+    }));
+  }, []);
+
+  const handleCuboidStorySelect = useCallback((stories: 1 | 2 | 3) => {
+    if (!pendingCuboidPolygon) return;
+
+    const { STORY_HEIGHTS } = require('@/types/sitesketcher');
+    const { getPolygonColor } = require('@/lib/sitesketcher/colors');
+
+    const cuboid = {
+      id: String(pendingCuboidPolygon.id || pendingCuboidPolygon.properties?.id || Date.now()),
+      type: 'Feature' as const,
+      geometry: pendingCuboidPolygon.geometry,
+      properties: {
+        height: STORY_HEIGHTS[stories],
+        stories,
+        base_height: 0,
+        is3DShape: true as const,
+        color: getPolygonColor(state.cuboids.length)
+      }
+    };
+
+    setState(prev => ({
+      ...prev,
+      cuboids: [...prev.cuboids, cuboid],
+      selectedCuboidId: cuboid.id
+    }));
+
+    // Clear pending state
+    setPendingCuboidPolygon(null);
+  }, [pendingCuboidPolygon, state.cuboids.length]);
 
   const handleToggleSideLengths = useCallback(() => {
     setState(prev => ({
@@ -495,6 +555,10 @@ function SiteSketcherContent() {
                 onClearAll={handleClearAll}
                 drawingMode={state.drawingMode}
                 onModeToggle={handleModeToggle}
+                viewMode={state.viewMode}
+                onViewModeToggle={handleViewModeToggle}
+                show3DBuildings={state.show3DBuildings}
+                onToggle3DBuildings={handleToggle3DBuildings}
                 polygons={state.polygons}
                 onPolygonDelete={handlePolygonDelete}
                 parkingOverlays={state.parkingOverlays}
@@ -541,6 +605,10 @@ function SiteSketcherContent() {
               showSideLengths={state.showSideLengths}
               rectangleToPlace={rectangleToPlace}
               onRectanglePlaced={() => setRectangleToPlace(null)}
+              viewMode={state.viewMode}
+              show3DBuildings={state.show3DBuildings}
+              cuboids={state.cuboids}
+              selectedCuboidId={state.selectedCuboidId}
               className="w-full h-full"
             />
             
@@ -595,6 +663,10 @@ function SiteSketcherContent() {
             showSideLengths={state.showSideLengths}
             rectangleToPlace={rectangleToPlace}
             onRectanglePlaced={() => setRectangleToPlace(null)}
+            viewMode={state.viewMode}
+            show3DBuildings={state.show3DBuildings}
+            cuboids={state.cuboids}
+            selectedCuboidId={state.selectedCuboidId}
             className="w-full h-full"
           />
         </div>
@@ -608,6 +680,10 @@ function SiteSketcherContent() {
             onClearAll={handleClearAll}
             drawingMode={state.drawingMode}
             onModeToggle={handleModeToggle}
+            viewMode={state.viewMode}
+            onViewModeToggle={handleViewModeToggle}
+            show3DBuildings={state.show3DBuildings}
+            onToggle3DBuildings={handleToggle3DBuildings}
             polygons={state.polygons}
             onPolygonDelete={handlePolygonDelete}
             parkingOverlays={state.parkingOverlays}
@@ -634,6 +710,16 @@ function SiteSketcherContent() {
         isOpen={showWelcomeModal}
         onClose={handleWelcomeClose}
         userProfile={profile}
+      />
+
+      {/* Cuboid Story Selector Modal */}
+      <CuboidStorySelector
+        isOpen={showCuboidSelector}
+        onClose={() => {
+          setShowCuboidSelector(false);
+          setPendingCuboidPolygon(null);
+        }}
+        onSelect={handleCuboidStorySelect}
       />
     </div>
   );

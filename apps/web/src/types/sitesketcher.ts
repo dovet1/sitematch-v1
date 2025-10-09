@@ -61,15 +61,37 @@ export interface TutorialStep {
 
 export type DrawingMode = 'draw' | 'select';
 export type MeasurementUnit = 'metric' | 'imperial';
+export type ViewMode = '2D' | '3D';
+
+export interface Cuboid3D {
+  id: string;
+  type: 'Feature';
+  geometry: {
+    type: 'Polygon';
+    coordinates: number[][][];
+  };
+  properties: {
+    height: number; // height in meters
+    stories: 1 | 2 | 3;
+    base_height: number;
+    is3DShape: true;
+    color?: string;
+    [key: string]: any;
+  };
+}
 
 export interface SiteSketcherState {
   polygons: MapboxDrawPolygon[];
   parkingOverlays: ParkingOverlay[];
+  cuboids: Cuboid3D[];
   measurements: AreaMeasurement | null;
   selectedPolygonId: string | null;
   selectedParkingId: string | null;
+  selectedCuboidId: string | null;
   measurementUnit: MeasurementUnit;
   drawingMode: DrawingMode;
+  viewMode: ViewMode;
+  show3DBuildings: boolean;
   recentSearches: SearchResult[];
   snapToGrid: boolean;
   gridSize: number; // meters
@@ -94,4 +116,10 @@ export const PARKING_SIZES = {
 export const PARKING_COLORS = {
   single: '#3b82f6', // blue-500
   double: '#1e40af', // blue-700
+} as const;
+
+export const STORY_HEIGHTS = {
+  1: 3.5,   // 1 story = 3.5 meters
+  2: 7.0,   // 2 stories = 7 meters
+  3: 10.5,  // 3 stories = 10.5 meters
 } as const;

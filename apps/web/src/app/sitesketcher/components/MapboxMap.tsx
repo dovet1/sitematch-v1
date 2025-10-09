@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardR
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { createMapboxMap, getMapboxToken, flyToLocation, addGridOverlay, removeGridOverlay } from '@/lib/sitesketcher/mapbox-utils';
-import type { MapboxDrawPolygon, ParkingOverlay, SearchResult, AreaMeasurement, MeasurementUnit, DrawingMode } from '@/types/sitesketcher';
+import type { MapboxDrawPolygon, ParkingOverlay, SearchResult, AreaMeasurement, MeasurementUnit, DrawingMode, ViewMode, Cuboid3D } from '@/types/sitesketcher';
 import { calculateDistance, formatDistance, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { createRectangleCoordinates, feetToMeters } from '@/lib/sitesketcher/rectangle-utils';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -32,6 +32,12 @@ interface MapboxMapProps {
   showSideLengths: boolean;
   rectangleToPlace?: { width: number; length: number } | null;
   onRectanglePlaced?: () => void;
+  viewMode: ViewMode;
+  show3DBuildings: boolean;
+  cuboids: Cuboid3D[];
+  onCuboidClick?: (cuboid: Cuboid3D) => void;
+  onCuboidUpdate?: (cuboid: Cuboid3D) => void;
+  selectedCuboidId: string | null;
   className?: string;
 }
 
@@ -40,6 +46,7 @@ export interface MapboxMapRef {
   deletePolygon: (polygonId: string) => void;
   isRotating: () => boolean;
   getOriginalCoordinates: () => number[][] | null;
+  setViewMode: (mode: ViewMode) => void;
 }
 
 export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
@@ -64,6 +71,12 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   showSideLengths,
   rectangleToPlace,
   onRectanglePlaced,
+  viewMode,
+  show3DBuildings,
+  cuboids,
+  onCuboidClick,
+  onCuboidUpdate,
+  selectedCuboidId,
   className = ''
 }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -251,7 +264,17 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       }
     },
     isRotating: () => isRotatingRef.current,
-    getOriginalCoordinates: () => originalPolygonRef.current
+    getOriginalCoordinates: () => originalPolygonRef.current,
+    setViewMode: (mode: ViewMode) => {
+      if (!mapRef.current) return;
+
+      const is3D = mode === '3D';
+      mapRef.current.easeTo({
+        pitch: is3D ? 60 : 0,
+        bearing: is3D ? -17.6 : 0,
+        duration: 1000
+      });
+    }
   }), [isMapLoaded]);
 
   // Initialize map
@@ -726,6 +749,138 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }
         });
 
+        // Add 3D buildings layer from Mapbox vector tiles
+        // First check if composite source exists (it won't on satellite style)
+        const compositeSource = map.getSource('composite');
+
+        if (compositeSource) {
+          const layers = map.getStyle().layers;
+          const labelLayerId = layers?.find(
+            (layer: any) => layer.type === 'symbol' && layer.layout?.['text-field']
+          )?.id;
+
+          map.addLayer({
+            'id': '3d-buildings',
+            'source': 'composite',
+            'source-layer': 'building',
+            'filter': ['==', 'extrude', 'true'],
+            'type': 'fill-extrusion',
+            'minzoom': 15,
+            'paint': {
+              'fill-extrusion-color': '#aaa',
+              'fill-extrusion-height': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                15,
+                0,
+                15.05,
+                ['get', 'height']
+              ],
+              'fill-extrusion-base': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                15,
+                0,
+                15.05,
+                ['get', 'min_height']
+              ],
+              'fill-extrusion-opacity': 0.6
+            }
+          }, labelLayerId);
+
+          // Initially hide 3D buildings layer
+          map.setLayoutProperty('3d-buildings', 'visibility', 'none');
+        } else {
+          // For satellite style, we need to add the composite source first
+          map.addSource('composite', {
+            type: 'vector',
+            url: 'mapbox://mapbox.mapbox-streets-v8'
+          });
+
+          const layers = map.getStyle().layers;
+          const labelLayerId = layers?.find(
+            (layer: any) => layer.type === 'symbol' && layer.layout?.['text-field']
+          )?.id;
+
+          map.addLayer({
+            'id': '3d-buildings',
+            'source': 'composite',
+            'source-layer': 'building',
+            'filter': ['==', 'extrude', 'true'],
+            'type': 'fill-extrusion',
+            'minzoom': 15,
+            'paint': {
+              'fill-extrusion-color': '#aaa',
+              'fill-extrusion-height': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                15,
+                0,
+                15.05,
+                ['get', 'height']
+              ],
+              'fill-extrusion-base': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                15,
+                0,
+                15.05,
+                ['get', 'min_height']
+              ],
+              'fill-extrusion-opacity': 0.6
+            }
+          }, labelLayerId);
+
+          // Initially hide 3D buildings layer
+          map.setLayoutProperty('3d-buildings', 'visibility', 'none');
+        }
+
+        // Add cuboids source and layer
+        map.addSource('cuboids-3d', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: []
+          }
+        });
+
+        map.addLayer({
+          'id': 'cuboids-3d',
+          'type': 'fill-extrusion',
+          'source': 'cuboids-3d',
+          'paint': {
+            'fill-extrusion-color': ['get', 'color'],
+            'fill-extrusion-height': ['get', 'height'],
+            'fill-extrusion-base': ['get', 'base_height'],
+            'fill-extrusion-opacity': 0.8
+          }
+        });
+
+        // Add lighting for realistic 3D rendering
+        // Using setLights with flat type (setLight is deprecated in v3)
+        if (map.setLights) {
+          map.setLights([
+            {
+              id: 'flat-light',
+              type: 'flat',
+              properties: {
+                color: 'rgba(255, 255, 255, 1)',
+                intensity: 0.4
+              }
+            }
+          ]);
+        } else {
+          // Fallback for older versions
+          map.setLight({
+            'anchor': 'viewport',
+            'color': 'white',
+            'intensity': 0.4
+          });
+        }
 
       });
 
@@ -2448,6 +2603,38 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       removeGridOverlay(mapRef.current);
     }
   }, [snapToGrid, gridSize, isMapLoaded]);
+
+  // Handle 3D buildings visibility
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoaded) return;
+
+    // Check if layer exists before trying to set visibility
+    const layer = mapRef.current.getLayer('3d-buildings');
+    if (!layer) return;
+
+    const visibility = show3DBuildings ? 'visible' : 'none';
+    mapRef.current.setLayoutProperty('3d-buildings', 'visibility', visibility);
+  }, [show3DBuildings, isMapLoaded]);
+
+  // Update cuboids layer
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoaded) return;
+
+    const source = mapRef.current.getSource('cuboids-3d') as mapboxgl.GeoJSONSource;
+    if (!source) return;
+
+    const features = cuboids.map(cuboid => ({
+      type: 'Feature' as const,
+      id: cuboid.id,
+      geometry: cuboid.geometry,
+      properties: cuboid.properties
+    }));
+
+    source.setData({
+      type: 'FeatureCollection',
+      features
+    });
+  }, [cuboids, isMapLoaded]);
 
   // Helper function to generate rotation handles for parking overlays
   const generateParkingRotationHandles = (overlay: ParkingOverlay): any[] => {

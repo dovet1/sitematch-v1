@@ -16,10 +16,12 @@ import {
   Pencil,
   MousePointer,
   Settings,
-  Square
+  Square,
+  Building2
 } from 'lucide-react';
 import { ModeToggleSwitch } from './ModeToggleSwitch';
-import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode } from '@/types/sitesketcher';
+import { ViewModeToggle } from './ViewModeToggle';
+import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode, ViewMode } from '@/types/sitesketcher';
 import { LocationSearch } from './LocationSearch';
 import { formatArea, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { MobileBottomSheet } from './MobileBottomSheet';
@@ -134,6 +136,11 @@ interface ResponsiveControlsProps {
   onClearAll: () => void;
   drawingMode: DrawingMode;
   onModeToggle: () => void;
+  // View mode props
+  viewMode: ViewMode;
+  onViewModeToggle: () => void;
+  show3DBuildings: boolean;
+  onToggle3DBuildings: () => void;
   // Polygon props
   polygons: MapboxDrawPolygon[];
   onPolygonDelete: (polygonId: string) => void;
@@ -167,6 +174,10 @@ export function ResponsiveControls({
   onClearAll,
   drawingMode,
   onModeToggle,
+  viewMode,
+  onViewModeToggle,
+  show3DBuildings,
+  onToggle3DBuildings,
   polygons,
   onPolygonDelete,
   showSideLengths,
@@ -261,6 +272,29 @@ export function ResponsiveControls({
             className="w-full max-w-xs"
           />
         </div>
+
+        {/* View Mode Toggle */}
+        <ViewModeToggle
+          viewMode={viewMode}
+          onToggle={onViewModeToggle}
+        />
+
+        {/* 3D Buildings Toggle - Only show when in 3D mode */}
+        {viewMode === '3D' && (
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Show 3D Buildings</span>
+            </div>
+            <Button
+              onClick={onToggle3DBuildings}
+              variant={show3DBuildings ? 'default' : 'outline'}
+              size="sm"
+            >
+              {show3DBuildings ? 'On' : 'Off'}
+            </Button>
+          </div>
+        )}
 
         {/* Add Rectangle Button - Only show in draw mode */}
         {drawingMode === 'draw' && (
