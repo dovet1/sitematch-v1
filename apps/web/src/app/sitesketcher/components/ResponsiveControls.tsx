@@ -330,14 +330,16 @@ export function ResponsiveControls({
           />
         </div>
 
-        {/* View Mode Toggle */}
-        <ViewModeToggle
-          viewMode={viewMode}
-          onToggle={onViewModeToggle}
-        />
+        {/* View Mode Toggle - Desktop only */}
+        {!isMobile && (
+          <ViewModeToggle
+            viewMode={viewMode}
+            onToggle={onViewModeToggle}
+          />
+        )}
 
-        {/* 3D Buildings Toggle - Only show when in 3D mode */}
-        {viewMode === '3D' && (
+        {/* 3D Buildings Toggle - Only show when in 3D mode on desktop */}
+        {!isMobile && viewMode === '3D' && (
           <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-muted-foreground" />
