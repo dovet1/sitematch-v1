@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, memo } from 'react';
+import { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
@@ -21,7 +22,7 @@ import {
 } from 'lucide-react';
 import { ModeToggleSwitch } from './ModeToggleSwitch';
 import { ViewModeToggle } from './ViewModeToggle';
-import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode, ViewMode } from '@/types/sitesketcher';
+import type { MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode, ViewMode } from '@/types/sitesketcher';
 import { LocationSearch } from './LocationSearch';
 import { formatArea, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { MobileBottomSheet } from './MobileBottomSheet';
@@ -129,8 +130,63 @@ const RectangleInputs = memo(function RectangleInputs({
   );
 });
 
+// Memoized height input to prevent re-renders from parent polygon updates
+const HeightInput = memo(function HeightInput({
+  polygonId,
+  initialHeight,
+  onHeightChange
+}: {
+  polygonId: string;
+  initialHeight: number;
+  onHeightChange: (polygonId: string, height: number) => void;
+}) {
+  const [localValue, setLocalValue] = useState<string>(String(initialHeight));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Update local value when polygonId changes (different polygon selected)
+  useEffect(() => {
+    setLocalValue(String(initialHeight));
+  }, [polygonId, initialHeight]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+  };
+
+  const handleCommit = (value: string) => {
+    const height = value === '' ? 0 : parseInt(value);
+    const clampedHeight = Math.max(0, Math.min(100, height));
+    onHeightChange(polygonId, clampedHeight);
+    setLocalValue(String(clampedHeight));
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    handleCommit(e.target.value);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleCommit((e.target as HTMLInputElement).value);
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <Input
+      ref={inputRef}
+      type="number"
+      min="0"
+      max="100"
+      step="1"
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      className="w-full"
+    />
+  );
+});
+
 interface ResponsiveControlsProps {
-  measurement: AreaMeasurement | null;
   measurementUnit: MeasurementUnit;
   onUnitToggle: () => void;
   onClearAll: () => void;
@@ -150,6 +206,7 @@ interface ResponsiveControlsProps {
   // Polygon-specific toggles
   onPolygonUnitToggle: (polygonId: string) => void;
   onPolygonSideLengthToggle: (polygonId: string) => void;
+  onPolygonHeightChange?: (polygonId: string, height: number) => void;
   // Rectangle props
   onAddRectangle: (width: number, length: number) => void;
   // Parking props
@@ -168,7 +225,6 @@ interface ResponsiveControlsProps {
 }
 
 export function ResponsiveControls({
-  measurement,
   measurementUnit,
   onUnitToggle,
   onClearAll,
@@ -184,6 +240,7 @@ export function ResponsiveControls({
   onToggleSideLengths,
   onPolygonUnitToggle,
   onPolygonSideLengthToggle,
+  onPolygonHeightChange,
   onAddRectangle,
   parkingOverlays,
   selectedOverlayId,
@@ -218,7 +275,7 @@ export function ResponsiveControls({
   }, [polygons, selectedPolygonId]);
 
   const [isMobile, setIsMobile] = useState(false);
-  
+
   // Check if mobile after mount to avoid hydration mismatch
   useEffect(() => {
     const checkMobile = () => {
@@ -573,27 +630,24 @@ export function ResponsiveControls({
                           </div>
                         </div>
                         
-                        {isSelected && (() => {
-                          const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
-                          return hasIndividualSetting ? polygon.properties.showSideLengths : showSideLengths;
-                        })() && (
+                        {isSelected && (
                           <div className={cn(
                             "border-t border-muted/60 bg-muted/20 space-y-4 rounded-b-xl relative",
                             isMobile ? "mt-3 pt-4 px-3 pb-3" : "mt-4 pt-4 px-4 pb-4"
                           )}>
-                            <div>
-                              <p className="text-xs font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Side Measurements</p>
-                              <div className="grid grid-cols-2 gap-2">
-                                {polygonMeasurement.sideLengths.map((length, sideIndex) => (
-                                  <div key={sideIndex} className="bg-background/80 border border-muted/60 rounded-lg p-2 text-center shadow-sm">
-                                    <div className="text-xs text-muted-foreground font-medium">Side {sideIndex + 1}</div>
-                                    <div className="text-sm font-bold font-mono text-foreground">
-                                      {(polygon.properties?.measurementUnit || measurementUnit) === 'metric' ? `${length}m` : `${(length * 3.28084).toFixed(1)}ft`}
-                                    </div>
-                                  </div>
-                                ))}
+                            {/* Height Control - Desktop only, 3D mode only */}
+                            {!isMobile && viewMode === '3D' && onPolygonHeightChange && (
+                              <div>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">
+                                  Building Height (meters)
+                                </label>
+                                <HeightInput
+                                  polygonId={currentPolygonId}
+                                  initialHeight={polygon.properties?.height ?? 3}
+                                  onHeightChange={onPolygonHeightChange}
+                                />
                               </div>
-                            </div>
+                            )}
                           </div>
                         )}
                       </div>

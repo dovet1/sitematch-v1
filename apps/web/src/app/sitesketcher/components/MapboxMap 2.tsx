@@ -4,9 +4,8 @@ import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardR
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { createMapboxMap, getMapboxToken, flyToLocation, addGridOverlay, removeGridOverlay } from '@/lib/sitesketcher/mapbox-utils';
-import type { MapboxDrawPolygon, ParkingOverlay, SearchResult, AreaMeasurement, MeasurementUnit, DrawingMode, ViewMode, Cuboid3D } from '@/types/sitesketcher';
+import type { MapboxDrawPolygon, ParkingOverlay, SearchResult, AreaMeasurement, MeasurementUnit, DrawingMode } from '@/types/sitesketcher';
 import { calculateDistance, formatDistance, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
-import { createRectangleCoordinates, feetToMeters } from '@/lib/sitesketcher/rectangle-utils';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
@@ -14,8 +13,6 @@ interface MapboxMapProps {
   onPolygonCreate: (polygon: MapboxDrawPolygon) => void;
   onPolygonUpdate: (polygon: MapboxDrawPolygon) => void;
   onPolygonDelete: (polygonId: string) => void;
-  onPolygonSelect?: (polygonId: string) => void;
-  onClearPolygonSelection?: () => void;
   parkingOverlays: ParkingOverlay[];
   onParkingOverlayClick: (overlay: ParkingOverlay) => void;
   onParkingOverlayUpdate: (overlay: ParkingOverlay) => void;
@@ -30,14 +27,6 @@ interface MapboxMapProps {
   measurementUnit: MeasurementUnit;
   drawingMode: DrawingMode;
   showSideLengths: boolean;
-  rectangleToPlace?: { width: number; length: number } | null;
-  onRectanglePlaced?: () => void;
-  viewMode: ViewMode;
-  show3DBuildings: boolean;
-  cuboids: Cuboid3D[];
-  onCuboidClick?: (cuboid: Cuboid3D) => void;
-  onCuboidUpdate?: (cuboid: Cuboid3D) => void;
-  selectedCuboidId: string | null;
   className?: string;
 }
 
@@ -46,15 +35,12 @@ export interface MapboxMapRef {
   deletePolygon: (polygonId: string) => void;
   isRotating: () => boolean;
   getOriginalCoordinates: () => number[][] | null;
-  setViewMode: (mode: ViewMode) => void;
 }
 
 export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   onPolygonCreate,
   onPolygonUpdate,
   onPolygonDelete,
-  onPolygonSelect,
-  onClearPolygonSelection,
   parkingOverlays,
   onParkingOverlayClick,
   onParkingOverlayUpdate,
@@ -69,14 +55,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   measurementUnit,
   drawingMode,
   showSideLengths,
-  rectangleToPlace,
-  onRectanglePlaced,
-  viewMode,
-  show3DBuildings,
-  cuboids,
-  onCuboidClick,
-  onCuboidUpdate,
-  selectedCuboidId,
   className = ''
 }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -94,14 +72,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   const measurementUnitRef = useRef<MeasurementUnit>(measurementUnit);
   const lastClickedPointRef = useRef<[number, number] | null>(null);
   const isDrawingModeRef = useRef<boolean>(false);
-  const isShiftPressedRef = useRef<boolean>(false);
   const showSideLengthsRef = useRef<boolean>(showSideLengths);
-  const keydownHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
-  const keyupHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
-  const rectangleToPlaceRef = useRef<{ width: number; length: number } | null>(rectangleToPlace || null);
-
-  // Helper function to detect mobile devices
-  const isMobile = () => window.innerWidth < 768;
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
@@ -267,17 +238,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       }
     },
     isRotating: () => isRotatingRef.current,
-    getOriginalCoordinates: () => originalPolygonRef.current,
-    setViewMode: (mode: ViewMode) => {
-      if (!mapRef.current) return;
-
-      const is3D = mode === '3D';
-      mapRef.current.easeTo({
-        pitch: is3D ? 60 : 0,
-        bearing: is3D ? -17.6 : 0,
-        duration: 1000
-      });
-    }
+    getOriginalCoordinates: () => originalPolygonRef.current
   }), [isMapLoaded]);
 
   // Initialize map
@@ -342,32 +303,16 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
               'line-width': 3
             }
           },
-          // Vertex points - larger hit areas for easier selection
-          // Use larger circles as the primary interactive elements
+          // Vertex points
           {
             id: 'gl-draw-polygon-vertex-stroke-inactive',
             type: 'circle',
             filter: ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point']],
             paint: {
-              // Much larger radius for easier clicking - this becomes the actual hit area
-              'circle-radius': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                10, 16, // At zoom 10, hit area = 16px radius
-                18, 20  // At zoom 18, hit area = 20px radius
-              ],
-              // Transparent fill with just a border for the visual indicator
-              'circle-color': 'transparent',
+              'circle-radius': 5,
+              'circle-color': '#ffffff',
               'circle-stroke-color': '#2563eb',
-              'circle-stroke-width': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                10, 2,  // At zoom 10, stroke = 2px
-                18, 3   // At zoom 18, stroke = 3px
-              ],
-              'circle-stroke-opacity': 0.3 // Subtle ring to show hit area
+              'circle-stroke-width': 2
             }
           },
           {
@@ -375,97 +320,10 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             type: 'circle',
             filter: ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['==', 'active', 'true']],
             paint: {
-              // Even larger when active/selected
-              'circle-radius': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                10, 18, // At zoom 10, hit area = 18px radius
-                18, 22  // At zoom 18, hit area = 22px radius
-              ],
-              'circle-color': 'transparent',
-              'circle-stroke-color': '#3b82f6',
-              'circle-stroke-width': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                10, 3,  // At zoom 10, stroke = 3px
-                18, 4   // At zoom 18, stroke = 4px
-              ],
-              'circle-stroke-opacity': 0.5 // More visible when active
-            }
-          },
-          // Add visible center dots to show exact vertex position
-          {
-            id: 'gl-draw-polygon-vertex-center-inactive',
-            type: 'circle',
-            filter: ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point']],
-            paint: {
-              // Small solid circle for precise visual reference
-              'circle-radius': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                10, 4,  // At zoom 10, center dot = 4px
-                18, 6   // At zoom 18, center dot = 6px
-              ],
-              'circle-color': '#ffffff',
-              'circle-stroke-color': '#2563eb',
-              'circle-stroke-width': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                10, 2,  // At zoom 10, stroke = 2px
-                18, 2   // At zoom 18, stroke = 2px
-              ],
-              'circle-opacity': 0.95,
-              'circle-stroke-opacity': 0.9
-            }
-          },
-          {
-            id: 'gl-draw-polygon-vertex-center-active',
-            type: 'circle',
-            filter: ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['==', 'active', 'true']],
-            paint: {
-              // Slightly larger center dot when active
-              'circle-radius': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                10, 5,  // At zoom 10, center dot = 5px
-                18, 7   // At zoom 18, center dot = 7px
-              ],
+              'circle-radius': 6,
               'circle-color': '#ffffff',
               'circle-stroke-color': '#3b82f6',
-              'circle-stroke-width': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                10, 2,  // At zoom 10, stroke = 2px
-                18, 3   // At zoom 18, stroke = 3px
-              ],
-              'circle-opacity': 1,
-              'circle-stroke-opacity': 1
-            }
-          },
-          // Add a subtle glow effect for better polygon visibility on hover
-          {
-            id: 'gl-draw-polygon-vertex-glow',
-            type: 'circle',
-            filter: ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point']],
-            paint: {
-              'circle-radius': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                10, 12, // Slightly larger than main vertex
-                18, 18  
-              ],
-              'circle-color': 'rgba(59, 130, 246, 0.2)', // Subtle blue glow
-              'circle-opacity': 0, // Hidden by default
-              'circle-stroke-color': 'rgba(59, 130, 246, 0.3)',
-              'circle-stroke-width': 1,
-              'circle-stroke-opacity': 0 // Hidden by default
+              'circle-stroke-width': 3
             }
           }
         ]
@@ -582,7 +440,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           filter: ['==', ['geometry-type'], 'Polygon'],
           paint: {
             'line-color': '#1f2937', // Dark gray border
-            'line-width': 1.5,
+            'line-width': 3,
             'line-opacity': 1
           }
         });
@@ -752,162 +610,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }
         });
 
-        // Add 3D buildings layer from Mapbox vector tiles
-        // First check if composite source exists (it won't on satellite style)
-        const compositeSource = map.getSource('composite');
-
-        if (compositeSource) {
-          const layers = map.getStyle().layers;
-          const labelLayerId = layers?.find(
-            (layer: any) => layer.type === 'symbol' && layer.layout?.['text-field']
-          )?.id;
-
-          map.addLayer({
-            'id': '3d-buildings',
-            'source': 'composite',
-            'source-layer': 'building',
-            'filter': ['==', 'extrude', 'true'],
-            'type': 'fill-extrusion',
-            'minzoom': 15,
-            'paint': {
-              'fill-extrusion-color': '#aaa',
-              'fill-extrusion-height': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                15,
-                0,
-                15.05,
-                ['get', 'height']
-              ],
-              'fill-extrusion-base': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                15,
-                0,
-                15.05,
-                ['get', 'min_height']
-              ],
-              'fill-extrusion-opacity': 0.6
-            }
-          }, labelLayerId);
-
-          // Initially hide 3D buildings layer
-          map.setLayoutProperty('3d-buildings', 'visibility', 'none');
-        } else {
-          // For satellite style, we need to add the composite source first
-          map.addSource('composite', {
-            type: 'vector',
-            url: 'mapbox://mapbox.mapbox-streets-v8'
-          });
-
-          const layers = map.getStyle().layers;
-          const labelLayerId = layers?.find(
-            (layer: any) => layer.type === 'symbol' && layer.layout?.['text-field']
-          )?.id;
-
-          map.addLayer({
-            'id': '3d-buildings',
-            'source': 'composite',
-            'source-layer': 'building',
-            'filter': ['==', 'extrude', 'true'],
-            'type': 'fill-extrusion',
-            'minzoom': 15,
-            'paint': {
-              'fill-extrusion-color': '#aaa',
-              'fill-extrusion-height': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                15,
-                0,
-                15.05,
-                ['get', 'height']
-              ],
-              'fill-extrusion-base': [
-                'interpolate',
-                ['linear'],
-                ['zoom'],
-                15,
-                0,
-                15.05,
-                ['get', 'min_height']
-              ],
-              'fill-extrusion-opacity': 0.6
-            }
-          }, labelLayerId);
-
-          // Initially hide 3D buildings layer
-          map.setLayoutProperty('3d-buildings', 'visibility', 'none');
-        }
-
-        // Add cuboids source and layer
-        map.addSource('cuboids-3d', {
-          type: 'geojson',
-          data: {
-            type: 'FeatureCollection',
-            features: []
-          }
-        });
-
-        map.addLayer({
-          'id': 'cuboids-3d',
-          'type': 'fill-extrusion',
-          'source': 'cuboids-3d',
-          'paint': {
-            'fill-extrusion-color': ['get', 'color'],
-            'fill-extrusion-height': ['get', 'height'],
-            'fill-extrusion-base': ['get', 'base_height'],
-            'fill-extrusion-opacity': 0.8
-          }
-        });
-
-        // Add polygons 3D extrusion layer
-        map.addSource('polygons-3d', {
-          type: 'geojson',
-          data: {
-            type: 'FeatureCollection',
-            features: []
-          }
-        });
-
-        map.addLayer({
-          'id': 'polygons-3d',
-          'type': 'fill-extrusion',
-          'source': 'polygons-3d',
-          'paint': {
-            'fill-extrusion-color': ['get', 'color'],
-            'fill-extrusion-height': ['get', 'height'],
-            'fill-extrusion-base': ['get', 'base_height'],
-            'fill-extrusion-opacity': 0.7
-          }
-        });
-
-        // Initially hide the 3D polygon layer (only show in 3D view mode)
-        map.setLayoutProperty('polygons-3d', 'visibility', 'none');
-
-        // Add lighting for realistic 3D rendering
-        // Using setLights with flat type (setLight is deprecated in v3)
-        if (map.setLights) {
-          map.setLights([
-            {
-              id: 'flat-light',
-              type: 'flat',
-              properties: {
-                color: 'rgba(255, 255, 255, 1)',
-                intensity: 0.4
-              }
-            }
-          ]);
-        } else {
-          // Fallback for older versions
-          map.setLight({
-            'anchor': 'viewport',
-            'color': 'white',
-            'intensity': 0.4
-          });
-        }
 
       });
 
@@ -999,17 +701,13 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       map.on('draw.modechange', (e: any) => {
         // Don't interfere with mode changes in select mode
         if (drawingModeRef.current === 'select') return;
-
-
-        // In draw mode, return to draw_polygon UNLESS we're placing a rectangle
+        
+        // In draw mode, always return to draw_polygon
         if (drawingModeRef.current === 'draw' && e.mode !== 'draw_polygon') {
-          // Don't force draw_polygon mode if we're in rectangle placement mode
-          if (!rectangleToPlaceRef.current) {
-            requestAnimationFrame(() => {
-              draw.changeMode('draw_polygon');
-              map.getCanvas().style.cursor = 'crosshair';
-            });
-          }
+          requestAnimationFrame(() => {
+            draw.changeMode('draw_polygon');
+            map.getCanvas().style.cursor = 'crosshair';
+          });
         }
       });
 
@@ -1074,12 +772,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
               onClearParkingSelection();
             }
             
-            // Notify parent about polygon selection
-            if (onPolygonSelect) {
-              const polygonId = String(selectedFeature.id || selectedFeature.properties?.id || '');
-              onPolygonSelect(polygonId);
-            }
-            
             // Reset rotation state for newly selected polygon
             originalPolygonRef.current = null;
             totalRotationRef.current = 0;
@@ -1105,6 +797,10 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           lastClickedPointRef.current = null;
           drawingPointsRef.current = [];
           
+          // Reset direction lock when leaving draw mode
+          isShiftLocked = false;
+          lockedDirection = null;
+          
           // Clear annotation when not drawing
           const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
           if (drawingSource) {
@@ -1115,75 +811,101 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           console.log('Entering draw_polygon mode - ready for new polygon');
           lastClickedPointRef.current = null;
           drawingPointsRef.current = [];
+          
+          // Reset direction lock when entering draw mode
+          isShiftLocked = false;
+          lockedDirection = null;
         }
       });
       
-      // Simple shift+click handler for right angles
+      // Enhanced cursor constraint system for shift+click right angles
       const canvas = map.getCanvas();
+      let isConstraintActive = false;
+      let constraintStartPoint: [number, number] | null = null;
+      let constraintDirection: 'horizontal' | 'vertical' | null = null;
+      let lastRealMousePos: [number, number] | null = null;
       
-      // Add keydown/keyup listeners to track shift state
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Shift') {
-          isShiftPressedRef.current = true;
-        }
-      };
-      
-      const handleKeyUp = (e: KeyboardEvent) => {
-        if (e.key === 'Shift') {
-          isShiftPressedRef.current = false;
-        }
-      };
-      
-      // Store handlers in refs for cleanup
-      keydownHandlerRef.current = handleKeyDown;
-      keyupHandlerRef.current = handleKeyUp;
-      
-      document.addEventListener('keydown', handleKeyDown);
-      document.addEventListener('keyup', handleKeyUp);
-      
-      // Handle click events on the canvas
-      const handleCanvasClick = (e: MouseEvent) => {
+      // Override mouse move to constrain cursor when shift is held
+      const originalMouseMove = canvas.onmousemove;
+      canvas.onmousemove = (e: MouseEvent) => {
         const currentMode = draw.getMode();
         
-        if (currentMode === 'draw_polygon' && drawingModeRef.current === 'draw' && isShiftPressedRef.current && drawingPointsRef.current.length > 0) {
-          // Prevent the default click
-          e.stopPropagation();
-          e.preventDefault();
-          
-          // Get click coordinates
+        if (currentMode === 'draw_polygon' && drawingModeRef.current === 'draw' && e.shiftKey && drawingPointsRef.current.length > 0) {
           const rect = canvas.getBoundingClientRect();
-          const clickPoint = map.unproject([e.clientX - rect.left, e.clientY - rect.top]);
-          let snappedPoint: [number, number] = [clickPoint.lng, clickPoint.lat];
+          const currentMousePos: [number, number] = [e.clientX - rect.left, e.clientY - rect.top];
           
-          // Get the last point from our tracking
-          const lastPoint = drawingPointsRef.current[drawingPointsRef.current.length - 1];
+          // Store the real mouse position
+          const unprojected = map.unproject(currentMousePos);
+          lastRealMousePos = [unprojected.lng, unprojected.lat];
           
-          // Calculate which direction to snap to
-          const deltaX = Math.abs(snappedPoint[0] - lastPoint[0]);
-          const deltaY = Math.abs(snappedPoint[1] - lastPoint[1]);
-          
-          if (deltaX > deltaY) {
-            snappedPoint = [snappedPoint[0], lastPoint[1]];
-          } else {
-            snappedPoint = [lastPoint[0], snappedPoint[1]];
-          }
-          
-          // Manually add the point to the current polygon
-          const allFeatures = draw.getAll();
-          if (allFeatures.features.length > 0) {
-            const currentFeature = allFeatures.features[allFeatures.features.length - 1];
-            if (currentFeature.geometry.type === 'Polygon') {
-              // Add the snapped point
-              currentFeature.geometry.coordinates[0].splice(-1, 0, snappedPoint);
-              
-              // Update the feature
-              draw.add(currentFeature);
-              
-              // Update our tracking
-              lastClickedPointRef.current = snappedPoint;
-              drawingPointsRef.current.push(snappedPoint);
+          // If constraint isn't active yet, activate it and determine direction
+          if (!isConstraintActive) {
+            const lastPoint = drawingPointsRef.current[drawingPointsRef.current.length - 1];
+            const mapMousePos = map.unproject(currentMousePos);
+            
+            const deltaX = Math.abs(mapMousePos.lng - lastPoint[0]);
+            const deltaY = Math.abs(mapMousePos.lat - lastPoint[1]);
+            
+            // Only activate constraint after meaningful movement
+            if (deltaX > 0.0001 || deltaY > 0.0001) {
+              isConstraintActive = true;
+              constraintStartPoint = [lastPoint[0], lastPoint[1]];
+              constraintDirection = deltaX > deltaY ? 'horizontal' : 'vertical';
             }
           }
+          
+          // Apply constraint if active
+          if (isConstraintActive && constraintStartPoint) {
+            const lastPoint = constraintStartPoint;
+            let constrainedPos: [number, number];
+            
+            if (constraintDirection === 'horizontal') {
+              // Lock Y coordinate to last point's Y
+              constrainedPos = [lastRealMousePos![0], lastPoint[1]];
+            } else {
+              // Lock X coordinate to last point's X  
+              constrainedPos = [lastPoint[0], lastRealMousePos![1]];
+            }
+            
+            // Project back to screen coordinates and create a new event
+            const screenPos = map.project(constrainedPos);
+            const constrainedEvent = new MouseEvent('mousemove', {
+              bubbles: true,
+              cancelable: true,
+              clientX: rect.left + screenPos.x,
+              clientY: rect.top + screenPos.y,
+              screenX: rect.left + screenPos.x,
+              screenY: rect.top + screenPos.y,
+              view: window,
+              shiftKey: true
+            });
+            
+            // Call the original handler with constrained coordinates
+            if (originalMouseMove) {
+              originalMouseMove.call(canvas, constrainedEvent);
+            }
+            return false; // Prevent further processing
+          }
+        } else {
+          // Reset constraint when shift is released or mode changes
+          isConstraintActive = false;
+          constraintStartPoint = null;
+          constraintDirection = null;
+        }
+        
+        // Call original handler for normal behavior
+        if (originalMouseMove) {
+          return originalMouseMove.call(canvas, e);
+        }
+      };
+      
+      // Handle clicks normally - the constraint already handles positioning
+      const handleCanvasClick = (e: MouseEvent) => {
+        // Reset constraint after click
+        if (e.shiftKey && isConstraintActive) {
+          isConstraintActive = false;
+          constraintStartPoint = null;
+          constraintDirection = null;
         }
       };
       
@@ -1201,6 +923,10 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           drawingPointsRef.current.push(clickedPoint);
           isDrawingModeRef.current = true; // Ensure drawing mode is active
           
+          // Reset direction lock when placing a normal point
+          isShiftLocked = false;
+          lockedDirection = null;
+          
           console.log('Drawing mousedown - reference point set:', clickedPoint);
           
           // Clear annotation momentarily after click
@@ -1213,7 +939,11 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         }
       });
 
-      // Simpler approach: just show preview and handle clicks
+      // Store original mouse position for shift locking
+      let isShiftLocked = false;
+      let lockedDirection: 'horizontal' | 'vertical' | null = null;
+
+      // Show real-time distance on mouse move
       map.on('mousemove', (e) => {
         // Only show in draw mode with a reference point
         if (drawingModeRef.current !== 'draw' || !isDrawingModeRef.current || !lastClickedPointRef.current) {
@@ -1223,26 +953,41 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         let currentPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
         let snapIndicator = null;
         
-        // If shift is pressed and we have points, show snap preview
-        if (isShiftPressedRef.current && drawingPointsRef.current.length > 0) {
+        // If shift key is pressed, lock to 90-degree angles
+        if (e.originalEvent.shiftKey && drawingPointsRef.current.length > 0) {
           const lastPoint = drawingPointsRef.current[drawingPointsRef.current.length - 1];
-          const deltaX = Math.abs(currentPoint[0] - lastPoint[0]);
-          const deltaY = Math.abs(currentPoint[1] - lastPoint[1]);
           
-          if (deltaX > deltaY) {
-            // Would snap horizontally
+          // If we haven't locked direction yet, determine it based on initial movement
+          if (!isShiftLocked) {
+            const deltaX = Math.abs(currentPoint[0] - lastPoint[0]);
+            const deltaY = Math.abs(currentPoint[1] - lastPoint[1]);
+            
+            // Only lock once we have some meaningful movement
+            if (deltaX > 0.00001 || deltaY > 0.00001) {
+              lockedDirection = deltaX > deltaY ? 'horizontal' : 'vertical';
+              isShiftLocked = true;
+            }
+          }
+          
+          // Apply the locked direction
+          if (lockedDirection === 'horizontal') {
+            // Lock to horizontal line
             currentPoint = [currentPoint[0], lastPoint[1]];
             snapIndicator = 'horizontal';
-          } else {
-            // Would snap vertically
+          } else if (lockedDirection === 'vertical') {
+            // Lock to vertical line
             currentPoint = [lastPoint[0], currentPoint[1]];
             snapIndicator = 'vertical';
           }
+        } else {
+          // Reset lock when shift is released
+          isShiftLocked = false;
+          lockedDirection = null;
         }
         
-        // Calculate distance from last clicked point to current position
+        // Calculate distance from last clicked point to current (possibly snapped) position
         const distance = calculateDistance(lastClickedPointRef.current, currentPoint);
-        const formattedDistance = formatDistance(distance, measurementUnit);
+        const formattedDistance = formatDistance(distance, measurementUnitRef.current);
         
         // Place annotation at the mouse position with slight offset
         const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
@@ -1259,7 +1004,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }];
           
           // Add a line preview if shift is held
-          if (isShiftPressedRef.current && lastClickedPointRef.current) {
+          if (e.originalEvent.shiftKey && lastClickedPointRef.current) {
             features.push({
               type: 'Feature',
               geometry: {
@@ -1287,66 +1032,15 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         lastClickedPointRef.current = null;
         drawingPointsRef.current = [];
         
+        // Reset direction lock when polygon is completed
+        isShiftLocked = false;
+        lockedDirection = null;
+        
         const drawingSource = map.getSource('drawing-annotation') as mapboxgl.GeoJSONSource;
         if (drawingSource) {
           drawingSource.setData({ type: 'FeatureCollection', features: [] });
         }
       });
-
-      // Add vertex hover enhancement for better UX
-      let hoveredVertexId: string | null = null;
-      
-      // Enhanced vertex hover with glow effect
-      const showVertexGlow = (e: any) => {
-        map.getCanvas().style.cursor = 'pointer';
-        // Show glow effect for all vertices of the polygon
-        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-opacity', 0.6);
-        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-stroke-opacity', 0.8);
-      };
-      
-      const hideVertexGlow = (e: any) => {
-        map.getCanvas().style.cursor = '';
-        // Hide glow effect
-        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-opacity', 0);
-        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-stroke-opacity', 0);
-      };
-      
-      // Apply hover effects to all vertex layers (both inactive and active)
-      map.on('mouseenter', 'gl-draw-polygon-vertex-stroke-inactive', showVertexGlow);
-      map.on('mouseleave', 'gl-draw-polygon-vertex-stroke-inactive', hideVertexGlow);
-      map.on('mouseenter', 'gl-draw-polygon-vertex-active', showVertexGlow);
-      map.on('mouseleave', 'gl-draw-polygon-vertex-active', hideVertexGlow);
-      
-      // Also apply to the center dots for complete coverage
-      map.on('mouseenter', 'gl-draw-polygon-vertex-center-inactive', showVertexGlow);
-      map.on('mouseleave', 'gl-draw-polygon-vertex-center-inactive', hideVertexGlow);
-      map.on('mouseenter', 'gl-draw-polygon-vertex-center-active', showVertexGlow);
-      map.on('mouseleave', 'gl-draw-polygon-vertex-center-active', hideVertexGlow);
-      
-      // Add polygon hover highlighting - show all corners when hovering over polygon
-      const highlightPolygonCorners = () => {
-        // Make hit areas more visible when hovering over polygon edges
-        map.setPaintProperty('gl-draw-polygon-vertex-stroke-inactive', 'circle-stroke-opacity', 0.6);
-        map.setPaintProperty('gl-draw-polygon-vertex-center-inactive', 'circle-opacity', 1);
-        map.setPaintProperty('gl-draw-polygon-vertex-center-inactive', 'circle-stroke-opacity', 1);
-        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-opacity', 0.3);
-        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-stroke-opacity', 0.4);
-      };
-      
-      const unhighlightPolygonCorners = () => {
-        // Return to normal visibility
-        map.setPaintProperty('gl-draw-polygon-vertex-stroke-inactive', 'circle-stroke-opacity', 0.3);
-        map.setPaintProperty('gl-draw-polygon-vertex-center-inactive', 'circle-opacity', 0.95);
-        map.setPaintProperty('gl-draw-polygon-vertex-center-inactive', 'circle-stroke-opacity', 0.9);
-        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-opacity', 0);
-        map.setPaintProperty('gl-draw-polygon-vertex-glow', 'circle-stroke-opacity', 0);
-      };
-      
-      // Apply to polygon stroke layers
-      map.on('mouseenter', 'gl-draw-polygon-stroke-active', highlightPolygonCorners);
-      map.on('mouseleave', 'gl-draw-polygon-stroke-active', unhighlightPolygonCorners);
-      map.on('mouseenter', 'gl-draw-polygon-stroke-inactive', highlightPolygonCorners);
-      map.on('mouseleave', 'gl-draw-polygon-stroke-inactive', unhighlightPolygonCorners);
       
 
 
@@ -1458,101 +1152,13 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         map.getCanvas().style.cursor = 'crosshair';
       });
 
-      // Function to handle rectangle placement (shared between click and touch)
-      const placeRectangle = (lngLat: { lng: number; lat: number }) => {
-        if (!rectangleToPlaceRef.current || drawingModeRef.current !== 'draw') return false;
-
-        const { width, length } = rectangleToPlaceRef.current;
-
-        // Convert to meters if needed
-        const widthMeters = measurementUnitRef.current === 'imperial' ? feetToMeters(width) : width;
-        const lengthMeters = measurementUnitRef.current === 'imperial' ? feetToMeters(length) : length;
-
-        // Create rectangle coordinates
-        const coordinates = createRectangleCoordinates(
-          [lngLat.lng, lngLat.lat],
-          widthMeters,
-          lengthMeters,
-          0 // No rotation by default
-        );
-
-        // Create polygon object
-        const rectanglePolygon: MapboxDrawPolygon = {
-          type: 'Feature',
-          geometry: {
-            type: 'Polygon',
-            coordinates: coordinates
-          },
-          properties: {}
-        };
-
-        // Add to Mapbox Draw
-        if (drawRef.current) {
-          const featureIds = drawRef.current.add(rectanglePolygon);
-          const addedFeature = drawRef.current.get(featureIds[0]);
-
-          if (addedFeature) {
-            // Call parent callback
-            onPolygonCreate(addedFeature as MapboxDrawPolygon);
-          }
-        }
-
-        // Clear rectangle placement mode
-        if (onRectanglePlaced) {
-          onRectanglePlaced();
-        }
-
-        return true;
-      };
-
-      // Handle touch events for mobile rectangle placement
-      let rectangleTouchStart: { x: number; y: number; time: number } | null = null;
-
-      map.on('touchstart', (e) => {
-        if (rectangleToPlaceRef.current && drawingModeRef.current === 'draw') {
-          const touch = (e.originalEvent as TouchEvent).touches[0];
-          if (touch) {
-            rectangleTouchStart = {
-              x: touch.clientX,
-              y: touch.clientY,
-              time: Date.now()
-            };
-          }
-        }
-      });
-
-      map.on('touchend', (e) => {
-        if (rectangleToPlaceRef.current && drawingModeRef.current === 'draw' && rectangleTouchStart) {
-          const touch = (e.originalEvent as TouchEvent).changedTouches[0];
-          if (touch) {
-            const touchDuration = Date.now() - rectangleTouchStart.time;
-            const distance = Math.sqrt(
-              Math.pow(touch.clientX - rectangleTouchStart.x, 2) +
-              Math.pow(touch.clientY - rectangleTouchStart.y, 2)
-            );
-
-            // If it was a quick tap (not a drag), place the rectangle
-            if (touchDuration < 300 && distance < 10) {
-              placeRectangle(e.lngLat);
-              e.preventDefault();
-            }
-          }
-          rectangleTouchStart = null;
-        }
-      });
-
       // Handle clicks on empty map areas to deselect all shapes
       map.on('click', (e) => {
-        // Handle rectangle placement if we have a rectangle ready to place
-        if (placeRectangle(e.lngLat)) {
-          return;
-        }
-
         // Only handle deselection in select mode
         if (drawingModeRef.current !== 'select') {
           return;
         }
-
+        
         // Query for features at the clicked point
         const features = map.queryRenderedFeatures(e.point, {
           layers: ['parking-overlays-fill', 'polygon-rotation-handles', 'parking-rotation-handles']
@@ -1574,15 +1180,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         if (features.length === 0 && drawFeatures.length === 0) {
           console.log('Deselecting all shapes - empty area clicked');
           
-          // Immediately clear rotation handles
-          updateRotationHandles(); // Clear polygon rotation handles
-          updateParkingRotationHandles(null); // Clear parking rotation handles
-          
-          // Clear polygon selection in parent component
-          if (onClearPolygonSelection) {
-            onClearPolygonSelection();
-          }
-          
           // Deselect polygons - force clear any selection
           if (drawRef.current) {
             const selectedIds = drawRef.current.getSelectedIds();
@@ -1597,15 +1194,9 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
               parkingClickedRef.current = false;
               isDraggingParkingRef.current = false;
               
-              // Force clear any polygon selection
+              // Force deselection by switching modes and back
               if (drawRef.current) {
-                const selectedIds = drawRef.current.getSelectedIds();
-                if (selectedIds.length > 0) {
-                  // Clear selection by changing mode to simple_select with no features selected
-                  drawRef.current.changeMode('simple_select', {
-                    featureIds: []
-                  });
-                }
+                drawRef.current.changeMode('simple_select');
               }
               
               // Manually execute the draw.selectionchange logic for empty selection
@@ -1617,8 +1208,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
               // Clear rotation state and handles
               originalPolygonRef.current = null;
               totalRotationRef.current = 0;
-              updateRotationHandles(); // Clear polygon rotation handles immediately
-              updateParkingRotationHandles(null); // Clear parking rotation handles immediately
+              updateRotationHandles(); // Clear rotation handles immediately
               
               console.log('Manually cleared rotation handles and selection');
             }, 0);
@@ -1631,136 +1221,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }
         }
       });
-
-      // Handle touches on empty map areas to deselect all shapes (mobile equivalent)
-      if (isMobile()) {
-        let clearSelectionTouchStartTime = 0;
-        let clearSelectionTouchStartPoint: {x: number, y: number} | null = null;
-        
-        map.on('touchstart', (e) => {
-          // Only handle deselection in select mode
-          if (drawingModeRef.current !== 'select') {
-            return;
-          }
-          
-          const touches = (e.originalEvent as TouchEvent).touches;
-          if (touches.length === 1) {
-            clearSelectionTouchStartTime = Date.now();
-            clearSelectionTouchStartPoint = { x: e.point.x, y: e.point.y };
-          }
-        });
-        
-        map.on('touchend', (e) => {
-          // Only handle deselection in select mode
-          if (drawingModeRef.current !== 'select') {
-            return;
-          }
-          
-          // Don't handle clearing if any drag/rotation operations are in progress
-          if (isDraggingParkingRef.current || isRotatingRef.current || parkingClickedRef.current) {
-            clearSelectionTouchStartPoint = null;
-            return;
-          }
-          
-          const touches = (e.originalEvent as TouchEvent).changedTouches;
-          if (touches.length === 1 && clearSelectionTouchStartPoint) {
-            const touchDuration = Date.now() - clearSelectionTouchStartTime;
-            const touchEndPoint = e.point;
-            
-            // Calculate distance moved during touch
-            const distance = Math.sqrt(
-              Math.pow(touchEndPoint.x - clearSelectionTouchStartPoint.x, 2) + 
-              Math.pow(touchEndPoint.y - clearSelectionTouchStartPoint.y, 2)
-            );
-            
-            // Only treat as tap if quick touch with minimal movement and no other interactions
-            if (touchDuration < 300 && distance < 10) {
-              // Query for features at the touched point
-              const features = map.queryRenderedFeatures([clearSelectionTouchStartPoint.x, clearSelectionTouchStartPoint.y], {
-                layers: ['parking-overlays-fill', 'polygon-rotation-handles', 'parking-rotation-handles']
-              });
-              
-              // Also check for Mapbox Draw features (polygons)
-              const drawFeatures = map.queryRenderedFeatures([clearSelectionTouchStartPoint.x, clearSelectionTouchStartPoint.y], {
-                filter: ['==', '$type', 'Polygon']
-              });
-              
-              console.log('Touch deselect check:', {
-                drawingMode: drawingModeRef.current,
-                featuresFound: features.length,
-                drawFeaturesFound: drawFeatures.length,
-                point: clearSelectionTouchStartPoint,
-                touchDuration,
-                distance
-              });
-              
-              // If no features were touched (empty area), deselect everything
-              if (features.length === 0 && drawFeatures.length === 0) {
-                console.log('Deselecting all shapes - empty area touched');
-                
-                // Immediately clear rotation handles
-                updateRotationHandles(); // Clear polygon rotation handles
-                updateParkingRotationHandles(null); // Clear parking rotation handles
-                
-                // Clear polygon selection in parent component
-                if (onClearPolygonSelection) {
-                  onClearPolygonSelection();
-                }
-                
-                // Deselect polygons - force clear any selection
-                if (drawRef.current) {
-                  const selectedIds = drawRef.current.getSelectedIds();
-                  console.log('Current selected polygon IDs (touch):', selectedIds);
-                  
-                  // Force deselection by changing to simple_select mode
-                  drawRef.current.changeMode('simple_select');
-                  
-                  // Manually trigger the selection change event to clear rotation handles
-                  setTimeout(() => {
-                    // Clear parking flags to ensure draw.selectionchange can run
-                    parkingClickedRef.current = false;
-                    isDraggingParkingRef.current = false;
-                    
-                    // Force clear any polygon selection using the same method as desktop
-                    if (drawRef.current) {
-                      const selectedIds = drawRef.current.getSelectedIds();
-                      if (selectedIds.length > 0) {
-                        // Clear selection by changing mode to simple_select with no features selected
-                        drawRef.current.changeMode('simple_select', {
-                          featureIds: []
-                        });
-                      }
-                    }
-                    
-                    // Manually execute the draw.selectionchange logic for empty selection
-                    // Clear parking selection when nothing is selected
-                    if (selectedParkingIdRef.current && onClearParkingSelection) {
-                      onClearParkingSelection();
-                    }
-                    
-                    // Clear rotation state and handles
-                    originalPolygonRef.current = null;
-                    totalRotationRef.current = 0;
-                    updateRotationHandles(); // Clear polygon rotation handles immediately
-                    updateParkingRotationHandles(null); // Clear parking rotation handles immediately
-                    
-                    console.log('Manually cleared rotation handles and selection (touch)');
-                  }, 0);
-                }
-                
-                // Deselect parking overlays
-                if (onClearParkingSelection) {
-                  console.log('Clearing parking selection (touch)');
-                  onClearParkingSelection();
-                }
-              }
-            }
-            
-            // Reset touch tracking
-            clearSelectionTouchStartPoint = null;
-          }
-        });
-      }
       
       // Add keyboard shortcut to force draw mode
       map.on('keydown', (e: any) => {
@@ -2500,13 +1960,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
 
     return () => {
       if (mapRef.current) {
-        // Clean up keyboard event listeners
-        if (keydownHandlerRef.current) {
-          document.removeEventListener('keydown', keydownHandlerRef.current);
-        }
-        if (keyupHandlerRef.current) {
-          document.removeEventListener('keyup', keyupHandlerRef.current);
-        }
+        // Canvas event listener is removed automatically when the map is removed
         
         mapRef.current.remove();
         mapRef.current = null;
@@ -2579,16 +2033,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       draw.changeMode('draw_polygon');
       map.getCanvas().style.cursor = 'crosshair';
     } else {
-      // Preserve current selection when changing to select mode
-      const currentSelectedIds = draw.getSelectedIds();
-      if (currentSelectedIds.length > 0) {
-        // Change mode while preserving selection
-        draw.changeMode('simple_select', {
-          featureIds: currentSelectedIds
-        });
-      } else {
-        draw.changeMode('simple_select');
-      }
+      draw.changeMode('simple_select');
       map.getCanvas().style.cursor = '';
     }
     
@@ -2630,104 +2075,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       removeGridOverlay(mapRef.current);
     }
   }, [snapToGrid, gridSize, isMapLoaded]);
-
-  // Handle 3D buildings visibility
-  useEffect(() => {
-    if (!mapRef.current || !isMapLoaded) return;
-
-    // Check if layer exists before trying to set visibility
-    const layer = mapRef.current.getLayer('3d-buildings');
-    if (!layer) return;
-
-    const visibility = show3DBuildings ? 'visible' : 'none';
-    mapRef.current.setLayoutProperty('3d-buildings', 'visibility', visibility);
-  }, [show3DBuildings, isMapLoaded]);
-
-  // Update cuboids layer
-  useEffect(() => {
-    if (!mapRef.current || !isMapLoaded) return;
-
-    const source = mapRef.current.getSource('cuboids-3d') as mapboxgl.GeoJSONSource;
-    if (!source) return;
-
-    const features = cuboids.map(cuboid => ({
-      type: 'Feature' as const,
-      id: cuboid.id,
-      geometry: cuboid.geometry,
-      properties: cuboid.properties
-    }));
-
-    source.setData({
-      type: 'FeatureCollection',
-      features
-    });
-  }, [cuboids, isMapLoaded]);
-
-  // Update polygons 3D layer
-  useEffect(() => {
-    if (!mapRef.current || !isMapLoaded) return;
-
-    const source = mapRef.current.getSource('polygons-3d') as mapboxgl.GeoJSONSource;
-    if (!source) return;
-
-    const features = polygons.map(polygon => {
-      // Default height if not specified (3 meters / 1 story)
-      const height = polygon.properties?.height ?? 3;
-      const baseHeight = polygon.properties?.base_height ?? 0;
-
-      return {
-        type: 'Feature' as const,
-        id: polygon.id || polygon.properties?.id,
-        geometry: polygon.geometry,
-        properties: {
-          color: polygon.properties?.color || '#2563eb',
-          height: height,
-          base_height: baseHeight,
-          id: polygon.id || polygon.properties?.id
-        }
-      };
-    });
-
-    source.setData({
-      type: 'FeatureCollection',
-      features
-    });
-  }, [polygons, isMapLoaded]);
-
-  // Toggle 3D polygons visibility based on viewMode (desktop only)
-  useEffect(() => {
-    if (!mapRef.current || !isMapLoaded) return;
-
-    const layer = mapRef.current.getLayer('polygons-3d');
-    if (!layer) return;
-
-    // Only show 3D on desktop devices
-    const visibility = (viewMode === '3D' && !isMobile()) ? 'visible' : 'none';
-    mapRef.current.setLayoutProperty('polygons-3d', 'visibility', visibility);
-  }, [viewMode, isMapLoaded]);
-
-  // Adjust camera pitch and bearing when switching between 2D and 3D modes (desktop only)
-  useEffect(() => {
-    if (!mapRef.current || !isMapLoaded || isMobile()) return;
-
-    const map = mapRef.current;
-
-    if (viewMode === '3D') {
-      // Tilt the camera to see 3D extrusions
-      map.easeTo({
-        pitch: 60, // 60 degrees tilt
-        bearing: 0, // Reset bearing to north
-        duration: 1000 // Smooth 1 second animation
-      });
-    } else {
-      // Return to flat 2D view
-      map.easeTo({
-        pitch: 0,
-        bearing: 0,
-        duration: 1000
-      });
-    }
-  }, [viewMode, isMapLoaded]);
 
   // Helper function to generate rotation handles for parking overlays
   const generateParkingRotationHandles = (overlay: ParkingOverlay): any[] => {
@@ -2957,19 +2304,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     currentFeatures.features.forEach((feature, polygonIndex) => {
       if (feature.geometry.type !== 'Polygon') return;
       
-      // Get polygon-specific showSideLengths setting
-      const polygonId = String(feature.id || '');
-      const matchingPolygon = polygons.find(p => String(p.id || p.properties?.id || '') === polygonId);
-      
-      // If polygon has individual setting, use it; otherwise use global default
-      const hasIndividualSetting = matchingPolygon?.properties && 'showSideLengths' in matchingPolygon.properties;
-      const polygonShowSides = hasIndividualSetting 
-        ? matchingPolygon.properties.showSideLengths 
-        : showSideLengths;
-      
-      // Skip this polygon if side lengths should not be shown
-      if (!polygonShowSides) return;
-      
       const coordinates = feature.geometry.coordinates[0];
       
       // Skip if polygon doesn't have enough points (need at least 4 for a closed polygon)
@@ -2987,13 +2321,9 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         const midLng = (startPoint[0] + endPoint[0]) / 2;
         const midLat = (startPoint[1] + endPoint[1]) / 2;
         
-        // Get side length and format it using polygon-specific settings
-        const polygonId = String(feature.id || '');
-        const matchingPolygon = polygons.find(p => String(p.id || p.properties?.id || '') === polygonId);
-        const polygonUnit = matchingPolygon?.properties?.measurementUnit ?? measurementUnit;
-        
+        // Get side length and format it
         const lengthMeters = polygonMeasurement.sideLengths[i];
-        const formattedLength = formatDistance(lengthMeters, polygonUnit);
+        const formattedLength = formatDistance(lengthMeters, measurementUnit);
         
         allFeatures.push({
           type: 'Feature' as const,
@@ -3015,7 +2345,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       type: 'FeatureCollection',
       features: allFeatures
     });
-  }, [polygons, measurementUnit, isMapLoaded, showSideLengths]);
+  }, [measurementUnit, isMapLoaded, showSideLengths]);
 
   // Update annotations when polygons change or are moved
   useEffect(() => {
@@ -3044,19 +2374,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       currentFeatures.features.forEach((feature, polygonIndex) => {
         if (feature.geometry.type !== 'Polygon') return;
         
-        // Get polygon-specific showSideLengths setting
-        const polygonId = String(feature.id || '');
-        const matchingPolygon = polygons.find(p => String(p.id || p.properties?.id || '') === polygonId);
-        
-        // If polygon has individual setting, use it; otherwise use global default
-        const hasIndividualSetting = matchingPolygon?.properties && 'showSideLengths' in matchingPolygon.properties;
-        const polygonShowSides = hasIndividualSetting 
-          ? matchingPolygon.properties.showSideLengths 
-          : showSideLengths;
-        
-        // Skip this polygon if side lengths should not be shown
-        if (!polygonShowSides) return;
-        
         const coordinates = feature.geometry.coordinates[0];
         
         // Skip if polygon doesn't have enough points
@@ -3071,13 +2388,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           const midLng = (startPoint[0] + endPoint[0]) / 2;
           const midLat = (startPoint[1] + endPoint[1]) / 2;
           
-          // Get polygon-specific settings
-          const polygonId = String(feature.id || '');
-          const matchingPolygon = polygons.find(p => String(p.id || p.properties?.id || '') === polygonId);
-          const polygonUnit = matchingPolygon?.properties?.measurementUnit ?? measurementUnit;
-          
           const lengthMeters = polygonMeasurement.sideLengths[i];
-          const formattedLength = formatDistance(lengthMeters, polygonUnit);
+          const formattedLength = formatDistance(lengthMeters, measurementUnit);
           
           allFeatures.push({
             type: 'Feature' as const,
@@ -3127,7 +2439,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       map.off('draw.create', handleDrawCreate);
       map.off('draw.delete', handleDrawDelete);
     };
-  }, [polygons, measurementUnit, showSideLengths, isMapLoaded]);
+  }, [polygons.length, measurementUnit, isMapLoaded]);
 
   // Function to update rotation handles for a specific polygon
   const updateRotationHandles = useCallback((polygon?: MapboxDrawPolygon) => {
@@ -3394,20 +2706,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         currentFeatures.features.forEach((feature, polygonIndex) => {
           if (feature.geometry.type !== 'Polygon') return;
           
-          // Get polygon-specific settings
-          const polygonId = String(feature.id || '');
-          const matchingPolygon = polygons.find(p => String(p.id || p.properties?.id || '') === polygonId);
-          
-          // If polygon has individual setting, use it; otherwise use global default
-          const hasIndividualSetting = matchingPolygon?.properties && 'showSideLengths' in matchingPolygon.properties;
-          const polygonShowSides = hasIndividualSetting 
-            ? matchingPolygon.properties.showSideLengths 
-            : showSideLengths;
-          const polygonUnit = matchingPolygon?.properties?.measurementUnit ?? measurementUnit;
-          
-          // Skip this polygon if side lengths should not be shown
-          if (!polygonShowSides) return;
-          
           const coordinates = feature.geometry.coordinates[0];
           if (coordinates.length < 4) return;
           
@@ -3423,7 +2721,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             
             // Use current measurements - they should be preserved by proper rotation
             const lengthMeters = currentMeasurement.sideLengths[i];
-            const formattedLength = formatDistance(lengthMeters, polygonUnit);
+            const formattedLength = formatDistance(lengthMeters, measurementUnit);
             
             allFeatures.push({
               type: 'Feature' as const,
@@ -3458,68 +2756,12 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     return calculatePolygonCenterLocal(coordinates);
   }, []);
 
-  // Update rectangleToPlace ref when prop changes
-  useEffect(() => {
-    rectangleToPlaceRef.current = rectangleToPlace || null;
-  }, [rectangleToPlace]);
-
-  // Effect to switch drawing mode when rectangle placement is active
-  useEffect(() => {
-    if (!drawRef.current || !isMapLoaded) return;
-
-    const draw = drawRef.current;
-
-    if (rectangleToPlace && drawingMode === 'draw') {
-      // Switch to simple_select to prevent polygon drawing
-      // This allows the map click handler to catch clicks for rectangle placement
-      if (draw.getMode() !== 'simple_select') {
-        draw.changeMode('simple_select');
-      }
-    } else if (!rectangleToPlace && drawingMode === 'draw') {
-      // Return to draw_polygon mode when not placing rectangles
-      if (draw.getMode() !== 'draw_polygon') {
-        draw.changeMode('draw_polygon');
-      }
-    }
-  }, [rectangleToPlace, drawingMode, isMapLoaded]);
-
-  // Effect to change cursor when rectangle placement mode is active
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    const map = mapRef.current;
-
-    if (rectangleToPlace && drawingMode === 'draw') {
-      // Show crosshair cursor with a visual indication we're in rectangle placement mode
-      map.getCanvas().style.cursor = 'crosshair';
-      map.getCanvas().title = `Click to place ${rectangleToPlace.width} x ${rectangleToPlace.length} ${measurementUnit === 'metric' ? 'm' : 'ft'} rectangle`;
-    } else {
-      map.getCanvas().title = '';
-    }
-  }, [rectangleToPlace, drawingMode, measurementUnit]);
-
   return (
-    <div className="relative w-full h-full">
-      <div
-        ref={mapContainer}
-        className={`w-full h-full ${className}`}
-        style={{ minHeight: '400px' }}
-      />
-
-      {/* Rectangle Placement Instruction Banner */}
-      {rectangleToPlace && drawingMode === 'draw' && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
-          <div className="bg-primary text-primary-foreground px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-            </svg>
-            <span className="font-semibold">
-              Click on the map to place your {rectangleToPlace.width} × {rectangleToPlace.length} {measurementUnit === 'metric' ? 'm' : 'ft'} rectangle
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
+    <div 
+      ref={mapContainer} 
+      className={`w-full h-full ${className}`}
+      style={{ minHeight: '400px' }}
+    />
   );
 });
 

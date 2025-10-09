@@ -191,19 +191,26 @@ function SiteSketcherContent() {
     });
   }, []);
 
-  const handlePolygonUpdate = useCallback((polygon: MapboxDrawPolygon) => {    
+  const handlePolygonUpdate = useCallback((polygon: MapboxDrawPolygon) => {
     setState(prev => {
       return {
         ...prev,
         polygons: prev.polygons.map(p => {
           // Use a more precise matching strategy - prefer exact ID match
           const exactIdMatch = p.id && polygon.id && String(p.id) === String(polygon.id);
-          const exactPropsMatch = p.properties?.id && polygon.properties?.id && 
+          const exactPropsMatch = p.properties?.id && polygon.properties?.id &&
             String(p.properties.id) === String(polygon.properties.id);
-          
+
           // Only update if we have a clear match
           if (exactIdMatch || exactPropsMatch) {
-            return polygon;
+            // Merge properties to preserve custom properties like height
+            return {
+              ...polygon,
+              properties: {
+                ...p.properties,
+                ...polygon.properties
+              }
+            };
           }
           return p;
         }),
@@ -434,15 +441,35 @@ function SiteSketcherContent() {
         if (id === polygonId) {
           // Determine current effective value using same logic as display
           const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
-          const currentShow = hasIndividualSetting 
-            ? polygon.properties.showSideLengths 
+          const currentShow = hasIndividualSetting
+            ? polygon.properties.showSideLengths
             : prev.showSideLengths;
-          
+
           return {
             ...polygon,
             properties: {
               ...polygon.properties,
               showSideLengths: !currentShow
+            }
+          };
+        }
+        return polygon;
+      })
+    }));
+  }, []);
+
+  const handlePolygonHeightChange = useCallback((polygonId: string, height: number) => {
+    setState(prev => ({
+      ...prev,
+      polygons: prev.polygons.map(polygon => {
+        const id = String(polygon.id || polygon.properties?.id || '');
+        if (id === polygonId) {
+          return {
+            ...polygon,
+            properties: {
+              ...polygon.properties,
+              height: height,
+              base_height: 0 // Start from ground level
             }
           };
         }
@@ -575,6 +602,7 @@ function SiteSketcherContent() {
                 onToggleSideLengths={handleToggleSideLengths}
                 onPolygonUnitToggle={handlePolygonUnitToggle}
                 onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
+                onPolygonHeightChange={handlePolygonHeightChange}
                 onAddRectangle={handleAddRectangle}
               />
             </div>
@@ -700,6 +728,7 @@ function SiteSketcherContent() {
             onToggleSideLengths={handleToggleSideLengths}
             onPolygonUnitToggle={handlePolygonUnitToggle}
             onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
+            onPolygonHeightChange={handlePolygonHeightChange}
             onAddRectangle={handleAddRectangle}
           />
         </div>
