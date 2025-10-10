@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('id, email, subscription_status')
       .eq('id', userId)
-      .single()
+      .single() as { data: { id: string; email: string; subscription_status: string | null } | null; error: any }
 
     if (selectError) {
       console.error('Service role SELECT failed:', selectError)
@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
     console.log('User found:', userData)
 
     // Try simple update
-    const { data, error } = await supabase
-      .from('users')
+    const { data, error } = await (supabase
+      .from('users') as any)
       .update({ subscription_status: 'trialing' })
       .eq('id', userId)
       .select()

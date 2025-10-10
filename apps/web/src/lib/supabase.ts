@@ -84,6 +84,9 @@ export interface Database {
           role: 'occupier' | 'admin'
           user_type: 'Commercial Occupier' | 'Housebuilder' | 'Consultant' | 'Landlord/Vendor' | 'Developer' | 'Government' | 'Other'
           org_id: string | null
+          subscription_status: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           created_at: string
           updated_at: string
         }
@@ -93,6 +96,9 @@ export interface Database {
           role?: 'occupier' | 'admin'
           user_type: 'Commercial Occupier' | 'Housebuilder' | 'Consultant' | 'Landlord/Vendor' | 'Developer' | 'Government' | 'Other'
           org_id?: string | null
+          subscription_status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -102,6 +108,9 @@ export interface Database {
           role?: 'occupier' | 'admin'
           user_type?: 'Commercial Occupier' | 'Housebuilder' | 'Consultant' | 'Agent' | 'Landlord/Vendor' | 'Developer' | 'Government' | 'Other'
           org_id?: string | null
+          subscription_status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           updated_at?: string
         }
       }
@@ -167,6 +176,7 @@ export interface Database {
           contact_phone: string | null
           brochure_url: string | null
           status: 'draft' | 'pending' | 'approved' | 'rejected' | 'archived'
+          rejection_reason: string | null
           created_by: string
           created_at: string
           updated_at: string
@@ -190,6 +200,7 @@ export interface Database {
           contact_phone?: string | null
           brochure_url?: string | null
           status?: 'draft' | 'pending' | 'approved' | 'rejected' | 'archived'
+          rejection_reason?: string | null
           created_by: string
           created_at?: string
           updated_at?: string
@@ -213,6 +224,7 @@ export interface Database {
           contact_phone?: string | null
           brochure_url?: string | null
           status?: 'draft' | 'pending' | 'approved' | 'rejected' | 'archived'
+          rejection_reason?: string | null
           updated_at?: string
           org_id?: string | null
           linked_agency_id?: string | null
@@ -289,6 +301,43 @@ export interface Database {
           data?: any
           thumbnail_url?: string | null
           location?: any | null
+          updated_at?: string
+        }
+      }
+      listing_versions: {
+        Row: {
+          id: string
+          listing_id: string
+          content: any // JSONB
+          status: string
+          is_live: boolean
+          reviewed_by: string | null
+          reviewed_at: string | null
+          review_notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          listing_id: string
+          content: any
+          status?: string
+          is_live?: boolean
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          review_notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          listing_id?: string
+          content?: any
+          status?: string
+          is_live?: boolean
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          review_notes?: string | null
           updated_at?: string
         }
       }

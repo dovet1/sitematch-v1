@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('email, stripe_customer_id, subscription_status')
       .eq('id', userId)
-      .single()
+      .single() as { data: { email: string; stripe_customer_id: string | null; subscription_status: string | null } | null; error: any }
 
     console.log('Database query result:', { user, userError })
 
@@ -85,8 +85,8 @@ export async function POST(request: NextRequest) {
       customerId = customer.id
 
       // Save customer ID to user record using admin client
-      await adminSupabase
-        .from('users')
+      await (adminSupabase
+        .from('users') as any)
         .update({ stripe_customer_id: customerId })
         .eq('id', userId)
     }

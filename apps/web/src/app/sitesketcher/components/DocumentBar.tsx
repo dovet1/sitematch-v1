@@ -14,14 +14,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   FileText,
-  ChevronDown,
   Save,
   FolderOpen,
   FilePlus,
   FileX,
   Download,
   History,
-  Copy
+  Copy,
+  Pencil,
+  Menu
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -147,10 +148,11 @@ export function DocumentBar({
         ) : (
           <button
             onClick={handleNameClick}
-            className="text-sm font-medium hover:text-primary transition-colors truncate"
+            className="flex items-center gap-1.5 text-sm font-medium hover:text-primary transition-colors truncate group"
             title="Click to rename"
           >
-            {sketchName}
+            <span className="truncate">{sketchName}</span>
+            <Pencil className="h-3 w-3 text-muted-foreground group-hover:text-primary flex-shrink-0" />
           </button>
         )}
 
@@ -170,12 +172,11 @@ export function DocumentBar({
       {/* File Menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8">
-            File
-            <ChevronDown className="ml-1 h-3 w-3" />
+          <Button variant="ghost" size="icon" className="h-8 w-8" title="File menu">
+            <Menu className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem onClick={onNewSketch}>
             <FilePlus className="mr-2 h-4 w-4" />
             New Sketch

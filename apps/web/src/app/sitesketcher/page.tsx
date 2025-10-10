@@ -22,7 +22,8 @@ import type {
   SearchResult,
   SiteSketcherState,
   MeasurementUnit,
-  SavedSketch
+  SavedSketch,
+  ExportAreaBounds
 } from '@/types/sitesketcher';
 import { calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { getMapboxToken, flyToLocation } from '@/lib/sitesketcher/mapbox-utils';
@@ -536,7 +537,7 @@ function SiteSketcherContent() {
     // Save to existing sketch
     setIsSaving(true);
     try {
-      let location = null;
+      let location: { center: [number, number]; zoom: number } | undefined = undefined;
       if (mapRef.current) {
         const center = mapRef.current.getCenter();
         const zoom = mapRef.current.getZoom();
@@ -571,7 +572,7 @@ function SiteSketcherContent() {
   const handleSaveSketch = useCallback(async (name: string, description: string) => {
     setIsSaving(true);
     try {
-      let location = null;
+      let location: { center: [number, number]; zoom: number } | undefined = undefined;
       if (mapRef.current) {
         const center = mapRef.current.getCenter();
         const zoom = mapRef.current.getZoom();
@@ -633,7 +634,8 @@ function SiteSketcherContent() {
           recentSearches: state.recentSearches,
           snapToGrid: false,
           gridSize: 10,
-          showSideLengths: true
+          showSideLengths: true,
+          exportAreaBounds: null
         });
         setCurrentSketchId(null);
         setCurrentSketchName('Untitled Sketch');
@@ -658,7 +660,8 @@ function SiteSketcherContent() {
         recentSearches: state.recentSearches,
         snapToGrid: false,
         gridSize: 10,
-        showSideLengths: true
+        showSideLengths: true,
+        exportAreaBounds: null
       });
       setCurrentSketchId(null);
       setCurrentSketchName('Untitled Sketch');
@@ -708,12 +711,15 @@ function SiteSketcherContent() {
       console.log('Navigating to sketch location:', sketch.location);
       setTimeout(() => {
         console.log('Now triggering navigation after polygons loaded');
-        setSearchResult({
-          id: `sketch-location-${sketch.id}`,
-          place_name: sketch.name,
-          center: sketch.location.center,
-          place_type: ['place']
-        });
+        if (sketch.location) {
+          setSearchResult({
+            id: `sketch-location-${sketch.id}`,
+            place_name: sketch.name,
+            center: sketch.location.center,
+            place_type: ['place'],
+            properties: {}
+          });
+        }
       }, 1000);
     }
 
@@ -896,7 +902,6 @@ function SiteSketcherContent() {
           <div className="w-80 border-r bg-background flex flex-col">
             <div className="flex-1 overflow-y-auto desktop-sidebar-scroll p-4">
               <ResponsiveControls
-                measurement={state.measurements}
                 measurementUnit={state.measurementUnit}
                 onUnitToggle={handleUnitToggle}
                 onClearAll={handleClearAll}
@@ -1022,7 +1027,6 @@ function SiteSketcherContent() {
         {/* Mobile Bottom Sheet - Always visible */}
         <div className="mobile-bottom-sheet-container">
           <ResponsiveControls
-            measurement={state.measurements}
             measurementUnit={state.measurementUnit}
             onUnitToggle={handleUnitToggle}
             onClearAll={handleClearAll}
