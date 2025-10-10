@@ -223,37 +223,6 @@ export function DocumentBar({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-
-      {/* Export Menu */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8">
-            Export
-            <ChevronDown className="ml-1 h-3 w-3" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-48">
-          <DropdownMenuItem onClick={onExportPNG}>
-            <Download className="mr-2 h-4 w-4" />
-            PNG Image...
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onClick={onExportJSON}>
-            <Download className="mr-2 h-4 w-4" />
-            GeoJSON...
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onClick={onExportCSV}>
-            <Download className="mr-2 h-4 w-4" />
-            CSV Data...
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onClick={onExportPDF}>
-            <Download className="mr-2 h-4 w-4" />
-            PDF Report...
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
     </div>
   );
 }

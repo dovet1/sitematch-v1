@@ -53,6 +53,7 @@ export interface MapboxMapRef {
   flyToLocation: (center: [number, number], zoom?: number) => Promise<void>;
   setMapView: (center: [number, number], zoom: number) => void;
   getCanvas: () => HTMLCanvasElement;
+  getMap: () => mapboxgl.Map | null;
 }
 
 export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
@@ -376,6 +377,9 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     getCanvas: () => {
       if (!mapRef.current) throw new Error('Map not initialized');
       return mapRef.current.getCanvas();
+    },
+    getMap: () => {
+      return mapRef.current;
     }
   }), [isMapLoaded]);
 

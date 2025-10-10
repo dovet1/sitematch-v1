@@ -32,6 +32,10 @@ export function SketchesList({ isOpen, onClose, onLoadSketch }: SketchesListProp
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('deleteConfirm state changed to:', deleteConfirm);
+  }, [deleteConfirm]);
+
+  useEffect(() => {
     if (isOpen) {
       loadSketches();
     }
@@ -53,15 +57,19 @@ export function SketchesList({ isOpen, onClose, onLoadSketch }: SketchesListProp
   };
 
   const handleDelete = async (id: string) => {
+    console.log('handleDelete called for id:', id);
     setActionLoading(id);
     try {
+      console.log('Calling deleteSketch...');
       await deleteSketch(id);
+      console.log('Delete successful, updating UI...');
       setSketches(sketches.filter(s => s.id !== id));
       setDeleteConfirm(null);
     } catch (err) {
+      console.error('Delete error:', err);
       setError('Failed to delete sketch');
-      console.error(err);
     } finally {
+      console.log('Clearing loading state');
       setActionLoading(null);
     }
   };
@@ -186,7 +194,12 @@ export function SketchesList({ isOpen, onClose, onLoadSketch }: SketchesListProp
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setDeleteConfirm(sketch.id)}
+                            onClick={() => {
+                              console.log('Delete button clicked for sketch:', sketch.id);
+                              if (window.confirm(`Are you sure you want to delete "${sketch.name}"? This action cannot be undone.`)) {
+                                handleDelete(sketch.id);
+                              }
+                            }}
                             disabled={actionLoading === sketch.id}
                             title="Delete"
                           >
@@ -203,8 +216,14 @@ export function SketchesList({ isOpen, onClose, onLoadSketch }: SketchesListProp
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
-        <AlertDialogContent>
+      <AlertDialog
+        open={deleteConfirm !== null}
+        onOpenChange={(open) => {
+          console.log('AlertDialog onOpenChange:', open, 'deleteConfirm:', deleteConfirm);
+          if (!open) setDeleteConfirm(null);
+        }}
+      >
+        <AlertDialogContent className="z-[9999]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Sketch?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -212,9 +231,17 @@ export function SketchesList({ isOpen, onClose, onLoadSketch }: SketchesListProp
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => {
+              console.log('Cancel clicked');
+              setDeleteConfirm(null);
+            }}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Delete action clicked, deleteConfirm:', deleteConfirm);
+                if (deleteConfirm) handleDelete(deleteConfirm);
+              }}
               className="bg-destructive hover:bg-destructive/90"
             >
               Delete

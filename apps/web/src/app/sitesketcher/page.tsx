@@ -61,7 +61,8 @@ function SiteSketcherContent() {
     recentSearches: [],
     snapToGrid: false,
     gridSize: 10,
-    showSideLengths: true
+    showSideLengths: true,
+    exportAreaBounds: null
   });
 
   const [mapboxError, setMapboxError] = useState<string | null>(null);
@@ -79,6 +80,7 @@ function SiteSketcherContent() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSelectingExportArea, setIsSelectingExportArea] = useState(false);
   const mapRef = useRef<MapboxMapRef>(null);
   const originalMeasurementsRef = useRef<AreaMeasurement | null>(null);
 
@@ -729,19 +731,45 @@ function SiteSketcherContent() {
 
   const handleExportPNG = useCallback(async () => {
     try {
-      await exportAsPNG(mapRef, currentSketchName);
+      await exportAsPNG(mapRef, currentSketchName, state.exportAreaBounds);
+      if (state.exportAreaBounds) {
+        toast.success('PNG exported with selected area');
+      }
     } catch (error) {
       console.error('Failed to export PNG:', error);
+      toast.error('Failed to export PNG');
     }
-  }, [currentSketchName]);
+  }, [currentSketchName, state.exportAreaBounds]);
 
   const handleExportPDF = useCallback(async () => {
     try {
-      await exportAsPDF(state, mapRef, currentSketchName);
+      await exportAsPDF(state, mapRef, currentSketchName, 'sketch', state.exportAreaBounds);
+      if (state.exportAreaBounds) {
+        toast.success('PDF exported with selected area');
+      }
     } catch (error) {
       console.error('Failed to export PDF:', error);
+      toast.error('Failed to export PDF');
     }
   }, [state, currentSketchName]);
+
+  const handleSelectExportArea = useCallback(() => {
+    console.log('handleSelectExportArea called');
+    console.log('Map available:', !!mapRef.current?.getMap?.());
+    setIsSelectingExportArea(true);
+    toast.info('Draw a rectangle on the map to select export area');
+  }, []);
+
+  const handleExportAreaSelected = useCallback((bounds: ExportAreaBounds) => {
+    setState(prev => ({ ...prev, exportAreaBounds: bounds }));
+    setIsSelectingExportArea(false);
+    toast.success('Export area selected');
+  }, []);
+
+  const handleExportAreaCancel = useCallback(() => {
+    setIsSelectingExportArea(false);
+    toast.info('Export area selection cancelled');
+  }, []);
 
   // Unsaved changes dialog handlers
   const handleUnsavedDontSave = useCallback(() => {
@@ -931,10 +959,10 @@ function SiteSketcherContent() {
               selectedCuboidId={state.selectedCuboidId}
               className="w-full h-full"
             />
-            
+
             {/* Desktop Mode Toggle Button */}
             {/* Floating Mode Indicator for Desktop */}
-            <FloatingModeIndicator 
+            <FloatingModeIndicator
               mode={state.drawingMode}
               onToggle={handleModeToggle}
               position="bottom-right"

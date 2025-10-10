@@ -739,37 +739,6 @@ export function ResponsiveControls({
           </Collapsible>
         </Card>
 
-        {/* Save, Load, Export Buttons */}
-        <div className="grid grid-cols-3 gap-2">
-          <Button
-            variant="outline"
-            onClick={onSave}
-            disabled={!onSave}
-            className="w-full"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Save
-          </Button>
-          <Button
-            variant="outline"
-            onClick={onLoad}
-            disabled={!onLoad}
-            className="w-full"
-          >
-            <FolderOpen className="h-4 w-4 mr-2" />
-            Load
-          </Button>
-          <Button
-            variant="outline"
-            onClick={onExport}
-            disabled={!onExport}
-            className="w-full"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
-
         {/* Clear All Button */}
         {isMobile ? (
           <TouchOptimizedButton

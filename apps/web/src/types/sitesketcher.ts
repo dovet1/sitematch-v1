@@ -59,9 +59,16 @@ export interface TutorialStep {
   completed: boolean;
 }
 
-export type DrawingMode = 'draw' | 'select';
+export type DrawingMode = 'draw' | 'select' | 'export-area';
 export type MeasurementUnit = 'metric' | 'imperial';
 export type ViewMode = '2D' | '3D';
+
+export interface ExportAreaBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
 
 export interface Cuboid3D {
   id: string;
@@ -96,6 +103,7 @@ export interface SiteSketcherState {
   snapToGrid: boolean;
   gridSize: number; // meters
   showSideLengths: boolean;
+  exportAreaBounds: ExportAreaBounds | null;
 }
 
 export interface ParkingConfiguration {
