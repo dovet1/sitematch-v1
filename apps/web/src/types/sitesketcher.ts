@@ -123,3 +123,18 @@ export const STORY_HEIGHTS = {
   2: 7.0,   // 2 stories = 7 meters
   3: 10.5,  // 3 stories = 10.5 meters
 } as const;
+
+export interface SavedSketch {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  data: SiteSketcherState;
+  thumbnail_url: string | null;
+  location: {
+    center: [number, number];
+    zoom: number;
+  } | null;
+  created_at: string;
+  updated_at: string;
+}

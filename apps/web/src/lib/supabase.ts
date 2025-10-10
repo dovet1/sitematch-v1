@@ -259,6 +259,39 @@ export interface Database {
           description?: string | null
         }
       }
+      site_sketches: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          description: string | null
+          data: any // JSONB
+          thumbnail_url: string | null
+          location: any | null // JSONB
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          description?: string | null
+          data: any
+          thumbnail_url?: string | null
+          location?: any | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          data?: any
+          thumbnail_url?: string | null
+          location?: any | null
+          updated_at?: string
+        }
+      }
     }
   }
 }

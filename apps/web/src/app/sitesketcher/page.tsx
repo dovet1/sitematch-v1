@@ -10,18 +10,36 @@ import { MobileFAB } from './components/MobileFAB';
 import { FloatingModeIndicator } from './components/FloatingModeIndicator';
 import WelcomeOnboarding from './components/WelcomeOnboarding';
 import { CuboidStorySelector } from './components/CuboidStorySelector';
-import { AlertTriangle, Pencil, MousePointer, ArrowLeft } from 'lucide-react';
-import type { 
-  MapboxDrawPolygon, 
-  ParkingOverlay, 
+import { SaveSketchModal } from './components/SaveSketchModal';
+import { SketchesList } from './components/SketchesList';
+import { AlertTriangle, Pencil, MousePointer, ArrowLeft, Menu } from 'lucide-react';
+import type {
+  MapboxDrawPolygon,
+  ParkingOverlay,
   AreaMeasurement,
   SearchResult,
   SiteSketcherState,
-  MeasurementUnit
+  MeasurementUnit,
+  SavedSketch
 } from '@/types/sitesketcher';
 import { calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { getMapboxToken } from '@/lib/sitesketcher/mapbox-utils';
 import { getPolygonColor } from '@/lib/sitesketcher/colors';
+import { createSketch, updateSketch } from '@/lib/sitesketcher/sketch-service';
+import { exportAsJSON, exportAsCSV, exportAsPNG, exportAsPDF } from '@/lib/sitesketcher/export-utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import '@/styles/sitesketcher-mobile.css';
 import '@/styles/sitesketcher-toggle.css';
 import Link from 'next/link';
@@ -61,6 +79,10 @@ function SiteSketcherContent() {
   const [rectangleToPlace, setRectangleToPlace] = useState<{ width: number; length: number } | null>(null);
   const [showCuboidSelector, setShowCuboidSelector] = useState(false);
   const [pendingCuboidPolygon, setPendingCuboidPolygon] = useState<MapboxDrawPolygon | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [currentSketchId, setCurrentSketchId] = useState<string | null>(null);
   const mapRef = useRef<MapboxMapRef>(null);
   const originalMeasurementsRef = useRef<AreaMeasurement | null>(null);
 
@@ -491,6 +513,114 @@ function SiteSketcherContent() {
     setRectangleToPlace({ width, length });
   }, []);
 
+
+  // Save/Load/Export handlers
+  const handleSave = useCallback(() => {
+    setShowSaveModal(true);
+  }, []);
+
+  const handleSaveSketch = useCallback(async (name: string, description: string) => {
+    try {
+      // Get current map location if available
+      let location = null;
+      if (mapRef.current) {
+        const center = mapRef.current.getCenter();
+        const zoom = mapRef.current.getZoom();
+        location = {
+          center: [center.lng, center.lat] as [number, number],
+          zoom
+        };
+      }
+
+      if (currentSketchId) {
+        // Update existing sketch
+        await updateSketch(currentSketchId, {
+          name,
+          description,
+          data: state,
+          location
+        });
+      } else {
+        // Create new sketch
+        const sketch = await createSketch({
+          name,
+          description,
+          data: state,
+          location
+        });
+        setCurrentSketchId(sketch.id);
+      }
+    } catch (error) {
+      console.error('Failed to save sketch:', error);
+      throw error;
+    }
+  }, [state, currentSketchId]);
+
+  const handleLoad = useCallback(() => {
+    setShowLoadModal(true);
+  }, []);
+
+  const handleLoadSketch = useCallback((sketch: SavedSketch) => {
+    console.log('Loading sketch:', sketch.name);
+    console.log('Sketch location:', sketch.location);
+
+    // Load the state and polygons first
+    setState(sketch.data);
+    setCurrentSketchId(sketch.id);
+
+    // Close the modal
+    setShowLoadModal(false);
+
+    // Then move map AFTER React finishes rendering and browser paints
+    if (sketch.location && mapRef.current) {
+      console.log('Scheduling map movement using requestAnimationFrame');
+
+      // Use multiple RAF to ensure we're after React rendering AND browser paint
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (mapRef.current && sketch.location) {
+              console.log('NOW moving map after all renders:', sketch.location);
+              mapRef.current.setMapView(sketch.location.center, sketch.location.zoom);
+            }
+          });
+        });
+      });
+    }
+  }, []);
+
+  const handleExport = useCallback(() => {
+    setShowExportMenu(true);
+  }, []);
+
+  const handleExportJSON = useCallback(() => {
+    exportAsJSON(state, currentSketchId || 'sketch');
+    setShowExportMenu(false);
+  }, [state, currentSketchId]);
+
+  const handleExportCSV = useCallback(() => {
+    exportAsCSV(state, currentSketchId || 'sketch');
+    setShowExportMenu(false);
+  }, [state, currentSketchId]);
+
+  const handleExportPNG = useCallback(async () => {
+    try {
+      await exportAsPNG(mapRef, currentSketchId || 'sketch');
+      setShowExportMenu(false);
+    } catch (error) {
+      console.error('Failed to export PNG:', error);
+    }
+  }, [currentSketchId]);
+
+  const handleExportPDF = useCallback(async () => {
+    try {
+      await exportAsPDF(state, mapRef, currentSketchId || 'sketch');
+      setShowExportMenu(false);
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+    }
+  }, [state, currentSketchId]);
+
   // Show loading while checking authentication
   if (loading) {
     return (
@@ -604,6 +734,9 @@ function SiteSketcherContent() {
                 onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
                 onPolygonHeightChange={handlePolygonHeightChange}
                 onAddRectangle={handleAddRectangle}
+                onSave={handleSave}
+                onLoad={handleLoad}
+                onExport={handleExport}
               />
             </div>
           </div>
@@ -730,9 +863,58 @@ function SiteSketcherContent() {
             onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
             onPolygonHeightChange={handlePolygonHeightChange}
             onAddRectangle={handleAddRectangle}
+            onSave={handleSave}
+            onLoad={handleLoad}
+            onExport={handleExport}
           />
         </div>
       </div>
+
+      {/* Save Sketch Modal */}
+      <SaveSketchModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSave={handleSaveSketch}
+      />
+
+      {/* Load Sketches Modal */}
+      <SketchesList
+        isOpen={showLoadModal}
+        onClose={() => setShowLoadModal(false)}
+        onLoadSketch={handleLoadSketch}
+      />
+
+      {/* Export Menu Dropdown */}
+      {showExportMenu && (
+        <Dialog open={showExportMenu} onOpenChange={setShowExportMenu}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Export Sketch</DialogTitle>
+              <DialogDescription>
+                Choose a format to export your sketch
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-2 py-4">
+              <Button variant="outline" onClick={handleExportJSON} className="justify-start">
+                <Download className="mr-2 h-4 w-4" />
+                Export as GeoJSON
+              </Button>
+              <Button variant="outline" onClick={handleExportCSV} className="justify-start">
+                <Download className="mr-2 h-4 w-4" />
+                Export as CSV
+              </Button>
+              <Button variant="outline" onClick={handleExportPNG} className="justify-start">
+                <Download className="mr-2 h-4 w-4" />
+                Export as PNG Image
+              </Button>
+              <Button variant="outline" onClick={handleExportPDF} className="justify-start">
+                <Download className="mr-2 h-4 w-4" />
+                Export as PDF Report
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Welcome Onboarding Modal */}
       <WelcomeOnboarding

@@ -47,6 +47,11 @@ export interface MapboxMapRef {
   isRotating: () => boolean;
   getOriginalCoordinates: () => number[][] | null;
   setViewMode: (mode: ViewMode) => void;
+  getCenter: () => { lng: number; lat: number };
+  getZoom: () => number;
+  flyTo: (options: { center: [number, number]; zoom: number; duration: number; pitch?: number; bearing?: number }) => void;
+  setMapView: (center: [number, number], zoom: number) => void;
+  getCanvas: () => HTMLCanvasElement;
 }
 
 export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
@@ -277,6 +282,102 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         bearing: is3D ? -17.6 : 0,
         duration: 1000
       });
+    },
+    getCenter: () => {
+      if (!mapRef.current) return { lng: 0, lat: 0 };
+      const center = mapRef.current.getCenter();
+      return { lng: center.lng, lat: center.lat };
+    },
+    getZoom: () => {
+      if (!mapRef.current) return 0;
+      return mapRef.current.getZoom();
+    },
+    flyTo: (options: { center: [number, number]; zoom: number; duration: number; pitch?: number; bearing?: number }) => {
+      if (!mapRef.current) return;
+      const map = mapRef.current;
+      console.log('MapboxMap.flyTo called with:', options);
+      console.log('Current map center:', map.getCenter());
+      console.log('Current map zoom:', map.getZoom());
+
+      // Calculate distance to see if we're already there
+      const currentCenter = map.getCenter();
+      const distance = Math.sqrt(
+        Math.pow(currentCenter.lng - options.center[0], 2) +
+        Math.pow(currentCenter.lat - options.center[1], 2)
+      );
+      console.log('Distance to target:', distance);
+
+      // If we're very close, mapbox won't animate, so force a small offset first
+      if (distance < 0.0001) {
+        console.log('Already at target location, jumping slightly away first');
+        map.jumpTo({
+          center: [options.center[0] + 0.01, options.center[1] + 0.01],
+          zoom: options.zoom - 1
+        });
+        // Small delay to let the jump complete
+        setTimeout(() => {
+          map.flyTo({
+            center: options.center,
+            zoom: options.zoom,
+            pitch: options.pitch !== undefined ? options.pitch : map.getPitch(),
+            bearing: options.bearing !== undefined ? options.bearing : map.getBearing(),
+            duration: options.duration,
+            essential: true
+          });
+        }, 100);
+      } else {
+        // Stop any ongoing animations first
+        map.stop();
+
+        // Use flyTo with all options
+        map.flyTo({
+          center: options.center,
+          zoom: options.zoom,
+          pitch: options.pitch !== undefined ? options.pitch : map.getPitch(),
+          bearing: options.bearing !== undefined ? options.bearing : map.getBearing(),
+          duration: options.duration,
+          essential: true
+        });
+      }
+
+      console.log('flyTo executed');
+    },
+    setMapView: (center: [number, number], zoom: number) => {
+      if (!mapRef.current) return;
+      const map = mapRef.current;
+      console.log('setMapView - checking if actually need to move');
+      console.log('Current:', map.getCenter(), 'zoom:', map.getZoom());
+      console.log('Target:', center, 'zoom:', zoom);
+
+      // Calculate if we actually need to move
+      const current = map.getCenter();
+      const distance = Math.sqrt(
+        Math.pow(current.lng - center[0], 2) + Math.pow(current.lat - center[1], 2)
+      );
+
+      console.log('Distance from target:', distance);
+
+      if (distance < 0.0001 && Math.abs(map.getZoom() - zoom) < 0.1) {
+        console.log('Already at target location, skipping');
+        return;
+      }
+
+      // Stop any animation
+      map.stop();
+
+      // Use flyTo with very short duration - this seems to work better than jumpTo for visual updates
+      map.flyTo({
+        center: center,
+        zoom: zoom,
+        duration: 1, // 1ms - essentially instant
+        essential: true
+      });
+
+      console.log('flyTo initiated');
+    },
+    getCanvas: () => {
+      if (!mapRef.current) throw new Error('Map not initialized');
+      return mapRef.current.getCanvas();
     }
   }), [isMapLoaded]);
 

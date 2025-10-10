@@ -18,7 +18,10 @@ import {
   MousePointer,
   Settings,
   Square,
-  Building2
+  Building2,
+  Save,
+  FolderOpen,
+  Download
 } from 'lucide-react';
 import { ModeToggleSwitch } from './ModeToggleSwitch';
 import { ViewModeToggle } from './ViewModeToggle';
@@ -221,6 +224,10 @@ interface ResponsiveControlsProps {
   onLocationSelect: (location: any) => void;
   recentSearches: any[];
   onUpdateRecentSearches: (searches: any[]) => void;
+  // Save/Load/Export props
+  onSave?: () => void;
+  onLoad?: () => void;
+  onExport?: () => void;
   className?: string;
 }
 
@@ -252,6 +259,9 @@ export function ResponsiveControls({
   onLocationSelect,
   recentSearches,
   onUpdateRecentSearches,
+  onSave,
+  onLoad,
+  onExport,
   className = ''
 }: ResponsiveControlsProps) {
   const [measurementsOpen, setMeasurementsOpen] = useState(false);
@@ -728,6 +738,37 @@ export function ResponsiveControls({
             </CollapsibleContent>
           </Collapsible>
         </Card>
+
+        {/* Save, Load, Export Buttons */}
+        <div className="grid grid-cols-3 gap-2">
+          <Button
+            variant="outline"
+            onClick={onSave}
+            disabled={!onSave}
+            className="w-full"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Save
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onLoad}
+            disabled={!onLoad}
+            className="w-full"
+          >
+            <FolderOpen className="h-4 w-4 mr-2" />
+            Load
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onExport}
+            disabled={!onExport}
+            className="w-full"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+        </div>
 
         {/* Clear All Button */}
         {isMobile ? (
