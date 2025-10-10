@@ -59,7 +59,7 @@ export async function PATCH(
       .from('listings')
       .select('id, status')
       .eq('id', listingId)
-      .single();
+      .single() as { data: { id: string; status: string } | null; error: any };
 
     if (fetchError || !existingListing) {
       return NextResponse.json(

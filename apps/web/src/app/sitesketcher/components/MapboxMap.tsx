@@ -50,6 +50,7 @@ export interface MapboxMapRef {
   getCenter: () => { lng: number; lat: number };
   getZoom: () => number;
   flyTo: (options: { center: [number, number]; zoom: number; duration: number; pitch?: number; bearing?: number }) => void;
+  flyToLocation: (center: [number, number], zoom?: number) => Promise<void>;
   setMapView: (center: [number, number], zoom: number) => void;
   getCanvas: () => HTMLCanvasElement;
 }
@@ -345,35 +346,32 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     setMapView: (center: [number, number], zoom: number) => {
       if (!mapRef.current) return;
       const map = mapRef.current;
-      console.log('setMapView - checking if actually need to move');
-      console.log('Current:', map.getCenter(), 'zoom:', map.getZoom());
+      console.log('setMapView - using easeTo with visible animation');
+      console.log('Current:', map.getCenter(), 'zoom:', map.getZoom(), 'pitch:', map.getPitch());
       console.log('Target:', center, 'zoom:', zoom);
 
-      // Calculate if we actually need to move
-      const current = map.getCenter();
-      const distance = Math.sqrt(
-        Math.pow(current.lng - center[0], 2) + Math.pow(current.lat - center[1], 2)
-      );
-
-      console.log('Distance from target:', distance);
-
-      if (distance < 0.0001 && Math.abs(map.getZoom() - zoom) < 0.1) {
-        console.log('Already at target location, skipping');
-        return;
-      }
-
-      // Stop any animation
+      // Stop any ongoing animation first
       map.stop();
 
-      // Use flyTo with very short duration - this seems to work better than jumpTo for visual updates
-      map.flyTo({
+      // Get the correct pitch based on current viewMode
+      const targetPitch = viewMode === '3D' ? 60 : 0;
+
+      // Use easeTo with a visible duration so user can see the movement
+      map.easeTo({
         center: center,
         zoom: zoom,
-        duration: 1, // 1ms - essentially instant
+        pitch: targetPitch,
+        bearing: 0,
+        duration: 1500, // 1.5 second smooth animation
         essential: true
       });
 
-      console.log('flyTo initiated');
+      console.log('easeTo animation started');
+    },
+    flyToLocation: async (center: [number, number], zoom = 15) => {
+      if (!mapRef.current) return;
+      console.log('MapboxMap.flyToLocation called with:', center, zoom);
+      return flyToLocation(mapRef.current, center, zoom);
     },
     getCanvas: () => {
       if (!mapRef.current) throw new Error('Map not initialized');

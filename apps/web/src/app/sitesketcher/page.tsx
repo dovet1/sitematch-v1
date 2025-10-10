@@ -12,6 +12,8 @@ import WelcomeOnboarding from './components/WelcomeOnboarding';
 import { CuboidStorySelector } from './components/CuboidStorySelector';
 import { SaveSketchModal } from './components/SaveSketchModal';
 import { SketchesList } from './components/SketchesList';
+import { DocumentBar } from './components/DocumentBar';
+import { UnsavedChangesDialog } from './components/UnsavedChangesDialog';
 import { AlertTriangle, Pencil, MousePointer, ArrowLeft, Menu } from 'lucide-react';
 import type {
   MapboxDrawPolygon,
@@ -23,28 +25,17 @@ import type {
   SavedSketch
 } from '@/types/sitesketcher';
 import { calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
-import { getMapboxToken } from '@/lib/sitesketcher/mapbox-utils';
+import { getMapboxToken, flyToLocation } from '@/lib/sitesketcher/mapbox-utils';
 import { getPolygonColor } from '@/lib/sitesketcher/colors';
 import { createSketch, updateSketch } from '@/lib/sitesketcher/sketch-service';
 import { exportAsJSON, exportAsCSV, exportAsPNG, exportAsPDF } from '@/lib/sitesketcher/export-utils';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import '@/styles/sitesketcher-mobile.css';
 import '@/styles/sitesketcher-toggle.css';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
+import { Toaster } from 'sonner';
 
 const STORAGE_KEY = 'sitesketcher-state';
 const RECENT_SEARCHES_KEY = 'sitesketcher-recent-searches';
@@ -81,8 +72,13 @@ function SiteSketcherContent() {
   const [pendingCuboidPolygon, setPendingCuboidPolygon] = useState<MapboxDrawPolygon | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
   const [currentSketchId, setCurrentSketchId] = useState<string | null>(null);
+  const [currentSketchName, setCurrentSketchName] = useState('Untitled Sketch');
+  const [savedStateSnapshot, setSavedStateSnapshot] = useState<string>('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const mapRef = useRef<MapboxMapRef>(null);
   const originalMeasurementsRef = useRef<AreaMeasurement | null>(null);
 
@@ -96,6 +92,18 @@ function SiteSketcherContent() {
       return () => clearTimeout(timer);
     }
   }, [user, loading, router]);
+
+  // Detect unsaved changes by comparing current state with saved snapshot
+  useEffect(() => {
+    const currentStateStr = JSON.stringify(state);
+    if (savedStateSnapshot && currentStateStr !== savedStateSnapshot) {
+      setHasUnsavedChanges(true);
+    } else if (!savedStateSnapshot) {
+      // If there's no snapshot yet, check if state is non-empty
+      const hasContent = state.polygons.length > 0 || state.parkingOverlays.length > 0 || state.cuboids.length > 0;
+      setHasUnsavedChanges(hasContent);
+    }
+  }, [state, savedStateSnapshot]);
 
   // Load state from localStorage on mount
   useEffect(() => {
@@ -515,13 +523,17 @@ function SiteSketcherContent() {
 
 
   // Save/Load/Export handlers
-  const handleSave = useCallback(() => {
-    setShowSaveModal(true);
-  }, []);
+  // Handle Save - updates existing or prompts for name if new
+  const handleSave = useCallback(async () => {
+    if (!currentSketchId || currentSketchName === 'Untitled Sketch') {
+      // No existing sketch or unnamed, trigger Save As
+      setShowSaveModal(true);
+      return;
+    }
 
-  const handleSaveSketch = useCallback(async (name: string, description: string) => {
+    // Save to existing sketch
+    setIsSaving(true);
     try {
-      // Get current map location if available
       let location = null;
       if (mapRef.current) {
         const center = mapRef.current.getCenter();
@@ -532,8 +544,43 @@ function SiteSketcherContent() {
         };
       }
 
-      if (currentSketchId) {
-        // Update existing sketch
+      await updateSketch(currentSketchId, {
+        name: currentSketchName,
+        description: '',
+        data: state,
+        location
+      });
+
+      // Update saved snapshot
+      setSavedStateSnapshot(JSON.stringify(state));
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('Failed to save sketch:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [state, currentSketchId, currentSketchName]);
+
+  // Handle Save As - always creates new sketch or renames
+  const handleSaveAs = useCallback(() => {
+    setShowSaveModal(true);
+  }, []);
+
+  const handleSaveSketch = useCallback(async (name: string, description: string) => {
+    setIsSaving(true);
+    try {
+      let location = null;
+      if (mapRef.current) {
+        const center = mapRef.current.getCenter();
+        const zoom = mapRef.current.getZoom();
+        location = {
+          center: [center.lng, center.lat] as [number, number],
+          zoom
+        };
+      }
+
+      if (currentSketchId && name === currentSketchName) {
+        // Updating existing sketch with same name
         await updateSketch(currentSketchId, {
           name,
           description,
@@ -541,7 +588,7 @@ function SiteSketcherContent() {
           location
         });
       } else {
-        // Create new sketch
+        // Creating new sketch (Save As)
         const sketch = await createSketch({
           name,
           description,
@@ -549,16 +596,94 @@ function SiteSketcherContent() {
           location
         });
         setCurrentSketchId(sketch.id);
+        setCurrentSketchName(sketch.name);
       }
+
+      // Update saved snapshot
+      setSavedStateSnapshot(JSON.stringify(state));
+      setHasUnsavedChanges(false);
+      setShowSaveModal(false);
     } catch (error) {
       console.error('Failed to save sketch:', error);
       throw error;
+    } finally {
+      setIsSaving(false);
     }
-  }, [state, currentSketchId]);
+  }, [state, currentSketchId, currentSketchName]);
+
+  // Handle New Sketch
+  const handleNewSketch = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setPendingAction(() => () => {
+        // Reset to blank sketch
+        setState({
+          polygons: [],
+          parkingOverlays: [],
+          cuboids: [],
+          measurements: null,
+          selectedPolygonId: null,
+          selectedParkingId: null,
+          selectedCuboidId: null,
+          measurementUnit: state.measurementUnit,
+          drawingMode: 'draw',
+          viewMode: '2D',
+          show3DBuildings: false,
+          recentSearches: state.recentSearches,
+          snapToGrid: false,
+          gridSize: 10,
+          showSideLengths: true
+        });
+        setCurrentSketchId(null);
+        setCurrentSketchName('Untitled Sketch');
+        setSavedStateSnapshot('');
+        setHasUnsavedChanges(false);
+      });
+      setShowUnsavedDialog(true);
+    } else {
+      // No unsaved changes, create new immediately
+      setState({
+        polygons: [],
+        parkingOverlays: [],
+        cuboids: [],
+        measurements: null,
+        selectedPolygonId: null,
+        selectedParkingId: null,
+        selectedCuboidId: null,
+        measurementUnit: state.measurementUnit,
+        drawingMode: 'draw',
+        viewMode: '2D',
+        show3DBuildings: false,
+        recentSearches: state.recentSearches,
+        snapToGrid: false,
+        gridSize: 10,
+        showSideLengths: true
+      });
+      setCurrentSketchId(null);
+      setCurrentSketchName('Untitled Sketch');
+      setSavedStateSnapshot('');
+      setHasUnsavedChanges(false);
+    }
+  }, [hasUnsavedChanges, state.measurementUnit, state.recentSearches]);
+
+  // Handle Close Sketch (same as New Sketch)
+  const handleCloseSketch = handleNewSketch;
+
+  // Handle Rename Sketch
+  const handleRenameSketch = useCallback((newName: string) => {
+    setCurrentSketchName(newName);
+    setHasUnsavedChanges(true);
+  }, []);
 
   const handleLoad = useCallback(() => {
-    setShowLoadModal(true);
-  }, []);
+    if (hasUnsavedChanges) {
+      setPendingAction(() => () => {
+        setShowLoadModal(true);
+      });
+      setShowUnsavedDialog(true);
+    } else {
+      setShowLoadModal(true);
+    }
+  }, [hasUnsavedChanges]);
 
   const handleLoadSketch = useCallback((sketch: SavedSketch) => {
     console.log('Loading sketch:', sketch.name);
@@ -567,59 +692,79 @@ function SiteSketcherContent() {
     // Load the state and polygons first
     setState(sketch.data);
     setCurrentSketchId(sketch.id);
+    setCurrentSketchName(sketch.name);
 
-    // Close the modal
-    setShowLoadModal(false);
+    // Update saved snapshot and clear unsaved changes
+    setSavedStateSnapshot(JSON.stringify(sketch.data));
+    setHasUnsavedChanges(false);
 
-    // Then move map AFTER React finishes rendering and browser paints
-    if (sketch.location && mapRef.current) {
-      console.log('Scheduling map movement using requestAnimationFrame');
+    // Note: Modal is closed by SketchesList component
 
-      // Use multiple RAF to ensure we're after React rendering AND browser paint
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (mapRef.current && sketch.location) {
-              console.log('NOW moving map after all renders:', sketch.location);
-              mapRef.current.setMapView(sketch.location.center, sketch.location.zoom);
-            }
-          });
+    // Navigate to sketch location using the same mechanism as location search
+    // Use a longer delay to ensure polygons are fully loaded and won't interrupt the animation
+    if (sketch.location) {
+      console.log('Navigating to sketch location:', sketch.location);
+      setTimeout(() => {
+        console.log('Now triggering navigation after polygons loaded');
+        setSearchResult({
+          id: `sketch-location-${sketch.id}`,
+          place_name: sketch.name,
+          center: sketch.location.center,
+          place_type: ['place']
         });
-      });
+      }, 1000);
     }
+
+    toast.success(`Sketch "${sketch.name}" loaded`);
   }, []);
 
-  const handleExport = useCallback(() => {
-    setShowExportMenu(true);
-  }, []);
-
+  // Export handlers (no longer need separate menu state)
   const handleExportJSON = useCallback(() => {
-    exportAsJSON(state, currentSketchId || 'sketch');
-    setShowExportMenu(false);
-  }, [state, currentSketchId]);
+    exportAsJSON(state, currentSketchName);
+  }, [state, currentSketchName]);
 
   const handleExportCSV = useCallback(() => {
-    exportAsCSV(state, currentSketchId || 'sketch');
-    setShowExportMenu(false);
-  }, [state, currentSketchId]);
+    exportAsCSV(state, currentSketchName);
+  }, [state, currentSketchName]);
 
   const handleExportPNG = useCallback(async () => {
     try {
-      await exportAsPNG(mapRef, currentSketchId || 'sketch');
-      setShowExportMenu(false);
+      await exportAsPNG(mapRef, currentSketchName);
     } catch (error) {
       console.error('Failed to export PNG:', error);
     }
-  }, [currentSketchId]);
+  }, [currentSketchName]);
 
   const handleExportPDF = useCallback(async () => {
     try {
-      await exportAsPDF(state, mapRef, currentSketchId || 'sketch');
-      setShowExportMenu(false);
+      await exportAsPDF(state, mapRef, currentSketchName);
     } catch (error) {
       console.error('Failed to export PDF:', error);
     }
-  }, [state, currentSketchId]);
+  }, [state, currentSketchName]);
+
+  // Unsaved changes dialog handlers
+  const handleUnsavedDontSave = useCallback(() => {
+    setShowUnsavedDialog(false);
+    if (pendingAction) {
+      pendingAction();
+      setPendingAction(null);
+    }
+  }, [pendingAction]);
+
+  const handleUnsavedCancel = useCallback(() => {
+    setShowUnsavedDialog(false);
+    setPendingAction(null);
+  }, []);
+
+  const handleUnsavedSave = useCallback(async () => {
+    await handleSave();
+    setShowUnsavedDialog(false);
+    if (pendingAction) {
+      pendingAction();
+      setPendingAction(null);
+    }
+  }, [handleSave, pendingAction]);
 
   // Show loading while checking authentication
   if (loading) {
@@ -700,6 +845,23 @@ function SiteSketcherContent() {
           </div>
         </header>
 
+        {/* Document Bar */}
+        <DocumentBar
+          sketchName={currentSketchName}
+          hasUnsavedChanges={hasUnsavedChanges}
+          isSaving={isSaving}
+          onRenameSketch={handleRenameSketch}
+          onNewSketch={handleNewSketch}
+          onOpenSketch={handleLoad}
+          onSave={handleSave}
+          onSaveAs={handleSaveAs}
+          onCloseSketch={handleCloseSketch}
+          onExportPNG={handleExportPNG}
+          onExportJSON={handleExportJSON}
+          onExportCSV={handleExportCSV}
+          onExportPDF={handleExportPDF}
+        />
+
         {/* Desktop Main Content */}
         <div className="flex-1 flex overflow-hidden">
           {/* Desktop Sidebar */}
@@ -734,9 +896,6 @@ function SiteSketcherContent() {
                 onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
                 onPolygonHeightChange={handlePolygonHeightChange}
                 onAddRectangle={handleAddRectangle}
-                onSave={handleSave}
-                onLoad={handleLoad}
-                onExport={handleExport}
               />
             </div>
           </div>
@@ -863,9 +1022,6 @@ function SiteSketcherContent() {
             onPolygonSideLengthToggle={handlePolygonSideLengthToggle}
             onPolygonHeightChange={handlePolygonHeightChange}
             onAddRectangle={handleAddRectangle}
-            onSave={handleSave}
-            onLoad={handleLoad}
-            onExport={handleExport}
           />
         </div>
       </div>
@@ -884,37 +1040,14 @@ function SiteSketcherContent() {
         onLoadSketch={handleLoadSketch}
       />
 
-      {/* Export Menu Dropdown */}
-      {showExportMenu && (
-        <Dialog open={showExportMenu} onOpenChange={setShowExportMenu}>
-          <DialogContent className="sm:max-w-[400px]">
-            <DialogHeader>
-              <DialogTitle>Export Sketch</DialogTitle>
-              <DialogDescription>
-                Choose a format to export your sketch
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-2 py-4">
-              <Button variant="outline" onClick={handleExportJSON} className="justify-start">
-                <Download className="mr-2 h-4 w-4" />
-                Export as GeoJSON
-              </Button>
-              <Button variant="outline" onClick={handleExportCSV} className="justify-start">
-                <Download className="mr-2 h-4 w-4" />
-                Export as CSV
-              </Button>
-              <Button variant="outline" onClick={handleExportPNG} className="justify-start">
-                <Download className="mr-2 h-4 w-4" />
-                Export as PNG Image
-              </Button>
-              <Button variant="outline" onClick={handleExportPDF} className="justify-start">
-                <Download className="mr-2 h-4 w-4" />
-                Export as PDF Report
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* Unsaved Changes Dialog */}
+      <UnsavedChangesDialog
+        isOpen={showUnsavedDialog}
+        sketchName={currentSketchName}
+        onDontSave={handleUnsavedDontSave}
+        onCancel={handleUnsavedCancel}
+        onSave={handleUnsavedSave}
+      />
 
       {/* Welcome Onboarding Modal */}
       <WelcomeOnboarding
@@ -938,13 +1071,16 @@ function SiteSketcherContent() {
 
 export default function SiteSketcherPage() {
   return (
-    <Suspense fallback={<div className="h-screen bg-background flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-muted-foreground">Loading SiteSketcher...</p>
-      </div>
-    </div>}>
-      <SiteSketcherContent />
-    </Suspense>
+    <>
+      <Toaster position="top-center" richColors />
+      <Suspense fallback={<div className="h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading SiteSketcher...</p>
+        </div>
+      </div>}>
+        <SiteSketcherContent />
+      </Suspense>
+    </>
   );
 }
