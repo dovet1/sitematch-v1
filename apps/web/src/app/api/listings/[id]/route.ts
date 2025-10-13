@@ -16,6 +16,8 @@ import type {
   ApiResponse
 } from '@/types/listings';
 
+export const dynamic = 'force-dynamic';
+
 // =====================================================
 // GET /api/listings/[id] - Get specific listing
 // =====================================================

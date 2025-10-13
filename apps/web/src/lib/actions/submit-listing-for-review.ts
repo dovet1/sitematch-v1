@@ -89,8 +89,8 @@ export async function approveListingAction(
     const supabase = createAdminClient();
 
     // First, get the version data that we're approving
-    const { data: version, error: versionFetchError } = await supabase
-      .from('listing_versions')
+    const { data: version, error: versionFetchError } = await (supabase
+      .from('listing_versions') as any)
       .select('listing_id, content')
       .eq('id', versionId)
       .single();
@@ -100,8 +100,8 @@ export async function approveListingAction(
     }
 
     // Step 1: Deactivate all other versions for this listing
-    const { error: deactivateError } = await supabase
-      .from('listing_versions')
+    const { error: deactivateError } = await (supabase
+      .from('listing_versions') as any)
       .update({ is_live: false })
       .eq('listing_id', listingId);
 
@@ -110,9 +110,9 @@ export async function approveListingAction(
     }
 
     // Step 2: Update the version status to approved and set is_live flag
-    const { error: versionError } = await supabase
-      .from('listing_versions')
-      .update({ 
+    const { error: versionError } = await (supabase
+      .from('listing_versions') as any)
+      .update({
         status: 'approved',
         reviewed_by: currentUser.id,
         reviewed_at: new Date().toISOString(),
@@ -147,8 +147,8 @@ export async function approveListingAction(
     if (content.site_acreage_min) updateData.site_acreage_min = content.site_acreage_min;
     if (content.site_acreage_max) updateData.site_acreage_max = content.site_acreage_max;
 
-    const { error: listingError } = await supabase
-      .from('listings')
+    const { error: listingError } = await (supabase
+      .from('listings') as any)
       .update(updateData)
       .eq('id', listingId);
 
@@ -199,40 +199,40 @@ export async function rejectListingAction(
     let existingVersion;
     
     if (versionId) {
-      const { data, error: fetchError } = await supabase
-        .from('listing_versions')
+      const { data, error: fetchError } = await (supabase
+        .from('listing_versions') as any)
         .select('id, status, listing_id')
         .eq('id', versionId)
         .single();
-        
+
       console.log('Existing version check:', { data, fetchError });
       existingVersion = data;
     }
-    
+
     // If no version found with the provided ID, get the latest pending_review version
     if (!existingVersion) {
       console.log('Version not found with ID, fetching latest pending_review version for listing:', listingId);
-      
-      const { data: latestVersion, error: latestError } = await supabase
-        .from('listing_versions')
+
+      const { data: latestVersion, error: latestError } = await (supabase
+        .from('listing_versions') as any)
         .select('id, status, listing_id')
         .eq('listing_id', listingId)
         .eq('status', 'pending_review')
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
-        
+
       console.log('Latest version check:', { latestVersion, latestError });
-      
+
       if (latestError || !latestVersion) {
         console.error('No pending review version found for listing');
         return { success: false, error: 'No pending review version found for this listing' };
       }
-      
+
       existingVersion = latestVersion;
       targetVersionId = latestVersion.id;
     }
-    
+
     console.log('Using version:', { targetVersionId, status: existingVersion.status });
 
     // Update the version status to rejected
@@ -246,9 +246,9 @@ export async function rejectListingAction(
     };
     console.log('Update data:', updateData);
     console.log('Version ID:', versionId);
-    
-    const { data: versionData, error: versionError } = await supabase
-      .from('listing_versions')
+
+    const { data: versionData, error: versionError } = await (supabase
+      .from('listing_versions') as any)
       .update(updateData)
       .eq('id', targetVersionId)
       .select();
@@ -268,9 +268,9 @@ export async function rejectListingAction(
     console.log('Version updated successfully, now updating listing status...');
     
     // Update the listing status back to draft
-    const { error: listingError } = await supabase
-      .from('listings')
-      .update({ 
+    const { error: listingError } = await (supabase
+      .from('listings') as any)
+      .update({
         status: 'draft'
       })
       .eq('id', listingId);

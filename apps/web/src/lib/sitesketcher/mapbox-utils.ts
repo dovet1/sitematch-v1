@@ -109,6 +109,9 @@ export function createMapboxMap(
     center: [DEFAULT_VIEWPORT.longitude, DEFAULT_VIEWPORT.latitude],
     zoom: DEFAULT_VIEWPORT.zoom,
     accessToken: getMapboxToken(),
+    pitchWithRotate: true,
+    dragRotate: true,
+    touchPitch: true,
     ...options
   });
 }
@@ -118,15 +121,38 @@ export function flyToLocation(
   center: [number, number],
   zoom = 15
 ): Promise<void> {
+  console.log('flyToLocation utility called with:', center, zoom);
+  console.log('Map current center:', map.getCenter());
+  console.log('Map current zoom:', map.getZoom());
+
   return new Promise((resolve) => {
+    console.log('Executing map.flyTo with:', { center, zoom, duration: 2000 });
+
+    // Stop any ongoing animations first
+    map.stop();
+
     map.flyTo({
       center,
       zoom,
       duration: 2000,
       essential: true
     });
-    
-    map.once('moveend', () => resolve());
+
+    map.once('moveend', () => {
+      console.log('flyTo moveend event fired');
+      console.log('Map new center:', map.getCenter());
+      console.log('Map new zoom:', map.getZoom());
+
+      // Force a repaint to ensure visual update
+      map.triggerRepaint();
+
+      // Also resize in case that helps
+      setTimeout(() => {
+        map.resize();
+      }, 100);
+
+      resolve();
+    });
   });
 }
 

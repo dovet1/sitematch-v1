@@ -20,6 +20,8 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import type { WizardFormData, SubmissionResult } from '@/types/wizard';
 import type { CreateListingRequest } from '@/types/listings';
 
+export const dynamic = 'force-dynamic';
+
 // =====================================================
 // PAGE COMPONENT
 // =====================================================

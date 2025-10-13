@@ -13,6 +13,8 @@ import type {
   ApiResponse
 } from '@/types/listings';
 
+export const dynamic = 'force-dynamic';
+
 // =====================================================
 // PATCH /api/listings/[id]/status - Update listing status (Admin only)
 // =====================================================
@@ -59,7 +61,7 @@ export async function PATCH(
       .from('listings')
       .select('id, status')
       .eq('id', listingId)
-      .single();
+      .single() as { data: { id: string; status: ListingStatus } | null; error: any };
 
     if (fetchError || !existingListing) {
       return NextResponse.json(
@@ -69,7 +71,7 @@ export async function PATCH(
     }
 
     // Parse request body
-    let statusUpdate: UpdateListingStatusRequest;
+    let statusUpdate: any;
     try {
       statusUpdate = await request.json();
     } catch (parseError) {
@@ -81,7 +83,7 @@ export async function PATCH(
 
     // Validate status
     const validStatuses: ListingStatus[] = ['draft', 'pending', 'approved', 'rejected', 'archived'];
-    if (!validStatuses.includes(statusUpdate.status)) {
+    if (!validStatuses.includes(statusUpdate.status as ListingStatus)) {
       return NextResponse.json(
         {
           success: false,
@@ -91,8 +93,14 @@ export async function PATCH(
       );
     }
 
+    // After validation, we can safely cast to the correct type
+    const validatedStatusUpdate: UpdateListingStatusRequest = {
+      status: statusUpdate.status as ListingStatus,
+      reason: statusUpdate.reason
+    };
+
     // Validate status transition
-    const validTransition = isValidStatusTransition(existingListing.status, statusUpdate.status);
+    const validTransition = isValidStatusTransition(existingListing.status, validatedStatusUpdate.status);
     if (!validTransition.isValid) {
       return NextResponse.json(
         { success: false, error: validTransition.reason },
@@ -101,7 +109,7 @@ export async function PATCH(
     }
 
     // Validate rejection reason is provided when rejecting
-    if (statusUpdate.status === 'rejected' && !statusUpdate.reason) {
+    if (validatedStatusUpdate.status === 'rejected' && !validatedStatusUpdate.reason) {
       return NextResponse.json(
         { success: false, error: 'Reason is required when rejecting a listing' },
         { status: 400 }
@@ -110,17 +118,17 @@ export async function PATCH(
 
     // Update the listing status using admin client
     const updateData: any = {
-      status: statusUpdate.status,
+      status: validatedStatusUpdate.status,
       updated_at: new Date().toISOString()
     };
 
     // Add rejection reason if provided and status is rejected
-    if (statusUpdate.status === 'rejected' && statusUpdate.reason) {
-      updateData.rejection_reason = statusUpdate.reason;
+    if (validatedStatusUpdate.status === 'rejected' && validatedStatusUpdate.reason) {
+      updateData.rejection_reason = validatedStatusUpdate.reason;
     }
 
-    const { data: updatedListing, error: updateError } = await adminClient
-      .from('listings')
+    const { data: updatedListing, error: updateError } = await (adminClient
+      .from('listings') as any)
       .update(updateData)
       .eq('id', listingId)
       .select()
@@ -134,11 +142,11 @@ export async function PATCH(
     }
 
     // Log the status change for audit trail
-    console.log(`Listing status updated: ${listingId} from '${existingListing.status}' to '${statusUpdate.status}' by admin ${user.id}${statusUpdate.reason ? ` (reason: ${statusUpdate.reason})` : ''}`);
+    console.log(`Listing status updated: ${listingId} from '${existingListing.status}' to '${validatedStatusUpdate.status}' by admin ${user.id}${validatedStatusUpdate.reason ? ` (reason: ${validatedStatusUpdate.reason})` : ''}`);
 
     // Send email notifications based on status change
     try {
-      await sendStatusChangeNotification(updatedListing, statusUpdate, existingListing.status);
+      await sendStatusChangeNotification(updatedListing, validatedStatusUpdate, existingListing.status);
     } catch (emailError) {
       // Log email error but don't fail the status update
       console.error('Email notification failed:', emailError);
@@ -147,7 +155,7 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       data: updatedListing,
-      message: `Listing status updated to ${statusUpdate.status}`
+      message: `Listing status updated to ${validatedStatusUpdate.status}`
     });
 
   } catch (error) {

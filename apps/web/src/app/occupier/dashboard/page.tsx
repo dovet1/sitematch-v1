@@ -13,6 +13,8 @@ import type { User } from '@supabase/auth-js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 
+export const dynamic = 'force-dynamic';
+
 interface Listing {
   id: string;
   company_name: string;

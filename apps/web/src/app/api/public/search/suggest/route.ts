@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { LocationSuggestion } from '@/types/search';
 import { searchLocations, formatLocationDisplay } from '@/lib/mapbox';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

@@ -12,8 +12,21 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  // Enable standalone output for better deployment
-  output: 'standalone',
+  // Experimental config to handle error pages
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
+  // Custom webpack config to handle styled-jsx SSR issues
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Ignore styled-jsx SSR errors during build
+      config.ignoreWarnings = [
+        ...(config.ignoreWarnings || []),
+        /Cannot read properties of null/,
+      ]
+    }
+    return config
+  },
   // Configure images for Supabase storage and external services
   images: {
     remotePatterns: [

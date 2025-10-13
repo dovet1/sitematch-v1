@@ -23,9 +23,27 @@ function SearchPageContent() {
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
   const [isSignupInProgress, setIsSignupInProgress] = useState(false);
-  
+
   // Parse URL parameters into SearchFilters
   const [searchFilters, setSearchFilters] = useState<SearchFilters>(() => {
+    if (!searchParams) {
+      return {
+        location: '',
+        coordinates: null,
+        companyName: '',
+        sector: [],
+        useClass: [],
+        sizeMin: null,
+        sizeMax: null,
+        acreageMin: null,
+        acreageMax: null,
+        dwellingMin: null,
+        dwellingMax: null,
+        isNationwide: false,
+        listingType: []
+      };
+    }
+
     const location = searchParams.get('location') || '';
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
@@ -62,16 +80,16 @@ function SearchPageContent() {
     };
   });
 
-  const [isMapView, setIsMapView] = useState(searchParams.get('view') === 'map');
+  const [isMapView, setIsMapView] = useState(searchParams?.get('view') === 'map');
   const [selectedListingId, setSelectedListingId] = useState<string | null>(
-    searchParams.get('listingId') || null
+    searchParams?.get('listingId') || null
   );
   const [previousScrollPosition, setPreviousScrollPosition] = useState(0);
 
   // Update selectedListingId when URL listingId parameter changes
   useEffect(() => {
-    const urlListingId = searchParams.get('listingId');
-    setSelectedListingId(urlListingId);
+    const urlListingId = searchParams?.get('listingId');
+    setSelectedListingId(urlListingId || null);
   }, [searchParams]);
 
   // Update URL when filters or view changes

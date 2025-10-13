@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardR
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { createMapboxMap, getMapboxToken, flyToLocation, addGridOverlay, removeGridOverlay } from '@/lib/sitesketcher/mapbox-utils';
-import type { MapboxDrawPolygon, ParkingOverlay, SearchResult, AreaMeasurement, MeasurementUnit, DrawingMode } from '@/types/sitesketcher';
+import type { MapboxDrawPolygon, ParkingOverlay, SearchResult, AreaMeasurement, MeasurementUnit, DrawingMode, ViewMode, Cuboid3D } from '@/types/sitesketcher';
 import { calculateDistance, formatDistance, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { createRectangleCoordinates, feetToMeters } from '@/lib/sitesketcher/rectangle-utils';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -32,6 +32,12 @@ interface MapboxMapProps {
   showSideLengths: boolean;
   rectangleToPlace?: { width: number; length: number } | null;
   onRectanglePlaced?: () => void;
+  viewMode: ViewMode;
+  show3DBuildings: boolean;
+  cuboids: Cuboid3D[];
+  onCuboidClick?: (cuboid: Cuboid3D) => void;
+  onCuboidUpdate?: (cuboid: Cuboid3D) => void;
+  selectedCuboidId: string | null;
   className?: string;
 }
 
@@ -40,6 +46,14 @@ export interface MapboxMapRef {
   deletePolygon: (polygonId: string) => void;
   isRotating: () => boolean;
   getOriginalCoordinates: () => number[][] | null;
+  setViewMode: (mode: ViewMode) => void;
+  getCenter: () => { lng: number; lat: number };
+  getZoom: () => number;
+  flyTo: (options: { center: [number, number]; zoom: number; duration: number; pitch?: number; bearing?: number }) => void;
+  flyToLocation: (center: [number, number], zoom?: number) => Promise<void>;
+  setMapView: (center: [number, number], zoom: number) => void;
+  getCanvas: () => HTMLCanvasElement;
+  getMap: () => mapboxgl.Map | null;
 }
 
 export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
@@ -64,6 +78,12 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   showSideLengths,
   rectangleToPlace,
   onRectanglePlaced,
+  viewMode,
+  show3DBuildings,
+  cuboids,
+  onCuboidClick,
+  onCuboidUpdate,
+  selectedCuboidId,
   className = ''
 }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -86,6 +106,9 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   const keydownHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
   const keyupHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
   const rectangleToPlaceRef = useRef<{ width: number; length: number } | null>(rectangleToPlace || null);
+
+  // Helper function to detect mobile devices
+  const isMobile = () => window.innerWidth < 768;
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
@@ -251,7 +274,113 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       }
     },
     isRotating: () => isRotatingRef.current,
-    getOriginalCoordinates: () => originalPolygonRef.current
+    getOriginalCoordinates: () => originalPolygonRef.current,
+    setViewMode: (mode: ViewMode) => {
+      if (!mapRef.current) return;
+
+      const is3D = mode === '3D';
+      mapRef.current.easeTo({
+        pitch: is3D ? 60 : 0,
+        bearing: is3D ? -17.6 : 0,
+        duration: 1000
+      });
+    },
+    getCenter: () => {
+      if (!mapRef.current) return { lng: 0, lat: 0 };
+      const center = mapRef.current.getCenter();
+      return { lng: center.lng, lat: center.lat };
+    },
+    getZoom: () => {
+      if (!mapRef.current) return 0;
+      return mapRef.current.getZoom();
+    },
+    flyTo: (options: { center: [number, number]; zoom: number; duration: number; pitch?: number; bearing?: number }) => {
+      if (!mapRef.current) return;
+      const map = mapRef.current;
+      console.log('MapboxMap.flyTo called with:', options);
+      console.log('Current map center:', map.getCenter());
+      console.log('Current map zoom:', map.getZoom());
+
+      // Calculate distance to see if we're already there
+      const currentCenter = map.getCenter();
+      const distance = Math.sqrt(
+        Math.pow(currentCenter.lng - options.center[0], 2) +
+        Math.pow(currentCenter.lat - options.center[1], 2)
+      );
+      console.log('Distance to target:', distance);
+
+      // If we're very close, mapbox won't animate, so force a small offset first
+      if (distance < 0.0001) {
+        console.log('Already at target location, jumping slightly away first');
+        map.jumpTo({
+          center: [options.center[0] + 0.01, options.center[1] + 0.01],
+          zoom: options.zoom - 1
+        });
+        // Small delay to let the jump complete
+        setTimeout(() => {
+          map.flyTo({
+            center: options.center,
+            zoom: options.zoom,
+            pitch: options.pitch !== undefined ? options.pitch : map.getPitch(),
+            bearing: options.bearing !== undefined ? options.bearing : map.getBearing(),
+            duration: options.duration,
+            essential: true
+          });
+        }, 100);
+      } else {
+        // Stop any ongoing animations first
+        map.stop();
+
+        // Use flyTo with all options
+        map.flyTo({
+          center: options.center,
+          zoom: options.zoom,
+          pitch: options.pitch !== undefined ? options.pitch : map.getPitch(),
+          bearing: options.bearing !== undefined ? options.bearing : map.getBearing(),
+          duration: options.duration,
+          essential: true
+        });
+      }
+
+      console.log('flyTo executed');
+    },
+    setMapView: (center: [number, number], zoom: number) => {
+      if (!mapRef.current) return;
+      const map = mapRef.current;
+      console.log('setMapView - using easeTo with visible animation');
+      console.log('Current:', map.getCenter(), 'zoom:', map.getZoom(), 'pitch:', map.getPitch());
+      console.log('Target:', center, 'zoom:', zoom);
+
+      // Stop any ongoing animation first
+      map.stop();
+
+      // Get the correct pitch based on current viewMode
+      const targetPitch = viewMode === '3D' ? 60 : 0;
+
+      // Use easeTo with a visible duration so user can see the movement
+      map.easeTo({
+        center: center,
+        zoom: zoom,
+        pitch: targetPitch,
+        bearing: 0,
+        duration: 1500, // 1.5 second smooth animation
+        essential: true
+      });
+
+      console.log('easeTo animation started');
+    },
+    flyToLocation: async (center: [number, number], zoom = 15) => {
+      if (!mapRef.current) return;
+      console.log('MapboxMap.flyToLocation called with:', center, zoom);
+      return flyToLocation(mapRef.current, center, zoom);
+    },
+    getCanvas: () => {
+      if (!mapRef.current) throw new Error('Map not initialized');
+      return mapRef.current.getCanvas();
+    },
+    getMap: () => {
+      return mapRef.current;
+    }
   }), [isMapLoaded]);
 
   // Initialize map
@@ -726,6 +855,162 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }
         });
 
+        // Add 3D buildings layer from Mapbox vector tiles
+        // First check if composite source exists (it won't on satellite style)
+        const compositeSource = map.getSource('composite');
+
+        if (compositeSource) {
+          const layers = map.getStyle().layers;
+          const labelLayerId = layers?.find(
+            (layer: any) => layer.type === 'symbol' && layer.layout?.['text-field']
+          )?.id;
+
+          map.addLayer({
+            'id': '3d-buildings',
+            'source': 'composite',
+            'source-layer': 'building',
+            'filter': ['==', 'extrude', 'true'],
+            'type': 'fill-extrusion',
+            'minzoom': 15,
+            'paint': {
+              'fill-extrusion-color': '#aaa',
+              'fill-extrusion-height': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                15,
+                0,
+                15.05,
+                ['get', 'height']
+              ],
+              'fill-extrusion-base': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                15,
+                0,
+                15.05,
+                ['get', 'min_height']
+              ],
+              'fill-extrusion-opacity': 0.6
+            }
+          }, labelLayerId);
+
+          // Initially hide 3D buildings layer
+          map.setLayoutProperty('3d-buildings', 'visibility', 'none');
+        } else {
+          // For satellite style, we need to add the composite source first
+          map.addSource('composite', {
+            type: 'vector',
+            url: 'mapbox://mapbox.mapbox-streets-v8'
+          });
+
+          const layers = map.getStyle().layers;
+          const labelLayerId = layers?.find(
+            (layer: any) => layer.type === 'symbol' && layer.layout?.['text-field']
+          )?.id;
+
+          map.addLayer({
+            'id': '3d-buildings',
+            'source': 'composite',
+            'source-layer': 'building',
+            'filter': ['==', 'extrude', 'true'],
+            'type': 'fill-extrusion',
+            'minzoom': 15,
+            'paint': {
+              'fill-extrusion-color': '#aaa',
+              'fill-extrusion-height': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                15,
+                0,
+                15.05,
+                ['get', 'height']
+              ],
+              'fill-extrusion-base': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                15,
+                0,
+                15.05,
+                ['get', 'min_height']
+              ],
+              'fill-extrusion-opacity': 0.6
+            }
+          }, labelLayerId);
+
+          // Initially hide 3D buildings layer
+          map.setLayoutProperty('3d-buildings', 'visibility', 'none');
+        }
+
+        // Add cuboids source and layer
+        map.addSource('cuboids-3d', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: []
+          }
+        });
+
+        map.addLayer({
+          'id': 'cuboids-3d',
+          'type': 'fill-extrusion',
+          'source': 'cuboids-3d',
+          'paint': {
+            'fill-extrusion-color': ['get', 'color'],
+            'fill-extrusion-height': ['get', 'height'],
+            'fill-extrusion-base': ['get', 'base_height'],
+            'fill-extrusion-opacity': 0.8
+          }
+        });
+
+        // Add polygons 3D extrusion layer
+        map.addSource('polygons-3d', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: []
+          }
+        });
+
+        map.addLayer({
+          'id': 'polygons-3d',
+          'type': 'fill-extrusion',
+          'source': 'polygons-3d',
+          'paint': {
+            'fill-extrusion-color': ['get', 'color'],
+            'fill-extrusion-height': ['get', 'height'],
+            'fill-extrusion-base': ['get', 'base_height'],
+            'fill-extrusion-opacity': 0.7
+          }
+        });
+
+        // Initially hide the 3D polygon layer (only show in 3D view mode)
+        map.setLayoutProperty('polygons-3d', 'visibility', 'none');
+
+        // Add lighting for realistic 3D rendering
+        // Using setLights with flat type (setLight is deprecated in v3)
+        if (map.setLights) {
+          map.setLights([
+            {
+              id: 'flat-light',
+              type: 'flat',
+              properties: {
+                color: 'rgba(255, 255, 255, 1)',
+                intensity: 0.4
+              }
+            }
+          ]);
+        } else {
+          // Fallback for older versions
+          map.setLight({
+            'anchor': 'viewport',
+            'color': 'white',
+            'intensity': 0.4
+          });
+        }
 
       });
 
@@ -2448,6 +2733,104 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       removeGridOverlay(mapRef.current);
     }
   }, [snapToGrid, gridSize, isMapLoaded]);
+
+  // Handle 3D buildings visibility
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoaded) return;
+
+    // Check if layer exists before trying to set visibility
+    const layer = mapRef.current.getLayer('3d-buildings');
+    if (!layer) return;
+
+    const visibility = show3DBuildings ? 'visible' : 'none';
+    mapRef.current.setLayoutProperty('3d-buildings', 'visibility', visibility);
+  }, [show3DBuildings, isMapLoaded]);
+
+  // Update cuboids layer
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoaded) return;
+
+    const source = mapRef.current.getSource('cuboids-3d') as mapboxgl.GeoJSONSource;
+    if (!source) return;
+
+    const features = cuboids.map(cuboid => ({
+      type: 'Feature' as const,
+      id: cuboid.id,
+      geometry: cuboid.geometry,
+      properties: cuboid.properties
+    }));
+
+    source.setData({
+      type: 'FeatureCollection',
+      features
+    });
+  }, [cuboids, isMapLoaded]);
+
+  // Update polygons 3D layer
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoaded) return;
+
+    const source = mapRef.current.getSource('polygons-3d') as mapboxgl.GeoJSONSource;
+    if (!source) return;
+
+    const features = polygons.map(polygon => {
+      // Default height if not specified (3 meters / 1 story)
+      const height = polygon.properties?.height ?? 3;
+      const baseHeight = polygon.properties?.base_height ?? 0;
+
+      return {
+        type: 'Feature' as const,
+        id: polygon.id || polygon.properties?.id,
+        geometry: polygon.geometry,
+        properties: {
+          color: polygon.properties?.color || '#2563eb',
+          height: height,
+          base_height: baseHeight,
+          id: polygon.id || polygon.properties?.id
+        }
+      };
+    });
+
+    source.setData({
+      type: 'FeatureCollection',
+      features
+    });
+  }, [polygons, isMapLoaded]);
+
+  // Toggle 3D polygons visibility based on viewMode
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoaded) return;
+
+    const layer = mapRef.current.getLayer('polygons-3d');
+    if (!layer) return;
+
+    // Show 3D polygons when in 3D mode (works on both mobile and desktop)
+    const visibility = viewMode === '3D' ? 'visible' : 'none';
+    mapRef.current.setLayoutProperty('polygons-3d', 'visibility', visibility);
+  }, [viewMode, isMapLoaded]);
+
+  // Adjust camera pitch and bearing when switching between 2D and 3D modes
+  useEffect(() => {
+    if (!mapRef.current || !isMapLoaded) return;
+
+    const map = mapRef.current;
+
+    if (viewMode === '3D') {
+      // Tilt the camera to see 3D extrusions
+      map.easeTo({
+        pitch: 60, // 60 degrees tilt
+        bearing: 0, // Reset bearing to north
+        duration: 1000 // Smooth 1 second animation
+      });
+    } else {
+      // Return to flat 2D view
+      map.easeTo({
+        pitch: 0,
+        bearing: 0,
+        duration: 1000
+      });
+    }
+  }, [viewMode, isMapLoaded]);
 
   // Helper function to generate rotation handles for parking overlays
   const generateParkingRotationHandles = (overlay: ParkingOverlay): any[] => {

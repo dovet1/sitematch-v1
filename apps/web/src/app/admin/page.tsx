@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Shield, Users, Activity, FileCheck, AlertTriangle, Building2 } from 'lucide-react'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminDashboard() {
   await requireAdmin()
   

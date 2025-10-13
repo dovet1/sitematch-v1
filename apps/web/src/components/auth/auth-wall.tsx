@@ -15,9 +15,10 @@ interface AuthWallProps {
 export function AuthWall({ resultCount, searchQuery }: AuthWallProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  
+
   // Build the redirect URL
-  const currentUrl = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '')
+  const searchParamsString = searchParams?.toString() ?? ''
+  const currentUrl = pathname + (searchParamsString ? `?${searchParamsString}` : '')
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[600px] p-8">

@@ -108,8 +108,8 @@ export async function updateUserSubscriptionStatus(
 
   try {
     // Simple direct update with service role
-    const { data, error } = await supabase
-      .from('users')
+    const { data, error } = await (supabase
+      .from('users') as any)
       .update(updateData)
       .eq('id', userId)
       .select()

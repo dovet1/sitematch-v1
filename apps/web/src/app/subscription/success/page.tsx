@@ -46,7 +46,7 @@ function SubscriptionSuccessContent() {
   const [subscriptionAmount, setSubscriptionAmount] = useState<number>(975)
 
   const sessionId = searchParams?.get('session_id')
-  const redirectParam = searchParams?.get('redirect')
+  const redirectParam = searchParams?.get('redirect') ?? null
 
   // Get validated button configuration
   const buttonConfig = getButtonConfig(redirectParam)

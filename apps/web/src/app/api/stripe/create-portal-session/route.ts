@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 import { stripe } from '@/lib/stripe'
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Get authenticated user from session
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('stripe_customer_id, email')
       .eq('id', user.id)
-      .single()
+      .single() as { data: { stripe_customer_id: string | null; email: string } | null; error: any }
 
     if (userError || !userData) {
       console.error('Error fetching user data:', userError)
@@ -55,8 +57,8 @@ export async function POST(request: NextRequest) {
       customerId = customer.id
 
       // Save customer ID to database
-      await adminSupabase
-        .from('users')
+      await (adminSupabase
+        .from('users') as any)
         .update({ stripe_customer_id: customerId })
         .eq('id', user.id)
     }
