@@ -85,20 +85,25 @@ export function RejectionModal({
         // Get the latest pending_review version for this listing using client-side Supabase
         const { createClientClient } = await import('@/lib/supabase')
         const supabase = createClientClient()
-        
-        const { data: version, error } = await supabase
+
+        // Don't use .single() - use limit(1) and get the first result
+        const { data: versions, error } = await supabase
           .from('listing_versions')
           .select('id')
           .eq('listing_id', listingId)
           .eq('status', 'pending_review')
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
-        
-        console.log('Version query result:', { version, error })
-        
-        if (version) {
-          targetVersionId = version.id
+
+        console.log('Version query result:', { versions, error })
+
+        if (error) {
+          console.error('Error fetching version:', error)
+          throw new Error(`Failed to fetch version: ${error.message}`)
+        }
+
+        if (versions && versions.length > 0) {
+          targetVersionId = versions[0].id
         } else {
           throw new Error('No pending review version found')
         }
