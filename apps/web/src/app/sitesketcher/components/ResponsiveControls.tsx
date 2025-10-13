@@ -18,7 +18,7 @@ import {
   Settings
 } from 'lucide-react';
 import { ModeToggleSwitch } from './ModeToggleSwitch';
-import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode } from '@/types/sitesketcher';
+import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode, ViewMode } from '@/types/sitesketcher';
 import { LocationSearch } from './LocationSearch';
 import { formatArea, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { MobileBottomSheet } from './MobileBottomSheet';
@@ -27,12 +27,16 @@ import { ParkingOverlay as ParkingOverlayComponent } from './ParkingOverlay';
 import { cn } from '@/lib/utils';
 
 interface ResponsiveControlsProps {
-  measurement: AreaMeasurement | null;
   measurementUnit: MeasurementUnit;
   onUnitToggle: () => void;
   onClearAll: () => void;
   drawingMode: DrawingMode;
   onModeToggle: () => void;
+  // View mode props
+  viewMode: ViewMode;
+  onViewModeToggle: () => void;
+  show3DBuildings: boolean;
+  onToggle3DBuildings: () => void;
   // Polygon props
   polygons: MapboxDrawPolygon[];
   onPolygonDelete: (polygonId: string) => void;
@@ -42,6 +46,9 @@ interface ResponsiveControlsProps {
   // Polygon-specific toggles
   onPolygonUnitToggle: (polygonId: string) => void;
   onPolygonSideLengthToggle: (polygonId: string) => void;
+  onPolygonHeightChange?: (polygonId: string, height: number) => void;
+  // Rectangle props
+  onAddRectangle: (width: number, length: number) => void;
   // Parking props
   parkingOverlays: ParkingOverlay[];
   selectedOverlayId: string | null;
@@ -54,22 +61,31 @@ interface ResponsiveControlsProps {
   onLocationSelect: (location: any) => void;
   recentSearches: any[];
   onUpdateRecentSearches: (searches: any[]) => void;
+  // Save/Load/Export props
+  onSave?: () => void;
+  onLoad?: () => void;
+  onExport?: () => void;
   className?: string;
 }
 
 export function ResponsiveControls({
-  measurement,
   measurementUnit,
   onUnitToggle,
   onClearAll,
   drawingMode,
   onModeToggle,
+  viewMode,
+  onViewModeToggle,
+  show3DBuildings,
+  onToggle3DBuildings,
   polygons,
   onPolygonDelete,
   showSideLengths,
   onToggleSideLengths,
   onPolygonUnitToggle,
   onPolygonSideLengthToggle,
+  onPolygonHeightChange,
+  onAddRectangle,
   parkingOverlays,
   selectedOverlayId,
   onAddOverlay,
@@ -80,6 +96,9 @@ export function ResponsiveControls({
   onLocationSelect,
   recentSearches,
   onUpdateRecentSearches,
+  onSave,
+  onLoad,
+  onExport,
   className = ''
 }: ResponsiveControlsProps) {
   const [measurementsOpen, setMeasurementsOpen] = useState(false);
