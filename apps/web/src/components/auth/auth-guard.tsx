@@ -22,7 +22,8 @@ export function AuthGuard({ children, requireAuth = true, fallback }: AuthGuardP
     if (!loading && requireAuth && !user && !isRedirecting) {
       setIsRedirecting(true)
       // Capture current URL including search params
-      const currentUrl = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '')
+      const searchParamsString = searchParams?.toString() ?? ''
+      const currentUrl = pathname + (searchParamsString ? `?${searchParamsString}` : '')
       const encodedRedirect = encodeURIComponent(currentUrl)
       router.push(`/auth/signup?redirect=${encodedRedirect}`)
     }
