@@ -12,8 +12,8 @@ export function SearchContextToast() {
 
   useEffect(() => {
     // Check if we just authenticated and have search params
-    const query = searchParams.get('query')
-    const location = searchParams.get('location')
+    const query = searchParams?.get('query')
+    const location = searchParams?.get('location')
     
     // Check for authentication marker in cookies
     const cookies = document.cookie.split(';').reduce((acc, cookie) => {
