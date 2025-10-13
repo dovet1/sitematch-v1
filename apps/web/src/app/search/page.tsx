@@ -80,16 +80,16 @@ function SearchPageContent() {
     };
   });
 
-  const [isMapView, setIsMapView] = useState(searchParams.get('view') === 'map');
+  const [isMapView, setIsMapView] = useState(searchParams?.get('view') === 'map');
   const [selectedListingId, setSelectedListingId] = useState<string | null>(
-    searchParams.get('listingId') || null
+    searchParams?.get('listingId') || null
   );
   const [previousScrollPosition, setPreviousScrollPosition] = useState(0);
 
   // Update selectedListingId when URL listingId parameter changes
   useEffect(() => {
-    const urlListingId = searchParams.get('listingId');
-    setSelectedListingId(urlListingId);
+    const urlListingId = searchParams?.get('listingId');
+    setSelectedListingId(urlListingId || null);
   }, [searchParams]);
 
   // Update URL when filters or view changes
