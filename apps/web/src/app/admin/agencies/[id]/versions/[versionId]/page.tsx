@@ -70,7 +70,8 @@ interface AgencyVersion {
 
 export default function AdminAgencyVersionReviewPage() {
   const params = useParams<{ id: string; versionId: string }>()
-  const { id: agencyId, versionId } = params
+  const agencyId = params?.id as string
+  const versionId = params?.versionId as string
   const [version, setVersion] = useState<AgencyVersion | null>(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
