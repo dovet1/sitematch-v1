@@ -45,18 +45,20 @@ interface TeamMemberWithAgency extends TeamMember {
 }
 
 export default function TeamMemberPage() {
-  const params = useParams()
+  const params = useParams<{ id: string; teamId: string }>()
+  const agencyId = params?.id as string
+  const teamId = params?.teamId as string
   const [teamMember, setTeamMember] = useState<TeamMemberWithAgency | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchTeamMember()
-  }, [params.id, params.teamId])
+  }, [agencyId, teamId])
 
   const fetchTeamMember = async () => {
     try {
-      const response = await fetch(`/api/agencies/${params.id}/team/${params.teamId}/profile`)
+      const response = await fetch(`/api/agencies/${agencyId}/team/${teamId}/profile`)
       if (!response.ok) {
         throw new Error('Team member not found')
       }

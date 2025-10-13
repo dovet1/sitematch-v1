@@ -97,7 +97,8 @@ function useIsMobile() {
 }
 
 export default function AgencyEditPage() {
-  const params = useParams()
+  const params = useParams<{ id: string }>()
+  const agencyId = params?.id as string
   const router = useRouter()
   const [agency, setAgency] = useState<Agency | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -108,20 +109,20 @@ export default function AgencyEditPage() {
   const isMobile = useIsMobile()
 
   // Add success transition hook
-  const { 
-    isVisible: showSuccessTransition, 
-    data: successData, 
-    showSuccess, 
-    hideSuccess 
+  const {
+    isVisible: showSuccessTransition,
+    data: successData,
+    showSuccess,
+    hideSuccess
   } = useAgencySuccessTransition()
 
   useEffect(() => {
     fetchAgency()
-  }, [params.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [agencyId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAgency = async () => {
     try {
-      const response = await fetch(`/api/agencies/${params.id}`)
+      const response = await fetch(`/api/agencies/${agencyId}`)
       if (!response.ok) {
         throw new Error('Failed to fetch agency')
       }
