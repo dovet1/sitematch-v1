@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import { ListingDetailPage } from '@/components/listings/listing-detail-page';
 
+export const dynamic = 'force-dynamic';
+
 interface ListingDetailRouteProps {
   params: {
     id: string;

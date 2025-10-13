@@ -8,6 +8,8 @@ import { Building2, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+export const dynamic = 'force-dynamic';
+
 async function createOrganization(formData: FormData) {
   'use server'
   

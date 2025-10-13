@@ -6,6 +6,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import {
+
+export const dynamic = 'force-dynamic';
+
   updateListing,
   deleteListing,
   validateListingData

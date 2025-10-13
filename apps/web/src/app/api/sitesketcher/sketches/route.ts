@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/sitesketcher/sketches - List all sketches for current user
 export async function GET(request: NextRequest) {
   try {

@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 import { stripe } from '@/lib/stripe'
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Get authenticated user from session

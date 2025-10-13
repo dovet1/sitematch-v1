@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe, WEBHOOK_CONFIG } from '@/lib/stripe'
 import {
+
+export const dynamic = 'force-dynamic';
+
   updateUserSubscriptionStatus,
   startUserTrial,
   invalidateSubscriptionCache

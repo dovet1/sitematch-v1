@@ -3,6 +3,8 @@ import { createServerClient } from '@/lib/supabase';
 import { SearchFilters, SearchResponse } from '@/types/search';
 import { calculateDistance } from '@/lib/mapbox';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

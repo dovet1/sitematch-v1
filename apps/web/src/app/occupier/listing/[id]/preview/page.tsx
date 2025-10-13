@@ -8,6 +8,8 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { OwnerListingPreview } from '@/components/listings/OwnerListingPreview';
 
+export const dynamic = 'force-dynamic';
+
 interface OwnerPreviewRouteProps {
   params: {
     id: string;

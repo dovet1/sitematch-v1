@@ -3,6 +3,8 @@ import { getCurrentUser } from '@/lib/auth';
 import { createServerClient } from '@/lib/supabase';
 import ConsultantProfileWizard from '@/components/consultant/consultant-profile-wizard';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ConsultantProfileCompletePage() {
   const user = await getCurrentUser();
   

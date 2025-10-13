@@ -7,6 +7,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
 import {
+
+export const dynamic = 'force-dynamic';
+
   createListing,
   getListings,
   validateListingData

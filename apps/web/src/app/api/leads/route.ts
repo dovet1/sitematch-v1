@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { subscribeToNewsletter } from '@/lib/resend';
 import { LeadCaptureFormData, LeadCaptureResponse } from '@/types/leads';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const body: LeadCaptureFormData = await request.json();

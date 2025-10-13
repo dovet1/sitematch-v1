@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { cookies } from 'next/headers'
 
+export const dynamic = 'force-dynamic';
+
 // Configure route segment to handle larger file uploads
 export const runtime = 'nodejs' // Use Node.js runtime
 export const maxDuration = 30 // 30 seconds timeout

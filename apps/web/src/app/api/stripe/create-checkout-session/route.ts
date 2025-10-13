@@ -4,6 +4,8 @@ import { createServerClient } from '@supabase/ssr'
 import { stripe, SUBSCRIPTION_CONFIG } from '@/lib/stripe'
 import { cookies } from 'next/headers'
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { userId: providedUserId, userType, redirectPath } = await request.json()
