@@ -6,9 +6,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import {
-
-export const dynamic = 'force-dynamic';
-
   updateListing,
   deleteListing,
   validateListingData
@@ -18,6 +15,8 @@ import type {
   UpdateListingRequest,
   ApiResponse
 } from '@/types/listings';
+
+export const dynamic = 'force-dynamic';
 
 // =====================================================
 // GET /api/listings/[id] - Get specific listing

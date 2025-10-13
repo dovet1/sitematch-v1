@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe, WEBHOOK_CONFIG } from '@/lib/stripe'
 import {
-
-export const dynamic = 'force-dynamic';
-
   updateUserSubscriptionStatus,
   startUserTrial,
   invalidateSubscriptionCache
 } from '@/lib/subscription'
 import { createClient } from '@/lib/supabase'
 import type Stripe from 'stripe'
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   const body = await request.text()

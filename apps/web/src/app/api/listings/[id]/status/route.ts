@@ -8,13 +8,12 @@ import { getCurrentUser } from '@/lib/auth';
 import { updateListingStatus } from '@/lib/listings';
 import { createAdminClient } from '@/lib/supabase';
 import type {
-
-export const dynamic = 'force-dynamic';
-
   UpdateListingStatusRequest,
   ListingStatus,
   ApiResponse
 } from '@/types/listings';
+
+export const dynamic = 'force-dynamic';
 
 // =====================================================
 // PATCH /api/listings/[id]/status - Update listing status (Admin only)
