@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
@@ -18,6 +19,7 @@ import {
   Settings
 } from 'lucide-react';
 import { ModeToggleSwitch } from './ModeToggleSwitch';
+import { ViewModeToggle } from './ViewModeToggle';
 import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode, ViewMode } from '@/types/sitesketcher';
 import { LocationSearch } from './LocationSearch';
 import { formatArea, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
@@ -25,6 +27,62 @@ import { MobileBottomSheet } from './MobileBottomSheet';
 import { TouchOptimizedButton } from './TouchOptimizedButton';
 import { ParkingOverlay as ParkingOverlayComponent } from './ParkingOverlay';
 import { cn } from '@/lib/utils';
+
+// Memoized height input to prevent re-renders from parent polygon updates
+const HeightInput = memo(function HeightInput({
+  polygonId,
+  initialHeight,
+  onHeightChange
+}: {
+  polygonId: string;
+  initialHeight: number;
+  onHeightChange: (polygonId: string, height: number) => void;
+}) {
+  const [localValue, setLocalValue] = useState<string>(String(initialHeight));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Update local value when polygonId changes (different polygon selected)
+  useEffect(() => {
+    setLocalValue(String(initialHeight));
+  }, [polygonId, initialHeight]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+  };
+
+  const handleCommit = (value: string) => {
+    const height = value === '' ? 0 : parseInt(value);
+    const clampedHeight = Math.max(0, Math.min(500, height));
+    onHeightChange(polygonId, clampedHeight);
+    setLocalValue(String(clampedHeight));
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    handleCommit(e.target.value);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleCommit((e.target as HTMLInputElement).value);
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <Input
+      ref={inputRef}
+      type="number"
+      min="0"
+      max="500"
+      step="1"
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      className="flex-1 h-9"
+    />
+  );
+});
 
 interface ResponsiveControlsProps {
   measurementUnit: MeasurementUnit;
@@ -415,27 +473,53 @@ export function ResponsiveControls({
                           </div>
                         </div>
                         
-                        {isSelected && (() => {
-                          const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
-                          return hasIndividualSetting ? polygon.properties.showSideLengths : showSideLengths;
-                        })() && (
+                        {isSelected && (
                           <div className={cn(
                             "border-t border-muted/60 bg-muted/20 space-y-4 rounded-b-xl relative",
                             isMobile ? "mt-3 pt-4 px-3 pb-3" : "mt-4 pt-4 px-4 pb-4"
                           )}>
-                            <div>
-                              <p className="text-xs font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Side Measurements</p>
-                              <div className="grid grid-cols-2 gap-2">
-                                {polygonMeasurement.sideLengths.map((length, sideIndex) => (
-                                  <div key={sideIndex} className="bg-background/80 border border-muted/60 rounded-lg p-2 text-center shadow-sm">
-                                    <div className="text-xs text-muted-foreground font-medium">Side {sideIndex + 1}</div>
-                                    <div className="text-sm font-bold font-mono text-foreground">
-                                      {(polygon.properties?.measurementUnit || measurementUnit) === 'metric' ? `${length}m` : `${(length * 3.28084).toFixed(1)}ft`}
+                            {viewMode === '3D' ? (
+                              // 3D Mode: Show height control
+                              <div onClick={(e) => e.stopPropagation()}>
+                                <p className="text-xs font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Building Height</p>
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    {onPolygonHeightChange && (
+                                      <HeightInput
+                                        polygonId={currentPolygonId}
+                                        initialHeight={polygon.properties?.height || 0}
+                                        onHeightChange={onPolygonHeightChange}
+                                      />
+                                    )}
+                                    <span className="text-sm text-muted-foreground whitespace-nowrap">meters</span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    Set the extrusion height for this polygon
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              // 2D Mode: Show side measurements (only if enabled)
+                              (() => {
+                                const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
+                                const showSides = hasIndividualSetting ? polygon.properties.showSideLengths : showSideLengths;
+                                return showSides ? (
+                                  <div>
+                                    <p className="text-xs font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Side Measurements</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      {polygonMeasurement.sideLengths.map((length, sideIndex) => (
+                                        <div key={sideIndex} className="bg-background/80 border border-muted/60 rounded-lg p-2 text-center shadow-sm">
+                                          <div className="text-xs text-muted-foreground font-medium">Side {sideIndex + 1}</div>
+                                          <div className="text-sm font-bold font-mono text-foreground">
+                                            {(polygon.properties?.measurementUnit || measurementUnit) === 'metric' ? `${length}m` : `${(length * 3.28084).toFixed(1)}ft`}
+                                          </div>
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
-                                ))}
-                              </div>
-                            </div>
+                                ) : null;
+                              })()
+                            )}
                           </div>
                         )}
                       </div>
@@ -475,7 +559,36 @@ export function ResponsiveControls({
             <CollapsibleContent>
               <div className="px-4 pb-4 space-y-4">
                 <p className="text-xs text-muted-foreground -mt-2">These settings apply to new polygons only</p>
-                
+
+                {/* View Mode Toggle */}
+                <ViewModeToggle
+                  viewMode={viewMode}
+                  onToggle={onViewModeToggle}
+                />
+
+                {/* 3D Buildings Toggle - only show in 3D mode */}
+                {viewMode === '3D' && (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm">Show 3D Buildings</h3>
+                      <p className="text-xs text-muted-foreground">Display existing buildings in 3D</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onToggle3DBuildings}
+                      className={cn(
+                        "h-8 text-xs font-medium transition-colors",
+                        show3DBuildings
+                          ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                          : "bg-background hover:bg-muted border-muted"
+                      )}
+                    >
+                      {show3DBuildings ? 'ON' : 'OFF'}
+                    </Button>
+                  </div>
+                )}
+
                 {/* Measurement Unit Toggle */}
                 <div className="flex items-center justify-between">
                   <div>
@@ -490,7 +603,7 @@ export function ResponsiveControls({
                     {measurementUnit === 'metric' ? 'Metric' : 'Imperial'}
                   </Button>
                 </div>
-                
+
                 {/* Side Lengths Toggle */}
                 <div className="flex items-center justify-between">
                   <div>
@@ -502,8 +615,8 @@ export function ResponsiveControls({
                     onClick={onToggleSideLengths}
                     className={cn(
                       "h-8 text-xs font-medium transition-colors",
-                      showSideLengths 
-                        ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" 
+                      showSideLengths
+                        ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
                         : "bg-background hover:bg-muted border-muted"
                     )}
                   >
