@@ -82,6 +82,7 @@ function SiteSketcherContent() {
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSelectingExportArea, setIsSelectingExportArea] = useState(false);
+  const [showMobileFileMenu, setShowMobileFileMenu] = useState(false);
   const mapRef = useRef<MapboxMapRef>(null);
   const originalMeasurementsRef = useRef<AreaMeasurement | null>(null);
 
@@ -979,15 +980,133 @@ function SiteSketcherContent() {
       {/* Mobile Layout - Full screen */}
       <div className="md:hidden mobile-layout">
         {/* Mobile Navigation */}
-        <div className="fixed top-4 left-4 z-50 flex items-center gap-3">
-          <Link 
+        <div className="fixed top-4 left-4 right-4 z-50 flex items-center justify-between">
+          <Link
             href="/"
             className="flex items-center justify-center w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
             title="Back to SiteMatcher"
           >
             <ArrowLeft className="h-5 w-5 text-gray-700" />
           </Link>
+
+          {/* Mobile File Menu Button */}
+          <div className="flex items-center gap-2">
+            {hasUnsavedChanges && (
+              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+            )}
+            <button
+              onClick={() => setShowMobileFileMenu(!showMobileFileMenu)}
+              className="flex items-center justify-center w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              title="File Menu"
+            >
+              <Menu className="h-5 w-5 text-gray-700" />
+            </button>
+          </div>
         </div>
+
+        {/* Mobile File Menu Dropdown */}
+        {showMobileFileMenu && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/20 z-40"
+              onClick={() => setShowMobileFileMenu(false)}
+            />
+            {/* Menu */}
+            <div className="fixed top-16 right-4 z-50 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-200 w-64 overflow-hidden">
+              <div className="p-2">
+                <div className="px-3 py-2 text-sm text-gray-500 font-medium border-b border-gray-200 mb-2">
+                  {currentSketchName}
+                  {hasUnsavedChanges && <span className="text-orange-500 ml-2">*</span>}
+                  {isSaving && <span className="text-blue-500 ml-2">Saving...</span>}
+                </div>
+
+                <button
+                  onClick={() => {
+                    handleNewSketch();
+                    setShowMobileFileMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors"
+                >
+                  New Sketch
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleLoad();
+                    setShowMobileFileMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors"
+                >
+                  Open Sketch
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleSave();
+                    setShowMobileFileMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors"
+                  disabled={isSaving}
+                >
+                  Save
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleSaveAs();
+                    setShowMobileFileMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors"
+                >
+                  Save As...
+                </button>
+
+                <div className="border-t border-gray-200 my-2"></div>
+
+                <button
+                  onClick={() => {
+                    handleExportPNG();
+                    setShowMobileFileMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors"
+                >
+                  Export PNG
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleExportPDF();
+                    setShowMobileFileMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors"
+                >
+                  Export PDF
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleExportJSON();
+                    setShowMobileFileMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors"
+                >
+                  Export JSON
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleExportCSV();
+                    setShowMobileFileMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors"
+                >
+                  Export CSV
+                </button>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Full Screen Map */}
         <div className="mobile-map-container">

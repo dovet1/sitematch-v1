@@ -2797,21 +2797,21 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     });
   }, [polygons, isMapLoaded]);
 
-  // Toggle 3D polygons visibility based on viewMode (desktop only)
+  // Toggle 3D polygons visibility based on viewMode
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded) return;
 
     const layer = mapRef.current.getLayer('polygons-3d');
     if (!layer) return;
 
-    // Only show 3D on desktop devices
-    const visibility = (viewMode === '3D' && !isMobile()) ? 'visible' : 'none';
+    // Show 3D polygons when in 3D mode (works on both mobile and desktop)
+    const visibility = viewMode === '3D' ? 'visible' : 'none';
     mapRef.current.setLayoutProperty('polygons-3d', 'visibility', visibility);
   }, [viewMode, isMapLoaded]);
 
-  // Adjust camera pitch and bearing when switching between 2D and 3D modes (desktop only)
+  // Adjust camera pitch and bearing when switching between 2D and 3D modes
   useEffect(() => {
-    if (!mapRef.current || !isMapLoaded || isMobile()) return;
+    if (!mapRef.current || !isMapLoaded) return;
 
     const map = mapRef.current;
 
