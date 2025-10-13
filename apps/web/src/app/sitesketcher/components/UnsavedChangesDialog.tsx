@@ -35,16 +35,16 @@ export function UnsavedChangesDialog({
             Your changes will be lost if you don't save them.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={onDontSave}>
-            Don't Save
-          </AlertDialogCancel>
-          <AlertDialogCancel onClick={onCancel}>
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction onClick={onSave}>
+        <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-2">
+          <AlertDialogAction onClick={onSave} className="w-full sm:w-auto m-0">
             Save
           </AlertDialogAction>
+          <AlertDialogCancel onClick={onCancel} className="w-full sm:w-auto m-0">
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogCancel onClick={onDontSave} className="w-full sm:w-auto m-0">
+            Don't Save
+          </AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
