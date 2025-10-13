@@ -30,17 +30,17 @@ function SearchPageContent() {
       return {
         location: '',
         coordinates: null,
-        nationwide: false,
-        sectors: [],
-        useClasses: [],
-        listingTypes: [],
+        companyName: '',
+        sector: [],
+        useClass: [],
         sizeMin: null,
         sizeMax: null,
         acreageMin: null,
         acreageMax: null,
         dwellingMin: null,
         dwellingMax: null,
-        companyName: ''
+        isNationwide: false,
+        listingType: []
       };
     }
 
