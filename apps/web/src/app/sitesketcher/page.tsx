@@ -45,7 +45,7 @@ function SiteSketcherContent() {
   const { user, loading, profile } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const showWelcome = searchParams.get('welcome') === 'true';
+  const showWelcome = searchParams?.get('welcome') === 'true';
   
   const [state, setState] = useState<SiteSketcherState>({
     polygons: [],
