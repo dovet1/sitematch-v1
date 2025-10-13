@@ -164,9 +164,9 @@ export class OrganizationService {
     organizationId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const { error } = await this.adminClient
-        .from('users')
-        .update({ 
+      const { error } = await (this.adminClient
+        .from('users') as any)
+        .update({
           org_id: organizationId,
           updated_at: new Date().toISOString()
         })
