@@ -23,9 +23,27 @@ function SearchPageContent() {
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
   const [isSignupInProgress, setIsSignupInProgress] = useState(false);
-  
+
   // Parse URL parameters into SearchFilters
   const [searchFilters, setSearchFilters] = useState<SearchFilters>(() => {
+    if (!searchParams) {
+      return {
+        location: '',
+        coordinates: null,
+        nationwide: false,
+        sectors: [],
+        useClasses: [],
+        listingTypes: [],
+        sizeMin: null,
+        sizeMax: null,
+        acreageMin: null,
+        acreageMax: null,
+        dwellingMin: null,
+        dwellingMax: null,
+        companyName: ''
+      };
+    }
+
     const location = searchParams.get('location') || '';
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
