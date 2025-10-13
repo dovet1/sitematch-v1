@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { 
-  ChevronUp, 
+import {
+  ChevronUp,
   ChevronDown,
   ChevronRight,
   Maximize2,
@@ -15,24 +16,190 @@ import {
   Plus,
   Pencil,
   MousePointer,
-  Settings
+  Settings,
+  Square,
+  Building2,
+  Save,
+  FolderOpen,
+  Download
 } from 'lucide-react';
 import { ModeToggleSwitch } from './ModeToggleSwitch';
-import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode } from '@/types/sitesketcher';
+import { ViewModeToggle } from './ViewModeToggle';
+import type { MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode, ViewMode } from '@/types/sitesketcher';
 import { LocationSearch } from './LocationSearch';
 import { formatArea, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { MobileBottomSheet } from './MobileBottomSheet';
 import { TouchOptimizedButton } from './TouchOptimizedButton';
 import { ParkingOverlay as ParkingOverlayComponent } from './ParkingOverlay';
+import { RectangleDimensionsModal } from './RectangleDimensionsModal';
 import { cn } from '@/lib/utils';
 
+// Memoized rectangle inputs to prevent re-renders from parent
+const RectangleInputs = memo(function RectangleInputs({
+  measurementUnit,
+  onSubmit
+}: {
+  measurementUnit: MeasurementUnit;
+  onSubmit: (width: number, length: number) => void;
+}) {
+  const [rectangleWidth, setRectangleWidth] = useState<string>('10');
+  const [rectangleLength, setRectangleLength] = useState<string>('20');
+  const widthInputRef = useRef<HTMLInputElement>(null);
+  const lengthInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = () => {
+    const widthNum = parseFloat(rectangleWidth);
+    const lengthNum = parseFloat(rectangleLength);
+
+    if (isNaN(widthNum) || isNaN(lengthNum) || widthNum <= 0 || lengthNum <= 0) {
+      alert('Please enter valid positive numbers for width and length');
+      return;
+    }
+
+    onSubmit(widthNum, lengthNum);
+
+    // Reset for next time
+    setRectangleWidth('10');
+    setRectangleLength('20');
+  };
+
+  return (
+    <div key="rectangle-inputs-mobile" className="space-y-3 p-4 bg-muted/50 rounded-lg border border-border">
+      <div className="text-sm font-medium text-foreground">
+        Rectangle Dimensions ({measurementUnit === 'metric' ? 'metres' : 'feet'})
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label htmlFor="rectangle-width-mobile" className="text-xs text-muted-foreground">Width</label>
+          <input
+            ref={widthInputRef}
+            id="rectangle-width-mobile"
+            type="text"
+            inputMode="decimal"
+            value={rectangleWidth}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setRectangleWidth(value);
+              }
+            }}
+            onBlur={(e) => {
+              const num = parseFloat(e.target.value);
+              if (isNaN(num) || num <= 0) {
+                setRectangleWidth('10');
+              }
+            }}
+            className="w-full px-3 py-2 text-base border border-input rounded-md bg-background"
+            placeholder="Width"
+            autoComplete="off"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="rectangle-length-mobile" className="text-xs text-muted-foreground">Length</label>
+          <input
+            ref={lengthInputRef}
+            id="rectangle-length-mobile"
+            type="text"
+            inputMode="decimal"
+            value={rectangleLength}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                setRectangleLength(value);
+              }
+            }}
+            onBlur={(e) => {
+              const num = parseFloat(e.target.value);
+              if (isNaN(num) || num <= 0) {
+                setRectangleLength('20');
+              }
+            }}
+            className="w-full px-3 py-2 text-base border border-input rounded-md bg-background"
+            placeholder="Length"
+            autoComplete="off"
+          />
+        </div>
+      </div>
+
+      <Button
+        onClick={handleSubmit}
+        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+      >
+        Place on Map
+      </Button>
+    </div>
+  );
+});
+
+// Memoized height input to prevent re-renders from parent polygon updates
+const HeightInput = memo(function HeightInput({
+  polygonId,
+  initialHeight,
+  onHeightChange
+}: {
+  polygonId: string;
+  initialHeight: number;
+  onHeightChange: (polygonId: string, height: number) => void;
+}) {
+  const [localValue, setLocalValue] = useState<string>(String(initialHeight));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Update local value when polygonId changes (different polygon selected)
+  useEffect(() => {
+    setLocalValue(String(initialHeight));
+  }, [polygonId, initialHeight]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+  };
+
+  const handleCommit = (value: string) => {
+    const height = value === '' ? 0 : parseInt(value);
+    const clampedHeight = Math.max(0, Math.min(100, height));
+    onHeightChange(polygonId, clampedHeight);
+    setLocalValue(String(clampedHeight));
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    handleCommit(e.target.value);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleCommit((e.target as HTMLInputElement).value);
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <Input
+      ref={inputRef}
+      type="number"
+      min="0"
+      max="100"
+      step="1"
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      className="w-full"
+    />
+  );
+});
+
 interface ResponsiveControlsProps {
-  measurement: AreaMeasurement | null;
   measurementUnit: MeasurementUnit;
   onUnitToggle: () => void;
   onClearAll: () => void;
   drawingMode: DrawingMode;
   onModeToggle: () => void;
+  // View mode props
+  viewMode: ViewMode;
+  onViewModeToggle: () => void;
+  show3DBuildings: boolean;
+  onToggle3DBuildings: () => void;
   // Polygon props
   polygons: MapboxDrawPolygon[];
   onPolygonDelete: (polygonId: string) => void;
@@ -42,6 +209,9 @@ interface ResponsiveControlsProps {
   // Polygon-specific toggles
   onPolygonUnitToggle: (polygonId: string) => void;
   onPolygonSideLengthToggle: (polygonId: string) => void;
+  onPolygonHeightChange?: (polygonId: string, height: number) => void;
+  // Rectangle props
+  onAddRectangle: (width: number, length: number) => void;
   // Parking props
   parkingOverlays: ParkingOverlay[];
   selectedOverlayId: string | null;
@@ -54,22 +224,31 @@ interface ResponsiveControlsProps {
   onLocationSelect: (location: any) => void;
   recentSearches: any[];
   onUpdateRecentSearches: (searches: any[]) => void;
+  // Save/Load/Export props
+  onSave?: () => void;
+  onLoad?: () => void;
+  onExport?: () => void;
   className?: string;
 }
 
 export function ResponsiveControls({
-  measurement,
   measurementUnit,
   onUnitToggle,
   onClearAll,
   drawingMode,
   onModeToggle,
+  viewMode,
+  onViewModeToggle,
+  show3DBuildings,
+  onToggle3DBuildings,
   polygons,
   onPolygonDelete,
   showSideLengths,
   onToggleSideLengths,
   onPolygonUnitToggle,
   onPolygonSideLengthToggle,
+  onPolygonHeightChange,
+  onAddRectangle,
   parkingOverlays,
   selectedOverlayId,
   onAddOverlay,
@@ -80,6 +259,9 @@ export function ResponsiveControls({
   onLocationSelect,
   recentSearches,
   onUpdateRecentSearches,
+  onSave,
+  onLoad,
+  onExport,
   className = ''
 }: ResponsiveControlsProps) {
   const [measurementsOpen, setMeasurementsOpen] = useState(false);
@@ -87,6 +269,8 @@ export function ResponsiveControls({
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(true); // Always open on mobile
   const [mobileSheetHeight, setMobileSheetHeight] = useState<'collapsed' | 'halfway' | 'expanded'>('collapsed');
+  const [isRectangleModalOpen, setIsRectangleModalOpen] = useState(false);
+  const [showRectangleInputs, setShowRectangleInputs] = useState(false);
 
   // Reset selectedPolygonId if the selected polygon no longer exists
   useEffect(() => {
@@ -101,18 +285,33 @@ export function ResponsiveControls({
   }, [polygons, selectedPolygonId]);
 
   const [isMobile, setIsMobile] = useState(false);
-  
+
   // Check if mobile after mount to avoid hydration mismatch
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  const handleRectangleSubmit = (width: number, length: number) => {
+    onAddRectangle(width, length);
+    setShowRectangleInputs(false);
+  };
+
+  const handleRectangleButtonClick = () => {
+    if (isMobile) {
+      // On mobile, toggle inline inputs
+      setShowRectangleInputs(!showRectangleInputs);
+    } else {
+      // On desktop, open modal
+      setIsRectangleModalOpen(true);
+    }
+  };
 
   function MobileContent() {
     return (
@@ -133,13 +332,60 @@ export function ResponsiveControls({
       <div className="space-y-4">
         {/* Mode Toggle Switch */}
         <div className="flex justify-center overflow-visible">
-          <ModeToggleSwitch 
+          <ModeToggleSwitch
             mode={drawingMode}
             onToggle={onModeToggle}
             size={isMobile ? "large" : "default"}
             className="w-full max-w-xs"
           />
         </div>
+
+        {/* View Mode Toggle - Desktop only */}
+        {!isMobile && (
+          <ViewModeToggle
+            viewMode={viewMode}
+            onToggle={onViewModeToggle}
+          />
+        )}
+
+        {/* 3D Buildings Toggle - Only show when in 3D mode on desktop */}
+        {!isMobile && viewMode === '3D' && (
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Show 3D Buildings</span>
+            </div>
+            <Button
+              onClick={onToggle3DBuildings}
+              variant={show3DBuildings ? 'default' : 'outline'}
+              size="sm"
+            >
+              {show3DBuildings ? 'On' : 'Off'}
+            </Button>
+          </div>
+        )}
+
+        {/* Add Rectangle Button - Only show in draw mode */}
+        {drawingMode === 'draw' && (
+          <>
+            <Button
+              onClick={handleRectangleButtonClick}
+              variant="outline"
+              className="w-full flex items-center gap-2 justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
+            >
+              <Square className="h-4 w-4" />
+              {showRectangleInputs && isMobile ? 'Cancel Rectangle' : 'Add Rectangle'}
+            </Button>
+
+            {/* Inline Rectangle Inputs (Mobile Only) */}
+            {showRectangleInputs && isMobile && (
+              <RectangleInputs
+                measurementUnit={measurementUnit}
+                onSubmit={handleRectangleSubmit}
+              />
+            )}
+          </>
+        )}
 
         {/* Measurements Section */}
         <Card>
@@ -396,27 +642,24 @@ export function ResponsiveControls({
                           </div>
                         </div>
                         
-                        {isSelected && (() => {
-                          const hasIndividualSetting = polygon.properties && 'showSideLengths' in polygon.properties;
-                          return hasIndividualSetting ? polygon.properties.showSideLengths : showSideLengths;
-                        })() && (
+                        {isSelected && (
                           <div className={cn(
                             "border-t border-muted/60 bg-muted/20 space-y-4 rounded-b-xl relative",
                             isMobile ? "mt-3 pt-4 px-3 pb-3" : "mt-4 pt-4 px-4 pb-4"
                           )}>
-                            <div>
-                              <p className="text-xs font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Side Measurements</p>
-                              <div className="grid grid-cols-2 gap-2">
-                                {polygonMeasurement.sideLengths.map((length, sideIndex) => (
-                                  <div key={sideIndex} className="bg-background/80 border border-muted/60 rounded-lg p-2 text-center shadow-sm">
-                                    <div className="text-xs text-muted-foreground font-medium">Side {sideIndex + 1}</div>
-                                    <div className="text-sm font-bold font-mono text-foreground">
-                                      {(polygon.properties?.measurementUnit || measurementUnit) === 'metric' ? `${length}m` : `${(length * 3.28084).toFixed(1)}ft`}
-                                    </div>
-                                  </div>
-                                ))}
+                            {/* Height Control - Desktop only, 3D mode only */}
+                            {!isMobile && viewMode === '3D' && onPolygonHeightChange && (
+                              <div>
+                                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">
+                                  Building Height (meters)
+                                </label>
+                                <HeightInput
+                                  polygonId={currentPolygonId}
+                                  initialHeight={polygon.properties?.height ?? 3}
+                                  onHeightChange={onPolygonHeightChange}
+                                />
                               </div>
-                            </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -547,6 +790,14 @@ export function ResponsiveControls({
       />
 
       <DesktopSections />
+
+      {/* Rectangle Dimensions Modal */}
+      <RectangleDimensionsModal
+        isOpen={isRectangleModalOpen}
+        onClose={() => setIsRectangleModalOpen(false)}
+        onSubmit={onAddRectangle}
+        measurementUnit={measurementUnit}
+      />
     </div>
   );
 }
