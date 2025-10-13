@@ -497,9 +497,30 @@ export function ResponsiveControls({
                                 </div>
                               </div>
                             )}
+
+                            {/* Expandable indicator - positioned in top right */}
+                            <div className={cn(
+                              "absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 rounded-md",
+                              "transition-all duration-200",
+                              isSelected
+                                ? "bg-primary/10 text-primary"
+                                : "bg-muted/40 text-muted-foreground hover:bg-muted/60",
+                              "group-hover:scale-105"
+                            )}>
+                              <span className={cn(
+                                "text-xs font-medium hidden sm:inline",
+                                isSelected ? "text-primary" : "text-muted-foreground"
+                              )}>
+                                {viewMode === '3D' && !isSelected ? 'Height' : isSelected ? 'Less' : 'More'}
+                              </span>
+                              <ChevronDown className={cn(
+                                "h-4 w-4 transition-transform duration-300 ease-out",
+                                isSelected && "rotate-180"
+                              )} />
+                            </div>
                           </div>
                         </div>
-                        
+
                         {isSelected && (
                           <div className={cn(
                             "border-t border-muted/60 bg-muted/20 space-y-4 rounded-b-xl relative",
