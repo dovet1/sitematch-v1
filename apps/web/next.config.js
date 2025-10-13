@@ -12,8 +12,10 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  // Enable standalone output for better deployment
-  output: 'standalone',
+  // Experimental config to handle error pages
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
   // Configure images for Supabase storage and external services
   images: {
     remotePatterns: [
