@@ -23,45 +23,39 @@ interface UserTypeFormData {
 }
 
 const userTypes: { value: UserType; label: string; description: string; icon: React.ReactNode }[] = [
-  { 
-    value: 'Commercial Occupier', 
-    label: 'Commercial Occupier', 
-    description: 'Looking for office or retail space',
+  {
+    value: 'Commercial Occupier',
+    label: 'Commercial Occupier',
+    description: 'Looking for commercial property',
     icon: <Building2 className="h-4 w-4" />
   },
-  { 
-    value: 'Landlord/Vendor', 
-    label: 'Landlord/Vendor', 
-    description: 'Property owner or seller',
-    icon: <Home className="h-4 w-4" />
-  },
-  { 
-    value: 'Developer', 
-    label: 'Developer', 
-    description: 'Property developer',
+  {
+    value: 'Landlord/developer',
+    label: 'Landlord/developer',
+    description: 'Property owner or developer',
     icon: <Wrench className="h-4 w-4" />
   },
-  { 
-    value: 'Housebuilder', 
-    label: 'Housebuilder', 
+  {
+    value: 'Housebuilder',
+    label: 'Housebuilder',
     description: 'Residential developer',
     icon: <TreePine className="h-4 w-4" />
   },
-  { 
-    value: 'Consultant', 
-    label: 'Consultant', 
-    description: 'Property consultant or advisor',
-    icon: <Calculator className="h-4 w-4" />
+  {
+    value: 'Agent',
+    label: 'Agent',
+    description: 'Property agent or broker',
+    icon: <Users className="h-4 w-4" />
   },
-  { 
-    value: 'Government', 
-    label: 'Government', 
+  {
+    value: 'Government',
+    label: 'Government',
     description: 'Government or public sector',
     icon: <Globe className="h-4 w-4" />
   },
-  { 
-    value: 'Other', 
-    label: 'Other', 
+  {
+    value: 'Other',
+    label: 'Other',
     description: 'Other type of user',
     icon: <MoreHorizontal className="h-4 w-4" />
   },

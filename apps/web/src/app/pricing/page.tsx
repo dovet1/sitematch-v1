@@ -8,6 +8,7 @@ import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
+import { Footer } from '@/components/homepage2/Footer';
 
 export default function PricingPage() {
   const { user } = useAuth();
@@ -100,7 +101,7 @@ export default function PricingPage() {
     },
     {
       name: 'Pro',
-      price: '£488',
+      price: '£487.50',
       originalPrice: '£975',
       period: '/year',
       description: 'For property professionals',
@@ -280,6 +281,7 @@ export default function PricingPage() {
           />
         )}
       </section>
+      <Footer />
     </div>
   );
 }

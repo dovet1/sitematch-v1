@@ -20,13 +20,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     if (!response.ok) {
       return {
         title: 'Shared Listing Not Found',
-        description: 'The shared commercial property requirement could not be found.',
+        description: 'The shared property requirement could not be found.',
       };
     }
 
     const listing = await response.json();
     const companyName = listing.company?.name || 'Unknown Company';
-    const title = listing.title || 'Commercial Property Requirement';
+    const title = listing.title || 'Property Requirement';
     const description = listing.description 
       ? `${listing.description.substring(0, 160)}...`
       : `View this commercial property requirement from ${companyName}`;
@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         title: `${title} - ${companyName}`,
         description,
         url: shareUrl,
-        siteName: 'Commercial Directory',
+        siteName: 'Property Requirement Directory',
         type: 'website',
         images: [
           {
@@ -64,8 +64,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   } catch (error) {
     console.error('Error generating metadata for shared listing:', error);
     return {
-      title: 'Shared Commercial Property Requirement',
-      description: 'View this commercial property requirement that was shared with you.',
+      title: 'Shared Property Requirement',
+      description: 'View this property requirement that was shared with you.',
     };
   }
 }

@@ -14,7 +14,7 @@ export interface AuthUser extends User {
   }
 }
 
-export type UserType = 'Commercial Occupier' | 'Housebuilder' | 'Consultant' | 'Landlord/Vendor' | 'Developer' | 'Government' | 'Other'
+export type UserType = 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
 
 export interface UserProfile {
   id: string

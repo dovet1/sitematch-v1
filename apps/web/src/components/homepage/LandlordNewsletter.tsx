@@ -11,10 +11,12 @@ export function LandlordNewsletter() {
   const [isSubscribed, setIsSubscribed] = useState(false);
 
   const userTypeOptions = [
+    { label: 'Commercial Occupier', value: 'commercial_occupier' },
+    { label: 'Landlord/developer', value: 'landlord_developer' },
+    { label: 'Housebuilder', value: 'housebuilder' },
     { label: 'Agent', value: 'agent' },
-    { label: 'Investor', value: 'investor' },
-    { label: 'Landlord', value: 'landlord' },
-    { label: 'Vendor', value: 'vendor' }
+    { label: 'Government', value: 'government' },
+    { label: 'Other', value: 'other' }
   ];
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {

@@ -214,7 +214,7 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
               <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
                 <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
                   <span className="text-violet-500">🌾</span>
-                  Site Acreage
+                  Site size (acres)
                 </h4>
                 <p className="text-gray-700">{listing.company?.site_acreage}</p>
               </div>

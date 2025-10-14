@@ -354,7 +354,7 @@ export function Step2RequirementDetails({
 
               {/* Site Acreage Range Slider */}
               <RangeSlider
-                label="Site Acreage (Optional)"
+                label="Site size (acres) (Optional)"
                 value={siteAcreageRange}
                 onChange={handleSiteAcreageChange}
                 min={0.1}

@@ -433,7 +433,7 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
 
           {/* Site Acreage Range */}
           <CollapsibleSection
-            title="Site Acreage"
+            title="Site size (acres)"
             isOpen={expandedSections.acreage}
             onToggle={() => toggleSection('acreage')}
             hasActiveFilters={localFilters.acreageMin !== null || localFilters.acreageMax !== null}
