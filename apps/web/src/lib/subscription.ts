@@ -5,6 +5,11 @@ import { stripe } from '@/lib/stripe'
 // Can be re-enabled in API routes if needed
 const CACHE_TTL = 300 // 5 minutes
 
+// In-memory cache to prevent duplicate queries within short time windows
+// This prevents Supabase SDK caching issues that can return stale data
+const requestCache = new Map<string, { data: UserSubscription | null, timestamp: number }>()
+const REQUEST_CACHE_TTL = 1000 // 1 second
+
 export type SubscriptionStatus =
   | 'trialing'
   | 'active'
@@ -54,9 +59,16 @@ export async function checkSubscriptionAccess(userId: string): Promise<boolean> 
  * Get user subscription status from database
  */
 export async function getUserSubscriptionStatus(userId: string): Promise<UserSubscription | null> {
+  // Check in-memory cache first to prevent duplicate queries
+  const cached = requestCache.get(userId)
+  if (cached && (Date.now() - cached.timestamp) < REQUEST_CACHE_TTL) {
+    return cached.data
+  }
+
   // Use admin client to bypass RLS restrictions
   const supabase = createAdminClient()
 
+  // Use maybeSingle() with order() to prevent Supabase SDK query caching issues
   const { data, error } = await supabase
     .from('users')
     .select(`
@@ -69,11 +81,26 @@ export async function getUserSubscriptionStatus(userId: string): Promise<UserSub
       payment_method_added
     `)
     .eq('id', userId)
-    .single()
+    .order('id', { ascending: true })
+    .limit(1)
+    .maybeSingle()
 
   if (error) {
     console.error('Error fetching user subscription status:', error)
     return null
+  }
+
+  // Cache the result
+  requestCache.set(userId, { data, timestamp: Date.now() })
+
+  // Periodic cache cleanup to prevent memory leaks
+  if (requestCache.size > 100) {
+    const now = Date.now()
+    Array.from(requestCache.entries()).forEach(([key, value]) => {
+      if (now - value.timestamp > REQUEST_CACHE_TTL) {
+        requestCache.delete(key)
+      }
+    })
   }
 
   return data
