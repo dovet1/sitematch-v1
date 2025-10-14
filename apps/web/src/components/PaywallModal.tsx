@@ -138,8 +138,8 @@ export function PaywallModal({
   }
 
   const handleViewFeatures = () => {
-    router.push('/pricing')
     handleOpenChange(false)
+    router.push('/pricing')
   }
 
   const handleContinueToFree = () => {

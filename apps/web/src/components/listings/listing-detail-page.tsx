@@ -268,9 +268,16 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   // Format names for human readability
   const formatName = (name: string): string => {
+    const acronyms = ['UK', 'US', 'EU', 'IT', 'HR', 'PR', 'B2B', 'B2C', 'EV'];
     return name
       .split(/[\s_-]+/) // Split on spaces, underscores, hyphens
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map(word => {
+        // Handle special acronyms
+        if (acronyms.includes(word.toUpperCase())) {
+          return word.toUpperCase();
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
       .join(' ');
   };
 
@@ -6668,7 +6675,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="font-medium text-gray-900 flex items-center gap-2">
                               <span className="text-violet-500">🌾</span>
-                              Site Acreage
+                              Site size (acres)
                             </h4>
                             <div className="flex items-center gap-2">
                               <Button 
@@ -6699,7 +6706,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="font-medium text-gray-900 flex items-center gap-2">
                               <span className="text-violet-500">🌾</span>
-                              Site Acreage
+                              Site size (acres)
                             </h4>
                             <Button size="sm" onClick={() => openModal('siteSize')} className="bg-violet-600 hover:bg-violet-700 text-white">
                               <Plus className="w-3 h-3 mr-1" />
@@ -6862,7 +6869,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         <span className="text-xl">🌍</span> Nationwide Coverage
                       </p>
                       <p className="text-gray-600 text-sm">
-                        This listing is open to opportunities across the UK & Ireland
+                        This listing is open to opportunities across the UK
                       </p>
                     </div>
                   )}

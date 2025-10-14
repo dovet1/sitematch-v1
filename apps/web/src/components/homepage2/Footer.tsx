@@ -10,7 +10,6 @@ export function Footer() {
       { label: 'Search Requirements', href: '/search' },
     ],
     company: [
-      { label: 'About Us', href: '/about' },
       { label: 'Contact', href: 'mailto:rob@sitematcher.co.uk' },
     ],
     legal: [

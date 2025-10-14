@@ -30,7 +30,7 @@ function formatSectorName(sector: string): string {
     .split(' ')
     .map(word => {
       // Handle special acronyms
-      const acronyms = ['UK', 'US', 'EU', 'IT', 'HR', 'PR', 'B2B', 'B2C'];
+      const acronyms = ['UK', 'US', 'EU', 'IT', 'HR', 'PR', 'B2B', 'B2C', 'EV'];
       if (acronyms.includes(word.toUpperCase())) {
         return word.toUpperCase();
       }
