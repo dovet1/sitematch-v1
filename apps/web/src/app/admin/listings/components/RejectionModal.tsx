@@ -86,16 +86,25 @@ export function RejectionModal({
         const { createClientClient } = await import('@/lib/supabase')
         const supabase = createClientClient()
 
+        // First, let's see ALL versions for this listing for debugging
+        const { data: allVersions, error: allError } = await supabase
+          .from('listing_versions')
+          .select('id, status, version_number, created_at')
+          .eq('listing_id', listingId)
+          .order('created_at', { ascending: false })
+
+        console.log('All versions for listing:', { allVersions, allError })
+
         // Don't use .single() - use limit(1) and get the first result
         const { data: versions, error } = await supabase
           .from('listing_versions')
-          .select('id')
+          .select('id, status')
           .eq('listing_id', listingId)
           .eq('status', 'pending_review')
           .order('created_at', { ascending: false })
           .limit(1)
 
-        console.log('Version query result:', { versions, error })
+        console.log('Pending review versions:', { versions, error })
 
         if (error) {
           console.error('Error fetching version:', error)
@@ -105,7 +114,7 @@ export function RejectionModal({
         if (versions && versions.length > 0) {
           targetVersionId = versions[0].id
         } else {
-          throw new Error('No pending review version found')
+          throw new Error('No pending review version found. Check RLS policies or version status.')
         }
       }
 
