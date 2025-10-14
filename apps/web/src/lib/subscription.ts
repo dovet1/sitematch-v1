@@ -96,11 +96,11 @@ export async function getUserSubscriptionStatus(userId: string): Promise<UserSub
   // Periodic cache cleanup to prevent memory leaks
   if (requestCache.size > 100) {
     const now = Date.now()
-    for (const [key, value] of requestCache.entries()) {
+    Array.from(requestCache.entries()).forEach(([key, value]) => {
       if (now - value.timestamp > REQUEST_CACHE_TTL) {
         requestCache.delete(key)
       }
-    }
+    })
   }
 
   return data
