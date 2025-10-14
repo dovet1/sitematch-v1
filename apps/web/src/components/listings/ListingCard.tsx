@@ -10,6 +10,7 @@ interface ListingCardProps {
   listing: SearchResult;
   onClick: () => void;
   searchCoordinates?: { lat: number; lng: number } | null;
+  index?: number;
 }
 
 function getInitials(companyName: string): string {
@@ -170,13 +171,19 @@ function formatSiteSize(listing: SearchResult): string {
   return 'No site size preference';
 }
 
-export function ListingCard({ listing, onClick, searchCoordinates }: ListingCardProps) {
+export function ListingCard({ listing, onClick, searchCoordinates, index = 999 }: ListingCardProps) {
   // Get the appropriate logo URL based on clearbit_logo flag and available data
   const logoUrl = getSearchResultLogoUrl(listing);
   const siteSizeText = formatSiteSize(listing);
   const locationText = formatLocations(listing, searchCoordinates);
   const [imageLoaded, setImageLoaded] = useState(false);
-  
+
+  // Load first 8 cards eagerly (covers 2 rows at max 4-col layout, 4 rows at 2-col)
+  // This ensures above-the-fold content is always loaded regardless of viewport
+  const isAboveFold = index < 8;
+  const loadingStrategy = isAboveFold ? 'eager' : 'lazy';
+  const fetchPriority = isAboveFold ? 'high' : 'auto';
+
   return (
     <article 
       className={cn(
@@ -201,47 +208,33 @@ export function ListingCard({ listing, onClick, searchCoordinates }: ListingCard
         <div className="absolute inset-0 flex items-center justify-center p-4">
           {logoUrl ? (
             <div className="w-full h-full flex items-center justify-center">
-              <img 
-                src={logoUrl} 
+              <img
+                src={logoUrl}
                 alt={`${listing.company_name} logo`}
-                className={cn(
-                  "max-w-full max-h-full object-contain transition-opacity duration-300",
-                  imageLoaded ? "opacity-100" : "opacity-0"
-                )}
-                loading="lazy"
+                className="max-w-full max-h-full object-contain"
+                loading={loadingStrategy}
+                fetchPriority={fetchPriority as 'high' | 'low' | 'auto'}
                 onLoad={() => setImageLoaded(true)}
                 onError={(e) => {
                   // Hide broken image and show placeholder
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
-                  const placeholder = target.parentElement?.nextElementSibling;
-                  if (placeholder) {
-                    placeholder.classList.remove('hidden');
-                  }
                   setImageLoaded(true);
                 }}
               />
             </div>
           ) : null}
           
-          {/* Placeholder (always render but conditionally hide) */}
+          {/* Placeholder - always visible, only hide when image loads */}
           <div className={cn(
             "logo-placeholder",
             "w-28 h-28 bg-white text-gray-700 rounded-2xl shadow-sm",
             "flex items-center justify-center text-4xl font-bold tracking-tight",
             "border border-gray-200",
-            logoUrl && !imageLoaded ? "opacity-0" : "",
-            logoUrl ? "hidden" : ""
+            logoUrl && imageLoaded ? "hidden" : ""
           )}>
             {getInitials(listing.company_name)}
           </div>
-          
-          {/* Loading skeleton while image loads */}
-          {logoUrl && !imageLoaded && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-28 h-28 bg-gray-200 rounded-2xl animate-pulse" />
-            </div>
-          )}
         </div>
       </div>
       
