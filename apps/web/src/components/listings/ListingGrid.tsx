@@ -20,7 +20,7 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange }: Listin
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const ITEMS_PER_PAGE = 20;
+  const ITEMS_PER_PAGE = 22;
 
 
   // Reset pagination when filters change
@@ -72,7 +72,15 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange }: Listin
         }
         
         const data = await response.json();
-        
+
+        console.log('📊 ListingGrid API Response:', {
+          page: pageNum,
+          append,
+          resultsCount: data.results?.length || 0,
+          totalCount: data.total,
+          firstFewListings: data.results?.slice(0, 3).map((l: any) => l.company_name)
+        });
+
         // Update listings
         if (append) {
           setListings(prev => [...prev, ...(data.results || [])]);
@@ -200,10 +208,10 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange }: Listin
     );
   }
 
-  // Separate local and nationwide listings for visual delineation
-  const localListings = listings.filter(listing => !listing.is_nationwide);
-  const nationwideListings = listings.filter(listing => listing.is_nationwide);
+  // Separate local and nationwide listings for visual delineation only when there's a location filter
   const hasLocationFilter = filters.coordinates !== null || filters.location !== '';
+  const localListings = hasLocationFilter ? listings.filter(listing => !listing.is_nationwide) : [];
+  const nationwideListings = hasLocationFilter ? listings.filter(listing => listing.is_nationwide) : [];
   const showDelineation = hasLocationFilter && localListings.length > 0 && nationwideListings.length > 0;
 
   return (
@@ -220,12 +228,13 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange }: Listin
             </div>
           )}
           <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {localListings.map((listing) => (
+            {localListings.map((listing, index) => (
               <ListingCard
                 key={listing.id}
                 listing={listing}
                 onClick={() => onListingClick(listing.id)}
                 searchCoordinates={filters.coordinates}
+                index={index}
               />
             ))}
           </div>
@@ -249,27 +258,36 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange }: Listin
         </div>
       )}
 
-      {/* Nationwide Listings */}
-      {nationwideListings.length > 0 && (
+      {/* All Listings (when no location filter) or Nationwide Listings (when location filter) */}
+      {!hasLocationFilter && listings.length > 0 ? (
         <div className="space-y-4">
-          {!showDelineation && nationwideListings.length === listings.length && (
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-gray-900">All Listings</h2>
-              <span className="text-sm text-gray-500">({nationwideListings.length})</span>
-            </div>
-          )}
           <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {nationwideListings.map((listing) => (
+            {listings.map((listing, index) => (
               <ListingCard
                 key={listing.id}
                 listing={listing}
                 onClick={() => onListingClick(listing.id)}
                 searchCoordinates={filters.coordinates}
+                index={index}
               />
             ))}
           </div>
         </div>
-      )}
+      ) : nationwideListings.length > 0 ? (
+        <div className="space-y-4">
+          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {nationwideListings.map((listing, index) => (
+              <ListingCard
+                key={listing.id}
+                listing={listing}
+                onClick={() => onListingClick(listing.id)}
+                searchCoordinates={filters.coordinates}
+                index={localListings.length + index}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* Loading More Indicator */}
       {isLoadingMore && (
