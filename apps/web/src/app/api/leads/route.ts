@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate persona
-    const validPersonas = ['agent', 'investor', 'landlord', 'vendor'];
+    const validPersonas = ['commercial_occupier', 'landlord_developer', 'housebuilder', 'agent', 'government', 'other'];
     if (!validPersonas.includes(persona)) {
       return NextResponse.json(
         { success: false, error: 'Invalid persona' },

@@ -44,10 +44,9 @@ interface TrialSignupModalProps {
 
 const userTypes: { value: UserType; label: string }[] = [
   { value: 'Commercial Occupier', label: 'Commercial Occupier' },
-  { value: 'Landlord/Vendor', label: 'Landlord/Vendor' },
-  { value: 'Developer', label: 'Developer' },
+  { value: 'Landlord/developer', label: 'Landlord/developer' },
   { value: 'Housebuilder', label: 'Housebuilder' },
-  { value: 'Consultant', label: 'Consultant' },
+  { value: 'Agent', label: 'Agent' },
   { value: 'Government', label: 'Government' },
   { value: 'Other', label: 'Other' },
 ]

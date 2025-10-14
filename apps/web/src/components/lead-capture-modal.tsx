@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeadCaptureFormData, LeadPersona } from '@/types/leads';
 import { markLeadModalShown } from '@/lib/lead-capture';
 
@@ -18,19 +19,23 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [selectedPersona, setSelectedPersona] = useState<string>('');
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<LeadCaptureFormData>();
 
   const personaOptions: { value: LeadPersona; label: string }[] = [
+    { value: 'commercial_occupier', label: 'Commercial Occupier' },
+    { value: 'landlord_developer', label: 'Landlord/developer' },
+    { value: 'housebuilder', label: 'Housebuilder' },
     { value: 'agent', label: 'Agent' },
-    { value: 'investor', label: 'Investor' },
-    { value: 'landlord', label: 'Landlord' },
-    { value: 'vendor', label: 'Vendor' },
+    { value: 'government', label: 'Government' },
+    { value: 'other', label: 'Other' },
   ];
 
   const onSubmit = async (data: LeadCaptureFormData) => {
@@ -72,6 +77,7 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
     reset();
     setSubmitStatus('idle');
     setErrorMessage('');
+    setSelectedPersona('');
     onClose();
   };
 
@@ -122,20 +128,29 @@ export function LeadCaptureModal({ isOpen, onClose }: LeadCaptureModalProps) {
             </div>
 
             <div>
-              <Label>What best describes you?</Label>
-              <div className="mt-2 space-y-2">
-                {personaOptions.map((option) => (
-                  <label key={option.value} className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      value={option.value}
-                      {...register('persona', { required: 'Please select an option' })}
-                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300"
-                    />
-                    <span className="text-sm">{option.label}</span>
-                  </label>
-                ))}
-              </div>
+              <Label htmlFor="persona-select">What best describes you?</Label>
+              <Select
+                value={selectedPersona}
+                onValueChange={(value) => {
+                  setSelectedPersona(value);
+                  setValue('persona', value as LeadPersona, { shouldValidate: true });
+                }}
+              >
+                <SelectTrigger id="persona-select" className="w-full mt-2">
+                  <SelectValue placeholder="Select an option" />
+                </SelectTrigger>
+                <SelectContent>
+                  {personaOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input
+                type="hidden"
+                {...register('persona', { required: 'Please select an option' })}
+              />
               {errors.persona && (
                 <p className="text-sm text-red-500 mt-1">{errors.persona.message}</p>
               )}

@@ -1,4 +1,4 @@
-export type LeadPersona = 'agent' | 'investor' | 'landlord' | 'vendor';
+export type LeadPersona = 'commercial_occupier' | 'landlord_developer' | 'housebuilder' | 'agent' | 'government' | 'other';
 
 export interface Lead {
   id: string;

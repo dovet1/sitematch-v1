@@ -100,7 +100,7 @@ export function Pricing() {
     },
     {
       name: 'Pro',
-      price: '£488',
+      price: '£487.50',
       originalPrice: '£975',
       period: '/year',
       description: 'For property professionals',
