@@ -1061,48 +1061,6 @@ function SiteSketcherContent() {
                 >
                   Save As...
                 </button>
-
-                <div className="border-t border-gray-200 my-2"></div>
-
-                <button
-                  onClick={() => {
-                    handleExportPNG();
-                    setShowMobileFileMenu(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors"
-                >
-                  Export PNG
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleExportPDF();
-                    setShowMobileFileMenu(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors"
-                >
-                  Export PDF
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleExportJSON();
-                    setShowMobileFileMenu(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors"
-                >
-                  Export JSON
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleExportCSV();
-                    setShowMobileFileMenu(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors"
-                >
-                  Export CSV
-                </button>
               </div>
             </div>
           </>
