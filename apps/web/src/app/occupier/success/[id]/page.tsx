@@ -240,11 +240,11 @@ export default async function ListingSuccessPage({ params }: PageProps) {
               Our support team is here to help if you need to make changes or have questions about the review process.
             </p>
             <a 
-              href="mailto:rob@sitematcher.co.uk" 
+              href="mailto:tom@sitematcher.co.uk" 
               className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium"
             >
               <Mail className="w-4 h-4 mr-2" />
-              rob@sitematcher.co.uk
+              tom@sitematcher.co.uk
             </a>
           </CardContent>
         </Card>

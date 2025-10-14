@@ -53,11 +53,11 @@ const userTypes: { value: UserType; label: string; description: string; icon: Re
     description: 'Residential developer',
     icon: <TreePine className="h-4 w-4" />
   },
-  { 
-    value: 'Consultant', 
-    label: 'Consultant', 
-    description: 'Property consultant or advisor',
-    icon: <Calculator className="h-4 w-4" />
+  {
+    value: 'Agent',
+    label: 'Agent',
+    description: 'Property agent or broker',
+    icon: <Users className="h-4 w-4" />
   },
   { 
     value: 'Government', 

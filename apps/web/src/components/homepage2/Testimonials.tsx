@@ -5,24 +5,17 @@ import { Star } from 'lucide-react';
 export function Testimonials() {
   const testimonials = [
     {
-      quote: "SiteMatcher helped us secure 3 new tenants in our first month. The quality of leads is outstanding.",
-      author: "Sarah Chen",
-      role: "Portfolio Manager",
-      company: "Urban Developments",
+      quote: "With SiteMatcher I can see the market in seconds. Searching and filtering is straightforward, contacts are right there, and the flyers give me the detail when I need it. It's easily the fastest way I've found to spot real opportunities.",
+      author: "Kerry Northfold",
+      role: "Director & Advisor",
+      company: "Vedra Property Group & Property Managers Association",
       rating: 5,
     },
     {
-      quote: "Finally, a platform that connects us directly with occupiers. No more wasted time on unqualified leads.",
-      author: "James Wilson",
-      role: "Commercial Agent",
-      company: "Wilson Property Group",
-      rating: 5,
-    },
-    {
-      quote: "The verification process means we only see serious requirements. It's saved us countless hours.",
-      author: "Emma Rodriguez",
-      role: "Development Director",
-      company: "Landmark Estates",
+      quote: "SiteMatcher shows me who's active and exactly what they're looking for. I get contacts instantly, and if I want to test an idea, SiteSketcher lets me draw a quick feasibility in minutes. It's straightforward, simple, and saves a huge amount of time.",
+      author: "Henry Foreman",
+      role: "Partner",
+      company: "FMX Urban Property Advisory",
       rating: 5,
     },
   ];
@@ -41,7 +34,7 @@ export function Testimonials() {
         </div>
 
         {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {testimonials.map((testimonial, index) => (
             <div
               key={index}
@@ -61,10 +54,10 @@ export function Testimonials() {
 
               {/* Author */}
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
                   {testimonial.author.split(' ')[0][0]}{testimonial.author.split(' ')[1][0]}
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="font-bold text-gray-900">{testimonial.author}</p>
                   <p className="text-sm text-gray-600">{testimonial.role}</p>
                   <p className="text-sm text-gray-500">{testimonial.company}</p>

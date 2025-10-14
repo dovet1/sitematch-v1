@@ -78,17 +78,10 @@ const keyFeatures = [
 
 const testimonials = [
   {
-    name: 'Sarah Chen',
-    role: 'Commercial Property Agent',
-    company: 'Prime Locations',
-    content: 'SiteSketcher has transformed how I present properties to clients. The visual analysis tools help them understand potential immediately.',
-    rating: 5
-  },
-  {
-    name: 'Michael Roberts',
-    role: 'Development Manager',
-    company: 'Urban Spaces',
-    content: 'Essential for preliminary site planning. The parking overlay feature alone has saved us countless hours of manual calculations.',
+    name: 'Henry Foreman',
+    role: 'Partner',
+    company: 'FMX Urban Property Advisory',
+    content: 'SiteMatcher shows me who\’s active and exactly what they\’re looking for. I get contacts instantly, and if I want to test an idea, SiteSketcher lets me draw a quick feasibility in minutes. It\’s straightforward, simple, and saves a huge amount of time.',
     rating: 5
   }
 ];
@@ -243,35 +236,31 @@ export default function SiteSketcherLanding() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-16 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Testimonial */}
+      <section className="py-16 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
               Trusted by Commercial Real Estate Professionals
             </h2>
           </div>
 
-          <div className="testimonials-grid grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index} className="p-6">
-                <div className="flex items-center mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <blockquote className="text-gray-700 mb-4">
-                  "{testimonial.content}"
-                </blockquote>
-                <div>
-                  <div className="font-semibold text-gray-900">{testimonial.name}</div>
-                  <div className="text-sm text-gray-600">
-                    {testimonial.role} at {testimonial.company}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <Card className="p-8 md:p-10 max-w-3xl mx-auto shadow-lg border-2 border-slate-100">
+            <div className="flex justify-center mb-6">
+              {[...Array(testimonials[0].rating)].map((_, i) => (
+                <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+              ))}
+            </div>
+            <blockquote className="text-lg md:text-xl text-gray-700 text-center mb-8 leading-relaxed">
+              "{testimonials[0].content}"
+            </blockquote>
+            <div className="text-center">
+              <div className="font-semibold text-gray-900 text-lg">{testimonials[0].name}</div>
+              <div className="text-gray-600">
+                {testimonials[0].role}, {testimonials[0].company}
+              </div>
+            </div>
+          </Card>
         </div>
       </section>
 

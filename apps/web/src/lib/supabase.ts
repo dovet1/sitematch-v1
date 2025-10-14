@@ -82,7 +82,7 @@ export interface Database {
           id: string
           email: string
           role: 'occupier' | 'admin'
-          user_type: 'Commercial Occupier' | 'Housebuilder' | 'Consultant' | 'Landlord/Vendor' | 'Developer' | 'Government' | 'Other'
+          user_type: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
           org_id: string | null
           subscription_status: string | null
           stripe_customer_id: string | null
@@ -94,7 +94,7 @@ export interface Database {
           id: string
           email: string
           role?: 'occupier' | 'admin'
-          user_type: 'Commercial Occupier' | 'Housebuilder' | 'Consultant' | 'Landlord/Vendor' | 'Developer' | 'Government' | 'Other'
+          user_type: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
           org_id?: string | null
           subscription_status?: string | null
           stripe_customer_id?: string | null
@@ -106,7 +106,7 @@ export interface Database {
           id?: string
           email?: string
           role?: 'occupier' | 'admin'
-          user_type?: 'Commercial Occupier' | 'Housebuilder' | 'Consultant' | 'Agent' | 'Landlord/Vendor' | 'Developer' | 'Government' | 'Other'
+          user_type?: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
           org_id?: string | null
           subscription_status?: string | null
           stripe_customer_id?: string | null

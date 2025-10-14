@@ -10,7 +10,7 @@ export function Footer() {
       { label: 'Search Requirements', href: '/search' },
     ],
     company: [
-      { label: 'Contact', href: 'mailto:rob@sitematcher.co.uk' },
+      { label: 'Contact', href: 'mailto:tom@sitematcher.co.uk' },
     ],
     legal: [
       { label: 'Terms of Service', href: 'https://app.termly.io/policy-viewer/policy.html?policyUUID=0d60ea82-ecb7-43d4-bf2d-a3ea5a0900c6' },
