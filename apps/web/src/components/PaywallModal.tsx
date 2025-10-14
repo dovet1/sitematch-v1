@@ -31,8 +31,8 @@ const contextConfig = {
     subtext: 'Connect directly with qualified occupiers actively seeking space',
     cta: 'Start Free Trial - View Requirements',
     testimonial: {
-      quote: 'SiteMatcher changed the way we find occupants for sites.',
-      author: 'Rob L., Property Acquisitions, Lidl',
+      quote: 'With SiteMatcher I can see the market in seconds. It\’s easily the fastest way I\’ve found to spot real opportunities.',
+      author: 'Kerry Northfold, Director, Vedra Property',
       rating: 5
     }
   },
@@ -41,8 +41,8 @@ const contextConfig = {
     subtext: 'Advanced property assessment and visualization tools for commercial real estate professionals',
     cta: 'Start Free Trial - Access SiteSketcher',
     testimonial: {
-      quote: 'SiteSketcher saved us hours of manual site analysis - invaluable for property evaluation',
-      author: 'Emma C., Development Manager',
+      quote: 'SiteSketcher lets me draw a quick feasibility in minutes. It\’s straightforward, simple, and saves a huge amount of time',
+      author: 'Henry Foreman, Partner, FMX Urban Property Advisory',
       rating: 5
     }
   },
@@ -51,8 +51,8 @@ const contextConfig = {
     subtext: "Connect your agency to your client's requirements",
     cta: 'Start Free Trial - Create Agency Profile',
     testimonial: {
-      quote: "SiteMatcher provides agencies the opportunity to show their client's requirements to an active community of property professionals",
-      author: 'Rob L., Property Acquisitions, Lidl',
+      quote: "With SiteMatcher I can see the market in seconds. It\’s easily the fastest way I\’ve found to spot real opportunities.",
+      author: 'Kerry Northfold, Director, Vedra Property',
       rating: 5
     }
   },
@@ -61,8 +61,8 @@ const contextConfig = {
     subtext: 'Access premium features and professional tools',
     cta: 'Start Free Trial - No Charge',
     testimonial: {
-      quote: 'Game-changer for our property search process',
-      author: 'Mike T., Facilities Manager',
+      quote: 'With SiteMatcher I can see the market in seconds. It\’s easily the fastest way I\’ve found to spot real opportunities.',
+      author: 'Kerry Northfold, Director, Vedra Property',
       rating: 5
     }
   }

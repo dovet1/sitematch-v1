@@ -507,7 +507,7 @@ export function SimplifiedListingModal({
                         </Badge>
                       ) : (
                         <div className="space-y-2">
-                          <h5 className="font-medium text-foreground">Preferred Locations</h5>
+                          <h5 className="font-medium text-foreground">Target Locations</h5>
                           <div className="flex flex-wrap gap-2">
                             {(listing.locations?.all as any).map((location: any, index: number) => (
                               <Badge key={index} variant="outline" className="bg-primary-50 text-primary-800 border-primary-200">
