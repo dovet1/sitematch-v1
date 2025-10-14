@@ -257,7 +257,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   const tabs = [
     { id: 'overview', label: 'overview' },
     { id: 'requirements', label: 'requirements' },
-    { id: 'locations', label: 'locations' },
+    { id: 'locations', label: 'target locations' },
     { id: 'contact', label: 'contact' },
     { id: 'faqs', label: 'faqs' },
     { id: 'agent', label: 'agents' }
@@ -3723,7 +3723,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 <MapPin className="w-4 h-4 text-white" />
                               </div>
                               <div>
-                                <h4 className="font-semibold text-gray-900 text-base">Preferred Locations</h4>
+                                <h4 className="font-semibold text-gray-900 text-base">Target Locations</h4>
                                 <p className="text-xs text-gray-600">Target specific areas or go nationwide</p>
                               </div>
                             </div>

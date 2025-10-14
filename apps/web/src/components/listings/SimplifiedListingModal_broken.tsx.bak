@@ -1140,7 +1140,7 @@ export function SimplifiedListingModal({
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            <h5 className="font-medium text-foreground">Preferred Locations</h5>
+                            <h5 className="font-medium text-foreground">Target Locations</h5>
                             {listing.locations?.all?.length > 0 ? (
                               <SmartList
                                 items={listing.locations.all.map(loc => cleanLocationName(loc.place_name))}

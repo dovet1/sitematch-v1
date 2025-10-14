@@ -393,7 +393,7 @@ export function ListingReview({ listing }: ListingReviewProps) {
             </div>
           ) : listing.locations && listing.locations.length > 0 ? (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground mb-3">Specific Preferred Locations:</p>
+              <p className="text-sm text-muted-foreground mb-3">Specific Target Locations:</p>
               {listing.locations.map((location: any, index: number) => (
                 <div key={location.id || index} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
