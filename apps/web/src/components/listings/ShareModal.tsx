@@ -110,14 +110,6 @@ export function ShareModal({
     return `Check out this site requirement from ${companyName} on SiteMatcher here:`;
   };
 
-  const shareToLinkedIn = () => {
-    if (!shareData?.share_url) return;
-    
-    const message = generateSocialMessage();
-    const linkedInUrl = `https://www.linkedin.com/feed/update/urn:li:share:?text=${encodeURIComponent(`${message} ${shareData.share_url}`)}`;
-    window.open(linkedInUrl, '_blank');
-  };
-
   const shareToWhatsApp = () => {
     if (!shareData?.share_url) return;
     
@@ -248,34 +240,59 @@ export function ShareModal({
 
                 <Separator className="bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-                {/* Enhanced Social Media Sharing */}
-                <div className="space-y-4">
+                {/* Quick Share Options */}
+                <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-violet-600" />
-                    <Label className="font-medium text-gray-900">Share on Social Media</Label>
+                    <Share2 className="h-4 w-4 text-violet-600" />
+                    <Label className="font-medium text-gray-900">Quick Share</Label>
                   </div>
-                  
+
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Button
-                      onClick={shareToLinkedIn}
+                      onClick={copyToClipboard}
                       variant="outline"
-                      className="group flex h-12 items-center justify-start gap-3 border-blue-200 bg-gradient-to-r from-blue-50 to-blue-50/50 hover:from-blue-100 hover:to-blue-100/50 transition-all duration-200"
+                      className={`group flex h-14 flex-col items-center justify-center gap-1.5 border-2 transition-all duration-200 ${
+                        copySuccess
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50/50 hover:border-violet-300 hover:from-violet-100 hover:to-purple-100/50'
+                      }`}
                     >
-                      <div className="flex h-8 w-8 items-center justify-center rounded bg-[#0A66C2]">
-                        <span className="text-xs font-bold text-white">in</span>
-                      </div>
-                      <span className="font-medium text-blue-900">LinkedIn</span>
-                      <ExternalLink className="ml-auto h-3 w-3 text-blue-600 group-hover:scale-110 transition-transform" />
+                      <AnimatePresence mode="wait">
+                        {copySuccess ? (
+                          <motion.div
+                            key="success"
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.8, opacity: 0 }}
+                            className="flex flex-col items-center gap-1"
+                          >
+                            <Check className="h-5 w-5 text-green-600" />
+                            <span className="text-xs font-medium text-green-900">Copied!</span>
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key="copy"
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.8, opacity: 0 }}
+                            className="flex flex-col items-center gap-1"
+                          >
+                            <Copy className="h-5 w-5 text-violet-600" />
+                            <span className="text-xs font-medium text-violet-900">Copy Link</span>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </Button>
 
                     <Button
                       onClick={shareToWhatsApp}
                       variant="outline"
-                      className="group flex h-12 items-center justify-start gap-3 border-green-200 bg-gradient-to-r from-green-50 to-green-50/50 hover:from-green-100 hover:to-green-100/50 transition-all duration-200"
+                      className="group flex h-14 flex-col items-center justify-center gap-1.5 border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50/50 hover:border-green-300 hover:from-green-100 hover:to-emerald-100/50 transition-all duration-200"
                     >
-                      <MessageCircle className="h-6 w-6 text-[#25D366]" />
-                      <span className="font-medium text-green-900">WhatsApp</span>
-                      <ExternalLink className="ml-auto h-3 w-3 text-green-600 group-hover:scale-110 transition-transform" />
+                      <div className="flex items-center justify-center w-5 h-5">
+                        <MessageCircle className="w-full h-full text-[#25D366] fill-current" strokeWidth={2} />
+                      </div>
+                      <span className="text-xs font-medium text-green-900">WhatsApp</span>
                     </Button>
                   </div>
                 </div>
