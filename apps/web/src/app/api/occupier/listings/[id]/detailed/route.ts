@@ -88,7 +88,7 @@ export async function GET(
       );
     }
 
-    // Get related data - since user is authenticated and owns the listing, 
+    // Get related data - since user is authenticated and owns the listing,
     // they can access all files regardless of listing status
     const [
       { data: locations },
@@ -105,6 +105,12 @@ export async function GET(
       supabase.from('listing_sectors').select('sector_id, sectors(id, name)').eq('listing_id', id),
       supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id)
     ]);
+
+    console.log('Occupier detailed route - FAQs from database:', {
+      listingId: id,
+      faqsCount: faqs?.length || 0,
+      faqs
+    });
 
 
     // Get sectors and use classes

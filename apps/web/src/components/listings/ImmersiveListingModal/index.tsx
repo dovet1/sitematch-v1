@@ -51,14 +51,24 @@ export function ImmersiveListingModal({
   }, []);
   
   // Memoize tabs array to prevent unnecessary re-renders
-  const tabs = useMemo(() => [
-    { id: 'overview', label: 'overview' },
-    { id: 'requirements', label: 'requirements' },
-    { id: 'locations', label: 'locations' },
-    { id: 'contact', label: 'contact' },
-    { id: 'faqs', label: 'faqs' },
-    { id: 'agent', label: 'agent' }
-  ], []);
+  // Filter out FAQs tab if there are no FAQs
+  const tabs = useMemo(() => {
+    const allTabs = [
+      { id: 'overview', label: 'overview' },
+      { id: 'requirements', label: 'requirements' },
+      { id: 'locations', label: 'locations' },
+      { id: 'contact', label: 'contact' },
+      { id: 'faqs', label: 'faqs' },
+      { id: 'agent', label: 'agent' }
+    ];
+
+    // Hide FAQs tab if there are no FAQs
+    if (!listing?.faqs || listing.faqs.length === 0) {
+      return allTabs.filter(tab => tab.id !== 'faqs');
+    }
+
+    return allTabs;
+  }, [listing?.faqs]);
 
 
   // Prevent body scroll and pull-to-refresh when modal is open on mobile
@@ -862,19 +872,19 @@ export function ImmersiveListingModal({
 
                     {/* Tab Navigation */}
                     <div className={styles.tabNavigation}>
-                      {['overview', 'requirements', 'locations', 'contact', 'faqs', 'agent'].map((tab) => (
+                      {tabs.map((tab) => (
                         <button
-                          key={tab}
-                          onClick={() => setActiveTab(tab)}
+                          key={tab.id}
+                          onClick={() => setActiveTab(tab.id)}
                           className={cn(
                             styles.tabButton,
-                            activeTab === tab && styles.tabButtonActive
+                            activeTab === tab.id && styles.tabButtonActive
                           )}
                         >
-                          {tab === 'overview' ? `From ${listing?.company?.name || 'Company'}` :
-                           tab === 'faqs' ? 'FAQs' :
-                           tab === 'agent' ? 'Agents' : 
-                           tab.charAt(0).toUpperCase() + tab.slice(1)}
+                          {tab.id === 'overview' ? `From ${listing?.company?.name || 'Company'}` :
+                           tab.id === 'faqs' ? 'FAQs' :
+                           tab.id === 'agent' ? 'Agents' :
+                           tab.label.charAt(0).toUpperCase() + tab.label.slice(1)}
                         </button>
                       ))}
                     </div>
