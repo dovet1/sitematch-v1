@@ -8,6 +8,7 @@ import { Plus, FileText, Clock, CheckCircle, AlertTriangle, Eye, Building2, Tren
 import Link from 'next/link';
 import StatusBadge from '../components/StatusBadge';
 import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal';
+import { AgencyModal } from '@/components/agencies/AgencyModal';
 import { useState, useEffect } from 'react';
 import type { User } from '@supabase/auth-js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -45,6 +46,8 @@ export default function OccupierDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('requirements');
   const [showWelcomeTip, setShowWelcomeTip] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewAgencyId, setPreviewAgencyId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -665,11 +668,16 @@ export default function OccupierDashboard() {
                             )}
                           </div>
                           <div className="flex gap-2">
-                            <Button asChild size="sm" variant="outline">
-                              <Link href={`/agencies/${agency.id}`}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                Preview
-                              </Link>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setPreviewAgencyId(agency.id);
+                                setShowPreview(true);
+                              }}
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              Preview
                             </Button>
                             <Button asChild size="sm">
                               <Link href={`/agencies/${agency.id}/edit`}>
@@ -687,6 +695,16 @@ export default function OccupierDashboard() {
           </Tabs>
         </div>
       </div>
+
+      {/* Agency Preview Modal */}
+      <AgencyModal
+        agencyId={previewAgencyId}
+        isOpen={showPreview}
+        onClose={() => {
+          setShowPreview(false);
+          setPreviewAgencyId(null);
+        }}
+      />
     </div>
   );
 }
