@@ -117,6 +117,13 @@ export function ContactsModal({
   };
 
   const handleCancelEdit = () => {
+    // If we're in editingContact mode (from parent), close the modal
+    if (editingContact) {
+      onClose();
+      return;
+    }
+
+    // Otherwise, just reset internal state
     setInternalEditingContact(null);
     setIsAddingNew(false);
     setFormData({
