@@ -1002,18 +1002,18 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   const handleSiteSizeSave = async (data: any) => {
     try {
       const supabase = createClientClient();
-      
+
       // Build updates based on listing type
       const updates: any = {};
-      
+
       if (listingData?.listingType === 'commercial') {
-        if (data.siteSizeMin !== undefined) updates.site_size_min = data.siteSizeMin;
-        if (data.siteSizeMax !== undefined) updates.site_size_max = data.siteSizeMax;
+        if ('siteSizeMin' in data) updates.site_size_min = data.siteSizeMin;
+        if ('siteSizeMax' in data) updates.site_size_max = data.siteSizeMax;
       } else {
-        if (data.dwellingCountMin !== undefined) updates.dwelling_count_min = data.dwellingCountMin;
-        if (data.dwellingCountMax !== undefined) updates.dwelling_count_max = data.dwellingCountMax;
-        if (data.siteAcreageMin !== undefined) updates.site_acreage_min = data.siteAcreageMin;
-        if (data.siteAcreageMax !== undefined) updates.site_acreage_max = data.siteAcreageMax;
+        if ('dwellingCountMin' in data) updates.dwelling_count_min = data.dwellingCountMin;
+        if ('dwellingCountMax' in data) updates.dwelling_count_max = data.dwellingCountMax;
+        if ('siteAcreageMin' in data) updates.site_acreage_min = data.siteAcreageMin;
+        if ('siteAcreageMax' in data) updates.site_acreage_max = data.siteAcreageMax;
       }
 
       const { error } = await supabase
@@ -3349,8 +3349,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 </div>
                               ) : (
                                 <div className="flex gap-3">
-                                  <Button 
-                                    variant="outline" 
+                                  <Button
+                                    variant="outline"
                                     className="flex-1 h-12 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-50"
                                     onClick={() => {
                                       setEditingData({
@@ -3363,6 +3363,20 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     <Edit className="w-4 h-4 mr-2" />
                                     {(listingData?.dwellingCountMin || listingData?.dwellingCountMax) ? 'Edit Dwellings' : 'Add Dwellings'}
                                   </Button>
+                                  {(listingData?.dwellingCountMin || listingData?.dwellingCountMax) && (
+                                    <Button
+                                      variant="outline"
+                                      className="h-12 border-red-200 hover:border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700"
+                                      onClick={async () => {
+                                        await handleSiteSizeSave({
+                                          dwellingCountMin: null,
+                                          dwellingCountMax: null
+                                        });
+                                      }}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -3472,8 +3486,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 </div>
                               ) : (
                                 <div className="flex gap-3">
-                                  <Button 
-                                    variant="outline" 
+                                  <Button
+                                    variant="outline"
                                     className="flex-1 h-12 border-amber-200 hover:border-amber-300 hover:bg-amber-50"
                                     onClick={() => {
                                       setEditingData({
@@ -3486,6 +3500,20 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     <Edit className="w-4 h-4 mr-2" />
                                     {(listingData?.siteAcreageMin || listingData?.siteAcreageMax) ? 'Edit Acreage' : 'Add Acreage'}
                                   </Button>
+                                  {(listingData?.siteAcreageMin || listingData?.siteAcreageMax) && (
+                                    <Button
+                                      variant="outline"
+                                      className="h-12 border-red-200 hover:border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700"
+                                      onClick={async () => {
+                                        await handleSiteSizeSave({
+                                          siteAcreageMin: null,
+                                          siteAcreageMax: null
+                                        });
+                                      }}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -6655,15 +6683,25 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               Dwelling Count
                             </h4>
                             <div className="flex items-center gap-2">
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => openModal('siteSize')}
                               >
                                 <Edit className="w-3 h-3 mr-1" />
                                 Edit
                               </Button>
-                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                                onClick={async () => {
+                                  await handleSiteSizeSave({
+                                    dwellingCountMin: null,
+                                    dwellingCountMax: null
+                                  });
+                                }}
+                              >
                                 <Trash2 className="w-3 h-3 mr-1" />
                                 Remove
                               </Button>
@@ -6703,15 +6741,25 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               Site size (acres)
                             </h4>
                             <div className="flex items-center gap-2">
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => openModal('siteSize')}
                               >
                                 <Edit className="w-3 h-3 mr-1" />
                                 Edit
                               </Button>
-                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                                onClick={async () => {
+                                  await handleSiteSizeSave({
+                                    siteAcreageMin: null,
+                                    siteAcreageMax: null
+                                  });
+                                }}
+                              >
                                 <Trash2 className="w-3 h-3 mr-1" />
                                 Remove
                               </Button>
