@@ -25,17 +25,14 @@ export async function hasListingChanges(listingId: string): Promise<{
       .eq('status', 'approved')
       .order('version_number', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (versionError) {
-      // No approved version means this is still a draft
-      if (versionError.code === 'PGRST116') {
-        return { hasChanges: false };
-      }
       return { hasChanges: false, error: versionError.message };
     }
 
     if (!approvedVersion) {
+      // No approved version means this is still a draft
       return { hasChanges: false };
     }
 
@@ -162,7 +159,7 @@ function compareArrays(current: any[], approved: any[], ignoreFields: string[] =
  */
 export async function getLatestApprovedVersion(listingId: string) {
   const supabase = createClientClient();
-  
+
   const { data, error } = await supabase
     .from('listing_versions')
     .select('*')
@@ -170,7 +167,7 @@ export async function getLatestApprovedVersion(listingId: string) {
     .eq('status', 'approved')
     .order('version_number', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (error) {
     return null;
