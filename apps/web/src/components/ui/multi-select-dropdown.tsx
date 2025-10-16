@@ -142,7 +142,7 @@ export function MultiSelectDropdown({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
+                  value={option.label}
                   onSelect={() => handleSelect(option.value)}
                   className="cursor-pointer"
                 >
