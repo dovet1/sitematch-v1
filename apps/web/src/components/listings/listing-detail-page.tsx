@@ -2024,9 +2024,34 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         current: (listingData.brochureFiles?.length ? 1 : 0) + ((listingData.sectors?.length || listingData.useClassIds?.length) ? 1 : 0)
       },
       requirements: {
-        completed: !!(listingData.sectors?.length && listingData.useClassIds?.length && listingData.siteSizeMin && listingData.siteSizeMax),
-        total: 3,
-        current: (listingData.sectors?.length ? 1 : 0) + (listingData.useClassIds?.length ? 1 : 0) + (listingData.siteSizeMin && listingData.siteSizeMax ? 1 : 0)
+        completed: (() => {
+          if (listingData.listingType === 'residential') {
+            // Residential: only require dwelling count OR acreage (sectors/use classes not relevant)
+            const hasDwelling = !!(listingData.dwellingCountMin && listingData.dwellingCountMax);
+            const hasAcreage = !!(listingData.siteAcreageMin && listingData.siteAcreageMax);
+            return hasDwelling || hasAcreage;
+          } else {
+            // Commercial: require sectors, use classes, and site size
+            const hasCategories = !!(listingData.sectors?.length && listingData.useClassIds?.length);
+            return hasCategories && !!(listingData.siteSizeMin && listingData.siteSizeMax);
+          }
+        })(),
+        total: listingData.listingType === 'residential' ? 1 : 3,
+        current: (() => {
+          if (listingData.listingType === 'residential') {
+            // Residential: just count if dwelling OR acreage is filled
+            const hasDwelling = !!(listingData.dwellingCountMin && listingData.dwellingCountMax);
+            const hasAcreage = !!(listingData.siteAcreageMin && listingData.siteAcreageMax);
+            return (hasDwelling || hasAcreage) ? 1 : 0;
+          } else {
+            // Commercial: count all three requirements
+            let count = 0;
+            count += listingData.sectors?.length ? 1 : 0;
+            count += listingData.useClassIds?.length ? 1 : 0;
+            count += (listingData.siteSizeMin && listingData.siteSizeMax) ? 1 : 0;
+            return count;
+          }
+        })()
       },
       locations: {
         completed: !!(listingData.locations?.length || listingData.locationSearchNationwide),
