@@ -44,20 +44,9 @@ export async function GET(
     }
 
     // Get the latest approved version
-    // First, let's see all versions for debugging
-    const { data: allVersions } = await supabase
-      .from('listing_versions')
-      .select('version_number, status, created_at')
-      .eq('listing_id', id)
-      .order('version_number', { ascending: false });
-
-    console.log('All listing versions:', {
-      listingId: id,
-      versions: allVersions
-    });
-
-    // Try to get the live version first, then fall back to latest approved
-    const { data: liveVersion } = await supabase
+    // Use adminSupabase to bypass RLS since we've already verified listing is approved
+    // First try to get the live version
+    const liveVersionResult = await adminSupabase
       .from('listing_versions')
       .select('content, version_number, created_at, is_live')
       .eq('listing_id', id)
@@ -65,9 +54,10 @@ export async function GET(
       .eq('is_live', true)
       .single();
 
-    const { data: approvedVersion, error: versionError } = liveVersion
-      ? { data: liveVersion, error: null }
-      : await supabase
+    // If no live version, get the latest approved version
+    const versionResult = liveVersionResult.data
+      ? liveVersionResult
+      : await adminSupabase
           .from('listing_versions')
           .select('content, version_number, created_at, is_live')
           .eq('listing_id', id)
@@ -76,26 +66,8 @@ export async function GET(
           .limit(1)
           .single();
 
-    console.log('Fetched approved version:', {
-      listingId: id,
-      versionNumber: approvedVersion?.version_number,
-      isLive: approvedVersion?.is_live,
-      usedLiveVersion: !!liveVersion
-    });
-    
-    // Temporary debug for production issue
-    const isDebug = request.nextUrl.searchParams.get('debug');
-    if (isDebug) {
-      return NextResponse.json({
-        debug: true,
-        listing_id: id,
-        version_found: !!approvedVersion,
-        version_number: approvedVersion?.version_number,
-        created_at: approvedVersion?.created_at,
-        has_locations: !!approvedVersion?.content && JSON.parse(approvedVersion.content).locations?.length,
-        location_count: approvedVersion?.content ? JSON.parse(approvedVersion.content).locations?.length : 0
-      });
-    }
+    const approvedVersion = versionResult.data;
+    const versionError = versionResult.error;
 
     if (versionError || !approvedVersion) {
       // Fallback to current database state if no approved version exists
@@ -261,18 +233,12 @@ export async function GET(
     }
 
     // Use the approved version content
-    // Check if content needs to be parsed from JSON string
-    const versionContent = typeof approvedVersion.content === 'string'
-      ? JSON.parse(approvedVersion.content)
-      : approvedVersion.content;
-
-    console.log('API detailed route - Version content keys:', {
-      listingId: id,
-      versionNumber: approvedVersion.version_number,
-      contentKeys: Object.keys(versionContent),
-      hasFaqsKey: 'faqs' in versionContent,
-      faqsValue: versionContent.faqs
-    });
+    // At this point, approvedVersion is guaranteed to exist (after the null check above)
+    // TypeScript can't narrow the Supabase type properly, so we use type assertion
+    const versionData = approvedVersion as { content: string | object; version_number: number; created_at: string; is_live: boolean };
+    const versionContent = typeof versionData.content === 'string'
+      ? JSON.parse(versionData.content)
+      : versionData.content;
 
     // Extract data from the version content
     const listingData = versionContent.listing || {};
@@ -282,12 +248,6 @@ export async function GET(
     const contacts = versionContent.contacts || [];
     const sectors = (versionContent.sectors || []).map((s: any) => s.sector).filter(Boolean);
     const useClasses = (versionContent.use_classes || []).map((uc: any) => uc.use_class).filter(Boolean);
-
-    console.log('API detailed route - FAQs extracted:', {
-      listingId: id,
-      faqsCount: faqs.length,
-      faqs
-    });
     
     // Get current listing agents from junction table
     const { data: listingAgents } = await supabase

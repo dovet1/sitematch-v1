@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { createClientClient } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, FileText, Clock, CheckCircle, AlertTriangle, Eye, Building2, TrendingUp, Users, MapPin, X } from 'lucide-react';
+import { Plus, FileText, Clock, CheckCircle, AlertTriangle, Eye, Building2, TrendingUp, Users, MapPin, X, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '../components/StatusBadge';
 import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal';
@@ -13,6 +13,16 @@ import { useState, useEffect } from 'react';
 import type { User } from '@supabase/auth-js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +58,8 @@ export default function OccupierDashboard() {
   const [showWelcomeTip, setShowWelcomeTip] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
   const [previewAgencyId, setPreviewAgencyId] = useState<string | null>(null);
+  const [listingToDelete, setListingToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -147,16 +159,42 @@ export default function OccupierDashboard() {
     };
   }, [router]);
 
+  // Delete listing handler
+  const handleDeleteListing = async (listingId: string) => {
+    if (!user) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/occupier/listings/${listingId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete listing');
+      }
+
+      // Remove from local state
+      setListings(listings.filter(l => l.id !== listingId));
+      setListingToDelete(null);
+    } catch (error) {
+      console.error('Error deleting listing:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete listing');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Format date helper
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (diffInDays === 0) return 'Today';
     if (diffInDays === 1) return 'Yesterday';
     if (diffInDays < 7) return `${diffInDays} days ago`;
-    
+
     return date.toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
@@ -525,6 +563,17 @@ export default function OccupierDashboard() {
                           
                           {/* Right Side - Premium Actions */}
                           <div className="flex items-center gap-2 ml-16 sm:ml-0">
+                            {/* Delete Button */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setListingToDelete(listing.id)}
+                              className="h-9 w-9 p-0 rounded-lg border border-border/60 bg-card/50 hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive shadow-sm hover:shadow transition-all duration-200"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span className="sr-only">Delete listing</span>
+                            </Button>
+
                             {/* Enhanced Preview Button */}
                             <Button
                               asChild
@@ -537,7 +586,7 @@ export default function OccupierDashboard() {
                                 <span className="sr-only">Preview listing</span>
                               </Link>
                             </Button>
-                            
+
                             {/* Enhanced Primary Action */}
                             <Button
                               asChild
@@ -705,6 +754,28 @@ export default function OccupierDashboard() {
           setPreviewAgencyId(null);
         }}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!listingToDelete} onOpenChange={(open) => !open && setListingToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Listing?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this listing? This action cannot be undone and will permanently remove the listing and all its data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => listingToDelete && handleDeleteListing(listingToDelete)}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

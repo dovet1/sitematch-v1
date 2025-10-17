@@ -106,13 +106,6 @@ export async function GET(
       supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id)
     ]);
 
-    console.log('Occupier detailed route - FAQs from database:', {
-      listingId: id,
-      faqsCount: faqs?.length || 0,
-      faqs
-    });
-
-
     // Get sectors and use classes
     const allSectors = (listingSectors?.map((ls: any) => ls.sectors).filter(Boolean) || []);
     const allUseClasses = (listingUseClasses?.map((luc: any) => luc.use_classes).filter(Boolean) || []);

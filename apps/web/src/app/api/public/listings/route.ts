@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServerClient();
 
-    // Build the query - RLS policies will handle filtering for approved listings
+    // Build the query - explicitly filter for approved listings
     let query = supabase
       .from('listings')
       .select(`
@@ -66,7 +66,8 @@ export async function GET(request: NextRequest) {
         company_domain,
         created_at,
         current_version_id
-      `);
+      `)
+      .eq('status', 'approved');
 
 
     // Apply location filtering
