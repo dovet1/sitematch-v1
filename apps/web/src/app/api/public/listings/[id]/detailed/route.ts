@@ -234,11 +234,11 @@ export async function GET(
 
     // Use the approved version content
     // At this point, approvedVersion is guaranteed to exist (after the null check above)
-    // Check if content needs to be parsed from JSON string
-    const content = approvedVersion.content;
-    const versionContent = typeof content === 'string'
-      ? JSON.parse(content)
-      : content;
+    // TypeScript can't narrow the Supabase type properly, so we use type assertion
+    const versionData = approvedVersion as { content: string | object; version_number: number; created_at: string; is_live: boolean };
+    const versionContent = typeof versionData.content === 'string'
+      ? JSON.parse(versionData.content)
+      : versionData.content;
 
     // Extract data from the version content
     const listingData = versionContent.listing || {};
