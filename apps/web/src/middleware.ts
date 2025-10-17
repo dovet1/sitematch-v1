@@ -145,8 +145,7 @@ export async function middleware(request: NextRequest) {
   // Handle search page differently - allow access but client will show modal if no subscription
   const isSearchPage = request.nextUrl.pathname === '/search'
 
-  // For subscription routes, always redirect to pricing if no subscription
-  // (whether logged in or not, since subscription is required)
+  // For subscription routes, redirect based on auth and subscription status
   if (isSubscriptionRoute || isListingPage) {
     if (user) {
       // Logged in user - check subscription
@@ -169,7 +168,12 @@ export async function middleware(request: NextRequest) {
             }
           }
 
-          // Redirect to pricing with return URL
+          // For SiteSketcher, redirect free users to landing page
+          if (request.nextUrl.pathname.startsWith('/sitesketcher')) {
+            return NextResponse.redirect(new URL('/sitesketcher/landing', request.url))
+          }
+
+          // For other subscription routes, redirect to pricing with return URL
           const pricingUrl = new URL('/pricing', request.url)
           pricingUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
           pricingUrl.searchParams.set('reason', 'subscription_required')
@@ -177,13 +181,21 @@ export async function middleware(request: NextRequest) {
         }
       } catch (error) {
         console.error('Subscription check error:', error)
-        // On error, redirect to pricing to be safe
+        // On error, redirect to landing for SiteSketcher, pricing for others
+        if (request.nextUrl.pathname.startsWith('/sitesketcher')) {
+          return NextResponse.redirect(new URL('/sitesketcher/landing', request.url))
+        }
         const pricingUrl = new URL('/pricing', request.url)
         pricingUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
         return NextResponse.redirect(pricingUrl)
       }
     } else {
-      // Not logged in - redirect to pricing (they'll need to sign up for subscription anyway)
+      // Not logged in - redirect to landing page for SiteSketcher
+      if (request.nextUrl.pathname.startsWith('/sitesketcher')) {
+        return NextResponse.redirect(new URL('/sitesketcher/landing', request.url))
+      }
+
+      // For other routes, redirect to pricing
       const pricingUrl = new URL('/pricing', request.url)
       pricingUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
       pricingUrl.searchParams.set('reason', 'subscription_required')
