@@ -63,20 +63,6 @@ export async function GET(
           .order('version_number', { ascending: false })
           .limit(1)
           .single();
-    
-    // Temporary debug for production issue
-    const isDebug = request.nextUrl.searchParams.get('debug');
-    if (isDebug) {
-      return NextResponse.json({
-        debug: true,
-        listing_id: id,
-        version_found: !!approvedVersion,
-        version_number: approvedVersion?.version_number,
-        created_at: approvedVersion?.created_at,
-        has_locations: !!approvedVersion?.content && JSON.parse(approvedVersion.content).locations?.length,
-        location_count: approvedVersion?.content ? JSON.parse(approvedVersion.content).locations?.length : 0
-      });
-    }
 
     if (versionError || !approvedVersion) {
       // Fallback to current database state if no approved version exists
