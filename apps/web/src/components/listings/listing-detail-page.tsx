@@ -1762,7 +1762,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           .eq('file_type', 'logo')
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (error || !logoFile) {
           return '';
