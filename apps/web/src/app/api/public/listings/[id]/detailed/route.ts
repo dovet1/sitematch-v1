@@ -44,20 +44,8 @@ export async function GET(
     }
 
     // Get the latest approved version
-    // First, let's see all versions for debugging
-    const { data: allVersions } = await supabase
-      .from('listing_versions')
-      .select('version_number, status, created_at')
-      .eq('listing_id', id)
-      .order('version_number', { ascending: false });
-
-    console.log('All listing versions:', {
-      listingId: id,
-      versions: allVersions
-    });
-
-    // Try to get the live version first, then fall back to latest approved
-    const { data: liveVersion } = await supabase
+    // Use adminSupabase to bypass RLS since we've already verified listing is approved
+    const { data: liveVersion } = await adminSupabase
       .from('listing_versions')
       .select('content, version_number, created_at, is_live')
       .eq('listing_id', id)
@@ -67,7 +55,7 @@ export async function GET(
 
     const { data: approvedVersion, error: versionError } = liveVersion
       ? { data: liveVersion, error: null }
-      : await supabase
+      : await adminSupabase
           .from('listing_versions')
           .select('content, version_number, created_at, is_live')
           .eq('listing_id', id)
@@ -75,13 +63,6 @@ export async function GET(
           .order('version_number', { ascending: false })
           .limit(1)
           .single();
-
-    console.log('Fetched approved version:', {
-      listingId: id,
-      versionNumber: approvedVersion?.version_number,
-      isLive: approvedVersion?.is_live,
-      usedLiveVersion: !!liveVersion
-    });
     
     // Temporary debug for production issue
     const isDebug = request.nextUrl.searchParams.get('debug');
@@ -266,14 +247,6 @@ export async function GET(
       ? JSON.parse(approvedVersion.content)
       : approvedVersion.content;
 
-    console.log('API detailed route - Version content keys:', {
-      listingId: id,
-      versionNumber: approvedVersion.version_number,
-      contentKeys: Object.keys(versionContent),
-      hasFaqsKey: 'faqs' in versionContent,
-      faqsValue: versionContent.faqs
-    });
-
     // Extract data from the version content
     const listingData = versionContent.listing || {};
     const locations = versionContent.locations || [];
@@ -282,12 +255,6 @@ export async function GET(
     const contacts = versionContent.contacts || [];
     const sectors = (versionContent.sectors || []).map((s: any) => s.sector).filter(Boolean);
     const useClasses = (versionContent.use_classes || []).map((uc: any) => uc.use_class).filter(Boolean);
-
-    console.log('API detailed route - FAQs extracted:', {
-      listingId: id,
-      faqsCount: faqs.length,
-      faqs
-    });
     
     // Get current listing agents from junction table
     const { data: listingAgents } = await supabase

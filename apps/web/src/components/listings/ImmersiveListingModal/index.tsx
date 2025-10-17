@@ -136,8 +136,16 @@ export function ImmersiveListingModal({
       
       try {
         const endpoint = apiEndpoint || `/api/public/listings/${listingId}/detailed`;
-        const response = await fetch(endpoint);
-        
+        const timestamp = new Date().getTime();
+        const urlWithTimestamp = `${endpoint}?t=${timestamp}`;
+        const response = await fetch(urlWithTimestamp, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+
         if (!response.ok) {
           throw new Error('Failed to fetch listing details');
         }
