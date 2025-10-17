@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.sitematcher.co.uk'),
   title: {
-    default: 'SiteMatcher - Connect Sites with Verified Property Requirements',
+    default: 'SiteMatcher | Find Tenants & Buyers Actively Looking for Sites',
     template: '%s | SiteMatcher'
   },
   description: 'Access 1000+ verified commercial and residential property requirements. Match your sites with qualified companies actively seeking their next location. Trusted by 500+ property professionals.',
@@ -75,8 +75,34 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "url": "https://www.sitematcher.co.uk/",
+    "name": "SiteMatcher",
+    "alternateName": "SiteMatcher UK"
+  };
+
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "SiteMatcher",
+    "url": "https://www.sitematcher.co.uk",
+    "logo": "https://www.sitematcher.co.uk/logo.svg"
+  };
+
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <Header />
