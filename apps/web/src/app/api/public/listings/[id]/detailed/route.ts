@@ -55,8 +55,8 @@ export async function GET(
       .single();
 
     // If no live version, get the latest approved version
-    let approvedVersion = liveVersion;
-    let versionError = liveError;
+    let approvedVersion: typeof liveVersion = liveVersion;
+    let versionError: typeof liveError = liveError;
 
     if (!liveVersion) {
       const result = await adminSupabase
@@ -238,9 +238,10 @@ export async function GET(
     // Use the approved version content
     // At this point, approvedVersion is guaranteed to exist (after the null check above)
     // Check if content needs to be parsed from JSON string
-    const versionContent = typeof approvedVersion!.content === 'string'
-      ? JSON.parse(approvedVersion!.content)
-      : approvedVersion!.content;
+    const content = approvedVersion.content;
+    const versionContent = typeof content === 'string'
+      ? JSON.parse(content)
+      : content;
 
     // Extract data from the version content
     const listingData = versionContent.listing || {};
