@@ -399,7 +399,9 @@ function SiteSketcherContent() {
       mapRef.current?.setViewMode(newMode);
       return {
         ...prev,
-        viewMode: newMode
+        viewMode: newMode,
+        // Automatically turn off 3D buildings when switching to 2D mode
+        show3DBuildings: newMode === '2D' ? false : prev.show3DBuildings
       };
     });
   }, []);
