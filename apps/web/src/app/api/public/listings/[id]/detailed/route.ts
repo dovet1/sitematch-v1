@@ -46,7 +46,7 @@ export async function GET(
     // Get the latest approved version
     // Use adminSupabase to bypass RLS since we've already verified listing is approved
     // First try to get the live version
-    const { data: liveVersion, error: liveError } = await adminSupabase
+    const liveVersionResult = await adminSupabase
       .from('listing_versions')
       .select('content, version_number, created_at, is_live')
       .eq('listing_id', id)
@@ -55,22 +55,19 @@ export async function GET(
       .single();
 
     // If no live version, get the latest approved version
-    let approvedVersion: typeof liveVersion = liveVersion;
-    let versionError: typeof liveError = liveError;
+    const versionResult = liveVersionResult.data
+      ? liveVersionResult
+      : await adminSupabase
+          .from('listing_versions')
+          .select('content, version_number, created_at, is_live')
+          .eq('listing_id', id)
+          .eq('status', 'approved')
+          .order('version_number', { ascending: false })
+          .limit(1)
+          .single();
 
-    if (!liveVersion) {
-      const result = await adminSupabase
-        .from('listing_versions')
-        .select('content, version_number, created_at, is_live')
-        .eq('listing_id', id)
-        .eq('status', 'approved')
-        .order('version_number', { ascending: false })
-        .limit(1)
-        .single();
-
-      approvedVersion = result.data;
-      versionError = result.error;
-    }
+    const approvedVersion = versionResult.data;
+    const versionError = versionResult.error;
 
     if (versionError || !approvedVersion) {
       // Fallback to current database state if no approved version exists
