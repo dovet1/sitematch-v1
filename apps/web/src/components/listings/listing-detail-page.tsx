@@ -6635,15 +6635,27 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               Site Size
                             </h4>
                             <div className="flex items-center gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => openModal('siteSize')}
                               >
                                 <Edit className="w-3 h-3 mr-1" />
                                 Edit
                               </Button>
-                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                                onClick={async () => {
+                                  if (confirm('Are you sure you want to remove site size requirements?')) {
+                                    await handleSiteSizeSave({
+                                      siteSizeMin: null,
+                                      siteSizeMax: null
+                                    });
+                                  }
+                                }}
+                              >
                                 <Trash2 className="w-3 h-3 mr-1" />
                                 Remove
                               </Button>
