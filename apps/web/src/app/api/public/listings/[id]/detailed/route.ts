@@ -236,10 +236,11 @@ export async function GET(
     }
 
     // Use the approved version content
+    // At this point, approvedVersion is guaranteed to exist (after the null check above)
     // Check if content needs to be parsed from JSON string
-    const versionContent = typeof approvedVersion.content === 'string'
-      ? JSON.parse(approvedVersion.content)
-      : approvedVersion.content;
+    const versionContent = typeof approvedVersion!.content === 'string'
+      ? JSON.parse(approvedVersion!.content)
+      : approvedVersion!.content;
 
     // Extract data from the version content
     const listingData = versionContent.listing || {};
