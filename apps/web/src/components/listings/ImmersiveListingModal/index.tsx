@@ -843,23 +843,19 @@ export function ImmersiveListingModal({
                             alt={`${listing.company?.name || 'Company'} logo`}
                             className="w-12 h-12 object-contain"
                             onError={(e) => {
-                              // If clearbit logo fails and we should use fallback, show initials
-                              if (listing?.company?.use_clearbit_fallback) {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                const fallback = target.nextElementSibling as HTMLElement;
-                                if (fallback) fallback.style.display = 'flex';
-                              }
+                              // Hide broken image and show fallback
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const fallback = target.nextElementSibling as HTMLElement;
+                              if (fallback) fallback.style.display = 'flex';
                             }}
                           />
                         ) : null}
-                        {(!listing.company?.logo_url || listing?.company?.use_clearbit_fallback) && (
-                          <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center" style={{ display: listing?.company.logo_url ? 'none' : 'flex' }}>
-                            <span className="text-white font-semibold">
-                              {listing.company?.name?.charAt(0).toUpperCase() || 'C'}
-                            </span>
-                          </div>
-                        )}
+                        <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center" style={{ display: listing.company?.logo_url ? 'none' : 'flex' }}>
+                          <span className="text-white font-semibold">
+                            {listing.company?.name?.charAt(0).toUpperCase() || 'C'}
+                          </span>
+                        </div>
                         <div>
                           <h2 className="text-2xl font-bold text-gray-900">
                             {listing.company?.name || 'Unnamed Company'}
