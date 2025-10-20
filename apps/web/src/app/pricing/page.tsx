@@ -146,7 +146,7 @@ export default function PricingPage() {
                 {/* Badge */}
                 {plan.badge && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-orange-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                    <span className="bg-orange-500 text-white px-4 py-1 rounded-full text-sm font-semibold whitespace-nowrap">
                       {plan.badge}
                     </span>
                   </div>
