@@ -117,8 +117,8 @@ export function ContactsModal({
   };
 
   const handleCancelEdit = () => {
-    // If we're in editingContact mode (from parent), close the modal
-    if (editingContact) {
+    // If we're in editingContact mode (from parent) or addOnlyMode, close the modal
+    if (editingContact || addOnlyMode) {
       onClose();
       return;
     }
