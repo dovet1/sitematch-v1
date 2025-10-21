@@ -177,6 +177,9 @@ export default function OccupierDashboard() {
       // Remove from local state
       setListings(listings.filter(l => l.id !== listingId));
       setListingToDelete(null);
+
+      // Force a page refresh to ensure data is in sync
+      router.refresh();
     } catch (error) {
       console.error('Error deleting listing:', error);
       alert(error instanceof Error ? error.message : 'Failed to delete listing');
