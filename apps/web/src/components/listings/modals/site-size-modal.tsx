@@ -145,7 +145,7 @@ export function SiteSizeModal({
               <div className="px-4">
                 <RangeSlider
                   min={0.1}
-                  max={50}
+                  max={1000}
                   step={0.1}
                   value={siteAcreage}
                   onChange={setSiteAcreage}
