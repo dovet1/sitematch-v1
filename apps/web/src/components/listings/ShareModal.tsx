@@ -317,7 +317,7 @@ export function ShareModal({
                       <p className="text-xs font-medium text-amber-900">Privacy & Control</p>
                       <p className="text-xs text-amber-800 leading-relaxed">
                         Anyone with this link can view your requirement. To remove from public view, 
-                        contact us at <span className="font-medium">tom@sitematcher.co.uk</span>
+                        contact us at <span className="font-medium">rob@sitematcher.co.uk</span>
                       </p>
                     </div>
                   </div>

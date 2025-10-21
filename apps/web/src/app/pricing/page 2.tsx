@@ -263,8 +263,8 @@ export default function PricingPage() {
           <div className="text-center mt-12">
             <p className="text-base text-gray-600">
               Prefer to pay by bank transfer? Contact us at{' '}
-              <a href="mailto:tom@sitematcher.co.uk" className="text-violet-600 font-semibold hover:underline">
-                tom@sitematcher.co.uk
+              <a href="mailto:rob@sitematcher.co.uk" className="text-violet-600 font-semibold hover:underline">
+                rob@sitematcher.co.uk
               </a>{' '}
               to request an invoice
             </p>

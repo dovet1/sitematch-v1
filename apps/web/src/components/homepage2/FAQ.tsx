@@ -21,7 +21,7 @@ export function FAQ() {
     },
     {
       question: "What payment methods do you accept?",
-      answer: "We accept all major credit and debit cards via Stripe. Subscriptions can be paid by bank transfer on request. Email tom@sitematcher.co.uk for an invoice.",
+      answer: "We accept all major credit and debit cards via Stripe. Subscriptions can be paid by bank transfer on request. Email rob@sitematcher.co.uk for an invoice.",
     },
     {
       question: "Is there a setup fee?",
@@ -91,13 +91,13 @@ export function FAQ() {
             Our team is here to help. Get in touch and we'll respond within 24 hours.
           </p>
           <a
-            href="mailto:tom@sitematcher.co.uk"
+            href="mailto:rob@sitematcher.co.uk"
             className="inline-flex items-center gap-2 text-lg font-semibold text-violet-600 hover:text-violet-700 transition-colors duration-200"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            tom@sitematcher.co.uk
+            rob@sitematcher.co.uk
           </a>
         </div>
       </div>
