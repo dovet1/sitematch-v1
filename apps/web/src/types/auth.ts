@@ -20,6 +20,7 @@ export interface UserProfile {
   id: string
   email: string
   role: UserRole
+  user_company_name?: string | null
   user_type: UserType
   newsletter_opt_in?: boolean
   created_at: string
@@ -31,7 +32,7 @@ export interface AuthContextType {
   profile: UserProfile | null
   loading: boolean
   signIn: (email: string, password: string, redirectTo?: string) => Promise<void>
-  signUp: (email: string, password: string, userType?: string, redirectTo?: string, newsletterOptIn?: boolean) => Promise<void>
+  signUp: (email: string, password: string, companyName?: string, redirectTo?: string, newsletterOptIn?: boolean, userType?: string) => Promise<void>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
   updatePassword: (newPassword: string) => Promise<void>

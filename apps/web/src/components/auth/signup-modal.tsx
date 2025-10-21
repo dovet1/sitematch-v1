@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label'
 import { useAuth } from '@/contexts/auth-context'
 
 interface SignUpFormData {
+  companyName: string
   email: string
   password: string
   confirmPassword: string
@@ -44,9 +45,9 @@ export function SignUpModal({ children, redirectTo }: SignUpModalProps) {
   const onSubmit = async (data: SignUpFormData) => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
-      await signUp(data.email, data.password, undefined, redirectTo)
+      await signUp(data.email, data.password, data.companyName, redirectTo)
       // User will be automatically signed in and redirected
       reset()
     } catch (err) {
@@ -137,7 +138,7 @@ export function SignUpModal({ children, redirectTo }: SignUpModalProps) {
               placeholder="Confirm your password"
               {...register('confirmPassword', {
                 required: 'Please confirm your password',
-                validate: (value, formValues) => 
+                validate: (value, formValues) =>
                   value === formValues.password || 'Passwords do not match'
               })}
               disabled={isLoading}
@@ -146,7 +147,27 @@ export function SignUpModal({ children, redirectTo }: SignUpModalProps) {
               <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
             )}
           </div>
-          
+
+          <div className="space-y-2">
+            <Label htmlFor="signup-company-name">Company Name</Label>
+            <Input
+              id="signup-company-name"
+              type="text"
+              placeholder="Enter your company name"
+              {...register('companyName', {
+                required: 'Company name is required',
+                minLength: {
+                  value: 2,
+                  message: 'Company name must be at least 2 characters'
+                }
+              })}
+              disabled={isLoading}
+            />
+            {errors.companyName && (
+              <p className="text-sm text-red-500">{errors.companyName.message}</p>
+            )}
+          </div>
+
           {error && (
             <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md">
               {error}

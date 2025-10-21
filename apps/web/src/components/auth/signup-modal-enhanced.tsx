@@ -23,6 +23,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { UserType } from '@/types/auth'
 
 interface SignUpFormData {
+  companyName: string
   email: string
   password: string
   userType: UserType
@@ -90,6 +91,7 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
     clearErrors
   } = useForm<SignUpFormData>({
     defaultValues: {
+      companyName: '',
       email: '',
       password: '',
       userType: undefined,
@@ -112,7 +114,7 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
     })
     
     try {
-      await signUp(data.email, data.password, data.userType, redirectTo, data.newsletter)
+      await signUp(data.email, data.password, data.companyName, redirectTo, data.newsletter, data.userType)
       // User will be automatically signed in and redirected
       reset()
     } catch (err) {
@@ -167,7 +169,7 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* Account Details Section */}
               <div className="space-y-4">
-              
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-email" className="text-sm font-medium text-slate-700">Email address</Label>
                   <Input
@@ -225,9 +227,36 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
                 </p>
               </div>
 
+              {/* Company Name Section */}
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-company-name" className="text-sm font-medium text-slate-700">Company Name</Label>
+                  <Input
+                    id="signup-company-name"
+                    type="text"
+                    placeholder="Enter your company name"
+                    aria-label="Company name"
+                    {...register('companyName', {
+                      required: 'Company name is required',
+                      minLength: {
+                        value: 2,
+                        message: 'Company name must be at least 2 characters'
+                      }
+                    })}
+                    disabled={isLoading}
+                    className="h-10 px-3 bg-white border-violet-200/60 rounded-lg focus:border-violet-400/60 focus:ring-1 focus:ring-violet-100/60 transition-colors"
+                  />
+                  {errors.companyName && (
+                    <p className="text-sm text-red-500" role="alert">
+                      {errors.companyName.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               {/* Profile Section */}
               <div className="space-y-3">
-              
+
                 <div className="space-y-2">
                   <Label htmlFor="user-type" className="text-sm font-medium text-slate-700">
                     Professional role

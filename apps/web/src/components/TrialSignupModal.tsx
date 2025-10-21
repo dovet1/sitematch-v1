@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { UserType } from '@/types/auth'
 
 interface TrialSignupFormData {
+  companyName: string
   email: string
   password: string
   userType: UserType
@@ -115,6 +116,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
     clearErrors
   } = useForm<TrialSignupFormData>({
     defaultValues: {
+      companyName: '',
       email: '',
       password: '',
       userType: undefined,
@@ -138,7 +140,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
       setLoadingStage('creating_account')
       if (mode === 'signup') {
         // Pass 'SKIP_REDIRECT' to prevent automatic dashboard redirect
-        await signUp(data.email, data.password, data.userType, 'SKIP_REDIRECT', data.newsletterOptIn)
+        await signUp(data.email, data.password, data.companyName, 'SKIP_REDIRECT', data.newsletterOptIn, data.userType)
       } else {
         // Pass 'SKIP_REDIRECT' to prevent automatic dashboard redirect
         await signIn(data.email, data.password, 'SKIP_REDIRECT')
@@ -334,7 +336,7 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
                       }
                     })}
                     disabled={isLoading}
-                    autoFocus
+                    autoFocus={mode === 'login'}
                     className="h-9"
                   />
                   {errors.email && (
@@ -372,6 +374,29 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
 
                 {mode === 'signup' && (
                   <>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="trial-company-name" className="text-sm font-medium">Company Name</Label>
+                      <Input
+                        id="trial-company-name"
+                        type="text"
+                        placeholder="Enter your company name"
+                        {...register('companyName', {
+                          required: mode === 'signup' ? 'Company name is required' : false,
+                          minLength: {
+                            value: 2,
+                            message: 'Company name must be at least 2 characters'
+                          }
+                        })}
+                        disabled={isLoading}
+                        className="h-9"
+                      />
+                      {errors.companyName && (
+                        <p className="text-sm text-red-500" role="alert">
+                          {errors.companyName.message}
+                        </p>
+                      )}
+                    </div>
+
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Professional role</Label>
                       <Select

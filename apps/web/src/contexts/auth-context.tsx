@@ -211,14 +211,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // If redirectTo === 'SKIP_REDIRECT', don't redirect anywhere
   }
 
-  const signUp = async (email: string, password: string, userType?: string, redirectTo?: string, newsletterOptIn?: boolean) => {
+  const signUp = async (email: string, password: string, companyName?: string, redirectTo?: string, newsletterOptIn?: boolean, userType?: string) => {
     console.log('signUp called with:', {
       email,
+      companyName,
       userType,
       newsletterOptIn,
       newsletterOptInType: typeof newsletterOptIn
     })
-    
+
     // First, sign up the user
     const { error, data } = await supabase.auth.signUp({
       email,
@@ -239,12 +240,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: data.user.id,
         email: data.user.email!,
         role: 'occupier' as UserRole,
+        user_company_name: companyName || null,
         user_type: userType as UserType || 'Other',
         newsletter_opt_in: newsletterOptIn || false,
       }
-      
+
       console.log('Creating user profile with data:', profileData)
-      
+
       const { error: profileError } = await supabase
         .from('users')
         .upsert([profileData], {
