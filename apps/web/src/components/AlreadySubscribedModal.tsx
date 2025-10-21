@@ -97,7 +97,7 @@ export function AlreadySubscribedModal({
             <p className="text-xs text-gray-500">
               Questions about your subscription?{' '}
               <a
-                href="mailto:tom@sitematcher.co.uk"
+                href="mailto:rob@sitematcher.co.uk"
                 className="text-violet-600 hover:text-violet-700 font-medium hover:underline"
               >
                 Contact support
