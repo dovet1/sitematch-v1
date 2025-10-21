@@ -86,9 +86,9 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
         const referenceResponse = await fetch('/api/public/reference-data');
         if (referenceResponse.ok) {
           const referenceData = await referenceResponse.json();
-          // Only show sectors and use classes that have published listings
-          setSectors(referenceData.sectors?.filter((s: SectorOption) => (s.count || 0) > 0) || []);
-          setUseClasses(referenceData.useClasses?.filter((uc: UseClassOption) => (uc.count || 0) > 0) || []);
+          // Show all sectors and use classes
+          setSectors(referenceData.sectors || []);
+          setUseClasses(referenceData.useClasses || []);
         }
 
         // Fetch company names from published listings - use high limit to get all listings
@@ -315,10 +315,9 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
                   />
                   <Label
                     htmlFor={`sector-${sector.id}`}
-                    className="text-sm cursor-pointer flex-1 flex justify-between"
+                    className="text-sm cursor-pointer flex-1"
                   >
                     <span>{sector.label}</span>
-                    <span className="text-muted-foreground">({sector.count})</span>
                   </Label>
                 </div>
               )))}
@@ -351,10 +350,9 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
                   />
                   <Label
                     htmlFor={`use-class-${useClass.id}`}
-                    className="text-sm cursor-pointer flex-1 flex justify-between"
+                    className="text-sm cursor-pointer flex-1"
                   >
                     <span>{useClass.label}</span>
-                    <span className="text-muted-foreground">({useClass.count})</span>
                   </Label>
                 </div>
               )))}
