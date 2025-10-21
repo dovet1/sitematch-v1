@@ -56,7 +56,7 @@ export function ImmersiveListingModal({
     const allTabs = [
       { id: 'overview', label: 'overview' },
       { id: 'requirements', label: 'requirements' },
-      { id: 'locations', label: 'locations' },
+      { id: 'locations', label: 'target locations' },
       { id: 'contact', label: 'contact' },
       { id: 'faqs', label: 'faqs' },
       { id: 'agent', label: 'agent' }
@@ -376,7 +376,7 @@ export function ImmersiveListingModal({
         )}
         {activeTab === 'locations' && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Locations</h3>
+            <h3 className="text-lg font-semibold">Target Locations</h3>
             
             {listing.locations?.all && listing.locations.all.length > 0 ? (
               <div className="space-y-3">
