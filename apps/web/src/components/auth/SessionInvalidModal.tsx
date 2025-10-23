@@ -21,7 +21,7 @@ export function SessionInvalidModal() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
-    const logoutReason = searchParams.get('logout_reason')
+    const logoutReason = searchParams?.get('logout_reason')
 
     // Only show modal if there's a logout reason and user is still authenticated
     if (logoutReason === 'session_invalid' && user) {
