@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { LogOut, Shield, LayoutDashboard, CreditCard, Loader2 } from 'lucide-react'
+import { LogOut, Shield, LayoutDashboard, CreditCard, Loader2, LogOutIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -11,6 +11,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useAuth } from '@/contexts/auth-context'
 import { UserStatusHeader } from './user-status-header'
 import Link from 'next/link'
@@ -36,6 +46,8 @@ export function UserMenu() {
   const [isLoading, setIsLoading] = useState(false)
   const [subscriptionStatus, setSubscriptionStatus] = useState<'trialing' | 'active' | 'past_due' | 'canceled' | null>(null)
   const [isLoadingPortal, setIsLoadingPortal] = useState(false)
+  const [showSignoutAllDialog, setShowSignoutAllDialog] = useState(false)
+  const [isSigningOutAll, setIsSigningOutAll] = useState(false)
 
   // Fetch subscription status
   useEffect(() => {
@@ -96,6 +108,28 @@ export function UserMenu() {
   const handleUpgrade = async () => {
     // Redirect to pricing or open trial signup modal
     window.location.href = '/pricing'
+  }
+
+  const handleSignOutAllDevices = async () => {
+    setIsSigningOutAll(true)
+    try {
+      const response = await fetch('/api/auth/signout-all-devices', {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to sign out all devices')
+      }
+
+      // Close the dialog and sign out current device
+      setShowSignoutAllDialog(false)
+      await signOut()
+    } catch (error) {
+      console.error('Error signing out all devices:', error)
+      alert('Failed to sign out all devices. Please try again.')
+    } finally {
+      setIsSigningOutAll(false)
+    }
   }
 
   if (!user) {
@@ -174,6 +208,13 @@ export function UserMenu() {
 
             <DropdownMenuSeparator />
             <DropdownMenuItem
+              onClick={() => setShowSignoutAllDialog(true)}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <LogOutIcon className="h-4 w-4" />
+              <span>Log out all devices</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
               onClick={handleSignOut}
               disabled={isLoading}
               className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
@@ -185,6 +226,27 @@ export function UserMenu() {
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {/* Sign out all devices confirmation dialog */}
+      <AlertDialog open={showSignoutAllDialog} onOpenChange={setShowSignoutAllDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log out all devices?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will log you out from all devices where you're currently signed in, including this one. You'll need to sign in again on each device.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSigningOutAll}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSignOutAllDevices}
+              disabled={isSigningOutAll}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSigningOutAll ? 'Logging out...' : 'Log out all devices'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

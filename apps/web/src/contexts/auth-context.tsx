@@ -15,6 +15,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchingProfile, setFetchingProfile] = useState(false)
+  const [sessionCheckInterval, setSessionCheckInterval] = useState<NodeJS.Timeout | null>(null)
 
   const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
     // Prevent multiple simultaneous fetches
@@ -138,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           const authUser = session.user as AuthUser
           setUser(authUser)
-          
+
           // Fetch profile async - don't block user display
           fetchUserProfile(session.user.id).then(userProfile => {
             if (userProfile) {
@@ -166,19 +167,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               updated_at: new Date().toISOString()
             })
           })
-          
+
           // Set loading to false immediately after setting user
           setLoading(false)
+
+          // Start periodic session validation
+          if (sessionCheckInterval) {
+            clearInterval(sessionCheckInterval)
+          }
+          const interval = setInterval(async () => {
+            try {
+              const sessionId = localStorage.getItem('session_id')
+              if (!sessionId) {
+                console.warn('No session ID found in localStorage')
+                return
+              }
+
+              const response = await fetch('/api/auth/validate-session', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sessionId }),
+              })
+              const data = await response.json()
+
+              if (!data.valid) {
+                // Session is invalid, redirect to logout
+                console.log('Session invalid, logging out. Reason:', data.reason)
+                router.push('/?logout_reason=session_invalid')
+              }
+            } catch (error) {
+              console.error('Error validating session:', error)
+            }
+          }, 60000) // Check every 60 seconds
+          setSessionCheckInterval(interval)
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setProfile(null)
           setLoading(false)
+
+          // Clear session validation interval
+          if (sessionCheckInterval) {
+            clearInterval(sessionCheckInterval)
+            setSessionCheckInterval(null)
+          }
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           // Only refresh if user is different
           if (user?.id !== session.user.id) {
             const authUser = session.user as AuthUser
             setUser(authUser)
-            
+
             const userProfile = await fetchUserProfile(session.user.id)
             if (userProfile) {
               setProfile(userProfile)
@@ -188,7 +227,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+      if (sessionCheckInterval) {
+        clearInterval(sessionCheckInterval)
+      }
+    }
   }, [])
 
   const signIn = async (email: string, password: string, redirectTo?: string) => {
@@ -200,6 +244,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       console.error('Supabase auth error:', error)
       throw error
+    }
+
+    // Update the session ID in the database to invalidate other sessions
+    try {
+      const response = await fetch('/api/auth/update-session', {
+        method: 'POST',
+      })
+      const data = await response.json()
+
+      if (data.success && data.sessionId) {
+        // Store session ID in localStorage and cookie for validation
+        localStorage.setItem('session_id', data.sessionId)
+        // Set cookie that expires in 30 days
+        document.cookie = `session_id=${data.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; samesite=lax`
+        console.log('Session ID stored:', data.sessionId)
+      } else {
+        console.error('Failed to get session ID:', data)
+      }
+    } catch (error) {
+      console.error('Error updating session:', error)
+      // Don't block login if session update fails
     }
 
     // Handle redirect after successful sign in
@@ -261,7 +326,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Auto sign in after successful signup
+    // Auto sign in after successful signup (which will also update the session)
     await signIn(email, password, redirectTo)
   }
 
@@ -313,7 +378,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       throw error
     }
-    
+
+    // Clear stored session ID from localStorage and cookie
+    localStorage.removeItem('session_id')
+    document.cookie = 'session_id=; path=/; max-age=0'
+
     setUser(null)
     setProfile(null)
     // Use replace instead of push to avoid back button issues

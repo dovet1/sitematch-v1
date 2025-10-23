@@ -4,6 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/contexts/auth-context'
 import { Header } from '@/components/header'
 import { LeadCaptureProvider } from '@/components/lead-capture-provider'
+import { SessionInvalidModal } from '@/components/auth/SessionInvalidModal'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -105,6 +106,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <AuthProvider>
+          <SessionInvalidModal />
           <Header />
           <main>
             {children}

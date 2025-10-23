@@ -259,8 +259,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     { id: 'requirements', label: 'requirements' },
     { id: 'locations', label: 'target locations' },
     { id: 'contact', label: 'contact' },
-    { id: 'faqs', label: 'faqs' },
-    { id: 'agent', label: 'agents' }
+    { id: 'faqs', label: 'faqs' }
   ];
 
   // Get company name for tab display
@@ -7091,6 +7090,16 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                     })()}
 
                   </div>
+
+                  {/* Agents Section */}
+                  <div className="mt-8 pt-8 border-t border-gray-200">
+                    <MultipleAgentsDisplay
+                      listingId={listingId}
+                      agents={listingData?.listing_agents || []}
+                      onAgentsUpdated={fetchListingData}
+                      onCreateAgency={() => router.push('/occupier/create-agency')}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -7286,18 +7295,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       </div>
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* Agents Tab Content */}
-              {activeTab === 'agent' && (
-                <div className="p-6">
-                  <MultipleAgentsDisplay
-                    listingId={listingId}
-                    agents={listingData?.listing_agents || []}
-                    onAgentsUpdated={fetchListingData}
-                    onCreateAgency={() => router.push('/occupier/create-agency')}
-                  />
                 </div>
               )}
 

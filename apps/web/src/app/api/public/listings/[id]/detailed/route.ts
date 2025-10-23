@@ -265,7 +265,6 @@ export async function GET(
         )
       `)
       .eq('listing_id', id);
-    
 
     // Format the response to match the expected structure
     const formattedListing = {

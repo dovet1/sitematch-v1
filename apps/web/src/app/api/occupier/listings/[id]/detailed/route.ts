@@ -33,17 +33,17 @@ export async function GET(
     const { data: listing, error: listingError } = await supabase
       .from('listings')
       .select(`
-        id, 
-        company_name, 
+        id,
+        company_name,
         company_domain,
-        title, 
-        description, 
-        site_size_min, 
-        site_size_max, 
-        contact_name, 
-        contact_title, 
-        contact_email, 
-        contact_phone, 
+        title,
+        description,
+        site_size_min,
+        site_size_max,
+        contact_name,
+        contact_title,
+        contact_email,
+        contact_phone,
         contact_area,
         created_at,
         listing_type,
@@ -60,6 +60,18 @@ export async function GET(
           logo_url,
           geographic_patch,
           classification
+        ),
+        listing_agents(
+          id,
+          agency_id,
+          added_at,
+          agency:agencies(
+            id,
+            name,
+            logo_url,
+            geographic_patch,
+            classification
+          )
         )
       `)
       .eq('id', id)
@@ -279,7 +291,8 @@ export async function GET(
       title: listing.title,
       description: listing.description || '',
       created_at: listing.created_at,
-      listing_type: listing.listing_type || 'commercial'
+      listing_type: listing.listing_type || 'commercial',
+      listing_agents: listing.listing_agents
     };
 
     return NextResponse.json(enhancedListing);
