@@ -502,11 +502,12 @@ export function ImmersiveListingModal({
               </div>
             )}
 
-            {/* Appointed Agents Section */}
-            <div className="mt-8 pt-8 border-t border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{listingAgents.length === 1 ? 'Appointed Agent' : 'Appointed Agents'}</h3>
+            {/* Appointed Agents Section - Only show if there are agents */}
+            {(agencyLoading || listingAgents.length > 0) && (
+              <div className="mt-8 pt-8 border-t border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{listingAgents.length === 1 ? 'Appointed Agent' : 'Appointed Agents'}</h3>
 
-              {agencyLoading ? (
+                {agencyLoading ? (
                 <div className="p-6 space-y-4">
                   <div className="h-8 bg-gray-200 rounded animate-pulse" />
                   <div className="h-4 bg-gray-200 rounded animate-pulse" />
@@ -596,8 +597,9 @@ export function ImmersiveListingModal({
                     This property requirement is being handled directly by the company.
                   </p>
                 </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         )}
         {activeTab === 'faqs' && (
