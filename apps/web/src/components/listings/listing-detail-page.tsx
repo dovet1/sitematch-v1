@@ -76,6 +76,7 @@ import { SiteSizeModal } from '@/components/listings/modals/site-size-modal';
 
 // Import agents components
 import { MultipleAgentsDisplay } from '@/components/listings/multiple-agents-display';
+import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal';
 
 // Import sharing components
 import { ShareButton } from '@/components/listings/ShareButton';
@@ -205,7 +206,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     faqs: false,
     preview: false,
     companyProfile: false,
-    addAgent: false
+    addAgent: false,
+    createAgency: false
   });
 
   const [editingContactData, setEditingContactData] = useState<any>(null);
@@ -4980,7 +4982,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                             listingId={listingId}
                             agents={listingData?.listing_agents || []}
                             onAgentsUpdated={fetchListingData}
-                            onCreateAgency={() => router.push('/occupier/create-agency')}
+                            onCreateAgency={() => openModal('createAgency')}
                             className="mt-4"
                           />
                         </div>
@@ -7097,7 +7099,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       listingId={listingId}
                       agents={listingData?.listing_agents || []}
                       onAgentsUpdated={fetchListingData}
-                      onCreateAgency={() => router.push('/occupier/create-agency')}
+                      onCreateAgency={() => openModal('createAgency')}
                     />
                   </div>
                 </div>
@@ -7534,6 +7536,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           </div>
         </div>
       )}
+
+      {/* Agency Creation Modal */}
+      <AgencyCreationModal
+        isOpen={modalStates.createAgency}
+        onClose={() => closeModal('createAgency')}
+      />
 
     </>
   );
