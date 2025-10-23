@@ -23,11 +23,16 @@ interface AgencyFormData {
 }
 
 interface AgencyCreationModalProps {
-  children: React.ReactNode
+  children?: React.ReactNode
+  isOpen?: boolean
+  onClose?: () => void
+  onSuccess?: () => void
 }
 
-export function AgencyCreationModal({ children }: AgencyCreationModalProps) {
-  const [open, setOpen] = useState(false)
+export function AgencyCreationModal({ children, isOpen, onClose, onSuccess }: AgencyCreationModalProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = isOpen !== undefined ? isOpen : internalOpen
+  const setOpen = onClose !== undefined ? (value: boolean) => !value && onClose() : setInternalOpen
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -58,10 +63,17 @@ export function AgencyCreationModal({ children }: AgencyCreationModalProps) {
         throw new Error(result.error || 'Failed to create agency')
       }
 
-      // Success - close modal and navigate to edit view
+      // Success - close modal
       setOpen(false)
       reset()
-      router.push(`/agencies/${result.data.agency.id}/edit`)
+
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess()
+      } else {
+        // Default behavior: navigate to edit view
+        router.push(`/agencies/${result.data.agency.id}/edit`)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
@@ -79,9 +91,11 @@ export function AgencyCreationModal({ children }: AgencyCreationModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      {children && (
+        <DialogTrigger asChild>
+          {children}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
