@@ -8,6 +8,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Skip session validation if already being logged out
+  const logoutReason = request.nextUrl.searchParams.get('logout_reason')
+  if (logoutReason === 'session_invalid' && request.nextUrl.pathname === '/') {
+    return NextResponse.next()
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -63,6 +69,28 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  // Session validation for authenticated users
+  if (user) {
+    // Get session ID from cookie
+    const sessionIdCookie = request.cookies.get('session_id')?.value
+
+    if (sessionIdCookie) {
+      // Fetch the user's stored session ID
+      const { data: userData } = await supabase
+        .from('users')
+        .select('current_session_id')
+        .eq('id', user.id)
+        .single()
+
+      // If there's a stored session ID and it doesn't match, redirect to logout
+      if (userData?.current_session_id && userData.current_session_id !== sessionIdCookie) {
+        const logoutUrl = new URL('/', request.url)
+        logoutUrl.searchParams.set('logout_reason', 'session_invalid')
+        return NextResponse.redirect(logoutUrl)
+      }
+    }
+  }
 
   // Admin route protection
   if (request.nextUrl.pathname.startsWith('/admin')) {
