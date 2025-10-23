@@ -49,7 +49,7 @@ export function MultipleAgentsDisplay({
         <div className="w-16 h-16 bg-gradient-to-br from-violet-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <Users className="w-8 h-8 text-violet-500" />
         </div>
-        <h4 className="font-medium text-gray-900 mb-2 text-sm">No Agents Added</h4>
+        <h4 className="font-medium text-gray-900 mb-2 text-sm">No Agencies Added</h4>
         <p className="text-xs text-gray-600 mb-4 leading-relaxed px-2">
           Let everyone know the agencies working on this company's site requirements.
         </p>
@@ -59,7 +59,7 @@ export function MultipleAgentsDisplay({
           className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add Agents
+          Add Agencies
         </Button>
 
         <MultipleAgentsManager
