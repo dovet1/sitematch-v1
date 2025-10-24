@@ -123,15 +123,28 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    console.log('Middleware auth check:', { 
-      userId: user.id, 
-      profile, 
-      pathname: request.nextUrl.pathname 
+    console.log('Middleware auth check:', {
+      userId: user.id,
+      profile,
+      pathname: request.nextUrl.pathname
     });
 
     if (!profile || (profile.role !== 'occupier' && profile.role !== 'admin')) {
       console.log('Middleware redirect: unauthorized');
       return NextResponse.redirect(new URL('/unauthorized', request.url))
+    }
+  }
+
+  // Agency routes require subscription
+  if (request.nextUrl.pathname.startsWith('/agencies')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/?login=1', request.url))
+    }
+
+    // Check subscription access
+    const hasAccess = await checkSubscriptionAccess(user.id)
+    if (!hasAccess) {
+      return NextResponse.redirect(new URL('/?paywall=agency', request.url))
     }
   }
 

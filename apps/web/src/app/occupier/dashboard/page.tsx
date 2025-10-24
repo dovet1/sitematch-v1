@@ -9,6 +9,7 @@ import Link from 'next/link';
 import StatusBadge from '../components/StatusBadge';
 import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal';
 import { AgencyModal } from '@/components/agencies/AgencyModal';
+import { PaywallModal } from '@/components/PaywallModal';
 import { useState, useEffect } from 'react';
 import type { User } from '@supabase/auth-js';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -60,6 +61,9 @@ export default function OccupierDashboard() {
   const [previewAgencyId, setPreviewAgencyId] = useState<string | null>(null);
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [hasSubscription, setHasSubscription] = useState<boolean>(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [showCreateAgency, setShowCreateAgency] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -87,6 +91,16 @@ export default function OccupierDashboard() {
       }
 
       setUser(user);
+
+      // Check subscription status
+      try {
+        const response = await fetch('/api/subscription/check');
+        const data = await response.json();
+        setHasSubscription(data.hasAccess || false);
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        setHasSubscription(false);
+      }
 
       // Get user's agency
       const { data: userAgency, error: agencyError } = await supabase
@@ -189,6 +203,14 @@ export default function OccupierDashboard() {
   };
 
   // Format date helper
+  const handleCreateAgencyClick = () => {
+    if (hasSubscription) {
+      setShowCreateAgency(true);
+    } else {
+      setShowPaywall(true);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -630,15 +652,14 @@ export default function OccupierDashboard() {
                   </p>
                 </div>
                 {!agency && (
-                  <AgencyCreationModal>
-                    <Button 
-                      size="default"
-                      className="violet-bloom-button violet-bloom-touch shadow-sm hover:shadow-md transition-all w-full sm:w-auto"
-                    >
-                      <Building2 className="w-4 h-4 mr-2" />
-                      Create Agency
-                    </Button>
-                  </AgencyCreationModal>
+                  <Button
+                    size="default"
+                    className="violet-bloom-button violet-bloom-touch shadow-sm hover:shadow-md transition-all w-full sm:w-auto"
+                    onClick={handleCreateAgencyClick}
+                  >
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Create Agency
+                  </Button>
                 )}
               </div>
 
@@ -668,12 +689,14 @@ export default function OccupierDashboard() {
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 w-full md:w-auto">
-                        <AgencyCreationModal>
-                          <Button size="lg" className="violet-bloom-button violet-bloom-touch w-full md:w-auto">
-                            <Plus className="w-5 h-5 mr-2" />
-                            Create Agency Profile
-                          </Button>
-                        </AgencyCreationModal>
+                        <Button
+                          size="lg"
+                          className="violet-bloom-button violet-bloom-touch w-full md:w-auto"
+                          onClick={handleCreateAgencyClick}
+                        >
+                          <Plus className="w-5 h-5 mr-2" />
+                          Create Agency Profile
+                        </Button>
                         <p className="text-xs text-center text-muted-foreground">
                           Takes 3 minutes
                         </p>
@@ -779,6 +802,19 @@ export default function OccupierDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Agency Creation Modal */}
+      <AgencyCreationModal
+        isOpen={showCreateAgency}
+        onClose={() => setShowCreateAgency(false)}
+      />
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        context="agency"
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+      />
     </div>
   );
 }
