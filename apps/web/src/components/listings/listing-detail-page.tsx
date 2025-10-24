@@ -77,6 +77,7 @@ import { SiteSizeModal } from '@/components/listings/modals/site-size-modal';
 // Import agents components
 import { MultipleAgentsDisplay } from '@/components/listings/multiple-agents-display';
 import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal';
+import { PaywallModal } from '@/components/PaywallModal';
 
 // Import sharing components
 import { ShareButton } from '@/components/listings/ShareButton';
@@ -190,6 +191,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   // Carousel state for site-plans and fit-outs
   const [sitePlansIndex, setSitePlansIndex] = useState(0);
   const [fitOutsIndex, setFitOutsIndex] = useState(0);
+
+  // Subscription state
+  const [hasSubscription, setHasSubscription] = useState<boolean>(false);
   
   // FAQ reordering state
   const [draggedFaqIndex, setDraggedFaqIndex] = useState<number | null>(null);
@@ -207,7 +211,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     preview: false,
     companyProfile: false,
     addAgent: false,
-    createAgency: false
+    createAgency: false,
+    paywall: false
   });
 
   const [editingContactData, setEditingContactData] = useState<any>(null);
@@ -298,6 +303,22 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     };
 
     fetchReferenceData();
+  }, []);
+
+  // Check subscription status
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const response = await fetch('/api/subscription/check');
+        const data = await response.json();
+        setHasSubscription(data.hasAccess || false);
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        setHasSubscription(false);
+      }
+    };
+
+    checkSubscription();
   }, []);
 
   // Check for changes compared to approved version
@@ -4982,7 +5003,13 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                             listingId={listingId}
                             agents={listingData?.listing_agents || []}
                             onAgentsUpdated={fetchListingData}
-                            onCreateAgency={() => openModal('createAgency')}
+                            onCreateAgency={() => {
+                              if (hasSubscription) {
+                                openModal('createAgency');
+                              } else {
+                                openModal('paywall');
+                              }
+                            }}
                             className="mt-4"
                           />
                         </div>
@@ -7099,7 +7126,13 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       listingId={listingId}
                       agents={listingData?.listing_agents || []}
                       onAgentsUpdated={fetchListingData}
-                      onCreateAgency={() => openModal('createAgency')}
+                      onCreateAgency={() => {
+                        if (hasSubscription) {
+                          openModal('createAgency');
+                        } else {
+                          openModal('paywall');
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -7541,6 +7574,13 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       <AgencyCreationModal
         isOpen={modalStates.createAgency}
         onClose={() => closeModal('createAgency')}
+      />
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        context="agency"
+        isOpen={modalStates.paywall}
+        onClose={() => closeModal('paywall')}
       />
 
     </>
