@@ -11,6 +11,7 @@ interface ImageFile {
   url: string;
   caption?: string;
   isExternal?: boolean;
+  externalUrl?: string;
   videoProvider?: 'youtube' | 'vimeo' | 'direct';
 }
 
@@ -169,93 +170,97 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
         >
           {/* Image/Video Container */}
           <div className="relative h-full w-full flex items-center justify-center p-4">
-            {type === 'videos' && currentImage.isExternal ? (
-              // External video embed (YouTube, Vimeo, etc.)
-              (() => {
-                const parsed = parseVideoUrl(currentImage.url);
-                if (!parsed) {
-                  return (
-                    <div className="text-center text-red-600">
-                      <p>Invalid video URL</p>
-                    </div>
-                  );
-                }
+            {(() => {
+              // Try to detect external video
+              if (type === 'videos') {
+                const videoUrl = currentImage.externalUrl || currentImage.url;
+                const parsed = parseVideoUrl(videoUrl);
 
-                // Show YouTube thumbnail as preview image
-                if (parsed.thumbnailUrl) {
+                // If it's a valid external video (YouTube, Vimeo, etc.)
+                if (parsed && (parsed.provider === 'youtube' || parsed.provider === 'vimeo')) {
+                  // Show YouTube thumbnail as preview image
+                  if (parsed.thumbnailUrl) {
+                    return (
+                      <div className="relative cursor-pointer group" onClick={() => {
+                        // On mobile, use the fullscreen gallery instead of video player modal
+                        if (onImageClick) {
+                          onImageClick(currentIndex);
+                        } else {
+                          setVideoToPlay(parsed.embedUrl);
+                          setShowVideoPlayer(true);
+                        }
+                      }}>
+                        {!imageLoaded[currentImage.id] && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                              className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full"
+                            />
+                          </div>
+                        )}
+                        <img
+                          src={parsed.thumbnailUrl}
+                          alt={currentImage.name || `Video ${currentIndex + 1}`}
+                          className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
+                          onLoad={() => handleImageLoad(currentImage.id)}
+                          style={{ display: imageLoaded[currentImage.id] ? 'block' : 'none' }}
+                        />
+                        {/* Play button overlay */}
+                        {imageLoaded[currentImage.id] && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <motion.div
+                              className="bg-black/60 backdrop-blur-sm rounded-full p-6 group-hover:bg-black/80 transition-all pointer-events-auto"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              <Play className="w-12 h-12 text-white fill-white" />
+                            </motion.div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // Fallback to iframe if no thumbnail
                   return (
-                    <div className="relative cursor-pointer group" onClick={() => {
-                      setVideoToPlay(parsed.embedUrl);
-                      setShowVideoPlayer(true);
-                    }}>
-                      {!imageLoaded[currentImage.id] && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                            className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full"
-                          />
-                        </div>
-                      )}
-                      <img
-                        src={parsed.thumbnailUrl}
-                        alt={currentImage.name || `Video ${currentIndex + 1}`}
-                        className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
-                        onLoad={() => handleImageLoad(currentImage.id)}
-                        style={{ display: imageLoaded[currentImage.id] ? 'block' : 'none' }}
+                    <div className="w-full max-w-4xl aspect-video">
+                      <iframe
+                        src={parsed.embedUrl}
+                        title={currentImage.name || `Video ${currentIndex + 1}`}
+                        className="w-full h-full rounded-lg shadow-lg"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
                       />
-                      {/* Play button overlay */}
-                      {imageLoaded[currentImage.id] && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <motion.div
-                            className="bg-black/60 backdrop-blur-sm rounded-full p-6 group-hover:bg-black/80 transition-all"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <Play className="w-12 h-12 text-white fill-white" />
-                          </motion.div>
-                        </div>
-                      )}
                     </div>
                   );
                 }
+              }
 
-                // Fallback to iframe if no thumbnail
-                return (
-                  <div className="w-full max-w-4xl aspect-video">
-                    <iframe
-                      src={parsed.embedUrl}
-                      title={currentImage.name || `Video ${currentIndex + 1}`}
-                      className="w-full h-full rounded-lg shadow-lg"
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                );
-              })()
-            ) : (
-              // Regular image or uploaded video
-              <>
-                {!imageLoaded[currentImage.id] && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                      className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full"
-                    />
-                  </div>
-                )}
+              // Default: show as regular image
+              return (
+                <>
+                  {!imageLoaded[currentImage.id] && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                        className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full"
+                      />
+                    </div>
+                  )}
 
-                <img
-                  src={currentImage.url}
-                  alt={currentImage.name || `${type} ${currentIndex + 1}`}
-                  className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
-                  onLoad={() => handleImageLoad(currentImage.id)}
-                  style={{ display: imageLoaded[currentImage.id] ? 'block' : 'none' }}
-                />
-              </>
-            )}
+                  <img
+                    src={currentImage.url}
+                    alt={currentImage.name || `${type} ${currentIndex + 1}`}
+                    className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
+                    onLoad={() => handleImageLoad(currentImage.id)}
+                    style={{ display: imageLoaded[currentImage.id] ? 'block' : 'none' }}
+                  />
+                </>
+              );
+            })()}
           </div>
         </motion.div>
       </AnimatePresence>
@@ -683,48 +688,50 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
       )}
 
       {/* Video Player Modal */}
-      {showVideoPlayer && videoToPlay && createPortal(
+      {createPortal(
         <AnimatePresence>
-          <motion.div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => {
-              setShowVideoPlayer(false);
-              setVideoToPlay(null);
-            }}
-          >
-            {/* Close button */}
-            <button
+          {showVideoPlayer && videoToPlay && (
+            <motion.div
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => {
                 setShowVideoPlayer(false);
                 setVideoToPlay(null);
               }}
-              className="absolute top-6 right-6 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full p-3 text-white transition-all duration-200"
-              aria-label="Close video"
             >
-              <X className="w-6 h-6" />
-            </button>
+              {/* Close button */}
+              <button
+                onClick={() => {
+                  setShowVideoPlayer(false);
+                  setVideoToPlay(null);
+                }}
+                className="absolute top-6 right-6 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full p-3 text-white transition-all duration-200"
+                aria-label="Close video"
+              >
+                <X className="w-6 h-6" />
+              </button>
 
-            {/* Video player */}
-            <motion.div
-              className="w-full max-w-6xl aspect-video mx-4"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <iframe
-                src={videoToPlay}
-                title="Video player"
-                className="w-full h-full rounded-lg shadow-2xl"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              {/* Video player */}
+              <motion.div
+                className="w-full max-w-6xl aspect-video mx-4"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <iframe
+                  src={videoToPlay}
+                  title="Video player"
+                  className="w-full h-full rounded-lg shadow-2xl"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </motion.div>
             </motion.div>
-          </motion.div>
+          )}
         </AnimatePresence>,
         document.body
       )}

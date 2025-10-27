@@ -155,9 +155,10 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
         const videos = listing.files?.videos?.map((file: any, index: number) => ({
           id: file.id || `video-${index}`,
           name: file.name || 'Video',
-          url: file.url || file.externalUrl,
+          url: file.url,
           caption: file.name,
-          isExternal: !!file.externalUrl,
+          isExternal: file.isExternal || !!file.externalUrl,
+          externalUrl: file.externalUrl || file.url,
           videoProvider: file.videoProvider
         })) || [];
 
