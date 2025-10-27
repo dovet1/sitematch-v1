@@ -525,6 +525,25 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         }) || [],
 
         videoFiles: files?.filter(f => f.file_type === 'video').map(file => {
+          // Handle external videos (YouTube, Vimeo, etc.)
+          if (file.external_url) {
+            return {
+              id: file.id,
+              name: file.file_name,
+              url: file.external_url,
+              path: undefined,
+              type: 'video' as const,
+              size: file.file_size,
+              mimeType: file.mime_type,
+              uploadedAt: new Date(file.created_at),
+              displayOrder: file.display_order || 0,
+              externalUrl: file.external_url,
+              videoProvider: file.video_provider,
+              isExternal: true
+            };
+          }
+
+          // Handle uploaded video files
           const { data: urlData } = supabase.storage
             .from('videos')
             .getPublicUrl(file.file_path);
@@ -2463,16 +2482,19 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   };
 
   // Quick Upload Modal for Visual Hero Section  
-  const QuickUploadModal = ({ isOpen, onClose, type, onUpload }: {
+  const QuickUploadModal = ({ isOpen, onClose, type, onUpload, onExternalVideoAdd }: {
     isOpen: boolean;
     onClose: () => void;
     type: 'photos' | 'videos';
     onUpload: (files: File[]) => void;
+    onExternalVideoAdd?: (url: string) => void;
   }) => {
     const [dragActive, setDragActive] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    const [showExternalUrl, setShowExternalUrl] = useState(false);
+    const [externalUrl, setExternalUrl] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const title = type === 'photos' ? 'Upload Photos' : 'Upload Videos';
@@ -2551,6 +2573,33 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     };
 
     const handleUpload = async () => {
+      // Handle external URL for videos
+      if (type === 'videos' && externalUrl && onExternalVideoAdd) {
+        setIsUploading(true);
+        try {
+          const { isValidVideoUrl } = await import('@/lib/video-utils');
+          if (!isValidVideoUrl(externalUrl)) {
+            setUploadError('Invalid video URL. Please enter a valid YouTube or Vimeo link.');
+            setIsUploading(false);
+            return;
+          }
+
+          await onExternalVideoAdd(externalUrl);
+          setExternalUrl('');
+          setShowExternalUrl(false);
+          onClose();
+          toast.success('External video added successfully!');
+        } catch (error) {
+          console.error('Add external video error:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Failed to add external video';
+          toast.error(errorMessage);
+        } finally {
+          setIsUploading(false);
+        }
+        return;
+      }
+
+      // Handle file uploads
       if (selectedFiles.length === 0) return;
 
       setIsUploading(true);
@@ -2634,6 +2683,47 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               </div>
             </div>
 
+            {/* External Video URL for videos only */}
+            {type === 'videos' && (
+              <div className="mt-4">
+                {!showExternalUrl ? (
+                  <button
+                    onClick={() => setShowExternalUrl(true)}
+                    className="text-sm text-violet-600 hover:text-violet-700 font-medium"
+                  >
+                    + Add video from YouTube/Vimeo
+                  </button>
+                ) : (
+                  <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-700">
+                        External Video URL
+                      </label>
+                      <button
+                        onClick={() => {
+                          setShowExternalUrl(false);
+                          setExternalUrl('');
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <input
+                      type="url"
+                      value={externalUrl}
+                      onChange={(e) => setExternalUrl(e.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Paste a YouTube or Vimeo link
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Selected files */}
             {selectedFiles.length > 0 && (
               <div className={`mt-4 space-y-2 ${isMobile ? 'flex-1 min-h-0' : ''}`}>
@@ -2665,12 +2755,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               >
                 Cancel
               </Button>
-              <Button 
-                onClick={handleUpload} 
-                disabled={selectedFiles.length === 0 || isUploading}
+              <Button
+                onClick={handleUpload}
+                disabled={(selectedFiles.length === 0 && !externalUrl) || isUploading}
                 className={`bg-violet-600 hover:bg-violet-700 text-white ${isMobile ? 'flex-1' : ''}`}
               >
-                {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''}`}
+                {isUploading ? 'Uploading...' : externalUrl ? 'Add Video' : `Upload ${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''}`}
               </Button>
             </div>
           </div>
@@ -2884,6 +2974,82 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     } catch (error) {
       console.error('Upload error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to upload files');
+    }
+  };
+
+  const handleExternalVideoAdd = async (url: string) => {
+    try {
+      const supabase = createClientClient();
+      const { parseVideoUrl } = await import('@/lib/video-utils');
+
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Parse the video URL
+      const parsed = parseVideoUrl(url);
+      if (!parsed) {
+        throw new Error('Invalid video URL');
+      }
+
+      // Create a database entry for the external video
+      // Note: video_source_check constraint requires file_path to be NULL for external videos
+      const insertData: any = {
+        listing_id: listingId,
+        user_id: user.id,
+        file_name: `External ${parsed.provider} video`,
+        file_size: 1, // Placeholder size for external videos (constraint requires > 0)
+        file_type: 'video',
+        mime_type: 'video/external',
+        bucket_name: 'external', // Placeholder bucket name for external videos
+        external_url: url,
+        video_provider: parsed.provider
+      };
+      // file_path should be NULL for external videos (don't include it)
+
+      const { data: fileRecord, error: dbError } = await supabase
+        .from('file_uploads')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (dbError) {
+        throw new Error(`Database error: ${dbError.message}`);
+      }
+
+      // Add to local state
+      const currentFiles = listingData?.videoFiles || [];
+      const newVideo = {
+        id: fileRecord.id,
+        name: fileRecord.file_name,
+        url: url,
+        path: undefined,
+        type: 'video' as const,
+        size: 0,
+        mimeType: 'video/external',
+        uploadedAt: new Date(fileRecord.created_at),
+        displayOrder: currentFiles.length,
+        caption: '',
+        thumbnail: parsed.thumbnailUrl,
+        externalUrl: url,
+        videoProvider: parsed.provider
+      };
+
+      const updatedFiles = [...currentFiles, newVideo];
+
+      setListingData(prev => prev ? {
+        ...prev,
+        videoFiles: updatedFiles
+      } : null);
+
+      closeQuickAddModal('uploadFitOuts');
+      toast.success('External video added successfully!');
+
+    } catch (error) {
+      console.error('Add external video error:', error);
+      throw error;
     }
   };
 
@@ -5110,6 +5276,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         onClose={() => closeQuickAddModal('uploadFitOuts')}
         type="videos"
         onUpload={(files) => handleQuickUpload(files, 'videos')}
+        onExternalVideoAdd={handleExternalVideoAdd}
       />
 
       {/* Company Profile Modal - Mobile Only */}
@@ -5722,6 +5889,24 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           <div className="relative w-full h-full max-h-full">
                             {(() => {
                               const currentFile = listingData.videoFiles?.[videosIndex];
+
+                              // Handle external videos (YouTube, Vimeo)
+                              if (currentFile?.isExternal && currentFile.externalUrl) {
+                                const { parseVideoUrl } = require('@/lib/video-utils');
+                                const parsed = parseVideoUrl(currentFile.externalUrl);
+
+                                if (parsed?.thumbnailUrl) {
+                                  return (
+                                    <img
+                                      src={parsed.thumbnailUrl}
+                                      alt={currentFile.name}
+                                      className="w-full h-full object-contain"
+                                    />
+                                  );
+                                }
+                              }
+
+                              // Handle regular images
                               if (currentFile && currentFile.mimeType?.startsWith('image/')) {
                                 return (
                                   <img
@@ -5730,7 +5915,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     className="w-full h-full object-contain"
                                   />
                                 );
-                              } else if (currentFile.mimeType?.startsWith('video/')) {
+                              }
+                              // Handle uploaded video files
+                              else if (currentFile && currentFile.mimeType?.startsWith('video/') && !currentFile.isExternal) {
                                 return (
                                   <video
                                     src={currentFile.url}
@@ -5741,14 +5928,16 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     muted
                                   />
                                 );
-                              } else {
+                              }
+                              // Fallback
+                              else {
                                 return (
                                   <div className="w-full h-full flex items-center justify-center bg-violet-800">
                                     <div className="text-center p-8">
                                       <FileText className="w-16 h-16 text-white mx-auto mb-4" />
-                                      <p className="text-white font-medium">{currentFile.name}</p>
+                                      <p className="text-white font-medium">{currentFile?.name}</p>
                                       <p className="text-violet-200 text-sm mt-2">
-                                        {(currentFile.size / 1024 / 1024).toFixed(1)} MB
+                                        {currentFile ? (currentFile.size / 1024 / 1024).toFixed(1) : '0'} MB
                                       </p>
                                     </div>
                                   </div>
@@ -7406,6 +7595,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         onClose={() => closeQuickAddModal('uploadFitOuts')}
         type="videos"
         onUpload={(files) => handleQuickUpload(files, 'videos')}
+        onExternalVideoAdd={handleExternalVideoAdd}
       />
 
       {/* CRUD Modals */}

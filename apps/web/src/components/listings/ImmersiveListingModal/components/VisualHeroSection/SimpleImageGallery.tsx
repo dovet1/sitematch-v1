@@ -3,12 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Image as ImageIcon, FileText, Plus, Eye, Trash2, X, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createPortal } from 'react-dom';
+import { parseVideoUrl } from '@/lib/video-utils';
 
 interface ImageFile {
   id: string;
   name: string;
   url: string;
   caption?: string;
+  isExternal?: boolean;
+  videoProvider?: 'youtube' | 'vimeo' | 'direct';
 }
 
 interface SimpleImageGalleryProps {
@@ -162,25 +165,80 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
         >
-          {/* Image Container */}
+          {/* Image/Video Container */}
           <div className="relative h-full w-full flex items-center justify-center p-4">
-            {!imageLoaded[currentImage.id] && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                  className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full"
+            {type === 'videos' && currentImage.isExternal ? (
+              // External video embed (YouTube, Vimeo, etc.)
+              (() => {
+                const parsed = parseVideoUrl(currentImage.url);
+                if (!parsed) {
+                  return (
+                    <div className="text-center text-red-600">
+                      <p>Invalid video URL</p>
+                    </div>
+                  );
+                }
+
+                // Show YouTube thumbnail as preview image
+                if (parsed.thumbnailUrl) {
+                  return (
+                    <>
+                      {!imageLoaded[currentImage.id] && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                            className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full"
+                          />
+                        </div>
+                      )}
+                      <img
+                        src={parsed.thumbnailUrl}
+                        alt={currentImage.name || `Video ${currentIndex + 1}`}
+                        className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
+                        onLoad={() => handleImageLoad(currentImage.id)}
+                        style={{ display: imageLoaded[currentImage.id] ? 'block' : 'none' }}
+                      />
+                    </>
+                  );
+                }
+
+                // Fallback to iframe if no thumbnail
+                return (
+                  <div className="w-full max-w-4xl aspect-video">
+                    <iframe
+                      src={parsed.embedUrl}
+                      title={currentImage.name || `Video ${currentIndex + 1}`}
+                      className="w-full h-full rounded-lg shadow-lg"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                );
+              })()
+            ) : (
+              // Regular image or uploaded video
+              <>
+                {!imageLoaded[currentImage.id] && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                      className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full"
+                    />
+                  </div>
+                )}
+
+                <img
+                  src={currentImage.url}
+                  alt={currentImage.name || `${type} ${currentIndex + 1}`}
+                  className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
+                  onLoad={() => handleImageLoad(currentImage.id)}
+                  style={{ display: imageLoaded[currentImage.id] ? 'block' : 'none' }}
                 />
-              </div>
+              </>
             )}
-            
-            <img
-              src={currentImage.url}
-              alt={currentImage.name || `${type} ${currentIndex + 1}`}
-              className="max-h-full max-w-full object-contain rounded-lg shadow-lg"
-              onLoad={() => handleImageLoad(currentImage.id)}
-              style={{ display: imageLoaded[currentImage.id] ? 'block' : 'none' }}
-            />
           </div>
         </motion.div>
       </AnimatePresence>

@@ -103,7 +103,7 @@ export async function GET(
         `).eq('id', listingId).single(),
         supabase.from('listing_locations').select('id, place_name, coordinates, formatted_address').eq('listing_id', listingId),
         supabase.from('faqs').select('id, question, answer, display_order').eq('listing_id', listingId),
-        supabase.from('file_uploads').select('id, file_path, file_name, file_size, file_type, bucket_name, is_primary, display_order, caption').eq('listing_id', listingId),
+        supabase.from('file_uploads').select('id, file_path, file_name, file_size, file_type, mime_type, bucket_name, is_primary, display_order, caption, external_url, video_provider, created_at').eq('listing_id', listingId),
         supabase.from('listing_contacts').select('id, contact_name, contact_title, contact_email, contact_phone, contact_area, headshot_url, is_primary_contact').eq('listing_id', listingId),
         supabase.from('listing_sectors').select('sector_id, sectors(id, name)').eq('listing_id', listingId),
         supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', listingId)
@@ -181,9 +181,12 @@ export async function GET(
           })) || [],
           videos: files?.filter((f: any) => f.file_type === 'video' || f.file_type === 'fit_out').map((f: any) => ({
             ...f,
-            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
+            url: f.external_url || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
             name: f.file_name,
-            size: f.file_size
+            size: f.file_size,
+            isExternal: !!f.external_url,
+            externalUrl: f.external_url,
+            videoProvider: f.video_provider
           })) || [],
           brochures: files?.filter((f: any) => f.file_type === 'brochure').map((f: any) => ({
             ...f,
@@ -336,9 +339,12 @@ export async function GET(
         })),
         videos: files.filter((f: any) => f.file_type === 'video' || f.file_type === 'fit_out').map((f: any) => ({
           ...f,
-          url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
+          url: f.external_url || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
           name: f.file_name,
-          size: f.file_size
+          size: f.file_size,
+          isExternal: !!f.external_url,
+          externalUrl: f.external_url,
+          videoProvider: f.video_provider
         })),
         brochures: files.filter((f: any) => f.file_type === 'brochure').map((f: any) => ({
           ...f,
