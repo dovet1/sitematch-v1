@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,7 +46,8 @@ import {
   GripVertical,
   Download,
   Globe,
-  HelpCircle
+  HelpCircle,
+  Play
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -191,6 +193,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   // Carousel state for site-plans and videos
   const [photosIndex, setPhotosIndex] = useState(0);
   const [videosIndex, setVideosIndex] = useState(0);
+
+  // Video player modal state
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
+  const [videoToPlay, setVideoToPlay] = useState<string | null>(null);
 
   // Subscription state
   const [hasSubscription, setHasSubscription] = useState<boolean>(false);
@@ -2790,6 +2796,18 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   // File action handlers
   const handleViewFile = (file: any) => {
+    // Check if it's an external video (YouTube, Vimeo)
+    if (file?.isExternal && file?.externalUrl) {
+      const { parseVideoUrl } = require('@/lib/video-utils');
+      const parsed = parseVideoUrl(file.externalUrl);
+      if (parsed?.embedUrl) {
+        setVideoToPlay(parsed.embedUrl);
+        setShowVideoPlayer(true);
+        return;
+      }
+    }
+
+    // For regular files, open in new tab
     window.open(file.url, '_blank');
   };
 
@@ -5891,11 +5909,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               const currentFile = listingData.videoFiles?.[videosIndex];
 
                               // Handle external videos (YouTube, Vimeo)
-                              if (currentFile?.isExternal && currentFile.externalUrl) {
+                              if (currentFile) {
                                 const { parseVideoUrl } = require('@/lib/video-utils');
-                                const parsed = parseVideoUrl(currentFile.externalUrl);
+                                const videoUrl = currentFile.externalUrl || currentFile.url;
+                                const parsed = parseVideoUrl(videoUrl);
 
-                                if (parsed?.thumbnailUrl) {
+                                if (parsed && (parsed.provider === 'youtube' || parsed.provider === 'vimeo') && parsed.thumbnailUrl) {
                                   return (
                                     <img
                                       src={parsed.thumbnailUrl}
@@ -7822,6 +7841,52 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         isOpen={modalStates.paywall}
         onClose={() => closeModal('paywall')}
       />
+
+      {/* Video Player Modal */}
+      <AnimatePresence>
+        {showVideoPlayer && videoToPlay && (
+          <motion.div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              setShowVideoPlayer(false);
+              setVideoToPlay(null);
+            }}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setShowVideoPlayer(false);
+                setVideoToPlay(null);
+              }}
+              className="absolute top-6 right-6 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full p-3 text-white transition-all duration-200"
+              aria-label="Close video"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Video player */}
+            <motion.div
+              className="w-full max-w-6xl aspect-video mx-4"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <iframe
+                src={videoToPlay}
+                title="Video player"
+                className="w-full h-full rounded-lg shadow-2xl"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </>
   );

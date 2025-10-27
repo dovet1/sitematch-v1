@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Image as ImageIcon, FileText, Plus, Eye, Trash2, X, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Image as ImageIcon, FileText, Plus, Eye, Trash2, X, Settings, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createPortal } from 'react-dom';
 import { parseVideoUrl } from '@/lib/video-utils';
@@ -28,6 +28,8 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
   const [showManageModal, setShowManageModal] = useState(false);
   const [wasFromManageModal, setWasFromManageModal] = useState(false);
   const [showManageDeleteConfirm, setShowManageDeleteConfirm] = useState(false);
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
+  const [videoToPlay, setVideoToPlay] = useState<string | null>(null);
   const [selectedManageImageIndex, setSelectedManageImageIndex] = useState(-1);
 
   
@@ -182,7 +184,10 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
                 // Show YouTube thumbnail as preview image
                 if (parsed.thumbnailUrl) {
                   return (
-                    <>
+                    <div className="relative cursor-pointer group" onClick={() => {
+                      setVideoToPlay(parsed.embedUrl);
+                      setShowVideoPlayer(true);
+                    }}>
                       {!imageLoaded[currentImage.id] && (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <motion.div
@@ -199,7 +204,19 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
                         onLoad={() => handleImageLoad(currentImage.id)}
                         style={{ display: imageLoaded[currentImage.id] ? 'block' : 'none' }}
                       />
-                    </>
+                      {/* Play button overlay */}
+                      {imageLoaded[currentImage.id] && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <motion.div
+                            className="bg-black/60 backdrop-blur-sm rounded-full p-6 group-hover:bg-black/80 transition-all"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <Play className="w-12 h-12 text-white fill-white" />
+                          </motion.div>
+                        </div>
+                      )}
+                    </div>
                   );
                 }
 
@@ -661,6 +678,53 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
               </motion.div>
             </>
           )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* Video Player Modal */}
+      {showVideoPlayer && videoToPlay && createPortal(
+        <AnimatePresence>
+          <motion.div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              setShowVideoPlayer(false);
+              setVideoToPlay(null);
+            }}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setShowVideoPlayer(false);
+                setVideoToPlay(null);
+              }}
+              className="absolute top-6 right-6 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full p-3 text-white transition-all duration-200"
+              aria-label="Close video"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Video player */}
+            <motion.div
+              className="w-full max-w-6xl aspect-video mx-4"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <iframe
+                src={videoToPlay}
+                title="Video player"
+                className="w-full h-full rounded-lg shadow-2xl"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </motion.div>
+          </motion.div>
         </AnimatePresence>,
         document.body
       )}
