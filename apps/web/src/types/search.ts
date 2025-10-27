@@ -116,12 +116,15 @@ export interface FAQ {
 
 export interface FileAttachment {
   id: string;
-  type: 'brochure' | 'fit_out' | 'site_plan';
+  type: 'brochure' | 'fit_out' | 'site_plan' | 'photo' | 'video';
   name: string;
   size: number;
   url: string;
   thumbnail_url?: string;
   mime_type?: string;
+  isExternal?: boolean;
+  externalUrl?: string;
+  videoProvider?: 'youtube' | 'vimeo' | 'direct';
 }
 
 export interface EnhancedListingModalContent {

@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Image as ImageIcon, FileText, Maximize2, X } from 'lucide-react';
+import { parseVideoUrl } from '@/lib/video-utils';
 
 interface ImageFile {
   id: string;
   name: string;
   url: string;
   caption?: string;
+  isExternal?: boolean;
+  externalUrl?: string;
+  videoProvider?: 'youtube' | 'vimeo' | 'direct';
 }
 
 interface ImageGalleryProps {
@@ -102,15 +106,59 @@ export function ImageGallery({ images, type }: ImageGalleryProps) {
                 />
               </div>
             )}
-            
-            <img
-              src={currentImage.url}
-              alt={currentImage.name || `${type} ${currentIndex + 1}`}
-              className="w-full h-full object-cover"
-              onLoad={() => handleImageLoad(currentImage.id)}
-              style={{ display: imageLoaded[currentImage.id] ? 'block' : 'none' }}
-            />
-            
+
+            {/* Handle external videos (YouTube, Vimeo) */}
+            {type === 'videos' && currentImage.isExternal && currentImage.externalUrl ? (
+              (() => {
+                const parsed = parseVideoUrl(currentImage.externalUrl);
+                if (!parsed) {
+                  return (
+                    <div className="flex items-center justify-center h-full text-center text-white">
+                      <p>Invalid video URL</p>
+                    </div>
+                  );
+                }
+
+                // Show YouTube thumbnail as preview image
+                if (parsed.thumbnailUrl) {
+                  return (
+                    <img
+                      src={parsed.thumbnailUrl}
+                      alt={currentImage.name || `Video ${currentIndex + 1}`}
+                      className="w-full h-full object-cover"
+                      onLoad={() => handleImageLoad(currentImage.id)}
+                      style={{ display: imageLoaded[currentImage.id] ? 'block' : 'none' }}
+                    />
+                  );
+                }
+
+                // Fallback to iframe if no thumbnail
+                return (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full max-w-4xl aspect-video">
+                      <iframe
+                        src={parsed.embedUrl}
+                        title={currentImage.name || `Video ${currentIndex + 1}`}
+                        className="w-full h-full"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        onLoad={() => handleImageLoad(currentImage.id)}
+                      />
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              <img
+                src={currentImage.url}
+                alt={currentImage.name || `${type} ${currentIndex + 1}`}
+                className="w-full h-full object-cover"
+                onLoad={() => handleImageLoad(currentImage.id)}
+                style={{ display: imageLoaded[currentImage.id] ? 'block' : 'none' }}
+              />
+            )}
+
             {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
           </div>
@@ -170,23 +218,34 @@ export function ImageGallery({ images, type }: ImageGalleryProps) {
       {images.length > 1 && (
         <div className="absolute bottom-20 left-6 right-6 z-10 hidden md:block">
           <div className="flex gap-2 justify-center">
-            {images.map((image, index) => (
-              <button
-                key={image.id}
-                onClick={() => setCurrentIndex(index)}
-                className={`w-16 h-12 rounded overflow-hidden transition-all duration-200 ${
-                  index === currentIndex 
-                    ? 'ring-2 ring-white scale-110' 
-                    : 'opacity-60 hover:opacity-80'
-                }`}
-              >
-                <img
-                  src={image.url}
-                  alt={`${type} ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            ))}
+            {images.map((image, index) => {
+              // Get thumbnail URL for external videos
+              let thumbnailUrl = image.url;
+              if (type === 'videos' && image.isExternal && image.externalUrl) {
+                const parsed = parseVideoUrl(image.externalUrl);
+                if (parsed?.thumbnailUrl) {
+                  thumbnailUrl = parsed.thumbnailUrl;
+                }
+              }
+
+              return (
+                <button
+                  key={image.id}
+                  onClick={() => setCurrentIndex(index)}
+                  className={`w-16 h-12 rounded overflow-hidden transition-all duration-200 ${
+                    index === currentIndex
+                      ? 'ring-2 ring-white scale-110'
+                      : 'opacity-60 hover:opacity-80'
+                  }`}
+                >
+                  <img
+                    src={thumbnailUrl}
+                    alt={`${type} ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -212,11 +271,50 @@ export function ImageGallery({ images, type }: ImageGalleryProps) {
 
             {/* Full Screen Image */}
             <div className="relative h-full w-full flex items-center justify-center">
-              <img
-                src={currentImage.url}
-                alt={currentImage.name || `${type} ${currentIndex + 1}`}
-                className="max-h-full max-w-full object-contain"
-              />
+              {/* Handle external videos in full screen */}
+              {type === 'videos' && currentImage.isExternal && currentImage.externalUrl ? (
+                (() => {
+                  const parsed = parseVideoUrl(currentImage.externalUrl);
+                  if (!parsed) {
+                    return (
+                      <div className="text-center text-white">
+                        <p>Invalid video URL</p>
+                      </div>
+                    );
+                  }
+
+                  // Show YouTube thumbnail in full screen
+                  if (parsed.thumbnailUrl) {
+                    return (
+                      <img
+                        src={parsed.thumbnailUrl}
+                        alt={currentImage.name || `Video ${currentIndex + 1}`}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    );
+                  }
+
+                  // Fallback to iframe
+                  return (
+                    <div className="w-full max-w-6xl aspect-video">
+                      <iframe
+                        src={parsed.embedUrl}
+                        title={currentImage.name || `Video ${currentIndex + 1}`}
+                        className="w-full h-full"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  );
+                })()
+              ) : (
+                <img
+                  src={currentImage.url}
+                  alt={currentImage.name || `${type} ${currentIndex + 1}`}
+                  className="max-h-full max-w-full object-contain"
+                />
+              )}
 
               {/* Navigation Controls */}
               {images.length > 1 && (

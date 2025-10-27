@@ -105,6 +105,7 @@ export interface UploadedFile {
   uploadedAt: Date;
   preview?: string;
   thumbnail?: string;
+  isExternal?: boolean;
   externalUrl?: string;
   videoProvider?: 'youtube' | 'vimeo' | 'direct';
 }

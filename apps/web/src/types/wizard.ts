@@ -120,6 +120,7 @@ export interface SupportingDocumentsData {
     displayOrder: number;
     caption?: string;
     thumbnail?: string;
+    isExternal?: boolean;
     externalUrl?: string;
     videoProvider?: 'youtube' | 'vimeo' | 'direct';
   }>;
