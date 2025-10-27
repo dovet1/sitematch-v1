@@ -16,7 +16,14 @@ import { cn } from '@/lib/utils';
 
 import { uploadMultipleFilesViaApi } from '@/lib/file-upload-api';
 import { validateFiles, deleteFile } from '@/lib/file-upload';
-import { formatFileSize, isImageFile, isVideoFile } from '@/types/uploads';
+import {
+  formatFileSize,
+  isImageFile,
+  isVideoFile,
+  validateVideoUrl,
+  getVideoEmbedUrl,
+  detectVideoProvider
+} from '@/types/uploads';
 import type { 
   GalleryUploadProps,
   GalleryItem,
@@ -28,6 +35,8 @@ interface ExtendedGalleryUploadProps extends GalleryUploadProps {
   listingId?: string;
   allowReordering?: boolean;
   showCaptions?: boolean;
+  fileType?: 'photo' | 'video';
+  allowExternalUrls?: boolean;
 }
 
 export function GalleryUpload({
@@ -41,13 +50,18 @@ export function GalleryUpload({
   organizationId,
   listingId,
   allowReordering = true,
-  showCaptions = true
+  showCaptions = true,
+  fileType = 'photo',
+  allowExternalUrls = false
 }: ExtendedGalleryUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [editingCaption, setEditingCaption] = useState<string | null>(null);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [externalUrl, setExternalUrl] = useState('');
+  const [isAddingUrl, setIsAddingUrl] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,8 +70,8 @@ export function GalleryUpload({
   // =====================================================
 
   const handleFileValidation = useCallback((files: File[]): FileValidationResult => {
-    const validation = validateFiles(files, 'fitOut');
-    
+    const validation = validateFiles(files, fileType);
+
     // Check total file count
     if (value.length + files.length > maxFiles) {
       validation.errors.push({
@@ -69,7 +83,7 @@ export function GalleryUpload({
 
     setValidationError(validation.isValid ? null : validation.errors[0]?.message || 'Invalid files');
     return validation;
-  }, [value.length, maxFiles]);
+  }, [value.length, maxFiles, fileType]);
 
   const handleFileSelect = useCallback(async (files: File[]) => {
     if (disabled || files.length === 0) return;
@@ -87,7 +101,7 @@ export function GalleryUpload({
       // Upload files via API
       const uploadedFiles = await uploadMultipleFilesViaApi(
         files,
-        'fitOut',
+        fileType,
         organizationId,
         (progress) => {
           setUploadProgress(progress);
@@ -101,7 +115,7 @@ export function GalleryUpload({
         ...file,
         displayOrder: value.length + index,
         caption: '',
-        isVideo: isVideoFile(file.mimeType)
+        isVideo: fileType === 'video'
       }));
 
       // Add to existing files
@@ -121,14 +135,16 @@ export function GalleryUpload({
       setIsUploading(false);
       setUploadProgress(0);
     }
-  }, [disabled, organizationId, onChange, onProgress, value, maxFiles, handleFileValidation]);
+  }, [disabled, organizationId, onChange, onProgress, value, maxFiles, handleFileValidation, fileType, listingId]);
 
   const handleItemRemove = useCallback(async (itemToRemove: GalleryItem) => {
     if (disabled) return;
 
     try {
-      // Delete from storage
-      await deleteFile(itemToRemove.path, 'fitOut');
+      // Delete from storage (skip if external URL)
+      if (itemToRemove.path) {
+        await deleteFile(itemToRemove.path, fileType);
+      }
       
       // Remove from local state and reorder
       const updatedItems = value
@@ -141,7 +157,7 @@ export function GalleryUpload({
       console.error('File deletion error:', error);
       setValidationError(error instanceof Error ? error.message : 'Failed to delete file');
     }
-  }, [disabled, value, onChange]);
+  }, [disabled, value, onChange, fileType]);
 
   const handleCaptionUpdate = useCallback((itemId: string, caption: string) => {
     const updatedItems = value.map(item =>
@@ -166,6 +182,77 @@ export function GalleryUpload({
 
     onChange(reorderedItems);
   }, [allowReordering, disabled, value, onChange]);
+
+  // =====================================================
+  // EXTERNAL URL HANDLING
+  // =====================================================
+
+  const handleAddExternalUrl = useCallback(async () => {
+    if (!externalUrl.trim() || disabled) return;
+
+    // Validate URL
+    const validation = validateVideoUrl(externalUrl);
+    if (!validation.isValid) {
+      setValidationError(validation.error || 'Invalid video URL');
+      return;
+    }
+
+    setIsAddingUrl(true);
+    setValidationError(null);
+
+    try {
+      const provider = detectVideoProvider(externalUrl);
+      if (!provider) {
+        throw new Error('Unsupported video provider');
+      }
+
+      // Call API to add external video
+      const response = await fetch('/api/files/external-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: externalUrl,
+          listingId: listingId,
+          name: `${provider} Video`,
+          displayOrder: value.length
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add video');
+      }
+
+      const { file } = await response.json();
+
+      // Add to gallery
+      const newItem: GalleryItem = {
+        id: file.id,
+        name: file.file_name,
+        url: externalUrl,
+        path: '',
+        type: 'video',
+        size: 0,
+        mimeType: 'video/external',
+        uploadedAt: new Date(file.created_at),
+        displayOrder: value.length,
+        caption: '',
+        isVideo: true,
+        externalUrl: externalUrl,
+        videoProvider: provider
+      };
+
+      onChange([...value, newItem]);
+      setExternalUrl('');
+      setShowUrlInput(false);
+
+    } catch (error) {
+      console.error('Add external URL error:', error);
+      setValidationError(error instanceof Error ? error.message : 'Failed to add video');
+    } finally {
+      setIsAddingUrl(false);
+    }
+  }, [externalUrl, disabled, listingId, value, onChange]);
 
   // =====================================================
   // DRAG AND DROP
@@ -349,7 +436,10 @@ export function GalleryUpload({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,video/mp4"
+            accept={fileType === 'video'
+              ? 'video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm'
+              : 'image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif'
+            }
             onChange={handleInputChange}
             multiple
             className="hidden"
@@ -386,18 +476,87 @@ export function GalleryUpload({
 
               <div className="space-y-1">
                 <p className="text-sm font-medium text-gray-900">
-                  {dragOver ? 'Drop images/videos here' : 'Add fit-out examples'}
+                  {dragOver ? `Drop ${fileType === 'video' ? 'videos' : 'photos'} here` : `Add ${fileType === 'video' ? 'videos' : 'photos'}`}
                 </p>
                 <p className="text-xs text-gray-500">
                   Drag and drop or click to browse
                 </p>
                 <p className="text-xs text-gray-400">
-                  JPG, PNG, MP4 up to 5MB • {value.length}/{maxFiles} files
+                  {fileType === 'video' ? 'MP4, MOV, AVI, MKV, WebM up to 100MB' : 'JPG, PNG, WebP up to 10MB'} • {value.length}/{maxFiles} files
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* External URL Input for Videos */}
+      {allowExternalUrls && canAddMore && (
+        <div className="space-y-2">
+          {!showUrlInput ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowUrlInput(true)}
+              disabled={disabled}
+              className="w-full"
+            >
+              <Video className="w-4 h-4 mr-2" />
+              Add YouTube or Vimeo URL
+            </Button>
+          ) : (
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1">
+                    <Input
+                      type="url"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      value={externalUrl}
+                      onChange={(e) => setExternalUrl(e.target.value)}
+                      disabled={disabled || isAddingUrl}
+                      className="text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Paste a YouTube or Vimeo video URL
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddExternalUrl}
+                    disabled={disabled || isAddingUrl || !externalUrl.trim()}
+                  >
+                    {isAddingUrl ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      'Add Video'
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowUrlInput(false);
+                      setExternalUrl('');
+                      setValidationError(null);
+                    }}
+                    disabled={disabled || isAddingUrl}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Error Message */}
@@ -412,7 +571,7 @@ export function GalleryUpload({
       {value.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="font-medium text-gray-900">Fit-out Examples</h4>
+            <h4 className="font-medium text-gray-900">{fileType === 'video' ? 'Videos' : 'Photos'}</h4>
             <Badge variant="secondary" className="text-xs">
               {value.length}/{maxFiles} files
             </Badge>
@@ -426,7 +585,7 @@ export function GalleryUpload({
 
           {allowReordering && value.length > 1 && (
             <p className="text-xs text-gray-500 text-center">
-              Drag images to reorder them
+              Drag {fileType === 'video' ? 'videos' : 'photos'} to reorder them
             </p>
           )}
         </div>
@@ -435,10 +594,16 @@ export function GalleryUpload({
       {/* Empty State */}
       {value.length === 0 && !isUploading && (
         <div className="text-center py-8 text-gray-500">
-          <ImageIcon className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-          <p className="text-sm">No fit-out examples uploaded yet</p>
+          {fileType === 'video' ? (
+            <Video className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+          ) : (
+            <ImageIcon className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+          )}
+          <p className="text-sm">No {fileType === 'video' ? 'videos' : 'photos'} added yet</p>
           <p className="text-xs text-gray-400 mt-1">
-            Show potential tenants what your spaces could look like
+            {fileType === 'video'
+              ? 'Upload videos or add YouTube/Vimeo links to showcase your company'
+              : 'Upload photos to help visualize your space requirements'}
           </p>
         </div>
       )}

@@ -112,7 +112,7 @@ export async function GET(
     ] = await Promise.all([
       supabase.from('listing_locations').select('id, place_name, coordinates, formatted_address').eq('listing_id', id),
       supabase.from('faqs').select('id, question, answer, display_order').eq('listing_id', id),
-      supabase.from('file_uploads').select('id, file_path, file_name, file_size, file_type, bucket_name, is_primary, display_order, caption').eq('listing_id', id),
+      supabase.from('file_uploads').select('id, file_path, file_name, file_size, file_type, mime_type, bucket_name, is_primary, display_order, caption, external_url, video_provider, created_at').eq('listing_id', id),
       supabase.from('listing_contacts').select('id, contact_name, contact_title, contact_email, contact_phone, contact_area, headshot_url, is_primary_contact').eq('listing_id', id),
       supabase.from('listing_sectors').select('sector_id, sectors(id, name)').eq('listing_id', id),
       supabase.from('listing_use_classes').select('use_class_id, use_classes(id, name, code)').eq('listing_id', id)
@@ -263,26 +263,29 @@ export async function GET(
             type: 'brochure',
             caption: file.caption || null
           })),
-        fit_outs: (files || [])
-          .filter((file: any) => file.file_type === 'fitOut' || file.file_type === 'fit_out')
+        videos: (files || [])
+          .filter((file: any) => file.file_type === 'video')
           .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
           .map((file: any) => ({
             id: file.id,
             name: file.file_name,
-            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/fit-outs/${file.file_path}`,
+            url: file.external_url || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/videos/${file.file_path}`,
             size: file.file_size,
-            type: 'fit_out',
-            caption: file.caption || null
+            type: 'video',
+            caption: file.caption || null,
+            isExternal: !!file.external_url,
+            externalUrl: file.external_url || null,
+            videoProvider: file.video_provider || null
           })),
-        site_plans: (files || [])
-          .filter((file: any) => file.file_type === 'sitePlan' || file.file_type === 'site_plan')
+        photos: (files || [])
+          .filter((file: any) => file.file_type === 'photo')
           .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
           .map((file: any) => ({
             id: file.id,
             name: file.file_name,
-            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/site-plans/${file.file_path}`,
+            url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/photos/${file.file_path}`,
             size: file.file_size,
-            type: 'site_plan',
+            type: 'photo',
             caption: file.caption || null
           }))
       },

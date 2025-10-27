@@ -16,13 +16,13 @@ interface MobileMediaViewerProps {
   isLoading: boolean;
   className?: string;
   onAddLocations?: () => void;
-  onAddSitePlans?: () => void;
-  onAddFitOuts?: () => void;
-  onDeleteSitePlan?: (index: number, file: any) => void;
-  onDeleteFitOut?: (index: number, file: any) => void;
+  onAddPhotos?: () => void;
+  onAddVideos?: () => void;
+  onDeletePhoto?: (index: number, file: any) => void;
+  onDeleteVideo?: (index: number, file: any) => void;
 }
 
-export function MobileMediaViewer({ listing, isLoading, className, onAddLocations, onAddSitePlans, onAddFitOuts, onDeleteSitePlan, onDeleteFitOut }: MobileMediaViewerProps) {
+export function MobileMediaViewer({ listing, isLoading, className, onAddLocations, onAddPhotos, onAddVideos, onDeletePhoto, onDeleteVideo }: MobileMediaViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenImageIndex, setFullscreenImageIndex] = useState(0);
@@ -34,26 +34,26 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
   const hasLocations = listing?.locations?.all && listing.locations.all.length > 0;
 
   const mediaItems = [
-    { 
-      type: 'coverage', 
+    {
+      type: 'coverage',
       label: 'Coverage',
       icon: MapPin,
       available: true,
       hasContent: hasLocations
     },
-    { 
-      type: 'site-plan', 
-      label: 'Site Plans',
+    {
+      type: 'photos',
+      label: 'Photos',
       icon: FileText,
       available: true, // Always show
-      hasContent: listing?.files?.site_plans && listing.files.site_plans.length > 0
+      hasContent: listing?.files?.photos && listing.files.photos.length > 0
     },
-    { 
-      type: 'fit-out', 
-      label: 'Fit-Outs',
+    {
+      type: 'videos',
+      label: 'Videos',
       icon: Home,
       available: true, // Always show
-      hasContent: listing?.files?.fit_outs && listing.files.fit_outs.length > 0
+      hasContent: listing?.files?.videos && listing.files.videos.length > 0
     }
   ]; // Remove filter - show all tabs
 
@@ -124,56 +124,59 @@ export function MobileMediaViewer({ listing, isLoading, className, onAddLocation
           return <NationwideHeroVisual company={listing?.company || { name: 'Company' }} onAddLocations={onAddLocations} />;
         }
 
-      case 'site-plan':
-        const sitePlans = listing.files?.site_plans?.map((file: any, index: number) => ({
-          id: file.id || `site-plan-${index}`,
-          name: file.name || 'Site Plan',
+      case 'photos':
+        const photos = listing.files?.photos?.map((file: any, index: number) => ({
+          id: file.id || `photo-${index}`,
+          name: file.name || 'Photo',
           url: file.url,
           caption: file.name
         })) || [];
-        
+
         return (
-          <SimpleImageGallery 
-            images={sitePlans}
-            type="site-plans"
+          <SimpleImageGallery
+            images={photos}
+            type="photos"
             onImageClick={(index, onClose) => {
-              setFullscreenImages(sitePlans);
+              setFullscreenImages(photos);
               setFullscreenImageIndex(index);
               setCustomCloseHandler(onClose || null);
               setIsFullscreen(true);
             }}
-            onAddClick={onAddSitePlans}
-            onDeleteImage={onDeleteSitePlan ? (index, image) => {
+            onAddClick={onAddPhotos}
+            onDeleteImage={onDeletePhoto ? (index, image) => {
               // Convert back to original file format for the handler
-              const originalFile = listing.files?.site_plans?.[index];
-              onDeleteSitePlan(index, originalFile || image);
+              const originalFile = listing.files?.photos?.[index];
+              onDeletePhoto(index, originalFile || image);
             } : undefined}
           />
         );
 
-      case 'fit-out':
-        const fitOuts = listing.files?.fit_outs?.map((file: any, index: number) => ({
-          id: file.id || `fit-out-${index}`,
-          name: file.name || 'Fit-out Image',
+      case 'videos':
+        const videos = listing.files?.videos?.map((file: any, index: number) => ({
+          id: file.id || `video-${index}`,
+          name: file.name || 'Video',
           url: file.url,
-          caption: file.name
+          caption: file.name,
+          isExternal: file.isExternal || !!file.externalUrl,
+          externalUrl: file.externalUrl || file.url,
+          videoProvider: file.videoProvider
         })) || [];
-        
+
         return (
-          <SimpleImageGallery 
-            images={fitOuts}
-            type="fit-outs"
+          <SimpleImageGallery
+            images={videos}
+            type="videos"
             onImageClick={(index, onClose) => {
-              setFullscreenImages(fitOuts);
+              setFullscreenImages(videos);
               setFullscreenImageIndex(index);
               setCustomCloseHandler(onClose || null);
               setIsFullscreen(true);
             }}
-            onAddClick={onAddFitOuts}
-            onDeleteImage={onDeleteFitOut ? (index, image) => {
+            onAddClick={onAddVideos}
+            onDeleteImage={onDeleteVideo ? (index, image) => {
               // Convert back to original file format for the handler
-              const originalFile = listing.files?.fit_outs?.[index];
-              onDeleteFitOut(index, originalFile || image);
+              const originalFile = listing.files?.videos?.[index];
+              onDeleteVideo(index, originalFile || image);
             } : undefined}
           />
         );

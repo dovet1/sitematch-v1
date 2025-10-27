@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,7 +46,8 @@ import {
   GripVertical,
   Download,
   Globe,
-  HelpCircle
+  HelpCircle,
+  Play
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -54,7 +56,7 @@ import { hasListingChanges } from '@/lib/listing-comparison';
 import { getSectors, getUseClasses } from '@/lib/listings';
 import type { WizardFormData } from '@/types/wizard';
 import type { Sector, UseClass } from '@/types/listings';
-import { uploadFiles, validateFiles } from '@/lib/file-upload';
+import { uploadFiles, validateFiles, validateFile } from '@/lib/file-upload';
 import type { FileUploadType, UploadedFile } from '@/types/uploads';
 import { ImmersiveListingModal } from '@/components/listings/ImmersiveListingModal';
 import { fetchCompanyLogo, validateDomain, normalizeDomain, formatDomainWithProtocol } from '@/lib/clearbit-logo';
@@ -169,7 +171,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   const [useClasses, setUseClasses] = useState<UseClass[]>([]);
   
   // Visual hero view state (matching public modal)
-  const [visualView, setVisualView] = useState<'map' | 'fitouts' | 'siteplans'>('map');
+  const [visualView, setVisualView] = useState<'map' | 'videos' | 'photos'>('map');
   
   // Mobile requirements section state
   const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({
@@ -188,9 +190,13 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     useClasses: false
   });
   
-  // Carousel state for site-plans and fit-outs
-  const [sitePlansIndex, setSitePlansIndex] = useState(0);
-  const [fitOutsIndex, setFitOutsIndex] = useState(0);
+  // Carousel state for site-plans and videos
+  const [photosIndex, setPhotosIndex] = useState(0);
+  const [videosIndex, setVideosIndex] = useState(0);
+
+  // Video player modal state
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
+  const [videoToPlay, setVideoToPlay] = useState<string | null>(null);
 
   // Subscription state
   const [hasSubscription, setHasSubscription] = useState<boolean>(false);
@@ -507,32 +513,52 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           };
         }) || [],
 
-        sitePlanFiles: files?.filter(f => f.file_type === 'sitePlan').map(file => {
+        photoFiles: files?.filter(f => f.file_type === 'photo').map(file => {
           const { data: urlData } = supabase.storage
-            .from('site-plans')
+            .from('photos')
             .getPublicUrl(file.file_path);
           return {
             id: file.id,
             name: file.file_name,
             url: urlData.publicUrl,
             path: file.file_path,
-            type: 'sitePlan' as const,
+            type: 'photo' as const,
             size: file.file_size,
             mimeType: file.mime_type,
-            uploadedAt: new Date(file.created_at)
+            uploadedAt: new Date(file.created_at),
+            displayOrder: file.display_order || 0
           };
         }) || [],
 
-        fitOutFiles: files?.filter(f => f.file_type === 'fitOut').map(file => {
+        videoFiles: files?.filter(f => f.file_type === 'video').map(file => {
+          // Handle external videos (YouTube, Vimeo, etc.)
+          if (file.external_url) {
+            return {
+              id: file.id,
+              name: file.file_name,
+              url: file.external_url,
+              path: undefined,
+              type: 'video' as const,
+              size: file.file_size,
+              mimeType: file.mime_type,
+              uploadedAt: new Date(file.created_at),
+              displayOrder: file.display_order || 0,
+              externalUrl: file.external_url,
+              videoProvider: file.video_provider,
+              isExternal: true
+            };
+          }
+
+          // Handle uploaded video files
           const { data: urlData } = supabase.storage
-            .from('fit-outs')
+            .from('videos')
             .getPublicUrl(file.file_path);
           return {
             id: file.id,
             name: file.file_name,
             url: urlData.publicUrl,
             path: file.file_path,
-            type: 'fitOut' as const,
+            type: 'video' as const,
             size: file.file_size,
             mimeType: file.mime_type,
             uploadedAt: new Date(file.created_at),
@@ -582,30 +608,30 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   // Carousel navigation functions
   const nextSitePlan = () => {
-    const sitePlanFiles = listingData?.sitePlanFiles;
-    if (sitePlanFiles && sitePlanFiles.length > 0) {
-      setSitePlansIndex((prev) => (prev + 1) % sitePlanFiles.length);
+    const photoFiles = listingData?.photoFiles;
+    if (photoFiles && photoFiles.length > 0) {
+      setPhotosIndex((prev) => (prev + 1) % photoFiles.length);
     }
   };
 
   const prevSitePlan = () => {
-    const sitePlanFiles = listingData?.sitePlanFiles;
-    if (sitePlanFiles && sitePlanFiles.length > 0) {
-      setSitePlansIndex((prev) => (prev - 1 + sitePlanFiles.length) % sitePlanFiles.length);
+    const photoFiles = listingData?.photoFiles;
+    if (photoFiles && photoFiles.length > 0) {
+      setPhotosIndex((prev) => (prev - 1 + photoFiles.length) % photoFiles.length);
     }
   };
 
   const nextFitOut = () => {
-    const fitOutFiles = listingData?.fitOutFiles;
-    if (fitOutFiles && fitOutFiles.length > 0) {
-      setFitOutsIndex((prev) => (prev + 1) % fitOutFiles.length);
+    const videoFiles = listingData?.videoFiles;
+    if (videoFiles && videoFiles.length > 0) {
+      setVideosIndex((prev) => (prev + 1) % videoFiles.length);
     }
   };
 
   const prevFitOut = () => {
-    const fitOutFiles = listingData?.fitOutFiles;
-    if (fitOutFiles && fitOutFiles.length > 0) {
-      setFitOutsIndex((prev) => (prev - 1 + fitOutFiles.length) % fitOutFiles.length);
+    const videoFiles = listingData?.videoFiles;
+    if (videoFiles && videoFiles.length > 0) {
+      setVideosIndex((prev) => (prev - 1 + videoFiles.length) % videoFiles.length);
     }
   };
 
@@ -1353,7 +1379,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       // Only handle keyboard navigation in visual hero sections
-      if (visualView === 'siteplans' && listingData?.sitePlanFiles && listingData.sitePlanFiles.length > 1) {
+      if (visualView === 'photos' && listingData?.photoFiles && listingData.photoFiles.length > 1) {
         if (e.key === 'ArrowLeft') {
           e.preventDefault();
           prevSitePlan();
@@ -1361,7 +1387,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           e.preventDefault();
           nextSitePlan();
         }
-      } else if (visualView === 'fitouts' && listingData?.fitOutFiles && listingData.fitOutFiles.length > 1) {
+      } else if (visualView === 'videos' && listingData?.videoFiles && listingData.videoFiles.length > 1) {
         if (e.key === 'ArrowLeft') {
           e.preventDefault();
           prevFitOut();
@@ -1374,7 +1400,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
     document.addEventListener('keydown', handleKeyPress);
     return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [visualView, listingData?.sitePlanFiles, listingData?.fitOutFiles]);
+  }, [visualView, listingData?.photoFiles, listingData?.videoFiles]);
 
   const handleSubmitForReview = async () => {
     if (!listingData) return;
@@ -1519,8 +1545,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           for (const brochure of existingBrochures) {
             try {
               // Delete from storage
-              await supabase.storage.from('brochures').remove([brochure.path]);
-              
+              if (brochure.path) {
+                await supabase.storage.from('brochures').remove([brochure.path]);
+              }
+
               // Delete from database
               await supabase
                 .from('file_uploads')
@@ -2086,9 +2114,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         current: (listingData.primaryContact?.contactName ? 1 : 0) + (listingData.primaryContact?.contactEmail ? 1 : 0)
       },
       documents: {
-        completed: !!(listingData.sitePlanFiles?.length || listingData.fitOutFiles?.length),
+        completed: !!(listingData.photoFiles?.length || listingData.videoFiles?.length),
         total: 2,
-        current: (listingData.sitePlanFiles?.length ? 1 : 0) + (listingData.fitOutFiles?.length ? 1 : 0)
+        current: (listingData.photoFiles?.length ? 1 : 0) + (listingData.videoFiles?.length ? 1 : 0)
       },
       faqs: {
         completed: !!(listingData.faqs?.length),
@@ -2460,23 +2488,27 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   };
 
   // Quick Upload Modal for Visual Hero Section  
-  const QuickUploadModal = ({ isOpen, onClose, type, onUpload }: {
+  const QuickUploadModal = ({ isOpen, onClose, type, onUpload, onExternalVideoAdd }: {
     isOpen: boolean;
     onClose: () => void;
-    type: 'siteplans' | 'fitouts';
+    type: 'photos' | 'videos';
     onUpload: (files: File[]) => void;
+    onExternalVideoAdd?: (url: string) => void;
   }) => {
     const [dragActive, setDragActive] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [showExternalUrl, setShowExternalUrl] = useState(false);
+    const [externalUrl, setExternalUrl] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const title = type === 'siteplans' ? 'Upload Site Plans' : 'Upload Fit-Out Examples';
-    const description = type === 'siteplans' 
+    const title = type === 'photos' ? 'Upload Photos' : 'Upload Videos';
+    const description = type === 'photos'
       ? 'Upload floor plans, site layouts, or property plans'
-      : 'Upload images or videos of your ideal space design';
+      : 'Upload or link to videos to demonstrate what your site may look like';
 
-    const acceptedTypes = type === 'siteplans' 
+    const acceptedTypes = type === 'photos' 
       ? '.pdf,.jpg,.jpeg,.png,.dwg'
       : '.jpg,.jpeg,.png,.mp4,.mov';
 
@@ -2494,14 +2526,50 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       e.preventDefault();
       e.stopPropagation();
       setDragActive(false);
-      
+
       const files = Array.from(e.dataTransfer.files);
+
+      // Validate files before adding
+      const invalidFiles: string[] = [];
+      const fileType: FileUploadType = type === 'photos' ? 'photo' : 'video';
+
+      files.forEach(file => {
+        const validation = validateFile(file, fileType);
+        if (!validation.isValid && validation.errors.length > 0) {
+          invalidFiles.push(validation.errors[0].message);
+        }
+      });
+
+      if (invalidFiles.length > 0) {
+        setUploadError(invalidFiles[0]);
+        return;
+      }
+
+      setUploadError(null);
       setSelectedFiles(prev => [...prev, ...files]);
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
         const files = Array.from(e.target.files);
+
+        // Validate files before adding
+        const invalidFiles: string[] = [];
+        const fileType: FileUploadType = type === 'photos' ? 'photo' : 'video';
+
+        files.forEach(file => {
+          const validation = validateFile(file, fileType);
+          if (!validation.isValid && validation.errors.length > 0) {
+            invalidFiles.push(validation.errors[0].message);
+          }
+        });
+
+        if (invalidFiles.length > 0) {
+          setUploadError(invalidFiles[0]);
+          return;
+        }
+
+        setUploadError(null);
         setSelectedFiles(prev => [...prev, ...files]);
       }
     };
@@ -2511,8 +2579,35 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     };
 
     const handleUpload = async () => {
+      // Handle external URL for videos
+      if (type === 'videos' && externalUrl && onExternalVideoAdd) {
+        setIsUploading(true);
+        try {
+          const { isValidVideoUrl } = await import('@/lib/video-utils');
+          if (!isValidVideoUrl(externalUrl)) {
+            setUploadError('Invalid video URL. Please enter a valid YouTube or Vimeo link.');
+            setIsUploading(false);
+            return;
+          }
+
+          await onExternalVideoAdd(externalUrl);
+          setExternalUrl('');
+          setShowExternalUrl(false);
+          onClose();
+          toast.success('External video added successfully!');
+        } catch (error) {
+          console.error('Add external video error:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Failed to add external video';
+          toast.error(errorMessage);
+        } finally {
+          setIsUploading(false);
+        }
+        return;
+      }
+
+      // Handle file uploads
       if (selectedFiles.length === 0) return;
-      
+
       setIsUploading(true);
       try {
         await onUpload(selectedFiles);
@@ -2521,7 +2616,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         toast.success(`${title} uploaded successfully!`);
       } catch (error) {
         console.error('Upload error:', error);
-        toast.error('Upload failed');
+        const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+        toast.error(errorMessage);
       } finally {
         setIsUploading(false);
       }
@@ -2545,7 +2641,14 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
             </div>
             
             <p className="text-gray-600 mb-4">{description}</p>
-            
+
+            {/* Error message */}
+            {uploadError && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800 text-sm">{uploadError}</p>
+              </div>
+            )}
+
             {/* Drop zone */}
             <div
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
@@ -2581,10 +2684,51 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   {' '}or drag and drop
                 </p>
                 <p className="text-sm text-gray-400">
-                  {type === 'siteplans' ? 'PDF, JPG, PNG, DWG files' : 'JPG, PNG, MP4, MOV files'}
+                  {type === 'photos' ? 'PDF, JPG, PNG, DWG files' : 'JPG, PNG, MP4, MOV files'}
                 </p>
               </div>
             </div>
+
+            {/* External Video URL for videos only */}
+            {type === 'videos' && (
+              <div className="mt-4">
+                {!showExternalUrl ? (
+                  <button
+                    onClick={() => setShowExternalUrl(true)}
+                    className="text-sm text-violet-600 hover:text-violet-700 font-medium"
+                  >
+                    + Add video from YouTube/Vimeo
+                  </button>
+                ) : (
+                  <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-700">
+                        External Video URL
+                      </label>
+                      <button
+                        onClick={() => {
+                          setShowExternalUrl(false);
+                          setExternalUrl('');
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <input
+                      type="url"
+                      value={externalUrl}
+                      onChange={(e) => setExternalUrl(e.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Paste a YouTube or Vimeo link
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Selected files */}
             {selectedFiles.length > 0 && (
@@ -2617,12 +2761,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
               >
                 Cancel
               </Button>
-              <Button 
-                onClick={handleUpload} 
-                disabled={selectedFiles.length === 0 || isUploading}
+              <Button
+                onClick={handleUpload}
+                disabled={(selectedFiles.length === 0 && !externalUrl) || isUploading}
                 className={`bg-violet-600 hover:bg-violet-700 text-white ${isMobile ? 'flex-1' : ''}`}
               >
-                {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''}`}
+                {isUploading ? 'Uploading...' : externalUrl ? 'Add Video' : `Upload ${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''}`}
               </Button>
             </div>
           </div>
@@ -2652,11 +2796,23 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
 
   // File action handlers
   const handleViewFile = (file: any) => {
+    // Check if it's an external video (YouTube, Vimeo)
+    if (file?.isExternal && file?.externalUrl) {
+      const { parseVideoUrl } = require('@/lib/video-utils');
+      const parsed = parseVideoUrl(file.externalUrl);
+      if (parsed?.embedUrl) {
+        setVideoToPlay(parsed.embedUrl);
+        setShowVideoPlayer(true);
+        return;
+      }
+    }
+
+    // For regular files, open in new tab
     window.open(file.url, '_blank');
   };
 
 
-  const handleDeleteFile = async (file: any, type: 'siteplans' | 'fitouts') => {
+  const handleDeleteFile = async (file: any, type: 'photos' | 'videos') => {
     if (!confirm(`Are you sure you want to delete "${file.name}"?`)) {
       return;
     }
@@ -2665,7 +2821,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       const supabase = createClientClient();
       
       // Delete from storage
-      const bucket = type === 'siteplans' ? 'site-plans' : 'fit-outs';
+      const bucket = type === 'photos' ? 'site-plans' : 'videos';
       const { error: storageError } = await supabase.storage
         .from(bucket)
         .remove([file.path]);
@@ -2685,15 +2841,15 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       }
 
       // Update local state
-      if (type === 'siteplans') {
+      if (type === 'photos') {
         setListingData(prev => prev ? {
           ...prev,
-          sitePlanFiles: prev.sitePlanFiles?.filter(f => f.id !== file.id) || []
+          photoFiles: prev.photoFiles?.filter(f => f.id !== file.id) || []
         } : null);
       } else {
         setListingData(prev => prev ? {
           ...prev,
-          fitOutFiles: prev.fitOutFiles?.filter(f => f.id !== file.id) || []
+          videoFiles: prev.videoFiles?.filter(f => f.id !== file.id) || []
         } : null);
       }
 
@@ -2705,12 +2861,12 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
   };
 
   // Mobile deletion functions (skip confirm dialog since we have our own confirmation UI)
-  const handleMobileDeleteFile = async (file: any, type: 'siteplans' | 'fitouts') => {
+  const handleMobileDeleteFile = async (file: any, type: 'photos' | 'videos') => {
     try {
       const supabase = createClientClient();
       
       // Delete from storage
-      const bucket = type === 'siteplans' ? 'site-plans' : 'fit-outs';
+      const bucket = type === 'photos' ? 'site-plans' : 'videos';
       const { error: storageError } = await supabase.storage
         .from(bucket)
         .remove([file.path]);
@@ -2730,15 +2886,15 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       }
 
       // Update local state
-      if (type === 'siteplans') {
+      if (type === 'photos') {
         setListingData(prev => prev ? {
           ...prev,
-          sitePlanFiles: prev.sitePlanFiles?.filter(f => f.id !== file.id) || []
+          photoFiles: prev.photoFiles?.filter(f => f.id !== file.id) || []
         } : null);
       } else {
         setListingData(prev => prev ? {
           ...prev,
-          fitOutFiles: prev.fitOutFiles?.filter(f => f.id !== file.id) || []
+          videoFiles: prev.videoFiles?.filter(f => f.id !== file.id) || []
         } : null);
       }
 
@@ -2749,7 +2905,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     }
   };
 
-  const handleQuickUpload = async (files: File[], type: 'siteplans' | 'fitouts') => {
+  const handleQuickUpload = async (files: File[], type: 'photos' | 'videos') => {
     try {
       const supabase = createClientClient();
       
@@ -2760,7 +2916,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       }
       
       // Map our type to the file upload types
-      const fileUploadType: FileUploadType = type === 'siteplans' ? 'sitePlan' : 'fitOut';
+      const fileUploadType: FileUploadType = type === 'photos' ? 'photo' : 'video';
       
       // Validate files first
       const validation = validateFiles(files, fileUploadType);
@@ -2777,24 +2933,27 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       const uploadedFiles = await uploadFiles(files, fileUploadType, user.id, listingId);
       
       // Update the listing data with real uploaded files
-      if (type === 'siteplans') {
+      if (type === 'photos') {
         const transformedFiles = uploadedFiles.map((file, index) => ({
           id: file.id,
           name: file.name,
           url: file.url,
           path: file.path,
-          type: file.type as 'sitePlan',
+          type: file.type as 'photo',
           size: file.size,
           mimeType: file.mimeType,
-          uploadedAt: file.uploadedAt
+          uploadedAt: file.uploadedAt,
+          displayOrder: index,
+          caption: '',
+          thumbnail: file.thumbnail
         }));
         
-        const currentFiles = listingData?.sitePlanFiles || [];
+        const currentFiles = listingData?.photoFiles || [];
         const updatedFiles = [...currentFiles, ...transformedFiles];
         
         setListingData(prev => prev ? {
           ...prev,
-          sitePlanFiles: updatedFiles
+          photoFiles: updatedFiles
         } : null);
       } else {
         const transformedFiles = uploadedFiles.map((file, index) => ({
@@ -2802,38 +2961,113 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
           name: file.name,
           url: file.url,
           path: file.path,
-          type: file.type as 'fitOut',
+          type: file.type as 'video',
           size: file.size,
           mimeType: file.mimeType,
           uploadedAt: file.uploadedAt,
           displayOrder: index,
           caption: '',
-          isVideo: file.mimeType.startsWith('video/'),
           thumbnail: file.thumbnail
         }));
         
-        const currentFiles = listingData?.fitOutFiles || [];
+        const currentFiles = listingData?.videoFiles || [];
         const updatedFiles = [...currentFiles, ...transformedFiles];
         
         setListingData(prev => prev ? {
           ...prev,
-          fitOutFiles: updatedFiles
+          videoFiles: updatedFiles
         } : null);
       }
 
       // Save to database by updating the listing with file associations
-      const finalFiles = type === 'siteplans' ? 
-        [...(listingData?.sitePlanFiles || []), ...uploadedFiles] : 
-        [...(listingData?.fitOutFiles || []), ...uploadedFiles];
+      const finalFiles = type === 'photos' ? 
+        [...(listingData?.photoFiles || []), ...uploadedFiles] : 
+        [...(listingData?.videoFiles || []), ...uploadedFiles];
       await saveSection('documents', { [type]: finalFiles });
       
       // Close the modal and show success message
-      closeQuickAddModal(type === 'siteplans' ? 'uploadSitePlans' : 'uploadFitOuts');
-      toast.success(`${uploadedFiles.length} ${type === 'siteplans' ? 'site plan' : 'fit-out'} file${uploadedFiles.length > 1 ? 's' : ''} uploaded successfully!`);
+      closeQuickAddModal(type === 'photos' ? 'uploadSitePlans' : 'uploadFitOuts');
+      toast.success(`${uploadedFiles.length} ${type === 'photos' ? 'site plan' : 'video'} file${uploadedFiles.length > 1 ? 's' : ''} uploaded successfully!`);
       
     } catch (error) {
       console.error('Upload error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to upload files');
+    }
+  };
+
+  const handleExternalVideoAdd = async (url: string) => {
+    try {
+      const supabase = createClientClient();
+      const { parseVideoUrl } = await import('@/lib/video-utils');
+
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Parse the video URL
+      const parsed = parseVideoUrl(url);
+      if (!parsed) {
+        throw new Error('Invalid video URL');
+      }
+
+      // Create a database entry for the external video
+      // Note: video_source_check constraint requires file_path to be NULL for external videos
+      const insertData: any = {
+        listing_id: listingId,
+        user_id: user.id,
+        file_name: `External ${parsed.provider} video`,
+        file_size: 1, // Placeholder size for external videos (constraint requires > 0)
+        file_type: 'video',
+        mime_type: 'video/external',
+        bucket_name: 'external', // Placeholder bucket name for external videos
+        external_url: url,
+        video_provider: parsed.provider
+      };
+      // file_path should be NULL for external videos (don't include it)
+
+      const { data: fileRecord, error: dbError } = await supabase
+        .from('file_uploads')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (dbError) {
+        throw new Error(`Database error: ${dbError.message}`);
+      }
+
+      // Add to local state
+      const currentFiles = listingData?.videoFiles || [];
+      const newVideo = {
+        id: fileRecord.id,
+        name: fileRecord.file_name,
+        url: url,
+        path: undefined,
+        type: 'video' as const,
+        size: 0,
+        mimeType: 'video/external',
+        uploadedAt: new Date(fileRecord.created_at),
+        displayOrder: currentFiles.length,
+        caption: '',
+        thumbnail: parsed.thumbnailUrl,
+        externalUrl: url,
+        videoProvider: parsed.provider
+      };
+
+      const updatedFiles = [...currentFiles, newVideo];
+
+      setListingData(prev => prev ? {
+        ...prev,
+        videoFiles: updatedFiles
+      } : null);
+
+      closeQuickAddModal('uploadFitOuts');
+      toast.success('External video added successfully!');
+
+    } catch (error) {
+      console.error('Add external video error:', error);
+      throw error;
     }
   };
 
@@ -2903,30 +3137,30 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                 })) || []
               },
               files: {
-                site_plans: listingData?.sitePlanFiles || [],
-                fit_outs: listingData?.fitOutFiles || []
+                photos: listingData?.photoFiles || [],
+                videos: listingData?.videoFiles || []
               }
             } as any}
             isLoading={loading}
             onAddLocations={() => openModal('locations')}
-            onAddSitePlans={() => {
+            onAddPhotos={() => {
               openQuickAddModal('uploadSitePlans');
             }}
-            onAddFitOuts={() => {
+            onAddVideos={() => {
               openQuickAddModal('uploadFitOuts');
             }}
-            onDeleteSitePlan={(index, file) => {
+            onDeletePhoto={(index, file) => {
               // Use the mobile delete function (skips confirm dialog)
-              const actualFile = listingData?.sitePlanFiles?.[index];
+              const actualFile = listingData?.photoFiles?.[index];
               if (actualFile) {
-                handleMobileDeleteFile(actualFile, 'siteplans');
+                handleMobileDeleteFile(actualFile, 'photos');
               }
             }}
-            onDeleteFitOut={(index, file) => {
+            onDeleteVideo={(index, file) => {
               // Use the mobile delete function (skips confirm dialog)
-              const actualFile = listingData?.fitOutFiles?.[index];
+              const actualFile = listingData?.videoFiles?.[index];
               if (actualFile) {
-                handleMobileDeleteFile(actualFile, 'fitouts');
+                handleMobileDeleteFile(actualFile, 'videos');
               }
             }}
           />
@@ -5051,15 +5285,16 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       <QuickUploadModal
         isOpen={quickAddModals.uploadSitePlans}
         onClose={() => closeQuickAddModal('uploadSitePlans')}
-        type="siteplans"
-        onUpload={(files) => handleQuickUpload(files, 'siteplans')}
+        type="photos"
+        onUpload={(files) => handleQuickUpload(files, 'photos')}
       />
       
       <QuickUploadModal
         isOpen={quickAddModals.uploadFitOuts}
         onClose={() => closeQuickAddModal('uploadFitOuts')}
-        type="fitouts"
-        onUpload={(files) => handleQuickUpload(files, 'fitouts')}
+        type="videos"
+        onUpload={(files) => handleQuickUpload(files, 'videos')}
+        onExternalVideoAdd={handleExternalVideoAdd}
       />
 
       {/* Company Profile Modal - Mobile Only */}
@@ -5509,15 +5744,15 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   </div>
                 )}
 
-                {visualView === 'siteplans' && (
+                {visualView === 'photos' && (
                   <div className="relative h-full w-full overflow-hidden group">
-                    {listingData.sitePlanFiles && listingData.sitePlanFiles.length > 0 ? (
+                    {listingData.photoFiles && listingData.photoFiles.length > 0 ? (
                       <>
                         {/* Main Carousel Image with Proper Aspect Ratio */}
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="relative w-full h-full max-h-full">
                             {(() => {
-                              const currentFile = listingData.sitePlanFiles?.[sitePlansIndex];
+                              const currentFile = listingData.photoFiles?.[photosIndex];
                               return currentFile && currentFile.mimeType?.startsWith('image/') ? (
                                 <img
                                   src={currentFile.url}
@@ -5543,7 +5778,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 size="sm" 
                                 variant="ghost" 
                                 className="text-gray-900 bg-white/95 hover:bg-white backdrop-blur-sm rounded-lg shadow-lg font-medium"
-                                onClick={() => handleViewFile(listingData.sitePlanFiles?.[sitePlansIndex])}
+                                onClick={() => handleViewFile(listingData.photoFiles?.[photosIndex])}
                               >
                                 <Eye className="w-4 h-4 mr-2" />
                                 View
@@ -5552,7 +5787,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 size="sm" 
                                 variant="ghost" 
                                 className="text-red-600 bg-white/95 hover:bg-white backdrop-blur-sm rounded-lg shadow-lg font-medium"
-                                onClick={() => handleDeleteFile(listingData.sitePlanFiles?.[sitePlansIndex], 'siteplans')}
+                                onClick={() => handleDeleteFile(listingData.photoFiles?.[photosIndex], 'photos')}
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Delete
@@ -5560,7 +5795,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                             </div>
 
                             {/* Navigation arrows positioned relative to image */}
-                            {listingData.sitePlanFiles.length > 1 && (
+                            {listingData.photoFiles.length > 1 && (
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 <button
                                   onClick={prevSitePlan}
@@ -5594,9 +5829,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         <div className="absolute top-6 right-6 z-20">
                           <div className="flex items-center gap-3">
                             {/* Counter styled like preview modal */}
-                            {listingData.sitePlanFiles.length > 1 && (
+                            {listingData.photoFiles.length > 1 && (
                               <div className="bg-black/70 backdrop-blur-sm px-2.5 py-1 rounded text-white text-sm font-medium shadow-lg">
-                                {sitePlansIndex + 1}/{listingData.sitePlanFiles.length}
+                                {photosIndex + 1}/{listingData.photoFiles.length}
                               </div>
                             )}
                             
@@ -5606,7 +5841,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               variant="ghost"
                               className="bg-white/95 hover:bg-white text-gray-900 hover:text-gray-900 shadow-lg hover:shadow-xl rounded-lg px-3 py-2 transition-all duration-200 hover:scale-105 font-medium"
                               onClick={() => openQuickAddModal('uploadSitePlans')}
-                              title="Add site plans"
+                              title="Add photos"
                             >
                               <Plus className="w-4 h-4 mr-1" />
                               <span className="text-sm font-medium">Add</span>
@@ -5615,15 +5850,15 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         </div>
 
                         {/* Progressive Disclosure: Thumbnail strip (shows on hover when multiple images) */}
-                        {listingData.sitePlanFiles.length > 1 && (
+                        {listingData.photoFiles.length > 1 && (
                           <div className="absolute bottom-6 left-6 right-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <div className="flex gap-2 justify-center">
-                              {listingData.sitePlanFiles.map((file, index) => (
+                              {listingData.photoFiles.map((file, index) => (
                                 <button
                                   key={file.id}
-                                  onClick={() => setSitePlansIndex(index)}
+                                  onClick={() => setPhotosIndex(index)}
                                   className={`w-16 h-12 rounded-lg overflow-hidden transition-all duration-200 backdrop-blur-sm ${
-                                    index === sitePlansIndex 
+                                    index === photosIndex 
                                       ? 'ring-2 ring-white/90 scale-110 shadow-lg' 
                                       : 'ring-1 ring-white/20 opacity-70 hover:opacity-90 hover:scale-105'
                                   }`}
@@ -5649,10 +5884,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       <div className="h-full flex items-center justify-center p-4">
                         <SophisticatedEmptyState
                           icon={FileText}
-                          title="Site Plans"
+                          title="Photos"
                           description="Upload floor plans, site layouts, or property plans to help agents understand your space requirements."
                           benefit="Detailed plans help agents assess whether available properties match your spatial needs and layout preferences."
-                          actionText="Upload Site Plans"
+                          actionText="Upload Photos"
                           onAction={() => openQuickAddModal('uploadSitePlans')}
                           examples={["Floor plans", "Site layout", "Building sections", "CAD drawings"]}
                           showBenefits={false}
@@ -5663,15 +5898,34 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   </div>
                 )}
 
-                {visualView === 'fitouts' && (
+                {visualView === 'videos' && (
                   <div className="relative h-full w-full overflow-hidden group">
-                    {listingData.fitOutFiles && listingData.fitOutFiles.length > 0 ? (
+                    {listingData.videoFiles && listingData.videoFiles.length > 0 ? (
                       <>
                         {/* Main Carousel Image/Video with Proper Aspect Ratio */}
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="relative w-full h-full max-h-full">
                             {(() => {
-                              const currentFile = listingData.fitOutFiles?.[fitOutsIndex];
+                              const currentFile = listingData.videoFiles?.[videosIndex];
+
+                              // Handle external videos (YouTube, Vimeo)
+                              if (currentFile) {
+                                const { parseVideoUrl } = require('@/lib/video-utils');
+                                const videoUrl = currentFile.externalUrl || currentFile.url;
+                                const parsed = parseVideoUrl(videoUrl);
+
+                                if (parsed && (parsed.provider === 'youtube' || parsed.provider === 'vimeo') && parsed.thumbnailUrl) {
+                                  return (
+                                    <img
+                                      src={parsed.thumbnailUrl}
+                                      alt={currentFile.name}
+                                      className="w-full h-full object-contain"
+                                    />
+                                  );
+                                }
+                              }
+
+                              // Handle regular images
                               if (currentFile && currentFile.mimeType?.startsWith('image/')) {
                                 return (
                                   <img
@@ -5680,9 +5934,11 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     className="w-full h-full object-contain"
                                   />
                                 );
-                              } else if (currentFile.isVideo) {
+                              }
+                              // Handle uploaded video files
+                              else if (currentFile && currentFile.mimeType?.startsWith('video/') && !currentFile.isExternal) {
                                 return (
-                                  <video 
+                                  <video
                                     src={currentFile.url}
                                     className="w-full h-full object-contain"
                                     controls={false}
@@ -5691,14 +5947,16 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                     muted
                                   />
                                 );
-                              } else {
+                              }
+                              // Fallback
+                              else {
                                 return (
                                   <div className="w-full h-full flex items-center justify-center bg-violet-800">
                                     <div className="text-center p-8">
                                       <FileText className="w-16 h-16 text-white mx-auto mb-4" />
-                                      <p className="text-white font-medium">{currentFile.name}</p>
+                                      <p className="text-white font-medium">{currentFile?.name}</p>
                                       <p className="text-violet-200 text-sm mt-2">
-                                        {(currentFile.size / 1024 / 1024).toFixed(1)} MB
+                                        {currentFile ? (currentFile.size / 1024 / 1024).toFixed(1) : '0'} MB
                                       </p>
                                     </div>
                                   </div>
@@ -5712,16 +5970,16 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 size="sm" 
                                 variant="ghost" 
                                 className="text-gray-900 bg-white/95 hover:bg-white backdrop-blur-sm rounded-lg shadow-lg font-medium"
-                                onClick={() => handleViewFile(listingData.fitOutFiles?.[fitOutsIndex])}
+                                onClick={() => handleViewFile(listingData.videoFiles?.[videosIndex])}
                               >
                                 <Eye className="w-4 h-4 mr-2" />
-                                {listingData.fitOutFiles?.[fitOutsIndex]?.isVideo ? 'Play' : 'View'}
+                                {listingData.videoFiles?.[videosIndex]?.mimeType?.startsWith('video/') ? 'Play' : 'View'}
                               </Button>
                               <Button 
                                 size="sm" 
                                 variant="ghost" 
                                 className="text-red-600 bg-white/95 hover:bg-white backdrop-blur-sm rounded-lg shadow-lg font-medium"
-                                onClick={() => handleDeleteFile(listingData.fitOutFiles?.[fitOutsIndex], 'fitouts')}
+                                onClick={() => handleDeleteFile(listingData.videoFiles?.[videosIndex], 'videos')}
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Delete
@@ -5729,7 +5987,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                             </div>
 
                             {/* Navigation arrows positioned relative to image */}
-                            {listingData.fitOutFiles.length > 1 && (
+                            {listingData.videoFiles.length > 1 && (
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 <button
                                   onClick={prevFitOut}
@@ -5738,7 +5996,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                            text-gray-700 hover:text-gray-900 shadow-lg hover:shadow-xl 
                                            border border-white/20 hover:border-white/40
                                            transition-all duration-200 hover:scale-105"
-                                  aria-label="Previous fit-out"
+                                  aria-label="Previous video"
                                 >
                                   <ChevronLeft className="w-5 h-5" />
                                 </button>
@@ -5750,7 +6008,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                            text-gray-700 hover:text-gray-900 shadow-lg hover:shadow-xl 
                                            border border-white/20 hover:border-white/40
                                            transition-all duration-200 hover:scale-105"
-                                  aria-label="Next fit-out"
+                                  aria-label="Next video"
                                 >
                                   <ChevronRight className="w-5 h-5" />
                                 </button>
@@ -5763,9 +6021,9 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         <div className="absolute top-6 right-6 z-20">
                           <div className="flex items-center gap-3">
                             {/* Counter styled like preview modal */}
-                            {listingData.fitOutFiles.length > 1 && (
+                            {listingData.videoFiles.length > 1 && (
                               <div className="bg-black/70 backdrop-blur-sm px-2.5 py-1 rounded text-white text-sm font-medium shadow-lg">
-                                {fitOutsIndex + 1}/{listingData.fitOutFiles.length}
+                                {videosIndex + 1}/{listingData.videoFiles.length}
                               </div>
                             )}
                             
@@ -5775,7 +6033,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               variant="ghost"
                               className="bg-white/95 hover:bg-white text-gray-900 hover:text-gray-900 shadow-lg hover:shadow-xl rounded-lg px-3 py-2 transition-all duration-200 hover:scale-105 font-medium"
                               onClick={() => openQuickAddModal('uploadFitOuts')}
-                              title="Add fit-out examples"
+                              title="Add video examples"
                             >
                               <Plus className="w-4 h-4 mr-1" />
                               <span className="text-sm font-medium">Add</span>
@@ -5784,15 +6042,15 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         </div>
 
                         {/* Progressive Disclosure: Thumbnail strip (shows on hover when multiple images) */}
-                        {listingData.fitOutFiles.length > 1 && (
+                        {listingData.videoFiles.length > 1 && (
                           <div className="absolute bottom-6 left-6 right-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <div className="flex gap-2 justify-center">
-                              {listingData.fitOutFiles.map((file, index) => (
+                              {listingData.videoFiles.map((file, index) => (
                                 <button
                                   key={file.id}
-                                  onClick={() => setFitOutsIndex(index)}
+                                  onClick={() => setVideosIndex(index)}
                                   className={`w-16 h-12 rounded-lg overflow-hidden transition-all duration-200 backdrop-blur-sm ${
-                                    index === fitOutsIndex 
+                                    index === videosIndex 
                                       ? 'ring-2 ring-white/90 scale-110 shadow-lg' 
                                       : 'ring-1 ring-white/20 opacity-70 hover:opacity-90 hover:scale-105'
                                   }`}
@@ -5800,10 +6058,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                   {file.mimeType?.startsWith('image/') ? (
                                     <img
                                       src={file.url}
-                                      alt={`Fit-out ${index + 1}`}
+                                      alt={`Video ${index + 1}`}
                                       className="w-full h-full object-cover"
                                     />
-                                  ) : file.isVideo ? (
+                                  ) : file.mimeType?.startsWith('video/') ? (
                                     <div className="relative w-full h-full">
                                       <video
                                         src={file.url}
@@ -5831,10 +6089,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                       <div className="h-full flex items-center justify-center p-4">
                         <SophisticatedEmptyState
                           icon={Building2}
-                          title="Fit-Out Examples"
-                          description="Upload images or videos of your ideal space design to help agents understand your style preferences."
+                          title="Videos"
+                          description="Upload or link to videos to demonstrate what your site may look like"
                           benefit="Agents can better match your requirements and present more relevant opportunities when they understand your aesthetic preferences."
-                          actionText="Upload Fit-Out Examples"
+                          actionText="Upload Videos"
                           onAction={() => openQuickAddModal('uploadFitOuts')}
                           examples={["Modern office", "Industrial style", "Traditional workspace", "Creative space"]}
                           showBenefits={false}
@@ -5870,40 +6128,40 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                     <span className="whitespace-nowrap">Coverage</span>
                   </button>
                   <button
-                    onClick={() => setVisualView('fitouts')}
+                    onClick={() => setVisualView('photos')}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-1 focus:ring-offset-transparent ${
-                      visualView === 'fitouts'
+                      visualView === 'photos'
                         ? 'bg-white text-gray-900 shadow-md'
                         : 'text-white/90 hover:bg-white/15 hover:text-white'
                     }`}
-                    title="Switch to fit-out examples view"
-                    aria-pressed={visualView === 'fitouts'}
-                    aria-label="Fit-out examples view toggle"
+                    title="Switch to photos view"
+                    aria-pressed={visualView === 'photos'}
+                    aria-label="Photos view toggle"
                   >
-                    <Building2 className="w-4 h-4" />
-                    <span className="whitespace-nowrap">Fit-Outs</span>
-                    {listingData.fitOutFiles && listingData.fitOutFiles.length > 0 && (
+                    <FileText className="w-4 h-4" />
+                    <span className="whitespace-nowrap">Photos</span>
+                    {listingData.photoFiles && listingData.photoFiles.length > 0 && (
                       <span className="bg-gray-800 text-white text-xs px-1.5 py-0.5 rounded ml-1.5 font-semibold">
-                        {listingData.fitOutFiles.length}
+                        {listingData.photoFiles.length}
                       </span>
                     )}
                   </button>
                   <button
-                    onClick={() => setVisualView('siteplans')}
+                    onClick={() => setVisualView('videos')}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-1 focus:ring-offset-transparent ${
-                      visualView === 'siteplans'
+                      visualView === 'videos'
                         ? 'bg-white text-gray-900 shadow-md'
                         : 'text-white/90 hover:bg-white/15 hover:text-white'
                     }`}
-                    title="Switch to site plans view"
-                    aria-pressed={visualView === 'siteplans'}
-                    aria-label="Site plans view toggle"
+                    title="Switch to video examples view"
+                    aria-pressed={visualView === 'videos'}
+                    aria-label="Videos view toggle"
                   >
-                    <FileText className="w-4 h-4" />
-                    <span className="whitespace-nowrap">Site-Plans</span>
-                    {listingData.sitePlanFiles && listingData.sitePlanFiles.length > 0 && (
+                    <Building2 className="w-4 h-4" />
+                    <span className="whitespace-nowrap">Videos</span>
+                    {listingData.videoFiles && listingData.videoFiles.length > 0 && (
                       <span className="bg-gray-800 text-white text-xs px-1.5 py-0.5 rounded ml-1.5 font-semibold">
-                        {listingData.sitePlanFiles.length}
+                        {listingData.videoFiles.length}
                       </span>
                     )}
                   </button>
@@ -7347,15 +7605,16 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       <QuickUploadModal
         isOpen={quickAddModals.uploadSitePlans}
         onClose={() => closeQuickAddModal('uploadSitePlans')}
-        type="siteplans"
-        onUpload={(files) => handleQuickUpload(files, 'siteplans')}
+        type="photos"
+        onUpload={(files) => handleQuickUpload(files, 'photos')}
       />
       
       <QuickUploadModal
         isOpen={quickAddModals.uploadFitOuts}
         onClose={() => closeQuickAddModal('uploadFitOuts')}
-        type="fitouts"
-        onUpload={(files) => handleQuickUpload(files, 'fitouts')}
+        type="videos"
+        onUpload={(files) => handleQuickUpload(files, 'videos')}
+        onExternalVideoAdd={handleExternalVideoAdd}
       />
 
       {/* CRUD Modals */}
@@ -7582,6 +7841,52 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
         isOpen={modalStates.paywall}
         onClose={() => closeModal('paywall')}
       />
+
+      {/* Video Player Modal */}
+      <AnimatePresence>
+        {showVideoPlayer && videoToPlay && (
+          <motion.div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              setShowVideoPlayer(false);
+              setVideoToPlay(null);
+            }}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setShowVideoPlayer(false);
+                setVideoToPlay(null);
+              }}
+              className="absolute top-6 right-6 z-10 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full p-3 text-white transition-all duration-200"
+              aria-label="Close video"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Video player */}
+            <motion.div
+              className="w-full max-w-6xl aspect-video mx-4"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <iframe
+                src={videoToPlay}
+                title="Video player"
+                className="w-full h-full rounded-lg shadow-2xl"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </>
   );

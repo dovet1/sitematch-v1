@@ -14,13 +14,13 @@ export interface TempFileUpload {
   url: string
   size: number
   mimeType: string
-  type: 'logo' | 'brochure' | 'sitePlan' | 'fitOut' | 'headshot'
+  type: 'logo' | 'brochure' | 'photo' | 'video' | 'headshot'
   uploadedAt: Date
 }
 
 export interface TempUploadOptions {
   file: File
-  fileType: 'logo' | 'brochure' | 'sitePlan' | 'fitOut' | 'headshot'
+  fileType: 'logo' | 'brochure' | 'photo' | 'video' | 'headshot'
   userId: string
   onProgress?: (progress: number) => void
 }
@@ -35,8 +35,8 @@ export interface TempUploadResult {
 const BUCKET_MAP = {
   'logo': 'logos',
   'brochure': 'brochures',
-  'sitePlan': 'site-plans', 
-  'fitOut': 'fit-outs',
+  'photo': 'photos', 
+  'video': 'videos',
   'headshot': 'headshots'
 } as const
 

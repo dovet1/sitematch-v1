@@ -151,8 +151,8 @@ export default async function CreateListingPage({
           headshot_url: contact.headshotUrl
         })) || [],
         brochure_urls: data.brochureFiles?.map(f => f.url).filter(Boolean) || [],
-        site_plan_urls: data.sitePlanFiles?.map(f => f.url).filter(Boolean) || [],
-        fit_out_urls: data.fitOutFiles?.map(f => f.url).filter(Boolean) || [],
+        photo_urls: data.photoFiles?.map(f => f.url).filter(Boolean) || [],
+        video_urls: data.videoFiles?.map(f => f.url).filter(Boolean) || [],
         status: 'pending' as const
       };
 
@@ -469,9 +469,9 @@ export default async function CreateListingPage({
           }
 
           // 10. Add updated site plan files (if any)
-          if (data.sitePlanFiles && data.sitePlanFiles.length > 0) {
-            for (let i = 0; i < data.sitePlanFiles.length; i++) {
-              const file = data.sitePlanFiles[i];
+          if (data.photoFiles && data.photoFiles.length > 0) {
+            for (let i = 0; i < data.photoFiles.length; i++) {
+              const file = data.photoFiles[i];
               await supabase
                 .from('file_uploads')
                 .insert({
@@ -480,18 +480,18 @@ export default async function CreateListingPage({
                   file_path: file.path || extractStoragePath(file.url), // Use file.path if available, extract from URL
                   file_name: file.name,
                   file_size: file.size || 0,
-                  file_type: 'sitePlan',
+                  file_type: 'photo',
                   mime_type: file.mimeType || 'application/pdf',
-                  bucket_name: 'site-plans',
+                  bucket_name: 'photos',
                   display_order: i
                 });
             }
           }
 
           // 11. Add updated fit-out files (if any)
-          if (data.fitOutFiles && data.fitOutFiles.length > 0) {
-            for (let i = 0; i < data.fitOutFiles.length; i++) {
-              const file = data.fitOutFiles[i];
+          if (data.videoFiles && data.videoFiles.length > 0) {
+            for (let i = 0; i < data.videoFiles.length; i++) {
+              const file = data.videoFiles[i];
               await supabase
                 .from('file_uploads')
                 .insert({
@@ -500,9 +500,9 @@ export default async function CreateListingPage({
                   file_path: file.path || extractStoragePath(file.url), // Use file.path if available, extract from URL
                   file_name: file.name,
                   file_size: file.size || 0,
-                  file_type: 'fitOut',
+                  file_type: 'video',
                   mime_type: file.mimeType || 'image/jpeg',
-                  bucket_name: 'fit-outs',
+                  bucket_name: 'videos',
                   display_order: file.displayOrder || i
                 });
             }
@@ -754,11 +754,11 @@ export default async function CreateListingPage({
       if (sanitizedData.brochureFiles) {
         delete sanitizedData.brochureFiles;
       }
-      if (sanitizedData.sitePlanFiles) {
-        delete sanitizedData.sitePlanFiles;
+      if (sanitizedData.photoFiles) {
+        delete sanitizedData.photoFiles;
       }
-      if (sanitizedData.fitOutFiles) {
-        delete sanitizedData.fitOutFiles;
+      if (sanitizedData.videoFiles) {
+        delete sanitizedData.videoFiles;
       }
       
       // Clean primary contact headshot file

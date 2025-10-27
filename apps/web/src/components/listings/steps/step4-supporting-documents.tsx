@@ -41,8 +41,8 @@ export function Step4SupportingDocuments({
     formState: { errors: formErrors }
   } = useForm<Step4FormData>({
     defaultValues: {
-      sitePlanFiles: data.sitePlanFiles || [],
-      fitOutFiles: data.fitOutFiles || []
+      photoFiles: data.photoFiles || [],
+      videoFiles: data.videoFiles || []
     },
     mode: 'onChange'
   });
@@ -59,8 +59,8 @@ export function Step4SupportingDocuments({
   // =====================================================
 
   const currentFormData: Step4FormData = {
-    sitePlanFiles: data.sitePlanFiles || [],
-    fitOutFiles: data.fitOutFiles || []
+    photoFiles: data.photoFiles || [],
+    videoFiles: data.videoFiles || []
   };
 
   // =====================================================
@@ -107,29 +107,42 @@ export function Step4SupportingDocuments({
     });
   }, [currentFormData, onUpdate]);
 
-  const handleSitePlanFilesChange = useCallback((files: UploadedFile[]) => {
+  const handlePhotoFilesChange = useCallback((files: GalleryItem[]) => {
     onUpdate({
       ...currentFormData,
-      sitePlanFiles: files.filter(f => f.type === 'sitePlan').map(f => ({ ...f, type: 'sitePlan' as const }))
-    });
-  }, [currentFormData, onUpdate]);
-
-  const handleFitOutFilesChange = useCallback((files: GalleryItem[]) => {
-    onUpdate({
-      ...currentFormData,
-      fitOutFiles: files.map(f => ({ 
+      photoFiles: files.map(f => ({
         id: f.id,
         name: f.name,
         url: f.url,
         path: f.path,
-        type: 'fitOut' as const,
+        type: 'photo' as const,
         size: f.size,
         mimeType: f.mimeType,
         uploadedAt: f.uploadedAt,
         displayOrder: f.displayOrder,
         caption: f.caption,
-        isVideo: f.isVideo,
         thumbnail: f.thumbnail
+      }))
+    });
+  }, [currentFormData, onUpdate]);
+
+  const handleVideoFilesChange = useCallback((files: GalleryItem[]) => {
+    onUpdate({
+      ...currentFormData,
+      videoFiles: files.map(f => ({
+        id: f.id,
+        name: f.name,
+        url: f.url,
+        path: f.path,
+        type: 'video' as const,
+        size: f.size,
+        mimeType: f.mimeType,
+        uploadedAt: f.uploadedAt,
+        displayOrder: f.displayOrder,
+        caption: f.caption,
+        thumbnail: f.thumbnail,
+        externalUrl: f.externalUrl,
+        videoProvider: f.videoProvider
       }))
     });
   }, [currentFormData, onUpdate]);
@@ -188,36 +201,41 @@ export function Step4SupportingDocuments({
           </div>
 
           <div className="border-t pt-8">
-            <h4 className="font-medium text-gray-900 mb-4">Site Plans & Layouts</h4>
+            <h4 className="font-medium text-gray-900 mb-4">Photos</h4>
             <p className="text-sm text-gray-600 mb-4">
-              Upload ideal site layouts, floor plans, or space requirement documents.
+              Upload photos to help landlords visualize your space requirements and company culture.
             </p>
-            <DocumentUpload
-              type="sitePlan"
-              value={data.sitePlanFiles || []}
-              onChange={handleSitePlanFilesChange}
+            <GalleryUpload
+              value={(data.photoFiles || []).map(f => ({
+                ...f,
+                isVideo: false
+              }))}
+              onChange={handlePhotoFilesChange}
               organizationId={organizationId}
-              acceptedTypes={['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png']}
-              maxFileSize={10 * 1024 * 1024} // 10MB
-              showPreview={true}
+              maxFiles={20}
+              allowReordering={true}
+              showCaptions={true}
+              fileType="photo"
             />
           </div>
 
           <div className="border-t pt-8">
-            <h4 className="font-medium text-gray-900 mb-4">Fit-out Examples</h4>
+            <h4 className="font-medium text-gray-900 mb-4">Videos</h4>
             <p className="text-sm text-gray-600 mb-4">
-              Show examples of your previous fit-outs to help landlords visualize your space requirements.
+              Upload videos or add YouTube/Vimeo links to showcase your company and space requirements.
             </p>
             <GalleryUpload
-              value={(data.fitOutFiles || []).map(f => ({
+              value={(data.videoFiles || []).map(f => ({
                 ...f,
-                isVideo: f.isVideo || false
+                path: f.path || ''
               }))}
-              onChange={handleFitOutFilesChange}
+              onChange={handleVideoFilesChange}
               organizationId={organizationId}
               maxFiles={10}
               allowReordering={true}
               showCaptions={true}
+              fileType="video"
+              allowExternalUrls={true}
             />
           </div>
         </CardContent>

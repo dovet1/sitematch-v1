@@ -420,52 +420,56 @@ export function ListingWizard({
         }] : [],
         
         // Supporting documents from file_uploads table or fallback to listing_documents
-        sitePlanFiles: listing.file_uploads?.filter((file: any) => file.file_type === 'sitePlan').map((file: any) => ({
+        photoFiles: listing.file_uploads?.filter((file: any) => file.file_type === 'photo').map((file: any) => ({
           id: file.id,
-          name: file.file_name || 'Site Plan',
+          name: file.file_name || 'Photo',
           url: file.file_path,
           path: file.file_path,
-          type: 'sitePlan' as const,
-          size: file.file_size || 0,
-          mimeType: file.mime_type || 'application/pdf',
-          uploadedAt: new Date(file.created_at || Date.now())
-        })) || listing.listing_documents?.filter((doc: any) => 
-          ['sitePlan', 'site_plan'].includes(doc.document_type)
-        ).map((doc: any) => ({
-          id: doc.id,
-          name: doc.file_name || 'Site Plan',
-          url: doc.file_url,
-          path: '',
-          type: 'sitePlan' as const,
-          size: doc.file_size || 0,
-          mimeType: 'application/pdf',
-          uploadedAt: new Date()
-        })) || [],
-        
-        fitOutFiles: listing.file_uploads?.filter((file: any) => file.file_type === 'fitOut').map((file: any) => ({
-          id: file.id,
-          name: file.file_name || 'Fit-Out Example',
-          url: file.file_path,
-          path: file.file_path,
-          type: 'fitOut' as const,
+          type: 'photo' as const,
           size: file.file_size || 0,
           mimeType: file.mime_type || 'image/jpeg',
           uploadedAt: new Date(file.created_at || Date.now()),
-          displayOrder: file.display_order || 0,
-          caption: file.caption || '',
-          isVideo: false,
-          thumbnail: ''
-        })) || listing.listing_documents?.filter((doc: any) => 
-          ['fitOut', 'fit_out'].includes(doc.document_type)
+          displayOrder: file.display_order || 0
+        })) || listing.listing_documents?.filter((doc: any) =>
+          ['photo', 'site_plan'].includes(doc.document_type)
         ).map((doc: any) => ({
           id: doc.id,
-          name: doc.file_name || 'Fit-Out',
+          name: doc.file_name || 'Photo',
           url: doc.file_url,
           path: '',
-          type: 'fitOut' as const,
+          type: 'photo' as const,
           size: doc.file_size || 0,
-          mimeType: 'application/pdf',
-          uploadedAt: new Date()
+          mimeType: 'image/jpeg',
+          uploadedAt: new Date(),
+          displayOrder: 0
+        })) || [],
+        
+        videoFiles: listing.file_uploads?.filter((file: any) => file.file_type === 'video').map((file: any) => ({
+          id: file.id,
+          name: file.file_name || 'Video',
+          url: file.file_path,
+          path: file.file_path,
+          type: 'video' as const,
+          size: file.file_size || 0,
+          mimeType: file.mime_type || 'video/mp4',
+          uploadedAt: new Date(file.created_at || Date.now()),
+          displayOrder: file.display_order || 0,
+          caption: file.caption || '',
+          thumbnail: file.thumbnail || ''
+        })) || listing.listing_documents?.filter((doc: any) =>
+          ['video', 'fit_out'].includes(doc.document_type)
+        ).map((doc: any) => ({
+          id: doc.id,
+          name: doc.file_name || 'Video',
+          url: doc.file_url,
+          path: '',
+          type: 'video' as const,
+          size: doc.file_size || 0,
+          mimeType: 'video/mp4',
+          uploadedAt: new Date(),
+          displayOrder: 0,
+          caption: '',
+          thumbnail: ''
         })) || []
       };
       
@@ -716,17 +720,17 @@ export function ListingWizard({
           return file;
         }).filter(Boolean) as typeof sanitizedData.brochureFiles;
       }
-      if (sanitizedData.sitePlanFiles) {
-        sanitizedData.sitePlanFiles = sanitizedData.sitePlanFiles.map(file => {
+      if (sanitizedData.photoFiles) {
+        sanitizedData.photoFiles = sanitizedData.photoFiles.map(file => {
           if (file instanceof File) return undefined;
           return file;
-        }).filter(Boolean) as typeof sanitizedData.sitePlanFiles;
+        }).filter(Boolean) as typeof sanitizedData.photoFiles;
       }
-      if (sanitizedData.fitOutFiles) {
-        sanitizedData.fitOutFiles = sanitizedData.fitOutFiles.map(file => {
+      if (sanitizedData.videoFiles) {
+        sanitizedData.videoFiles = sanitizedData.videoFiles.map(file => {
           if (file instanceof File) return undefined;
           return file;
-        }).filter(Boolean) as typeof sanitizedData.fitOutFiles;
+        }).filter(Boolean) as typeof sanitizedData.videoFiles;
       }
 
       const result = await onSubmit(sanitizedData as WizardFormData);

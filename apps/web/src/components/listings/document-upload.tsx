@@ -188,20 +188,26 @@ export function DocumentUpload({
       
       if (useTemporaryStorage) {
         // Delete from temporary storage only
-        const result = await deleteTempFile(fileToRemove.path, bucket);
-        
-        if (result.success) {
-          // Remove from local state
+        if (fileToRemove.path) {
+          const result = await deleteTempFile(fileToRemove.path, bucket);
+
+          if (result.success) {
+            // Remove from local state
+            const updatedFiles = value.filter(file => file.id !== fileToRemove.id);
+            onChange(updatedFiles);
+          } else {
+            throw new Error(result.error || 'Failed to delete file');
+          }
+        } else {
+          // No path, just remove from local state
           const updatedFiles = value.filter(file => file.id !== fileToRemove.id);
           onChange(updatedFiles);
-        } else {
-          throw new Error(result.error || 'Failed to delete file');
         }
       } else {
         // Delete from storage and database
         const { deleteFileDirect } = await import('@/lib/file-upload-direct');
-        const result = await deleteFileDirect(fileToRemove.id, fileToRemove.path, bucket);
-        
+        const result = await deleteFileDirect(fileToRemove.id, fileToRemove.path || '', bucket);
+
         if (result.success) {
           // Remove from local state
           const updatedFiles = value.filter(file => file.id !== fileToRemove.id);

@@ -116,12 +116,15 @@ export interface FAQ {
 
 export interface FileAttachment {
   id: string;
-  type: 'brochure' | 'fit_out' | 'site_plan';
+  type: 'brochure' | 'fit_out' | 'site_plan' | 'photo' | 'video';
   name: string;
   size: number;
   url: string;
   thumbnail_url?: string;
   mime_type?: string;
+  isExternal?: boolean;
+  externalUrl?: string;
+  videoProvider?: 'youtube' | 'vimeo' | 'direct';
 }
 
 export interface EnhancedListingModalContent {
@@ -162,8 +165,8 @@ export interface EnhancedListingModalContent {
   // File attachments
   files: {
     brochures: FileAttachment[];
-    fit_outs: FileAttachment[];
-    site_plans: FileAttachment[];
+    photos: FileAttachment[];
+    videos: FileAttachment[];
   };
 
   // Missing data elements from create form

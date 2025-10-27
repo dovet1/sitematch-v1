@@ -38,7 +38,7 @@ export interface CompanyInfoData {
     id: string;
     name: string;
     url: string;
-    path: string;
+    path?: string;
     type: 'brochure';
     size: number;
     mimeType: string;
@@ -95,29 +95,34 @@ export interface FAQData {
 // Step 6: Supporting Documents Data - Story 3.2 (brochure removed)
 export interface SupportingDocumentsData {
   // File upload data
-  sitePlanFiles?: Array<{
+  photoFiles?: Array<{
     id: string;
     name: string;
     url: string;
-    path: string;
-    type: 'sitePlan';
-    size: number;
-    mimeType: string;
-    uploadedAt: Date;
-  }>;
-  fitOutFiles?: Array<{
-    id: string;
-    name: string;
-    url: string;
-    path: string;
-    type: 'fitOut';
+    path?: string;
+    type: 'photo';
     size: number;
     mimeType: string;
     uploadedAt: Date;
     displayOrder: number;
     caption?: string;
-    isVideo?: boolean;
     thumbnail?: string;
+  }>;
+  videoFiles?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    path?: string;
+    type: 'video';
+    size: number;
+    mimeType: string;
+    uploadedAt: Date;
+    displayOrder: number;
+    caption?: string;
+    thumbnail?: string;
+    isExternal?: boolean;
+    externalUrl?: string;
+    videoProvider?: 'youtube' | 'vimeo' | 'direct';
   }>;
 }
 

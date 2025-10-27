@@ -369,8 +369,8 @@ export class AdminService {
     const logoFiles = fileUploads?.filter((file: any) => file.file_type === 'logo') || []
     const headshotFiles = fileUploads?.filter((file: any) => file.file_type === 'headshot') || []
     const brochureFiles = fileUploads?.filter((file: any) => file.file_type === 'brochure') || []
-    const sitePlanFiles = fileUploads?.filter((file: any) => ['sitePlan', 'site_plan'].includes(file.file_type)) || []
-    const fitOutFiles = fileUploads?.filter((file: any) => ['fitOut', 'fit_out'].includes(file.file_type)) || []
+    const photoFiles = fileUploads?.filter((file: any) => ['photo', 'site_plan'].includes(file.file_type)) || []
+    const videoFiles = fileUploads?.filter((file: any) => ['video', 'fit_out'].includes(file.file_type)) || []
     const mediaFiles = fileUploads?.filter((file: any) => ['image', 'video', 'pdf'].includes(file.file_type)) || []
 
     // Process contacts - separate primary from additional and link headshots
@@ -437,7 +437,7 @@ export class AdminService {
         file_name: file.file_name,
         file_size: file.file_size
       })),
-      listing_documents: [...sitePlanFiles, ...fitOutFiles, ...brochureFiles].map((file: any) => ({
+      listing_documents: [...photoFiles, ...videoFiles, ...brochureFiles].map((file: any) => ({
         id: file.id,
         document_type: file.file_type,
         file_url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${file.bucket_name}/${file.file_path}`,
