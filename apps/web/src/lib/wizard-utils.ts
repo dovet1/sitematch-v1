@@ -55,8 +55,8 @@ export const validationSchema: ValidationSchema = {
     faqs: {} // Optional
   },
   step6: {
-    sitePlanFiles: {},
-    fitOutFiles: {}
+    photoFiles: {},
+    videoFiles: {}
   }
 };
 
@@ -358,8 +358,8 @@ export function getStepData(stepNumber: 1 | 2 | 3 | 4 | 5 | 6, formData: Partial
     const { faqs } = formData;
     return { faqs };
   } else if (stepNumber === 6) {
-    const { sitePlanFiles, fitOutFiles } = formData;
-    return { sitePlanFiles, fitOutFiles };
+    const { photoFiles, videoFiles } = formData;
+    return { photoFiles, videoFiles };
   }
   return {};
 }

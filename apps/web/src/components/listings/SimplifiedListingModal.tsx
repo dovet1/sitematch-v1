@@ -690,7 +690,7 @@ export function SimplifiedListingModal({
                 )}
 
                 {/* Collapsible Fit-Out Examples Section */}
-                {listing.files?.fit_outs && listing.files.fit_outs.length > 0 && (
+                {listing.files?.videos && listing.files.videos.length > 0 && (
                   <div className="space-y-4">
                     <button
                       onClick={() => toggleSection('fit_outs')}
@@ -710,7 +710,7 @@ export function SimplifiedListingModal({
                     {expandedSections.has('fit_outs') && (
                       <div className="bg-gray-50 rounded-lg p-4">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                          {listing.files.fit_outs.map((file, index) => (
+                          {listing.files.videos.map((file, index) => (
                             <div key={file.id} className="group">
                               <div className="aspect-square bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
                                 {file.url ? (
@@ -740,7 +740,7 @@ export function SimplifiedListingModal({
                 )}
 
                 {/* Collapsible Site Plan Examples Section */}
-                {listing.files?.site_plans && listing.files.site_plans.length > 0 && (
+                {listing.files?.photos && listing.files.photos.length > 0 && (
                   <div className="space-y-4">
                     <button
                       onClick={() => toggleSection('site_plans')}
@@ -760,7 +760,7 @@ export function SimplifiedListingModal({
                     {expandedSections.has('site_plans') && (
                       <div className="bg-gray-50 rounded-lg p-4">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                          {listing.files.site_plans.map((file, index) => (
+                          {listing.files.photos.map((file, index) => (
                             <div key={file.id} className="group">
                               <div className="aspect-square bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
                                 {file.url ? (

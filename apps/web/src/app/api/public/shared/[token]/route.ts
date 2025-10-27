@@ -173,13 +173,13 @@ export async function GET(
         },
         faqs: faqs || [],
         files: {
-          site_plans: files?.filter((f: any) => f.file_type === 'sitePlan' || f.file_type === 'site_plan').map((f: any) => ({
+          photos: files?.filter((f: any) => f.file_type === 'photo' || f.file_type === 'site_plan').map((f: any) => ({
             ...f,
             url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
             name: f.file_name,
             size: f.file_size
           })) || [],
-          fit_outs: files?.filter((f: any) => f.file_type === 'fitOut' || f.file_type === 'fit_out').map((f: any) => ({
+          videos: files?.filter((f: any) => f.file_type === 'video' || f.file_type === 'fit_out').map((f: any) => ({
             ...f,
             url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
             name: f.file_name,
@@ -328,13 +328,13 @@ export async function GET(
       },
       faqs: faqs,
       files: {
-        site_plans: files.filter((f: any) => f.file_type === 'sitePlan' || f.file_type === 'site_plan').map((f: any) => ({
+        photos: files.filter((f: any) => f.file_type === 'photo' || f.file_type === 'site_plan').map((f: any) => ({
           ...f,
           url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
           name: f.file_name,
           size: f.file_size
         })),
-        fit_outs: files.filter((f: any) => f.file_type === 'fitOut' || f.file_type === 'fit_out').map((f: any) => ({
+        videos: files.filter((f: any) => f.file_type === 'video' || f.file_type === 'fit_out').map((f: any) => ({
           ...f,
           url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${f.bucket_name}/${f.file_path}`,
           name: f.file_name,

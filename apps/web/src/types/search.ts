@@ -162,8 +162,8 @@ export interface EnhancedListingModalContent {
   // File attachments
   files: {
     brochures: FileAttachment[];
-    fit_outs: FileAttachment[];
-    site_plans: FileAttachment[];
+    photos: FileAttachment[];
+    videos: FileAttachment[];
   };
 
   // Missing data elements from create form

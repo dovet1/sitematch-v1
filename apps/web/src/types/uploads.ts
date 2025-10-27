@@ -6,7 +6,7 @@
 /**
  * Supported file types for uploads
  */
-export type FileUploadType = 'logo' | 'brochure' | 'sitePlan' | 'fitOut' | 'headshot';
+export type FileUploadType = 'logo' | 'brochure' | 'photo' | 'video' | 'headshot';
 
 /**
  * File upload configuration
@@ -40,27 +40,21 @@ export const FILE_UPLOAD_CONFIGS: Record<FileUploadType, FileUploadConfig> = {
     requiresOptimization: false,
     description: 'Company brochures (PDF - max 40MB each)'
   },
-  sitePlan: {
-    bucket: 'site-plans',
-    allowedTypes: [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'image/jpeg',
-      'image/png'
-    ],
+  photo: {
+    bucket: 'photos',
+    allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
     maxSize: 10 * 1024 * 1024, // 10MB
-    maxFiles: 5,
-    requiresOptimization: true, // Now true since we support images
-    description: 'Site plans and documents (PDF, DOC, DOCX, JPG, PNG - max 10MB each)'
-  },
-  fitOut: {
-    bucket: 'fit-outs',
-    allowedTypes: ['image/jpeg', 'image/png', 'video/mp4'],
-    maxSize: 5 * 1024 * 1024, // 5MB
-    maxFiles: 10,
+    maxFiles: 20,
     requiresOptimization: true,
-    description: 'Fit-out examples (JPG, PNG, MP4 - max 5MB each)'
+    description: 'Photos (JPG, PNG, WebP, HEIC - max 10MB each)'
+  },
+  video: {
+    bucket: 'videos',
+    allowedTypes: ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/webm'],
+    maxSize: 100 * 1024 * 1024, // 100MB
+    maxFiles: 10,
+    requiresOptimization: false,
+    description: 'Videos (MP4, MOV, AVI, MKV, WebM - max 100MB each) or external URLs'
   },
   headshot: {
     bucket: 'headshots',
@@ -104,13 +98,15 @@ export interface UploadedFile {
   id: string;
   name: string;
   url: string;
-  path: string;
+  path?: string;
   type: FileUploadType;
   size: number;
   mimeType: string;
   uploadedAt: Date;
   preview?: string;
   thumbnail?: string;
+  externalUrl?: string;
+  videoProvider?: 'youtube' | 'vimeo' | 'direct';
 }
 
 /**
@@ -200,7 +196,7 @@ export interface FilePreviewProps {
 export interface GalleryItem extends UploadedFile {
   displayOrder: number;
   caption?: string;
-  isVideo: boolean;
+  isVideo?: boolean;
 }
 
 /**
@@ -222,8 +218,8 @@ export interface GalleryUploadProps {
 export const FILE_TYPE_LABELS: Record<FileUploadType, string> = {
   logo: 'Company Logo',
   brochure: 'Company Brochures',
-  sitePlan: 'Site Plans',
-  fitOut: 'Fit-out Examples',
+  photo: 'Photos',
+  video: 'Videos',
   headshot: 'Contact Headshot'
 };
 
@@ -232,12 +228,20 @@ export const FILE_TYPE_LABELS: Record<FileUploadType, string> = {
  */
 export const MIME_TYPE_EXTENSIONS: Record<string, string> = {
   'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
   'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
   'image/svg+xml': 'svg',
   'application/pdf': 'pdf',
   'application/msword': 'doc',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-  'video/mp4': 'mp4'
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/x-msvideo': 'avi',
+  'video/x-matroska': 'mkv',
+  'video/webm': 'webm'
 };
 
 /**
@@ -279,4 +283,89 @@ export function isVideoFile(mimeType: string): boolean {
  */
 export function isDocumentFile(mimeType: string): boolean {
   return mimeType.startsWith('application/');
+}
+
+/**
+ * Extract video ID from YouTube URL
+ */
+export function extractYouTubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
+    /youtube\.com\/embed\/([^&\n?#]+)/,
+    /youtube\.com\/v\/([^&\n?#]+)/
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+
+  return null;
+}
+
+/**
+ * Extract video ID from Vimeo URL
+ */
+export function extractVimeoId(url: string): string | null {
+  const match = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Detect video provider from URL
+ */
+export function detectVideoProvider(url: string): 'youtube' | 'vimeo' | null {
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    return 'youtube';
+  }
+  if (url.includes('vimeo.com')) {
+    return 'vimeo';
+  }
+  return null;
+}
+
+/**
+ * Get embed URL for external video
+ */
+export function getVideoEmbedUrl(url: string): string | null {
+  const provider = detectVideoProvider(url);
+
+  if (provider === 'youtube') {
+    const videoId = extractYouTubeId(url);
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+  }
+
+  if (provider === 'vimeo') {
+    const videoId = extractVimeoId(url);
+    return videoId ? `https://player.vimeo.com/video/${videoId}` : null;
+  }
+
+  return null;
+}
+
+/**
+ * Validate external video URL
+ */
+export function validateVideoUrl(url: string): { isValid: boolean; error?: string } {
+  if (!url || url.trim() === '') {
+    return { isValid: false, error: 'URL is required' };
+  }
+
+  try {
+    new URL(url);
+  } catch {
+    return { isValid: false, error: 'Invalid URL format' };
+  }
+
+  const provider = detectVideoProvider(url);
+  if (!provider) {
+    return { isValid: false, error: 'Only YouTube and Vimeo URLs are supported' };
+  }
+
+  const videoId = provider === 'youtube' ? extractYouTubeId(url) : extractVimeoId(url);
+  if (!videoId) {
+    return { isValid: false, error: 'Could not extract video ID from URL' };
+  }
+
+  return { isValid: true };
 }

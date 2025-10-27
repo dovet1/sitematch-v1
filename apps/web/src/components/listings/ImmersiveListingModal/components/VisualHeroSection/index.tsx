@@ -71,9 +71,9 @@ export function VisualHeroSection({ listing, isLoading }: VisualHeroSectionProps
       case 'map':
         return <InteractiveMapView key="map-view" locations={content.data} onMapStateChange={handleMapStateChange} />;
       case 'gallery':
-        return <ImageGallery key="gallery-view" images={content.data} type="fit-outs" />;
+        return <ImageGallery key="gallery-view" images={content.data} type="photos" />;
       case 'plans':
-        return <ImageGallery key="plans-view" images={content.data} type="site-plans" />;
+        return <ImageGallery key="plans-view" images={content.data} type="videos" />;
       case 'nationwide':
       default:
         return <NationwideHeroVisual key="nationwide-view" company={content.data} />;
@@ -99,9 +99,9 @@ export function VisualHeroSection({ listing, isLoading }: VisualHeroSectionProps
       case 'map':
         return 'Map';
       case 'gallery':
-        return 'Fit-Outs';
+        return 'Photos';
       case 'plans':
-        return 'Site-Plans';
+        return 'Videos';
       case 'nationwide':
       default:
         return 'Coverage';

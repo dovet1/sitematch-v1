@@ -196,7 +196,7 @@ export function EnhancedListingModal({
                 url: '/mock/brochure.pdf'
               }
             ],
-            fit_outs: [
+            videos: [
               {
                 id: '2',
                 type: 'fit_out',
@@ -206,7 +206,7 @@ export function EnhancedListingModal({
                 thumbnail_url: '/mock/layout-thumb.jpg'
               }
             ],
-            site_plans: [
+            photos: [
               {
                 id: '3',
                 type: 'site_plan',
@@ -460,7 +460,7 @@ export function EnhancedListingModal({
                     Requirements
                   </div>
                 </button>
-                {(listing?.files.fit_outs.length > 0 || listing?.files.site_plans.length > 0) && (
+                {(listing?.files.videos.length > 0 || listing?.files.photos.length > 0) && (
                   <button
                     onClick={() => setActiveTab('files')}
                     className={cn(
@@ -1091,7 +1091,7 @@ export function EnhancedListingModal({
                 {activeTab === 'files' && (
                   <div className="space-y-8">
                     {/* Files & Documents */}
-                {(listing.files.fit_outs.length > 0 || listing.files.site_plans.length > 0) && (
+                {(listing.files.videos.length > 0 || listing.files.photos.length > 0) && (
                   <div className="space-y-6">
                     <button
                       onClick={() => toggleSection('files')}
@@ -1111,10 +1111,10 @@ export function EnhancedListingModal({
                     {expandedSections.has('files') && (
                       <div className="grid md:grid-cols-2 gap-4">
                       {/* Fit-outs */}
-                      {listing.files.fit_outs.length > 0 && (
+                      {listing.files.videos.length > 0 && (
                         <div className="space-y-2">
                           <h5 className="font-medium text-foreground">Fit-out Examples</h5>
-                          {listing.files.fit_outs.map((file) => (
+                          {listing.files.videos.map((file) => (
                             <div key={file.id} className="group bg-white border border-border rounded-xl overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-primary-300">
                               {/* File Preview/Thumbnail */}
                               <div className="aspect-video relative bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -1158,10 +1158,10 @@ export function EnhancedListingModal({
                       )}
 
                       {/* Site Plans */}
-                      {listing.files.site_plans.length > 0 && (
+                      {listing.files.photos.length > 0 && (
                         <div className="space-y-2">
                           <h5 className="font-medium text-foreground">Site Plans</h5>
-                          {listing.files.site_plans.map((file) => (
+                          {listing.files.photos.map((file) => (
                             <div key={file.id} className="group bg-white border border-border rounded-xl overflow-hidden hover:shadow-lg transition-all duration-200 hover:border-primary-300">
                               {/* File Preview */}
                               <div className="aspect-video relative bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">

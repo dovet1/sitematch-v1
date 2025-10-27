@@ -28,8 +28,8 @@ export interface SubmissionError {
 export interface FileUploadResults {
   logoUrl?: string;
   brochureUrls?: string[];
-  sitePlanUrls?: string[];
-  fitOutUrls?: string[];
+  photoUrls?: string[];
+  videoUrls?: string[];
 }
 
 export interface SubmissionState {
@@ -102,8 +102,8 @@ export async function submitEnhancedListing(
       clearbit_logo: formData.clearbitLogo || false,
       company_domain: formData.companyDomain,
       brochure_urls: fileUploads.brochureUrls || [],
-      site_plan_urls: fileUploads.sitePlanUrls || [],
-      fit_out_urls: fileUploads.fitOutUrls || [],
+      photo_urls: fileUploads.photoUrls || [],
+      video_urls: fileUploads.videoUrls || [],
       
       // Property page link field
       property_page_link: formData.propertyPageLink,
@@ -269,24 +269,24 @@ async function uploadAllFiles(
     }
   }
 
-  // Upload site plans
-  if (formData.sitePlanFiles && formData.sitePlanFiles.length > 0) {
-    results.sitePlanUrls = [];
-    for (const file of formData.sitePlanFiles) {
+  // Upload photos
+  if (formData.photoFiles && formData.photoFiles.length > 0) {
+    results.photoUrls = [];
+    for (const file of formData.photoFiles) {
       if (file.url) {
-        results.sitePlanUrls.push(file.url);
+        results.photoUrls.push(file.url);
         completedUploads++;
         onProgress(completedUploads / totalFiles);
       }
     }
   }
 
-  // Upload fit-out examples
-  if (formData.fitOutFiles && formData.fitOutFiles.length > 0) {
-    results.fitOutUrls = [];
-    for (const file of formData.fitOutFiles) {
+  // Upload videos
+  if (formData.videoFiles && formData.videoFiles.length > 0) {
+    results.videoUrls = [];
+    for (const file of formData.videoFiles) {
       if (file.url) {
-        results.fitOutUrls.push(file.url);
+        results.videoUrls.push(file.url);
         completedUploads++;
         onProgress(completedUploads / totalFiles);
       }
@@ -298,12 +298,12 @@ async function uploadAllFiles(
 
 function countTotalFiles(formData: WizardFormData): number {
   let count = 0;
-  
+
   if (formData.logoFile instanceof File) count++;
   if (formData.brochureFiles) count += formData.brochureFiles.length;
-  if (formData.sitePlanFiles) count += formData.sitePlanFiles.length;
-  if (formData.fitOutFiles) count += formData.fitOutFiles.length;
-  
+  if (formData.photoFiles) count += formData.photoFiles.length;
+  if (formData.videoFiles) count += formData.videoFiles.length;
+
   return count;
 }
 

@@ -39,9 +39,12 @@ export function validateFile(
   // Check file size
   if (file.size > config.maxSize) {
     const maxSizeMB = (config.maxSize / (1024 * 1024)).toFixed(1);
+    const message = type === 'video'
+      ? `Video file is too large (max ${maxSizeMB}MB). Please upload your video to YouTube and link to it here instead.`
+      : `File too large. Maximum size: ${maxSizeMB}MB`;
     errors.push({
       code: 'FILE_TOO_LARGE',
-      message: `File too large. Maximum size: ${maxSizeMB}MB`,
+      message,
       file: file.name
     });
   }
@@ -397,9 +400,11 @@ export async function uploadFiles(
   } catch (error) {
     // Clean up any successfully uploaded files
     await Promise.all(
-      uploadedFiles.map(file => deleteFile(file.path, type))
+      uploadedFiles
+        .filter(file => file.path)
+        .map(file => deleteFile(file.path!, type))
     );
-    
+
     throw error;
   }
 }

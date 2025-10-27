@@ -280,7 +280,7 @@ export async function GET(
             type: 'brochure',
             caption: file.caption || null
           })),
-        fit_outs: (files || [])
+        videos: (files || [])
           .filter((file: any) => file.file_type === 'fitOut' || file.file_type === 'fit_out')
           .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
           .map((file: any) => ({
@@ -291,7 +291,7 @@ export async function GET(
             type: 'fit_out',
             caption: file.caption || null
           })),
-        site_plans: (files || [])
+        photos: (files || [])
           .filter((file: any) => file.file_type === 'sitePlan' || file.file_type === 'site_plan')
           .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
           .map((file: any) => ({

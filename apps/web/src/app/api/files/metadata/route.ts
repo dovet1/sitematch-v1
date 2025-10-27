@@ -25,29 +25,49 @@ export async function POST(request: NextRequest) {
       listing_id,
       is_primary,
       display_order,
-      caption
+      caption,
+      external_url,
+      video_provider
     } = metadata
 
     // Validate required fields
-    if (!file_path || !file_name || !file_type || !bucket_name) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+    // For videos with external URLs, file_path is not required
+    if (file_type === 'video' && external_url) {
+      if (!file_name || !file_type || !external_url || !video_provider) {
+        return NextResponse.json(
+          { error: 'Missing required fields for external video' },
+          { status: 400 }
+        )
+      }
+    } else {
+      if (!file_path || !file_name || !file_type || !bucket_name) {
+        return NextResponse.json(
+          { error: 'Missing required fields' },
+          { status: 400 }
+        )
+      }
     }
 
     // Create file record in database
     const fileInsertData: any = {
       user_id: user.id,
-      file_path,
       file_name,
       file_size: file_size || 0,
       file_type,
-      mime_type: mime_type || 'application/octet-stream',
-      bucket_name,
       is_primary: is_primary || false,
       display_order: display_order || 0,
       caption: caption || null
+    }
+
+    // Handle external videos vs direct uploads
+    if (file_type === 'video' && external_url) {
+      fileInsertData.external_url = external_url
+      fileInsertData.video_provider = video_provider
+      fileInsertData.mime_type = 'video/external'
+    } else {
+      fileInsertData.file_path = file_path
+      fileInsertData.bucket_name = bucket_name
+      fileInsertData.mime_type = mime_type || 'application/octet-stream'
     }
 
     // Add listing_id if provided

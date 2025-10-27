@@ -13,7 +13,7 @@ interface ImageFile {
 
 interface SimpleImageGalleryProps {
   images: ImageFile[];
-  type: 'fit-outs' | 'site-plans';
+  type: 'photos' | 'videos';
   onImageClick?: (index: number, onClose?: () => void) => void;
   onAddClick?: () => void;
   onDeleteImage?: (index: number, image: ImageFile) => void; // New prop for deletion
@@ -117,13 +117,13 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
     return (
       <div className="h-full w-full flex items-center justify-center bg-white">
         <div className="text-center max-w-xs mx-auto">
-          {type === 'fit-outs' ? (
+          {type === 'photos' ? (
             <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           ) : (
             <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           )}
           <p className="text-gray-600 mb-6">
-            No {type === 'fit-outs' ? 'fit-out examples' : 'site plans'} available
+            No {type === 'photos' ? 'photos' : 'videos'} available
           </p>
           {onAddClick && (
             <Button
@@ -134,7 +134,7 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
               className="bg-violet-600 hover:bg-violet-700 text-white transition-all duration-200 px-6 py-2.5 rounded-lg font-medium shadow-lg hover:shadow-xl"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add {type === 'fit-outs' ? 'Fit-Out Examples' : 'Site Plans'}
+              Add {type === 'photos' ? 'Photos' : 'Videos'}
             </Button>
           )}
         </div>
@@ -418,7 +418,7 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
                   {/* Header */}
                   <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      Manage {type === 'fit-outs' ? 'Fit-Out Examples' : 'Site Plans'}
+                      Manage {type === 'photos' ? 'Photos' : 'Videos'}
                     </h3>
                     <button
                       onClick={() => setShowManageModal(false)}
@@ -428,7 +428,7 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
                       <X className="w-5 h-5 text-gray-500" />
                     </button>
                   </div>
-                  
+
                   {/* Content */}
                   <div className="flex-1 overflow-y-auto bg-gray-50">
                     <div className="p-6 space-y-4">
@@ -442,7 +442,7 @@ export function SimpleImageGallery({ images, type, onImageClick, onAddClick, onD
                           className="w-full bg-violet-600 hover:bg-violet-700 text-white flex items-center gap-2 py-3"
                         >
                           <Plus className="w-4 h-4" />
-                          Add New {type === 'fit-outs' ? 'Fit-Out Example' : 'Site Plan'}
+                          Add New {type === 'photos' ? 'Photo' : 'Video'}
                         </Button>
                       )}
                       

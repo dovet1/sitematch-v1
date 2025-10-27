@@ -3,7 +3,7 @@ import type { UploadedFile } from '@/types/uploads'
 
 export interface DirectUploadOptions {
   file: File
-  fileType: 'logo' | 'brochure' | 'sitePlan' | 'fitOut' | 'headshot'
+  fileType: 'logo' | 'brochure' | 'photo' | 'video' | 'headshot'
   listingId?: string
   userId: string
   onProgress?: (progress: number) => void
@@ -19,8 +19,8 @@ export interface DirectUploadResult {
 const BUCKET_MAP = {
   'logo': 'logos',
   'brochure': 'brochures',
-  'sitePlan': 'site-plans',
-  'fitOut': 'fit-outs',
+  'photo': 'photos',
+  'video': 'videos',
   'headshot': 'headshots'
 } as const
 

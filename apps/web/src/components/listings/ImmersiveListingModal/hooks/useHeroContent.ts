@@ -32,21 +32,21 @@ export function useHeroContent(listing: EnhancedListingModalContent | null) {
       });
     }
 
-    // Priority 2: Show gallery if fit-out images exist
-    if (listing.files?.fit_outs?.length > 0) {
+    // Priority 2: Show gallery if photos exist
+    if (listing.files?.photos?.length > 0) {
       contentOptions.push({
         type: 'gallery',
         priority: 2,
-        data: listing.files.fit_outs
+        data: listing.files.photos
       });
     }
 
-    // Priority 3: Show site plans if available
-    if (listing.files?.site_plans?.length > 0) {
+    // Priority 3: Show videos if available
+    if (listing.files?.videos?.length > 0) {
       contentOptions.push({
         type: 'plans',
         priority: 3,
-        data: listing.files.site_plans
+        data: listing.files.videos
       });
     }
 

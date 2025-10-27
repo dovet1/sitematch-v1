@@ -11,7 +11,7 @@ interface ImageFile {
 
 interface ImageGalleryProps {
   images: ImageFile[];
-  type: 'fit-outs' | 'site-plans';
+  type: 'photos' | 'videos';
 }
 
 export function ImageGallery({ images, type }: ImageGalleryProps) {
@@ -64,13 +64,13 @@ export function ImageGallery({ images, type }: ImageGalleryProps) {
     return (
       <div className="h-full w-full flex items-center justify-center">
         <div className="text-center">
-          {type === 'fit-outs' ? (
+          {type === 'photos' ? (
             <ImageIcon className="w-16 h-16 text-violet-300 mx-auto mb-4" />
           ) : (
             <FileText className="w-16 h-16 text-violet-300 mx-auto mb-4" />
           )}
           <p className="text-violet-200">
-            No {type === 'fit-outs' ? 'fit-out examples' : 'site plans'} available
+            No {type === 'photos' ? 'photos' : 'videos'} available
           </p>
         </div>
       </div>

@@ -40,8 +40,8 @@ export function Step6SupportingDocuments({
     formState: { errors: formErrors }
   } = useForm<Step6FormData>({
     defaultValues: {
-      sitePlanFiles: data.sitePlanFiles || [],
-      fitOutFiles: data.fitOutFiles || []
+      photoFiles: data.photoFiles || [],
+      videoFiles: data.videoFiles || []
     },
     mode: 'onChange'
   });
@@ -50,8 +50,8 @@ export function Step6SupportingDocuments({
   // STATE MANAGEMENT
   // =====================================================
 
-  const [sitePlanFiles, setSitePlanFiles] = useState<UploadedFile[]>([]);
-  const [fitOutFiles, setFitOutFiles] = useState<GalleryItem[]>([]);
+  const [photoFiles, setSitePlanFiles] = useState<UploadedFile[]>([]);
+  const [videoFiles, setFitOutFiles] = useState<GalleryItem[]>([]);
 
   const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -69,54 +69,56 @@ export function Step6SupportingDocuments({
   // Update local state when data prop changes (for edit mode) - only on first load
   useEffect(() => {
     // Only initialize once with loaded data 
-    const shouldUpdateSitePlans = data.sitePlanFiles && data.sitePlanFiles.length > 0 && !hasInitializedRef.current;
-    const shouldUpdateFitOuts = data.fitOutFiles && data.fitOutFiles.length > 0 && !hasInitializedRef.current;
+    const shouldUpdateSitePlans = data.photoFiles && data.photoFiles.length > 0 && !hasInitializedRef.current;
+    const shouldUpdateFitOuts = data.videoFiles && data.videoFiles.length > 0 && !hasInitializedRef.current;
     
     console.log('Step6 initialization check:', {
       shouldUpdateSitePlans,
       shouldUpdateFitOuts,
       hasInitialized: hasInitializedRef.current,
-      sitePlanCount: data.sitePlanFiles?.length || 0,
-      fitOutCount: data.fitOutFiles?.length || 0
+      photoCount: data.photoFiles?.length || 0,
+      videoCount: data.videoFiles?.length || 0
     });
     
     if (shouldUpdateSitePlans) {
-      setSitePlanFiles(data.sitePlanFiles || []);
+      setSitePlanFiles(data.photoFiles || []);
     }
     
     if (shouldUpdateFitOuts) {
-      const transformedFitOutFiles = (data.fitOutFiles || []).map(file => ({
-        ...file,
-        isVideo: file.isVideo || false
-      }));
-      setFitOutFiles(transformedFitOutFiles);
+      setFitOutFiles(data.videoFiles || []);
     }
     
     if ((shouldUpdateSitePlans || shouldUpdateFitOuts) && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
     }
-  }, [data.sitePlanFiles, data.fitOutFiles]);
+  }, [data.photoFiles, data.videoFiles]);
 
   // Update parent when files change (debounced to prevent loops)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       const formData = {
-        sitePlanFiles: sitePlanFiles.map(file => ({
-          ...file,
-          type: 'sitePlan' as const
-        })),
-        fitOutFiles: fitOutFiles.map(file => ({
+        photoFiles: photoFiles.map((file, index) => ({
           id: file.id,
           name: file.name,
           url: file.url,
           path: file.path,
-          type: 'fitOut' as const,
+          type: 'photo' as const,
+          size: file.size,
+          mimeType: file.mimeType,
+          uploadedAt: file.uploadedAt,
+          displayOrder: index
+        })),
+        videoFiles: videoFiles.map(file => ({
+          id: file.id,
+          name: file.name,
+          url: file.url,
+          path: file.path || '',
+          type: 'video' as const,
           size: file.size,
           mimeType: file.mimeType,
           uploadedAt: file.uploadedAt,
           displayOrder: file.displayOrder,
           caption: file.caption,
-          isVideo: file.isVideo,
           thumbnail: file.thumbnail
         }))
       };
@@ -134,19 +136,35 @@ export function Step6SupportingDocuments({
     }, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [sitePlanFiles, fitOutFiles, onUpdate]);
+  }, [photoFiles, videoFiles, onUpdate]);
 
   // Validation
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       const stepErrors = validateStep(6, {
-        sitePlanFiles: sitePlanFiles.map(file => ({
-          ...file,
-          type: 'sitePlan' as const
+        photoFiles: photoFiles.map((file, index) => ({
+          id: file.id,
+          name: file.name,
+          url: file.url,
+          path: file.path,
+          type: 'photo' as const,
+          size: file.size,
+          mimeType: file.mimeType,
+          uploadedAt: file.uploadedAt,
+          displayOrder: index
         })),
-        fitOutFiles: fitOutFiles.map(file => ({
-          ...file,
-          type: 'fitOut' as const
+        videoFiles: videoFiles.map(file => ({
+          id: file.id,
+          name: file.name,
+          url: file.url,
+          path: file.path || '',
+          type: 'video' as const,
+          size: file.size,
+          mimeType: file.mimeType,
+          uploadedAt: file.uploadedAt,
+          displayOrder: file.displayOrder,
+          caption: file.caption,
+          thumbnail: file.thumbnail
         }))
       });
       const isValid = Object.keys(stepErrors).length === 0 && !isUploading;
@@ -158,7 +176,7 @@ export function Step6SupportingDocuments({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [sitePlanFiles, fitOutFiles, isUploading, onValidationChange]);
+  }, [photoFiles, videoFiles, isUploading, onValidationChange]);
 
   // =====================================================
   // HANDLERS
@@ -166,12 +184,12 @@ export function Step6SupportingDocuments({
 
   const handleSitePlanFilesChange = useCallback((files: UploadedFile[]) => {
     setSitePlanFiles(files);
-    setUploadErrors(prev => ({ ...prev, sitePlans: '' }));
+    setUploadErrors(prev => ({ ...prev, photos: '' }));
   }, []);
 
   const handleFitOutFilesChange = useCallback((files: GalleryItem[]) => {
     setFitOutFiles(files);
-    setUploadErrors(prev => ({ ...prev, fitOuts: '' }));
+    setUploadErrors(prev => ({ ...prev, videos: '' }));
   }, []);
 
   const handleUploadStart = useCallback(() => {
@@ -227,11 +245,11 @@ export function Step6SupportingDocuments({
         </CardHeader>
         <CardContent>
           <DocumentUpload
-            value={sitePlanFiles}
+            value={photoFiles}
             onChange={handleSitePlanFilesChange}
             organizationId=""
             listingId={listingId}
-            type="sitePlan"
+            type="photo"
             acceptedTypes={[
               "application/pdf",
               "image/png", 
@@ -242,10 +260,10 @@ export function Step6SupportingDocuments({
             ]}
             maxFileSize={10 * 1024 * 1024} // 10MB
           />
-          {uploadErrors.sitePlans && (
+          {uploadErrors.photos && (
             <div className="mt-2 flex items-center gap-2 text-sm text-red-600">
               <AlertCircle className="w-4 h-4" />
-              {uploadErrors.sitePlans}
+              {uploadErrors.photos}
             </div>
           )}
         </CardContent>
@@ -265,16 +283,16 @@ export function Step6SupportingDocuments({
         </CardHeader>
         <CardContent>
           <GalleryUpload
-            value={fitOutFiles}
+            value={videoFiles}
             onChange={handleFitOutFilesChange}
             organizationId=""
             listingId={listingId}
             maxFiles={10}
           />
-          {uploadErrors.fitOuts && (
+          {uploadErrors.videos && (
             <div className="mt-2 flex items-center gap-2 text-sm text-red-600">
               <AlertCircle className="w-4 h-4" />
-              {uploadErrors.fitOuts}
+              {uploadErrors.videos}
             </div>
           )}
         </CardContent>
@@ -293,17 +311,17 @@ export function Step6SupportingDocuments({
       )}
 
       {/* Summary */}
-      {(sitePlanFiles.length > 0 || fitOutFiles.length > 0) && (
+      {(photoFiles.length > 0 || videoFiles.length > 0) && (
         <Card className="border-green-200 bg-green-50">
           <CardContent className="py-4">
             <div className="text-sm text-green-700">
               <p className="font-medium mb-1">Files Ready:</p>
               <ul className="space-y-1">
-                {sitePlanFiles.length > 0 && (
-                  <li>• {sitePlanFiles.length} site plan{sitePlanFiles.length !== 1 ? 's' : ''}</li>
+                {photoFiles.length > 0 && (
+                  <li>• {photoFiles.length} site plan{photoFiles.length !== 1 ? 's' : ''}</li>
                 )}
-                {fitOutFiles.length > 0 && (
-                  <li>• {fitOutFiles.length} fit-out example{fitOutFiles.length !== 1 ? 's' : ''}</li>
+                {videoFiles.length > 0 && (
+                  <li>• {videoFiles.length} fit-out example{videoFiles.length !== 1 ? 's' : ''}</li>
                 )}
               </ul>
             </div>

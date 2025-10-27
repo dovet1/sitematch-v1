@@ -52,8 +52,8 @@ const mockListing = {
   ],
   files: {
     brochures: [],
-    fit_outs: [],
-    site_plans: []
+    videos: [],
+    photos: []
   }
 };
 
