@@ -13,7 +13,7 @@ export function Termly() {
   return (
     <Script
       id="termly-consent"
-      src="https://app.termly.io/resource-blocker/60d58f52-d8db-4e80-9121-20465e437e1c"
+      src={`https://app.termly.io/resource-blocker/${termlyId}`}
       strategy="beforeInteractive"
     />
   );
