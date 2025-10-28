@@ -1,41 +1,48 @@
 'use client';
 
-import Script from 'next/script';
 import { useEffect } from 'react';
 
 export function Termly() {
   const termlyId = process.env.NEXT_PUBLIC_TERMLY_ID;
 
   useEffect(() => {
-    console.log('[Termly Debug] Environment:', process.env.NODE_ENV);
-    console.log('[Termly Debug] ID present:', !!termlyId);
-    console.log('[Termly Debug] ID value:', termlyId || 'MISSING');
+    if (!termlyId) {
+      console.error('[Termly] NEXT_PUBLIC_TERMLY_ID is not set!');
+      return;
+    }
 
-    // Check if script was added to DOM
-    setTimeout(() => {
-      const script = document.getElementById('termly-consent');
-      console.log('[Termly Debug] Script in DOM:', !!script);
-      if (script) {
-        console.log('[Termly Debug] Script src:', script.getAttribute('src'));
-      }
-    }, 1000);
+    console.log('[Termly] Loading script with ID:', termlyId);
+
+    // Check if already loaded
+    if (document.getElementById('termly-consent')) {
+      console.log('[Termly] Script already exists');
+      return;
+    }
+
+    // Create and inject script
+    const script = document.createElement('script');
+    script.id = 'termly-consent';
+    script.src = `https://app.termly.io/resource-blocker/${termlyId}`;
+    script.async = true;
+
+    script.onload = () => {
+      console.log('[Termly] Script loaded successfully');
+    };
+
+    script.onerror = (error) => {
+      console.error('[Termly] Script failed to load:', error);
+    };
+
+    // Insert at the very beginning of head
+    const firstScript = document.head.querySelector('script');
+    if (firstScript) {
+      document.head.insertBefore(script, firstScript);
+    } else {
+      document.head.appendChild(script);
+    }
+
+    console.log('[Termly] Script injected into DOM');
   }, [termlyId]);
 
-  if (!termlyId) {
-    console.error('[Termly] NEXT_PUBLIC_TERMLY_ID is not set!');
-    console.error('[Termly] This should be set in Vercel environment variables');
-    return null;
-  }
-
-  console.log('[Termly] Rendering Script component with ID:', termlyId);
-
-  return (
-    <Script
-      id="termly-consent"
-      src={`https://app.termly.io/resource-blocker/${termlyId}`}
-      strategy="beforeInteractive"
-      onLoad={() => console.log('[Termly] Script onLoad triggered')}
-      onError={(e) => console.error('[Termly] Script onError:', e)}
-    />
-  );
+  return null;
 }
