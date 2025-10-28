@@ -4,12 +4,12 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ArrowRight, 
-  MapPin, 
-  Building2, 
-  Car, 
-  Users, 
+import {
+  ArrowRight,
+  MapPin,
+  Building2,
+  Car,
+  Users,
   TrendingUp,
   CheckCircle,
   Play,
@@ -21,15 +21,13 @@ import {
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { StartTrialButton } from '@/components/StartTrialButton';
+import { VideoLightbox } from '@/components/VideoLightbox';
 import '@/styles/sitesketcher-landing.css';
 import dynamic from 'next/dynamic';
 
 // Performance optimizations - images and components are loaded efficiently
 
-interface DemoState {
-  isPlaying: boolean;
-  currentStep: number;
-}
+const DEMO_VIDEO_ID = 'DdBlMDdXe5w';
 
 const commercialUserTypes = [
   {
@@ -88,20 +86,7 @@ const testimonials = [
 
 export default function SiteSketcherLanding() {
   const { user } = useAuth();
-  const [demoState, setDemoState] = useState<DemoState>({ isPlaying: false, currentStep: 0 });
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-
-  const handleTryDemo = () => {
-    if (!demoState.isPlaying) {
-      setDemoState({ isPlaying: true, currentStep: 0 });
-      // In a real implementation, this would trigger an interactive demo
-      // For now, we'll simulate with a timeout
-      setTimeout(() => {
-        setDemoState({ isPlaying: false, currentStep: 0 });
-      }, 5000);
-    }
-  };
+  const [showVideoLightbox, setShowVideoLightbox] = useState(false);
 
   return (
     <div className="min-h-screen bg-background sitesketcher-landing">
@@ -137,15 +122,14 @@ export default function SiteSketcherLanding() {
               />
               
               {/* Secondary Action */}
-              <Button 
-                size="lg" 
-                variant="outline" 
-                onClick={handleTryDemo}
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => setShowVideoLightbox(true)}
                 className="cta-button cta-button-secondary touch-button w-full px-8 py-3 text-base border-2 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
-                disabled={demoState.isPlaying}
               >
                 <Play className="mr-2 h-4 w-4" />
-                {demoState.isPlaying ? 'Loading Demo...' : 'View Demo'}
+                View Demo
               </Button>
               
               {/* Tertiary Action - Text Link Style */}
@@ -175,35 +159,21 @@ export default function SiteSketcherLanding() {
           </div>
 
           <div className="relative max-w-4xl mx-auto">
-            <Card className="overflow-hidden shadow-2xl">
-              <div className="relative aspect-video bg-gradient-to-br from-blue-100 to-slate-100 flex items-center justify-center">
-                {demoState.isPlaying ? (
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading interactive demo...</p>
+            <Card className="overflow-hidden shadow-2xl cursor-pointer group" onClick={() => setShowVideoLightbox(true)}>
+              <div className="relative aspect-video bg-black">
+                {/* YouTube thumbnail */}
+                <img
+                  src={`https://img.youtube.com/vi/${DEMO_VIDEO_ID}/maxresdefault.jpg`}
+                  alt="SiteSketcher Demo Video"
+                  className="w-full h-full object-cover"
+                />
+
+                {/* Play button overlay */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-all">
+                  <div className="bg-blue-600 group-hover:bg-blue-700 group-hover:scale-110 transition-all rounded-full p-6 shadow-2xl">
+                    <Play className="w-12 h-12 text-white fill-white" />
                   </div>
-                ) : (
-                  <Button 
-                    size="lg" 
-                    onClick={handleTryDemo}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4"
-                  >
-                    <Play className="mr-2 h-6 w-6" />
-                    Start Interactive Demo
-                  </Button>
-                )}
-                
-                {/* Demo overlay with steps */}
-                {demoState.isPlaying && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <div className="text-white text-center">
-                      <h3 className="text-xl font-semibold mb-2">
-                        Step {demoState.currentStep + 1}: Site Evaluation
-                      </h3>
-                      <p>Measuring property boundaries and calculating area...</p>
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
             </Card>
           </div>
@@ -281,6 +251,14 @@ export default function SiteSketcherLanding() {
           />
         </div>
       </section>
+
+      {/* Video Lightbox */}
+      <VideoLightbox
+        isOpen={showVideoLightbox}
+        onClose={() => setShowVideoLightbox(false)}
+        videoId={DEMO_VIDEO_ID}
+        title="SiteSketcher Demo"
+      />
 
     </div>
   );
