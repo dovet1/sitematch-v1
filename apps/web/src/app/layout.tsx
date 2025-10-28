@@ -5,6 +5,7 @@ import { AuthProvider } from '@/contexts/auth-context'
 import { Header } from '@/components/header'
 import { LeadCaptureProvider } from '@/components/lead-capture-provider'
 import { SessionInvalidModal } from '@/components/auth/SessionInvalidModal'
+import { Termly } from '@/components/analytics/Termly'
 import { Hotjar } from '@/components/analytics/Hotjar'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -106,6 +107,7 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
+        <Termly />
         <Hotjar />
         <AuthProvider>
           <SessionInvalidModal />

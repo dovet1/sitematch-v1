@@ -13,6 +13,8 @@ export function Hotjar() {
     <Script
       src={scriptSrc}
       strategy="afterInteractive"
+      data-category="analytics"
+      type="text/plain"
     />
   );
 }
