@@ -15,16 +15,32 @@ export function LeadCaptureProvider() {
   useEffect(() => {
     if (!mounted) return;
 
-    // Check if modal should be shown on first page load
-    const shouldShow = shouldShowLeadModal();
-    if (shouldShow) {
-      // Small delay to ensure page is fully loaded
-      const timer = setTimeout(() => {
-        setShowModal(true);
-      }, 1000);
+    // Function to check if user has made cookie consent decision
+    const hasConsented = () => {
+      // Check if Termly consent cookie exists
+      const cookies = document.cookie.split(';');
+      return cookies.some(cookie => cookie.trim().startsWith('termly_consent='));
+    };
 
-      return () => clearTimeout(timer);
-    }
+    // Function to attempt showing modal
+    const tryShowModal = () => {
+      // If user hasn't consented yet, wait for them to interact with cookie banner
+      if (!hasConsented()) {
+        // Check again in 2 seconds
+        setTimeout(tryShowModal, 2000);
+        return;
+      }
+
+      // User has made a consent decision, now check if modal should be shown
+      const shouldShow = shouldShowLeadModal();
+      if (shouldShow) {
+        setShowModal(true);
+      }
+    };
+
+    // Start checking after initial delay
+    const timer = setTimeout(tryShowModal, 1000);
+    return () => clearTimeout(timer);
   }, [mounted]);
 
   const handleClose = () => {
