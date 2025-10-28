@@ -97,6 +97,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <Termly />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
@@ -107,7 +108,6 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <Termly />
         <Hotjar />
         <AuthProvider>
           <SessionInvalidModal />
