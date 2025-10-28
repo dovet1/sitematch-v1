@@ -1,34 +1,46 @@
 'use client';
 
-import Script from 'next/script';
+import { useEffect } from 'react';
 
 export function Termly() {
   const termlyId = process.env.NEXT_PUBLIC_TERMLY_ID;
 
-  if (!termlyId) {
-    return null;
-  }
+  useEffect(() => {
+    console.log('[Termly] Component mounted');
+    console.log('[Termly] ID:', termlyId ? 'Found' : 'NOT FOUND');
 
-  return (
-    <>
-      {/* Termly Cookie Consent Banner */}
-      <Script
-        id="termly-consent"
-        strategy="beforeInteractive"
-        dangerouslySetInnerHTML={{
-          __html: `
-            (function(d, s, id) {
-              var js, tjs = d.getElementsByTagName(s)[0];
-              if (d.getElementById(id)) return;
-              js = d.createElement(s); js.id = id;
-              js.src = "https://app.termly.io/embed.min.js";
-              js.dataset.autoBlock = "on";
-              js.dataset.websiteUuid = "${termlyId}";
-              tjs.parentNode.insertBefore(js, tjs);
-            })(document, 'script', 'termly-js');
-          `
-        }}
-      />
-    </>
-  );
+    if (!termlyId) {
+      console.error('[Termly] NEXT_PUBLIC_TERMLY_ID is not set!');
+      return;
+    }
+
+    // Check if script already loaded
+    if (document.getElementById('termly-js')) {
+      console.log('[Termly] Script already loaded');
+      return;
+    }
+
+    console.log('[Termly] Loading script...');
+
+    // Load Termly script
+    const script = document.createElement('script');
+    script.id = 'termly-js';
+    script.src = 'https://app.termly.io/embed.min.js';
+    script.setAttribute('data-auto-block', 'on');
+    script.setAttribute('data-website-uuid', termlyId);
+    script.async = true;
+
+    script.onload = () => {
+      console.log('[Termly] Script loaded successfully');
+    };
+
+    script.onerror = (error) => {
+      console.error('[Termly] Script failed to load:', error);
+    };
+
+    document.head.appendChild(script);
+    console.log('[Termly] Script added to DOM');
+  }, [termlyId]);
+
+  return null;
 }
