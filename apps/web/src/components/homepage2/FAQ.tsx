@@ -13,7 +13,7 @@ export function FAQ() {
     },
     {
       question: "How are requirements verified?",
-      answer: "Every requirement is manually reviewed by our team. We verify company details, contact information, and ensure the requirement is genuine before publishing.",
+      answer: "We only accept listings from registered property agencies or the companies themselves that have genuine site requirements. Each submission is reviewed by our team before going live. If we need to confirm any details, we’ll contact the poster directly.",
     },
     {
       question: "Can I cancel my subscription?",
@@ -24,8 +24,8 @@ export function FAQ() {
       answer: "We accept all major credit and debit cards via Stripe. Subscriptions can be paid by bank transfer on request. Email rob@sitematcher.co.uk for an invoice.",
     },
     {
-      question: "Is there a setup fee?",
-      answer: "No setup fees, no hidden charges. You only pay the monthly or annual subscription fee.",
+      question: "How do you make sure listed requirements are active?",
+      answer: "We contact each listing poster at least once a year to confirm that their requirement is still current. If we don’t receive confirmation, the listing is removed from the site. In addition, we monitor property market news and act promptly if we learn information that affects any requirements.",
     },
   ];
 
