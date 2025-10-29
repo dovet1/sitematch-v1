@@ -143,7 +143,7 @@ export function Partners() {
     <section className="py-16 bg-white border-y border-gray-100">
       <div className="max-w-7xl mx-auto px-6">
         <p className="text-center text-sm font-semibold text-gray-500 uppercase tracking-wider mb-8">
-          Trusted by companies UK-wide
+          For companies of every size and sector
         </p>
 
         <div
