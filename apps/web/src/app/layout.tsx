@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     default: 'SiteMatcher | Find Tenants & Buyers Actively Looking for Sites',
     template: '%s | SiteMatcher'
   },
-  description: 'Access 1000+ verified commercial and residential property requirements. Match your sites with qualified companies actively seeking their next location. Trusted by 500+ property professionals.',
+  description: 'Access 8700+ verified commercial and residential property requirements. Match your sites with qualified companies actively seeking their next location. Trusted by 1400+ property professionals.',
   keywords: ['commercial property', 'property requirements', 'site matching', 'development opportunities', 'land acquisition', 'property professionals', 'real estate', 'UK property', 'site finding', 'commercial real estate'],
   authors: [{ name: 'SiteMatcher' }],
   creator: 'SiteMatcher',
