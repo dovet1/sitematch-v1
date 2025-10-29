@@ -4080,7 +4080,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 <Globe className="w-8 h-8 text-violet-500" />
                               </div>
                               <h5 className="font-semibold text-gray-900 mb-1">Nationwide Coverage</h5>
-                              <p className="text-sm text-gray-600 mb-4">Open to opportunities across the UK & Ireland</p>
+                              <p className="text-sm text-gray-600 mb-4">Open to opportunities across the UK</p>
                               <div className="flex items-center justify-center gap-2 text-xs text-violet-600">
                                 <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse"></div>
                                 <span>Tap Add to specify target areas</span>
@@ -5719,7 +5719,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                                 <div className="w-12 h-12 bg-violet-400/30 rounded-full flex items-center justify-center mx-auto mb-2">
                                   <MapPin className="w-6 h-6 text-white" />
                                 </div>
-                                <div className="text-xs text-violet-200">UK & Ireland</div>
+                                <div className="text-xs text-violet-200">UK</div>
                               </div>
                             </div>
                           </div>
@@ -5728,7 +5728,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                             Nationwide Coverage
                           </h3>
                           <p className="text-violet-200 text-lg mb-6 max-w-sm mx-auto leading-relaxed">
-                            Open to opportunities across the UK & Ireland
+                            Open to opportunities across the UK
                           </p>
                           
                           <Button 

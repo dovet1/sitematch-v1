@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
     }
     
     // If commercial-focused filters are applied, exclude residential listings
-    const hasCommercialFilters = sector.length > 0 || useClass.length > 0 || sizeMin !== null || sizeMax !== null;
+    const hasCommercialFilters = sector.length > 0 || sizeMin !== null || sizeMax !== null;
     if (hasCommercialFilters) {
       console.log('Applying commercial filters - excluding residential listings');
       query = query.neq('listing_type', 'residential');
