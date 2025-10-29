@@ -177,7 +177,7 @@ export function LocationsModal({
               "text-gray-500",
               isMobileUI ? "text-sm" : "text-xs"
             )}>
-              Open to opportunities across the UK & Ireland
+              Open to opportunities across the UK
             </p>
           </div>
         )}

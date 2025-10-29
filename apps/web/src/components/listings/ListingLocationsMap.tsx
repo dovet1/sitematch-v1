@@ -112,7 +112,7 @@ export function ListingLocationsMap({
             <MapPin className="w-8 h-8 text-violet-500" />
           </div>
           <p className="text-gray-700 font-medium">Nationwide Coverage</p>
-          <p className="text-sm text-gray-600 mt-1">Open to opportunities across the UK & Ireland</p>
+          <p className="text-sm text-gray-600 mt-1">Open to opportunities across the UK</p>
         </div>
       </div>
     );

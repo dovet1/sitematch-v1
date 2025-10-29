@@ -20,7 +20,7 @@ export function Footer() {
               />
             </div>
             <p className="text-sm text-gray-400 mb-4">
-              Connecting commercial occupiers with the right property opportunities across the UK & Ireland.
+              Connecting commercial occupiers with the right property opportunities across the UK.
             </p>
           </div>
 
