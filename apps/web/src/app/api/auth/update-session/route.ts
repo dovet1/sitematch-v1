@@ -20,7 +20,7 @@ export async function POST() {
     // This will be used to invalidate other sessions
     const sessionId = randomUUID()
 
-    console.log('Updating session for user:', user.id, 'with session ID:', sessionId)
+    console.log('[UPDATE-SESSION] User:', user.id, 'New Session ID:', sessionId)
 
     // Update the user's current session ID in the database
     const { error: updateError } = await supabase
@@ -39,12 +39,26 @@ export async function POST() {
       )
     }
 
-    console.log('Session updated successfully for user:', user.id)
+    console.log('[UPDATE-SESSION] Session updated successfully. Setting cookie.')
 
-    return NextResponse.json({
+    // Create response with session ID
+    const response = NextResponse.json({
       success: true,
       sessionId
     })
+
+    // Set the session_id cookie server-side to ensure it's available immediately
+    response.cookies.set('session_id', sessionId, {
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+      sameSite: 'lax',
+      httpOnly: false, // Allow client-side access for validation
+      secure: process.env.NODE_ENV === 'production'
+    })
+
+    console.log('[UPDATE-SESSION] Cookie set in response for session:', sessionId)
+
+    return response
   } catch (error) {
     console.error('Session update error:', error)
     return NextResponse.json(

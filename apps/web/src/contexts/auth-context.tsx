@@ -126,11 +126,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    // Check if we're being logged out before doing anything
+    let shouldContinue = true
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('logout_reason') === 'session_invalid') {
+        // Clear local session data only - don't call supabase.auth.signOut()
+        // as that would revoke the JWT globally and log out all devices
+        console.log('[AUTH-CONTEXT] Session invalid detected, clearing local session')
+        localStorage.removeItem('session_id')
+
+        // Clear all possible session_id cookies
+        document.cookie = 'session_id=; path=/; max-age=0; samesite=lax'
+        document.cookie = 'session_id=; path=/; max-age=0'
+        console.log('[AUTH-CONTEXT] Cleared session_id cookies')
+
+        // Clear Supabase session locally only (scope: 'local')
+        supabase.auth.signOut({ scope: 'local' }).then(() => {
+          setUser(null)
+          setProfile(null)
+          setLoading(false)
+        })
+        shouldContinue = false
+      }
+    }
+
+    if (!shouldContinue) {
+      // Return empty cleanup function
+      return () => {}
+    }
+
     refresh()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+          // For INITIAL_SESSION, double-check we're not in a logout flow
+          if (event === 'INITIAL_SESSION' && typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search)
+            if (urlParams.get('logout_reason') === 'session_invalid') {
+              // Don't restore session, clear local session only
+              console.log('Skipping session restoration due to logout_reason=session_invalid')
+              await supabase.auth.signOut({ scope: 'local' })
+              setUser(null)
+              setProfile(null)
+              setLoading(false)
+              return
+            }
+          }
+
           // Skip if user is already set and same user
           if (user?.id === session.user.id && profile) {
             setLoading(false)
@@ -171,37 +215,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Set loading to false immediately after setting user
           setLoading(false)
 
-          // Start periodic session validation
-          if (sessionCheckInterval) {
-            clearInterval(sessionCheckInterval)
-          }
-          const interval = setInterval(async () => {
-            try {
-              const sessionId = localStorage.getItem('session_id')
-              if (!sessionId) {
-                console.warn('No session ID found in localStorage')
-                return
-              }
-
-              const response = await fetch('/api/auth/validate-session', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ sessionId }),
-              })
-              const data = await response.json()
-
-              if (!data.valid) {
-                // Session is invalid, redirect to logout
-                console.log('Session invalid, logging out. Reason:', data.reason)
-                router.push('/?logout_reason=session_invalid')
-              }
-            } catch (error) {
-              console.error('Error validating session:', error)
+          // Only start session validation interval for new sign-ins
+          // For INITIAL_SESSION, the middleware will handle immediate validation
+          if (event === 'SIGNED_IN') {
+            if (sessionCheckInterval) {
+              clearInterval(sessionCheckInterval)
             }
-          }, 60000) // Check every 60 seconds
-          setSessionCheckInterval(interval)
+            const interval = setInterval(async () => {
+              try {
+                const sessionId = localStorage.getItem('session_id')
+                if (!sessionId) {
+                  console.warn('No session ID found in localStorage')
+                  return
+                }
+
+                const response = await fetch('/api/auth/validate-session', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ sessionId }),
+                })
+                const data = await response.json()
+
+                if (!data.valid) {
+                  // Session is invalid, redirect to logout
+                  console.log('Session invalid, logging out. Reason:', data.reason)
+                  router.push('/?logout_reason=session_invalid')
+                }
+              } catch (error) {
+                console.error('Error validating session:', error)
+              }
+            }, 60000) // Check every 60 seconds
+            setSessionCheckInterval(interval)
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setProfile(null)
@@ -247,33 +294,87 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Update the session ID in the database to invalidate other sessions
+    let sessionId: string | null = null
     try {
+      console.log('[AUTH-CONTEXT] Calling update-session API...')
       const response = await fetch('/api/auth/update-session', {
         method: 'POST',
+        credentials: 'include' // Ensure cookies are included in request and response
       })
       const data = await response.json()
 
       if (data.success && data.sessionId) {
-        // Store session ID in localStorage and cookie for validation
+        sessionId = data.sessionId
+        console.log('[AUTH-CONTEXT] Received session ID:', data.sessionId)
+
+        // First, explicitly delete any existing session_id cookies
+        // Try multiple variations to ensure all old cookies are removed
+        const cookiesToClear = [
+          'session_id=; path=/; max-age=0; samesite=lax',
+          'session_id=; path=/; max-age=0; samesite=strict',
+          'session_id=; path=/; max-age=0; samesite=none; secure',
+          'session_id=; path=/; max-age=0',
+          'session_id=; max-age=0',
+        ]
+        cookiesToClear.forEach(cookieStr => {
+          document.cookie = cookieStr
+        })
+        console.log('[AUTH-CONTEXT] Cleared all existing session_id cookie variations')
+
+        // Also clear from localStorage
+        localStorage.removeItem('session_id')
+
+        // Store session ID in localStorage for client-side validation
         localStorage.setItem('session_id', data.sessionId)
-        // Set cookie that expires in 30 days
+        console.log('[AUTH-CONTEXT] Stored in localStorage')
+
+        // Note: Cookie is set by the server in the response, but we also set it client-side as backup
         document.cookie = `session_id=${data.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; samesite=lax`
-        console.log('Session ID stored:', data.sessionId)
+        console.log('[AUTH-CONTEXT] Set NEW cookie via document.cookie')
+
+        // Wait and verify cookie is set correctly
+        let attempts = 0
+        let cookieSet = false
+        while (attempts < 10 && !cookieSet) {
+          await new Promise(resolve => setTimeout(resolve, 50))
+          const cookies = document.cookie.split(';').map(c => c.trim())
+          const sessionCookie = cookies.find(c => c.startsWith('session_id='))
+
+          if (sessionCookie && sessionCookie.includes(data.sessionId)) {
+            cookieSet = true
+            console.log('[AUTH-CONTEXT] Cookie verified after', attempts * 50, 'ms:', sessionCookie)
+          } else {
+            console.log('[AUTH-CONTEXT] Cookie check attempt', attempts + 1, ':', sessionCookie || 'NOT FOUND')
+          }
+          attempts++
+        }
+
+        if (!cookieSet) {
+          console.error('[AUTH-CONTEXT] WARNING: Cookie was not set correctly after 500ms! This will cause logout.')
+        }
       } else {
-        console.error('Failed to get session ID:', data)
+        console.error('[AUTH-CONTEXT] Failed to get session ID:', data)
       }
     } catch (error) {
-      console.error('Error updating session:', error)
+      console.error('[AUTH-CONTEXT] Error updating session:', error)
       // Don't block login if session update fails
     }
 
     // Handle redirect after successful sign in
-    if (redirectTo && redirectTo !== 'SKIP_REDIRECT') {
-      router.push(redirectTo)
-    } else if (!redirectTo || redirectTo !== 'SKIP_REDIRECT') {
-      router.push('/occupier/dashboard')
+    // Use window.location.replace for a full page reload that replaces history
+    // This ensures cookies are properly set and no race conditions occur
+    const targetUrl = redirectTo && redirectTo !== 'SKIP_REDIRECT' ? redirectTo :
+                      (!redirectTo || redirectTo !== 'SKIP_REDIRECT' ? '/occupier/dashboard' : null)
+
+    if (targetUrl) {
+      console.log('[AUTH-CONTEXT] Redirecting to:', targetUrl)
+      // Add a small delay to ensure the Set-Cookie header is fully processed
+      await new Promise(resolve => setTimeout(resolve, 200))
+      // Use replace instead of href to prevent back button issues
+      window.location.replace(targetUrl)
+    } else {
+      console.log('[AUTH-CONTEXT] No redirect, staying on current page')
     }
-    // If redirectTo === 'SKIP_REDIRECT', don't redirect anywhere
   }
 
   const signUp = async (email: string, password: string, companyName?: string, redirectTo?: string, newsletterOptIn?: boolean, userType?: string) => {
