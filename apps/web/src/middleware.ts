@@ -75,19 +75,47 @@ export async function middleware(request: NextRequest) {
     // Get session ID from cookie
     const sessionIdCookie = request.cookies.get('session_id')?.value
 
-    if (sessionIdCookie) {
-      // Fetch the user's stored session ID
-      const { data: userData } = await supabase
-        .from('users')
-        .select('current_session_id')
-        .eq('id', user.id)
-        .single()
+    // Fetch the user's stored session ID
+    const { data: userData } = await supabase
+      .from('users')
+      .select('current_session_id')
+      .eq('id', user.id)
+      .single()
 
-      // If there's a stored session ID and it doesn't match, redirect to logout
-      if (userData?.current_session_id && userData.current_session_id !== sessionIdCookie) {
+    console.log('[MIDDLEWARE] Session check:', {
+      path: request.nextUrl.pathname,
+      userId: user.id,
+      cookieId: sessionIdCookie ? sessionIdCookie.substring(0, 8) + '...' : 'NONE',
+      dbId: userData?.current_session_id ? userData.current_session_id.substring(0, 8) + '...' : 'NONE'
+    })
+
+    // Only validate if there's a session ID in the database
+    // This allows new logins to establish their session first
+    if (userData?.current_session_id) {
+      // If user has no session cookie yet, this might be their first login or a new device
+      // Allow the request to continue so the session can be established
+      if (!sessionIdCookie) {
+        console.log('[MIDDLEWARE] User has no session cookie, allowing to establish session')
+      } else if (userData.current_session_id !== sessionIdCookie) {
+        // Session ID mismatch - this device has been logged out
+        console.log('[MIDDLEWARE] Session mismatch! Logging out this device.')
         const logoutUrl = new URL('/', request.url)
         logoutUrl.searchParams.set('logout_reason', 'session_invalid')
-        return NextResponse.redirect(logoutUrl)
+
+        // Create redirect response and clear the invalid session cookie
+        const logoutResponse = NextResponse.redirect(logoutUrl)
+
+        // Clear the session_id cookie by setting it to expire immediately
+        logoutResponse.cookies.set('session_id', '', {
+          path: '/',
+          maxAge: 0,
+          sameSite: 'lax'
+        })
+
+        console.log('[MIDDLEWARE] Cleared invalid session cookie from response')
+        return logoutResponse
+      } else {
+        console.log('[MIDDLEWARE] Session valid, allowing request')
       }
     }
   }

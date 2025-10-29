@@ -33,8 +33,16 @@ export function SessionInvalidModal() {
     setIsLoggingOut(true)
     setIsOpen(false)
 
+    // Clear session cookies immediately
+    document.cookie = 'session_id=; path=/; max-age=0; samesite=lax'
+    document.cookie = 'session_id=; path=/; max-age=0'
+    localStorage.removeItem('session_id')
+
     try {
-      await signOut()
+      // Use local scope to only sign out THIS device, not all devices
+      const { createClientClient } = await import('@/lib/supabase')
+      const supabase = createClientClient()
+      await supabase.auth.signOut({ scope: 'local' })
     } catch (error) {
       console.error('Error signing out:', error)
     }
