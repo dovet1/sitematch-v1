@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Zap, X, Star, ArrowRight } from 'lucide-react'
+import Image from 'next/image'
 import {
   Dialog,
   DialogContent,
@@ -216,9 +217,31 @@ export function PaywallModal({
             {/* Testimonial */}
             <div className="p-3 bg-gray-50 rounded-lg border">
               <div className="flex items-start space-x-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                  {config.testimonial.author.split(' ')[0][0]}{config.testimonial.author.split(' ')[1] ? config.testimonial.author.split(' ')[1][0] : ''}
-                </div>
+                {config.testimonial.author === 'Kerry Northfold, Director, Vedra Property' ? (
+                  <div className="w-10 h-10 rounded-full overflow-hidden relative flex-shrink-0">
+                    <Image
+                      src="/testimonials/kerry-northfold.jpg"
+                      alt="Kerry Northfold"
+                      width={40}
+                      height={40}
+                      className="object-cover"
+                    />
+                  </div>
+                ) : config.testimonial.author === 'Henry Foreman, Partner, FMX Urban Property Advisory' ? (
+                  <div className="w-10 h-10 rounded-full overflow-hidden relative flex-shrink-0">
+                    <Image
+                      src="/testimonials/henry-foreman.jpg"
+                      alt="Henry Foreman"
+                      width={40}
+                      height={40}
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                    {config.testimonial.author.split(' ')[0][0]}{config.testimonial.author.split(' ')[1] ? config.testimonial.author.split(' ')[1][0] : ''}
+                  </div>
+                )}
                 <div className="flex-1">
                   <div className="flex items-center mb-1">
                     {[...Array(config.testimonial.rating)].map((_, i) => (

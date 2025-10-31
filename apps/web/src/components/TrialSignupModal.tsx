@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { Mail, Loader2, UserPlus, X, Lock, Zap, Star, LogIn } from 'lucide-react'
+import Image from 'next/image'
 import {
   Dialog,
   DialogContent,
@@ -486,9 +487,31 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
             {displayTestimonial && (
               <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
                 <div className="flex items-start space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                    {displayTestimonial.author.split(' ')[0][0]}{displayTestimonial.author.split(' ')[1] ? displayTestimonial.author.split(' ')[1][0] : ''}
-                  </div>
+                  {displayTestimonial.author === 'Kerry Northfold, Director, Vedra Property' ? (
+                    <div className="w-10 h-10 rounded-full overflow-hidden relative flex-shrink-0">
+                      <Image
+                        src="/testimonials/kerry-northfold.jpg"
+                        alt="Kerry Northfold"
+                        width={40}
+                        height={40}
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : displayTestimonial.author === 'Harry Foreman, Partner, FMX Urban Property Advisory' ? (
+                    <div className="w-10 h-10 rounded-full overflow-hidden relative flex-shrink-0">
+                      <Image
+                        src="/testimonials/henry-foreman.jpg"
+                        alt="Henry Foreman"
+                        width={40}
+                        height={40}
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                      {displayTestimonial.author.split(' ')[0][0]}{displayTestimonial.author.split(' ')[1] ? displayTestimonial.author.split(' ')[1][0] : ''}
+                    </div>
+                  )}
                   <div className="flex-1">
                     <div className="flex items-center mb-1">
                       {[...Array(displayTestimonial.rating)].map((_, i) => (
