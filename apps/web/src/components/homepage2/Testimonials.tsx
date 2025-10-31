@@ -1,6 +1,7 @@
 'use client';
 
 import { Star } from 'lucide-react';
+import Image from 'next/image';
 
 export function Testimonials() {
   const testimonials = [
@@ -54,9 +55,31 @@ export function Testimonials() {
 
               {/* Author */}
               <div className="flex items-center gap-4">
-                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  {testimonial.author.split(' ')[0][0]}{testimonial.author.split(' ')[1][0]}
-                </div>
+                {testimonial.author === 'Kerry Northfold' ? (
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden relative">
+                    <Image
+                      src="/testimonials/kerry-northfold.jpg"
+                      alt="Kerry Northfold"
+                      width={48}
+                      height={48}
+                      className="object-cover"
+                    />
+                  </div>
+                ) : testimonial.author === 'Henry Foreman' ? (
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden relative">
+                    <Image
+                      src="/testimonials/henry-foreman.jpg"
+                      alt="Henry Foreman"
+                      width={48}
+                      height={48}
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                    {testimonial.author.split(' ')[0][0]}{testimonial.author.split(' ')[1][0]}
+                  </div>
+                )}
                 <div className="min-w-0">
                   <p className="font-bold text-gray-900">{testimonial.author}</p>
                   <p className="text-sm text-gray-600">{testimonial.role}</p>
