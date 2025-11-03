@@ -343,60 +343,19 @@ export async function GET(request: NextRequest) {
       features: features
     };
 
-    // If no results from database, return minimal mock GeoJSON
+    // If no features (e.g., all listings are nationwide without specific locations), return empty GeoJSON
     if (features.length === 0) {
-      console.log('No database results, returning mock GeoJSON for development');
-      const mockGeoJson = {
+      console.log('No map features found - listings may not have specific locations');
+      const emptyGeoJson = {
         type: 'FeatureCollection',
-        features: [
-          {
-            type: 'Feature',
-            geometry: {
-              type: 'Point',
-              coordinates: [-0.1278, 51.5074] // London
-            },
-            properties: {
-              id: 'mock-1',
-              company_name: 'Sample Company Ltd',
-              listing_type: 'commercial',
-              clearbit_logo: true,
-              company_domain: 'google.com',
-              logo_url: null,
-              sector: 'Technology',
-              use_class: 'Office',
-              site_size_min: 2000,
-              site_size_max: 5000,
-              place_name: 'London, UK'
-            }
-          },
-          {
-            type: 'Feature',
-            geometry: {
-              type: 'Point',
-              coordinates: [-2.2426, 53.4808] // Manchester
-            },
-            properties: {
-              id: 'mock-2',
-              company_name: 'Tech Startup Ltd',
-              listing_type: 'commercial',
-              clearbit_logo: true,
-              company_domain: 'microsoft.com',
-              logo_url: null,
-              sector: 'Technology',
-              use_class: 'Office',
-              site_size_min: 1500,
-              site_size_max: 4000,
-              place_name: 'Manchester, UK'
-            }
-          }
-        ]
+        features: []
       };
 
       return NextResponse.json({
-        geojson: mockGeoJson,
-        total: 2,
+        geojson: emptyGeoJson,
+        total: 0,
         bounds: { north, south, east, west },
-        fallback: true
+        message: 'No listings with specific locations found for these filters'
       });
     }
 
