@@ -10,14 +10,26 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Create a new browser client instance each time for fresh auth state
-export const createClientClient = () => createBrowserClient(supabaseUrl, supabaseAnonKey)
+export const createClientClient = () => createBrowserClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    flowType: 'pkce'
+  }
+})
 
 // Legacy export for backward compatibility
-export const browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey)
+export const browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    flowType: 'pkce'
+  }
+})
 export const supabase = browserClient
 
 // Default createClient export for API routes
-export const createClient = () => createBrowserClient(supabaseUrl, supabaseAnonKey)
+export const createClient = () => createBrowserClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    flowType: 'pkce'
+  }
+})
 
 // Server component client (for use in Server Components and API Routes)
 export const createServerClient = () => {
