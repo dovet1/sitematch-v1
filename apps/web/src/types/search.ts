@@ -23,6 +23,11 @@ export interface SearchResult {
   description: string;
   site_size_min: number | null;
   site_size_max: number | null;
+  site_acreage_min: number | null;
+  site_acreage_max: number | null;
+  dwelling_count_min: number | null;
+  dwelling_count_max: number | null;
+  listing_type: 'residential' | 'commercial';
   // Multiple sectors and use classes from junction tables
   sectors: Array<{ id: string; name: string }>;
   use_classes: Array<{ id: string; name: string; code: string }>;

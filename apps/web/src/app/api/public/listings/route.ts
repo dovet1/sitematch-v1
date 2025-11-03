@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
         site_acreage_max,
         dwelling_count_min,
         dwelling_count_max,
+        listing_type,
         contact_name,
         contact_title,
         contact_email,
@@ -421,6 +422,7 @@ export async function GET(request: NextRequest) {
         site_acreage_max: listingData.site_acreage_max,
         dwelling_count_min: listingData.dwelling_count_min,
         dwelling_count_max: listingData.dwelling_count_max,
+        listing_type: listingData.listing_type || 'commercial',
         sectors: sectors.map((ls: any) => ls.sectors).filter(Boolean),
         use_classes: useClasses.map((luc: any) => luc.use_classes).filter(Boolean),
         // Legacy single values for backwards compatibility

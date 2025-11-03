@@ -39,7 +39,28 @@ export function MultiListingPopup({ cluster, onListingClick, onClose }: MultiLis
     setSelectedListings(new Set());
   };
 
-  const formatSizeRange = (min: number | null, max: number | null) => {
+  const formatSizeRange = (listing: SearchResult) => {
+    // For residential listings, show acreage
+    if (listing.listing_type === 'residential') {
+      const minAcres = listing.site_acreage_min;
+      const maxAcres = listing.site_acreage_max;
+
+      if (!minAcres && !maxAcres) return 'Size not specified';
+
+      const formatAcres = (num: number) => {
+        return num % 1 === 0 ? num.toString() : num.toFixed(2);
+      };
+
+      if (minAcres && maxAcres) return `${formatAcres(minAcres)} - ${formatAcres(maxAcres)} acres`;
+      if (minAcres) return `From ${formatAcres(minAcres)} acres`;
+      if (maxAcres) return `Up to ${formatAcres(maxAcres)} acres`;
+      return '';
+    }
+
+    // For commercial listings, show sq ft
+    const min = listing.site_size_min;
+    const max = listing.site_size_max;
+
     if (!min && !max) return 'Size not specified';
     if (min && max) return `${min.toLocaleString()} - ${max.toLocaleString()} sq ft`;
     if (min) return `From ${min.toLocaleString()} sq ft`;
@@ -114,7 +135,7 @@ export function MultiListingPopup({ cluster, onListingClick, onClose }: MultiLis
             <div className="flex items-center gap-2 text-sm">
               <Square className="w-4 h-4 text-gray-400" />
               <span className="text-gray-600">
-                {formatSizeRange(listing.site_size_min, listing.site_size_max)}
+                {formatSizeRange(listing)}
               </span>
             </div>
 
@@ -242,7 +263,7 @@ export function MultiListingPopup({ cluster, onListingClick, onClose }: MultiLis
                 <div className="space-y-2 mb-3">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Square className="w-4 h-4" />
-                    <span>{formatSizeRange(listing.site_size_min, listing.site_size_max)}</span>
+                    <span>{formatSizeRange(listing)}</span>
                   </div>
                   
                   {/* Price information (placeholder for real implementation) */}
