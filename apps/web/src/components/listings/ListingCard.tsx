@@ -148,18 +148,44 @@ function formatLocations(
 }
 
 function formatSiteSize(listing: SearchResult): string {
+  // For residential listings, show acreage instead of sq ft
+  if (listing.listing_type === 'residential') {
+    const minAcres = listing.site_acreage_min;
+    const maxAcres = listing.site_acreage_max;
+
+    if (!minAcres && !maxAcres) {
+      return 'No site size preference';
+    }
+
+    // Format numbers with up to 2 decimal places
+    const formatAcres = (num: number) => {
+      return num % 1 === 0 ? num.toString() : num.toFixed(2);
+    };
+
+    if (minAcres && maxAcres) {
+      return `${formatAcres(minAcres)} - ${formatAcres(maxAcres)} acres`;
+    } else if (minAcres) {
+      return `Min ${formatAcres(minAcres)} acres`;
+    } else if (maxAcres) {
+      return `Max ${formatAcres(maxAcres)} acres`;
+    }
+
+    return 'No site size preference';
+  }
+
+  // For commercial listings, show sq ft
   const min = listing.site_size_min;
   const max = listing.site_size_max;
-  
+
   if (!min && !max) {
     return 'No site size preference';
   }
-  
+
   // Format numbers with commas
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('en-GB').format(num);
   };
-  
+
   if (min && max) {
     return `${formatNumber(min)} - ${formatNumber(max)} sq ft`;
   } else if (min) {
@@ -167,7 +193,7 @@ function formatSiteSize(listing: SearchResult): string {
   } else if (max) {
     return `Max ${formatNumber(max)} sq ft`;
   }
-  
+
   return 'No site size preference';
 }
 
