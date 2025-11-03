@@ -56,7 +56,8 @@
       "Bash(npx turbo:*)",
       "Bash(npx next build:*)",
       "WebFetch(domain:docs.mapbox.com)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm i:*)"
     ],
     "deny": []
   }
