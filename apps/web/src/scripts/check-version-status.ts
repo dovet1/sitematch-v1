@@ -14,6 +14,11 @@ async function checkVersion() {
     .eq('id', '745c191e-6fca-4077-a309-05823569f894')
     .single()
 
+  if (!version) {
+    console.log('❌ Version not found')
+    return
+  }
+
   console.log('Version details:')
   console.log('  version_number:', version.version_number)
   console.log('  status:', version.status)
