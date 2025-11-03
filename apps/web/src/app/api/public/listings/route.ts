@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { SearchFilters, SearchResponse } from '@/types/search';
 import { calculateDistance } from '@/lib/mapbox';
+import { checkSubscriptionAccess } from '@/lib/subscription';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,13 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServerClient();
 
+    // Check if user has subscription access
+    const { data: { user } } = await supabase.auth.getUser();
+    const hasAccess = user ? await checkSubscriptionAccess(user.id) : false;
+    const isFreeTier = !hasAccess;
+
+    console.log('Subscription check:', { userId: user?.id, hasAccess, isFreeTier });
+
     // Build the query - explicitly filter for approved listings
     let query = supabase
       .from('listings')
@@ -66,9 +74,16 @@ export async function GET(request: NextRequest) {
         clearbit_logo,
         company_domain,
         created_at,
-        current_version_id
+        current_version_id,
+        is_featured_free
       `)
       .eq('status', 'approved');
+
+    // For free tier users, only show featured free listings
+    if (isFreeTier) {
+      query = query.eq('is_featured_free', true);
+      console.log('Free tier user - filtering to featured free listings only');
+    }
 
 
     // Apply location filtering
@@ -621,7 +636,8 @@ export async function GET(request: NextRequest) {
       total: totalFilteredCount,
       page,
       limit,
-      hasMore: (page * limit) < totalFilteredCount
+      hasMore: (page * limit) < totalFilteredCount,
+      isFreeTier
     };
 
     return NextResponse.json(response);

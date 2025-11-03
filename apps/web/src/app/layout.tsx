@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     url: 'https://www.sitematcher.co.uk',
     siteName: 'SiteMatcher',
     title: 'SiteMatcher - Connect Sites with Verified Property Requirements',
-    description: 'Access 1000+ verified commercial and residential property requirements. Match your sites with qualified companies actively seeking their next location.',
+    description: 'Access 8000+ verified commercial and residential property requirements. Match your sites with qualified companies actively seeking their next location.',
     images: [
       {
         url: '/map-screenshot.png',
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'SiteMatcher - Connect Sites with Verified Property Requirements',
-    description: 'Access 1000+ verified commercial and residential property requirements. Match your sites with qualified companies.',
+    description: 'Access 8000+ verified commercial and residential property requirements. Match your sites with qualified companies.',
     images: ['/map-screenshot.png'],
   },
   robots: {

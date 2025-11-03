@@ -5,14 +5,16 @@ import { SearchFilters, SearchResult } from '@/types/search';
 import { ListingCard } from './ListingCard';
 import { LoadingGrid } from './LoadingGrid';
 import { SearchEmptyState } from './SearchEmptyState';
+import { UpgradeCTA } from '@/components/search/UpgradeCTA';
 
 interface ListingGridProps {
   filters: SearchFilters;
   onListingClick: (listingId: string) => void;
   onFiltersChange?: (filters: SearchFilters) => void;
+  onUpgradeClick?: () => void;
 }
 
-export function ListingGrid({ filters, onListingClick, onFiltersChange }: ListingGridProps) {
+export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgradeClick }: ListingGridProps) {
   const [listings, setListings] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -20,6 +22,7 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange }: Listin
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
+  const [isFreeTier, setIsFreeTier] = useState(false);
   const ITEMS_PER_PAGE = 22;
 
 
@@ -87,11 +90,21 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange }: Listin
         } else {
           setListings(data.results || []);
         }
-        
-        // Check if there are more listings
-        const receivedCount = data.results?.length || 0;
-        setHasMore(receivedCount === ITEMS_PER_PAGE);
-        
+
+        // Check if user is on free tier
+        if (data.isFreeTier !== undefined) {
+          setIsFreeTier(data.isFreeTier);
+        }
+
+        // For free tier, disable "load more" - show all featured free listings at once
+        if (data.isFreeTier) {
+          setHasMore(false);
+        } else {
+          // Check if there are more listings for paid users
+          const receivedCount = data.results?.length || 0;
+          setHasMore(receivedCount === ITEMS_PER_PAGE);
+        }
+
         // Update total count if provided
         if (data.total !== undefined) {
           setTotalCount(data.total);
@@ -288,6 +301,11 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange }: Listin
           </div>
         </div>
       ) : null}
+
+      {/* Upgrade CTA for Free Tier Users */}
+      {isFreeTier && listings.length > 0 && onUpgradeClick && (
+        <UpgradeCTA onUpgradeClick={onUpgradeClick} />
+      )}
 
       {/* Loading More Indicator */}
       {isLoadingMore && (

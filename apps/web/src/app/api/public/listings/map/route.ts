@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase';
+import { checkSubscriptionAccess } from '@/lib/subscription';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,14 @@ export async function GET(request: NextRequest) {
     const isNationwide = searchParams.get('isNationwide') === 'true';
 
     const supabase = createClient();
-    
+
+    // Check if user has subscription access
+    const { data: { user } } = await supabase.auth.getUser();
+    const hasAccess = user ? await checkSubscriptionAccess(user.id) : false;
+    const isFreeTier = !hasAccess;
+
+    console.log('Map API - Subscription check:', { userId: user?.id, hasAccess, isFreeTier });
+
     // Build minimal query for map clustering - only essential data
     let query = supabase
       .from('listings')
@@ -48,6 +56,7 @@ export async function GET(request: NextRequest) {
         site_acreage_max,
         dwelling_count_min,
         dwelling_count_max,
+        is_featured_free,
         listing_sectors(
           sector:sectors(
             name
@@ -64,7 +73,13 @@ export async function GET(request: NextRequest) {
         )
       `)
       .in('status', ['approved', 'pending', 'draft']) // More lenient for development
-      .limit(1000) // Increased limit for better map coverage
+      .limit(1000); // Increased limit for better map coverage
+
+    // For free tier users, only show featured free listings
+    if (isFreeTier) {
+      query = query.eq('is_featured_free', true);
+      console.log('Map API - Free tier user: filtering to featured free listings only');
+    }
 
     // Apply geographic filtering using map bounds
     // Note: Geographic filtering will be done post-query for now since complex PostGIS queries 

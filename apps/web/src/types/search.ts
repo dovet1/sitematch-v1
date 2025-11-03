@@ -64,6 +64,7 @@ export interface SearchResponse {
   page: number;
   limit: number;
   hasMore: boolean;
+  isFreeTier?: boolean;
 }
 
 export interface LocationSuggestion {

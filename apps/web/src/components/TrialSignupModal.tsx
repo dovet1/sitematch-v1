@@ -55,7 +55,7 @@ const userTypes: { value: UserType; label: string }[] = [
 
 const contextConfig = {
   search: {
-    headline: 'Access 1000+ Property Requirements',
+    headline: 'Access 8000+ Property Requirements',
     subtext: 'Connect directly with qualified businesses actively seeking space',
     cta: 'Start Free Trial',
     testimonial: {
