@@ -205,10 +205,6 @@ export function ImmersiveListingModal({
             {/* Requirements Brochures */}
             {listing.files?.brochures && listing.files.brochures.length > 0 && (
               <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="text-blue-500">📋</span>
-                  Requirements Brochure
-                </h4>
                 <button
                   onClick={() => window.open(listing.files.brochures[0].url, '_blank')}
                   className="flex items-center gap-3 p-3 rounded-lg bg-white border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group w-full"

@@ -127,10 +127,6 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
             {/* Requirements Brochures */}
             {listing.files?.brochures && listing.files.brochures.length > 0 && (
               <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="text-blue-500">📋</span>
-                  Requirements Brochure
-                </h4>
                 <div className="space-y-2">
                   {listing.files.brochures.map((file: any, index: number) => (
                     <a
@@ -222,10 +218,6 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
             {/* Sectors */}
             {listing.listing_type === 'commercial' && listing.company?.sectors && listing.company.sectors.length > 0 && (
               <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="text-blue-500">🏢</span>
-                  Sectors
-                </h4>
                 <div className="flex flex-wrap gap-2">
                   {listing.company?.sectors?.map((sector, index) => (
                     <span
