@@ -162,24 +162,18 @@ function SearchPageContent() {
     }
   };
 
-  // Check subscription access and show appropriate modal
-  useEffect(() => {
-    if (!loading && !subscriptionLoading && !isSignupInProgress) {
-      if (!user) {
-        // User not logged in - show trial signup modal
-        setShowTrialModal(true);
-        setShowPaywallModal(false);
-      } else if (user && !hasAccess) {
-        // User logged in but no subscription - show paywall modal
-        setShowTrialModal(false);
-        setShowPaywallModal(true);
-      } else {
-        // User has access - hide both modals
-        setShowTrialModal(false);
-        setShowPaywallModal(false);
-      }
+  // Handle upgrade CTA click - show appropriate modal based on auth state
+  const handleUpgradeClick = () => {
+    if (!user) {
+      // Not logged in - show trial signup modal
+      setShowTrialModal(true);
+      setShowPaywallModal(false);
+    } else if (user && !hasAccess) {
+      // Logged in but no subscription - show paywall modal
+      setShowTrialModal(false);
+      setShowPaywallModal(true);
     }
-  }, [user, hasAccess, loading, subscriptionLoading, isSignupInProgress]);
+  };
 
   // Show loading state while checking auth
   if (loading || subscriptionLoading) {
@@ -194,11 +188,6 @@ function SearchPageContent() {
       </div>
     );
   }
-
-  // Remove auth wall - let middleware handle subscription check instead
-
-  // Show access modal for non-paid users
-  const showAccessDenied = !user || (user && !hasAccess)
 
   return (
     <div className="min-h-screen bg-background">
@@ -217,9 +206,8 @@ function SearchPageContent() {
         showViewToggle={true}
       />
 
-      {/* Main Content - Only show if user has access */}
-      {!showAccessDenied ? (
-        <div className={isMapView ? "map-view-container" : "container mx-auto px-4 py-6"}>
+      {/* Main Content - Show for all users (free tier gets limited listings) */}
+      <div className={isMapView ? "map-view-container" : "container mx-auto px-4 py-6"}>
         {/* Results Header - Only show in list view */}
         {!isMapView && (
           <div className="mb-6 space-y-4">
@@ -235,8 +223,8 @@ function SearchPageContent() {
                   </button>
                   <span className="flex-shrink-0">›</span>
                   <span className="text-foreground font-medium truncate min-w-0">
-                    {searchFilters.isNationwide 
-                      ? "Nationwide Only" 
+                    {searchFilters.isNationwide
+                      ? "Nationwide Only"
                       : `Search: "${searchFilters.location}"`}
                   </span>
                 </>
@@ -244,7 +232,7 @@ function SearchPageContent() {
                 <span className="text-foreground font-medium">All Requirements</span>
               )}
             </div>
-            
+
           </div>
         )}
 
@@ -260,37 +248,20 @@ function SearchPageContent() {
               filters={searchFilters}
               onListingClick={handleListingClick}
               onFiltersChange={handleFiltersChange}
+              onUpgradeClick={handleUpgradeClick}
             />
           )}
         </div>
-        </div>
-      ) : (
-        /* Placeholder content for non-paid users */
-        <div className="container mx-auto px-4 py-6">
-          <div className="text-center py-12">
-            <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-gray-200 rounded w-1/2 mx-auto"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/3 mx-auto"></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-64 bg-gray-200 rounded-lg"></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
 
-      {/* Listing Modal - Only show if user has access */}
-      {!showAccessDenied && (
-        <ListingModal
-          listingId={selectedListingId}
-          isOpen={!!selectedListingId}
-          onClose={handleModalClose}
-          searchState={searchFilters}
-          scrollPosition={previousScrollPosition}
-        />
-      )}
+      {/* Listing Modal */}
+      <ListingModal
+        listingId={selectedListingId}
+        isOpen={!!selectedListingId}
+        onClose={handleModalClose}
+        searchState={searchFilters}
+        scrollPosition={previousScrollPosition}
+      />
 
       {/* Trial Modal for non-authenticated users */}
       <TrialSignupModal

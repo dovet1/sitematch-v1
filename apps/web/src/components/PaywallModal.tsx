@@ -28,7 +28,7 @@ interface PaywallModalProps {
 
 const contextConfig = {
   search: {
-    headline: 'Access 1000+ Property Requirements',
+    headline: 'Access 8000+ Property Requirements',
     subtext: 'Connect directly with qualified occupiers actively seeking space',
     cta: 'Start Free Trial - View Requirements',
     testimonial: {
