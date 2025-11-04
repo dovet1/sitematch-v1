@@ -36,10 +36,11 @@ export function Partners() {
         }
 
         if (data) {
+          const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN
           const companyData: Company[] = data.map(listing => ({
             id: listing.id,
             name: listing.company_name,
-            logo: `https://logo.clearbit.com/${listing.company_domain}`
+            logo: token ? `https://img.logo.dev/${listing.company_domain}?token=${token}` : ''
           }));
 
           setCompanies(companyData);

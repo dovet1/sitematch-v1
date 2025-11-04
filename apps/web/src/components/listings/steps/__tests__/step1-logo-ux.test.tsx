@@ -106,14 +106,14 @@ describe('Logo Section UX Improvements', () => {
     it('displays enhanced success state with logo preview and alternative action', () => {
       const dataWithLogo = {
         ...mockProps.data,
-        logoPreview: 'https://logo.clearbit.com/apple.com',
+        logoPreview: 'https://img.logo.dev/apple.com?token=pk_test',
         clearbitLogo: true,
         companyDomain: 'apple.com',
         logoMethod: 'clearbit' as const,
       };
 
       render(<Step1CompanyInfo {...mockProps} data={dataWithLogo} />);
-      
+
       // Check for enhanced success state
       expect(screen.getByText('Logo found!')).toBeInTheDocument();
       expect(screen.getByText('We found your logo automatically from apple.com')).toBeInTheDocument();
@@ -124,7 +124,7 @@ describe('Logo Section UX Improvements', () => {
       const user = userEvent.setup();
       const dataWithLogo = {
         ...mockProps.data,
-        logoPreview: 'https://logo.clearbit.com/apple.com',
+        logoPreview: 'https://img.logo.dev/apple.com?token=pk_test',
         clearbitLogo: true,
         companyDomain: 'apple.com',
         logoMethod: 'clearbit' as const,

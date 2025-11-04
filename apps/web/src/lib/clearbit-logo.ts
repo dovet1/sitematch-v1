@@ -1,6 +1,6 @@
 // =====================================================
-// Clearbit Logo API Integration - Story 9.0
-// Service for fetching company logos via Clearbit API
+// Logo.dev API Integration (formerly Clearbit) - Story 9.0
+// Service for fetching company logos via Logo.dev API
 // =====================================================
 
 /**
@@ -123,7 +123,7 @@ async function rateLimit(): Promise<void> {
 }
 
 /**
- * Fetches company logo from Clearbit API
+ * Fetches company logo from Logo.dev API
  * @param domain - Company domain (e.g., "apple.com")
  * @returns Promise resolving to logo URL or null if not found
  * @throws Error if domain is invalid or request fails
@@ -133,54 +133,61 @@ export async function fetchCompanyLogo(domain: string): Promise<string | null> {
   if (!validateDomain(domain)) {
     throw new Error('Invalid domain format. Please enter a valid domain (e.g., company.com)');
   }
-  
+
   const normalizedDomain = normalizeDomain(domain);
-  
+
   // Check cache first
   const cacheEntry = logoCache.get(normalizedDomain);
   if (cacheEntry && isCacheValid(cacheEntry)) {
     return cacheEntry.url;
   }
-  
+
   // Apply rate limiting
   await rateLimit();
-  
+
   try {
-    // Clearbit Logo API endpoint with high quality parameters
-    const logoUrl = `https://logo.clearbit.com/${normalizedDomain}?size=512&format=png`;
-    
-    // Use HEAD request to check if logo exists without downloading
+    // Get Logo.dev token from environment
+    const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+    if (!token) {
+      throw new Error('Logo.dev token not configured. Please add NEXT_PUBLIC_LOGO_DEV_TOKEN to your environment variables.');
+    }
+
+    // Logo.dev API endpoint with maximum quality parameters (300 is the max size, retina=true for 2x resolution)
+    const logoUrl = `https://img.logo.dev/${normalizedDomain}?token=${token}&size=300&retina=true&format=png`;
+
+    // Use GET request to check if logo exists (Logo.dev may not support HEAD requests)
+    // We'll fetch the actual image to verify it exists
     const response = await fetch(logoUrl, {
-      method: 'HEAD',
+      method: 'GET',
       // Add timeout to prevent hanging requests
       signal: AbortSignal.timeout(10000), // 10 second timeout
     });
-    
+
     const result = response.ok ? logoUrl : null;
-    
+
     // Cache the result
     logoCache.set(normalizedDomain, {
       url: result,
       timestamp: Date.now()
     });
-    
+
     return result;
-    
+
   } catch (error) {
     // Handle network errors, timeouts, etc.
-    console.error('Clearbit API request failed:', error);
-    
+    console.error('Logo.dev API request failed:', error);
+
     // Cache the failure to prevent immediate retries
     logoCache.set(normalizedDomain, {
       url: null,
       timestamp: Date.now()
     });
-    
+
     // Re-throw with user-friendly message
     if (error instanceof Error && error.name === 'TimeoutError') {
       throw new Error('Request timed out. Please try again.');
     }
-    
+
     throw new Error('Unable to fetch logo. Please check the domain or try uploading your own logo.');
   }
 }
@@ -189,20 +196,29 @@ export async function fetchCompanyLogo(domain: string): Promise<string | null> {
  * Gets the full logo URL for display purposes
  * This method always returns the full URL, even for cached entries
  * @param domain - Company domain
- * @param size - Logo size (optional, defaults to 512 for high quality)
+ * @param size - Logo size (optional, defaults to 300 which is the max supported by Logo.dev)
  * @param format - Image format (optional, defaults to png)
- * @returns Full Clearbit logo URL or null
+ * @param retina - Whether to enable retina/2x resolution (optional, defaults to true)
+ * @returns Full Logo.dev logo URL or null
  */
-export function getClearbitLogoUrl(domain: string, size: number = 512, format: string = 'png'): string | null {
+export function getClearbitLogoUrl(domain: string, size: number = 300, format: string = 'png', retina: boolean = true): string | null {
   if (!validateDomain(domain)) {
     return null;
   }
-  
+
+  // Get Logo.dev token from environment
+  const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+  if (!token) {
+    console.error('Logo.dev token not configured');
+    return null;
+  }
+
   const normalizedDomain = normalizeDomain(domain);
-  // Clearbit supports size parameter and format
-  // Size can be any value but common ones are 128, 256, 512
-  // Format can be png, jpg, or svg
-  return `https://logo.clearbit.com/${normalizedDomain}?size=${size}&format=${format}`;
+  // Logo.dev supports size parameter and format
+  // Maximum size is 300
+  // Format can be png, jpg, webp, or svg
+  // retina=true provides 2x resolution for high-DPI displays
+  return `https://img.logo.dev/${normalizedDomain}?token=${token}&size=${size}&retina=${retina}&format=${format}`;
 }
 
 /**

@@ -143,21 +143,24 @@ export async function GET(
     const allSectors = sectors.map((s: any) => s.sector).filter(Boolean);
     const allUseClasses = useClasses.map((uc: any) => uc.use_class).filter(Boolean);
 
-    // Get logo file or generate Clearbit URL
+    // Get logo file or generate Logo.dev URL
     const logoFile = files?.find((file: any) => file.file_type === 'logo' && file.is_primary);
-    
-    const generateClearbitUrl = (companyDomain: string | null, companyName: string) => {
+
+    const generateLogoDevUrl = (companyDomain: string | null, companyName: string) => {
+      const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+      if (!token) return null;
+
       if (companyDomain) {
-        return `https://logo.clearbit.com/${companyDomain}`;
+        return `https://img.logo.dev/${companyDomain}?token=${token}`;
       }
-      
+
       const domain = companyName
         .toLowerCase()
         .replace(/\s+/g, '')
         .replace(/[^a-z0-9]/g, '')
         .replace(/ltd|limited|plc|inc|corp|corporation|llc/g, '');
-      
-      return `https://logo.clearbit.com/${domain}.com`;
+
+      return `https://img.logo.dev/${domain}.com?token=${token}`;
     };
 
     const formatSectorName = (name: string) => {
@@ -196,7 +199,7 @@ export async function GET(
     const enhancedListing = {
       company: {
         name: listing.company_name,
-        logo_url: logoFile ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${logoFile.bucket_name}/${logoFile.file_path}` : generateClearbitUrl(listing.company_domain, listing.company_name),
+        logo_url: logoFile ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${logoFile.bucket_name}/${logoFile.file_path}` : generateLogoDevUrl(listing.company_domain, listing.company_name),
         sectors: allSectors.map((s: any) => formatSectorName(s.name)).filter(Boolean),
         use_classes: allUseClasses.map((uc: any) => `${uc.name} (${uc.code})`).filter(Boolean),
         sector: allSectors.map((s: any) => formatSectorName(s.name)).join(', ') || 'Not specified',

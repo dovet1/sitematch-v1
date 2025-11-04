@@ -139,11 +139,12 @@ export async function GET(
       const fallbackLogoFile = files?.find((f: any) => f.file_type === 'logo');
       let fallbackLogoUrl = null;
       let fallbackShouldUseClearbitFallback = false;
-      
+
       if (fallbackLogoFile) {
         fallbackLogoUrl = fallbackLogoFile.file_path;
       } else if (currentListing?.clearbit_logo && currentListing?.company_domain) {
-        fallbackLogoUrl = `https://logo.clearbit.com/${currentListing.company_domain}`;
+        const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+        fallbackLogoUrl = token ? `https://img.logo.dev/${currentListing.company_domain}?token=${token}` : null;
       } else {
         fallbackShouldUseClearbitFallback = true;
       }
@@ -312,8 +313,10 @@ export async function GET(
         logoUrl = data.publicUrl;
       }
     } else if (formattedListing.clearbit_logo && formattedListing.company_domain) {
-      // Use clearbit logo if enabled and domain available
-      logoUrl = `https://logo.clearbit.com/${formattedListing.company_domain}`;
+      // Use Logo.dev logo if enabled and domain available
+      const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+      logoUrl = token ? `https://img.logo.dev/${formattedListing.company_domain}?token=${token}` : null;
+      if (!logoUrl) shouldUseClearbitFallback = true;
     } else {
       // Use initials fallback
       shouldUseClearbitFallback = true;
