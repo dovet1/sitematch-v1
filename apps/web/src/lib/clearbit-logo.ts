@@ -215,10 +215,11 @@ export function getClearbitLogoUrl(domain: string, size: number = 300, format: s
 
   const normalizedDomain = normalizeDomain(domain);
   // Logo.dev supports size parameter and format
-  // Maximum size is 300
+  // Maximum size is 300 - clamp any larger requests to the max
+  const clampedSize = Math.min(size, 300);
   // Format can be png, jpg, webp, or svg
   // retina=true provides 2x resolution for high-DPI displays
-  return `https://img.logo.dev/${normalizedDomain}?token=${token}&size=${size}&retina=${retina}&format=${format}`;
+  return `https://img.logo.dev/${normalizedDomain}?token=${token}&size=${clampedSize}&retina=${retina}&format=${format}`;
 }
 
 /**
