@@ -23,7 +23,7 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [isFreeTier, setIsFreeTier] = useState(false);
-  const ITEMS_PER_PAGE = 22;
+  const ITEMS_PER_PAGE = 15;
 
 
   // Reset pagination when filters change
