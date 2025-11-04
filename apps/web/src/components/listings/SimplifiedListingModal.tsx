@@ -792,10 +792,6 @@ export function SimplifiedListingModal({
                 {/* Requirements Brochure Section - Graceful degradation */}
                 {listing.files?.brochures && listing.files.brochures.length > 0 && (
                   <div className="premium-section">
-                    <h4 className="heading-4 text-foreground flex items-center gap-2 premium-border-accent mb-4">
-                      <FileText className="w-4 h-4 text-primary-500" />
-                      Requirements Brochure
-                    </h4>
                     <div className="space-y-3">
                       <Button
                         variant="outline"
