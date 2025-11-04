@@ -155,9 +155,10 @@ export async function fetchCompanyLogo(domain: string): Promise<string | null> {
     // Logo.dev API endpoint with maximum quality parameters (300 is the max size, retina=true for 2x resolution)
     const logoUrl = `https://img.logo.dev/${normalizedDomain}?token=${token}&size=300&retina=true&format=png`;
 
-    // Use HEAD request to check if logo exists without downloading
+    // Use GET request to check if logo exists (Logo.dev may not support HEAD requests)
+    // We'll fetch the actual image to verify it exists
     const response = await fetch(logoUrl, {
-      method: 'HEAD',
+      method: 'GET',
       // Add timeout to prevent hanging requests
       signal: AbortSignal.timeout(10000), // 10 second timeout
     });
