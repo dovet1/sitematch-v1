@@ -270,28 +270,34 @@ export async function GET(request: NextRequest) {
       .select('listing_id, sectors(id, name)')
       .in('listing_id', currentListingIds);
     
-    // Fetch use classes  
+    // Fetch use classes
     const { data: useClassData } = await supabase
       .from('listing_use_classes')
       .select('listing_id, use_classes(id, name, code)')
       .in('listing_id', currentListingIds);
-      
-    // Batch fetch locations to avoid URL length limits with .in()
-    // Use batching for large result sets to avoid PostgREST query string limits
-    const LOCATION_BATCH_SIZE = 100;
+
+    // Only fetch locations when actually needed for filtering or display
+    // Skip expensive location fetching when user is just browsing without location filters
+    const needsLocationData = (lat !== null && lng !== null) || location || isNationwide;
     let allLocations: any[] = [];
 
-    for (let i = 0; i < currentListingIds.length; i += LOCATION_BATCH_SIZE) {
-      const batch = currentListingIds.slice(i, i + LOCATION_BATCH_SIZE);
-      const { data: locationData, error: locationError } = await supabase
-        .from('listing_locations')
-        .select('listing_id, id, place_name, coordinates, formatted_address, region, country')
-        .in('listing_id', batch);
+    if (needsLocationData) {
+      // Batch fetch locations to avoid URL length limits with .in()
+      // Use batching for large result sets to avoid PostgREST query string limits
+      const LOCATION_BATCH_SIZE = 100;
 
-      if (locationError) {
-        console.error(`Error fetching locations batch ${Math.floor(i / LOCATION_BATCH_SIZE) + 1}:`, locationError);
-      } else if (locationData) {
-        allLocations = [...allLocations, ...locationData];
+      for (let i = 0; i < currentListingIds.length; i += LOCATION_BATCH_SIZE) {
+        const batch = currentListingIds.slice(i, i + LOCATION_BATCH_SIZE);
+        const { data: locationData, error: locationError } = await supabase
+          .from('listing_locations')
+          .select('listing_id, id, place_name, coordinates, formatted_address, region, country')
+          .in('listing_id', batch);
+
+        if (locationError) {
+          console.error(`Error fetching locations batch ${Math.floor(i / LOCATION_BATCH_SIZE) + 1}:`, locationError);
+        } else if (locationData) {
+          allLocations = [...allLocations, ...locationData];
+        }
       }
     }
 
@@ -492,11 +498,6 @@ export async function GET(request: NextRequest) {
           return;
         }
 
-        // Debug: Log first 5 listings with locations
-        if (listingsWithDistances.length + nationwideListings.length < 5) {
-          console.log(`Listing "${listing.title}": ${listing.locations.length} locations`,
-            listing.locations.map((l: any) => ({ place_name: l.place_name, has_coords: !!l.coordinates })));
-        }
 
         // Calculate minimum distance to any of the listing's locations
         let minDistance = Infinity;
@@ -546,11 +547,8 @@ export async function GET(request: NextRequest) {
         _distance: item.distance // Add distance for potential client-side use
       }));
 
-      // Debug: Log the closest listings
-
       // Combine results: location-specific (sorted by distance) first, then nationwide
       results = [...sortedListingsWithinRadius, ...nationwideListings];
-      console.log('Nationwide listings:', nationwideListings.length);
     }
 
     // Apply pagination
