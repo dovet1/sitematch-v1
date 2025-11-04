@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
 import { checkSubscriptionAccess } from '@/lib/subscription';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const dwellingMax = searchParams.get('maxDwelling') ? Number(searchParams.get('maxDwelling')) : null;
     const isNationwide = searchParams.get('isNationwide') === 'true';
 
-    const supabase = createClient();
+    const supabase = createServerClient();
 
     // Check if user has subscription access
     const { data: { user } } = await supabase.auth.getUser();
@@ -304,23 +304,35 @@ export async function GET(request: NextRequest) {
 
         if (!coordinates) return;
 
-        // Parse coordinates safely
+        // Parse coordinates safely - handle multiple formats
         let lat, lng;
         try {
-          if (Array.isArray(coordinates)) {
+          if (typeof coordinates === 'string') {
+            // Handle string format: "[-0.007855, 51.481247]"
+            const parsed = JSON.parse(coordinates);
+            if (Array.isArray(parsed) && parsed.length === 2) {
+              [lng, lat] = parsed; // GeoJSON format [longitude, latitude]
+            } else {
+              console.warn('Invalid coordinate string format:', coordinates);
+              return;
+            }
+          } else if (Array.isArray(coordinates)) {
             [lng, lat] = coordinates; // GeoJSON format [longitude, latitude]
           } else if (coordinates.lat && coordinates.lng) {
             lat = coordinates.lat;
             lng = coordinates.lng;
           } else {
+            console.warn('Unknown coordinate format:', coordinates);
             return;
           }
 
           // Validate coordinate ranges
           if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            console.warn('Coordinates out of valid range:', { lat, lng });
             return;
           }
         } catch (coordError) {
+          console.error('Error parsing coordinates:', coordError, coordinates);
           return;
         }
 

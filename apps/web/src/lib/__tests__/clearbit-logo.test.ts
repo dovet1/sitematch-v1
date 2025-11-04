@@ -1,5 +1,5 @@
 // =====================================================
-// Clearbit Logo Service Unit Tests - Story 9.0
+// Logo.dev Service Unit Tests (formerly Clearbit) - Story 9.0
 // =====================================================
 
 import {
@@ -10,6 +10,9 @@ import {
   clearLogoCache,
   getCacheStats
 } from '../clearbit-logo';
+
+// Mock environment variable
+process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN = 'pk_test_token';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -22,7 +25,7 @@ global.AbortSignal.timeout = jest.fn().mockImplementation((ms: number) => {
   return controller.signal;
 });
 
-describe('clearbit-logo service', () => {
+describe('logo-dev service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     clearLogoCache();
@@ -100,9 +103,9 @@ describe('clearbit-logo service', () => {
   });
 
   describe('getClearbitLogoUrl', () => {
-    it('should return correct Clearbit URL for valid domains', () => {
-      expect(getClearbitLogoUrl('apple.com')).toBe('https://logo.clearbit.com/apple.com');
-      expect(getClearbitLogoUrl('www.google.com')).toBe('https://logo.clearbit.com/google.com');
+    it('should return correct Logo.dev URL for valid domains', () => {
+      expect(getClearbitLogoUrl('apple.com')).toBe('https://img.logo.dev/apple.com?token=pk_test_token&size=300&retina=true&format=png');
+      expect(getClearbitLogoUrl('www.google.com')).toBe('https://img.logo.dev/google.com?token=pk_test_token&size=300&retina=true&format=png');
     });
 
     it('should return null for invalid domains', () => {
@@ -123,9 +126,9 @@ describe('clearbit-logo service', () => {
       } as Response);
 
       const result = await fetchCompanyLogo('apple.com');
-      expect(result).toBe('https://logo.clearbit.com/apple.com');
+      expect(result).toBe('https://img.logo.dev/apple.com?token=pk_test_token&size=300&retina=true&format=png');
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://logo.clearbit.com/apple.com',
+        'https://img.logo.dev/apple.com?token=pk_test_token&size=300&retina=true&format=png',
         {
           method: 'HEAD',
           signal: expect.any(AbortSignal)
@@ -155,7 +158,7 @@ describe('clearbit-logo service', () => {
 
       // Second call should use cache
       const result = await fetchCompanyLogo('apple.com');
-      expect(result).toBe('https://logo.clearbit.com/apple.com');
+      expect(result).toBe('https://img.logo.dev/apple.com?token=pk_test_token&size=300&retina=true&format=png');
       expect(mockFetch).toHaveBeenCalledTimes(1); // No additional fetch
     });
 

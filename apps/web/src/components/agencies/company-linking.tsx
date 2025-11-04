@@ -214,7 +214,8 @@ export function CompanyLinking({ agencyId }: CompanyLinkingProps) {
       const { data } = supabase.storage.from(bucket).getPublicUrl(company.logo_url)
       return data.publicUrl
     } else if (company.clearbit_logo && company.company_domain) {
-      return `https://logo.clearbit.com/${company.company_domain}`
+      const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN
+      return token ? `https://img.logo.dev/${company.company_domain}?token=${token}` : null
     }
     return null
   }

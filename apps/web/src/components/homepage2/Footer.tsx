@@ -112,9 +112,16 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-slate-800">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-gray-400">
-              © {new Date().getFullYear()} SiteMatcher. All rights reserved.
-            </p>
+            <div className="flex flex-col items-center md:items-start gap-2">
+              <p className="text-sm text-gray-400">
+                © {new Date().getFullYear()} SiteMatcher. All rights reserved.
+              </p>
+              <p className="text-xs text-gray-500">
+                <a href='https://logo.dev' title='Logo API' target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">
+                  Logos provided by Logo.dev
+                </a>
+              </p>
+            </div>
 
             {/* Social Links */}
             <div className="flex gap-4">
