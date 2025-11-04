@@ -669,8 +669,7 @@ export function Step1ImmediateCreation({
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label className="text-sm font-medium">
-              Requirements brochure
-              <span className="text-gray-500 font-normal ml-1">(optional)</span>
+              Requirements brochure*
             </Label>
             <DocumentUpload
               type="brochure"
