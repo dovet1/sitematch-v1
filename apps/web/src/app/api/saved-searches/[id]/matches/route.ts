@@ -200,7 +200,11 @@ export async function GET(
         company_name,
         listing_type,
         status,
-        created_at
+        created_at,
+        site_size_min,
+        site_size_max,
+        site_acreage_min,
+        site_acreage_max
       `)
       .eq('status', 'approved');
 
@@ -214,13 +218,12 @@ export async function GET(
       query = query.eq('listing_type', savedSearch.listing_type);
     }
 
-    // Apply size filters
-    if (savedSearch.min_size) {
-      query = query.gte('size', savedSearch.min_size);
-    }
-    if (savedSearch.max_size) {
-      query = query.lte('size', savedSearch.max_size);
-    }
+    // Apply size filters based on listing type
+    // For commercial: use site_size_min/max (square feet)
+    // For residential: use site_acreage_min/max (acres)
+    // Note: We need to fetch all and filter in memory since we don't know
+    // if the user entered sq ft or acres without knowing the listing type
+    // For now, skip size filtering in the query and filter later
 
     // Fetch listings
     const { data: listings, error: listingsError } = await query;
@@ -242,8 +245,8 @@ export async function GET(
     // Get listing IDs for fetching sectors and planning use classes
     const listingIds = listings.map((l) => l.id);
 
-    // Fetch sectors if needed
-    let listingSectors: any = {};
+    // Fetch sectors if needed (by ID)
+    let listingSectors: Record<string, string[]> = {};
     if (savedSearch.sectors && savedSearch.sectors.length > 0) {
       const { data: sectorsData } = await supabase
         .from('listing_sectors')
@@ -251,7 +254,7 @@ export async function GET(
         .in('listing_id', listingIds);
 
       if (sectorsData) {
-        sectorsData.forEach((row) => {
+        sectorsData.forEach((row: any) => {
           if (!listingSectors[row.listing_id]) {
             listingSectors[row.listing_id] = [];
           }
@@ -260,22 +263,30 @@ export async function GET(
       }
     }
 
-    // Fetch planning use classes if needed
-    let listingUseClasses: any = {};
+    // Fetch planning use classes if needed (by ID)
+    let listingUseClasses: Record<string, string[]> = {};
     if (savedSearch.planning_use_classes && savedSearch.planning_use_classes.length > 0) {
-      const { data: useClassesData } = await supabase
-        .from('listing_planning_use_classes')
-        .select('listing_id, planning_use_class_id')
+      const { data: useClassesData, error: useClassError } = await supabase
+        .from('listing_use_classes')
+        .select('listing_id, use_class_id')
         .in('listing_id', listingIds);
 
+      if (useClassError) {
+        console.error('Error fetching use classes:', useClassError);
+      }
+
       if (useClassesData) {
-        useClassesData.forEach((row) => {
+        useClassesData.forEach((row: any) => {
           if (!listingUseClasses[row.listing_id]) {
             listingUseClasses[row.listing_id] = [];
           }
-          listingUseClasses[row.listing_id].push(row.planning_use_class_id);
+          listingUseClasses[row.listing_id].push(row.use_class_id);
         });
       }
+
+      console.log(`Fetched use classes for ${Object.keys(listingUseClasses).length} listings`);
+      console.log('Sample use class data:', Object.entries(listingUseClasses).slice(0, 2));
+      console.log('Searching for use classes:', savedSearch.planning_use_classes);
     }
 
     // Filter and enrich listings
@@ -298,6 +309,29 @@ export async function GET(
           listingUseClassIds.includes(useClassId)
         );
         if (!hasMatchingUseClass) continue;
+      }
+
+      // Check size match
+      if (savedSearch.min_size || savedSearch.max_size) {
+        // Determine which size fields to check based on listing type
+        let listingSizeMin: number | null = null;
+        let listingSizeMax: number | null = null;
+
+        if (listing.listing_type === 'commercial') {
+          // Commercial uses square feet
+          listingSizeMin = listing.site_size_min;
+          listingSizeMax = listing.site_size_max;
+        } else if (listing.listing_type === 'residential') {
+          // Residential uses acres
+          listingSizeMin = listing.site_acreage_min ? Number(listing.site_acreage_min) : null;
+          listingSizeMax = listing.site_acreage_max ? Number(listing.site_acreage_max) : null;
+        }
+
+        // Check if listing size range overlaps with search size range
+        if (listingSizeMin !== null && listingSizeMax !== null) {
+          if (savedSearch.min_size && listingSizeMax < savedSearch.min_size) continue;
+          if (savedSearch.max_size && listingSizeMin > savedSearch.max_size) continue;
+        }
       }
 
       // Get location data if we filtered by location
