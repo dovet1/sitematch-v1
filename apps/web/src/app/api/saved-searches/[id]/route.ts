@@ -55,6 +55,8 @@ export async function PUT(
 
     const body: UpdateSavedSearch = await request.json();
 
+    console.log('Received update body:', JSON.stringify(body, null, 2));
+
     // Validation
     if (body.name !== undefined && body.name.trim().length === 0) {
       return NextResponse.json(
@@ -103,8 +105,31 @@ export async function PUT(
     if (body.location_lat !== undefined) updateData.location_lat = body.location_lat;
     if (body.location_lng !== undefined) updateData.location_lng = body.location_lng;
     if (body.location_radius_miles !== undefined) updateData.location_radius_miles = body.location_radius_miles;
-    if (body.sectors !== undefined) updateData.sectors = body.sectors;
-    if (body.planning_use_classes !== undefined) updateData.planning_use_classes = body.planning_use_classes;
+
+    // Handle sectors: null, empty array, or array of strings
+    if (body.sectors !== undefined) {
+      if (body.sectors === null || (Array.isArray(body.sectors) && body.sectors.length === 0)) {
+        updateData.sectors = null;
+      } else if (Array.isArray(body.sectors)) {
+        updateData.sectors = body.sectors.filter(s => s !== null && s !== undefined);
+        if (updateData.sectors.length === 0) updateData.sectors = null;
+      } else {
+        updateData.sectors = [body.sectors];
+      }
+    }
+
+    // Handle planning_use_classes: null, empty array, or array of strings
+    if (body.planning_use_classes !== undefined) {
+      if (body.planning_use_classes === null || (Array.isArray(body.planning_use_classes) && body.planning_use_classes.length === 0)) {
+        updateData.planning_use_classes = null;
+      } else if (Array.isArray(body.planning_use_classes)) {
+        updateData.planning_use_classes = body.planning_use_classes.filter(c => c !== null && c !== undefined);
+        if (updateData.planning_use_classes.length === 0) updateData.planning_use_classes = null;
+      } else {
+        updateData.planning_use_classes = [body.planning_use_classes];
+      }
+    }
+
     if (body.min_size !== undefined) updateData.min_size = body.min_size;
     if (body.max_size !== undefined) updateData.max_size = body.max_size;
 

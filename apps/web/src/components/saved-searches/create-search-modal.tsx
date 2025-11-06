@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SearchableDropdown } from '@/components/ui/searchable-dropdown';
 import type { SearchableOption } from '@/components/ui/searchable-dropdown';
+import { CheckboxMultiSelect } from '@/components/ui/checkbox-multi-select';
+import type { CheckboxOption } from '@/components/ui/checkbox-multi-select';
 import { searchLocations, formatLocationDisplay } from '@/lib/mapbox';
 import type { LocationResult } from '@/lib/mapbox';
 import { Loader2, MapPin, X } from 'lucide-react';
@@ -287,26 +289,24 @@ export function CreateSearchModal({
           {/* Sectors */}
           <div>
             <Label>Sectors</Label>
-            <SearchableDropdown
-              options={sectorOptions}
+            <CheckboxMultiSelect
+              options={sectorOptions.map(opt => ({ value: opt.value, label: opt.label }))}
               selected={selectedSectors}
               onChange={setSelectedSectors}
               placeholder="Select sectors..."
               searchPlaceholder="Search sectors..."
-              multiple
             />
           </div>
 
           {/* Planning Use Classes */}
           <div>
             <Label>Planning Use Class</Label>
-            <SearchableDropdown
-              options={useClassOptions}
+            <CheckboxMultiSelect
+              options={useClassOptions.map(opt => ({ value: opt.value, label: opt.label }))}
               selected={selectedUseClasses}
               onChange={setSelectedUseClasses}
               placeholder="Select use classes..."
               searchPlaceholder="Search use classes..."
-              multiple
             />
           </div>
 

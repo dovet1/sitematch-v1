@@ -92,6 +92,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Handle sectors: convert empty arrays to null
+    let sectors = body.sectors || null;
+    if (Array.isArray(sectors) && sectors.length === 0) {
+      sectors = null;
+    } else if (Array.isArray(sectors)) {
+      sectors = sectors.filter(s => s !== null && s !== undefined);
+      if (sectors.length === 0) sectors = null;
+    }
+
+    // Handle planning_use_classes: convert empty arrays to null
+    let planning_use_classes = body.planning_use_classes || null;
+    if (Array.isArray(planning_use_classes) && planning_use_classes.length === 0) {
+      planning_use_classes = null;
+    } else if (Array.isArray(planning_use_classes)) {
+      planning_use_classes = planning_use_classes.filter(c => c !== null && c !== undefined);
+      if (planning_use_classes.length === 0) planning_use_classes = null;
+    }
+
     // Create the saved search
     const { data: newSearch, error: insertError } = await supabase
       .from('saved_searches')
@@ -103,8 +121,8 @@ export async function POST(request: NextRequest) {
         location_lat: body.location_lat || null,
         location_lng: body.location_lng || null,
         location_radius_miles: body.location_radius_miles || null,
-        sectors: body.sectors || null,
-        planning_use_classes: body.planning_use_classes || null,
+        sectors,
+        planning_use_classes,
         min_size: body.min_size || null,
         max_size: body.max_size || null,
       })
