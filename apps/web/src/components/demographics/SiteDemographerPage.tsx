@@ -84,7 +84,7 @@ export function SiteDemographerPage() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-[calc(100vh-4rem)] flex flex-col bg-white">
       {/* Consolidated Header with Controls */}
       <div className="px-8 py-5 border-b border-gray-200 bg-white shadow-sm">
         <div className="flex items-center justify-between gap-6">
@@ -120,20 +120,22 @@ export function SiteDemographerPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Left Panel - Results */}
-        <div className="flex-1 p-10 overflow-y-auto bg-white">
-          <DemographicsResults
-            results={results}
-            loading={loading}
-            error={error}
-            location={selectedLocation}
-            radius={radius}
-          />
+        <div className="flex-1 flex flex-col overflow-y-auto bg-white min-h-0">
+          <div className={results || loading ? "p-10" : "flex-1"}>
+            <DemographicsResults
+              results={results}
+              loading={loading}
+              error={error}
+              location={selectedLocation}
+              radius={radius}
+            />
+          </div>
         </div>
 
         {/* Right Panel - Map */}
-        <div className="flex-1 bg-gray-50 border-l border-gray-200 relative">
+        <div className="flex-1 bg-gray-50 border-l border-gray-200 relative min-h-0">
           {selectedLocation ? (
             <DemographicsMap
               center={{ lat: selectedLocation.center[1], lng: selectedLocation.center[0] }}
