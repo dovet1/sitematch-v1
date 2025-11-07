@@ -57,7 +57,10 @@
       "Bash(npx next build:*)",
       "WebFetch(domain:docs.mapbox.com)",
       "Bash(git add:*)",
-      "Bash(npm i:*)"
+      "Bash(npm i:*)",
+      "Bash(python3:*)",
+      "Bash(unzip:*)",
+      "Bash(awk:*)"
     ],
     "deny": []
   }

@@ -1,0 +1,11 @@
+"date","geography","geography code","Household deprivation: Total: All households; measures: Value","Household deprivation: Household is not deprived in any dimension; measures: Value","Household deprivation: Household is deprived in one dimension; measures: Value","Household deprivation: Household is deprived in two dimensions; measures: Value","Household deprivation: Household is deprived in three dimensions; measures: Value","Household deprivation: Household is deprived in four dimensions; measures: Value"
+"2021","North East","E12000001",1175680,534296,394780,190800,53831,1973
+"2021","North West","E12000002",3153403,1472821,1044671,485461,143300,7150
+"2021","Yorkshire and The Humber","E12000003",2330658,1091336,785691,352188,96318,5125
+"2021","East Midlands","E12000004",2037332,979646,690884,291841,71223,3738
+"2021","West Midlands","E12000005",2429491,1115475,827948,379299,101174,5595
+"2021","East","E12000006",2628782,1302897,893298,347734,79502,5351
+"2021","London","E12000007",3423892,1645474,1126411,493114,145789,13104
+"2021","South East","E12000008",3807966,1981806,1250376,462795,104955,8034
+"2021","South West","E12000009",2448881,1225986,828631,317350,72014,4900
+"2021","Wales","W92000004",1347114,618587,450057,215492,60583,2395

@@ -10,6 +10,7 @@ import { Toaster } from 'sonner';
 import { OverviewTab } from './overview-tab';
 import { RequirementsTab } from './requirements-tab';
 import { SavedSearchesTab } from '@/components/saved-searches/saved-searches-tab';
+import { ToolsTab } from './tools-tab';
 
 interface DashboardClientProps {
   userId: string;
@@ -139,13 +140,7 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
               <p className="text-gray-500">Coming soon</p>
             </div>
           )}
-          {activeTab === 'tools' && (
-            <div className="text-center py-12">
-              <Wrench className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Tools</h3>
-              <p className="text-gray-500">Coming soon</p>
-            </div>
-          )}
+          {activeTab === 'tools' && <ToolsTab />}
         </div>
       </main>
 
