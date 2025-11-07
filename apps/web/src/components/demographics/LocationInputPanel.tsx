@@ -147,7 +147,12 @@ export function LocationInputPanel({
             min="1"
             max="50"
             value={radius}
-            onChange={(e) => onRadiusChange(Number(e.target.value))}
+            onChange={(e) => {
+              const val = Number(e.target.value);
+              if (!isNaN(val) && val >= 1 && val <= 50) {
+                onRadiusChange(val);
+              }
+            }}
             className="h-10 pr-16 border-gray-300 focus:border-violet-500 focus:ring-violet-500"
             disabled={loading}
           />
