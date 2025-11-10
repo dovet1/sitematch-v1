@@ -208,30 +208,15 @@ export function DemographicsMap({
         data: lsoaBoundaries,
       });
 
-      // Convert Set to Array for Mapbox expression
-      const selectedCodesArray = Array.from(selectedLsoaCodes);
-
-      // Add LSOA fill layer with data-driven styling
+      // Add LSOA fill layer with initial styling (will be updated by separate effect)
       const beforeLayer = map.current.getLayer('radius-circle-fill') ? 'radius-circle-fill' : undefined;
       map.current.addLayer({
         id: 'lsoa-fill',
         type: 'fill',
         source: 'lsoa-boundaries',
         paint: {
-          // Selected: violet, Deselected: gray
-          'fill-color': [
-            'case',
-            ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-            '#7c3aed', // Selected: violet
-            '#9ca3af'  // Deselected: gray
-          ],
-          // Selected: more opaque, Deselected: more transparent
-          'fill-opacity': [
-            'case',
-            ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-            0.5, // Selected
-            0.25 // Deselected
-          ],
+          'fill-color': '#7c3aed', // Will be updated dynamically
+          'fill-opacity': 0.5,
         },
       }, beforeLayer);
 
@@ -241,13 +226,7 @@ export function DemographicsMap({
         type: 'line',
         source: 'lsoa-boundaries',
         paint: {
-          // Selected: dark violet, Deselected: medium gray
-          'line-color': [
-            'case',
-            ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-            '#5b21b6', // Selected: dark violet
-            '#6b7280'  // Deselected: medium gray
-          ],
+          'line-color': '#5b21b6', // Will be updated dynamically
           'line-width': 2,
         },
       });
@@ -267,7 +246,7 @@ export function DemographicsMap({
     } else {
       map.current.once('idle', tryAddBoundaries);
     }
-  }, [lsoaBoundaries, mapLoaded, selectedLsoaCodes]);
+  }, [lsoaBoundaries, mapLoaded]);
 
   // Add click handlers for LSOA interaction (separate from layer creation)
   useEffect(() => {
