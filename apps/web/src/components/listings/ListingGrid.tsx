@@ -76,14 +76,6 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
         
         const data = await response.json();
 
-        console.log('📊 ListingGrid API Response:', {
-          page: pageNum,
-          append,
-          resultsCount: data.results?.length || 0,
-          totalCount: data.total,
-          firstFewListings: data.results?.slice(0, 3).map((l: any) => l.company_name)
-        });
-
         // Update listings
         if (append) {
           setListings(prev => [...prev, ...(data.results || [])]);
