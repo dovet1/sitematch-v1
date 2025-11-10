@@ -157,9 +157,12 @@ export async function GET(
           use_clearbit_fallback: fallbackShouldUseClearbitFallback,
           clearbit_logo: currentListing?.clearbit_logo,
           company_domain: currentListing?.company_domain,
-          brochure_url: files?.find((f: any) => f.file_type === 'brochure')
-            ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${files.find((f: any) => f.file_type === 'brochure').bucket_name}/${files.find((f: any) => f.file_type === 'brochure').file_path}`
-            : null,
+          brochure_url: (() => {
+            const brochureFile = files?.find((f: any) => f.file_type === 'brochure');
+            return brochureFile
+              ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${brochureFile.bucket_name}/${brochureFile.file_path}`
+              : null;
+          })(),
           property_page_link: currentListing?.property_page_link,
           sectors: allSectors.map((s: any) => s.name),
           use_classes: allUseClasses.map((uc: any) => `${uc.code} - ${uc.name}`),
@@ -332,9 +335,12 @@ export async function GET(
         use_clearbit_fallback: shouldUseClearbitFallback,
         clearbit_logo: formattedListing.clearbit_logo,
         company_domain: formattedListing.company_domain,
-        brochure_url: files.find((f: any) => f.file_type === 'brochure')
-          ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${files.find((f: any) => f.file_type === 'brochure').bucket_name}/${files.find((f: any) => f.file_type === 'brochure').file_path}`
-          : null,
+        brochure_url: (() => {
+          const brochureFile = files.find((f: any) => f.file_type === 'brochure');
+          return brochureFile
+            ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${brochureFile.bucket_name}/${brochureFile.file_path}`
+            : null;
+        })(),
         property_page_link: formattedListing.property_page_link,
         sectors: sectors.map((s: any) => s.name),
         use_classes: useClasses.map((uc: any) => `${uc.code} - ${uc.name}`),
