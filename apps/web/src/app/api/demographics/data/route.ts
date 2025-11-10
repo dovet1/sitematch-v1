@@ -5,8 +5,9 @@ import {
   getHouseholdDataFromCSV,
   getCountryOfBirthFromCSV,
   getDeprivationDataFromCSV,
+  getPerLSOADataFromCSV,
 } from '@/lib/census-data';
-import type { DemographicsResult } from '@/lib/types/demographics';
+import type { DemographicsResult, DemographicsAPIResponse } from '@/lib/types/demographics';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,8 +37,11 @@ export async function POST(request: NextRequest) {
     const countryOfBirthData = getCountryOfBirthFromCSV(geography_codes);
     const deprivationData = getDeprivationDataFromCSV(geography_codes);
 
-    // Construct the response
-    const result: DemographicsResult = {
+    // Fetch per-LSOA data for client-side aggregation
+    const perLsoaData = getPerLSOADataFromCSV(geography_codes);
+
+    // Construct the aggregated result
+    const aggregated: DemographicsResult = {
       query_info: {
         geography_codes,
         total_population: populationData.total,
@@ -61,9 +65,15 @@ export async function POST(request: NextRequest) {
       household_deprivation: deprivationData,
     };
 
-    console.log(`Successfully aggregated demographics for ${result.population.total} people`);
+    // Construct the full response with per-LSOA data
+    const response: DemographicsAPIResponse = {
+      aggregated,
+      by_lsoa: perLsoaData,
+    };
 
-    return NextResponse.json(result);
+    console.log(`Successfully aggregated demographics for ${aggregated.population.total} people`);
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error in demographics data API:', error);
 

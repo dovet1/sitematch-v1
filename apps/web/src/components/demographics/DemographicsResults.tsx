@@ -4,13 +4,16 @@ import { Users, Home, Calendar, Globe, AlertCircle } from 'lucide-react';
 import type { DemographicsResult } from '@/lib/types/demographics';
 import type { LocationResult } from '@/lib/mapbox';
 import { formatLocationDisplay } from '@/lib/mapbox';
+import type { MeasurementMode } from './LocationInputPanel';
 
 interface DemographicsResultsProps {
   results: DemographicsResult | null;
   loading: boolean;
   error: string | null;
   location: LocationResult | null;
-  radius: number;
+  measurementMode: MeasurementMode;
+  measurementValue: number;
+  totalLsoaCount?: number;
 }
 
 export function DemographicsResults({
@@ -18,8 +21,21 @@ export function DemographicsResults({
   loading,
   error,
   location,
-  radius,
+  measurementMode,
+  measurementValue,
+  totalLsoaCount,
 }: DemographicsResultsProps) {
+  // Format display text based on mode
+  const getMeasurementDisplay = () => {
+    switch (measurementMode) {
+      case 'distance':
+        return `${measurementValue} mile${measurementValue !== 1 ? 's' : ''}`;
+      case 'drive_time':
+        return `${measurementValue} min drive`;
+      case 'walk_time':
+        return `${measurementValue} min walk`;
+    }
+  };
   // Empty State
   if (!loading && !results && !error) {
     return (
@@ -86,8 +102,17 @@ export function DemographicsResults({
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Demographics Report</h2>
         {location && (
           <p className="text-sm text-gray-500">
-            {formatLocationDisplay(location)} • {radius} mile radius •{' '}
-            {results.query_info.geography_codes.length} areas analyzed
+            {formatLocationDisplay(location)} • {getMeasurementDisplay()} •{' '}
+            {totalLsoaCount && totalLsoaCount > results.query_info.geography_codes.length ? (
+              <>
+                <span className="font-medium text-violet-600">
+                  {results.query_info.geography_codes.length} of {totalLsoaCount} areas
+                </span>
+                {' '}selected
+              </>
+            ) : (
+              <span>{results.query_info.geography_codes.length} areas analyzed</span>
+            )}
           </p>
         )}
       </div>

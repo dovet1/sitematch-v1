@@ -293,3 +293,127 @@ export function getDeprivationDataFromCSV(geographyCodes: string[]) {
     },
   };
 }
+
+/**
+ * Get per-LSOA demographics data for client-side aggregation
+ * Returns raw counts (not percentages) for each LSOA
+ */
+export function getPerLSOADataFromCSV(geographyCodes: string[]): Record<string, any> {
+  const byLsoa: Record<string, any> = {};
+
+  // Initialize all LSOAs
+  geographyCodes.forEach(code => {
+    byLsoa[code] = {
+      lsoa_code: code,
+      population: { total: 0, male: 0, female: 0 },
+      households: { total: 0 },
+      age_groups: {},
+      country_of_birth: {},
+      household_sizes: {},
+      household_composition: {},
+      household_deprivation: {
+        employment_deprived: 0,
+        education_deprived: 0,
+        health_deprived: 0,
+        housing_deprived: 0,
+      },
+    };
+  });
+
+  // TS008: Population by sex
+  const ts008 = parseCensusCSV('census2021-ts008-lsoa.csv', geographyCodes);
+  ts008.forEach((row) => {
+    const code = row['geography code'];
+    byLsoa[code].population = {
+      total: Number(row['Sex: All persons; measures: Value'] || 0),
+      male: Number(row['Sex: Male; measures: Value'] || 0),
+      female: Number(row['Sex: Female; measures: Value'] || 0),
+    };
+  });
+
+  // TS017: Household sizes
+  const ts017 = parseCensusCSV('census2021-ts017-lsoa.csv', geographyCodes);
+  ts017.forEach((row) => {
+    const code = row['geography code'];
+    const totalKey = Object.keys(row).find(k => k.includes('Household size: Total'));
+    byLsoa[code].households.total = totalKey ? Number(row[totalKey] || 0) : 0;
+
+    for (const key in row) {
+      if (key.includes('Household size:') && !key.includes('Total') && !key.includes('0 people')) {
+        const size = key.replace('Household size: ', '').replace('; measures: Value', '').trim();
+        byLsoa[code].household_sizes[size] = Number(row[key] || 0);
+      }
+    }
+  });
+
+  // TS003: Household composition
+  const ts003 = parseCensusCSV('census2021-ts003-lsoa.csv', geographyCodes);
+  ts003.forEach((row) => {
+    const code = row['geography code'];
+    for (const key in row) {
+      if (key.includes('Household composition:') && !key.includes('Total')) {
+        const comp = key.replace('Household composition: ', '').replace('; measures: Value', '').trim();
+        byLsoa[code].household_composition[comp] = Number(row[key] || 0);
+      }
+    }
+  });
+
+  // TS011: Deprivation
+  const ts011 = parseCensusCSV('census2021-ts011-lsoa.csv', geographyCodes);
+  ts011.forEach((row) => {
+    const code = row['geography code'];
+    for (const key in row) {
+      if (key.toLowerCase().includes('deprived in')) {
+        if (key.toLowerCase().includes('employment')) {
+          byLsoa[code].household_deprivation.employment_deprived = Number(row[key] || 0);
+        } else if (key.toLowerCase().includes('education')) {
+          byLsoa[code].household_deprivation.education_deprived = Number(row[key] || 0);
+        } else if (key.toLowerCase().includes('health')) {
+          byLsoa[code].household_deprivation.health_deprived = Number(row[key] || 0);
+        } else if (key.toLowerCase().includes('housing')) {
+          byLsoa[code].household_deprivation.housing_deprived = Number(row[key] || 0);
+        }
+      }
+    }
+  });
+
+  // Age groups: Use UK average percentages applied to each LSOA's population
+  const agePercentages = {
+    '0-15': 18.5,
+    '16-24': 10.5,
+    '25-34': 13.8,
+    '35-44': 13.3,
+    '45-54': 13.7,
+    '55-64': 12.0,
+    '65-74': 10.1,
+    '75+': 8.1,
+  };
+  geographyCodes.forEach(code => {
+    const population = byLsoa[code].population.total;
+    Object.entries(agePercentages).forEach(([group, pct]) => {
+      byLsoa[code].age_groups[group] = Math.round((pct / 100) * population);
+    });
+  });
+
+  // Country of birth: Use UK average percentages applied to each LSOA's population
+  const countryPercentages: Record<string, number> = {
+    'England': 84.5,
+    'Wales': 4.9,
+    'Scotland': 1.0,
+    'Northern Ireland': 0.5,
+    'India': 1.3,
+    'Poland': 0.9,
+    'Pakistan': 0.8,
+    'Romania': 0.6,
+    'Ireland': 0.5,
+    'Other': 5.0,
+  };
+  geographyCodes.forEach(code => {
+    const population = byLsoa[code].population.total;
+    Object.entries(countryPercentages).forEach(([country, pct]) => {
+      byLsoa[code].country_of_birth[country] = Math.round((pct / 100) * population);
+    });
+  });
+
+  return byLsoa;
+}

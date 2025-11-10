@@ -2,22 +2,82 @@
 
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LocationInputPanel } from './LocationInputPanel';
+import { LocationInputPanel, type MeasurementMode } from './LocationInputPanel';
 import { DemographicsResults } from './DemographicsResults';
 import { DemographicsMap } from './DemographicsMap';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LocationResult } from '@/lib/mapbox';
-import type { DemographicsResult } from '@/lib/types/demographics';
+import type { DemographicsResult, LSOADemographics, DemographicsAPIResponse } from '@/lib/types/demographics';
+import { aggregateDemographics } from '@/lib/demographics-aggregator';
+
+// Conversion constants
+const WALK_SPEED_MPH = 3;
+const DRIVE_SPEED_MPH = 35;
+
+// Convert measurement to radius in miles
+function convertToRadiusMiles(mode: MeasurementMode, value: number): number {
+  switch (mode) {
+    case 'distance':
+      return value;
+    case 'walk_time':
+      return (value / 60) * WALK_SPEED_MPH; // minutes to hours * speed
+    case 'drive_time':
+      return (value / 60) * DRIVE_SPEED_MPH;
+  }
+}
 
 export function SiteDemographerPage() {
   const router = useRouter();
   const [selectedLocation, setSelectedLocation] = useState<LocationResult | null>(null);
-  const [radius, setRadius] = useState<number>(10);
+  const [measurementMode, setMeasurementMode] = useState<MeasurementMode>('distance');
+  const [measurementValue, setMeasurementValue] = useState<number>(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<DemographicsResult | null>(null);
+  const [rawDemographicsData, setRawDemographicsData] = useState<Record<string, LSOADemographics> | null>(null);
   const [lsoaBoundaries, setLsoaBoundaries] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [selectedLsoaCodes, setSelectedLsoaCodes] = useState<Set<string>>(new Set());
+  const [allLsoaCodes, setAllLsoaCodes] = useState<string[]>([]);
+
+  // Aggregate demographics based on selected LSOAs
+  const results = useMemo(() => {
+    if (!rawDemographicsData || selectedLsoaCodes.size === 0) return null;
+    try {
+      return aggregateDemographics(rawDemographicsData, Array.from(selectedLsoaCodes));
+    } catch (err) {
+      console.error('Error aggregating demographics:', err);
+      return null;
+    }
+  }, [rawDemographicsData, selectedLsoaCodes]);
+
+  // Handle LSOA toggle
+  const handleLsoaToggle = (code: string) => {
+    setSelectedLsoaCodes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(code)) {
+        // Don't allow deselecting all LSOAs
+        if (newSet.size > 1) {
+          newSet.delete(code);
+        }
+      } else {
+        newSet.add(code);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle mode change and adjust value if needed
+  const handleMeasurementModeChange = (mode: MeasurementMode) => {
+    setMeasurementMode(mode);
+    // Set appropriate default value for each mode
+    if (mode === 'walk_time') {
+      setMeasurementValue(20); // 20 min = 1 mile
+    } else if (mode === 'drive_time') {
+      setMeasurementValue(10); // 10 min = ~6 miles
+    } else {
+      setMeasurementValue(10); // 10 miles
+    }
+  };
 
   const handleAnalyze = async () => {
     if (!selectedLocation) return;
@@ -28,19 +88,22 @@ export function SiteDemographerPage() {
     try {
       const [lng, lat] = selectedLocation.center;
 
+      // Convert measurement to radius in miles
+      const radiusMiles = convertToRadiusMiles(measurementMode, measurementValue);
+
       // Fetch all data in parallel
       const [geoResponse, boundariesResponse] = await Promise.all([
         // Step 1: Get geography codes
         fetch('/api/demographics/geography', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lat, lng, radius_miles: radius }),
+          body: JSON.stringify({ lat, lng, radius_miles: radiusMiles }),
         }),
         // Step 2: Get LSOA boundaries for map
         fetch('/api/demographics/boundaries', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lat, lng, radius_miles: radius }),
+          body: JSON.stringify({ lat, lng, radius_miles: radiusMiles }),
         }),
       ]);
 
@@ -64,8 +127,16 @@ export function SiteDemographerPage() {
         throw new Error('Failed to fetch demographics data');
       }
 
-      const demographicsData = await dataResponse.json();
-      setResults(demographicsData);
+      const demographicsData: DemographicsAPIResponse = await dataResponse.json();
+
+      // Store raw data for client-side aggregation
+      setRawDemographicsData(demographicsData.by_lsoa);
+
+      // Initialize all LSOAs as selected
+      const codes = Object.keys(demographicsData.by_lsoa);
+      setAllLsoaCodes(codes);
+      setSelectedLsoaCodes(new Set(codes));
+
       setLsoaBoundaries(boundaries);
     } catch (err) {
       console.error('Error analyzing demographics:', err);
@@ -77,9 +148,12 @@ export function SiteDemographerPage() {
 
   const handleReset = () => {
     setSelectedLocation(null);
-    setRadius(10);
-    setResults(null);
+    setMeasurementMode('distance');
+    setMeasurementValue(10);
+    setRawDemographicsData(null);
     setLsoaBoundaries(null);
+    setSelectedLsoaCodes(new Set());
+    setAllLsoaCodes([]);
     setError(null);
   };
 
@@ -108,8 +182,10 @@ export function SiteDemographerPage() {
             <LocationInputPanel
               selectedLocation={selectedLocation}
               onLocationChange={setSelectedLocation}
-              radius={radius}
-              onRadiusChange={setRadius}
+              measurementMode={measurementMode}
+              onMeasurementModeChange={handleMeasurementModeChange}
+              measurementValue={measurementValue}
+              onMeasurementValueChange={setMeasurementValue}
               onAnalyze={handleAnalyze}
               onReset={handleReset}
               loading={loading}
@@ -129,7 +205,9 @@ export function SiteDemographerPage() {
               loading={loading}
               error={error}
               location={selectedLocation}
-              radius={radius}
+              measurementMode={measurementMode}
+              measurementValue={measurementValue}
+              totalLsoaCount={allLsoaCodes.length}
             />
           </div>
         </div>
@@ -139,9 +217,14 @@ export function SiteDemographerPage() {
           {selectedLocation ? (
             <DemographicsMap
               center={{ lat: selectedLocation.center[1], lng: selectedLocation.center[0] }}
-              radiusMiles={radius}
+              radiusMiles={convertToRadiusMiles(measurementMode, measurementValue)}
               lsoaBoundaries={lsoaBoundaries}
               loading={loading}
+              measurementMode={measurementMode}
+              measurementValue={measurementValue}
+              selectedLsoaCodes={selectedLsoaCodes}
+              allLsoaCodes={allLsoaCodes}
+              onLsoaToggle={handleLsoaToggle}
             />
           ) : (
             <div className="h-full flex items-center justify-center">

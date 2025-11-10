@@ -4,15 +4,26 @@ import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { MapPin, Loader2, X, RotateCcw } from 'lucide-react';
 import { searchLocations, formatLocationDisplay } from '@/lib/mapbox';
 import type { LocationResult } from '@/lib/mapbox';
 
+export type MeasurementMode = 'distance' | 'drive_time' | 'walk_time';
+
 interface LocationInputPanelProps {
   selectedLocation: LocationResult | null;
   onLocationChange: (location: LocationResult | null) => void;
-  radius: number;
-  onRadiusChange: (radius: number) => void;
+  measurementMode: MeasurementMode;
+  onMeasurementModeChange: (mode: MeasurementMode) => void;
+  measurementValue: number;
+  onMeasurementValueChange: (value: number) => void;
   onAnalyze: () => void;
   onReset: () => void;
   loading: boolean;
@@ -22,8 +33,10 @@ interface LocationInputPanelProps {
 export function LocationInputPanel({
   selectedLocation,
   onLocationChange,
-  radius,
-  onRadiusChange,
+  measurementMode,
+  onMeasurementModeChange,
+  measurementValue,
+  onMeasurementValueChange,
   onAnalyze,
   onReset,
   loading,
@@ -33,7 +46,23 @@ export function LocationInputPanel({
   const [locationResults, setLocationResults] = useState<LocationResult[]>([]);
   const [locationLoading, setLocationLoading] = useState(false);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const inputRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Get configuration based on mode
+  const getModeConfig = () => {
+    switch (measurementMode) {
+      case 'distance':
+        return { label: 'Distance', unit: 'miles', min: 1, max: 50 };
+      case 'drive_time':
+        return { label: 'Drive Time', unit: 'mins', min: 2, max: 120 };
+      case 'walk_time':
+        return { label: 'Walk Time', unit: 'mins', min: 20, max: 60 };
+    }
+  };
+
+  const config = getModeConfig();
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -49,6 +78,13 @@ export function LocationInputPanel({
 
   // Search locations with debounce
   useEffect(() => {
+    // Don't search if we already have a selected location
+    if (selectedLocation) {
+      setLocationResults([]);
+      setShowLocationDropdown(false);
+      return;
+    }
+
     const timer = setTimeout(async () => {
       if (locationQuery.trim().length > 2) {
         setLocationLoading(true);
@@ -69,13 +105,14 @@ export function LocationInputPanel({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [locationQuery]);
+  }, [locationQuery, selectedLocation]);
 
   const handleLocationSelect = (location: LocationResult) => {
     onLocationChange(location);
     setLocationQuery(formatLocationDisplay(location));
     setShowLocationDropdown(false);
     setLocationResults([]);
+    searchInputRef.current?.blur();
   };
 
   const handleClearLocation = () => {
@@ -93,6 +130,7 @@ export function LocationInputPanel({
         <div className="relative">
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
+            ref={searchInputRef}
             value={locationQuery}
             onChange={(e) => setLocationQuery(e.target.value)}
             placeholder="Search for a UK location..."
@@ -119,7 +157,10 @@ export function LocationInputPanel({
             {locationResults.map((result) => (
               <button
                 key={result.id}
-                onClick={() => handleLocationSelect(result)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleLocationSelect(result);
+                }}
                 className="w-full text-left px-4 py-3 hover:bg-violet-50 transition-colors border-b border-gray-100 last:border-0"
               >
                 <div className="flex items-start gap-3">
@@ -139,25 +180,43 @@ export function LocationInputPanel({
         )}
       </div>
 
-      {/* Radius Input */}
+      {/* Measurement Mode Selector */}
+      <div className="w-40">
+        <Select
+          value={measurementMode}
+          onValueChange={(value) => onMeasurementModeChange(value as MeasurementMode)}
+          disabled={loading}
+        >
+          <SelectTrigger className="h-10 border-gray-300 focus:border-violet-500 focus:ring-violet-500">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="distance">Distance</SelectItem>
+            <SelectItem value="drive_time">Drive Time</SelectItem>
+            <SelectItem value="walk_time">Walk Time</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Measurement Value Input */}
       <div className="w-32">
         <div className="relative">
           <Input
             type="number"
-            min="1"
-            max="50"
-            value={radius}
+            min={config.min}
+            max={config.max}
+            value={measurementValue}
             onChange={(e) => {
               const val = Number(e.target.value);
-              if (!isNaN(val) && val >= 1 && val <= 50) {
-                onRadiusChange(val);
+              if (!isNaN(val) && val >= config.min && val <= config.max) {
+                onMeasurementValueChange(val);
               }
             }}
             className="h-10 pr-16 border-gray-300 focus:border-violet-500 focus:ring-violet-500"
             disabled={loading}
           />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none">
-            miles
+            {config.unit}
           </span>
         </div>
       </div>

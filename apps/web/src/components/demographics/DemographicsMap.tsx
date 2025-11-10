@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import type { MeasurementMode } from './LocationInputPanel';
 
 // Set your Mapbox access token
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
@@ -12,6 +13,11 @@ interface DemographicsMapProps {
   radiusMiles: number;
   lsoaBoundaries: GeoJSON.FeatureCollection | null;
   loading: boolean;
+  measurementMode: MeasurementMode;
+  measurementValue: number;
+  selectedLsoaCodes: Set<string>;
+  allLsoaCodes: string[];
+  onLsoaToggle: (code: string) => void;
 }
 
 export function DemographicsMap({
@@ -19,7 +25,23 @@ export function DemographicsMap({
   radiusMiles,
   lsoaBoundaries,
   loading,
+  measurementMode,
+  measurementValue,
+  selectedLsoaCodes,
+  allLsoaCodes,
+  onLsoaToggle,
 }: DemographicsMapProps) {
+  // Format display text based on mode
+  const getMeasurementDisplay = () => {
+    switch (measurementMode) {
+      case 'distance':
+        return `${measurementValue} mile${measurementValue !== 1 ? 's' : ''}`;
+      case 'drive_time':
+        return `${measurementValue} min drive`;
+      case 'walk_time':
+        return `${measurementValue} min walk`;
+    }
+  };
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -162,7 +184,7 @@ export function DemographicsMap({
     }
   }, [center, radiusMiles, mapLoaded]);
 
-  // Draw LSOA boundaries
+  // Draw LSOA boundaries (initial setup)
   useEffect(() => {
     if (!map.current || !mapLoaded || !lsoaBoundaries) return;
 
@@ -186,15 +208,30 @@ export function DemographicsMap({
         data: lsoaBoundaries,
       });
 
-      // Add LSOA fill layer
+      // Convert Set to Array for Mapbox expression
+      const selectedCodesArray = Array.from(selectedLsoaCodes);
+
+      // Add LSOA fill layer with data-driven styling
       const beforeLayer = map.current.getLayer('radius-circle-fill') ? 'radius-circle-fill' : undefined;
       map.current.addLayer({
         id: 'lsoa-fill',
         type: 'fill',
         source: 'lsoa-boundaries',
         paint: {
-          'fill-color': '#7c3aed', // Violet bloom color
-          'fill-opacity': 0.4,
+          // Selected: violet, Deselected: gray
+          'fill-color': [
+            'case',
+            ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+            '#7c3aed', // Selected: violet
+            '#9ca3af'  // Deselected: gray
+          ],
+          // Selected: more opaque, Deselected: more transparent
+          'fill-opacity': [
+            'case',
+            ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+            0.5, // Selected
+            0.25 // Deselected
+          ],
         },
       }, beforeLayer);
 
@@ -204,40 +241,15 @@ export function DemographicsMap({
         type: 'line',
         source: 'lsoa-boundaries',
         paint: {
-          'line-color': '#5b21b6', // Darker violet
+          // Selected: dark violet, Deselected: medium gray
+          'line-color': [
+            'case',
+            ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+            '#5b21b6', // Selected: dark violet
+            '#6b7280'  // Deselected: medium gray
+          ],
           'line-width': 2,
         },
-      });
-
-      // Add click handler to show LSOA info
-      map.current.on('click', 'lsoa-fill', (e) => {
-        if (!e.features || e.features.length === 0) return;
-
-        const feature = e.features[0];
-        const properties = feature.properties;
-
-        new mapboxgl.Popup()
-          .setLngLat(e.lngLat)
-          .setHTML(
-            `<div class="p-2">
-              <p class="font-semibold">${properties?.LSOA21NM || 'Unknown LSOA'}</p>
-              <p class="text-sm text-gray-600">${properties?.LSOA21CD || ''}</p>
-            </div>`
-          )
-          .addTo(map.current!);
-      });
-
-      // Change cursor on hover
-      map.current.on('mouseenter', 'lsoa-fill', () => {
-        if (map.current) {
-          map.current.getCanvas().style.cursor = 'pointer';
-        }
-      });
-
-      map.current.on('mouseleave', 'lsoa-fill', () => {
-        if (map.current) {
-          map.current.getCanvas().style.cursor = '';
-        }
       });
     };
 
@@ -255,7 +267,83 @@ export function DemographicsMap({
     } else {
       map.current.once('idle', tryAddBoundaries);
     }
-  }, [lsoaBoundaries, mapLoaded]);
+  }, [lsoaBoundaries, mapLoaded, selectedLsoaCodes]);
+
+  // Add click handlers for LSOA interaction (separate from layer creation)
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !lsoaBoundaries) return;
+    if (!map.current.getLayer('lsoa-fill')) return;
+
+    // Click handler to toggle LSOA selection
+    const handleClick = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+      if (!e.features || e.features.length === 0) return;
+
+      const feature = e.features[0];
+      const lsoaCode = feature.properties?.LSOA21CD;
+
+      if (lsoaCode) {
+        onLsoaToggle(lsoaCode);
+      }
+    };
+
+    // Cursor handlers
+    const handleMouseEnter = () => {
+      if (map.current) {
+        map.current.getCanvas().style.cursor = 'pointer';
+      }
+    };
+
+    const handleMouseLeave = () => {
+      if (map.current) {
+        map.current.getCanvas().style.cursor = '';
+      }
+    };
+
+    // Add event listeners
+    map.current.on('click', 'lsoa-fill', handleClick);
+    map.current.on('mouseenter', 'lsoa-fill', handleMouseEnter);
+    map.current.on('mouseleave', 'lsoa-fill', handleMouseLeave);
+
+    // Cleanup function to remove event listeners
+    return () => {
+      if (map.current) {
+        map.current.off('click', 'lsoa-fill', handleClick);
+        map.current.off('mouseenter', 'lsoa-fill', handleMouseEnter);
+        map.current.off('mouseleave', 'lsoa-fill', handleMouseLeave);
+      }
+    };
+  }, [mapLoaded, lsoaBoundaries, onLsoaToggle]);
+
+  // Update layer styling when selection changes (without recreating layers)
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !lsoaBoundaries) return;
+    if (!map.current.getLayer('lsoa-fill')) return;
+
+    const selectedCodesArray = Array.from(selectedLsoaCodes);
+
+    // Update fill layer paint properties
+    map.current.setPaintProperty('lsoa-fill', 'fill-color', [
+      'case',
+      ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+      '#7c3aed', // Selected: violet
+      '#9ca3af'  // Deselected: gray
+    ]);
+
+    map.current.setPaintProperty('lsoa-fill', 'fill-opacity', [
+      'case',
+      ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+      0.5, // Selected
+      0.25 // Deselected
+    ]);
+
+    // Update outline layer paint properties
+    map.current.setPaintProperty('lsoa-outline', 'line-color', [
+      'case',
+      ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+      '#5b21b6', // Selected: dark violet
+      '#6b7280'  // Deselected: medium gray
+    ]);
+  }, [selectedLsoaCodes, mapLoaded, lsoaBoundaries]);
 
   return (
     <div className="absolute inset-0 w-full h-full">

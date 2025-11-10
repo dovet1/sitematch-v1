@@ -65,3 +65,31 @@ export interface DemographicsResult {
   household_composition: HouseholdCompositionData[];
   household_deprivation: DeprivationData;
 }
+
+// Per-LSOA raw data for client-side aggregation
+export interface LSOADemographics {
+  lsoa_code: string;
+  population: {
+    total: number;
+    male: number;
+    female: number;
+  };
+  households: {
+    total: number;
+  };
+  age_groups: Record<string, number>; // age_group -> count
+  country_of_birth: Record<string, number>; // country -> count
+  household_sizes: Record<string, number>; // size -> count
+  household_composition: Record<string, number>; // type -> count
+  household_deprivation: {
+    employment_deprived: number;
+    education_deprived: number;
+    health_deprived: number;
+    housing_deprived: number;
+  };
+}
+
+export interface DemographicsAPIResponse {
+  aggregated: DemographicsResult;
+  by_lsoa: Record<string, LSOADemographics>;
+}
