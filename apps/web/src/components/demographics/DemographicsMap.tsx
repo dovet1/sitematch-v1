@@ -12,6 +12,7 @@ interface DemographicsMapProps {
   center: { lat: number; lng: number };
   radiusMiles: number;
   lsoaBoundaries: GeoJSON.FeatureCollection | null;
+  adjacentBoundaries: GeoJSON.FeatureCollection | null;
   loading: boolean;
   measurementMode: MeasurementMode;
   measurementValue: number;
@@ -24,6 +25,7 @@ export function DemographicsMap({
   center,
   radiusMiles,
   lsoaBoundaries,
+  adjacentBoundaries,
   loading,
   measurementMode,
   measurementValue,
@@ -186,71 +188,115 @@ export function DemographicsMap({
 
   // Draw LSOA boundaries (initial setup)
   useEffect(() => {
-    if (!map.current || !mapLoaded || !lsoaBoundaries) return;
+    if (!map.current || !mapLoaded) return;
 
     const addBoundaries = () => {
       if (!map.current || !map.current.isStyleLoaded()) return;
 
-      // Remove existing LSOA layers and source
-      if (map.current.getSource('lsoa-boundaries')) {
-        if (map.current.getLayer('lsoa-fill')) {
-          map.current.removeLayer('lsoa-fill');
-        }
-        if (map.current.getLayer('lsoa-outline')) {
-          map.current.removeLayer('lsoa-outline');
-        }
-        map.current.removeSource('lsoa-boundaries');
-      }
+      // Remove existing LSOA layers and sources
+      const layersToRemove = ['lsoa-fill', 'lsoa-outline', 'adjacent-lsoa-fill', 'adjacent-lsoa-outline'];
+      const sourcesToRemove = ['lsoa-boundaries', 'adjacent-lsoa-boundaries'];
 
-      // Add LSOA boundaries source
-      map.current.addSource('lsoa-boundaries', {
-        type: 'geojson',
-        data: lsoaBoundaries,
+      layersToRemove.forEach((layerId) => {
+        if (map.current?.getLayer(layerId)) {
+          map.current.removeLayer(layerId);
+        }
       });
 
-      // Convert Set to Array for Mapbox expression
+      sourcesToRemove.forEach((sourceId) => {
+        if (map.current?.getSource(sourceId)) {
+          map.current.removeSource(sourceId);
+        }
+      });
+
+      const beforeLayer = map.current.getLayer('radius-circle-fill') ? 'radius-circle-fill' : undefined;
       const selectedCodesArray = Array.from(selectedLsoaCodes);
 
-      // Add LSOA fill layer with data-driven styling
-      const beforeLayer = map.current.getLayer('radius-circle-fill') ? 'radius-circle-fill' : undefined;
-      map.current.addLayer({
-        id: 'lsoa-fill',
-        type: 'fill',
-        source: 'lsoa-boundaries',
-        paint: {
-          // Selected: violet, Deselected: gray
-          'fill-color': [
-            'case',
-            ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-            '#7c3aed', // Selected: violet
-            '#9ca3af'  // Deselected: gray
-          ],
-          // Selected: more opaque, Deselected: more transparent
-          'fill-opacity': [
-            'case',
-            ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-            0.5, // Selected
-            0.25 // Deselected
-          ],
-        },
-      }, beforeLayer);
+      // Add adjacent LSOAs first (so they render below inner LSOAs)
+      if (adjacentBoundaries && adjacentBoundaries.features.length > 0) {
+        map.current.addSource('adjacent-lsoa-boundaries', {
+          type: 'geojson',
+          data: adjacentBoundaries,
+        });
 
-      // Add LSOA outline layer
-      map.current.addLayer({
-        id: 'lsoa-outline',
-        type: 'line',
-        source: 'lsoa-boundaries',
-        paint: {
-          // Selected: dark violet, Deselected: medium gray
-          'line-color': [
-            'case',
-            ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-            '#5b21b6', // Selected: dark violet
-            '#6b7280'  // Deselected: medium gray
-          ],
-          'line-width': 2,
-        },
-      });
+        map.current.addLayer({
+          id: 'adjacent-lsoa-fill',
+          type: 'fill',
+          source: 'adjacent-lsoa-boundaries',
+          paint: {
+            'fill-color': [
+              'case',
+              ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+              '#7c3aed', // Selected: violet
+              '#e5e7eb'  // Deselected: very light gray
+            ],
+            'fill-opacity': [
+              'case',
+              ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+              0.4, // Selected
+              0.15 // Deselected: very faint
+            ],
+          },
+        }, beforeLayer);
+
+        map.current.addLayer({
+          id: 'adjacent-lsoa-outline',
+          type: 'line',
+          source: 'adjacent-lsoa-boundaries',
+          paint: {
+            'line-color': [
+              'case',
+              ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+              '#5b21b6', // Selected: dark violet
+              '#d1d5db'  // Deselected: light gray
+            ],
+            'line-width': 1,
+          },
+        });
+      }
+
+      // Add inner LSOAs (render on top)
+      if (lsoaBoundaries && lsoaBoundaries.features.length > 0) {
+        map.current.addSource('lsoa-boundaries', {
+          type: 'geojson',
+          data: lsoaBoundaries,
+        });
+
+        map.current.addLayer({
+          id: 'lsoa-fill',
+          type: 'fill',
+          source: 'lsoa-boundaries',
+          paint: {
+            'fill-color': [
+              'case',
+              ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+              '#7c3aed', // Selected: violet
+              '#9ca3af'  // Deselected: gray
+            ],
+            'fill-opacity': [
+              'case',
+              ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+              0.5, // Selected
+              0.25 // Deselected
+            ],
+          },
+        }, beforeLayer);
+
+        map.current.addLayer({
+          id: 'lsoa-outline',
+          type: 'line',
+          source: 'lsoa-boundaries',
+          paint: {
+            'line-color': [
+              'case',
+              ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+              '#5b21b6', // Selected: dark violet
+              '#6b7280'  // Deselected: medium gray
+            ],
+            'line-width': 2,
+          },
+        });
+      }
     };
 
     // Use idle event instead of style.load to ensure map is fully ready after flyTo
@@ -267,12 +313,11 @@ export function DemographicsMap({
     } else {
       map.current.once('idle', tryAddBoundaries);
     }
-  }, [lsoaBoundaries, mapLoaded]);
+  }, [lsoaBoundaries, adjacentBoundaries, mapLoaded]);
 
   // Add click handlers for LSOA interaction (separate from layer creation)
   useEffect(() => {
-    if (!map.current || !mapLoaded || !lsoaBoundaries) return;
-    if (!map.current.getLayer('lsoa-fill')) return;
+    if (!map.current || !mapLoaded) return;
 
     // Click handler to toggle LSOA selection
     const handleClick = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
@@ -299,51 +344,89 @@ export function DemographicsMap({
       }
     };
 
-    // Add event listeners
-    map.current.on('click', 'lsoa-fill', handleClick);
-    map.current.on('mouseenter', 'lsoa-fill', handleMouseEnter);
-    map.current.on('mouseleave', 'lsoa-fill', handleMouseLeave);
+    // Add event listeners for both inner and adjacent layers
+    const layers = ['lsoa-fill', 'adjacent-lsoa-fill'];
+
+    layers.forEach((layer) => {
+      if (map.current?.getLayer(layer)) {
+        map.current.on('click', layer, handleClick);
+        map.current.on('mouseenter', layer, handleMouseEnter);
+        map.current.on('mouseleave', layer, handleMouseLeave);
+      }
+    });
 
     // Cleanup function to remove event listeners
     return () => {
       if (map.current) {
-        map.current.off('click', 'lsoa-fill', handleClick);
-        map.current.off('mouseenter', 'lsoa-fill', handleMouseEnter);
-        map.current.off('mouseleave', 'lsoa-fill', handleMouseLeave);
+        layers.forEach((layer) => {
+          if (map.current?.getLayer(layer)) {
+            map.current.off('click', layer, handleClick);
+            map.current.off('mouseenter', layer, handleMouseEnter);
+            map.current.off('mouseleave', layer, handleMouseLeave);
+          }
+        });
       }
     };
-  }, [mapLoaded, lsoaBoundaries, onLsoaToggle]);
+  }, [mapLoaded, lsoaBoundaries, adjacentBoundaries, onLsoaToggle]);
 
   // Update layer styling when selection changes (without recreating layers)
   useEffect(() => {
-    if (!map.current || !mapLoaded || !lsoaBoundaries) return;
-    if (!map.current.getLayer('lsoa-fill')) return;
+    if (!map.current || !mapLoaded) return;
 
     const selectedCodesArray = Array.from(selectedLsoaCodes);
 
-    // Update fill layer paint properties
-    map.current.setPaintProperty('lsoa-fill', 'fill-color', [
-      'case',
-      ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-      '#7c3aed', // Selected: violet
-      '#9ca3af'  // Deselected: gray
-    ]);
+    // Update inner LSOA layers
+    if (map.current.getLayer('lsoa-fill')) {
+      map.current.setPaintProperty('lsoa-fill', 'fill-color', [
+        'case',
+        ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+        '#7c3aed', // Selected: violet
+        '#9ca3af'  // Deselected: gray
+      ]);
 
-    map.current.setPaintProperty('lsoa-fill', 'fill-opacity', [
-      'case',
-      ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-      0.5, // Selected
-      0.25 // Deselected
-    ]);
+      map.current.setPaintProperty('lsoa-fill', 'fill-opacity', [
+        'case',
+        ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+        0.5, // Selected
+        0.25 // Deselected
+      ]);
+    }
 
-    // Update outline layer paint properties
-    map.current.setPaintProperty('lsoa-outline', 'line-color', [
-      'case',
-      ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-      '#5b21b6', // Selected: dark violet
-      '#6b7280'  // Deselected: medium gray
-    ]);
-  }, [selectedLsoaCodes, mapLoaded, lsoaBoundaries]);
+    if (map.current.getLayer('lsoa-outline')) {
+      map.current.setPaintProperty('lsoa-outline', 'line-color', [
+        'case',
+        ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+        '#5b21b6', // Selected: dark violet
+        '#6b7280'  // Deselected: medium gray
+      ]);
+    }
+
+    // Update adjacent LSOA layers
+    if (map.current.getLayer('adjacent-lsoa-fill')) {
+      map.current.setPaintProperty('adjacent-lsoa-fill', 'fill-color', [
+        'case',
+        ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+        '#7c3aed', // Selected: violet
+        '#e5e7eb'  // Deselected: very light gray
+      ]);
+
+      map.current.setPaintProperty('adjacent-lsoa-fill', 'fill-opacity', [
+        'case',
+        ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+        0.4, // Selected
+        0.15 // Deselected: very faint
+      ]);
+    }
+
+    if (map.current.getLayer('adjacent-lsoa-outline')) {
+      map.current.setPaintProperty('adjacent-lsoa-outline', 'line-color', [
+        'case',
+        ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+        '#5b21b6', // Selected: dark violet
+        '#d1d5db'  // Deselected: light gray
+      ]);
+    }
+  }, [selectedLsoaCodes, mapLoaded, lsoaBoundaries, adjacentBoundaries]);
 
   return (
     <div className="absolute inset-0 w-full h-full">

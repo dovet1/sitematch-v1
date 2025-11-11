@@ -36,6 +36,7 @@ export function SiteDemographerPage() {
   const [error, setError] = useState<string | null>(null);
   const [rawDemographicsData, setRawDemographicsData] = useState<Record<string, LSOADemographics> | null>(null);
   const [lsoaBoundaries, setLsoaBoundaries] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [adjacentBoundaries, setAdjacentBoundaries] = useState<GeoJSON.FeatureCollection | null>(null);
   const [selectedLsoaCodes, setSelectedLsoaCodes] = useState<Set<string>>(new Set());
   const [allLsoaCodes, setAllLsoaCodes] = useState<string[]>([]);
 
@@ -52,6 +53,9 @@ export function SiteDemographerPage() {
 
   // Handle LSOA toggle
   const handleLsoaToggle = (code: string) => {
+    // Check if this LSOA already has data
+    const hasData = rawDemographicsData && code in rawDemographicsData;
+
     setSelectedLsoaCodes(prev => {
       const newSet = new Set(prev);
       if (newSet.has(code)) {
@@ -64,6 +68,36 @@ export function SiteDemographerPage() {
       }
       return newSet;
     });
+
+    // If this LSOA doesn't have data, fetch it asynchronously
+    if (!hasData) {
+      fetch('/api/demographics/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          geography_codes: [code],
+        }),
+      })
+        .then(response => response.json())
+        .then((demographicsData: DemographicsAPIResponse) => {
+          // Merge new data with existing data
+          setRawDemographicsData(prev => ({
+            ...prev,
+            ...demographicsData.by_lsoa,
+          }));
+
+          // Add to all codes list
+          setAllLsoaCodes(prev => {
+            if (!prev.includes(code)) {
+              return [...prev, code];
+            }
+            return prev;
+          });
+        })
+        .catch(error => {
+          console.error('Error fetching LSOA data:', error);
+        });
+    }
   };
 
   // Handle mode change and adjust value if needed
@@ -112,7 +146,7 @@ export function SiteDemographerPage() {
       }
 
       const geoData = await geoResponse.json();
-      const boundaries = await boundariesResponse.json();
+      const boundariesData = await boundariesResponse.json();
 
       // Step 3: Get demographics data
       const dataResponse = await fetch('/api/demographics/data', {
@@ -137,7 +171,9 @@ export function SiteDemographerPage() {
       setAllLsoaCodes(codes);
       setSelectedLsoaCodes(new Set(codes));
 
-      setLsoaBoundaries(boundaries);
+      // Set both inner and adjacent boundaries
+      setLsoaBoundaries(boundariesData.inner);
+      setAdjacentBoundaries(boundariesData.adjacent);
     } catch (err) {
       console.error('Error analyzing demographics:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -152,6 +188,7 @@ export function SiteDemographerPage() {
     setMeasurementValue(10);
     setRawDemographicsData(null);
     setLsoaBoundaries(null);
+    setAdjacentBoundaries(null);
     setSelectedLsoaCodes(new Set());
     setAllLsoaCodes([]);
     setError(null);
@@ -219,6 +256,7 @@ export function SiteDemographerPage() {
               center={{ lat: selectedLocation.center[1], lng: selectedLocation.center[0] }}
               radiusMiles={convertToRadiusMiles(measurementMode, measurementValue)}
               lsoaBoundaries={lsoaBoundaries}
+              adjacentBoundaries={adjacentBoundaries}
               loading={loading}
               measurementMode={measurementMode}
               measurementValue={measurementValue}

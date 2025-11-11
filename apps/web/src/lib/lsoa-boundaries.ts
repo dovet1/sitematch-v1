@@ -177,3 +177,23 @@ export function getLSOACodesInRadiusWithPolygons(
   const polygons = getLSOAPolygonsInRadius(lat, lng, radiusMiles);
   return polygons.features.map((f) => f.properties.LSOA21CD);
 }
+
+/**
+ * Get LSOA polygon features by their codes
+ * Used to fetch adjacent LSOAs after finding their codes from the neighbor table
+ */
+export function getLSOAPolygonsByCodes(
+  lsoaCodes: string[]
+): { type: 'FeatureCollection'; features: LSOAFeature[] } {
+  const boundaries = loadLSOABoundaries();
+  const codeSet = new Set(lsoaCodes);
+
+  const matchingFeatures = boundaries.features.filter((feature) =>
+    codeSet.has(feature.properties.LSOA21CD)
+  );
+
+  return {
+    type: 'FeatureCollection',
+    features: matchingFeatures,
+  };
+}
