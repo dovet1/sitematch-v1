@@ -88,215 +88,67 @@ function parseCensusCSV(filename: string, geographyCodes: string[]): CensusRow[]
   }
 
   const fileContent = fs.readFileSync(filePath, 'utf-8');
-  const records: CensusRow[] = parse(fileContent, {
+
+  // New format files have metadata headers - skip lines until we find the column header row
+  // Column header rows have "mnemonic" at the end
+  const lines = fileContent.split('\n');
+  let headerLineIndex = -1;
+
+  for (let i = 0; i < Math.min(lines.length, 20); i++) {
+    if (lines[i].includes('mnemonic') || lines[i].includes('geography code')) {
+      headerLineIndex = i;
+      break;
+    }
+  }
+
+  let contentToParse = fileContent;
+  if (headerLineIndex > 0) {
+    // Skip metadata lines and start from the header row
+    contentToParse = lines.slice(headerLineIndex).join('\n');
+  }
+
+  const records: CensusRow[] = parse(contentToParse, {
     columns: true,
     skip_empty_lines: true,
+    relax_column_count: true, // Allow rows with different column counts (handles footer text)
+    skip_records_with_error: true, // Skip rows that can't be parsed
   });
 
   // Filter to only the requested geography codes
-  return records.filter((row) => geographyCodes.includes(row['geography code']));
-}
-
-/**
- * Get population data from TS001 and TS008
- */
-export function getPopulationFromCSV(geographyCodes: string[]) {
-  // TS001: Total population
-  const ts001 = parseCensusCSV('census2021-ts001-lsoa.csv', geographyCodes);
-
-  // TS008: Sex breakdown
-  const ts008 = parseCensusCSV('census2021-ts008-lsoa.csv', geographyCodes);
-
-  let total = 0;
-  let male = 0;
-  let female = 0;
-
-  ts008.forEach((row) => {
-    total += Number(row['Sex: All persons; measures: Value'] || 0);
-    male += Number(row['Sex: Male; measures: Value'] || 0);
-    female += Number(row['Sex: Female; measures: Value'] || 0);
+  // Handle both old format (geography code) and new format (mnemonic)
+  return records.filter((row) => {
+    const geoCode = row['geography code'] || row['mnemonic'];
+    return geographyCodes.includes(geoCode);
   });
-
-  return {
-    total,
-    male,
-    male_percentage: total > 0 ? (male / total) * 100 : 0,
-    female,
-    female_percentage: total > 0 ? (female / total) * 100 : 0,
-  };
 }
 
 /**
- * Get age profile from TS007 (MSOA level)
- * For LSOA codes, we'll map to parent MSOA
+ * Extract values from a single row by matching column name patterns
  */
-export function getAgeProfileFromCSV(geographyCodes: string[], totalPopulation: number) {
-  // For now, we'll use a representative age distribution from MSOA data
-  // TODO: Implement LSOA->MSOA mapping
+function extractValuesFromRow(row: CensusRow, pattern: string): Record<string, number> {
+  const values: Record<string, number> = {};
 
-  // Use sample age distribution for UK (from 2021 Census national data)
-  const percentages = [
-    { age_group: '0-15', percentage: 18.5 },
-    { age_group: '16-24', percentage: 10.5 },
-    { age_group: '25-34', percentage: 13.8 },
-    { age_group: '35-44', percentage: 13.3 },
-    { age_group: '45-54', percentage: 13.7 },
-    { age_group: '55-64', percentage: 12.0 },
-    { age_group: '65-74', percentage: 10.1 },
-    { age_group: '75+', percentage: 8.1 },
-  ];
+  for (const key in row) {
+    if (key.includes(pattern) && key.includes('measures: Value')) {
+      let cleanKey = key
+        .replace(pattern, '')
+        .replace('; measures: Value', '')
+        .trim();
 
-  return percentages.map((item) => ({
-    age_group: item.age_group,
-    count: Math.round((item.percentage / 100) * totalPopulation),
-    percentage: item.percentage,
-  }));
-}
+      // Remove leading colon
+      cleanKey = cleanKey.replace(/^:\s*/, '');
 
-/**
- * Get household data from TS017 and TS003
- */
-export function getHouseholdDataFromCSV(geographyCodes: string[]) {
-  // TS017: Household size
-  const ts017 = parseCensusCSV('census2021-ts017-lsoa.csv', geographyCodes);
-
-  // TS003: Household composition
-  const ts003 = parseCensusCSV('census2021-ts003-lsoa.csv', geographyCodes);
-
-  let totalHouseholds = 0;
-  const sizeCounts: Record<string, number> = {};
-
-  ts017.forEach((row) => {
-    // Find the Total column (format: "Household size: Total: All household spaces; measures: Value")
-    const totalKey = Object.keys(row).find(k => k.includes('Household size: Total'));
-    const total = totalKey ? Number(row[totalKey] || 0) : 0;
-    totalHouseholds += total;
-
-    // Extract size categories (exclude Total and 0 people)
-    for (const key in row) {
-      if (key.includes('Household size:') && !key.includes('Total') && !key.includes('0 people')) {
-        const size = key.replace('Household size: ', '').replace('; measures: Value', '').trim();
-        sizeCounts[size] = (sizeCounts[size] || 0) + Number(row[key] || 0);
+      if (cleanKey && !cleanKey.toLowerCase().includes('total') && !cleanKey.toLowerCase().includes('all')) {
+        values[cleanKey] = Number(row[key] || 0);
       }
     }
-  });
+  }
 
-  const compCounts: Record<string, number> = {};
-  ts003.forEach((row) => {
-    for (const key in row) {
-      if (key.includes('Household composition:') && !key.includes('Total')) {
-        const comp = key.replace('Household composition: ', '').replace('; measures: Value', '').trim();
-        compCounts[comp] = (compCounts[comp] || 0) + Number(row[key] || 0);
-      }
-    }
-  });
-
-  // Calculate average household size
-  let totalPeople = 0;
-  Object.keys(sizeCounts).forEach((sizeKey) => {
-    const sizeMatch = sizeKey.match(/(\d+)/);
-    if (sizeMatch) {
-      totalPeople += sizeCounts[sizeKey] * parseInt(sizeMatch[1]);
-    }
-  });
-
-  const average_size = totalHouseholds > 0 ? totalPeople / totalHouseholds : 0;
-
-  // Format size distribution
-  const size_distribution = Object.keys(sizeCounts).map((size) => ({
-    size,
-    count: sizeCounts[size],
-    percentage: totalHouseholds > 0 ? (sizeCounts[size] / totalHouseholds) * 100 : 0,
-  }));
-
-  // Format composition (top 8)
-  const compTotal = Object.values(compCounts).reduce((a, b) => a + b, 0);
-  const composition = Object.keys(compCounts)
-    .map((type) => ({
-      type,
-      count: compCounts[type],
-      percentage: compTotal > 0 ? (compCounts[type] / compTotal) * 100 : 0,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 8);
-
-  return {
-    total: totalHouseholds,
-    average_size: Math.round(average_size * 100) / 100,
-    size_distribution,
-    composition,
-  };
+  return values;
 }
 
 /**
- * Get country of birth data from TS012 (LTLA level)
- */
-export function getCountryOfBirthFromCSV(geographyCodes: string[]) {
-  // TS012 only available at LTLA level
-  // For now, return UK national averages
-
-  return [
-    { country: 'England', count: 0, percentage: 84.5 },
-    { country: 'Wales', count: 0, percentage: 4.9 },
-    { country: 'Scotland', count: 0, percentage: 1.0 },
-    { country: 'Northern Ireland', count: 0, percentage: 0.5 },
-    { country: 'India', count: 0, percentage: 1.3 },
-    { country: 'Poland', count: 0, percentage: 0.9 },
-    { country: 'Pakistan', count: 0, percentage: 0.8 },
-    { country: 'Romania', count: 0, percentage: 0.6 },
-    { country: 'Ireland', count: 0, percentage: 0.5 },
-    { country: 'Other', count: 0, percentage: 5.0 },
-  ];
-}
-
-/**
- * Get deprivation data from TS011
- */
-export function getDeprivationDataFromCSV(geographyCodes: string[]) {
-  const ts011 = parseCensusCSV('census2021-ts011-lsoa.csv', geographyCodes);
-
-  const deprivationCounts: Record<string, number> = {};
-  let totalHouseholds = 0;
-
-  ts011.forEach((row) => {
-    totalHouseholds += Number(row['Household deprivation: Total; measures: Value'] || 0);
-
-    for (const key in row) {
-      if (key.includes('deprived in')) {
-        deprivationCounts[key] = (deprivationCounts[key] || 0) + Number(row[key] || 0);
-      }
-    }
-  });
-
-  // Extract specific dimensions
-  const getDimension = (keyword: string) => {
-    const key = Object.keys(deprivationCounts).find((k) => k.toLowerCase().includes(keyword));
-    return key ? deprivationCounts[key] : 0;
-  };
-
-  return {
-    employment: {
-      deprived_count: getDimension('employment'),
-      percentage: totalHouseholds > 0 ? (getDimension('employment') / totalHouseholds) * 100 : 0,
-    },
-    education: {
-      deprived_count: getDimension('education'),
-      percentage: totalHouseholds > 0 ? (getDimension('education') / totalHouseholds) * 100 : 0,
-    },
-    health: {
-      deprived_count: getDimension('health'),
-      percentage: totalHouseholds > 0 ? (getDimension('health') / totalHouseholds) * 100 : 0,
-    },
-    housing: {
-      deprived_count: getDimension('housing'),
-      percentage: totalHouseholds > 0 ? (getDimension('housing') / totalHouseholds) * 100 : 0,
-    },
-  };
-}
-
-/**
- * Get per-LSOA demographics data for client-side aggregation
- * Returns raw counts (not percentages) for each LSOA
+ * Get per-LSOA census data for all datasets
  */
 export function getPerLSOADataFromCSV(geographyCodes: string[]): Record<string, any> {
   const byLsoa: Record<string, any> = {};
@@ -305,43 +157,91 @@ export function getPerLSOADataFromCSV(geographyCodes: string[]): Record<string, 
   geographyCodes.forEach(code => {
     byLsoa[code] = {
       lsoa_code: code,
-      population: { total: 0, male: 0, female: 0 },
-      households: { total: 0 },
-      age_groups: {},
-      country_of_birth: {},
-      household_sizes: {},
+      // Population & Households
+      population_total: 0,
+      households_total: 0,
       household_composition: {},
-      household_deprivation: {
-        employment_deprived: 0,
-        education_deprived: 0,
-        health_deprived: 0,
-        housing_deprived: 0,
-      },
+      accommodation_type: {},
+      tenure: {},
+      // Demographics
+      age_groups: {},
+      ethnicity: {},
+      country_of_birth: {},
+      religion: {},
+      // Employment
+      economic_activity: {},
+      occupation: {},
+      // Education
+      qualifications: {},
+      // Mobility
+      travel_to_work: {},
+      distance_to_work: {},
+      // Health
+      general_health: {},
+      disability: {},
     };
   });
 
-  // TS008: Population by sex
-  const ts008 = parseCensusCSV('census2021-ts008-lsoa.csv', geographyCodes);
-  ts008.forEach((row) => {
-    const code = row['geography code'];
-    byLsoa[code].population = {
-      total: Number(row['Sex: All persons; measures: Value'] || 0),
-      male: Number(row['Sex: Male; measures: Value'] || 0),
-      female: Number(row['Sex: Female; measures: Value'] || 0),
-    };
+  // Helper to get code from row (handles both old and new format)
+  const getCode = (row: CensusRow) => row['geography code'] || row['mnemonic'];
+
+  // TS001: Population (total)
+  const ts001 = parseCensusCSV('census2021-ts001-lsoa.csv', geographyCodes);
+  console.log(`TS001: Loaded ${ts001.length} rows for ${geographyCodes.length} geography codes`);
+
+  if (ts001.length > 0) {
+    const firstRow = ts001[0];
+    console.log('TS001 First row code:', getCode(firstRow));
+    console.log('TS001 First row columns:', Object.keys(firstRow).slice(0, 5));
+    const totalKey = Object.keys(firstRow).find(k =>
+      (k.includes('Residence type: Total') || k.includes('Usual residents')) &&
+      k.includes('measures: Value')
+    );
+    console.log('TS001 Found total key:', totalKey);
+    if (totalKey) {
+      console.log('TS001 Sample value:', firstRow[totalKey]);
+    }
+  }
+
+  ts001.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      // Look for "Residence type: Total" or "Usual residents"
+      const totalKey = Object.keys(row).find(k =>
+        (k.includes('Residence type: Total') || k.includes('Usual residents')) &&
+        k.includes('measures: Value')
+      );
+      const value = totalKey ? Number(row[totalKey] || 0) : 0;
+      byLsoa[code].population_total = value;
+      if (value > 0) {
+        console.log(`TS001: Set ${code} population to ${value}`);
+      }
+    }
   });
 
-  // TS017: Household sizes
-  const ts017 = parseCensusCSV('census2021-ts017-lsoa.csv', geographyCodes);
-  ts017.forEach((row) => {
-    const code = row['geography code'];
-    const totalKey = Object.keys(row).find(k => k.includes('Household size: Total'));
-    byLsoa[code].households.total = totalKey ? Number(row[totalKey] || 0) : 0;
+  // TS041: Number of Households
+  const ts041 = parseCensusCSV('number-of-households-ts041.csv', geographyCodes);
+  console.log(`TS041: Loaded ${ts041.length} rows`);
 
-    for (const key in row) {
-      if (key.includes('Household size:') && !key.includes('Total') && !key.includes('0 people')) {
-        const size = key.replace('Household size: ', '').replace('; measures: Value', '').trim();
-        byLsoa[code].household_sizes[size] = Number(row[key] || 0);
+  if (ts041.length > 0) {
+    const firstRow = ts041[0];
+    console.log('TS041 First row code:', getCode(firstRow));
+    console.log('TS041 First row columns:', Object.keys(firstRow));
+    console.log('TS041 Has "Total" column:', 'Total' in firstRow);
+    console.log('TS041 Has "2021" column:', '2021' in firstRow);
+    const value = Number(firstRow['2021'] || firstRow['Number of households'] || firstRow['Total'] || 0);
+    console.log('TS041 Sample value:', value);
+  }
+
+  ts041.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      // TS041 has a single value column - it's the first column (key "2021")
+      // Or it might have "Number of households" column
+      const value = Number(row['2021'] || row['Number of households'] || row['Total'] || 0);
+      byLsoa[code].households_total = value;
+      if (value > 0) {
+        console.log(`TS041: Set ${code} households to ${value}`);
       }
     }
   });
@@ -349,71 +249,222 @@ export function getPerLSOADataFromCSV(geographyCodes: string[]): Record<string, 
   // TS003: Household composition
   const ts003 = parseCensusCSV('census2021-ts003-lsoa.csv', geographyCodes);
   ts003.forEach((row) => {
-    const code = row['geography code'];
-    for (const key in row) {
-      if (key.includes('Household composition:') && !key.includes('Total')) {
-        const comp = key.replace('Household composition: ', '').replace('; measures: Value', '').trim();
-        byLsoa[code].household_composition[comp] = Number(row[key] || 0);
-      }
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      byLsoa[code].household_composition = extractValuesFromRow(row, 'Household composition:');
     }
   });
 
-  // TS011: Deprivation
-  const ts011 = parseCensusCSV('census2021-ts011-lsoa.csv', geographyCodes);
-  ts011.forEach((row) => {
-    const code = row['geography code'];
-    for (const key in row) {
-      if (key.toLowerCase().includes('deprived in')) {
-        if (key.toLowerCase().includes('employment')) {
-          byLsoa[code].household_deprivation.employment_deprived = Number(row[key] || 0);
-        } else if (key.toLowerCase().includes('education')) {
-          byLsoa[code].household_deprivation.education_deprived = Number(row[key] || 0);
-        } else if (key.toLowerCase().includes('health')) {
-          byLsoa[code].household_deprivation.health_deprived = Number(row[key] || 0);
-        } else if (key.toLowerCase().includes('housing')) {
-          byLsoa[code].household_deprivation.housing_deprived = Number(row[key] || 0);
+  // TS044: Accommodation type
+  const ts044 = parseCensusCSV('accommodation-type-ts044.csv', geographyCodes);
+  ts044.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      // Extract columns that aren't Total or %
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        if (key !== 'Total' && key !== 'mnemonic' && key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
         }
-      }
+      });
+      byLsoa[code].accommodation_type = values;
     }
   });
 
-  // Age groups: Use UK average percentages applied to each LSOA's population
-  const agePercentages = {
-    '0-15': 18.5,
-    '16-24': 10.5,
-    '25-34': 13.8,
-    '35-44': 13.3,
-    '45-54': 13.7,
-    '55-64': 12.0,
-    '65-74': 10.1,
-    '75+': 8.1,
-  };
-  geographyCodes.forEach(code => {
-    const population = byLsoa[code].population.total;
-    Object.entries(agePercentages).forEach(([group, pct]) => {
-      byLsoa[code].age_groups[group] = Math.round((pct / 100) * population);
-    });
+  // TS054: Tenure
+  const ts054 = parseCensusCSV('tenure-ts054.csv', geographyCodes);
+  ts054.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        if (key !== 'Total' && key !== 'mnemonic' && key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
+        }
+      });
+      byLsoa[code].tenure = values;
+    }
   });
 
-  // Country of birth: Use UK average percentages applied to each LSOA's population
-  const countryPercentages: Record<string, number> = {
-    'England': 84.5,
-    'Wales': 4.9,
-    'Scotland': 1.0,
-    'Northern Ireland': 0.5,
-    'India': 1.3,
-    'Poland': 0.9,
-    'Pakistan': 0.8,
-    'Romania': 0.6,
-    'Ireland': 0.5,
-    'Other': 5.0,
-  };
-  geographyCodes.forEach(code => {
-    const population = byLsoa[code].population.total;
-    Object.entries(countryPercentages).forEach(([country, pct]) => {
-      byLsoa[code].country_of_birth[country] = Math.round((pct / 100) * population);
-    });
+  // TS007A: Age profile
+  const ts007a = parseCensusCSV('age-by-five-year-age-bands-ts007a.csv', geographyCodes);
+  ts007a.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        if (key !== 'Total' && key !== 'mnemonic' && key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
+        }
+      });
+      byLsoa[code].age_groups = values;
+    }
+  });
+
+  // TS021: Ethnic group
+  const ts021 = parseCensusCSV('ethnic-groups-ts021.csv', geographyCodes);
+  ts021.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        if (key !== 'Total: All usual residents' && key !== 'mnemonic' && key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
+        }
+      });
+      byLsoa[code].ethnicity = values;
+    }
+  });
+
+  // TS004: Country of birth
+  const ts004 = parseCensusCSV('country-of-birth-ts004.csv', geographyCodes);
+  ts004.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        // Skip Total, metadata columns, and percentage columns
+        if (key !== 'Total: All usual residents' && key !== 'Total' && key !== 'mnemonic' &&
+            key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
+        }
+      });
+      byLsoa[code].country_of_birth = values;
+    }
+  });
+
+  // TS030: Religion
+  const ts030 = parseCensusCSV('religion-ts030.csv', geographyCodes);
+  ts030.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        if (key !== 'Total: All usual residents' && key !== 'mnemonic' && key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
+        }
+      });
+      byLsoa[code].religion = values;
+    }
+  });
+
+  // TS066: Economic activity status
+  const ts066 = parseCensusCSV('economic-activity-status-ts066.csv', geographyCodes);
+  ts066.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        if (key !== 'Total: All usual residents aged 16 years and over' && key !== 'mnemonic' && key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
+        }
+      });
+      byLsoa[code].economic_activity = values;
+    }
+  });
+
+  // TS063: Occupation
+  const ts063 = parseCensusCSV('occupation-ts063.csv', geographyCodes);
+  ts063.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        if (key !== 'Total: All usual residents aged 16 years and over in employment the week before the census' && key !== 'mnemonic' && key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
+        }
+      });
+      byLsoa[code].occupation = values;
+    }
+  });
+
+  // TS067: Highest level of qualification
+  const ts067 = parseCensusCSV('highest-level-of-qualification-ts067.csv', geographyCodes);
+  ts067.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        if (key !== 'Total: All usual residents aged 16 years and over' && key !== 'mnemonic' && key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
+        }
+      });
+      byLsoa[code].qualifications = values;
+    }
+  });
+
+  // TS061: Method used to travel to work
+  const ts061 = parseCensusCSV('method-used-to-travel-to-work-ts061.csv', geographyCodes);
+  ts061.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        if (key !== 'Total: All usual residents aged 16 years and over in employment the week before the census' && key !== 'mnemonic' && key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
+        }
+      });
+      byLsoa[code].travel_to_work = values;
+    }
+  });
+
+  // TS058: Distance travelled to work
+  const ts058 = parseCensusCSV('distance-travelled-to-work-ts058.csv', geographyCodes);
+  ts058.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        if (key !== 'Total: All usual residents aged 16 years and over in employment the week before the census' && key !== 'mnemonic' && key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
+        }
+      });
+      byLsoa[code].distance_to_work = values;
+    }
+  });
+
+  // TS037: General health
+  const ts037 = parseCensusCSV('general-health-ts037.csv', geographyCodes);
+  ts037.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        if (key !== 'Total: All usual residents' && key !== 'mnemonic' && key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
+        }
+      });
+      byLsoa[code].general_health = values;
+    }
+  });
+
+  // TS038: Disability
+  const ts038 = parseCensusCSV('disability-ts038.csv', geographyCodes);
+  ts038.forEach((row) => {
+    const code = getCode(row);
+    if (byLsoa[code]) {
+      const values: Record<string, number> = {};
+      Object.keys(row).forEach(key => {
+        if (key !== 'Total: All usual residents' && key !== 'mnemonic' && key !== '2021 super output area - lower layer' && !key.includes('%')) {
+          values[key] = Number(row[key] || 0);
+        }
+      });
+      byLsoa[code].disability = values;
+    }
   });
 
   return byLsoa;
+}
+
+/**
+ * Get geography codes from Census API
+ * For now, we use the centroid-based approach
+ */
+export function getGeographyCodesFromCSV(
+  lat: number,
+  lng: number,
+  radiusMiles: number
+): { geography_codes: string[] } {
+  const codes = getLSOACodesInRadius(lat, lng, radiusMiles);
+  return { geography_codes: codes };
 }

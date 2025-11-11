@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLSOAPolygonsInRadius, getLSOAPolygonsByCodes } from '@/lib/lsoa-boundaries';
-import { createServerClient } from '@/lib/supabase';
+import { getLSOAPolygonsInRadius } from '@/lib/lsoa-boundaries';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/demographics/boundaries
  * Returns LSOA polygon boundaries for a given location and radius
- * Also returns adjacent LSOAs (neighbors) for extended map coverage
  * Used for map visualization
  */
 export async function POST(request: NextRequest) {
@@ -39,44 +37,12 @@ export async function POST(request: NextRequest) {
 
     console.log(`Fetching LSOA boundaries for lat=${lat}, lng=${lng}, radius=${radius_miles}mi`);
 
-    // Get inner LSOA polygons that intersect with the radius
-    const innerGeoJSON = getLSOAPolygonsInRadius(lat, lng, radius_miles);
-    const innerCodes = innerGeoJSON.features.map((f) => f.properties.LSOA21CD);
+    // Get LSOA polygons that intersect with the radius
+    const geoJSON = getLSOAPolygonsInRadius(lat, lng, radius_miles);
 
-    console.log(`Found ${innerCodes.length} inner LSOAs`);
+    console.log(`Returning ${geoJSON.features.length} LSOA polygons`);
 
-    // Fetch adjacent LSOAs from Supabase neighbor table
-    const supabase = createServerClient();
-    const { data: neighbors, error: neighborsError } = await supabase
-      .from('lsoa_neighbors')
-      .select('neighbor_code')
-      .in('lsoa_code', innerCodes);
-
-    if (neighborsError) {
-      console.error('Error fetching neighbors:', neighborsError);
-      // Return just inner LSOAs if neighbor fetch fails
-      return NextResponse.json({
-        inner: innerGeoJSON,
-        adjacent: { type: 'FeatureCollection', features: [] },
-      });
-    }
-
-    // Get unique neighbor codes, excluding those already in inner set
-    const innerCodeSet = new Set(innerCodes);
-    const adjacentCodes = [...new Set(neighbors?.map((n) => n.neighbor_code) || [])]
-      .filter((code) => !innerCodeSet.has(code));
-
-    console.log(`Found ${adjacentCodes.length} adjacent LSOAs`);
-
-    // Get polygons for adjacent LSOAs
-    const adjacentGeoJSON = getLSOAPolygonsByCodes(adjacentCodes);
-
-    console.log(`Returning ${innerGeoJSON.features.length} inner + ${adjacentGeoJSON.features.length} adjacent LSOA polygons`);
-
-    return NextResponse.json({
-      inner: innerGeoJSON,
-      adjacent: adjacentGeoJSON,
-    });
+    return NextResponse.json(geoJSON);
   } catch (error) {
     console.error('Error in boundaries API:', error);
 

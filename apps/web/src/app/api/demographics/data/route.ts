@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  getPopulationFromCSV,
-  getAgeProfileFromCSV,
-  getHouseholdDataFromCSV,
-  getCountryOfBirthFromCSV,
-  getDeprivationDataFromCSV,
-  getPerLSOADataFromCSV,
-} from '@/lib/census-data';
-import type { DemographicsResult, DemographicsAPIResponse } from '@/lib/types/demographics';
+import { getPerLSOADataFromCSV } from '@/lib/census-data';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/demographics/data
- * Fetches and aggregates demographics data for given geographic areas
+ * Fetches per-LSOA demographics data for given geographic areas
+ * Returns raw census data for each LSOA
  */
 export async function POST(request: NextRequest) {
   try {
@@ -28,52 +21,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Fetching demographics for ${geography_codes.length} areas from Census CSV data`);
+    console.log(`Fetching demographics for ${geography_codes.length} LSOAs from Census CSV data`);
 
-    // Fetch demographic data from local CSV files
-    const populationData = getPopulationFromCSV(geography_codes);
-    const householdData = getHouseholdDataFromCSV(geography_codes);
-    const ageProfileData = getAgeProfileFromCSV(geography_codes, populationData.total);
-    const countryOfBirthData = getCountryOfBirthFromCSV(geography_codes);
-    const deprivationData = getDeprivationDataFromCSV(geography_codes);
-
-    // Fetch per-LSOA data for client-side aggregation
+    // Fetch per-LSOA data from local CSV files
     const perLsoaData = getPerLSOADataFromCSV(geography_codes);
 
-    // Construct the aggregated result
-    const aggregated: DemographicsResult = {
-      query_info: {
-        geography_codes,
-        total_population: populationData.total,
-        area_covered_sq_km: 0, // Will be calculated based on actual areas
-      },
-      population: {
-        total: populationData.total,
-        male: populationData.male,
-        male_percentage: populationData.male_percentage,
-        female: populationData.female,
-        female_percentage: populationData.female_percentage,
-      },
-      households: {
-        total: householdData.total,
-        average_size: householdData.average_size,
-      },
-      age_profile: ageProfileData,
-      country_of_birth: countryOfBirthData,
-      household_size: householdData.size_distribution,
-      household_composition: householdData.composition,
-      household_deprivation: deprivationData,
-    };
+    console.log(`Successfully loaded demographics for ${geography_codes.length} LSOAs`);
 
-    // Construct the full response with per-LSOA data
-    const response: DemographicsAPIResponse = {
-      aggregated,
-      by_lsoa: perLsoaData,
-    };
-
-    console.log(`Successfully aggregated demographics for ${aggregated.population.total} people`);
-
-    return NextResponse.json(response);
+    return NextResponse.json({ by_lsoa: perLsoaData });
   } catch (error) {
     console.error('Error in demographics data API:', error);
 

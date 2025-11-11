@@ -8,8 +8,6 @@ import { DemographicsMap } from './DemographicsMap';
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LocationResult } from '@/lib/mapbox';
-import type { DemographicsResult, LSOADemographics, DemographicsAPIResponse } from '@/lib/types/demographics';
-import { aggregateDemographics } from '@/lib/demographics-aggregator';
 
 // Conversion constants
 const WALK_SPEED_MPH = 3;
@@ -34,28 +32,13 @@ export function SiteDemographerPage() {
   const [measurementValue, setMeasurementValue] = useState<number>(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [rawDemographicsData, setRawDemographicsData] = useState<Record<string, LSOADemographics> | null>(null);
+  const [rawDemographicsData, setRawDemographicsData] = useState<Record<string, any> | null>(null);
   const [lsoaBoundaries, setLsoaBoundaries] = useState<GeoJSON.FeatureCollection | null>(null);
-  const [adjacentBoundaries, setAdjacentBoundaries] = useState<GeoJSON.FeatureCollection | null>(null);
   const [selectedLsoaCodes, setSelectedLsoaCodes] = useState<Set<string>>(new Set());
   const [allLsoaCodes, setAllLsoaCodes] = useState<string[]>([]);
 
-  // Aggregate demographics based on selected LSOAs
-  const results = useMemo(() => {
-    if (!rawDemographicsData || selectedLsoaCodes.size === 0) return null;
-    try {
-      return aggregateDemographics(rawDemographicsData, Array.from(selectedLsoaCodes));
-    } catch (err) {
-      console.error('Error aggregating demographics:', err);
-      return null;
-    }
-  }, [rawDemographicsData, selectedLsoaCodes]);
-
   // Handle LSOA toggle
   const handleLsoaToggle = (code: string) => {
-    // Check if this LSOA already has data
-    const hasData = rawDemographicsData && code in rawDemographicsData;
-
     setSelectedLsoaCodes(prev => {
       const newSet = new Set(prev);
       if (newSet.has(code)) {
@@ -68,36 +51,6 @@ export function SiteDemographerPage() {
       }
       return newSet;
     });
-
-    // If this LSOA doesn't have data, fetch it asynchronously
-    if (!hasData) {
-      fetch('/api/demographics/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          geography_codes: [code],
-        }),
-      })
-        .then(response => response.json())
-        .then((demographicsData: DemographicsAPIResponse) => {
-          // Merge new data with existing data
-          setRawDemographicsData(prev => ({
-            ...prev,
-            ...demographicsData.by_lsoa,
-          }));
-
-          // Add to all codes list
-          setAllLsoaCodes(prev => {
-            if (!prev.includes(code)) {
-              return [...prev, code];
-            }
-            return prev;
-          });
-        })
-        .catch(error => {
-          console.error('Error fetching LSOA data:', error);
-        });
-    }
   };
 
   // Handle mode change and adjust value if needed
@@ -146,7 +99,7 @@ export function SiteDemographerPage() {
       }
 
       const geoData = await geoResponse.json();
-      const boundariesData = await boundariesResponse.json();
+      const boundaries = await boundariesResponse.json();
 
       // Step 3: Get demographics data
       const dataResponse = await fetch('/api/demographics/data', {
@@ -161,9 +114,9 @@ export function SiteDemographerPage() {
         throw new Error('Failed to fetch demographics data');
       }
 
-      const demographicsData: DemographicsAPIResponse = await dataResponse.json();
+      const demographicsData = await dataResponse.json();
 
-      // Store raw data for client-side aggregation
+      // Store raw data
       setRawDemographicsData(demographicsData.by_lsoa);
 
       // Initialize all LSOAs as selected
@@ -171,9 +124,7 @@ export function SiteDemographerPage() {
       setAllLsoaCodes(codes);
       setSelectedLsoaCodes(new Set(codes));
 
-      // Set both inner and adjacent boundaries
-      setLsoaBoundaries(boundariesData.inner);
-      setAdjacentBoundaries(boundariesData.adjacent);
+      setLsoaBoundaries(boundaries);
     } catch (err) {
       console.error('Error analyzing demographics:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -188,7 +139,6 @@ export function SiteDemographerPage() {
     setMeasurementValue(10);
     setRawDemographicsData(null);
     setLsoaBoundaries(null);
-    setAdjacentBoundaries(null);
     setSelectedLsoaCodes(new Set());
     setAllLsoaCodes([]);
     setError(null);
@@ -226,7 +176,7 @@ export function SiteDemographerPage() {
               onAnalyze={handleAnalyze}
               onReset={handleReset}
               loading={loading}
-              hasResults={!!results}
+              hasResults={!!rawDemographicsData}
             />
           </div>
         </div>
@@ -236,15 +186,16 @@ export function SiteDemographerPage() {
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Left Panel - Results */}
         <div className="flex-1 flex flex-col overflow-y-auto bg-white min-h-0">
-          <div className={results || loading ? "p-10" : "flex-1"}>
+          <div className={rawDemographicsData || loading ? "p-10" : "flex-1"}>
             <DemographicsResults
-              results={results}
               loading={loading}
               error={error}
               location={selectedLocation}
               measurementMode={measurementMode}
               measurementValue={measurementValue}
               totalLsoaCount={allLsoaCodes.length}
+              rawData={rawDemographicsData}
+              selectedLsoaCodes={selectedLsoaCodes}
             />
           </div>
         </div>
@@ -256,7 +207,6 @@ export function SiteDemographerPage() {
               center={{ lat: selectedLocation.center[1], lng: selectedLocation.center[0] }}
               radiusMiles={convertToRadiusMiles(measurementMode, measurementValue)}
               lsoaBoundaries={lsoaBoundaries}
-              adjacentBoundaries={adjacentBoundaries}
               loading={loading}
               measurementMode={measurementMode}
               measurementValue={measurementValue}

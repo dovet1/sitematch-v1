@@ -1,31 +1,51 @@
 'use client';
 
-import { Users, Home, Calendar, Globe, AlertCircle } from 'lucide-react';
-import type { DemographicsResult } from '@/lib/types/demographics';
+import { Users, Home, Briefcase, GraduationCap, Car, Heart, AlertCircle } from 'lucide-react';
 import type { LocationResult } from '@/lib/mapbox';
 import { formatLocationDisplay } from '@/lib/mapbox';
 import type { MeasurementMode } from './LocationInputPanel';
+import { useState, useMemo } from 'react';
 
 interface DemographicsResultsProps {
-  results: DemographicsResult | null;
   loading: boolean;
   error: string | null;
   location: LocationResult | null;
   measurementMode: MeasurementMode;
   measurementValue: number;
   totalLsoaCount?: number;
+  rawData?: Record<string, any> | null;
+  selectedLsoaCodes?: Set<string>;
+}
+
+type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health';
+
+const CATEGORIES: { value: CategoryType; label: string; icon: any; color: string }[] = [
+  { value: 'population', label: 'Population & Households', icon: Users, color: 'violet' },
+  { value: 'demographics', label: 'Demographics', icon: Users, color: 'blue' },
+  { value: 'employment', label: 'Employment', icon: Briefcase, color: 'green' },
+  { value: 'education', label: 'Education', icon: GraduationCap, color: 'indigo' },
+  { value: 'mobility', label: 'Mobility', icon: Car, color: 'cyan' },
+  { value: 'health', label: 'Health', icon: Heart, color: 'rose' },
+];
+
+interface ChartData {
+  label: string;
+  value: number;
+  percentage: number;
 }
 
 export function DemographicsResults({
-  results,
   loading,
   error,
   location,
   measurementMode,
   measurementValue,
   totalLsoaCount,
+  rawData,
+  selectedLsoaCodes,
 }: DemographicsResultsProps) {
-  // Format display text based on mode
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType>('population');
+
   const getMeasurementDisplay = () => {
     switch (measurementMode) {
       case 'distance':
@@ -36,8 +56,104 @@ export function DemographicsResults({
         return `${measurementValue} min walk`;
     }
   };
+
+  // Aggregate data for the selected category
+  const categoryData = useMemo(() => {
+    if (!rawData || !selectedLsoaCodes || selectedLsoaCodes.size === 0) return null;
+
+    const selectedData = Array.from(selectedLsoaCodes)
+      .map(code => rawData[code])
+      .filter(Boolean);
+
+    if (selectedData.length === 0) return null;
+
+    const aggregateData = (field: string): ChartData[] => {
+      const totals: Record<string, number> = {};
+      let grandTotal = 0;
+
+      selectedData.forEach(lsoa => {
+        const data = lsoa[field];
+        if (data && typeof data === 'object') {
+          Object.entries(data).forEach(([key, value]) => {
+            const count = Number(value) || 0;
+            totals[key] = (totals[key] || 0) + count;
+            grandTotal += count;
+          });
+        }
+      });
+
+      return Object.entries(totals)
+        .map(([label, value]) => ({
+          label,
+          value,
+          percentage: grandTotal > 0 ? (value / grandTotal) * 100 : 0,
+        }))
+        .sort((a, b) => b.value - a.value);
+    };
+
+    const getTotalPopulation = (): number => {
+      return selectedData.reduce((sum, lsoa) => sum + (lsoa.population_total || 0), 0);
+    };
+
+    const getTotalHouseholds = (): number => {
+      return selectedData.reduce((sum, lsoa) => sum + (lsoa.households_total || 0), 0);
+    };
+
+    switch (selectedCategory) {
+      case 'population':
+        return {
+          charts: [
+            { title: 'Population (total)', data: [{ label: 'Total Population', value: getTotalPopulation(), percentage: 100 }] },
+            { title: 'Number of households', data: [{ label: 'Total Households', value: getTotalHouseholds(), percentage: 100 }] },
+            { title: 'Household composition', data: aggregateData('household_composition') },
+            { title: 'Type of accommodation', data: aggregateData('accommodation_type') },
+            { title: 'Tenure', data: aggregateData('tenure') },
+          ],
+        };
+      case 'demographics':
+        return {
+          charts: [
+            { title: 'Age profile', data: aggregateData('age_groups') },
+            { title: 'Ethnic group', data: aggregateData('ethnicity') },
+            { title: 'Country of birth', data: aggregateData('country_of_birth') },
+            { title: 'Religion', data: aggregateData('religion') },
+          ],
+        };
+      case 'employment':
+        return {
+          charts: [
+            { title: 'Economic activity', data: aggregateData('economic_activity') },
+            { title: 'Occupation', data: aggregateData('occupation') },
+          ],
+        };
+      case 'education':
+        return {
+          charts: [
+            { title: 'Highest level of qualification', data: aggregateData('qualifications') },
+          ],
+        };
+      case 'mobility':
+        return {
+          charts: [
+            { title: 'Method of travel to work', data: aggregateData('travel_to_work') },
+            { title: 'Distance travelled to work', data: aggregateData('distance_to_work') },
+          ],
+        };
+      case 'health':
+        return {
+          charts: [
+            { title: 'General health', data: aggregateData('general_health') },
+            { title: 'Disability', data: aggregateData('disability') },
+          ],
+        };
+    }
+  }, [rawData, selectedLsoaCodes, selectedCategory]);
+
+  const formatNumber = (num: number) => num.toLocaleString();
+  const formatPercentage = (num: number) => `${num.toFixed(1)}%`;
+
   // Empty State
-  if (!loading && !results && !error) {
+  if (!loading && !rawData && !error) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center max-w-md px-8">
@@ -63,8 +179,8 @@ export function DemographicsResults({
         <div className="animate-pulse space-y-6">
           <div className="h-10 bg-gray-100 rounded-lg w-1/3" />
           <div className="space-y-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-48 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl" />
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-64 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl" />
             ))}
           </div>
         </div>
@@ -90,214 +206,100 @@ export function DemographicsResults({
   }
 
   // Results State
-  if (!results) return null;
+  if (!rawData) return null;
 
-  const formatNumber = (num: number) => num.toLocaleString();
-  const formatPercentage = (num: number) => `${num.toFixed(1)}%`;
+  const selectedCount = selectedLsoaCodes?.size || 0;
 
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="sticky top-0 bg-white pb-6 z-10">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Demographics Report</h2>
-        {location && (
-          <p className="text-sm text-gray-500">
-            {formatLocationDisplay(location)} • {getMeasurementDisplay()} •{' '}
-            {totalLsoaCount && totalLsoaCount > results.query_info.geography_codes.length ? (
-              <>
-                <span className="font-medium text-violet-600">
-                  {results.query_info.geography_codes.length} of {totalLsoaCount} areas
-                </span>
-                {' '}selected
-              </>
-            ) : (
-              <span>{results.query_info.geography_codes.length} areas analyzed</span>
-            )}
-          </p>
-        )}
+      <div className="sticky top-0 bg-white pb-6 z-10 space-y-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Demographics Report</h2>
+          {location && (
+            <p className="text-sm text-gray-500">
+              {formatLocationDisplay(location)} • {getMeasurementDisplay()} •{' '}
+              {totalLsoaCount && totalLsoaCount > selectedCount ? (
+                <>
+                  <span className="font-medium text-violet-600">
+                    {selectedCount} of {totalLsoaCount} areas
+                  </span>
+                  {' '}selected
+                </>
+              ) : (
+                <span>{selectedCount} areas analyzed</span>
+              )}
+            </p>
+          )}
+        </div>
+
+        {/* Category Selector */}
+        <div>
+          <label htmlFor="category-select" className="block text-sm font-medium text-gray-700 mb-2">
+            Select Category
+          </label>
+          <select
+            id="category-select"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value as CategoryType)}
+            className="block w-full max-w-md px-4 py-2.5 text-base border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white"
+          >
+            {CATEGORIES.map((category) => (
+              <option key={category.value} value={category.value}>
+                {category.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* Cards Stack */}
-      <div className="space-y-6">
-        {/* Population Card */}
-        <div className="bg-gradient-to-br from-white to-violet-50/30 p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl shadow-sm">
-              <Users className="h-5 w-5 text-white" />
-            </div>
-            <h3 className="font-semibold text-gray-900 text-base">Population</h3>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <p className="text-4xl font-bold text-gray-900">
-                {formatNumber(results.population.total)}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">Total Population</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-              <div>
-                <p className="text-lg font-semibold text-gray-900">
-                  {formatPercentage(results.population.male_percentage)}
-                </p>
-                <p className="text-sm text-gray-500 mt-0.5">Male</p>
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-gray-900">
-                  {formatPercentage(results.population.female_percentage)}
-                </p>
-                <p className="text-sm text-gray-500 mt-0.5">Female</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Charts */}
+      <div className="space-y-8">
+        {categoryData?.charts.map((chart, index) => (
+          <div key={index} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h3 className="font-semibold text-gray-900 text-lg mb-6">{chart.title}</h3>
 
-        {/* Households Card */}
-        <div className="bg-gradient-to-br from-white to-blue-50/30 p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-sm">
-              <Home className="h-5 w-5 text-white" />
-            </div>
-            <h3 className="font-semibold text-gray-900 text-base">Households</h3>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <p className="text-4xl font-bold text-gray-900">
-                {formatNumber(results.households.total)}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">Total Households</p>
-            </div>
-            <div className="pt-4 border-t border-gray-200">
-              <p className="text-lg font-semibold text-gray-900">
-                {results.households.average_size.toFixed(2)} people
-              </p>
-              <p className="text-sm text-gray-500 mt-0.5">Average Household Size</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Age Profile Card */}
-        <div className="bg-gradient-to-br from-white to-green-50/30 p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-sm">
-              <Calendar className="h-5 w-5 text-white" />
-            </div>
-            <h3 className="font-semibold text-gray-900 text-base">Age Profile</h3>
-          </div>
-          <div className="space-y-3">
-            {results.age_profile.map((group) => (
-              <div key={group.age_group} className="flex items-center justify-between py-1.5">
-                <span className="text-sm text-gray-600 w-20">{group.age_group}</span>
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all"
-                      style={{ width: `${group.percentage}%` }}
-                    />
+            {chart.data.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No data available</div>
+            ) : chart.data.length === 1 && chart.data[0].label.includes('Total') ? (
+              // Special display for totals
+              <div className="text-center py-4">
+                <p className="text-5xl font-bold text-gray-900 mb-2">
+                  {formatNumber(chart.data[0].value)}
+                </p>
+                <p className="text-sm text-gray-500">{chart.data[0].label}</p>
+              </div>
+            ) : (
+              // Bar chart for other data
+              <div className="space-y-3">
+                {chart.data.slice(0, 15).map((item, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700 truncate flex-1 mr-4">{item.label}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-gray-500 text-xs">{formatNumber(item.value)}</span>
+                        <span className="font-medium text-gray-900 w-12 text-right">
+                          {formatPercentage(item.percentage)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(item.percentage, 100)}%` }}
+                      />
+                    </div>
                   </div>
-                  <span className="text-sm font-medium text-gray-900 w-12 text-right">
-                    {formatPercentage(group.percentage)}
-                  </span>
-                </div>
+                ))}
+                {chart.data.length > 15 && (
+                  <p className="text-sm text-gray-500 mt-4 text-center">
+                    Showing top 15 of {chart.data.length} items
+                  </p>
+                )}
               </div>
-            ))}
+            )}
           </div>
-        </div>
-
-        {/* Country of Birth Card */}
-        <div className="bg-gradient-to-br from-white to-orange-50/30 p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-sm">
-              <Globe className="h-5 w-5 text-white" />
-            </div>
-            <h3 className="font-semibold text-gray-900 text-base">Country of Birth</h3>
-          </div>
-          <div className="space-y-2.5">
-            {results.country_of_birth.slice(0, 8).map((country) => (
-              <div key={country.country} className="flex items-center justify-between py-1">
-                <span className="text-sm text-gray-600 truncate flex-1">{country.country}</span>
-                <span className="text-sm font-medium text-gray-900 ml-3">
-                  {formatPercentage(country.percentage)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Household Size Card */}
-        <div className="bg-gradient-to-br from-white to-purple-50/30 p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 bg-gradient-to-br from-purple-500 to-fuchsia-600 rounded-xl shadow-sm">
-              <Users className="h-5 w-5 text-white" />
-            </div>
-            <h3 className="font-semibold text-gray-900 text-base">Household Size</h3>
-          </div>
-          <div className="space-y-2.5">
-            {results.household_size.map((size) => (
-              <div key={size.size} className="flex items-center justify-between py-1">
-                <span className="text-sm text-gray-600 flex-1">{size.size}</span>
-                <span className="text-sm font-medium text-gray-900">
-                  {formatPercentage(size.percentage)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Household Composition Card */}
-        <div className="bg-gradient-to-br from-white to-pink-50/30 p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl shadow-sm">
-              <Home className="h-5 w-5 text-white" />
-            </div>
-            <h3 className="font-semibold text-gray-900 text-base">Household Composition</h3>
-          </div>
-          <div className="space-y-2.5">
-            {results.household_composition.map((comp) => (
-              <div key={comp.type} className="flex items-center justify-between py-1">
-                <span className="text-sm text-gray-600 truncate flex-1">{comp.type}</span>
-                <span className="text-sm font-medium text-gray-900 ml-3">
-                  {formatPercentage(comp.percentage)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Household Deprivation Card */}
-        <div className="bg-gradient-to-br from-white to-red-50/30 p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl shadow-sm">
-              <AlertCircle className="h-5 w-5 text-white" />
-            </div>
-            <h3 className="font-semibold text-gray-900 text-base">Household Deprivation</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-5">
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {formatPercentage(results.household_deprivation.employment.percentage)}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">Employment</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {formatPercentage(results.household_deprivation.education.percentage)}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">Education</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {formatPercentage(results.household_deprivation.health.percentage)}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">Health</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {formatPercentage(results.household_deprivation.housing.percentage)}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">Housing</p>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );
