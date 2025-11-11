@@ -217,6 +217,7 @@ export function DemographicsMap({
         id: 'lsoa-fill',
         type: 'fill',
         source: 'lsoa-boundaries',
+        layout: {},
         paint: {
           // Selected: violet, Deselected: gray
           'fill-color': [
@@ -234,6 +235,8 @@ export function DemographicsMap({
           ],
         },
       }, beforeLayer);
+
+      console.log('LSOA fill layer added, features count:', lsoaBoundaries.features.length);
 
       // Add LSOA outline layer
       map.current.addLayer({
@@ -272,14 +275,20 @@ export function DemographicsMap({
   // Add click handlers for LSOA interaction (separate from layer creation)
   useEffect(() => {
     if (!map.current || !mapLoaded || !lsoaBoundaries) return;
-    if (!map.current.getLayer('lsoa-fill')) return;
+    if (!map.current.getLayer('lsoa-fill')) {
+      console.log('lsoa-fill layer not found, cannot attach click handlers');
+      return;
+    }
+    console.log('Attaching click handlers to lsoa-fill layer');
 
     // Click handler to toggle LSOA selection
     const handleClick = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+      console.log('LSOA click event triggered', e.features);
       if (!e.features || e.features.length === 0) return;
 
       const feature = e.features[0];
       const lsoaCode = feature.properties?.LSOA21CD;
+      console.log('Clicked LSOA code:', lsoaCode);
 
       if (lsoaCode) {
         onLsoaToggle(lsoaCode);
