@@ -46,6 +46,7 @@ export function DemographicsMap({
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const handlersAttached = useRef(false);
+  const lastCenter = useRef<{ lat: number; lng: number } | null>(null);
 
   // Calculate zoom level based on radius (larger radius = more zoomed out)
   const calculateZoom = (radius: number): number => {
@@ -87,12 +88,20 @@ export function DemographicsMap({
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    // Fly to new center with appropriate zoom for radius
-    map.current.flyTo({
-      center: [center.lng, center.lat],
-      zoom: calculateZoom(radiusMiles),
-      essential: true,
-    });
+    // Check if the center has actually changed (new location search)
+    const centerChanged = !lastCenter.current ||
+      lastCenter.current.lat !== center.lat ||
+      lastCenter.current.lng !== center.lng;
+
+    // Only fly to location when the center actually changes (new location search)
+    if (centerChanged) {
+      map.current.flyTo({
+        center: [center.lng, center.lat],
+        zoom: calculateZoom(radiusMiles),
+        essential: true,
+      });
+      lastCenter.current = { lat: center.lat, lng: center.lng };
+    }
 
     // Remove existing marker
     const existingMarker = document.querySelector('.demographics-marker');
