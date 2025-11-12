@@ -169,20 +169,20 @@ export function DemographicsMap({
         type: 'fill',
         source: 'radius-circle',
         paint: {
-          'fill-color': '#ffffff',
+          'fill-color': '#fbbf24', // Amber/yellow
           'fill-opacity': 0.05,
         },
       });
 
-      // Add circle outline layer
+      // Add circle outline layer - yellow dashed line to distinguish from LSOA boundaries
       map.current.addLayer({
         id: 'radius-circle-outline',
         type: 'line',
         source: 'radius-circle',
         paint: {
-          'line-color': '#ffffff',
+          'line-color': '#fbbf24', // Amber/yellow
           'line-width': 3,
-          'line-dasharray': [4, 3],
+          'line-dasharray': [6, 4], // Longer dashes for distinction
         },
       });
     };
@@ -238,14 +238,14 @@ export function DemographicsMap({
         source: 'lsoa-boundaries',
         layout: {},
         paint: {
-          'fill-color': '#22d3ee', // Cyan
+          'fill-color': '#7c3aed', // Purple
           'fill-opacity': 0.3,
         },
       }, firstSymbolId);
 
       console.log('LSOA fill layer added, features count:', lsoaBoundaries.features.length);
 
-      // Add LSOA outline layer with bright color for visibility
+      // Add LSOA outline layer with white color
       map.current.addLayer({
         id: 'lsoa-outline',
         type: 'line',
@@ -376,24 +376,19 @@ export function DemographicsMap({
     map.current.setPaintProperty('lsoa-fill', 'fill-color', [
       'case',
       ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-      '#22d3ee', // Selected: bright cyan
+      '#7c3aed', // Selected: purple
       '#64748b'  // Deselected: muted slate gray
     ]);
 
     map.current.setPaintProperty('lsoa-fill', 'fill-opacity', [
       'case',
       ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-      0.4, // Selected: more visible
+      0.3, // Selected: 30% opacity
       0.15 // Deselected: very subtle
     ]);
 
-    // Update outline layer paint properties
-    map.current.setPaintProperty('lsoa-outline', 'line-color', [
-      'case',
-      ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-      '#ffffff', // Selected: bright white
-      '#94a3b8'  // Deselected: light gray
-    ]);
+    // Update outline layer paint properties - white for both
+    map.current.setPaintProperty('lsoa-outline', 'line-color', '#ffffff');
 
     map.current.setPaintProperty('lsoa-outline', 'line-width', [
       'case',
