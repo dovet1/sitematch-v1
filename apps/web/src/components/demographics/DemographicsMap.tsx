@@ -65,7 +65,7 @@ export function DemographicsMap({
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
+      style: 'mapbox://styles/mapbox/satellite-streets-v12',
       center: [center.lng, center.lat],
       zoom: calculateZoom(radiusMiles),
     });
@@ -160,8 +160,8 @@ export function DemographicsMap({
         type: 'fill',
         source: 'radius-circle',
         paint: {
-          'fill-color': '#7c3aed',
-          'fill-opacity': 0.1,
+          'fill-color': '#ffffff',
+          'fill-opacity': 0.05,
         },
       });
 
@@ -171,9 +171,9 @@ export function DemographicsMap({
         type: 'line',
         source: 'radius-circle',
         paint: {
-          'line-color': '#7c3aed',
-          'line-width': 2,
-          'line-dasharray': [2, 2],
+          'line-color': '#ffffff',
+          'line-width': 3,
+          'line-dasharray': [4, 3],
         },
       });
     };
@@ -209,31 +209,43 @@ export function DemographicsMap({
         data: lsoaBoundaries,
       });
 
+      // Find the first symbol layer (labels) to insert boundaries before it
+      const layers = map.current.getStyle().layers;
+      let firstSymbolId: string | undefined;
+      for (const layer of layers || []) {
+        if (layer.type === 'symbol') {
+          firstSymbolId = layer.id;
+          break;
+        }
+      }
+
+      console.log('Inserting LSOA layers before:', firstSymbolId);
+
       // Add LSOA fill layer with initial styling (will be updated by separate effect)
-      const beforeLayer = map.current.getLayer('radius-circle-fill') ? 'radius-circle-fill' : undefined;
+      // Insert before the first symbol layer so labels appear on top
       map.current.addLayer({
         id: 'lsoa-fill',
         type: 'fill',
         source: 'lsoa-boundaries',
         layout: {},
         paint: {
-          'fill-color': '#7c3aed',
-          'fill-opacity': 0.5,
+          'fill-color': '#22d3ee', // Cyan
+          'fill-opacity': 0.3,
         },
-      }, beforeLayer);
+      }, firstSymbolId);
 
       console.log('LSOA fill layer added, features count:', lsoaBoundaries.features.length);
 
-      // Add LSOA outline layer
+      // Add LSOA outline layer with bright color for visibility
       map.current.addLayer({
         id: 'lsoa-outline',
         type: 'line',
         source: 'lsoa-boundaries',
         paint: {
-          'line-color': '#5b21b6',
+          'line-color': '#ffffff',
           'line-width': 2,
         },
-      });
+      }, firstSymbolId);
     };
 
     // Use idle event instead of style.load to ensure map is fully ready after flyTo
@@ -355,23 +367,30 @@ export function DemographicsMap({
     map.current.setPaintProperty('lsoa-fill', 'fill-color', [
       'case',
       ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-      '#7c3aed', // Selected: violet
-      '#9ca3af'  // Deselected: gray
+      '#22d3ee', // Selected: bright cyan
+      '#64748b'  // Deselected: muted slate gray
     ]);
 
     map.current.setPaintProperty('lsoa-fill', 'fill-opacity', [
       'case',
       ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-      0.5, // Selected
-      0.25 // Deselected
+      0.4, // Selected: more visible
+      0.15 // Deselected: very subtle
     ]);
 
     // Update outline layer paint properties
     map.current.setPaintProperty('lsoa-outline', 'line-color', [
       'case',
       ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-      '#5b21b6', // Selected: dark violet
-      '#6b7280'  // Deselected: medium gray
+      '#ffffff', // Selected: bright white
+      '#94a3b8'  // Deselected: light gray
+    ]);
+
+    map.current.setPaintProperty('lsoa-outline', 'line-width', [
+      'case',
+      ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
+      2.5, // Selected: thicker
+      1.5  // Deselected: thinner
     ]);
   }, [selectedLsoaCodes, mapLoaded, lsoaBoundaries]);
 
