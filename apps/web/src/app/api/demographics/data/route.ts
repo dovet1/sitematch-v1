@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAggregatedLSOAMetrics, convertAggregatedToLSOAData } from '@/lib/supabase-census-data';
+import {
+  getAggregatedLSOAMetrics,
+  convertAggregatedToLSOAData,
+  getAggregatedAffluence
+} from '@/lib/supabase-census-data';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,11 +27,19 @@ export async function POST(request: NextRequest) {
 
     console.log(`Fetching aggregated demographics for ${geography_codes.length} LSOAs from Supabase`);
 
-    // Fetch aggregated data from Supabase using RPC function
-    const aggregatedMetrics = await getAggregatedLSOAMetrics(geography_codes);
+    // Fetch both census metrics and affluence data in parallel
+    const [aggregatedMetrics, affluenceData] = await Promise.all([
+      getAggregatedLSOAMetrics(geography_codes),
+      getAggregatedAffluence(geography_codes),
+    ]);
 
     // Convert to single aggregated LSOAData structure for backward compatibility
     const aggregatedData = convertAggregatedToLSOAData(aggregatedMetrics);
+
+    // Add affluence data if available
+    if (affluenceData) {
+      aggregatedData.affluence = affluenceData;
+    }
 
     // Return as single "aggregated" LSOA for frontend
     const response = {
@@ -36,7 +48,7 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    console.log(`Successfully loaded ${aggregatedMetrics.length} aggregated metrics for ${geography_codes.length} LSOAs`);
+    console.log(`Successfully loaded ${aggregatedMetrics.length} aggregated metrics${affluenceData ? ' and affluence data' : ''} for ${geography_codes.length} LSOAs`);
 
     return NextResponse.json(response);
   } catch (error) {

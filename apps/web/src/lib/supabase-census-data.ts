@@ -29,6 +29,12 @@ interface AggregatedMetric {
   national_avg_pct: number | null;
 }
 
+interface AffluenceData {
+  avg_raw_score: number;
+  calculated_category: 'A' | 'B' | 'C' | 'D' | 'E';
+  lsoa_count: number;
+}
+
 interface LSOAData {
   lsoa_code: string;
   lsoa_name?: string;
@@ -54,6 +60,8 @@ interface LSOAData {
   // Health
   general_health: Record<string, number>;
   disability: Record<string, number>;
+  // Affluence
+  affluence?: AffluenceData;
 }
 
 /**
@@ -285,4 +293,33 @@ export function convertAggregatedToLSOAData(
   });
 
   return lsoaData;
+}
+
+/**
+ * Fetch aggregated affluence scores for selected LSOA codes from Supabase
+ * Uses server-side aggregation via RPC function for better performance
+ */
+export async function getAggregatedAffluence(
+  geographyCodes: string[]
+): Promise<AffluenceData | null> {
+  console.log(`[Supabase] Fetching aggregated affluence for ${geographyCodes.length} LSOAs`);
+
+  const { data, error } = await supabase.rpc('get_lsoa_affluence_agg', {
+    selected_geo_codes: geographyCodes,
+  });
+
+  if (error) {
+    console.error('[Supabase] Error fetching aggregated affluence:', error);
+    throw new Error(`Failed to fetch aggregated affluence: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    console.warn('[Supabase] No affluence data found for selected LSOAs');
+    return null;
+  }
+
+  const affluenceData = data[0] as AffluenceData;
+  console.log(`[Supabase] Affluence: Category ${affluenceData.calculated_category}, Score: ${affluenceData.avg_raw_score}, Count: ${affluenceData.lsoa_count}`);
+
+  return affluenceData;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, Home, Briefcase, GraduationCap, Car, Heart, AlertCircle } from 'lucide-react';
+import { Users, Home, Briefcase, GraduationCap, Car, Heart, AlertCircle, TrendingUp } from 'lucide-react';
 import type { LocationResult } from '@/lib/mapbox';
 import { formatLocationDisplay } from '@/lib/mapbox';
 import type { MeasurementMode } from './LocationInputPanel';
@@ -17,7 +17,7 @@ interface DemographicsResultsProps {
   selectedLsoaCodes?: Set<string>;
 }
 
-type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health';
+type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health' | 'affluence';
 
 const CATEGORIES: { value: CategoryType; label: string; icon: any; color: string }[] = [
   { value: 'population', label: 'Population & Households', icon: Users, color: 'violet' },
@@ -26,6 +26,7 @@ const CATEGORIES: { value: CategoryType; label: string; icon: any; color: string
   { value: 'education', label: 'Education', icon: GraduationCap, color: 'indigo' },
   { value: 'mobility', label: 'Mobility', icon: Car, color: 'cyan' },
   { value: 'health', label: 'Health', icon: Heart, color: 'rose' },
+  { value: 'affluence', label: 'Affluence', icon: TrendingUp, color: 'emerald' },
 ];
 
 interface ChartData {
@@ -136,6 +137,28 @@ export function DemographicsResults({
           charts: [
             { title: 'General health', data: aggregateData('general_health') },
             { title: 'Disability', data: aggregateData('disability') },
+          ],
+        };
+      case 'affluence':
+        if (!aggregatedData.affluence) {
+          return {
+            charts: [
+              { title: 'Affluence Score', data: [{ label: 'No data available', value: 0, percentage: 0 }] },
+            ],
+          };
+        }
+        return {
+          charts: [
+            {
+              title: 'Affluence Score',
+              data: [
+                {
+                  label: `Category ${aggregatedData.affluence.calculated_category} (${aggregatedData.affluence.avg_raw_score.toFixed(1)})`,
+                  value: aggregatedData.affluence.avg_raw_score,
+                  percentage: 100,
+                },
+              ],
+            },
           ],
         };
     }
