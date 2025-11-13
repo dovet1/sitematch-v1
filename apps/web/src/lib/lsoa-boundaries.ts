@@ -5,13 +5,9 @@
 
 import fs from 'fs';
 import path from 'path';
-import proj4 from 'proj4';
 import * as turf from '@turf/turf';
 
 const CENSUS_DATA_DIR = path.join(process.cwd(), 'data', 'census2021');
-
-// Define British National Grid (EPSG:27700) projection
-proj4.defs('EPSG:27700', '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +towgs84=446.448,-125.157,542.06,0.15,0.247,0.842,-20.489 +units=m +no_defs');
 
 interface LSOAFeature {
   type: 'Feature';
@@ -37,70 +33,35 @@ interface LSOAGeoJSON {
 let lsoaBoundaries: LSOAGeoJSON | null = null;
 
 /**
- * Load LSOA boundaries GeoJSON and convert to WGS84
+ * Load LSOA boundaries GeoJSON (pre-converted to WGS84)
+ * Note: Boundaries are pre-converted using scripts/convert-lsoa-boundaries.ts
  */
 function loadLSOABoundaries(): LSOAGeoJSON {
   if (lsoaBoundaries) {
     return lsoaBoundaries;
   }
 
+  // Use pre-converted WGS84 file for faster loading
   const filePath = path.join(
     CENSUS_DATA_DIR,
-    'Lower_layer_Super_Output_Areas_December_2021_Boundaries_EW_BGC_V5.geojson'
+    'Lower_layer_Super_Output_Areas_December_2021_Boundaries_EW_WGS84.geojson'
   );
 
   if (!fs.existsSync(filePath)) {
     console.error('LSOA boundaries file not found:', filePath);
+    console.error('Run: npx tsx scripts/convert-lsoa-boundaries.ts');
     return { type: 'FeatureCollection', features: [] };
   }
 
-  console.log('Loading LSOA boundaries (this may take a moment)...');
+  console.log('Loading LSOA boundaries (pre-converted to WGS84)...');
   const fileContent = fs.readFileSync(filePath, 'utf-8');
   const geoJSON: LSOAGeoJSON = JSON.parse(fileContent);
-
-  // Convert coordinates from British National Grid to WGS84 (lat/lng)
-  console.log('Converting coordinates from EPSG:27700 to WGS84...');
-  geoJSON.features = geoJSON.features.map((feature) => {
-    const convertedCoords = convertCoordinates(feature.geometry.coordinates, feature.geometry.type);
-    return {
-      ...feature,
-      geometry: {
-        ...feature.geometry,
-        coordinates: convertedCoords,
-      },
-    };
-  });
 
   lsoaBoundaries = geoJSON;
   console.log(`Loaded ${lsoaBoundaries.features.length} LSOA boundaries`);
   return lsoaBoundaries;
 }
 
-/**
- * Convert coordinates from EPSG:27700 (British National Grid) to WGS84
- */
-function convertCoordinates(coords: any, geomType: string): any {
-  if (geomType === 'Polygon') {
-    // Polygon: array of rings, each ring is array of [x, y] points
-    return coords.map((ring: any[]) =>
-      ring.map((point: number[]) => {
-        const [lng, lat] = proj4('EPSG:27700', 'EPSG:4326', point);
-        return [lng, lat];
-      })
-    );
-  } else if (geomType === 'MultiPolygon') {
-    // MultiPolygon: array of polygons
-    return coords.map((polygon: any[]) =>
-      polygon.map((ring: any[]) =>
-        ring.map((point: number[]) => {
-          const [lng, lat] = proj4('EPSG:27700', 'EPSG:4326', point);
-          return [lng, lat];
-        })
-      )
-    );
-  }
-  return coords;
-}
 
 /**
  * Check if an LSOA polygon intersects with a radius circle

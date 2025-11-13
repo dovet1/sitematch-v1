@@ -248,10 +248,11 @@ export function DemographicsMap({
         map.current.removeSource('lsoa-boundaries');
       }
 
-      // Add LSOA boundaries source
+      // Add LSOA boundaries source with promoteId for feature-state
       map.current.addSource('lsoa-boundaries', {
         type: 'geojson',
         data: lsoaBoundaries,
+        promoteId: 'LSOA21CD', // Use LSOA code as stable feature ID
       });
 
       // Find the first symbol layer (labels) to insert boundaries before it
@@ -264,7 +265,7 @@ export function DemographicsMap({
         }
       }
 
-      // Add LSOA fill layer with initial styling (will be updated by separate effect)
+      // Add LSOA fill layer with feature-state driven styling
       // Insert before the first symbol layer so labels appear on top
       map.current.addLayer({
         id: 'lsoa-fill',
@@ -272,19 +273,34 @@ export function DemographicsMap({
         source: 'lsoa-boundaries',
         layout: {},
         paint: {
-          'fill-color': '#7c3aed', // Purple
-          'fill-opacity': 0.3,
+          'fill-color': [
+            'case',
+            ['boolean', ['feature-state', 'selected'], false],
+            '#7c3aed',   // Selected: purple
+            '#64748b'    // Deselected: muted slate gray
+          ],
+          'fill-opacity': [
+            'case',
+            ['boolean', ['feature-state', 'selected'], false],
+            0.3,   // Selected: 30% opacity
+            0.15   // Deselected: 15% opacity
+          ],
         },
       }, firstSymbolId);
 
-      // Add LSOA outline layer with white color
+      // Add LSOA outline layer with feature-state driven width
       map.current.addLayer({
         id: 'lsoa-outline',
         type: 'line',
         source: 'lsoa-boundaries',
         paint: {
           'line-color': '#ffffff',
-          'line-width': 2,
+          'line-width': [
+            'case',
+            ['boolean', ['feature-state', 'selected'], false],
+            2.5,  // Selected: thicker
+            1.5   // Deselected: thinner
+          ],
         },
       }, firstSymbolId);
     };
@@ -408,38 +424,21 @@ export function DemographicsMap({
     };
   }, [lsoaBoundaries, mapLoaded, onLsoaToggle]);
 
-  // Update layer styling when selection changes (without recreating layers)
+  // Update feature-state when selection changes - O(n) where n = number of LSOAs in view
   useEffect(() => {
     if (!map.current || !mapLoaded || !lsoaBoundaries) return;
     if (!map.current.getLayer('lsoa-fill')) return;
 
-    const selectedCodesArray = Array.from(selectedLsoaCodes);
-
-    // Update fill layer paint properties
-    map.current.setPaintProperty('lsoa-fill', 'fill-color', [
-      'case',
-      ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-      '#7c3aed', // Selected: purple
-      '#64748b'  // Deselected: muted slate gray
-    ]);
-
-    map.current.setPaintProperty('lsoa-fill', 'fill-opacity', [
-      'case',
-      ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-      0.3, // Selected: 30% opacity
-      0.15 // Deselected: very subtle
-    ]);
-
-    // Update outline layer paint properties - white for both
-    map.current.setPaintProperty('lsoa-outline', 'line-color', '#ffffff');
-
-    map.current.setPaintProperty('lsoa-outline', 'line-width', [
-      'case',
-      ['in', ['get', 'LSOA21CD'], ['literal', selectedCodesArray]],
-      2.5, // Selected: thicker
-      1.5  // Deselected: thinner
-    ]);
-  }, [selectedLsoaCodes, mapLoaded, lsoaBoundaries]);
+    // Set feature-state for all LSOAs based on selection
+    // This is much faster than rebuilding paint expressions
+    allLsoaCodes.forEach((code) => {
+      const isSelected = selectedLsoaCodes.has(code);
+      map.current?.setFeatureState(
+        { source: 'lsoa-boundaries', id: code },
+        { selected: isSelected }
+      );
+    });
+  }, [selectedLsoaCodes, mapLoaded, lsoaBoundaries, allLsoaCodes]);
 
   return (
     <div className="absolute inset-0 w-full h-full">
