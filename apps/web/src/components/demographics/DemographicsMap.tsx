@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { MeasurementMode } from './LocationInputPanel';
+import type { LSOATooltipData } from '@/lib/supabase-census-data';
 
 // Set your Mapbox access token
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
@@ -18,6 +19,7 @@ interface DemographicsMapProps {
   selectedLsoaCodes: Set<string>;
   allLsoaCodes: string[];
   onLsoaToggle: (code: string) => void;
+  lsoaTooltipData: Record<string, LSOATooltipData>;
 }
 
 export function DemographicsMap({
@@ -30,6 +32,7 @@ export function DemographicsMap({
   selectedLsoaCodes,
   allLsoaCodes,
   onLsoaToggle,
+  lsoaTooltipData,
 }: DemographicsMapProps) {
   // Format display text based on mode
   const getMeasurementDisplay = () => {
@@ -48,6 +51,7 @@ export function DemographicsMap({
   const handlersAttached = useRef(false);
   const lastCenter = useRef<{ lat: number; lng: number } | null>(null);
   const lastRadius = useRef<number | null>(null);
+  const popup = useRef<mapboxgl.Popup | null>(null);
 
   // Calculate zoom level based on radius (larger radius = more zoomed out)
   const calculateZoom = (radius: number): number => {
@@ -320,16 +324,54 @@ export function DemographicsMap({
         }
       };
 
-      // Cursor handlers
-      const handleMouseEnter = () => {
-        if (map.current) {
-          map.current.getCanvas().style.cursor = 'pointer';
+      // Hover handlers with popup
+      const handleMouseEnter = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+        if (!map.current) return;
+        map.current.getCanvas().style.cursor = 'pointer';
+
+        // Show tooltip popup
+        if (e.features && e.features.length > 0) {
+          const feature = e.features[0];
+          const lsoaCode = feature.properties?.LSOA21CD;
+          const tooltipInfo = lsoaTooltipData[lsoaCode];
+
+          if (tooltipInfo) {
+            const coordinates = e.lngLat;
+            let popupHTML = `<div style="padding: 8px; min-width: 200px;">
+              <div style="font-weight: 600; margin-bottom: 4px; color: #374151;">${tooltipInfo.geo_name}</div>
+              <div style="font-size: 13px; color: #6B7280; margin-bottom: 2px;">Population: ${tooltipInfo.population.toLocaleString()}</div>`;
+
+            if (tooltipInfo.affluence_score && tooltipInfo.affluence_category) {
+              popupHTML += `<div style="font-size: 13px; color: #6B7280;">Affluence: ${tooltipInfo.affluence_category} (${tooltipInfo.affluence_score.toFixed(1)})</div>`;
+            }
+
+            popupHTML += `</div>`;
+
+            // Remove existing popup if any
+            if (popup.current) {
+              popup.current.remove();
+            }
+
+            popup.current = new mapboxgl.Popup({
+              closeButton: false,
+              closeOnClick: false,
+              offset: 10,
+            })
+              .setLngLat(coordinates)
+              .setHTML(popupHTML)
+              .addTo(map.current);
+          }
         }
       };
 
       const handleMouseLeave = () => {
         if (map.current) {
           map.current.getCanvas().style.cursor = '';
+        }
+        // Remove popup
+        if (popup.current) {
+          popup.current.remove();
+          popup.current = null;
         }
       };
 

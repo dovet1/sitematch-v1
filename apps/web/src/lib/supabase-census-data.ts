@@ -35,6 +35,14 @@ interface AffluenceData {
   lsoa_count: number;
 }
 
+export interface LSOATooltipData {
+  geo_code: string;
+  geo_name: string;
+  population: number;
+  affluence_score: number | null;
+  affluence_category: string | null;
+}
+
 interface LSOAData {
   lsoa_code: string;
   lsoa_name?: string;
@@ -322,4 +330,63 @@ export async function getAggregatedAffluence(
   console.log(`[Supabase] Affluence: Category ${affluenceData.calculated_category}, Score: ${affluenceData.avg_raw_score}, Count: ${affluenceData.lsoa_count}`);
 
   return affluenceData;
+}
+
+/**
+ * Fetch per-LSOA tooltip data (name, population, affluence) for map hovers
+ */
+export async function getLSOATooltipData(
+  geographyCodes: string[]
+): Promise<Record<string, LSOATooltipData>> {
+  console.log(`[Supabase] Fetching tooltip data for ${geographyCodes.length} LSOAs`);
+
+  // Fetch population data
+  const { data: populationData, error: popError } = await supabase
+    .from('lsoa_metrics')
+    .select('geo_code, geo_name, numerator')
+    .in('geo_code', geographyCodes)
+    .eq('component_id', 'population_total')
+    .eq('edition', '2021');
+
+  if (popError) {
+    console.error('[Supabase] Error fetching population data:', popError);
+    throw new Error(`Failed to fetch population data: ${popError.message}`);
+  }
+
+  // Fetch affluence data
+  const { data: affluenceData, error: affError } = await supabase
+    .from('lsoa_affluence_scores')
+    .select('geo_code, geo_name, raw_score, category')
+    .in('geo_code', geographyCodes);
+
+  if (affError) {
+    console.error('[Supabase] Error fetching affluence data:', affError);
+    // Don't throw - affluence is optional
+  }
+
+  // Combine into tooltip data structure
+  const tooltipData: Record<string, LSOATooltipData> = {};
+
+  // Add population data
+  populationData?.forEach((row: any) => {
+    tooltipData[row.geo_code] = {
+      geo_code: row.geo_code,
+      geo_name: row.geo_name || row.geo_code,
+      population: row.numerator || 0,
+      affluence_score: null,
+      affluence_category: null,
+    };
+  });
+
+  // Add affluence data
+  affluenceData?.forEach((row: any) => {
+    if (tooltipData[row.geo_code]) {
+      tooltipData[row.geo_code].affluence_score = row.raw_score;
+      tooltipData[row.geo_code].affluence_category = row.category;
+    }
+  });
+
+  console.log(`[Supabase] Fetched tooltip data for ${Object.keys(tooltipData).length} LSOAs`);
+
+  return tooltipData;
 }

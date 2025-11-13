@@ -8,6 +8,7 @@ import { DemographicsMap } from './DemographicsMap';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LocationResult } from '@/lib/mapbox';
+import type { LSOATooltipData } from '@/lib/supabase-census-data';
 
 // Conversion constants
 const WALK_SPEED_MPH = 3;
@@ -38,6 +39,7 @@ export function SiteDemographerPage() {
   const [allLsoaCodes, setAllLsoaCodes] = useState<string[]>([]);
   const [isRefetchingData, setIsRefetchingData] = useState(false);
   const initialLoadComplete = useRef(false);
+  const [lsoaTooltipData, setLsoaTooltipData] = useState<Record<string, LSOATooltipData>>({});
 
   // Re-fetch aggregated data when selection changes
   useEffect(() => {
@@ -139,23 +141,34 @@ export function SiteDemographerPage() {
       const geoData = await geoResponse.json();
       const boundaries = await boundariesResponse.json();
 
-      // Step 3: Get demographics data
-      const dataResponse = await fetch('/api/demographics/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          geography_codes: geoData.geography_codes,
+      // Step 3: Get demographics data and tooltip data in parallel
+      const [dataResponse, tooltipResponse] = await Promise.all([
+        fetch('/api/demographics/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            geography_codes: geoData.geography_codes,
+          }),
         }),
-      });
+        fetch('/api/demographics/tooltip-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            geography_codes: geoData.geography_codes,
+          }),
+        }),
+      ]);
 
       if (!dataResponse.ok) {
         throw new Error('Failed to fetch demographics data');
       }
 
       const demographicsData = await dataResponse.json();
+      const tooltipData = await tooltipResponse.json();
 
       // Store raw data
       setRawDemographicsData(demographicsData.by_lsoa);
+      setLsoaTooltipData(tooltipData.tooltip_data || {});
 
       // Initialize all LSOAs as selected (use geography codes from API)
       setAllLsoaCodes(geoData.geography_codes);
@@ -252,6 +265,7 @@ export function SiteDemographerPage() {
               selectedLsoaCodes={selectedLsoaCodes}
               allLsoaCodes={allLsoaCodes}
               onLsoaToggle={handleLsoaToggle}
+              lsoaTooltipData={lsoaTooltipData}
             />
           ) : (
             <div className="h-full flex items-center justify-center">
