@@ -153,7 +153,7 @@ export function DemographicsResults({
               title: 'Affluence Score',
               data: [
                 {
-                  label: `Category ${aggregatedData.affluence.calculated_category} (${aggregatedData.affluence.avg_raw_score.toFixed(1)})`,
+                  label: `Score: ${aggregatedData.affluence.avg_raw_score.toFixed(1)}`,
                   value: aggregatedData.affluence.avg_raw_score,
                   percentage: 100,
                 },

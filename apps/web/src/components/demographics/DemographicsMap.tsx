@@ -51,7 +51,7 @@ export function DemographicsMap({
   const handlersAttached = useRef(false);
   const lastCenter = useRef<{ lat: number; lng: number } | null>(null);
   const lastRadius = useRef<number | null>(null);
-  const popup = useRef<mapboxgl.Popup | null>(null);
+  const [hoveredLsoa, setHoveredLsoa] = useState<LSOATooltipData | null>(null);
 
   // Calculate zoom level based on radius (larger radius = more zoomed out)
   const calculateZoom = (radius: number): number => {
@@ -324,10 +324,10 @@ export function DemographicsMap({
         }
       };
 
-      // Hover handlers with popup
+      // Hover handlers with info box
       let currentLsoaCode: string | null = null;
 
-      const updatePopup = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+      const updateHoverInfo = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
         if (!map.current || !e.features || e.features.length === 0) return;
 
         const feature = e.features[0];
@@ -338,54 +338,26 @@ export function DemographicsMap({
         currentLsoaCode = lsoaCode;
 
         const tooltipInfo = lsoaTooltipData[lsoaCode];
-
         if (tooltipInfo) {
-          const coordinates = e.lngLat;
-          let popupHTML = `<div style="padding: 8px; min-width: 200px;">
-            <div style="font-weight: 600; margin-bottom: 4px; color: #374151;">${tooltipInfo.geo_name}</div>
-            <div style="font-size: 13px; color: #6B7280; margin-bottom: 2px;">Population: ${tooltipInfo.population.toLocaleString()}</div>`;
-
-          if (tooltipInfo.affluence_score && tooltipInfo.affluence_category) {
-            popupHTML += `<div style="font-size: 13px; color: #6B7280;">Affluence: ${tooltipInfo.affluence_category} (${tooltipInfo.affluence_score.toFixed(1)})</div>`;
-          }
-
-          popupHTML += `</div>`;
-
-          // Remove existing popup if any
-          if (popup.current) {
-            popup.current.remove();
-          }
-
-          popup.current = new mapboxgl.Popup({
-            closeButton: false,
-            closeOnClick: false,
-            offset: 10,
-          })
-            .setLngLat(coordinates)
-            .setHTML(popupHTML)
-            .addTo(map.current);
+          setHoveredLsoa(tooltipInfo);
         }
       };
 
       const handleMouseEnter = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
         if (!map.current) return;
         map.current.getCanvas().style.cursor = 'pointer';
-        updatePopup(e);
+        updateHoverInfo(e);
       };
 
       const handleMouseMove = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
-        updatePopup(e);
+        updateHoverInfo(e);
       };
 
       const handleMouseLeave = () => {
         if (map.current) {
           map.current.getCanvas().style.cursor = '';
         }
-        // Remove popup
-        if (popup.current) {
-          popup.current.remove();
-          popup.current = null;
-        }
+        setHoveredLsoa(null);
         currentLsoaCode = null;
       };
 
@@ -453,6 +425,26 @@ export function DemographicsMap({
   return (
     <div className="absolute inset-0 w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
+
+      {/* LSOA Info Box - Top Right */}
+      {hoveredLsoa && (
+        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 min-w-[240px] z-10">
+          <div className="font-semibold text-gray-900 mb-2">{hoveredLsoa.geo_name}</div>
+          <div className="space-y-1 text-sm text-gray-600">
+            <div>
+              <span className="font-medium">Population:</span>{' '}
+              {hoveredLsoa.population.toLocaleString()}
+            </div>
+            {hoveredLsoa.affluence_score && (
+              <div>
+                <span className="font-medium">Affluence:</span>{' '}
+                {hoveredLsoa.affluence_score.toFixed(1)}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {loading && (
         <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
           <div className="text-center">

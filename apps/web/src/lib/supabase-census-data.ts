@@ -31,7 +31,6 @@ interface AggregatedMetric {
 
 interface AffluenceData {
   avg_raw_score: number;
-  calculated_category: 'A' | 'B' | 'C' | 'D' | 'E';
   lsoa_count: number;
 }
 
@@ -40,7 +39,6 @@ export interface LSOATooltipData {
   geo_name: string;
   population: number;
   affluence_score: number | null;
-  affluence_category: string | null;
 }
 
 interface LSOAData {
@@ -327,7 +325,7 @@ export async function getAggregatedAffluence(
   }
 
   const affluenceData = data[0] as AffluenceData;
-  console.log(`[Supabase] Affluence: Category ${affluenceData.calculated_category}, Score: ${affluenceData.avg_raw_score}, Count: ${affluenceData.lsoa_count}`);
+  console.log(`[Supabase] Affluence: Score: ${affluenceData.avg_raw_score}, Count: ${affluenceData.lsoa_count}`);
 
   return affluenceData;
 }
@@ -356,7 +354,7 @@ export async function getLSOATooltipData(
   // Fetch affluence data
   const { data: affluenceData, error: affError } = await supabase
     .from('lsoa_affluence_scores')
-    .select('geo_code, geo_name, raw_score, category')
+    .select('geo_code, geo_name, affluence_score_100')
     .in('geo_code', geographyCodes);
 
   if (affError) {
@@ -374,15 +372,13 @@ export async function getLSOATooltipData(
       geo_name: row.geo_name || row.geo_code,
       population: row.numerator || 0,
       affluence_score: null,
-      affluence_category: null,
     };
   });
 
   // Add affluence data
   affluenceData?.forEach((row: any) => {
     if (tooltipData[row.geo_code]) {
-      tooltipData[row.geo_code].affluence_score = row.raw_score;
-      tooltipData[row.geo_code].affluence_category = row.category;
+      tooltipData[row.geo_code].affluence_score = row.affluence_score_100;
     }
   });
 
