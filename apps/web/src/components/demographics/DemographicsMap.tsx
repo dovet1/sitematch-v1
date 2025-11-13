@@ -13,6 +13,7 @@ interface DemographicsMapProps {
   center: { lat: number; lng: number };
   radiusMiles: number;
   lsoaBoundaries: GeoJSON.FeatureCollection | null;
+  isochroneGeometry: any;
   loading: boolean;
   measurementMode: MeasurementMode;
   measurementValue: number;
@@ -26,6 +27,7 @@ export function DemographicsMap({
   center,
   radiusMiles,
   lsoaBoundaries,
+  isochroneGeometry,
   loading,
   measurementMode,
   measurementValue,
@@ -133,27 +135,14 @@ export function DemographicsMap({
       lastCenter.current.lng !== center.lng;
     const radiusChanged = lastRadius.current !== radiusMiles;
 
-    // Only redraw circle if center or radius actually changed
-    if (!centerChanged && !radiusChanged) return;
+    // Only redraw if something actually changed (allow redraw when isochrone arrives)
+    // Note: isochroneGeometry is in the dependency array, so this effect will re-run when it changes
+    if (!centerChanged && !radiusChanged && isochroneGeometry === null) return;
 
     const addCircle = () => {
       if (!map.current || !map.current.isStyleLoaded()) return;
 
-      const radiusMeters = radiusMiles * 1609.34;
-
-      // Create circle coordinates
-      const circleCoords: [number, number][] = [];
-      const steps = 64;
-      for (let i = 0; i <= steps; i++) {
-        const angle = (i / steps) * 2 * Math.PI;
-        const lat = center.lat + (radiusMeters / 111320) * Math.cos(angle);
-        const lng =
-          center.lng +
-          (radiusMeters / (111320 * Math.cos((center.lat * Math.PI) / 180))) * Math.sin(angle);
-        circleCoords.push([lng, lat]);
-      }
-
-      // Remove existing circle source and layer
+      // Remove existing overlay source and layers
       if (map.current.getSource('radius-circle')) {
         if (map.current.getLayer('radius-circle-fill')) {
           map.current.removeLayer('radius-circle-fill');
@@ -164,20 +153,51 @@ export function DemographicsMap({
         map.current.removeSource('radius-circle');
       }
 
-      // Add circle source
+      // Determine which geometry to use
+      let geometry: any;
+
+      console.log('[DemographicsMap] isochroneGeometry:', isochroneGeometry);
+      console.log('[DemographicsMap] measurementMode:', measurementMode);
+
+      if (isochroneGeometry) {
+        // Use isochrone polygon for time-based modes
+        console.log('[DemographicsMap] Using isochrone geometry');
+        geometry = isochroneGeometry;
+      } else {
+        // Create circle coordinates for distance mode
+        console.log('[DemographicsMap] Using circular radius geometry');
+        const radiusMeters = radiusMiles * 1609.34;
+        const circleCoords: [number, number][] = [];
+        const steps = 64;
+        for (let i = 0; i <= steps; i++) {
+          const angle = (i / steps) * 2 * Math.PI;
+          const lat = center.lat + (radiusMeters / 111320) * Math.cos(angle);
+          const lng =
+            center.lng +
+            (radiusMeters / (111320 * Math.cos((center.lat * Math.PI) / 180))) * Math.sin(angle);
+          circleCoords.push([lng, lat]);
+        }
+
+        geometry = {
+          type: 'Polygon',
+          coordinates: [circleCoords],
+        };
+      }
+
+      console.log('[DemographicsMap] Final geometry type:', geometry?.type);
+      console.log('[DemographicsMap] Geometry coordinates length:', geometry?.coordinates?.[0]?.length);
+
+      // Add overlay source
       map.current.addSource('radius-circle', {
         type: 'geojson',
         data: {
           type: 'Feature',
-          geometry: {
-            type: 'Polygon',
-            coordinates: [circleCoords],
-          },
+          geometry: geometry,
           properties: {},
         },
       });
 
-      // Add circle fill layer
+      // Add overlay fill layer
       map.current.addLayer({
         id: 'radius-circle-fill',
         type: 'fill',
@@ -188,7 +208,7 @@ export function DemographicsMap({
         },
       });
 
-      // Add circle outline layer - yellow dashed line to distinguish from LSOA boundaries
+      // Add overlay outline layer - yellow solid line to distinguish from LSOA boundaries
       map.current.addLayer({
         id: 'radius-circle-outline',
         type: 'line',
@@ -196,7 +216,6 @@ export function DemographicsMap({
         paint: {
           'line-color': '#fbbf24', // Amber/yellow
           'line-width': 3,
-          'line-dasharray': [6, 4], // Longer dashes for distinction
         },
       });
 
@@ -209,7 +228,7 @@ export function DemographicsMap({
     } else {
       map.current.once('style.load', addCircle);
     }
-  }, [center, radiusMiles, mapLoaded]);
+  }, [center, radiusMiles, isochroneGeometry, mapLoaded]);
 
   // Draw LSOA boundaries (initial setup - only when boundaries change)
   useEffect(() => {

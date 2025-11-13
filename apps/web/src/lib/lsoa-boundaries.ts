@@ -197,3 +197,70 @@ export function getLSOAPolygonsByCodes(
     features: matchingFeatures,
   };
 }
+
+/**
+ * Check if an LSOA polygon intersects with an isochrone polygon
+ */
+function doesLSOAIntersectIsochrone(
+  lsoaFeature: LSOAFeature,
+  isochroneCoordinates: number[][][]
+): boolean {
+  try {
+    // Validate coordinates
+    if (!lsoaFeature.geometry.coordinates || lsoaFeature.geometry.coordinates.length === 0) {
+      return false;
+    }
+
+    // Create isochrone polygon
+    const isochronePolygon = turf.polygon(isochroneCoordinates);
+
+    // Handle both Polygon and MultiPolygon for LSOA
+    let lsoaGeometry: any;
+    if (lsoaFeature.geometry.type === 'Polygon') {
+      lsoaGeometry = turf.polygon(lsoaFeature.geometry.coordinates as any);
+    } else if (lsoaFeature.geometry.type === 'MultiPolygon') {
+      lsoaGeometry = turf.multiPolygon(lsoaFeature.geometry.coordinates as any);
+    } else {
+      return false;
+    }
+
+    // Check if they intersect
+    return turf.booleanIntersects(isochronePolygon, lsoaGeometry);
+  } catch (error) {
+    // Silently skip invalid polygons
+    return false;
+  }
+}
+
+/**
+ * Get LSOA polygons that intersect with an isochrone polygon
+ * Returns filtered GeoJSON with only matching LSOAs
+ */
+export function getLSOAPolygonsInIsochrone(
+  isochroneCoordinates: number[][][]
+): { type: 'FeatureCollection'; features: LSOAFeature[] } {
+  const boundaries = loadLSOABoundaries();
+
+  console.log(`Filtering ${boundaries.features.length} LSOAs for isochrone polygon...`);
+
+  const matchingFeatures = boundaries.features.filter((feature) =>
+    doesLSOAIntersectIsochrone(feature, isochroneCoordinates)
+  );
+
+  console.log(`Found ${matchingFeatures.length} LSOAs intersecting isochrone`);
+
+  return {
+    type: 'FeatureCollection',
+    features: matchingFeatures,
+  };
+}
+
+/**
+ * Get LSOA codes that intersect with an isochrone polygon
+ */
+export function getLSOACodesInIsochrone(
+  isochroneCoordinates: number[][][]
+): string[] {
+  const polygons = getLSOAPolygonsInIsochrone(isochroneCoordinates);
+  return polygons.features.map((f) => f.properties.LSOA21CD);
+}

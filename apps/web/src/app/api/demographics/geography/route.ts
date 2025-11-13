@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLSOACodesInRadiusWithPolygons } from '@/lib/lsoa-boundaries';
+import { getLSOACodesInRadiusWithPolygons, getLSOACodesInIsochrone } from '@/lib/lsoa-boundaries';
 import { calculateCircleArea } from '@/lib/geography-utils';
+import { fetchIsochrone, getModeProfile } from '@/lib/mapbox-isochrone';
 
 export const dynamic = 'force-dynamic';
 
+type MeasurementMode = 'distance' | 'drive_time' | 'walk_time';
+
 /**
  * POST /api/demographics/geography
- * Resolves geographic area codes within a radius of a location
+ * Resolves geographic area codes within a radius/isochrone of a location
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { lat, lng, radius_miles } = body;
+    const { lat, lng, radius_miles, measurement_mode = 'distance' } = body;
 
     // Validation
     if (typeof lat !== 'number' || typeof lng !== 'number' || typeof radius_miles !== 'number') {
@@ -35,10 +38,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Resolving geography for lat=${lat}, lng=${lng}, radius=${radius_miles}mi`);
+    console.log(`Resolving geography for lat=${lat}, lng=${lng}, measurement=${measurement_mode}, value=${radius_miles}`);
 
-    // Get LSOA codes using polygon intersection (includes LSOAs partially in radius)
-    const codes = getLSOACodesInRadiusWithPolygons(lat, lng, radius_miles);
+    let codes: string[];
+    let isochroneGeometry: any = null;
+
+    // Use isochrone for time-based measurements, circular radius for distance
+    if (measurement_mode === 'drive_time' || measurement_mode === 'walk_time') {
+      console.log(`[Geography API] Fetching ${measurement_mode} isochrone...`);
+
+      const profile = getModeProfile(measurement_mode);
+      const isochroneResult = await fetchIsochrone(lat, lng, radius_miles, profile);
+
+      isochroneGeometry = isochroneResult.geometry;
+      codes = getLSOACodesInIsochrone(isochroneResult.geometry.coordinates);
+
+      console.log(`[Geography API] Isochrone returned ${codes.length} LSOAs`);
+    } else {
+      // Distance mode - use circular radius
+      codes = getLSOACodesInRadiusWithPolygons(lat, lng, radius_miles);
+      console.log(`[Geography API] Circular radius returned ${codes.length} LSOAs`);
+    }
+
     const areaType = 'LSOA';
 
     if (codes.length === 0) {
@@ -60,8 +81,10 @@ export async function POST(request: NextRequest) {
       coverage_info: {
         center: { lat, lng },
         radius_miles,
+        measurement_mode,
         approximate_area_sq_km: Math.round(area_sq_km * 10) / 10,
       },
+      isochrone_geometry: isochroneGeometry,
     });
   } catch (error) {
     console.error('Error in geography API:', error);
