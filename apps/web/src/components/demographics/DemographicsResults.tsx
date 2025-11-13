@@ -57,46 +57,38 @@ export function DemographicsResults({
     }
   };
 
-  // Aggregate data for the selected category
+  // Process aggregated data for the selected category
   const categoryData = useMemo(() => {
-    if (!rawData || !selectedLsoaCodes || selectedLsoaCodes.size === 0) return null;
+    if (!rawData) return null;
 
-    const selectedData = Array.from(selectedLsoaCodes)
-      .map(code => rawData[code])
-      .filter(Boolean);
-
-    if (selectedData.length === 0) return null;
+    // Data is now pre-aggregated from the server
+    const aggregatedData = rawData['aggregated'];
+    if (!aggregatedData) return null;
 
     const aggregateData = (field: string): ChartData[] => {
-      const totals: Record<string, number> = {};
-      let grandTotal = 0;
+      const data = aggregatedData[field];
+      if (!data || typeof data !== 'object') return [];
 
-      selectedData.forEach(lsoa => {
-        const data = lsoa[field];
-        if (data && typeof data === 'object') {
-          Object.entries(data).forEach(([key, value]) => {
-            const count = Number(value) || 0;
-            totals[key] = (totals[key] || 0) + count;
-            grandTotal += count;
-          });
-        }
+      let grandTotal = 0;
+      Object.values(data).forEach(value => {
+        grandTotal += Number(value) || 0;
       });
 
-      return Object.entries(totals)
+      return Object.entries(data)
         .map(([label, value]) => ({
           label,
-          value,
-          percentage: grandTotal > 0 ? (value / grandTotal) * 100 : 0,
+          value: Number(value) || 0,
+          percentage: grandTotal > 0 ? (Number(value) / grandTotal) * 100 : 0,
         }))
         .sort((a, b) => b.value - a.value);
     };
 
     const getTotalPopulation = (): number => {
-      return selectedData.reduce((sum, lsoa) => sum + (lsoa.population_total || 0), 0);
+      return aggregatedData.population_total || 0;
     };
 
     const getTotalHouseholds = (): number => {
-      return selectedData.reduce((sum, lsoa) => sum + (lsoa.households_total || 0), 0);
+      return aggregatedData.households_total || 0;
     };
 
     switch (selectedCategory) {
@@ -147,7 +139,7 @@ export function DemographicsResults({
           ],
         };
     }
-  }, [rawData, selectedLsoaCodes, selectedCategory]);
+  }, [rawData, selectedCategory]);
 
   const formatNumber = (num: number) => num.toLocaleString();
   const formatPercentage = (num: number) => `${num.toFixed(1)}%`;

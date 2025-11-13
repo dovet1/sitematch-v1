@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { LocationInputPanel, type MeasurementMode } from './LocationInputPanel';
 import { DemographicsResults } from './DemographicsResults';
 import { DemographicsMap } from './DemographicsMap';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LocationResult } from '@/lib/mapbox';
 
@@ -36,6 +36,44 @@ export function SiteDemographerPage() {
   const [lsoaBoundaries, setLsoaBoundaries] = useState<GeoJSON.FeatureCollection | null>(null);
   const [selectedLsoaCodes, setSelectedLsoaCodes] = useState<Set<string>>(new Set());
   const [allLsoaCodes, setAllLsoaCodes] = useState<string[]>([]);
+  const [isRefetchingData, setIsRefetchingData] = useState(false);
+  const initialLoadComplete = useRef(false);
+
+  // Re-fetch aggregated data when selection changes
+  useEffect(() => {
+    // Skip if no initial data loaded yet
+    if (!initialLoadComplete.current || selectedLsoaCodes.size === 0) return;
+
+    const fetchAggregatedData = async () => {
+      setIsRefetchingData(true);
+      try {
+        const codes = Array.from(selectedLsoaCodes);
+        const dataResponse = await fetch('/api/demographics/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            geography_codes: codes,
+          }),
+        });
+
+        if (!dataResponse.ok) {
+          throw new Error('Failed to fetch demographics data');
+        }
+
+        const demographicsData = await dataResponse.json();
+        setRawDemographicsData(demographicsData.by_lsoa);
+      } catch (err) {
+        console.error('Error refetching demographics:', err);
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setIsRefetchingData(false);
+      }
+    };
+
+    // Debounce to avoid too many API calls
+    const timeoutId = setTimeout(fetchAggregatedData, 300);
+    return () => clearTimeout(timeoutId);
+  }, [selectedLsoaCodes]);
 
   // Handle LSOA toggle
   const handleLsoaToggle = (code: string) => {
@@ -119,10 +157,10 @@ export function SiteDemographerPage() {
       // Store raw data
       setRawDemographicsData(demographicsData.by_lsoa);
 
-      // Initialize all LSOAs as selected
-      const codes = Object.keys(demographicsData.by_lsoa);
-      setAllLsoaCodes(codes);
-      setSelectedLsoaCodes(new Set(codes));
+      // Initialize all LSOAs as selected (use geography codes from API)
+      setAllLsoaCodes(geoData.geography_codes);
+      setSelectedLsoaCodes(new Set(geoData.geography_codes));
+      initialLoadComplete.current = true;
 
       setLsoaBoundaries(boundaries);
     } catch (err) {
@@ -142,6 +180,7 @@ export function SiteDemographerPage() {
     setSelectedLsoaCodes(new Set());
     setAllLsoaCodes([]);
     setError(null);
+    initialLoadComplete.current = false;
   };
 
   return (

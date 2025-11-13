@@ -47,6 +47,7 @@ export function DemographicsMap({
   const [mapLoaded, setMapLoaded] = useState(false);
   const handlersAttached = useRef(false);
   const lastCenter = useRef<{ lat: number; lng: number } | null>(null);
+  const lastRadius = useRef<number | null>(null);
 
   // Calculate zoom level based on radius (larger radius = more zoomed out)
   const calculateZoom = (radius: number): number => {
@@ -122,6 +123,15 @@ export function DemographicsMap({
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
+    // Check if center or radius has actually changed
+    const centerChanged = !lastCenter.current ||
+      lastCenter.current.lat !== center.lat ||
+      lastCenter.current.lng !== center.lng;
+    const radiusChanged = lastRadius.current !== radiusMiles;
+
+    // Only redraw circle if center or radius actually changed
+    if (!centerChanged && !radiusChanged) return;
+
     const addCircle = () => {
       if (!map.current || !map.current.isStyleLoaded()) return;
 
@@ -185,6 +195,9 @@ export function DemographicsMap({
           'line-dasharray': [6, 4], // Longer dashes for distinction
         },
       });
+
+      // Update last radius
+      lastRadius.current = radiusMiles;
     };
 
     if (map.current.isStyleLoaded()) {
@@ -228,8 +241,6 @@ export function DemographicsMap({
         }
       }
 
-      console.log('Inserting LSOA layers before:', firstSymbolId);
-
       // Add LSOA fill layer with initial styling (will be updated by separate effect)
       // Insert before the first symbol layer so labels appear on top
       map.current.addLayer({
@@ -242,8 +253,6 @@ export function DemographicsMap({
           'fill-opacity': 0.3,
         },
       }, firstSymbolId);
-
-      console.log('LSOA fill layer added, features count:', lsoaBoundaries.features.length);
 
       // Add LSOA outline layer with white color
       map.current.addLayer({
@@ -276,15 +285,8 @@ export function DemographicsMap({
   // Add click handlers after layers are created
   useEffect(() => {
     if (!map.current || !mapLoaded || !lsoaBoundaries) {
-      console.log('[DemographicsMap] Not ready for handlers:', {
-        hasMap: !!map.current,
-        mapLoaded,
-        hasBoundaries: !!lsoaBoundaries
-      });
       return;
     }
-
-    console.log('[DemographicsMap] Starting to attach click handlers');
 
     let timeoutId: NodeJS.Timeout;
     let handlerCleanup: (() => void) | undefined;
@@ -292,33 +294,26 @@ export function DemographicsMap({
     // Wait for layer to exist
     const checkAndAttachHandlers = () => {
       if (!map.current) {
-        console.log('[DemographicsMap] Map ref lost');
         return;
       }
 
       // Check if layer exists
       if (!map.current.getLayer('lsoa-fill')) {
-        console.log('[DemographicsMap] Layer not found, retrying in 100ms...');
         // Try again after a short delay
         timeoutId = setTimeout(checkAndAttachHandlers, 100);
         return;
       }
 
       if (handlersAttached.current) {
-        console.log('[DemographicsMap] Handlers already attached');
         return;
       }
 
-      console.log('[DemographicsMap] ✅ Attaching click handlers NOW');
-
       // Click handler to toggle LSOA selection
       const handleClick = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
-        console.log('[DemographicsMap] 🖱️ LSOA click event triggered', e.features);
         if (!e.features || e.features.length === 0) return;
 
         const feature = e.features[0];
         const lsoaCode = feature.properties?.LSOA21CD;
-        console.log('[DemographicsMap] Clicked LSOA code:', lsoaCode);
 
         if (lsoaCode) {
           onLsoaToggle(lsoaCode);
@@ -347,7 +342,6 @@ export function DemographicsMap({
 
       // Store cleanup function
       handlerCleanup = () => {
-        console.log('[DemographicsMap] Cleaning up handlers');
         if (map.current) {
           map.current.off('click', 'lsoa-fill', handleClick);
           map.current.off('mouseenter', 'lsoa-fill', handleMouseEnter);

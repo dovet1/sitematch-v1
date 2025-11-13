@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPerLSOADataFromCSV } from '@/lib/census-data';
+import { getAggregatedLSOAMetrics, convertAggregatedToLSOAData } from '@/lib/supabase-census-data';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/demographics/data
- * Fetches per-LSOA demographics data for given geographic areas
- * Returns raw census data for each LSOA
+ * Fetches aggregated demographics data for given geographic areas from Supabase
+ * Uses server-side aggregation for better performance and smaller payload
  */
 export async function POST(request: NextRequest) {
   try {
@@ -21,14 +21,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Fetching demographics for ${geography_codes.length} LSOAs from Census CSV data`);
+    console.log(`Fetching aggregated demographics for ${geography_codes.length} LSOAs from Supabase`);
 
-    // Fetch per-LSOA data from local CSV files
-    const perLsoaData = getPerLSOADataFromCSV(geography_codes);
+    // Fetch aggregated data from Supabase using RPC function
+    const aggregatedMetrics = await getAggregatedLSOAMetrics(geography_codes);
 
-    console.log(`Successfully loaded demographics for ${geography_codes.length} LSOAs`);
+    // Convert to single aggregated LSOAData structure for backward compatibility
+    const aggregatedData = convertAggregatedToLSOAData(aggregatedMetrics);
 
-    return NextResponse.json({ by_lsoa: perLsoaData });
+    // Return as single "aggregated" LSOA for frontend
+    const response = {
+      by_lsoa: {
+        aggregated: aggregatedData,
+      },
+    };
+
+    console.log(`Successfully loaded ${aggregatedMetrics.length} aggregated metrics for ${geography_codes.length} LSOAs`);
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Error in demographics data API:', error);
 
