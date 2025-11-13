@@ -325,43 +325,56 @@ export function DemographicsMap({
       };
 
       // Hover handlers with popup
+      let currentLsoaCode: string | null = null;
+
+      const updatePopup = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+        if (!map.current || !e.features || e.features.length === 0) return;
+
+        const feature = e.features[0];
+        const lsoaCode = feature.properties?.LSOA21CD;
+
+        // Only update if LSOA has changed
+        if (lsoaCode === currentLsoaCode) return;
+        currentLsoaCode = lsoaCode;
+
+        const tooltipInfo = lsoaTooltipData[lsoaCode];
+
+        if (tooltipInfo) {
+          const coordinates = e.lngLat;
+          let popupHTML = `<div style="padding: 8px; min-width: 200px;">
+            <div style="font-weight: 600; margin-bottom: 4px; color: #374151;">${tooltipInfo.geo_name}</div>
+            <div style="font-size: 13px; color: #6B7280; margin-bottom: 2px;">Population: ${tooltipInfo.population.toLocaleString()}</div>`;
+
+          if (tooltipInfo.affluence_score && tooltipInfo.affluence_category) {
+            popupHTML += `<div style="font-size: 13px; color: #6B7280;">Affluence: ${tooltipInfo.affluence_category} (${tooltipInfo.affluence_score.toFixed(1)})</div>`;
+          }
+
+          popupHTML += `</div>`;
+
+          // Remove existing popup if any
+          if (popup.current) {
+            popup.current.remove();
+          }
+
+          popup.current = new mapboxgl.Popup({
+            closeButton: false,
+            closeOnClick: false,
+            offset: 10,
+          })
+            .setLngLat(coordinates)
+            .setHTML(popupHTML)
+            .addTo(map.current);
+        }
+      };
+
       const handleMouseEnter = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
         if (!map.current) return;
         map.current.getCanvas().style.cursor = 'pointer';
+        updatePopup(e);
+      };
 
-        // Show tooltip popup
-        if (e.features && e.features.length > 0) {
-          const feature = e.features[0];
-          const lsoaCode = feature.properties?.LSOA21CD;
-          const tooltipInfo = lsoaTooltipData[lsoaCode];
-
-          if (tooltipInfo) {
-            const coordinates = e.lngLat;
-            let popupHTML = `<div style="padding: 8px; min-width: 200px;">
-              <div style="font-weight: 600; margin-bottom: 4px; color: #374151;">${tooltipInfo.geo_name}</div>
-              <div style="font-size: 13px; color: #6B7280; margin-bottom: 2px;">Population: ${tooltipInfo.population.toLocaleString()}</div>`;
-
-            if (tooltipInfo.affluence_score && tooltipInfo.affluence_category) {
-              popupHTML += `<div style="font-size: 13px; color: #6B7280;">Affluence: ${tooltipInfo.affluence_category} (${tooltipInfo.affluence_score.toFixed(1)})</div>`;
-            }
-
-            popupHTML += `</div>`;
-
-            // Remove existing popup if any
-            if (popup.current) {
-              popup.current.remove();
-            }
-
-            popup.current = new mapboxgl.Popup({
-              closeButton: false,
-              closeOnClick: false,
-              offset: 10,
-            })
-              .setLngLat(coordinates)
-              .setHTML(popupHTML)
-              .addTo(map.current);
-          }
-        }
+      const handleMouseMove = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+        updatePopup(e);
       };
 
       const handleMouseLeave = () => {
@@ -373,11 +386,13 @@ export function DemographicsMap({
           popup.current.remove();
           popup.current = null;
         }
+        currentLsoaCode = null;
       };
 
       // Add event listeners
       map.current.on('click', 'lsoa-fill', handleClick);
       map.current.on('mouseenter', 'lsoa-fill', handleMouseEnter);
+      map.current.on('mousemove', 'lsoa-fill', handleMouseMove);
       map.current.on('mouseleave', 'lsoa-fill', handleMouseLeave);
 
       handlersAttached.current = true;
@@ -387,6 +402,7 @@ export function DemographicsMap({
         if (map.current) {
           map.current.off('click', 'lsoa-fill', handleClick);
           map.current.off('mouseenter', 'lsoa-fill', handleMouseEnter);
+          map.current.off('mousemove', 'lsoa-fill', handleMouseMove);
           map.current.off('mouseleave', 'lsoa-fill', handleMouseLeave);
         }
         handlersAttached.current = false;
