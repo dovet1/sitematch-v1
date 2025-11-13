@@ -254,9 +254,9 @@ export function SiteDemographerPage() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden min-h-0">
-        {/* Left Panel - Results */}
-        <div className="flex-1 flex flex-col overflow-y-auto bg-white min-h-0">
-          <div className={rawDemographicsData || loading ? "p-10" : "flex-1"}>
+        {/* Left Panel - Results (30%) */}
+        <div className="w-[30%] flex flex-col overflow-y-auto bg-white min-h-0 border-r border-gray-200">
+          <div className={rawDemographicsData || loading ? "p-6" : "flex-1"}>
             <DemographicsResults
               loading={loading}
               error={error}
@@ -270,8 +270,8 @@ export function SiteDemographerPage() {
           </div>
         </div>
 
-        {/* Right Panel - Map */}
-        <div className="flex-1 bg-gray-50 border-l border-gray-200 relative min-h-0">
+        {/* Right Panel - Map (70%) */}
+        <div className="flex-1 bg-gray-50 relative min-h-0">
           {selectedLocation ? (
             <DemographicsMap
               center={{ lat: selectedLocation.center[1], lng: selectedLocation.center[0] }}

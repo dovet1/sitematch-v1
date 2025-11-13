@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, Home, Briefcase, GraduationCap, Car, Heart, AlertCircle, TrendingUp } from 'lucide-react';
+import { Users, Home, Briefcase, GraduationCap, Car, Heart, AlertCircle, TrendingUp, ChevronDown } from 'lucide-react';
 import type { LocationResult } from '@/lib/mapbox';
 import { formatLocationDisplay } from '@/lib/mapbox';
 import type { MeasurementMode } from './LocationInputPanel';
@@ -45,7 +45,22 @@ export function DemographicsResults({
   rawData,
   selectedLsoaCodes,
 }: DemographicsResultsProps) {
-  const [selectedCategory, setSelectedCategory] = useState<CategoryType>('population');
+  // Default to first 3 categories expanded
+  const [expandedCategories, setExpandedCategories] = useState<Set<CategoryType>>(
+    new Set(['population', 'demographics', 'affluence'])
+  );
+
+  const toggleCategory = (category: CategoryType) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
 
   const getMeasurementDisplay = () => {
     switch (measurementMode) {
@@ -58,11 +73,10 @@ export function DemographicsResults({
     }
   };
 
-  // Process aggregated data for the selected category
-  const categoryData = useMemo(() => {
+  // Get all category data at once (not just selected category)
+  const allCategoryData = useMemo(() => {
     if (!rawData) return null;
 
-    // Data is now pre-aggregated from the server
     const aggregatedData = rawData['aggregated'];
     if (!aggregatedData) return null;
 
@@ -92,77 +106,70 @@ export function DemographicsResults({
       return aggregatedData.households_total || 0;
     };
 
-    switch (selectedCategory) {
-      case 'population':
-        return {
-          charts: [
-            { title: 'Population (total)', data: [{ label: 'Total Population', value: getTotalPopulation(), percentage: 100 }] },
-            { title: 'Number of households', data: [{ label: 'Total Households', value: getTotalHouseholds(), percentage: 100 }] },
-            { title: 'Household composition', data: aggregateData('household_composition') },
-            { title: 'Type of accommodation', data: aggregateData('accommodation_type') },
-            { title: 'Tenure', data: aggregateData('tenure') },
-          ],
-        };
-      case 'demographics':
-        return {
-          charts: [
-            { title: 'Age profile', data: aggregateData('age_groups') },
-            { title: 'Ethnic group', data: aggregateData('ethnicity') },
-            { title: 'Country of birth', data: aggregateData('country_of_birth') },
-            { title: 'Religion', data: aggregateData('religion') },
-          ],
-        };
-      case 'employment':
-        return {
-          charts: [
-            { title: 'Economic activity', data: aggregateData('economic_activity') },
-            { title: 'Occupation', data: aggregateData('occupation') },
-          ],
-        };
-      case 'education':
-        return {
-          charts: [
-            { title: 'Highest level of qualification', data: aggregateData('qualifications') },
-          ],
-        };
-      case 'mobility':
-        return {
-          charts: [
-            { title: 'Method of travel to work', data: aggregateData('travel_to_work') },
-            { title: 'Distance travelled to work', data: aggregateData('distance_to_work') },
-          ],
-        };
-      case 'health':
-        return {
-          charts: [
-            { title: 'General health', data: aggregateData('general_health') },
-            { title: 'Disability', data: aggregateData('disability') },
-          ],
-        };
-      case 'affluence':
-        if (!aggregatedData.affluence) {
-          return {
-            charts: [
-              { title: 'Affluence Score', data: [{ label: 'No data available', value: 0, percentage: 0 }] },
+    const getAffluenceScore = (): number => {
+      return aggregatedData.affluence?.avg_raw_score || 0;
+    };
+
+    return {
+      population: {
+        charts: [
+          { title: 'Population (total)', data: [{ label: 'Total Population', value: getTotalPopulation(), percentage: 100 }] },
+          { title: 'Number of households', data: [{ label: 'Total Households', value: getTotalHouseholds(), percentage: 100 }] },
+          { title: 'Household composition', data: aggregateData('household_composition') },
+          { title: 'Type of accommodation', data: aggregateData('accommodation_type') },
+          { title: 'Tenure', data: aggregateData('tenure') },
+        ],
+        totalPop: getTotalPopulation(),
+        totalHouseholds: getTotalHouseholds(),
+      },
+      demographics: {
+        charts: [
+          { title: 'Age profile', data: aggregateData('age_groups') },
+          { title: 'Ethnic group', data: aggregateData('ethnicity') },
+          { title: 'Country of birth', data: aggregateData('country_of_birth') },
+          { title: 'Religion', data: aggregateData('religion') },
+        ],
+      },
+      employment: {
+        charts: [
+          { title: 'Economic activity', data: aggregateData('economic_activity') },
+          { title: 'Occupation', data: aggregateData('occupation') },
+        ],
+      },
+      education: {
+        charts: [
+          { title: 'Highest level of qualification', data: aggregateData('qualifications') },
+        ],
+      },
+      mobility: {
+        charts: [
+          { title: 'Method of travel to work', data: aggregateData('travel_to_work') },
+          { title: 'Distance travelled to work', data: aggregateData('distance_to_work') },
+        ],
+      },
+      health: {
+        charts: [
+          { title: 'General health', data: aggregateData('general_health') },
+          { title: 'Disability', data: aggregateData('disability') },
+        ],
+      },
+      affluence: {
+        charts: [
+          {
+            title: 'Affluence Score',
+            data: [
+              {
+                label: `Score: ${getAffluenceScore().toFixed(1)}`,
+                value: getAffluenceScore(),
+                percentage: 100,
+              },
             ],
-          };
-        }
-        return {
-          charts: [
-            {
-              title: 'Affluence Score',
-              data: [
-                {
-                  label: `Score: ${aggregatedData.affluence.avg_raw_score.toFixed(1)}`,
-                  value: aggregatedData.affluence.avg_raw_score,
-                  percentage: 100,
-                },
-              ],
-            },
-          ],
-        };
-    }
-  }, [rawData, selectedCategory]);
+          },
+        ],
+        score: getAffluenceScore(),
+      },
+    };
+  }, [rawData]);
 
   const formatNumber = (num: number) => num.toLocaleString();
   const formatPercentage = (num: number) => `${num.toFixed(1)}%`;
@@ -172,15 +179,14 @@ export function DemographicsResults({
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center max-w-md px-8">
-          <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-50 flex items-center justify-center">
-            <Users className="h-12 w-12 text-violet-400" />
+          <div className="w-20 h-20 mx-auto mb-6 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 flex items-center justify-center">
+            <Users className="h-10 w-10 text-violet-400" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-3">
-            No Demographics Data Yet
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No Data Yet
           </h3>
-          <p className="text-gray-500 leading-relaxed">
-            Select a location and click "Analyze" to view population data,
-            household information, age profiles, and more.
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Select a location and click "Analyze" to view demographics.
           </p>
         </div>
       </div>
@@ -190,12 +196,12 @@ export function DemographicsResults({
   // Loading State
   if (loading) {
     return (
-      <div className="space-y-8">
-        <div className="animate-pulse space-y-6">
-          <div className="h-10 bg-gray-100 rounded-lg w-1/3" />
-          <div className="space-y-6">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-64 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl" />
+      <div className="space-y-3">
+        <div className="animate-pulse space-y-3">
+          <div className="h-8 bg-gray-100 rounded w-1/3" />
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg" />
             ))}
           </div>
         </div>
@@ -208,113 +214,145 @@ export function DemographicsResults({
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center max-w-md px-8">
-          <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center">
-            <AlertCircle className="h-12 w-12 text-red-400" />
+          <div className="w-20 h-20 mx-auto mb-6 rounded-xl bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center">
+            <AlertCircle className="h-10 w-10 text-red-400" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-3">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
             Error Loading Data
           </h3>
-          <p className="text-gray-500 leading-relaxed">{error}</p>
+          <p className="text-sm text-gray-500 leading-relaxed">{error}</p>
         </div>
       </div>
     );
   }
 
   // Results State
-  if (!rawData) return null;
+  if (!rawData || !allCategoryData) return null;
 
   const selectedCount = selectedLsoaCodes?.size || 0;
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="sticky top-0 bg-white pb-6 z-10 space-y-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Demographics Report</h2>
-          {location && (
-            <p className="text-sm text-gray-500">
-              {formatLocationDisplay(location)} • {getMeasurementDisplay()} •{' '}
-              {totalLsoaCount && totalLsoaCount > selectedCount ? (
-                <>
-                  <span className="font-medium text-violet-600">
-                    {selectedCount} of {totalLsoaCount} areas
-                  </span>
-                  {' '}selected
-                </>
-              ) : (
-                <span>{selectedCount} areas analyzed</span>
-              )}
-            </p>
-          )}
-        </div>
+    <div className="space-y-3">
+      {/* Sticky Summary Header */}
+      <div className="sticky top-0 bg-white border-b border-gray-200 pb-3 z-10 -mx-6 px-6 pt-0">
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Demographics Report</h2>
+            {location && (
+              <p className="text-xs text-gray-500 mt-1">
+                {formatLocationDisplay(location)} • {getMeasurementDisplay()} •{' '}
+                {totalLsoaCount && totalLsoaCount > selectedCount ? (
+                  <>
+                    <span className="font-medium text-violet-600">
+                      {selectedCount} of {totalLsoaCount} areas
+                    </span>
+                    {' '}selected
+                  </>
+                ) : (
+                  <span>{selectedCount} areas</span>
+                )}
+              </p>
+            )}
+          </div>
 
-        {/* Category Selector */}
-        <div>
-          <label htmlFor="category-select" className="block text-sm font-medium text-gray-700 mb-2">
-            Select Category
-          </label>
-          <select
-            id="category-select"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value as CategoryType)}
-            className="block w-full max-w-md px-4 py-2.5 text-base border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white"
-          >
-            {CATEGORIES.map((category) => (
-              <option key={category.value} value={category.value}>
-                {category.label}
-              </option>
-            ))}
-          </select>
+          {/* Key Metrics Summary */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-violet-50 rounded-lg px-3 py-2">
+              <div className="text-[10px] uppercase tracking-wide text-gray-600 font-medium">Population</div>
+              <div className="text-lg font-bold text-gray-900 mt-0.5">
+                {formatNumber(allCategoryData.population.totalPop)}
+              </div>
+            </div>
+            <div className="bg-emerald-50 rounded-lg px-3 py-2">
+              <div className="text-[10px] uppercase tracking-wide text-gray-600 font-medium">Affluence</div>
+              <div className="text-lg font-bold text-gray-900 mt-0.5">
+                {allCategoryData.affluence.score.toFixed(1)}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="space-y-8">
-        {categoryData?.charts.map((chart, index) => (
-          <div key={index} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <h3 className="font-semibold text-gray-900 text-lg mb-6">{chart.title}</h3>
+      {/* Accordion Categories */}
+      <div className="space-y-2">
+        {CATEGORIES.map((category) => {
+          const isExpanded = expandedCategories.has(category.value);
+          const categoryDataObj = allCategoryData[category.value];
+          const Icon = category.icon;
 
-            {chart.data.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No data available</div>
-            ) : chart.data.length === 1 && chart.data[0].label.includes('Total') ? (
-              // Special display for totals
-              <div className="text-center py-4">
-                <p className="text-5xl font-bold text-gray-900 mb-2">
-                  {formatNumber(chart.data[0].value)}
-                </p>
-                <p className="text-sm text-gray-500">{chart.data[0].label}</p>
-              </div>
-            ) : (
-              // Bar chart for other data
-              <div className="space-y-3">
-                {chart.data.slice(0, 15).map((item, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-700 truncate flex-1 mr-4">{item.label}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-gray-500 text-xs">{formatNumber(item.value)}</span>
-                        <span className="font-medium text-gray-900 w-12 text-right">
-                          {formatPercentage(item.percentage)}
-                        </span>
+          return (
+            <div key={category.value} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+              {/* Header - Always visible */}
+              <button
+                onClick={() => toggleCategory(category.value)}
+                className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon className="w-3.5 h-3.5 text-gray-600" />
+                  <span className="font-medium text-sm text-gray-900">{category.label}</span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+                    isExpanded ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {/* Content - Collapsible */}
+              {isExpanded && categoryDataObj && (
+                <div className="border-t border-gray-100 bg-gray-50">
+                  <div className="px-4 py-3 space-y-4">
+                    {categoryDataObj.charts.map((chart, index) => (
+                      <div key={index}>
+                        <h4 className="text-xs font-semibold text-gray-700 mb-2">{chart.title}</h4>
+
+                        {chart.data.length === 0 ? (
+                          <div className="text-center py-2 text-xs text-gray-400">No data</div>
+                        ) : chart.data.length === 1 && chart.data[0].label.includes('Total') ? (
+                          // Special display for totals
+                          <div className="text-center py-2">
+                            <p className="text-2xl font-bold text-gray-900">
+                              {formatNumber(chart.data[0].value)}
+                            </p>
+                            <p className="text-[10px] text-gray-500 mt-0.5">{chart.data[0].label}</p>
+                          </div>
+                        ) : (
+                          // Ultra-compact bar list
+                          <div className="space-y-1.5">
+                            {chart.data.slice(0, 10).map((item, idx) => (
+                              <div key={idx} className="flex items-center gap-2 text-xs">
+                                <div className="w-28 truncate text-gray-700 text-[11px]" title={item.label}>
+                                  {item.label}
+                                </div>
+                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-violet-500 rounded-full transition-all"
+                                    style={{ width: `${Math.min(item.percentage, 100)}%` }}
+                                  />
+                                </div>
+                                <div className="w-12 text-right font-medium text-gray-900 text-[11px]">
+                                  {formatNumber(item.value)}
+                                </div>
+                                <div className="w-10 text-right text-gray-500 text-[11px]">
+                                  {formatPercentage(item.percentage)}
+                                </div>
+                              </div>
+                            ))}
+                            {chart.data.length > 10 && (
+                              <p className="text-[10px] text-gray-400 mt-2 text-center">
+                                +{chart.data.length - 10} more
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all"
-                        style={{ width: `${Math.min(item.percentage, 100)}%` }}
-                      />
-                    </div>
+                    ))}
                   </div>
-                ))}
-                {chart.data.length > 15 && (
-                  <p className="text-sm text-gray-500 mt-4 text-center">
-                    Showing top 15 of {chart.data.length} items
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
