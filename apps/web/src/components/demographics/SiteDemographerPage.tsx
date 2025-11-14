@@ -215,26 +215,32 @@ export function SiteDemographerPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col bg-white">
-      {/* Consolidated Header with Controls */}
-      <div className="px-8 py-5 border-b border-gray-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between gap-6">
-          {/* Left: Title */}
-          <div className="flex items-center gap-4">
+    <div className="h-[calc(100vh-4rem)] flex flex-col bg-gradient-to-b from-gray-50 to-white">
+      {/* Premium Header with Controls */}
+      <div className="relative z-50 px-8 py-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
+        {/* Subtle gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-violet-50/30 via-transparent to-purple-50/30 pointer-events-none" />
+
+        <div className="relative flex items-center justify-between gap-6">
+          {/* Left: Premium Title Section */}
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => router.push('/new-dashboard?tab=tools')}
-              className="h-9 w-9 rounded-full hover:bg-gray-100 transition-colors"
+              className="h-8 w-8 rounded-lg hover:bg-violet-50 hover:text-violet-700 transition-all duration-200"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">SiteDemographer</h1>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-1 bg-gradient-to-b from-violet-500 to-purple-600 rounded-full" />
+              <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
+                SiteDemographer
+              </h1>
             </div>
           </div>
 
-          {/* Right: Controls */}
+          {/* Right: Premium Controls */}
           <div className="flex-1 max-w-4xl">
             <LocationInputPanel
               selectedLocation={selectedLocation}
