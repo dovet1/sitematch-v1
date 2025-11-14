@@ -427,17 +427,31 @@ export function DemographicsMap({
   // Update feature-state when selection changes - O(n) where n = number of LSOAs in view
   useEffect(() => {
     if (!map.current || !mapLoaded || !lsoaBoundaries) return;
-    if (!map.current.getLayer('lsoa-fill')) return;
 
-    // Set feature-state for all LSOAs based on selection
-    // This is much faster than rebuilding paint expressions
-    allLsoaCodes.forEach((code) => {
-      const isSelected = selectedLsoaCodes.has(code);
-      map.current?.setFeatureState(
-        { source: 'lsoa-boundaries', id: code },
-        { selected: isSelected }
-      );
-    });
+    const updateFeatureStates = () => {
+      if (!map.current || !map.current.getLayer('lsoa-fill')) {
+        // Layer not ready yet, try again after a short delay
+        setTimeout(updateFeatureStates, 50);
+        return;
+      }
+
+      console.log('[DemographicsMap] Updating feature states for', allLsoaCodes.length, 'LSOAs');
+      console.log('[DemographicsMap] Selected count:', selectedLsoaCodes.size);
+
+      // Set feature-state for all LSOAs based on selection
+      // This is much faster than rebuilding paint expressions
+      allLsoaCodes.forEach((code) => {
+        const isSelected = selectedLsoaCodes.has(code);
+        map.current?.setFeatureState(
+          { source: 'lsoa-boundaries', id: code },
+          { selected: isSelected }
+        );
+      });
+
+      console.log('[DemographicsMap] Feature states updated');
+    };
+
+    updateFeatureStates();
   }, [selectedLsoaCodes, mapLoaded, lsoaBoundaries, allLsoaCodes]);
 
   return (
