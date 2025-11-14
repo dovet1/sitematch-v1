@@ -296,7 +296,7 @@ export async function GET(
       // Check sector match
       if (savedSearch.sectors && savedSearch.sectors.length > 0) {
         const listingSectorIds = listingSectors[listing.id] || [];
-        const hasMatchingSector = savedSearch.sectors.some((sectorId) =>
+        const hasMatchingSector = savedSearch.sectors.some((sectorId: string) =>
           listingSectorIds.includes(sectorId)
         );
         if (!hasMatchingSector) continue;
