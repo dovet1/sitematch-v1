@@ -371,6 +371,68 @@ export function DemographicsResults({
                             </p>
                             <p className="text-[10px] text-gray-500 mt-0.5">{chart.data[0].label}</p>
                           </div>
+                        ) : chart.title === 'Affluence Score' ? (
+                          // Special display for affluence score
+                          (() => {
+                            const score = chart.data[0].value;
+                            const ukAverage = nationalAverages['affluence_score'] || 57.0; // Default UK average
+                            const difference = score - ukAverage;
+                            const isAboveAverage = difference > 0.5;
+                            const isBelowAverage = difference < -0.5;
+
+                            // Determine rating and color
+                            const getRating = (score: number) => {
+                              if (score >= 70) return { label: 'Very High Affluence', color: 'text-blue-600', bg: 'bg-blue-50', barColor: 'bg-blue-500' };
+                              if (score >= 55) return { label: 'High Affluence', color: 'text-emerald-600', bg: 'bg-emerald-50', barColor: 'bg-emerald-500' };
+                              if (score >= 45) return { label: 'Medium Affluence', color: 'text-amber-600', bg: 'bg-amber-50', barColor: 'bg-amber-500' };
+                              return { label: 'Low Affluence', color: 'text-rose-600', bg: 'bg-rose-50', barColor: 'bg-rose-500' };
+                            };
+
+                            const rating = getRating(score);
+
+                            return (
+                              <div className={`${rating.bg} rounded-lg p-4 space-y-3`}>
+                                {/* Score Display */}
+                                <div className="text-center">
+                                  <div className="flex items-baseline gap-1 justify-center">
+                                    <span className="text-4xl font-bold text-gray-900">{score.toFixed(1)}</span>
+                                    <span className="text-base text-gray-500">/100</span>
+                                  </div>
+                                  <p className={`text-sm font-medium ${rating.color} mt-2`}>{rating.label}</p>
+                                </div>
+
+                                {/* Scale Visualization */}
+                                <div className="space-y-1">
+                                  <div className="relative h-2 bg-gray-200 rounded-full overflow-visible">
+                                    {/* Progress bar */}
+                                    <div
+                                      className={`h-full ${rating.barColor} rounded-full transition-all`}
+                                      style={{ width: `${Math.min(score, 100)}%` }}
+                                    />
+
+                                    {/* UK Average marker */}
+                                    <div
+                                      className="absolute top-0 bottom-0 w-[2px] bg-amber-500 z-10"
+                                      style={{ left: `${Math.min(ukAverage, 100)}%` }}
+                                      title={`UK Average: ${ukAverage.toFixed(1)}`}
+                                    >
+                                      <div className="absolute -top-1 -left-[3px] w-[8px] h-[4px] bg-amber-500 rounded-sm" />
+                                      <div className="absolute -bottom-1 -left-[3px] w-[8px] h-[4px] bg-amber-500 rounded-sm" />
+                                    </div>
+                                  </div>
+
+                                  {/* Scale labels */}
+                                  <div className="flex justify-between text-[9px] text-gray-500 px-0.5">
+                                    <span>0</span>
+                                    <span>25</span>
+                                    <span>50</span>
+                                    <span>75</span>
+                                    <span>100</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()
                         ) : (
                           // Ultra-compact bar list
                           <div className="space-y-1.5">
