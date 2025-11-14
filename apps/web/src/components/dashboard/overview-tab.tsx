@@ -306,7 +306,7 @@ export function OverviewTab({ userId }: OverviewTabProps) {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 text-sm">
-                      SiteDemographer
+                      SiteAnalyser
                     </h3>
                     <p className="text-xs text-gray-500 mt-1">
                       Detailed demographic insights for your area

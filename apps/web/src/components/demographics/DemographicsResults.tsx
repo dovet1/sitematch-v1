@@ -15,6 +15,7 @@ interface DemographicsResultsProps {
   totalLsoaCount?: number;
   rawData?: Record<string, any> | null;
   selectedLsoaCodes?: Set<string>;
+  nationalAverages?: Record<string, number>;
 }
 
 type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health' | 'affluence';
@@ -33,6 +34,7 @@ interface ChartData {
   label: string;
   value: number;
   percentage: number;
+  nationalAverage?: number;
 }
 
 export function DemographicsResults({
@@ -44,6 +46,7 @@ export function DemographicsResults({
   totalLsoaCount,
   rawData,
   selectedLsoaCodes,
+  nationalAverages = {},
 }: DemographicsResultsProps) {
   // Default to first 3 categories expanded
   const [expandedCategories, setExpandedCategories] = useState<Set<CategoryType>>(
@@ -80,6 +83,45 @@ export function DemographicsResults({
     const aggregatedData = rawData['aggregated'];
     if (!aggregatedData) return null;
 
+    // Helper to convert display label back to component_id format
+    const labelToComponentId = (label: string, prefix?: string): string => {
+      // Convert label to lowercase and replace spaces with underscores
+      let componentId = label.toLowerCase().replace(/\s+/g, '_');
+
+      // Add prefix if provided
+      if (prefix) {
+        componentId = prefix + componentId;
+      }
+
+      return componentId;
+    };
+
+    // Helper to find national average for a label
+    const findNationalAverage = (label: string, field: string): number | undefined => {
+      // Try different component_id patterns
+      const patterns: string[] = [];
+
+      // Add prefix-based patterns
+      if (field === 'household_composition') patterns.push(labelToComponentId(label, 'hhc_'));
+      else if (field === 'accommodation_type') patterns.push(labelToComponentId(label, 'accom_'));
+      else if (field === 'age_groups') patterns.push(labelToComponentId(label, 'age_'));
+      else if (field === 'country_of_birth') patterns.push(labelToComponentId(label, 'cob_'));
+      else if (field === 'distance_to_work') patterns.push(labelToComponentId(label, 'ts058_'));
+      else if (field === 'economic_activity') patterns.push(labelToComponentId(label, 'economically_'));
+
+      // Add raw pattern without prefix
+      patterns.push(labelToComponentId(label));
+
+      // Search for match in national averages
+      for (const pattern of patterns) {
+        if (nationalAverages[pattern] !== undefined) {
+          return nationalAverages[pattern];
+        }
+      }
+
+      return undefined;
+    };
+
     const aggregateData = (field: string): ChartData[] => {
       const data = aggregatedData[field];
       if (!data || typeof data !== 'object') return [];
@@ -94,6 +136,7 @@ export function DemographicsResults({
           label,
           value: Number(value) || 0,
           percentage: grandTotal > 0 ? (Number(value) / grandTotal) * 100 : 0,
+          nationalAverage: findNationalAverage(label, field),
         }))
         .sort((a, b) => b.value - a.value);
     };
@@ -169,7 +212,7 @@ export function DemographicsResults({
         score: getAffluenceScore(),
       },
     };
-  }, [rawData]);
+  }, [rawData, nationalAverages]);
 
   const formatNumber = (num: number) => num.toLocaleString();
   const formatPercentage = (num: number) => `${num.toFixed(1)}%`;
@@ -301,6 +344,18 @@ export function DemographicsResults({
               {/* Content - Collapsible */}
               {isExpanded && categoryDataObj && (
                 <div className="border-t border-gray-100 bg-gray-50">
+                  {/* Legend */}
+                  <div className="px-4 pt-3 pb-2 flex items-center gap-4 text-[10px] text-gray-600 border-b border-gray-100">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-4 h-1 bg-violet-500 rounded-full" />
+                      <span>Selected Area</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-[2px] h-3 bg-amber-500" />
+                      <span>UK Average</span>
+                    </div>
+                  </div>
+
                   <div className="px-4 py-3 space-y-4">
                     {categoryDataObj.charts.map((chart, index) => (
                       <div key={index}>
@@ -319,16 +374,49 @@ export function DemographicsResults({
                         ) : (
                           // Ultra-compact bar list
                           <div className="space-y-1.5">
+                            {/* Column headers */}
+                            <div className="flex items-center gap-2 text-xs pb-1 border-b border-gray-200">
+                              <div className="w-28 text-[9px] uppercase tracking-wide text-gray-500 font-medium">
+                                Category
+                              </div>
+                              <div className="flex-1 text-[9px] uppercase tracking-wide text-gray-500 font-medium">
+                                Distribution
+                              </div>
+                              <div className="w-12 text-right text-[9px] uppercase tracking-wide text-gray-500 font-medium">
+                                Count
+                              </div>
+                              <div className="w-10 text-right text-[9px] uppercase tracking-wide text-gray-500 font-medium">
+                                %
+                              </div>
+                              <div className="w-14 text-right text-[9px] uppercase tracking-wide text-gray-500 font-medium">
+                                vs UK
+                              </div>
+                            </div>
+
                             {chart.data.slice(0, 10).map((item, idx) => (
                               <div key={idx} className="flex items-center gap-2 text-xs">
                                 <div className="w-28 truncate text-gray-700 text-[11px]" title={item.label}>
                                   {item.label}
                                 </div>
-                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-visible relative">
                                   <div
                                     className="h-full bg-violet-500 rounded-full transition-all"
                                     style={{ width: `${Math.min(item.percentage, 100)}%` }}
                                   />
+                                  {/* National average indicator */}
+                                  {item.nationalAverage !== undefined && item.nationalAverage > 0 && (
+                                    <div
+                                      className="absolute top-0 bottom-0 w-[1.5px] bg-amber-500 z-10 opacity-80"
+                                      style={{ left: `${Math.min(item.nationalAverage, 100)}%` }}
+                                      title={`UK Average: ${item.nationalAverage.toFixed(1)}%`}
+                                      aria-label={`UK Average: ${item.nationalAverage.toFixed(1)}%`}
+                                    >
+                                      {/* Top indicator */}
+                                      <div className="absolute -top-1.5 -left-[3px] w-[7px] h-[3px] bg-amber-500 rounded-sm" />
+                                      {/* Bottom indicator */}
+                                      <div className="absolute -bottom-1.5 -left-[3px] w-[7px] h-[3px] bg-amber-500 rounded-sm" />
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="w-12 text-right font-medium text-gray-900 text-[11px]">
                                   {formatNumber(item.value)}
@@ -336,6 +424,27 @@ export function DemographicsResults({
                                 <div className="w-10 text-right text-gray-500 text-[11px]">
                                   {formatPercentage(item.percentage)}
                                 </div>
+                                {/* Comparison badge */}
+                                {item.nationalAverage !== undefined && item.nationalAverage > 0 && (
+                                  <div
+                                    className={`w-14 text-right text-[10px] font-medium tabular-nums ${
+                                      item.percentage > item.nationalAverage + 0.5
+                                        ? 'text-emerald-600'
+                                        : item.percentage < item.nationalAverage - 0.5
+                                          ? 'text-rose-600'
+                                          : 'text-gray-500'
+                                    }`}
+                                    title={`${item.percentage > item.nationalAverage ? 'Above' : item.percentage < item.nationalAverage ? 'Below' : 'At'} UK average by ${Math.abs(item.percentage - item.nationalAverage).toFixed(1)}%`}
+                                  >
+                                    {item.percentage > item.nationalAverage + 0.5 ? (
+                                      <>↑ {(item.percentage - item.nationalAverage).toFixed(1)}%</>
+                                    ) : item.percentage < item.nationalAverage - 0.5 ? (
+                                      <>↓ {(item.nationalAverage - item.percentage).toFixed(1)}%</>
+                                    ) : (
+                                      <>0%</>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             ))}
                             {chart.data.length > 10 && (

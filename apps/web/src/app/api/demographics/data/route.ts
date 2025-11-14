@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   getAggregatedLSOAMetrics,
   convertAggregatedToLSOAData,
+  extractNationalAverages,
   getAggregatedAffluence
 } from '@/lib/supabase-census-data';
 
@@ -36,19 +37,24 @@ export async function POST(request: NextRequest) {
     // Convert to single aggregated LSOAData structure for backward compatibility
     const aggregatedData = convertAggregatedToLSOAData(aggregatedMetrics);
 
+    // Extract national averages from aggregated metrics
+    const nationalAverages = extractNationalAverages(aggregatedMetrics);
+
     // Add affluence data if available
     if (affluenceData) {
       aggregatedData.affluence = affluenceData;
     }
 
-    // Return as single "aggregated" LSOA for frontend
+    // Return as single "aggregated" LSOA for frontend with national averages
     const response = {
       by_lsoa: {
         aggregated: aggregatedData,
       },
+      national_averages: nationalAverages,
     };
 
     console.log(`Successfully loaded ${aggregatedMetrics.length} aggregated metrics${affluenceData ? ' and affluence data' : ''} for ${geography_codes.length} LSOAs`);
+    console.log(`Extracted ${Object.keys(nationalAverages).length} national averages`);
 
     return NextResponse.json(response);
   } catch (error) {

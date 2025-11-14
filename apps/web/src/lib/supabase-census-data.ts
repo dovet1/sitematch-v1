@@ -202,6 +202,24 @@ export async function getAggregatedLSOAMetrics(
 }
 
 /**
+ * Extract national averages from aggregated metrics
+ * Returns a map of component_id -> national_avg_pct
+ */
+export function extractNationalAverages(
+  aggregatedMetrics: AggregatedMetric[]
+): Record<string, number> {
+  const nationalAverages: Record<string, number> = {};
+
+  aggregatedMetrics.forEach(metric => {
+    if (metric.national_avg_pct !== null && metric.national_avg_pct !== undefined) {
+      nationalAverages[metric.component_id] = metric.national_avg_pct;
+    }
+  });
+
+  return nationalAverages;
+}
+
+/**
  * Convert aggregated metrics into the LSOAData structure for backward compatibility
  */
 export function convertAggregatedToLSOAData(

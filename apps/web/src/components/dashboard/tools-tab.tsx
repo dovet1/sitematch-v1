@@ -11,7 +11,7 @@ export function ToolsTab() {
   const tools = [
     {
       id: 'site-demographer',
-      title: 'SiteDemographer',
+      title: 'SiteAnalyser',
       description: 'Analyze demographics for any UK location',
       icon: Users,
       stats: 'Population, households, age profiles & more',

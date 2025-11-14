@@ -41,6 +41,7 @@ export function SiteDemographerPage() {
   const [isRefetchingData, setIsRefetchingData] = useState(false);
   const initialLoadComplete = useRef(false);
   const [lsoaTooltipData, setLsoaTooltipData] = useState<Record<string, LSOATooltipData>>({});
+  const [nationalAverages, setNationalAverages] = useState<Record<string, number>>({});
 
   // Re-fetch aggregated data when selection changes
   useEffect(() => {
@@ -65,6 +66,11 @@ export function SiteDemographerPage() {
 
         const demographicsData = await dataResponse.json();
         setRawDemographicsData(demographicsData.by_lsoa);
+
+        // Extract and store national averages if available
+        if (demographicsData.national_averages) {
+          setNationalAverages(demographicsData.national_averages);
+        }
       } catch (err) {
         console.error('Error refetching demographics:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
@@ -183,6 +189,12 @@ export function SiteDemographerPage() {
       setRawDemographicsData(demographicsData.by_lsoa);
       setLsoaTooltipData(tooltipData.tooltip_data || {});
 
+      // Store national averages
+      if (demographicsData.national_averages) {
+        setNationalAverages(demographicsData.national_averages);
+        console.log('[SiteDemographerPage] Loaded', Object.keys(demographicsData.national_averages).length, 'national averages');
+      }
+
       // Initialize all LSOAs as selected (use geography codes from API)
       setAllLsoaCodes(geoData.geography_codes);
       setSelectedLsoaCodes(new Set(geoData.geography_codes));
@@ -235,7 +247,7 @@ export function SiteDemographerPage() {
             <div className="flex items-center gap-2">
               <div className="h-8 w-1 bg-gradient-to-b from-violet-500 to-purple-600 rounded-full" />
               <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
-                SiteDemographer
+                SiteAnalyser
               </h1>
             </div>
           </div>
@@ -272,6 +284,7 @@ export function SiteDemographerPage() {
               totalLsoaCount={allLsoaCodes.length}
               rawData={rawDemographicsData}
               selectedLsoaCodes={selectedLsoaCodes}
+              nationalAverages={nationalAverages}
             />
           </div>
         </div>
