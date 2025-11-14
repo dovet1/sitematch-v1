@@ -344,18 +344,6 @@ export function DemographicsResults({
               {/* Content - Collapsible */}
               {isExpanded && categoryDataObj && (
                 <div className="border-t border-gray-100 bg-gray-50">
-                  {/* Legend */}
-                  <div className="px-4 pt-3 pb-2 flex items-center gap-4 text-[10px] text-gray-600 border-b border-gray-100">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-4 h-1 bg-violet-500 rounded-full" />
-                      <span>Selected Area</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-[2px] h-3 bg-amber-500" />
-                      <span>UK Average</span>
-                    </div>
-                  </div>
-
                   <div className="px-4 py-3 space-y-4">
                     {categoryDataObj.charts.map((chart, index) => (
                       <div key={index}>
@@ -403,22 +391,12 @@ export function DemographicsResults({
 
                                 {/* Scale Visualization */}
                                 <div className="space-y-1">
-                                  <div className="relative h-2 bg-gray-200 rounded-full overflow-visible">
+                                  <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
                                     {/* Progress bar */}
                                     <div
                                       className={`h-full ${rating.barColor} rounded-full transition-all`}
                                       style={{ width: `${Math.min(score, 100)}%` }}
                                     />
-
-                                    {/* UK Average marker */}
-                                    <div
-                                      className="absolute top-0 bottom-0 w-[2px] bg-amber-500 z-10"
-                                      style={{ left: `${Math.min(ukAverage, 100)}%` }}
-                                      title={`UK Average: ${ukAverage.toFixed(1)}`}
-                                    >
-                                      <div className="absolute -top-1 -left-[3px] w-[8px] h-[4px] bg-amber-500 rounded-sm" />
-                                      <div className="absolute -bottom-1 -left-[3px] w-[8px] h-[4px] bg-amber-500 rounded-sm" />
-                                    </div>
                                   </div>
 
                                   {/* Scale labels */}
@@ -434,15 +412,12 @@ export function DemographicsResults({
                             );
                           })()
                         ) : (
-                          // Ultra-compact bar list
+                          // Ultra-compact list
                           <div className="space-y-1.5">
                             {/* Column headers */}
                             <div className="flex items-center gap-2 text-xs pb-1 border-b border-gray-200">
-                              <div className="w-28 text-[9px] uppercase tracking-wide text-gray-500 font-medium">
-                                Category
-                              </div>
                               <div className="flex-1 text-[9px] uppercase tracking-wide text-gray-500 font-medium">
-                                Distribution
+                                Category
                               </div>
                               <div className="w-12 text-right text-[9px] uppercase tracking-wide text-gray-500 font-medium">
                                 Count
@@ -457,28 +432,8 @@ export function DemographicsResults({
 
                             {chart.data.slice(0, 10).map((item, idx) => (
                               <div key={idx} className="flex items-center gap-2 text-xs">
-                                <div className="w-28 truncate text-gray-700 text-[11px]" title={item.label}>
+                                <div className="flex-1 text-gray-700 text-[11px]" title={item.label}>
                                   {item.label}
-                                </div>
-                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-visible relative">
-                                  <div
-                                    className="h-full bg-violet-500 rounded-full transition-all"
-                                    style={{ width: `${Math.min(item.percentage, 100)}%` }}
-                                  />
-                                  {/* National average indicator */}
-                                  {item.nationalAverage !== undefined && item.nationalAverage > 0 && (
-                                    <div
-                                      className="absolute top-0 bottom-0 w-[1.5px] bg-amber-500 z-10 opacity-80"
-                                      style={{ left: `${Math.min(item.nationalAverage, 100)}%` }}
-                                      title={`UK Average: ${item.nationalAverage.toFixed(1)}%`}
-                                      aria-label={`UK Average: ${item.nationalAverage.toFixed(1)}%`}
-                                    >
-                                      {/* Top indicator */}
-                                      <div className="absolute -top-1.5 -left-[3px] w-[7px] h-[3px] bg-amber-500 rounded-sm" />
-                                      {/* Bottom indicator */}
-                                      <div className="absolute -bottom-1.5 -left-[3px] w-[7px] h-[3px] bg-amber-500 rounded-sm" />
-                                    </div>
-                                  )}
                                 </div>
                                 <div className="w-12 text-right font-medium text-gray-900 text-[11px]">
                                   {formatNumber(item.value)}
