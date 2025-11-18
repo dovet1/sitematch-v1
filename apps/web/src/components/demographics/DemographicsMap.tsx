@@ -54,12 +54,13 @@ export function DemographicsMap({
   const [hoveredLsoa, setHoveredLsoa] = useState<LSOATooltipData | null>(null);
 
   // Calculate zoom level based on radius (larger radius = more zoomed out)
+  // Note: LSOA vector tiles may have maxzoom ~10-12, so we avoid going below zoom 8
   const calculateZoom = (radius: number): number => {
-    if (radius <= 5) return 10;
-    if (radius <= 10) return 9;
-    if (radius <= 20) return 8;
-    if (radius <= 30) return 7.5;
-    return 7;
+    if (radius <= 5) return 11;
+    if (radius <= 10) return 10;
+    if (radius <= 20) return 9;
+    if (radius <= 30) return 8.5;
+    return 8;  // Don't go below 8 to ensure LSOA tiles remain visible
   };
 
   // Initialize map
@@ -271,6 +272,7 @@ export function DemographicsMap({
 
       // Add LSOA fill layer for SELECTED LSOAs only
       // Insert before the first symbol layer so labels appear on top
+      // Note: Tiles will be visible at all zoom levels via overzooming
       map.current.addLayer({
         id: 'lsoa-fill-selected',
         type: 'fill',
