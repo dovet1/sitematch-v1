@@ -12,7 +12,6 @@ mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 interface DemographicsMapProps {
   center: { lat: number; lng: number };
   radiusMiles: number;
-  lsoaBoundaries: GeoJSON.FeatureCollection | null;
   isochroneGeometry: any;
   loading: boolean;
   measurementMode: MeasurementMode;
@@ -26,7 +25,6 @@ interface DemographicsMapProps {
 export function DemographicsMap({
   center,
   radiusMiles,
-  lsoaBoundaries,
   isochroneGeometry,
   loading,
   measurementMode,
@@ -230,29 +228,35 @@ export function DemographicsMap({
     }
   }, [center, radiusMiles, isochroneGeometry, mapLoaded]);
 
-  // Draw LSOA boundaries (initial setup - only when boundaries change)
+  // Draw LSOA boundaries using Mapbox vector tileset
   useEffect(() => {
-    if (!map.current || !mapLoaded || !lsoaBoundaries) return;
+    if (!map.current || !mapLoaded) return;
 
     const addBoundaries = () => {
       if (!map.current || !map.current.isStyleLoaded()) return;
 
       // Remove existing LSOA layers and source
       if (map.current.getSource('lsoa-boundaries')) {
-        if (map.current.getLayer('lsoa-fill')) {
-          map.current.removeLayer('lsoa-fill');
-        }
-        if (map.current.getLayer('lsoa-outline')) {
-          map.current.removeLayer('lsoa-outline');
-        }
+        const layersToRemove = [
+          'lsoa-fill-selected',
+          'lsoa-fill-deselected',
+          'lsoa-outline-selected',
+          'lsoa-outline-deselected',
+          'lsoa-fill', // Legacy layer name
+          'lsoa-outline' // Legacy layer name
+        ];
+        layersToRemove.forEach(layerId => {
+          if (map.current?.getLayer(layerId)) {
+            map.current.removeLayer(layerId);
+          }
+        });
         map.current.removeSource('lsoa-boundaries');
       }
 
-      // Add LSOA boundaries source with promoteId for feature-state
+      // Add LSOA boundaries from Mapbox vector tileset
       map.current.addSource('lsoa-boundaries', {
-        type: 'geojson',
-        data: lsoaBoundaries,
-        promoteId: 'LSOA21CD', // Use LSOA code as stable feature ID
+        type: 'vector',
+        url: 'mapbox://dovet.3xo625k3',
       });
 
       // Find the first symbol layer (labels) to insert boundaries before it
@@ -265,42 +269,58 @@ export function DemographicsMap({
         }
       }
 
-      // Add LSOA fill layer with feature-state driven styling
+      // Add LSOA fill layer for SELECTED LSOAs only
       // Insert before the first symbol layer so labels appear on top
       map.current.addLayer({
-        id: 'lsoa-fill',
+        id: 'lsoa-fill-selected',
         type: 'fill',
         source: 'lsoa-boundaries',
+        'source-layer': 'Lower_layer_Super_Output_Area-4ntic5',
         layout: {},
+        filter: ['in', ['get', 'LSOA21CD'], ['literal', []]],
         paint: {
-          'fill-color': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
-            '#7c3aed',   // Selected: purple
-            '#64748b'    // Deselected: muted slate gray
-          ],
-          'fill-opacity': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
-            0.3,   // Selected: 30% opacity
-            0.15   // Deselected: 15% opacity
-          ],
+          'fill-color': '#7c3aed',   // Selected: purple
+          'fill-opacity': 0.3,
         },
       }, firstSymbolId);
 
-      // Add LSOA outline layer with feature-state driven width
+      // Add LSOA fill layer for DESELECTED LSOAs (all LSOAs in the analysis)
       map.current.addLayer({
-        id: 'lsoa-outline',
+        id: 'lsoa-fill-deselected',
+        type: 'fill',
+        source: 'lsoa-boundaries',
+        'source-layer': 'Lower_layer_Super_Output_Area-4ntic5',
+        layout: {},
+        filter: ['in', ['get', 'LSOA21CD'], ['literal', []]],
+        paint: {
+          'fill-color': '#64748b',   // Deselected: muted slate gray
+          'fill-opacity': 0.15,
+        },
+      }, firstSymbolId);
+
+      // Add LSOA outline layer for SELECTED LSOAs
+      map.current.addLayer({
+        id: 'lsoa-outline-selected',
         type: 'line',
         source: 'lsoa-boundaries',
+        'source-layer': 'Lower_layer_Super_Output_Area-4ntic5',
+        filter: ['in', ['get', 'LSOA21CD'], ['literal', []]],
         paint: {
           'line-color': '#ffffff',
-          'line-width': [
-            'case',
-            ['boolean', ['feature-state', 'selected'], false],
-            2.5,  // Selected: thicker
-            1.5   // Deselected: thinner
-          ],
+          'line-width': 2.5,  // Selected: thicker
+        },
+      }, firstSymbolId);
+
+      // Add LSOA outline layer for DESELECTED LSOAs
+      map.current.addLayer({
+        id: 'lsoa-outline-deselected',
+        type: 'line',
+        source: 'lsoa-boundaries',
+        'source-layer': 'Lower_layer_Super_Output_Area-4ntic5',
+        filter: ['in', ['get', 'LSOA21CD'], ['literal', []]],
+        paint: {
+          'line-color': '#ffffff',
+          'line-width': 1.5,  // Deselected: thinner
         },
       }, firstSymbolId);
     };
@@ -319,11 +339,11 @@ export function DemographicsMap({
     } else {
       map.current.once('idle', tryAddBoundaries);
     }
-  }, [lsoaBoundaries, mapLoaded]);
+  }, [mapLoaded]);
 
   // Add click handlers after layers are created
   useEffect(() => {
-    if (!map.current || !mapLoaded || !lsoaBoundaries) {
+    if (!map.current || !mapLoaded) {
       return;
     }
 
@@ -336,8 +356,8 @@ export function DemographicsMap({
         return;
       }
 
-      // Check if layer exists
-      if (!map.current.getLayer('lsoa-fill')) {
+      // Check if layers exist
+      if (!map.current.getLayer('lsoa-fill-selected') || !map.current.getLayer('lsoa-fill-deselected')) {
         // Try again after a short delay
         timeoutId = setTimeout(checkAndAttachHandlers, 100);
         return;
@@ -396,21 +416,26 @@ export function DemographicsMap({
         currentLsoaCode = null;
       };
 
-      // Add event listeners
-      map.current.on('click', 'lsoa-fill', handleClick);
-      map.current.on('mouseenter', 'lsoa-fill', handleMouseEnter);
-      map.current.on('mousemove', 'lsoa-fill', handleMouseMove);
-      map.current.on('mouseleave', 'lsoa-fill', handleMouseLeave);
+      // Add event listeners to both selected and deselected layers
+      const lsoaLayers = ['lsoa-fill-selected', 'lsoa-fill-deselected'];
+      lsoaLayers.forEach(layerId => {
+        map.current?.on('click', layerId, handleClick);
+        map.current?.on('mouseenter', layerId, handleMouseEnter);
+        map.current?.on('mousemove', layerId, handleMouseMove);
+        map.current?.on('mouseleave', layerId, handleMouseLeave);
+      });
 
       handlersAttached.current = true;
 
       // Store cleanup function
       handlerCleanup = () => {
         if (map.current) {
-          map.current.off('click', 'lsoa-fill', handleClick);
-          map.current.off('mouseenter', 'lsoa-fill', handleMouseEnter);
-          map.current.off('mousemove', 'lsoa-fill', handleMouseMove);
-          map.current.off('mouseleave', 'lsoa-fill', handleMouseLeave);
+          lsoaLayers.forEach(layerId => {
+            map.current?.off('click', layerId, handleClick);
+            map.current?.off('mouseenter', layerId, handleMouseEnter);
+            map.current?.off('mousemove', layerId, handleMouseMove);
+            map.current?.off('mouseleave', layerId, handleMouseLeave);
+          });
         }
         handlersAttached.current = false;
       };
@@ -422,37 +447,44 @@ export function DemographicsMap({
       if (timeoutId) clearTimeout(timeoutId);
       if (handlerCleanup) handlerCleanup();
     };
-  }, [lsoaBoundaries, mapLoaded, onLsoaToggle]);
+  }, [mapLoaded, onLsoaToggle, lsoaTooltipData]);
 
-  // Update feature-state when selection changes - O(n) where n = number of LSOAs in view
+  // Update filters when selection changes
   useEffect(() => {
-    if (!map.current || !mapLoaded || !lsoaBoundaries) return;
+    if (!map.current || !mapLoaded) return;
 
-    const updateFeatureStates = () => {
-      if (!map.current || !map.current.getLayer('lsoa-fill')) {
-        // Layer not ready yet, try again after a short delay
-        setTimeout(updateFeatureStates, 50);
+    const updateFilters = () => {
+      if (!map.current ||
+          !map.current.getLayer('lsoa-fill-selected') ||
+          !map.current.getLayer('lsoa-fill-deselected')) {
+        // Layers not ready yet, try again after a short delay
+        setTimeout(updateFilters, 50);
         return;
       }
 
-      console.log('[DemographicsMap] Updating feature states for', allLsoaCodes.length, 'LSOAs');
+      console.log('[DemographicsMap] Updating filters for', allLsoaCodes.length, 'LSOAs');
       console.log('[DemographicsMap] Selected count:', selectedLsoaCodes.size);
 
-      // Set feature-state for all LSOAs based on selection
-      // This is much faster than rebuilding paint expressions
-      allLsoaCodes.forEach((code) => {
-        const isSelected = selectedLsoaCodes.has(code);
-        map.current?.setFeatureState(
-          { source: 'lsoa-boundaries', id: code },
-          { selected: isSelected }
-        );
-      });
+      // Convert Sets to Arrays for filter expressions
+      const selectedArray = Array.from(selectedLsoaCodes);
+      const deselectedArray = allLsoaCodes.filter(code => !selectedLsoaCodes.has(code));
 
-      console.log('[DemographicsMap] Feature states updated');
+      console.log('[DemographicsMap] Selected LSOAs:', selectedArray.length);
+      console.log('[DemographicsMap] Deselected LSOAs:', deselectedArray.length);
+
+      // Update selected layers to show only selected LSOAs
+      map.current.setFilter('lsoa-fill-selected', ['in', ['get', 'LSOA21CD'], ['literal', selectedArray]]);
+      map.current.setFilter('lsoa-outline-selected', ['in', ['get', 'LSOA21CD'], ['literal', selectedArray]]);
+
+      // Update deselected layers to show only deselected LSOAs
+      map.current.setFilter('lsoa-fill-deselected', ['in', ['get', 'LSOA21CD'], ['literal', deselectedArray]]);
+      map.current.setFilter('lsoa-outline-deselected', ['in', ['get', 'LSOA21CD'], ['literal', deselectedArray]]);
+
+      console.log('[DemographicsMap] Filters updated');
     };
 
-    updateFeatureStates();
-  }, [selectedLsoaCodes, mapLoaded, lsoaBoundaries, allLsoaCodes]);
+    updateFilters();
+  }, [selectedLsoaCodes, mapLoaded, allLsoaCodes]);
 
   return (
     <div className="absolute inset-0 w-full h-full">

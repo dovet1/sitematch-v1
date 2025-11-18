@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLSOAPolygonsInRadius, getLSOAPolygonsInIsochrone } from '@/lib/lsoa-boundaries';
+import { getLSOACodesInRadiusWithPolygons, getLSOACodesInIsochrone } from '@/lib/lsoa-boundaries';
 import { fetchIsochrone, getModeProfile } from '@/lib/mapbox-isochrone';
 
 export const dynamic = 'force-dynamic';
@@ -8,8 +8,9 @@ type MeasurementMode = 'distance' | 'drive_time' | 'walk_time';
 
 /**
  * POST /api/demographics/boundaries
- * Returns LSOA polygon boundaries for a given location and radius/isochrone
- * Used for map visualization
+ * Returns LSOA codes and optional isochrone geometry for a given location and radius/isochrone
+ * Note: Map visualization now uses Mapbox vector tileset (dovet.3xo625k3)
+ * This endpoint only returns the list of LSOA codes for demographic data fetching
  */
 export async function POST(request: NextRequest) {
   try {
@@ -38,9 +39,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Fetching LSOA boundaries for lat=${lat}, lng=${lng}, measurement=${measurement_mode}, value=${radius_miles}`);
+    console.log(`Fetching LSOA codes for lat=${lat}, lng=${lng}, measurement=${measurement_mode}, value=${radius_miles}`);
 
-    let geoJSON: any;
+    let lsoaCodes: string[];
     let isochroneGeometry: any = null;
 
     // Use isochrone for time-based measurements, circular radius for distance
@@ -51,23 +52,23 @@ export async function POST(request: NextRequest) {
       const isochroneResult = await fetchIsochrone(lat, lng, radius_miles, profile);
 
       isochroneGeometry = isochroneResult.geometry;
-      geoJSON = getLSOAPolygonsInIsochrone(isochroneResult.geometry.coordinates);
+      lsoaCodes = getLSOACodesInIsochrone(isochroneResult.geometry.coordinates);
 
-      console.log(`[Boundaries API] Isochrone returned ${geoJSON.features.length} LSOA polygons`);
+      console.log(`[Boundaries API] Isochrone returned ${lsoaCodes.length} LSOA codes`);
     } else {
       // Distance mode - use circular radius
-      geoJSON = getLSOAPolygonsInRadius(lat, lng, radius_miles);
-      console.log(`[Boundaries API] Circular radius returned ${geoJSON.features.length} LSOA polygons`);
+      lsoaCodes = getLSOACodesInRadiusWithPolygons(lat, lng, radius_miles);
+      console.log(`[Boundaries API] Circular radius returned ${lsoaCodes.length} LSOA codes`);
     }
 
-    console.log(`Returning ${geoJSON.features.length} LSOA polygons`);
+    console.log(`Returning ${lsoaCodes.length} LSOA codes`);
     console.log(`[Boundaries API] Returning isochrone geometry:`, isochroneGeometry ? 'YES' : 'NO');
     if (isochroneGeometry) {
       console.log(`[Boundaries API] Isochrone type: ${isochroneGeometry.type}, coords length: ${isochroneGeometry.coordinates?.[0]?.length}`);
     }
 
     return NextResponse.json({
-      lsoa_polygons: geoJSON,
+      lsoa_codes: lsoaCodes,
       isochrone_geometry: isochroneGeometry,
     });
   } catch (error) {
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error: 'Failed to fetch LSOA boundaries',
+        error: 'Failed to fetch LSOA codes',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }

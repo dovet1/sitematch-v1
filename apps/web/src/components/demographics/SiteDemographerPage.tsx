@@ -34,7 +34,6 @@ export function SiteDemographerPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rawDemographicsData, setRawDemographicsData] = useState<Record<string, any> | null>(null);
-  const [lsoaBoundaries, setLsoaBoundaries] = useState<GeoJSON.FeatureCollection | null>(null);
   const [isochroneGeometry, setIsochroneGeometry] = useState<any>(null);
   const [selectedLsoaCodes, setSelectedLsoaCodes] = useState<Set<string>>(new Set());
   const [allLsoaCodes, setAllLsoaCodes] = useState<string[]>([]);
@@ -127,53 +126,39 @@ export function SiteDemographerPage() {
         ? measurementValue
         : measurementValue; // For isochrone API, pass minutes directly
 
-      // Fetch all data in parallel
-      const [geoResponse, boundariesResponse] = await Promise.all([
-        // Step 1: Get geography codes
-        fetch('/api/demographics/geography', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            lat,
-            lng,
-            radius_miles: radiusMiles,
-            measurement_mode: measurementMode,
-          }),
+      // Fetch LSOA codes and isochrone geometry
+      const boundariesResponse = await fetch('/api/demographics/boundaries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lat,
+          lng,
+          radius_miles: radiusMiles,
+          measurement_mode: measurementMode,
         }),
-        // Step 2: Get LSOA boundaries for map
-        fetch('/api/demographics/boundaries', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            lat,
-            lng,
-            radius_miles: radiusMiles,
-            measurement_mode: measurementMode,
-          }),
-        }),
-      ]);
+      });
 
-      if (!geoResponse.ok) {
+      if (!boundariesResponse.ok) {
         throw new Error('Failed to resolve geographic areas');
       }
 
-      const geoData = await geoResponse.json();
       const boundariesData = await boundariesResponse.json();
+      const lsoaCodes = boundariesData.lsoa_codes;
 
-      // Step 3: Get demographics data and tooltip data in parallel
+      // Get demographics data and tooltip data in parallel
       const [dataResponse, tooltipResponse] = await Promise.all([
         fetch('/api/demographics/data', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            geography_codes: geoData.geography_codes,
+            geography_codes: lsoaCodes,
           }),
         }),
         fetch('/api/demographics/tooltip-data', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            geography_codes: geoData.geography_codes,
+            geography_codes: lsoaCodes,
           }),
         }),
       ]);
@@ -195,15 +180,14 @@ export function SiteDemographerPage() {
         console.log('[SiteDemographerPage] Loaded', Object.keys(demographicsData.national_averages).length, 'national averages');
       }
 
-      // Initialize all LSOAs as selected (use geography codes from API)
-      setAllLsoaCodes(geoData.geography_codes);
-      setSelectedLsoaCodes(new Set(geoData.geography_codes));
+      // Initialize all LSOAs as selected
+      setAllLsoaCodes(lsoaCodes);
+      setSelectedLsoaCodes(new Set(lsoaCodes));
       initialLoadComplete.current = true;
 
-      // Store boundaries and isochrone geometry
-      console.log('[SiteDemographerPage] Received boundaries:', boundariesData);
+      // Store isochrone geometry (boundaries now come from Mapbox vector tileset)
+      console.log('[SiteDemographerPage] Received LSOA codes:', lsoaCodes.length);
       console.log('[SiteDemographerPage] Isochrone geometry:', boundariesData.isochrone_geometry);
-      setLsoaBoundaries(boundariesData.lsoa_polygons);
       setIsochroneGeometry(boundariesData.isochrone_geometry);
     } catch (err) {
       console.error('Error analyzing demographics:', err);
@@ -218,7 +202,6 @@ export function SiteDemographerPage() {
     setMeasurementMode('distance');
     setMeasurementValue(10);
     setRawDemographicsData(null);
-    setLsoaBoundaries(null);
     setIsochroneGeometry(null);
     setSelectedLsoaCodes(new Set());
     setAllLsoaCodes([]);
@@ -295,7 +278,6 @@ export function SiteDemographerPage() {
             <DemographicsMap
               center={{ lat: selectedLocation.center[1], lng: selectedLocation.center[0] }}
               radiusMiles={convertToRadiusMiles(measurementMode, measurementValue)}
-              lsoaBoundaries={lsoaBoundaries}
               isochroneGeometry={isochroneGeometry}
               loading={loading}
               measurementMode={measurementMode}
