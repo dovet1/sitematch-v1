@@ -3,7 +3,7 @@
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LocationInputPanel } from './LocationInputPanel';
+import { LocationInputPanel, type MeasurementMode } from './LocationInputPanel';
 import { DemographicsResults } from './DemographicsResults';
 import { DemographicsMap } from './DemographicsMap';
 import { useState } from 'react';
@@ -17,11 +17,27 @@ interface SiteDemographerModalProps {
 
 export function SiteDemographerModal({ open, onClose }: SiteDemographerModalProps) {
   const [selectedLocation, setSelectedLocation] = useState<LocationResult | null>(null);
-  const [radius, setRadius] = useState<number>(10);
+  const [measurementMode, setMeasurementMode] = useState<MeasurementMode>('distance');
+  const [measurementValue, setMeasurementValue] = useState<number>(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<DemographicsResult | null>(null);
   const [lsoaBoundaries, setLsoaBoundaries] = useState<GeoJSON.FeatureCollection | null>(null);
+
+  // Convert measurement to radius in miles (same as SiteDemographerPage)
+  const convertToRadiusMiles = (mode: MeasurementMode, value: number): number => {
+    const WALK_SPEED_MPH = 3;
+    const DRIVE_SPEED_MPH = 35;
+
+    switch (mode) {
+      case 'distance':
+        return value;
+      case 'walk_time':
+        return (value / 60) * WALK_SPEED_MPH;
+      case 'drive_time':
+        return (value / 60) * DRIVE_SPEED_MPH;
+    }
+  };
 
   const handleAnalyze = async () => {
     if (!selectedLocation) return;
@@ -32,19 +48,24 @@ export function SiteDemographerModal({ open, onClose }: SiteDemographerModalProp
     try {
       const [lng, lat] = selectedLocation.center;
 
+      // For time-based modes, pass minutes directly; for distance mode, pass miles
+      const radiusMiles = measurementMode === 'distance'
+        ? measurementValue
+        : measurementValue;
+
       // Fetch all data in parallel
       const [geoResponse, boundariesResponse] = await Promise.all([
         // Step 1: Get geography codes
         fetch('/api/demographics/geography', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lat, lng, radius_miles: radius }),
+          body: JSON.stringify({ lat, lng, radius_miles: radiusMiles, measurement_mode: measurementMode }),
         }),
         // Step 2: Get LSOA boundaries for map
         fetch('/api/demographics/boundaries', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lat, lng, radius_miles: radius }),
+          body: JSON.stringify({ lat, lng, radius_miles: radiusMiles, measurement_mode: measurementMode }),
         }),
       ]);
 
@@ -79,9 +100,22 @@ export function SiteDemographerModal({ open, onClose }: SiteDemographerModalProp
     }
   };
 
+  // Handle mode change with appropriate defaults
+  const handleMeasurementModeChange = (mode: MeasurementMode) => {
+    setMeasurementMode(mode);
+    if (mode === 'walk_time') {
+      setMeasurementValue(20); // 20 min = 1 mile
+    } else if (mode === 'drive_time') {
+      setMeasurementValue(10); // 10 min = ~6 miles
+    } else {
+      setMeasurementValue(10); // 10 miles
+    }
+  };
+
   const handleReset = () => {
     setSelectedLocation(null);
-    setRadius(10);
+    setMeasurementMode('distance');
+    setMeasurementValue(10);
     setResults(null);
     setLsoaBoundaries(null);
     setError(null);
@@ -115,8 +149,10 @@ export function SiteDemographerModal({ open, onClose }: SiteDemographerModalProp
             <LocationInputPanel
               selectedLocation={selectedLocation}
               onLocationChange={setSelectedLocation}
-              radius={radius}
-              onRadiusChange={setRadius}
+              measurementMode={measurementMode}
+              onMeasurementModeChange={handleMeasurementModeChange}
+              measurementValue={measurementValue}
+              onMeasurementValueChange={setMeasurementValue}
               onAnalyze={handleAnalyze}
               onReset={handleReset}
               loading={loading}
@@ -129,9 +165,15 @@ export function SiteDemographerModal({ open, onClose }: SiteDemographerModalProp
             {selectedLocation ? (
               <DemographicsMap
                 center={{ lat: selectedLocation.center[1], lng: selectedLocation.center[0] }}
-                radiusMiles={radius}
-                lsoaBoundaries={lsoaBoundaries}
+                radiusMiles={convertToRadiusMiles(measurementMode, measurementValue)}
+                isochroneGeometry={null}
                 loading={loading}
+                measurementMode={measurementMode}
+                measurementValue={measurementValue}
+                selectedLsoaCodes={new Set()}
+                allLsoaCodes={[]}
+                onLsoaToggle={() => {}}
+                lsoaTooltipData={{}}
               />
             ) : (
               <div className="h-full flex items-center justify-center text-gray-400">
@@ -146,11 +188,15 @@ export function SiteDemographerModal({ open, onClose }: SiteDemographerModalProp
           {/* Right Panel - Results */}
           <div className="w-full lg:w-96 border-l border-gray-200 p-6 overflow-y-auto bg-gray-50">
             <DemographicsResults
-              results={results}
               loading={loading}
               error={error}
               location={selectedLocation}
-              radius={radius}
+              measurementMode={measurementMode}
+              measurementValue={measurementValue}
+              totalLsoaCount={0}
+              rawData={null}
+              selectedLsoaCodes={new Set()}
+              nationalAverages={{}}
             />
           </div>
         </div>

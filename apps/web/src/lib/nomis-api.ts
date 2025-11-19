@@ -13,6 +13,18 @@
 
 const USE_MOCK_DATA = true; // Toggle to switch between mock and real API
 
+const NOMIS_BASE_URL = 'https://www.nomisweb.co.uk/api/v01';
+
+const DATASETS = {
+  POPULATION: 'NM_2010_1',
+  SEX: 'NM_2011_1',
+  AGE_PROFILE: 'NM_2012_1',
+  HOUSEHOLD_SIZE: 'NM_2013_1',
+  HOUSEHOLD_COMP: 'NM_2014_1',
+  COUNTRY_OF_BIRTH: 'NM_2015_1',
+  HOUSEHOLD_DEPR: 'NM_2016_1',
+};
+
 interface NomisObservation {
   DATE: string;
   DATE_NAME: string;

@@ -118,7 +118,7 @@ function parseCensusCSV(filename: string, geographyCodes: string[]): CensusRow[]
   // Handle both old format (geography code) and new format (mnemonic)
   return records.filter((row) => {
     const geoCode = row['geography code'] || row['mnemonic'];
-    return geographyCodes.includes(geoCode);
+    return geographyCodes.includes(String(geoCode));
   });
 }
 
