@@ -305,7 +305,7 @@ export async function GET(
       // Check planning use class match
       if (savedSearch.planning_use_classes && savedSearch.planning_use_classes.length > 0) {
         const listingUseClassIds = listingUseClasses[listing.id] || [];
-        const hasMatchingUseClass = savedSearch.planning_use_classes.some((useClassId) =>
+        const hasMatchingUseClass = savedSearch.planning_use_classes.some((useClassId: string) =>
           listingUseClassIds.includes(useClassId)
         );
         if (!hasMatchingUseClass) continue;
