@@ -68,7 +68,9 @@ export async function PUT(
     // Validate size range
     if (
       body.min_size !== undefined &&
+      body.min_size !== null &&
       body.max_size !== undefined &&
+      body.max_size !== null &&
       body.min_size > body.max_size
     ) {
       return NextResponse.json(
