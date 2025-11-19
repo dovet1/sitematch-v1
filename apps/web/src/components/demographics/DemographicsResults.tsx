@@ -430,7 +430,7 @@ export function DemographicsResults({
                               </div>
                             </div>
 
-                            {chart.data.slice(0, 10).map((item, idx) => (
+                            {chart.data.slice(0, 10).map((item: ChartData, idx) => (
                               <div key={idx} className="flex items-center gap-2 text-xs">
                                 <div className="flex-1 text-gray-700 text-[11px]" title={item.label}>
                                   {item.label}
@@ -442,7 +442,7 @@ export function DemographicsResults({
                                   {formatPercentage(item.percentage)}
                                 </div>
                                 {/* Comparison badge */}
-                                {item.nationalAverage !== undefined && item.nationalAverage > 0 && (
+                                {'nationalAverage' in item && item.nationalAverage !== undefined && item.nationalAverage > 0 && (
                                   <div
                                     className={`w-14 text-right text-[10px] font-medium tabular-nums ${
                                       item.percentage > item.nationalAverage + 0.5
