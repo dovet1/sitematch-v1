@@ -41,6 +41,7 @@ export function SiteDemographerPage() {
   const initialLoadComplete = useRef(false);
   const [lsoaTooltipData, setLsoaTooltipData] = useState<Record<string, LSOATooltipData>>({});
   const [nationalAverages, setNationalAverages] = useState<Record<string, number>>({});
+  const [showTraffic, setShowTraffic] = useState(false);
 
   // Re-fetch aggregated data when selection changes
   useEffect(() => {
@@ -275,18 +276,33 @@ export function SiteDemographerPage() {
         {/* Right Panel - Map (70%) */}
         <div className="flex-1 bg-gray-50 relative min-h-0">
           {selectedLocation ? (
-            <DemographicsMap
-              center={{ lat: selectedLocation.center[1], lng: selectedLocation.center[0] }}
-              radiusMiles={convertToRadiusMiles(measurementMode, measurementValue)}
-              isochroneGeometry={isochroneGeometry}
-              loading={loading}
-              measurementMode={measurementMode}
-              measurementValue={measurementValue}
-              selectedLsoaCodes={selectedLsoaCodes}
-              allLsoaCodes={allLsoaCodes}
-              onLsoaToggle={handleLsoaToggle}
-              lsoaTooltipData={lsoaTooltipData}
-            />
+            <>
+              <DemographicsMap
+                center={{ lat: selectedLocation.center[1], lng: selectedLocation.center[0] }}
+                radiusMiles={convertToRadiusMiles(measurementMode, measurementValue)}
+                isochroneGeometry={isochroneGeometry}
+                loading={loading}
+                measurementMode={measurementMode}
+                measurementValue={measurementValue}
+                selectedLsoaCodes={selectedLsoaCodes}
+                allLsoaCodes={allLsoaCodes}
+                onLsoaToggle={handleLsoaToggle}
+                lsoaTooltipData={lsoaTooltipData}
+                showTraffic={showTraffic}
+              />
+
+              {/* Traffic Layer Toggle - Floating Button */}
+              <div className="absolute bottom-4 left-4 z-20">
+                <Button
+                  onClick={() => setShowTraffic(!showTraffic)}
+                  variant={showTraffic ? "default" : "outline"}
+                  size="sm"
+                  className={showTraffic ? "bg-violet-600 hover:bg-violet-700" : "bg-white"}
+                >
+                  {showTraffic ? "Hide Traffic" : "Show Traffic"}
+                </Button>
+              </div>
+            </>
           ) : (
             <div className="h-full flex items-center justify-center">
               <div className="text-center max-w-sm px-8">

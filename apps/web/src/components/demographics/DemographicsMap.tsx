@@ -9,6 +9,12 @@ import type { LSOATooltipData } from '@/lib/supabase-census-data';
 // Set your Mapbox access token
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
+// Traffic layer configuration
+const TRAFFIC_TILESET_ID = 'dovet.a4p7c0q8';
+const TRAFFIC_SOURCE_ID = 'traffic-roads';
+const TRAFFIC_LAYER_ID = 'traffic-roads';
+const TRAFFIC_SOURCE_LAYER = 'traffic_roads';
+
 interface DemographicsMapProps {
   center: { lat: number; lng: number };
   radiusMiles: number;
@@ -20,6 +26,7 @@ interface DemographicsMapProps {
   allLsoaCodes: string[];
   onLsoaToggle: (code: string) => void;
   lsoaTooltipData: Record<string, LSOATooltipData>;
+  showTraffic?: boolean; // Optional toggle for traffic layer visibility
 }
 
 export function DemographicsMap({
@@ -33,6 +40,7 @@ export function DemographicsMap({
   allLsoaCodes,
   onLsoaToggle,
   lsoaTooltipData,
+  showTraffic = false,
 }: DemographicsMapProps) {
   // Format display text based on mode
   const getMeasurementDisplay = () => {
@@ -49,9 +57,15 @@ export function DemographicsMap({
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const handlersAttached = useRef(false);
+  const trafficHandlersAttached = useRef(false);
   const lastCenter = useRef<{ lat: number; lng: number } | null>(null);
   const lastRadius = useRef<number | null>(null);
   const [hoveredLsoa, setHoveredLsoa] = useState<LSOATooltipData | null>(null);
+  const [hoveredRoad, setHoveredRoad] = useState<{
+    roadNumber: string;
+    classification: string;
+    aadt: number;
+  } | null>(null);
 
   // Calculate zoom level based on radius (larger radius = more zoomed out)
   // Note: LSOA vector tiles may have maxzoom ~10-12, so we avoid going below zoom 8
@@ -325,6 +339,57 @@ export function DemographicsMap({
           'line-width': 1.5,  // Deselected: thinner
         },
       }, firstSymbolId);
+
+      // Add traffic layer immediately after LSOA layers
+      // Only add if source doesn't already exist
+      if (!map.current.getSource(TRAFFIC_SOURCE_ID)) {
+        try {
+          console.log('[DemographicsMap] Adding traffic source:', `mapbox://${TRAFFIC_TILESET_ID}`);
+          map.current.addSource(TRAFFIC_SOURCE_ID, {
+            type: 'vector',
+            url: `mapbox://${TRAFFIC_TILESET_ID}`,
+          });
+
+          console.log('[DemographicsMap] Adding traffic layer, source-layer:', TRAFFIC_SOURCE_LAYER);
+          map.current.addLayer({
+            id: TRAFFIC_LAYER_ID,
+            type: 'line',
+            source: TRAFFIC_SOURCE_ID,
+            'source-layer': TRAFFIC_SOURCE_LAYER,
+            layout: {
+              visibility: 'none', // Start hidden
+            },
+            paint: {
+              'line-color': [
+                'interpolate',
+                ['linear'],
+                ['get', 'aadt'],
+                0,     '#e5e7eb',
+                5000,  '#fde68a',
+                10000, '#fbbf24',
+                20000, '#f97316',
+                35000, '#dc2626',
+                50000, '#991b1b',
+              ],
+              'line-width': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                8,  1,
+                10, 1.5,
+                12, 2.5,
+                14, 4,
+                16, 6,
+              ],
+              'line-opacity': 0.75,
+            },
+          }, firstSymbolId);
+
+          console.log('[DemographicsMap] Traffic layer added successfully');
+        } catch (error) {
+          console.error('[DemographicsMap] Error adding traffic layer:', error);
+        }
+      }
     };
 
     // Use idle event instead of style.load to ensure map is fully ready after flyTo
@@ -342,6 +407,98 @@ export function DemographicsMap({
       map.current.once('idle', tryAddBoundaries);
     }
   }, [mapLoaded]);
+
+  // Toggle traffic layer visibility based on showTraffic prop
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    const updateTrafficVisibility = () => {
+      if (!map.current?.getLayer(TRAFFIC_LAYER_ID)) {
+        // Layer doesn't exist yet, try again
+        setTimeout(updateTrafficVisibility, 50);
+        return;
+      }
+
+      map.current.setLayoutProperty(
+        TRAFFIC_LAYER_ID,
+        'visibility',
+        showTraffic ? 'visible' : 'none'
+      );
+
+      console.log('[DemographicsMap] Traffic layer visibility:', showTraffic ? 'visible' : 'none');
+    };
+
+    updateTrafficVisibility();
+  }, [showTraffic, mapLoaded]);
+
+  // Add traffic layer hover handlers
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !showTraffic) {
+      return;
+    }
+
+    let timeoutId: NodeJS.Timeout;
+    let handlerCleanup: (() => void) | undefined;
+
+    const checkAndAttachTrafficHandlers = () => {
+      if (!map.current) return;
+
+      // Check if layer exists
+      if (!map.current.getLayer(TRAFFIC_LAYER_ID)) {
+        timeoutId = setTimeout(checkAndAttachTrafficHandlers, 100);
+        return;
+      }
+
+      if (trafficHandlersAttached.current) return;
+
+      // Hover handlers for traffic roads
+      const handleMouseEnter = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+        if (!map.current || !e.features || e.features.length === 0) return;
+
+        map.current.getCanvas().style.cursor = 'pointer';
+
+        const feature = e.features[0];
+        const properties = feature.properties;
+
+        if (properties) {
+          setHoveredRoad({
+            roadNumber: properties.road_number || 'Unknown',
+            classification: properties.road_classification || 'Unknown',
+            aadt: properties.aadt || 0,
+          });
+        }
+      };
+
+      const handleMouseLeave = () => {
+        if (map.current) {
+          map.current.getCanvas().style.cursor = '';
+        }
+        setHoveredRoad(null);
+      };
+
+      // Attach handlers
+      map.current.on('mouseenter', TRAFFIC_LAYER_ID, handleMouseEnter);
+      map.current.on('mouseleave', TRAFFIC_LAYER_ID, handleMouseLeave);
+
+      trafficHandlersAttached.current = true;
+
+      // Store cleanup function
+      handlerCleanup = () => {
+        if (map.current) {
+          map.current.off('mouseenter', TRAFFIC_LAYER_ID, handleMouseEnter);
+          map.current.off('mouseleave', TRAFFIC_LAYER_ID, handleMouseLeave);
+        }
+        trafficHandlersAttached.current = false;
+      };
+    };
+
+    checkAndAttachTrafficHandlers();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (handlerCleanup) handlerCleanup();
+    };
+  }, [mapLoaded, showTraffic]);
 
   // Add click handlers after layers are created
   useEffect(() => {
@@ -493,7 +650,7 @@ export function DemographicsMap({
       <div ref={mapContainer} className="w-full h-full" />
 
       {/* LSOA Info Box - Top Right */}
-      {hoveredLsoa && (
+      {hoveredLsoa && !hoveredRoad && (
         <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 min-w-[240px] z-10">
           <div className="font-semibold text-gray-900 mb-2">{hoveredLsoa.geo_name}</div>
           <div className="space-y-1 text-sm text-gray-600">
@@ -507,6 +664,25 @@ export function DemographicsMap({
                 {hoveredLsoa.affluence_score.toFixed(1)}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Traffic Road Info Box - Top Right */}
+      {hoveredRoad && (
+        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 min-w-[240px] z-10">
+          <div className="font-semibold text-gray-900 mb-2">
+            {hoveredRoad.roadNumber}
+          </div>
+          <div className="space-y-1 text-sm text-gray-600">
+            <div>
+              <span className="font-medium">Type:</span>{' '}
+              {hoveredRoad.classification}
+            </div>
+            <div>
+              <span className="font-medium">Traffic:</span>{' '}
+              {hoveredRoad.aadt.toLocaleString()} vehicles/day
+            </div>
           </div>
         </div>
       )}
