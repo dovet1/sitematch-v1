@@ -37,14 +37,22 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
   const { isMobile } = useMobileBreakpoint();
   const router = useRouter();
 
-  // Memoize tabs array to prevent unnecessary re-renders
-  const tabs = useMemo(() => [
-    { id: 'overview', label: 'overview' },
-    { id: 'requirements', label: 'requirements' },
-    { id: 'locations', label: 'locations' },
-    { id: 'contact', label: 'contact' },
-    { id: 'faqs', label: 'faqs' }
-  ], []);
+  // Memoize tabs array to prevent unnecessary re-renders, conditionally include FAQs
+  const tabs = useMemo(() => {
+    const baseTabs = [
+      { id: 'overview', label: 'overview' },
+      { id: 'requirements', label: 'requirements' },
+      { id: 'locations', label: 'locations' },
+      { id: 'contact', label: 'contact' }
+    ];
+
+    // Only add FAQs tab if there are FAQs
+    if (listing?.faqs && listing.faqs.length > 0) {
+      baseTabs.push({ id: 'faqs', label: 'faqs' });
+    }
+
+    return baseTabs;
+  }, [listing?.faqs]);
 
   const handleTabChange = useCallback((tabId: string) => {
     setActiveTab(tabId);
@@ -764,9 +772,9 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
         }}
       />
       
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="h-screen bg-white flex flex-col overflow-hidden">
       {/* Header Bar - Same as modal */}
-      <div className="flex items-center justify-between px-6 py-4 bg-white/95 backdrop-blur-md border-b border-gray-200">
+      <div className="flex items-center justify-between px-6 py-4 bg-white/95 backdrop-blur-md border-b border-gray-200 flex-shrink-0">
         <Button 
           variant="ghost" 
           size="sm" 
@@ -791,19 +799,19 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
         </div>
       </div>
 
-      {/* Split Layout Container - Same as modal */}
-      <div className="flex flex-1">
-        {/* Visual Hero Section - 40% width on desktop */}
-        <div className="w-2/5 relative overflow-hidden bg-gradient-to-br from-violet-900 to-violet-700">
-          <VisualHeroSection 
+      {/* Split Layout Container - Takes remaining height after header */}
+      <div className="flex flex-1 min-h-0">
+        {/* Visual Hero Section - 40% width, fills available height, never scrolls */}
+        <div className="w-2/5 overflow-hidden bg-gradient-to-br from-violet-900 to-violet-700">
+          <VisualHeroSection
             listing={listing}
             isLoading={isLoading}
           />
         </div>
 
-        {/* Information Panel - 60% width on desktop */}
-        <div className="w-3/5 overflow-hidden bg-white">
-          <div className="h-full flex flex-col">
+        {/* Information Panel - 60% width, scrollable content */}
+        <div className="w-3/5 overflow-y-auto bg-white">
+          <div className="flex flex-col">
             {/* Company Hero Card - Same as modal */}
             <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-violet-50 to-violet-100">
               <div className="flex items-center gap-4">
@@ -849,27 +857,27 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
 
             {/* Tab Navigation - Same as modal */}
             <div className="flex border-b border-gray-200 overflow-x-auto md:overflow-visible">
-              {['overview', 'requirements', 'locations', 'contact', 'faqs'].map((tab) => (
+              {tabs.map((tab) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
                   className={cn(
                     "px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
                     "hover:text-violet-600 hover:border-violet-300",
-                    activeTab === tab
+                    activeTab === tab.id
                       ? "text-violet-600 border-violet-500"
                       : "text-gray-500 border-transparent"
                   )}
                 >
-                  {tab === 'overview' ? `From ${listing?.company?.name || 'Company'}` :
-                   tab === 'faqs' ? 'FAQs' :
-                   tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab.id === 'overview' ? `From ${listing?.company?.name || 'Company'}` :
+                   tab.id === 'faqs' ? 'FAQs' :
+                   tab.id.charAt(0).toUpperCase() + tab.id.slice(1)}
                 </button>
               ))}
             </div>
 
-            {/* Tab Content - Same as modal */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Tab Content */}
+            <div className="flex-1">
               {renderTabContent()}
             </div>
           </div>
