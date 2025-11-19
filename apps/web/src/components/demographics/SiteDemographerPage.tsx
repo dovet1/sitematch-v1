@@ -42,6 +42,7 @@ export function SiteDemographerPage() {
   const [lsoaTooltipData, setLsoaTooltipData] = useState<Record<string, LSOATooltipData>>({});
   const [nationalAverages, setNationalAverages] = useState<Record<string, number>>({});
   const [showTraffic, setShowTraffic] = useState(false);
+  const [showCountPoints, setShowCountPoints] = useState(false);
 
   // Re-fetch aggregated data when selection changes
   useEffect(() => {
@@ -289,10 +290,11 @@ export function SiteDemographerPage() {
                 onLsoaToggle={handleLsoaToggle}
                 lsoaTooltipData={lsoaTooltipData}
                 showTraffic={showTraffic}
+                showCountPoints={showCountPoints}
               />
 
-              {/* Traffic Layer Toggle - Floating Button */}
-              <div className="absolute bottom-4 left-4 z-20">
+              {/* Traffic Layer Toggles - Floating Buttons */}
+              <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2">
                 <Button
                   onClick={() => setShowTraffic(!showTraffic)}
                   variant={showTraffic ? "default" : "outline"}
@@ -300,6 +302,14 @@ export function SiteDemographerPage() {
                   className={showTraffic ? "bg-violet-600 hover:bg-violet-700" : "bg-white"}
                 >
                   {showTraffic ? "Hide Traffic" : "Show Traffic"}
+                </Button>
+                <Button
+                  onClick={() => setShowCountPoints(!showCountPoints)}
+                  variant={showCountPoints ? "default" : "outline"}
+                  size="sm"
+                  className={showCountPoints ? "bg-cyan-500 hover:bg-cyan-600" : "bg-white"}
+                >
+                  {showCountPoints ? "Hide Count Points" : "Show Count Points"}
                 </Button>
               </div>
             </>

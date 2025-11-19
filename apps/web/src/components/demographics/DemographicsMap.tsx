@@ -15,6 +15,12 @@ const TRAFFIC_SOURCE_ID = 'traffic-roads';
 const TRAFFIC_LAYER_ID = 'traffic-roads';
 const TRAFFIC_SOURCE_LAYER = 'traffic_roads';
 
+// DfT count points configuration
+const COUNT_POINTS_TILESET_ID = 'dovet.b44k9tis';
+const COUNT_POINTS_SOURCE_ID = 'traffic-counts';
+const COUNT_POINTS_LAYER_ID = 'traffic-counts-layer';
+const COUNT_POINTS_SOURCE_LAYER = 'traffic_counts';
+
 interface DemographicsMapProps {
   center: { lat: number; lng: number };
   radiusMiles: number;
@@ -27,6 +33,7 @@ interface DemographicsMapProps {
   onLsoaToggle: (code: string) => void;
   lsoaTooltipData: Record<string, LSOATooltipData>;
   showTraffic?: boolean; // Optional toggle for traffic layer visibility
+  showCountPoints?: boolean; // Optional toggle for DfT count points visibility
 }
 
 export function DemographicsMap({
@@ -41,6 +48,7 @@ export function DemographicsMap({
   onLsoaToggle,
   lsoaTooltipData,
   showTraffic = false,
+  showCountPoints = false,
 }: DemographicsMapProps) {
   // Format display text based on mode
   const getMeasurementDisplay = () => {
@@ -66,6 +74,7 @@ export function DemographicsMap({
     classification: string;
     aadt: number;
   } | null>(null);
+  const countPointsHandlersAttached = useRef(false);
 
   // Calculate zoom level based on radius (larger radius = more zoomed out)
   // Note: LSOA vector tiles may have maxzoom ~10-12, so we avoid going below zoom 8
@@ -390,6 +399,46 @@ export function DemographicsMap({
           console.error('[DemographicsMap] Error adding traffic layer:', error);
         }
       }
+
+      // Add DfT count points layer
+      if (!map.current.getSource(COUNT_POINTS_SOURCE_ID)) {
+        try {
+          console.log('[DemographicsMap] Adding count points source:', `mapbox://${COUNT_POINTS_TILESET_ID}`);
+          map.current.addSource(COUNT_POINTS_SOURCE_ID, {
+            type: 'vector',
+            url: `mapbox://${COUNT_POINTS_TILESET_ID}`,
+          });
+
+          console.log('[DemographicsMap] Adding count points layer, source-layer:', COUNT_POINTS_SOURCE_LAYER);
+          map.current.addLayer({
+            id: COUNT_POINTS_LAYER_ID,
+            type: 'circle',
+            source: COUNT_POINTS_SOURCE_ID,
+            'source-layer': COUNT_POINTS_SOURCE_LAYER,
+            layout: {
+              visibility: 'none', // Start hidden
+            },
+            paint: {
+              'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                6, 1.5,
+                10, 3,
+                14, 6,
+              ],
+              'circle-color': '#0ea5e9', // Cyan/blue accent
+              'circle-stroke-color': '#ffffff',
+              'circle-stroke-width': 1,
+              'circle-opacity': 0.9,
+            },
+          }, firstSymbolId);
+
+          console.log('[DemographicsMap] Count points layer added successfully');
+        } catch (error) {
+          console.error('[DemographicsMap] Error adding count points layer:', error);
+        }
+      }
     };
 
     // Use idle event instead of style.load to ensure map is fully ready after flyTo
@@ -430,6 +479,29 @@ export function DemographicsMap({
 
     updateTrafficVisibility();
   }, [showTraffic, mapLoaded]);
+
+  // Toggle count points layer visibility based on showCountPoints prop
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    const updateCountPointsVisibility = () => {
+      if (!map.current?.getLayer(COUNT_POINTS_LAYER_ID)) {
+        // Layer doesn't exist yet, try again
+        setTimeout(updateCountPointsVisibility, 50);
+        return;
+      }
+
+      map.current.setLayoutProperty(
+        COUNT_POINTS_LAYER_ID,
+        'visibility',
+        showCountPoints ? 'visible' : 'none'
+      );
+
+      console.log('[DemographicsMap] Count points layer visibility:', showCountPoints ? 'visible' : 'none');
+    };
+
+    updateCountPointsVisibility();
+  }, [showCountPoints, mapLoaded]);
 
   // Add traffic layer hover handlers
   useEffect(() => {
@@ -644,6 +716,99 @@ export function DemographicsMap({
 
     updateFilters();
   }, [selectedLsoaCodes, mapLoaded, allLsoaCodes]);
+
+  // Add count points click handlers
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !showCountPoints) {
+      return;
+    }
+
+    let timeoutId: NodeJS.Timeout;
+    let handlerCleanup: (() => void) | undefined;
+
+    const checkAndAttachCountPointsHandlers = () => {
+      if (!map.current) return;
+
+      // Check if layer exists
+      if (!map.current.getLayer(COUNT_POINTS_LAYER_ID)) {
+        timeoutId = setTimeout(checkAndAttachCountPointsHandlers, 100);
+        return;
+      }
+
+      if (countPointsHandlersAttached.current) {
+        return;
+      }
+
+      console.log('[DemographicsMap] Attaching count points handlers');
+
+      // Click handler to show popup
+      const handleClick = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+        if (!e.features || e.features.length === 0) return;
+
+        const feature = e.features[0];
+        const coords = (feature.geometry as any).coordinates.slice();
+        const props = feature.properties || {};
+
+        const aadt = props.aadt;
+        const roadName = props.road_name || 'Unnamed road';
+        const year = props.year;
+
+        const html = `
+          <div style="font-size: 13px;">
+            <div style="font-weight: 600; margin-bottom: 6px;">DfT Count Point</div>
+            <div style="margin-bottom: 2px;">${roadName}</div>
+            <div style="margin-bottom: 2px;">Year: ${year}</div>
+            <div style="margin-bottom: 6px;">AADT (all vehicles): ${Number(aadt).toLocaleString('en-GB')}</div>
+            <div style="margin-top: 4px; font-size: 11px; color: #6b7280;">
+              Source: DfT traffic counts
+            </div>
+          </div>
+        `;
+
+        new mapboxgl.Popup()
+          .setLngLat(coords)
+          .setHTML(html)
+          .addTo(map.current!);
+      };
+
+      // Cursor handlers
+      const handleMouseEnter = () => {
+        if (map.current) {
+          map.current.getCanvas().style.cursor = 'pointer';
+        }
+      };
+
+      const handleMouseLeave = () => {
+        if (map.current) {
+          map.current.getCanvas().style.cursor = '';
+        }
+      };
+
+      // Attach handlers
+      map.current.on('click', COUNT_POINTS_LAYER_ID, handleClick);
+      map.current.on('mouseenter', COUNT_POINTS_LAYER_ID, handleMouseEnter);
+      map.current.on('mouseleave', COUNT_POINTS_LAYER_ID, handleMouseLeave);
+
+      countPointsHandlersAttached.current = true;
+
+      // Store cleanup function
+      handlerCleanup = () => {
+        if (map.current) {
+          map.current.off('click', COUNT_POINTS_LAYER_ID, handleClick);
+          map.current.off('mouseenter', COUNT_POINTS_LAYER_ID, handleMouseEnter);
+          map.current.off('mouseleave', COUNT_POINTS_LAYER_ID, handleMouseLeave);
+        }
+        countPointsHandlersAttached.current = false;
+      };
+    };
+
+    checkAndAttachCountPointsHandlers();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (handlerCleanup) handlerCleanup();
+    };
+  }, [mapLoaded, showCountPoints]);
 
   return (
     <div className="absolute inset-0 w-full h-full">
