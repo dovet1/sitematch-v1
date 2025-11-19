@@ -802,7 +802,7 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
       {/* Split Layout Container - Takes remaining height after header */}
       <div className="flex flex-1 min-h-0">
         {/* Visual Hero Section - 40% width, fills available height, never scrolls */}
-        <div className="w-2/5 overflow-hidden bg-gradient-to-br from-violet-900 to-violet-700">
+        <div className="w-2/5 h-full overflow-hidden bg-gradient-to-br from-violet-900 to-violet-700">
           <VisualHeroSection
             listing={listing}
             isLoading={isLoading}
@@ -810,7 +810,7 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
         </div>
 
         {/* Information Panel - 60% width, scrollable content */}
-        <div className="w-3/5 overflow-y-auto bg-white">
+        <div className="w-3/5 h-full overflow-y-auto bg-white">
           <div className="flex flex-col">
             {/* Company Hero Card - Same as modal */}
             <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-violet-50 to-violet-100">
