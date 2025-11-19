@@ -50,7 +50,7 @@ export function DemographicsResults({
 }: DemographicsResultsProps) {
   // Default to first 3 categories expanded
   const [expandedCategories, setExpandedCategories] = useState<Set<CategoryType>>(
-    new Set(['population', 'demographics', 'affluence'])
+    new Set(['population', 'demographics', 'affluence'] as CategoryType[])
   );
 
   const toggleCategory = (category: CategoryType) => {
