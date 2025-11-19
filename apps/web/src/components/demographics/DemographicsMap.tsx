@@ -750,22 +750,56 @@ export function DemographicsMap({
         const props = feature.properties || {};
 
         const aadt = props.aadt;
-        const roadName = props.road_name || 'Unnamed road';
+        const roadName = props.road_name;
         const year = props.year;
 
+        // Hide road name if it's 'U' (Unknown/Unclassified) or empty
+        const shouldShowRoadName = roadName && roadName !== 'U';
+
+        // Premium styled popup matching the site's design system
         const html = `
-          <div style="font-size: 13px;">
-            <div style="font-weight: 600; margin-bottom: 6px;">DfT Count Point</div>
-            <div style="margin-bottom: 2px;">${roadName}</div>
-            <div style="margin-bottom: 2px;">Year: ${year}</div>
-            <div style="margin-bottom: 6px;">AADT (all vehicles): ${Number(aadt).toLocaleString('en-GB')}</div>
-            <div style="margin-top: 4px; font-size: 11px; color: #6b7280;">
-              Source: DfT traffic counts
+          <div style="min-width: 220px;">
+            <!-- Cyan accent bar -->
+            <div style="height: 3px; background: linear-gradient(to right, #06b6d4, #0ea5e9); margin: -12px -12px 12px -12px; border-radius: 6px 6px 0 0;"></div>
+
+            <!-- Hero metric: AADT -->
+            <div style="text-align: center; margin-bottom: 12px;">
+              <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; font-weight: 600; margin-bottom: 4px;">
+                Average Daily Traffic
+              </div>
+              <div style="font-size: 28px; font-weight: 700; color: #0f172a; line-height: 1;">
+                ${Number(aadt).toLocaleString('en-GB')}
+              </div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                vehicles/day
+              </div>
+            </div>
+
+            ${shouldShowRoadName ? `
+              <!-- Divider -->
+              <div style="height: 1px; background: #e5e7eb; margin: 12px 0;"></div>
+
+              <!-- Road name -->
+              <div style="font-size: 13px; color: #334155; margin-bottom: 8px; font-weight: 500;">
+                ${roadName}
+              </div>
+            ` : ''}
+
+            ${shouldShowRoadName ? '' : '<div style="height: 1px; background: #e5e7eb; margin: 12px 0;"></div>'}
+
+            <!-- Source attribution -->
+            <div style="font-size: 11px; color: #64748b; line-height: 1.4;">
+              Source: DfT traffic counts (${year})
             </div>
           </div>
         `;
 
-        new mapboxgl.Popup()
+        new mapboxgl.Popup({
+          className: 'count-point-popup',
+          closeButton: true,
+          closeOnClick: false,
+          maxWidth: '280px'
+        })
           .setLngLat(coords)
           .setHTML(html)
           .addTo(map.current!);
