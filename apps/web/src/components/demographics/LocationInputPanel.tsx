@@ -275,7 +275,7 @@ export function LocationInputPanel({
           ) : (
             <>
               <Sparkles className="mr-2 h-3.5 w-3.5" />
-              <span>Analyze</span>
+              <span>Analyse</span>
             </>
           )}
         </Button>

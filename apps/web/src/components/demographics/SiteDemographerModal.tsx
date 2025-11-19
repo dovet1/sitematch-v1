@@ -129,7 +129,7 @@ export function SiteDemographerModal({ open, onClose }: SiteDemographerModalProp
           <div>
             <h2 className="text-2xl font-bold text-gray-900">SiteDemographer</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Analyze demographics for any UK location
+              Analyse demographics for any UK location
             </p>
           </div>
           <Button

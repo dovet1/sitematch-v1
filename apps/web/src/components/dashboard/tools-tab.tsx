@@ -12,7 +12,7 @@ export function ToolsTab() {
     {
       id: 'site-demographer',
       title: 'SiteAnalyser',
-      description: 'Analyze demographics for any UK location',
+      description: 'Analyse demographics for any UK location',
       icon: Users,
       stats: 'Population, households, age profiles & more',
       gradient: 'from-violet-500 to-purple-600',
@@ -29,7 +29,7 @@ export function ToolsTab() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Tools</h1>
           <p className="text-gray-500 mt-1">
-            Powerful tools to help you analyze and understand property markets
+            Powerful tools to help you analyse sites
           </p>
         </div>
 
