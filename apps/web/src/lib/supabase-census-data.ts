@@ -372,7 +372,7 @@ export async function getLSOATooltipData(
   // Fetch affluence data
   const { data: affluenceData, error: affError } = await supabase
     .from('lsoa_affluence_scores')
-    .select('geo_code, geo_name, affluence_score_100')
+    .select('geo_code, geo_name, affluence_score_with_income')
     .in('geo_code', geographyCodes);
 
   if (affError) {
@@ -396,7 +396,7 @@ export async function getLSOATooltipData(
   // Add affluence data
   affluenceData?.forEach((row: any) => {
     if (tooltipData[row.geo_code]) {
-      tooltipData[row.geo_code].affluence_score = row.affluence_score_100;
+      tooltipData[row.geo_code].affluence_score = row.affluence_score_with_income;
     }
   });
 
