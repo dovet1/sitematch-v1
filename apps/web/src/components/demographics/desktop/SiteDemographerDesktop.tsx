@@ -100,7 +100,7 @@ export function SiteDemographerDesktop() {
     // Debounce to avoid too many API calls
     const timeoutId = setTimeout(fetchAggregatedData, 300);
     return () => clearTimeout(timeoutId);
-  }, [selectedLsoaCodes, rawDemographicsData, setIsRefetchingData, updateData]);
+  }, [selectedLsoaCodes, updateData]); // Removed rawDemographicsData to prevent infinite loop
 
   const handleAnalyze = async () => {
     if (!selectedLocation) return;
