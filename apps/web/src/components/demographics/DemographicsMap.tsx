@@ -34,6 +34,7 @@ interface DemographicsMapProps {
   lsoaTooltipData: Record<string, LSOATooltipData>;
   showTraffic?: boolean; // Optional toggle for traffic layer visibility
   showCountPoints?: boolean; // Optional toggle for DfT count points visibility
+  isMobile?: boolean; // Optional flag for mobile layout adjustments
 }
 
 export function DemographicsMap({
@@ -48,6 +49,7 @@ export function DemographicsMap({
   onLsoaToggle,
   lsoaTooltipData,
   showTraffic = false,
+  isMobile = false,
   showCountPoints = false,
 }: DemographicsMapProps) {
   // Format display text based on mode

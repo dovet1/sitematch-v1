@@ -1,0 +1,146 @@
+'use client';
+
+import { useState } from 'react';
+import { MobileHeader } from './MobileHeader';
+import { MobileBottomSheet, type SheetHeight } from './MobileBottomSheet';
+import { MobileLocationSearch } from './MobileLocationSearch';
+import { MobileResults } from './MobileResults';
+import { DemographicsMap } from '../DemographicsMap';
+import { useDemographicsData } from '../shared/hooks/useDemographicsData';
+import { useLsoaSelection } from '../shared/hooks/useLsoaSelection';
+import { useLocationSearch } from '../shared/hooks/useLocationSearch';
+
+// Conversion constants
+const WALK_SPEED_MPH = 3;
+const DRIVE_SPEED_MPH = 35;
+
+function convertToRadiusMiles(mode: 'distance' | 'drive_time' | 'walk_time', value: number): number {
+  switch (mode) {
+    case 'distance':
+      return value;
+    case 'walk_time':
+      return (value / 60) * WALK_SPEED_MPH;
+    case 'drive_time':
+      return (value / 60) * DRIVE_SPEED_MPH;
+  }
+}
+
+export function SiteDemographerMobile() {
+  // Shared hooks
+  const {
+    rawDemographicsData,
+    isochroneGeometry,
+    lsoaTooltipData,
+    loading,
+    error,
+    analyze,
+  } = useDemographicsData();
+
+  const {
+    selectedLsoaCodes,
+    allLsoaCodes,
+    toggleLsoa,
+    initializeSelection,
+  } = useLsoaSelection();
+
+  const {
+    selectedLocation,
+    measurementMode,
+    measurementValue,
+    setSelectedLocation,
+    setMeasurementMode,
+    setMeasurementValue,
+  } = useLocationSearch();
+
+  // Mobile-specific state
+  const [sheetHeight, setSheetHeight] = useState<SheetHeight>('collapsed');
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const handleAnalyze = async () => {
+    if (!selectedLocation) return;
+
+    const result = await analyze(selectedLocation, measurementMode, measurementValue);
+
+    if (result.success && result.lsoaCodes) {
+      initializeSelection(result.lsoaCodes);
+      // Expand sheet to show results
+      setSheetHeight('halfway');
+    }
+  };
+
+  return (
+    <div className="h-screen flex flex-col bg-white">
+      {/* Mobile Header */}
+      <MobileHeader
+        selectedLocation={selectedLocation}
+        onSearchClick={() => setSearchOpen(true)}
+        measurementMode={measurementMode}
+        measurementValue={measurementValue}
+        onAnalyze={handleAnalyze}
+        loading={loading}
+      />
+
+      {/* Map Container */}
+      <div className="flex-1 relative">
+        {selectedLocation ? (
+          <DemographicsMap
+            center={{ lat: selectedLocation.center[1], lng: selectedLocation.center[0] }}
+            radiusMiles={convertToRadiusMiles(measurementMode, measurementValue)}
+            isochroneGeometry={isochroneGeometry}
+            loading={loading}
+            measurementMode={measurementMode}
+            measurementValue={measurementValue}
+            selectedLsoaCodes={selectedLsoaCodes}
+            allLsoaCodes={allLsoaCodes}
+            onLsoaToggle={toggleLsoa}
+            lsoaTooltipData={lsoaTooltipData}
+            showTraffic={false}
+            showCountPoints={false}
+            isMobile={true}
+          />
+        ) : (
+          <div className="h-full flex items-center justify-center bg-gray-50">
+            <div className="text-center px-8">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center">
+                <svg className="w-10 h-10 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+              </div>
+              <p className="text-lg font-medium text-gray-900 mb-2">Ready to analyse</p>
+              <p className="text-sm text-gray-500">Tap above to search for a UK location</p>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Bottom Sheet */}
+        <MobileBottomSheet
+          open={true}
+          height={sheetHeight}
+          onHeightChange={setSheetHeight}
+        >
+          <MobileResults
+            loading={loading}
+            error={error}
+            location={selectedLocation}
+            measurementMode={measurementMode}
+            measurementValue={measurementValue}
+            rawData={rawDemographicsData}
+            selectedLsoaCodes={selectedLsoaCodes}
+          />
+        </MobileBottomSheet>
+      </div>
+
+      {/* Location Search Modal */}
+      <MobileLocationSearch
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        selectedLocation={selectedLocation}
+        onLocationSelect={setSelectedLocation}
+        measurementMode={measurementMode}
+        measurementValue={measurementValue}
+        onMeasurementModeChange={setMeasurementMode}
+        onMeasurementValueChange={setMeasurementValue}
+      />
+    </div>
+  );
+}
