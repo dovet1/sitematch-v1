@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLSOACodesInRadiusWithPolygons, getLSOACodesInIsochrone } from '@/lib/lsoa-boundaries';
+import { getLSOACodesInRadiusWithPolygons, getLSOACodesInIsochrone } from '@/lib/lsoa-boundaries-postgis';
 import { fetchIsochrone, getModeProfile } from '@/lib/mapbox-isochrone';
 
 export const dynamic = 'force-dynamic';
@@ -52,12 +52,12 @@ export async function POST(request: NextRequest) {
       const isochroneResult = await fetchIsochrone(lat, lng, radius_miles, profile);
 
       isochroneGeometry = isochroneResult.geometry;
-      lsoaCodes = getLSOACodesInIsochrone(isochroneResult.geometry.coordinates);
+      lsoaCodes = await getLSOACodesInIsochrone(isochroneResult.geometry.coordinates);
 
       console.log(`[Boundaries API] Isochrone returned ${lsoaCodes.length} LSOA codes`);
     } else {
       // Distance mode - use circular radius
-      lsoaCodes = getLSOACodesInRadiusWithPolygons(lat, lng, radius_miles);
+      lsoaCodes = await getLSOACodesInRadiusWithPolygons(lat, lng, radius_miles);
       console.log(`[Boundaries API] Circular radius returned ${lsoaCodes.length} LSOA codes`);
     }
 
