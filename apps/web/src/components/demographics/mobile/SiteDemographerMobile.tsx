@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MobileHeader } from './MobileHeader';
 import { MobileBottomSheet, type SheetHeight } from './MobileBottomSheet';
 import { MobileLocationSearch } from './MobileLocationSearch';
@@ -34,6 +34,7 @@ export function SiteDemographerMobile() {
     loading,
     error,
     analyze,
+    updateData,
   } = useDemographicsData();
 
   const {
@@ -55,6 +56,50 @@ export function SiteDemographerMobile() {
   // Mobile-specific state
   const [sheetHeight, setSheetHeight] = useState<SheetHeight>('collapsed');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [isRefetchingData, setIsRefetchingData] = useState(false);
+
+  // Refetch data when LSOA selection changes
+  useEffect(() => {
+    // Only refetch if we have initial data AND the selection has changed
+    if (!rawDemographicsData || selectedLsoaCodes.size === 0) {
+      return;
+    }
+
+    const fetchAggregatedData = async () => {
+      setIsRefetchingData(true);
+      try {
+        const codes = Array.from(selectedLsoaCodes);
+
+        const dataResponse = await fetch('/api/demographics/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            geography_codes: codes,
+          }),
+        });
+
+        if (!dataResponse.ok) {
+          throw new Error('Failed to fetch demographics data');
+        }
+
+        const demographicsData = await dataResponse.json();
+
+        // Update the raw data with the new aggregated data
+        updateData(demographicsData.by_lsoa);
+      } catch (error) {
+        console.error('Error refetching demographics data:', error);
+      } finally {
+        setIsRefetchingData(false);
+      }
+    };
+
+    // Debounce the refetch to avoid too many requests
+    const timeoutId = setTimeout(() => {
+      fetchAggregatedData();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [selectedLsoaCodes, updateData]); // Removed rawDemographicsData to prevent infinite loop
 
   const handleAnalyze = async () => {
     if (!selectedLocation) return;

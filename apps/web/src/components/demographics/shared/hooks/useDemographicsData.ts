@@ -3,7 +3,7 @@
  * Extracted from SiteDemographerPage to be shared between mobile and desktop
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import type { LocationResult } from '@/lib/mapbox';
 import type { LSOATooltipData } from '@/lib/supabase-census-data';
 import type { MeasurementMode } from '../types/demographics.types';
@@ -117,9 +117,9 @@ export function useDemographicsData() {
     initialLoadComplete.current = false;
   };
 
-  const updateData = (newData: Record<string, any>) => {
+  const updateData = useCallback((newData: Record<string, any>) => {
     setRawDemographicsData(newData);
-  };
+  }, []);
 
   return {
     rawDemographicsData,

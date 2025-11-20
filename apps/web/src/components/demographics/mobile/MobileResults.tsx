@@ -47,14 +47,28 @@ export function MobileResults({
   };
 
   const allCategoryData = useMemo(() => {
-    if (!rawData) return null;
+    console.log('[MobileResults] rawData:', rawData);
+    if (!rawData) {
+      console.log('[MobileResults] No rawData');
+      return null;
+    }
 
     const aggregatedData = rawData['aggregated'];
-    if (!aggregatedData) return null;
+    console.log('[MobileResults] aggregatedData:', aggregatedData);
+    if (!aggregatedData) {
+      console.log('[MobileResults] No aggregatedData');
+      return null;
+    }
 
     // Extract key metrics
-    const totalPop = aggregatedData.numerator_all_usual_residents || 0;
-    const affluenceScore = aggregatedData.affluence_score_with_income || aggregatedData.affluence_score_100 || 0;
+    // Note: aggregated data uses different field names than individual LSOA data
+    const totalPop = aggregatedData.population_total || 0;
+
+    // Affluence is nested in an 'affluence' object for aggregated data
+    // Use avg_raw_score which is the same as what desktop uses
+    const affluenceScore = aggregatedData.affluence?.avg_raw_score || 0;
+
+    console.log('[MobileResults] Extracted metrics:', { totalPop, affluenceScore, affluence: aggregatedData.affluence });
 
     return {
       population: totalPop,
