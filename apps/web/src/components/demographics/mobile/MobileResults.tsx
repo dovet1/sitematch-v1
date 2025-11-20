@@ -110,7 +110,7 @@ export function MobileResults({
   const selectedCount = selectedLsoaCodes?.size || 0;
 
   return (
-    <div className="pb-6">
+    <div className="pb-24">
       {/* Location Header */}
       <div className="px-4 py-3 border-b border-gray-100">
         <h3 className="text-base font-semibold text-gray-900">

@@ -201,7 +201,7 @@ export function MobileFullReport({ open, onClose, rawData, location }: MobileFul
           </div>
 
           {/* Content */}
-          <div className="pb-8">
+          <div className="pb-32 safe-area-inset-bottom">
             {!allCategoryData ? (
               <div className="flex items-center justify-center py-12">
                 <p className="text-gray-500">No data available</p>
