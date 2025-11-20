@@ -134,7 +134,23 @@ export function MobileBottomSheet({
         </div>
 
         {/* Content */}
-        <div className="pt-8 h-full overflow-y-auto">
+        <div
+          className="pt-8 h-full overflow-y-auto overscroll-contain"
+          onTouchStart={(e) => {
+            // Prevent scroll pass-through to elements below
+            const element = e.currentTarget;
+            const scrollTop = element.scrollTop;
+            const scrollHeight = element.scrollHeight;
+            const height = element.clientHeight;
+            const isAtTop = scrollTop === 0;
+            const isAtBottom = scrollTop + height >= scrollHeight;
+
+            // If at top and trying to scroll up, or at bottom and trying to scroll down, prevent
+            if ((isAtTop && scrollTop < 0) || (isAtBottom && scrollTop > scrollHeight - height)) {
+              e.preventDefault();
+            }
+          }}
+        >
           {children}
         </div>
       </motion.div>

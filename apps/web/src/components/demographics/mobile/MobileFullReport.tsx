@@ -180,7 +180,7 @@ export function MobileFullReport({ open, onClose, rawData, location }: MobileFul
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="absolute inset-0 bg-white overflow-y-auto"
+          className="absolute inset-0 bg-white overflow-y-auto overscroll-contain"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

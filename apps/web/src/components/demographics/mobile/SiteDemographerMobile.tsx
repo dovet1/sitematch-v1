@@ -26,6 +26,29 @@ function convertToRadiusMiles(mode: 'distance' | 'drive_time' | 'walk_time', val
 }
 
 export function SiteDemographerMobile() {
+  // Prevent overscroll/bounce on mobile
+  useEffect(() => {
+    // Prevent pull-to-refresh and overscroll bounce
+    document.body.style.overscrollBehavior = 'none';
+    document.documentElement.style.overscrollBehavior = 'none';
+
+    // Lock body scroll to prevent scrolling behind the bottom sheet
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
+
+    return () => {
+      // Cleanup on unmount
+      document.body.style.overscrollBehavior = '';
+      document.documentElement.style.overscrollBehavior = '';
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    };
+  }, []);
+
   // Shared hooks
   const {
     rawDemographicsData,
@@ -114,7 +137,7 @@ export function SiteDemographerMobile() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-white">
+    <div className="flex flex-col min-h-screen bg-white overflow-hidden">
       {/* Mobile Header */}
       <MobileHeader
         selectedLocation={selectedLocation}
@@ -125,8 +148,8 @@ export function SiteDemographerMobile() {
         loading={loading}
       />
 
-      {/* Map Container */}
-      <div className="flex-1 relative">
+      {/* Map Container - Takes remaining height, non-scrollable */}
+      <div className="flex-1 relative overflow-hidden">
         {selectedLocation ? (
           <DemographicsMap
             center={{ lat: selectedLocation.center[1], lng: selectedLocation.center[0] }}
@@ -144,7 +167,7 @@ export function SiteDemographerMobile() {
             isMobile={true}
           />
         ) : (
-          <div className="h-full flex items-center justify-center bg-gray-50">
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 overflow-hidden">
             <div className="text-center px-8">
               <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center">
                 <svg className="w-10 h-10 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
