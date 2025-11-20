@@ -4,7 +4,8 @@ import { Users, TrendingUp } from 'lucide-react';
 import type { LocationResult } from '@/lib/mapbox';
 import { formatLocationDisplay } from '@/lib/mapbox';
 import type { MeasurementMode } from '../shared/types/demographics.types';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { MobileFullReport } from './MobileFullReport';
 
 interface MobileResultsProps {
   loading: boolean;
@@ -35,6 +36,8 @@ export function MobileResults({
   rawData,
   selectedLsoaCodes,
 }: MobileResultsProps) {
+  const [isFullReportOpen, setIsFullReportOpen] = useState(false);
+
   const getMeasurementDisplay = () => {
     switch (measurementMode) {
       case 'distance':
@@ -47,28 +50,14 @@ export function MobileResults({
   };
 
   const allCategoryData = useMemo(() => {
-    console.log('[MobileResults] rawData:', rawData);
-    if (!rawData) {
-      console.log('[MobileResults] No rawData');
-      return null;
-    }
+    if (!rawData) return null;
 
     const aggregatedData = rawData['aggregated'];
-    console.log('[MobileResults] aggregatedData:', aggregatedData);
-    if (!aggregatedData) {
-      console.log('[MobileResults] No aggregatedData');
-      return null;
-    }
+    if (!aggregatedData) return null;
 
     // Extract key metrics
-    // Note: aggregated data uses different field names than individual LSOA data
     const totalPop = aggregatedData.population_total || 0;
-
-    // Affluence is nested in an 'affluence' object for aggregated data
-    // Use avg_raw_score which is the same as what desktop uses
     const affluenceScore = aggregatedData.affluence?.avg_raw_score || 0;
-
-    console.log('[MobileResults] Extracted metrics:', { totalPop, affluenceScore, affluence: aggregatedData.affluence });
 
     return {
       population: totalPop,
@@ -181,6 +170,27 @@ export function MobileResults({
           </div>
         </div>
       </div>
+
+      {/* View Full Report Button */}
+      <div className="px-4 pt-4">
+        <button
+          onClick={() => setIsFullReportOpen(true)}
+          className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-medium py-3.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+        >
+          <span>View Full Report</span>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Full Report Modal */}
+      <MobileFullReport
+        open={isFullReportOpen}
+        onClose={() => setIsFullReportOpen(false)}
+        rawData={rawData || null}
+        location={location ? formatLocationDisplay(location) : ''}
+      />
 
       {/* Interaction Hint */}
       <div className="px-4 pt-4">
