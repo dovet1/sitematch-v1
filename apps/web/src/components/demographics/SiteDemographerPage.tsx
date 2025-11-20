@@ -141,7 +141,9 @@ export function SiteDemographerPage() {
       });
 
       if (!boundariesResponse.ok) {
-        throw new Error('Failed to resolve geographic areas');
+        const errorData = await boundariesResponse.json().catch(() => ({}));
+        console.error('[SiteDemographerPage] Boundaries API error:', errorData);
+        throw new Error(errorData.error || errorData.details || 'Failed to resolve geographic areas');
       }
 
       const boundariesData = await boundariesResponse.json();
