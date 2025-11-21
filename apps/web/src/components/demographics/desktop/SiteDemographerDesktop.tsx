@@ -68,6 +68,9 @@ export function SiteDemographerDesktop() {
   const [showTraffic, setShowTraffic] = useState(false);
   const [showCountPoints, setShowCountPoints] = useState(false);
 
+  // Track the location that has been analyzed (map only moves when this changes)
+  const [analyzedLocation, setAnalyzedLocation] = useState<LocationResult | null>(null);
+
   // Re-fetch aggregated data when selection changes
   useEffect(() => {
     if (!rawDemographicsData || selectedLsoaCodes.size === 0) return;
@@ -118,6 +121,8 @@ export function SiteDemographerDesktop() {
     if (result.success && result.lsoaCodes) {
       // Initialize LSOA selection with all codes
       initializeSelection(result.lsoaCodes);
+      // Update analyzed location - map will fly to this location
+      setAnalyzedLocation(location);
     }
   };
 
@@ -125,6 +130,7 @@ export function SiteDemographerDesktop() {
     resetDemographics();
     resetSelection();
     resetLocation();
+    setAnalyzedLocation(null);
   };
 
   return (
@@ -192,10 +198,10 @@ export function SiteDemographerDesktop() {
 
         {/* Right Panel - Map (70%) */}
         <div className="flex-1 bg-gray-50 relative min-h-0">
-          {selectedLocation ? (
+          {analyzedLocation ? (
             <>
               <DemographicsMap
-                center={{ lat: selectedLocation.center[1], lng: selectedLocation.center[0] }}
+                center={{ lat: analyzedLocation.center[1], lng: analyzedLocation.center[0] }}
                 radiusMiles={convertToRadiusMiles(measurementMode, measurementValue)}
                 isochroneGeometry={isochroneGeometry}
                 loading={loading}

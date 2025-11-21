@@ -151,8 +151,11 @@ export function LocationInputPanel({
     setShowLocationDropdown(false);
     setLocationResults([]);
     searchInputRef.current?.blur();
-    // Auto-analyze with the new location, reset first if we have existing results
-    onAnalyze(location, hasResults);
+    // Auto-analyze only on first search (no existing results)
+    // Subsequent searches require user to click Analyze button
+    if (!hasResults) {
+      onAnalyze(location, false);
+    }
   };
 
   const handleClearLocation = () => {
