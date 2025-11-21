@@ -763,7 +763,7 @@ export function DemographicsMap({
                 Average Daily Traffic
               </div>
               <div style="font-size: 28px; font-weight: 700; color: #0f172a; line-height: 1;">
-                ${Number(aadt).toLocaleString('en-GB')}
+                ${Math.round(Number(aadt)).toLocaleString('en-GB')}
               </div>
               <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
                 vehicles/day
@@ -875,7 +875,7 @@ export function DemographicsMap({
             </div>
             <div>
               <span className="font-medium">Traffic:</span>{' '}
-              {hoveredRoad.aadt.toLocaleString()} vehicles/day
+              {Math.round(hoveredRoad.aadt).toLocaleString()} vehicles/day
             </div>
           </div>
         </div>
