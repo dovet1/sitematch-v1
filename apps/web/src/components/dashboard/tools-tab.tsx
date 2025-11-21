@@ -25,7 +25,7 @@ export function ToolsTab() {
       title: 'SiteBrochure',
       description: 'Generate professional requirement brochures',
       icon: FileText,
-      stats: 'Create branded PDF brochures for occupiers',
+      stats: 'Create branded PDF brochures in minutes',
       gradient: 'from-blue-500 to-cyan-600',
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',

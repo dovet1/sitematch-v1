@@ -165,7 +165,7 @@ export function BrochureDocument({ brochure }: BrochureDocumentProps) {
             {brochure.use_class && (
               <DetailCard
                 label="Use Class"
-                value={formatUseClass(brochure.use_class)}
+                value={brochure.use_class_label || formatUseClass(brochure.use_class)}
                 brandColor={brandColor}
                 icon="🏢"
               />
@@ -175,7 +175,7 @@ export function BrochureDocument({ brochure }: BrochureDocumentProps) {
             {brochure.sector && (
               <DetailCard
                 label="Sector"
-                value={formatSector(brochure.sector)}
+                value={brochure.sector_label || formatSector(brochure.sector)}
                 brandColor={brandColor}
                 icon="🏷️"
               />

@@ -34,7 +34,9 @@ export interface BrochureRow {
   sqft_min: number | null;
   sqft_max: number | null;
   use_class: string | null;
+  use_class_label: string | null;
   sector: string | null;
+  sector_label: string | null;
   additional_notes: string | null;
 
   // Locations & Media
@@ -75,7 +77,9 @@ export interface BrochureFormData {
   sqftMin?: number;
   sqftMax?: number;
   useClass?: string;
+  useClassLabel?: string;
   sector?: string;
+  sectorLabel?: string;
   additionalNotes?: string;
 
   // Step 3 - Locations & Media

@@ -19,7 +19,7 @@ export default function NewBrochurePage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Create Brochure</h1>
           <p className="text-gray-500 text-sm">
-            Edit the form to customize your PDF brochure
+            Edit the form to customise your PDF brochure
           </p>
         </div>
       </div>

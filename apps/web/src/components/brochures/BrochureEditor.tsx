@@ -140,7 +140,9 @@ export function BrochureEditor({ initialData, brochureId }: BrochureEditorProps)
     company_about: formData.companyAbout || null,
     brand_color: formData.brandColor,
     sector: formData.sector || null,
+    sector_label: formData.sectorLabel || null,
     use_class: formData.useClass || null,
+    use_class_label: formData.useClassLabel || null,
     sqft_min: formData.sqftMin || null,
     sqft_max: formData.sqftMax || null,
     target_locations: formData.targetLocations,
@@ -313,7 +315,11 @@ export function BrochureEditor({ initialData, brochureId }: BrochureEditorProps)
                 <select
                   id="sector"
                   value={formData.sector || ''}
-                  onChange={(e) => updateField('sector', e.target.value)}
+                  onChange={(e) => {
+                    const selected = sectors.find(s => s.value === e.target.value);
+                    updateField('sector', e.target.value);
+                    updateField('sectorLabel', selected?.label || '');
+                  }}
                   className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
                 >
                   <option value="">Select sector</option>
@@ -329,7 +335,11 @@ export function BrochureEditor({ initialData, brochureId }: BrochureEditorProps)
                 <select
                   id="useClass"
                   value={formData.useClass || ''}
-                  onChange={(e) => updateField('useClass', e.target.value)}
+                  onChange={(e) => {
+                    const selected = useClasses.find(uc => uc.code === e.target.value);
+                    updateField('useClass', e.target.value);
+                    updateField('useClassLabel', selected?.label || '');
+                  }}
                   className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
                 >
                   <option value="">Select use class</option>
