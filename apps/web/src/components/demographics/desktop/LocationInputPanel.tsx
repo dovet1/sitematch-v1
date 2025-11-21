@@ -59,7 +59,7 @@ export function LocationInputPanel({
       case 'drive_time':
         return { label: 'Drive Time', unit: 'mins', min: 2, max: 120 };
       case 'walk_time':
-        return { label: 'Walk Time', unit: 'mins', min: 20, max: 60 };
+        return { label: 'Walk Time', unit: 'mins', min: 1, max: 60 };
     }
   };
 
