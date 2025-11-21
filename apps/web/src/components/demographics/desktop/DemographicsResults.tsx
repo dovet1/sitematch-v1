@@ -330,7 +330,7 @@ export function DemographicsResults({
                           How is this calculated?
                         </p>
                         <p className="text-xs text-gray-600 leading-relaxed">
-                          The Affluence Score combines Census 2021 socioeconomic measures (70%) with household income data (30%) to create a single score from 0–100.
+                          The Affluence Score combines Census 2021 socioeconomic measures (70%) with household income data (30%) to create a single score from 0–100 (50 being the median).
                         </p>
                       </div>
                       <button
@@ -407,7 +407,7 @@ export function DemographicsResults({
                                       How is this calculated?
                                     </p>
                                     <p className="text-xs text-gray-600 leading-relaxed">
-                                      The Affluence Score combines Census 2021 socioeconomic measures (70%) with household income data (30%) to create a single score from 0–100.
+                                      The Affluence Score combines Census 2021 socioeconomic measures (70%) with household income data (30%) to create a single score from 0–100 (50 being the median).
                                     </p>
                                   </div>
                                   <button
