@@ -117,13 +117,7 @@ export function BrochureDocument({ brochure }: BrochureDocumentProps) {
           </div>
 
           {/* Company Name */}
-          <h1 className="text-4xl font-bold mb-1 tracking-tight">{brochure.company_name}</h1>
-
-          {brochure.sector && (
-            <p className="text-lg font-medium" style={{ color: 'rgba(255,255,255,0.85)' }}>
-              {formatSector(brochure.sector)}
-            </p>
-          )}
+          <h1 className="text-4xl font-bold tracking-tight">{brochure.company_name}</h1>
         </div>
       </header>
 

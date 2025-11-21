@@ -1,38 +1,31 @@
 'use client';
 
-import { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
-import { BrochureWizard } from '@/components/brochures';
-
-function NewBrochureContent() {
-  const searchParams = useSearchParams();
-  const listingId = searchParams?.get('listingId') || undefined;
-
-  return <BrochureWizard listingId={listingId} />;
-}
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { BrochureEditor } from '@/components/brochures/BrochureEditor';
 
 export default function NewBrochurePage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Create Brochure</h1>
-        <p className="text-gray-500 mt-1">
-          Generate a professional PDF brochure for your requirement
-        </p>
+      <div className="flex items-center gap-4">
+        <Link href="/new-dashboard/brochures">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Create Brochure</h1>
+          <p className="text-gray-500 text-sm">
+            Edit the form to customize your PDF brochure
+          </p>
+        </div>
       </div>
 
-      {/* Wizard */}
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-violet-600" />
-          </div>
-        }
-      >
-        <NewBrochureContent />
-      </Suspense>
+      {/* Editor */}
+      <BrochureEditor />
     </div>
   );
 }
