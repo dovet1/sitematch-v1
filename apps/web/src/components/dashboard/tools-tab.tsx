@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, ArrowRight, MapPin } from 'lucide-react';
+import { Users, ArrowRight, MapPin, FileText } from 'lucide-react';
 
 export function ToolsTab() {
   const router = useRouter();
@@ -19,6 +19,17 @@ export function ToolsTab() {
       iconBg: 'bg-violet-100',
       iconColor: 'text-violet-600',
       onClick: () => router.push('/new-dashboard/tools/site-demographer'),
+    },
+    {
+      id: 'brochure-generator',
+      title: 'SiteBrochure',
+      description: 'Generate professional requirement brochures',
+      icon: FileText,
+      stats: 'Create branded PDF brochures for occupiers',
+      gradient: 'from-blue-500 to-cyan-600',
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+      onClick: () => router.push('/new-dashboard/brochures'),
     },
   ];
 
