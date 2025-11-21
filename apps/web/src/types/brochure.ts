@@ -18,6 +18,7 @@ export interface BrochureRow {
   company_domain: string | null;
   company_logo_source: LogoSource;
   company_logo_url: string | null;
+  company_about: string | null;
 
   // Agent details
   agent_name: string;
@@ -59,6 +60,7 @@ export interface BrochureFormData {
   companyDomain?: string;
   companyLogoSource: LogoSource;
   companyLogoUrl: string;
+  companyAbout?: string;
 
   agentName: string;
   agentCompany: string;

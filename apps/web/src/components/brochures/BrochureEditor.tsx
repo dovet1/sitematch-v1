@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Download, Loader2 } from 'lucide-react';
+import { Save, Download, Loader2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { BrochureDocument } from './BrochureDocument';
 import { LogoSelector } from './LogoSelector';
 import { LocationSearch } from '@/components/listings/location-search';
+import { cn } from '@/lib/utils';
 import type { BrochureFormData } from '@/types/brochure';
 import type { LocationSelection } from '@/types/locations';
 
@@ -20,6 +21,7 @@ const DEFAULT_BROCHURE: BrochureFormData = {
   companyDomain: '',
   companyLogoUrl: '',
   companyLogoSource: 'none',
+  companyAbout: '',
   brandColor: '#7c3aed',
   sector: 'retail',
   useClass: 'E',
@@ -49,6 +51,41 @@ interface UseClass {
   value: string;
   code: string;
   label: string;
+}
+
+interface CollapsibleSectionProps {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}
+
+function CollapsibleSection({ title, defaultOpen = true, children }: CollapsibleSectionProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+      >
+        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+          {title}
+        </h3>
+        <ChevronDown
+          className={cn(
+            'h-4 w-4 text-gray-500 transition-transform',
+            isOpen && 'rotate-180'
+          )}
+        />
+      </button>
+      {isOpen && (
+        <div className="p-4 space-y-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface BrochureEditorProps {
@@ -100,6 +137,7 @@ export function BrochureEditor({ initialData, brochureId }: BrochureEditorProps)
     company_domain: formData.companyDomain || null,
     company_logo_url: formData.companyLogoUrl || null,
     company_logo_source: formData.companyLogoSource,
+    company_about: formData.companyAbout || null,
     brand_color: formData.brandColor,
     sector: formData.sector || null,
     use_class: formData.useClass || null,
@@ -168,211 +206,221 @@ export function BrochureEditor({ initialData, brochureId }: BrochureEditorProps)
     <div className="flex h-[calc(100vh-120px)] gap-6">
       {/* Left: Form Panel */}
       <div className="w-[400px] flex-shrink-0 overflow-y-auto border-r border-gray-200 pr-6">
-        <div className="space-y-6 pb-6">
-          {/* Company Section */}
-          <section>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
-              Company Details
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="companyName">Company Name</Label>
+        <div className="space-y-4 pb-6">
+          {/* Styling Section */}
+          <CollapsibleSection title="Styling" defaultOpen={true}>
+            <div>
+              <Label htmlFor="brandColor">Brand Colour</Label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  id="brandColor"
+                  value={formData.brandColor}
+                  onChange={(e) => updateField('brandColor', e.target.value)}
+                  className="h-10 w-14 rounded border border-gray-300 cursor-pointer"
+                />
                 <Input
-                  id="companyName"
-                  value={formData.companyName}
-                  onChange={(e) => updateField('companyName', e.target.value)}
-                  placeholder="Enter company name"
+                  value={formData.brandColor}
+                  onChange={(e) => updateField('brandColor', e.target.value)}
+                  placeholder="#7c3aed"
+                  className="flex-1"
                 />
               </div>
+            </div>
 
-              <LogoSelector
-                label="Company Logo"
-                logoUrl={formData.companyLogoUrl || ''}
-                logoSource={formData.companyLogoSource}
-                companyDomain={formData.companyDomain || ''}
-                onLogoUrlChange={(url) => updateField('companyLogoUrl', url)}
-                onLogoSourceChange={(source) => updateField('companyLogoSource', source)}
-                onCompanyDomainChange={(domain: string) => updateField('companyDomain', domain)}
-              />
-
-              <div>
-                <Label htmlFor="brandColor">Brand Color</Label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    id="brandColor"
-                    value={formData.brandColor}
-                    onChange={(e) => updateField('brandColor', e.target.value)}
-                    className="h-10 w-14 rounded border border-gray-300 cursor-pointer"
-                  />
-                  <Input
-                    value={formData.brandColor}
-                    onChange={(e) => updateField('brandColor', e.target.value)}
-                    placeholder="#7c3aed"
-                    className="flex-1"
-                  />
-                </div>
+            {/* TODO: Typography selector */}
+            <div>
+              <Label>Typography</Label>
+              <div className="h-10 px-3 rounded-md border border-dashed border-gray-300 bg-gray-50 flex items-center text-sm text-gray-400">
+                Coming soon...
               </div>
             </div>
-          </section>
+          </CollapsibleSection>
+
+          {/* Company Details Section */}
+          <CollapsibleSection title="Company Details" defaultOpen={true}>
+            <div>
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                value={formData.companyName}
+                onChange={(e) => updateField('companyName', e.target.value)}
+                placeholder="Enter company name"
+              />
+            </div>
+
+            <LogoSelector
+              label="Company Logo"
+              logoUrl={formData.companyLogoUrl || ''}
+              logoSource={formData.companyLogoSource}
+              companyDomain={formData.companyDomain || ''}
+              onLogoUrlChange={(url) => updateField('companyLogoUrl', url)}
+              onLogoSourceChange={(source) => updateField('companyLogoSource', source)}
+              onCompanyDomainChange={(domain: string) => updateField('companyDomain', domain)}
+            />
+
+            <div>
+              <Label htmlFor="companyAbout">About</Label>
+              <Textarea
+                id="companyAbout"
+                value={formData.companyAbout || ''}
+                onChange={(e) => updateField('companyAbout', e.target.value)}
+                placeholder="Describe who the company is and what they do..."
+                rows={3}
+              />
+            </div>
+          </CollapsibleSection>
 
           {/* Requirements Section */}
-          <section>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
-              Requirements
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="requirementsSummary">Summary</Label>
-                <Textarea
-                  id="requirementsSummary"
-                  value={formData.requirementsSummary}
-                  onChange={(e) => updateField('requirementsSummary', e.target.value)}
-                  placeholder="Describe what you're looking for..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="sqftMin">Min Size (sq ft)</Label>
-                  <Input
-                    id="sqftMin"
-                    type="number"
-                    value={formData.sqftMin || ''}
-                    onChange={(e) => updateField('sqftMin', e.target.value ? Number(e.target.value) : undefined)}
-                    placeholder="2,000"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="sqftMax">Max Size (sq ft)</Label>
-                  <Input
-                    id="sqftMax"
-                    type="number"
-                    value={formData.sqftMax || ''}
-                    onChange={(e) => updateField('sqftMax', e.target.value ? Number(e.target.value) : undefined)}
-                    placeholder="5,000"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="sector">Sector</Label>
-                  <select
-                    id="sector"
-                    value={formData.sector || ''}
-                    onChange={(e) => updateField('sector', e.target.value)}
-                    className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
-                  >
-                    <option value="">Select sector</option>
-                    {sectors.map((sector) => (
-                      <option key={sector.id} value={sector.value}>
-                        {sector.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="useClass">Use Class</Label>
-                  <select
-                    id="useClass"
-                    value={formData.useClass || ''}
-                    onChange={(e) => updateField('useClass', e.target.value)}
-                    className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
-                  >
-                    <option value="">Select use class</option>
-                    {useClasses.map((uc) => (
-                      <option key={uc.id} value={uc.code}>
-                        {uc.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <Label>Target Locations</Label>
-                <LocationSearch
-                  value={formData.targetLocations}
-                  onChange={handleLocationsChange}
-                  maxLocations={10}
-                  placeholder="Search for locations..."
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="additionalNotes">Additional Notes</Label>
-                <Textarea
-                  id="additionalNotes"
-                  value={formData.additionalNotes || ''}
-                  onChange={(e) => updateField('additionalNotes', e.target.value)}
-                  placeholder="Any other requirements..."
-                  rows={2}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Agent Section */}
-          <section>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
-              Agent / Contact
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="agentName">Name</Label>
-                <Input
-                  id="agentName"
-                  value={formData.agentName}
-                  onChange={(e) => updateField('agentName', e.target.value)}
-                  placeholder="Your name"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="agentCompany">Company</Label>
-                <Input
-                  id="agentCompany"
-                  value={formData.agentCompany}
-                  onChange={(e) => updateField('agentCompany', e.target.value)}
-                  placeholder="Your company"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="agentEmail">Email</Label>
-                  <Input
-                    id="agentEmail"
-                    type="email"
-                    value={formData.agentEmail}
-                    onChange={(e) => updateField('agentEmail', e.target.value)}
-                    placeholder="email@example.com"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="agentPhone">Phone</Label>
-                  <Input
-                    id="agentPhone"
-                    value={formData.agentPhone || ''}
-                    onChange={(e) => updateField('agentPhone', e.target.value)}
-                    placeholder="+44 123 456 7890"
-                  />
-                </div>
-              </div>
-
-              <LogoSelector
-                label="Agent Logo"
-                logoUrl={formData.agentLogoUrl || ''}
-                logoSource={formData.agentLogoSource}
-                companyDomain={formData.agentDomain || ''}
-                onLogoUrlChange={(url) => updateField('agentLogoUrl', url)}
-                onLogoSourceChange={(source) => updateField('agentLogoSource', source)}
-                onCompanyDomainChange={(domain: string) => updateField('agentDomain', domain)}
+          <CollapsibleSection title="Requirements" defaultOpen={true}>
+            <div>
+              <Label htmlFor="requirementsSummary">Summary</Label>
+              <Textarea
+                id="requirementsSummary"
+                value={formData.requirementsSummary}
+                onChange={(e) => updateField('requirementsSummary', e.target.value)}
+                placeholder="Describe what you're looking for..."
+                rows={3}
               />
             </div>
-          </section>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="sqftMin">Min Size (sq ft)</Label>
+                <Input
+                  id="sqftMin"
+                  type="number"
+                  value={formData.sqftMin || ''}
+                  onChange={(e) => updateField('sqftMin', e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="2,000"
+                />
+              </div>
+              <div>
+                <Label htmlFor="sqftMax">Max Size (sq ft)</Label>
+                <Input
+                  id="sqftMax"
+                  type="number"
+                  value={formData.sqftMax || ''}
+                  onChange={(e) => updateField('sqftMax', e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="5,000"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="sector">Sector</Label>
+                <select
+                  id="sector"
+                  value={formData.sector || ''}
+                  onChange={(e) => updateField('sector', e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
+                >
+                  <option value="">Select sector</option>
+                  {sectors.map((sector) => (
+                    <option key={sector.id} value={sector.value}>
+                      {sector.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="useClass">Use Class</Label>
+                <select
+                  id="useClass"
+                  value={formData.useClass || ''}
+                  onChange={(e) => updateField('useClass', e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
+                >
+                  <option value="">Select use class</option>
+                  {useClasses.map((uc) => (
+                    <option key={uc.id} value={uc.code}>
+                      {uc.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Target Locations Section */}
+          <CollapsibleSection title="Target Locations" defaultOpen={true}>
+            {/* TODO: Target Summary field */}
+            <div>
+              <Label>Target Summary</Label>
+              <Textarea
+                disabled
+                placeholder="Coming soon - describe what locations you're looking for..."
+                rows={2}
+                className="bg-gray-50 border-dashed"
+              />
+            </div>
+
+            <div>
+              <Label>Selected Locations</Label>
+              <LocationSearch
+                value={formData.targetLocations}
+                onChange={handleLocationsChange}
+                maxLocations={10}
+                placeholder="Search for locations..."
+              />
+            </div>
+          </CollapsibleSection>
+
+          {/* Contacts Section */}
+          <CollapsibleSection title="Contacts" defaultOpen={true}>
+            <div>
+              <Label htmlFor="agentName">Name</Label>
+              <Input
+                id="agentName"
+                value={formData.agentName}
+                onChange={(e) => updateField('agentName', e.target.value)}
+                placeholder="Your name"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="agentCompany">Company</Label>
+              <Input
+                id="agentCompany"
+                value={formData.agentCompany}
+                onChange={(e) => updateField('agentCompany', e.target.value)}
+                placeholder="Your company"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="agentEmail">Email</Label>
+                <Input
+                  id="agentEmail"
+                  type="email"
+                  value={formData.agentEmail}
+                  onChange={(e) => updateField('agentEmail', e.target.value)}
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="agentPhone">Phone</Label>
+                <Input
+                  id="agentPhone"
+                  value={formData.agentPhone || ''}
+                  onChange={(e) => updateField('agentPhone', e.target.value)}
+                  placeholder="+44 123 456 7890"
+                />
+              </div>
+            </div>
+
+            <LogoSelector
+              label="Logo"
+              logoUrl={formData.agentLogoUrl || ''}
+              logoSource={formData.agentLogoSource}
+              companyDomain={formData.agentDomain || ''}
+              onLogoUrlChange={(url) => updateField('agentLogoUrl', url)}
+              onLogoSourceChange={(source) => updateField('agentLogoSource', source)}
+              onCompanyDomainChange={(domain: string) => updateField('agentDomain', domain)}
+            />
+          </CollapsibleSection>
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4 border-t border-gray-200">

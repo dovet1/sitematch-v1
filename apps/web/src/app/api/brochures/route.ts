@@ -57,22 +57,27 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    // Validate required fields
-    if (!body.company_name) {
+    // Validate required fields (support both camelCase and snake_case)
+    const companyName = body.companyName || body.company_name;
+    if (!companyName) {
       return NextResponse.json(
         { error: 'Company name is required' },
         { status: 400 }
       );
     }
 
-    if (!body.requirements_summary) {
+    const requirementsSummary = body.requirementsSummary || body.requirements_summary;
+    if (!requirementsSummary) {
       return NextResponse.json(
         { error: 'Requirements summary is required' },
         { status: 400 }
       );
     }
 
-    if (!body.agent_name || !body.agent_company || !body.agent_email) {
+    const agentName = body.agentName || body.agent_name;
+    const agentCompany = body.agentCompany || body.agent_company;
+    const agentEmail = body.agentEmail || body.agent_email;
+    if (!agentName || !agentCompany || !agentEmail) {
       return NextResponse.json(
         { error: 'Agent name, company, and email are required' },
         { status: 400 }
@@ -80,14 +85,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate array limits
-    if (body.target_locations && body.target_locations.length > 20) {
+    const targetLocations = body.targetLocations || body.target_locations;
+    if (targetLocations && targetLocations.length > 20) {
       return NextResponse.json(
         { error: 'Maximum 20 target locations allowed' },
         { status: 400 }
       );
     }
 
-    if (body.store_images && body.store_images.length > 6) {
+    const storeImages = body.storeImages || body.store_images;
+    if (storeImages && storeImages.length > 6) {
       return NextResponse.json(
         { error: 'Maximum 6 store images allowed' },
         { status: 400 }
@@ -99,26 +106,27 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: user.id,
         listing_id: body.listing_id || null,
-        company_name: body.company_name,
-        company_domain: body.company_domain || null,
-        company_logo_source: body.company_logo_source || 'logo_dev',
-        company_logo_url: body.company_logo_url || null,
-        agent_name: body.agent_name,
-        agent_company: body.agent_company,
-        agent_email: body.agent_email,
-        agent_phone: body.agent_phone || null,
-        agent_domain: body.agent_domain || null,
-        agent_logo_source: body.agent_logo_source || 'logo_dev',
-        agent_logo_url: body.agent_logo_url || null,
-        requirements_summary: body.requirements_summary,
-        sqft_min: body.sqft_min || null,
-        sqft_max: body.sqft_max || null,
-        use_class: body.use_class || null,
+        company_name: body.companyName || body.company_name,
+        company_domain: body.companyDomain || body.company_domain || null,
+        company_logo_source: body.companyLogoSource || body.company_logo_source || 'logo_dev',
+        company_logo_url: body.companyLogoUrl || body.company_logo_url || null,
+        company_about: body.companyAbout || body.company_about || null,
+        agent_name: body.agentName || body.agent_name,
+        agent_company: body.agentCompany || body.agent_company,
+        agent_email: body.agentEmail || body.agent_email,
+        agent_phone: body.agentPhone || body.agent_phone || null,
+        agent_domain: body.agentDomain || body.agent_domain || null,
+        agent_logo_source: body.agentLogoSource || body.agent_logo_source || 'logo_dev',
+        agent_logo_url: body.agentLogoUrl || body.agent_logo_url || null,
+        requirements_summary: body.requirementsSummary || body.requirements_summary,
+        sqft_min: body.sqftMin || body.sqft_min || null,
+        sqft_max: body.sqftMax || body.sqft_max || null,
+        use_class: body.useClass || body.use_class || null,
         sector: body.sector || null,
-        additional_notes: body.additional_notes || null,
-        target_locations: body.target_locations || [],
-        store_images: body.store_images || [],
-        brand_color: body.brand_color || '#7c3aed',
+        additional_notes: body.additionalNotes || body.additional_notes || null,
+        target_locations: body.targetLocations || body.target_locations || [],
+        store_images: body.storeImages || body.store_images || [],
+        brand_color: body.brandColor || body.brand_color || '#7c3aed',
       })
       .select()
       .single();

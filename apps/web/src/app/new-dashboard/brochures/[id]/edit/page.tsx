@@ -14,6 +14,7 @@ function rowToFormData(row: BrochureRow): Partial<BrochureFormData> {
     companyName: row.company_name,
     companyLogoUrl: row.company_logo_url || '',
     companyLogoSource: row.company_logo_source || 'none',
+    companyAbout: row.company_about || '',
     brandColor: row.brand_color || '#7c3aed',
     sector: row.sector || '',
     useClass: row.use_class || '',

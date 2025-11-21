@@ -118,6 +118,13 @@ export function BrochureDocument({ brochure }: BrochureDocumentProps) {
 
           {/* Company Name */}
           <h1 className="text-4xl font-bold tracking-tight">{brochure.company_name}</h1>
+
+          {/* Company About */}
+          {brochure.company_about && (
+            <p className="mt-2 text-sm" style={{ color: 'rgba(255,255,255,0.8)' }}>
+              {brochure.company_about}
+            </p>
+          )}
         </div>
       </header>
 

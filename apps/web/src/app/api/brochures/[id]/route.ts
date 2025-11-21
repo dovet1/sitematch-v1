@@ -89,49 +89,61 @@ export async function PUT(
     const body = await request.json();
 
     // Validate array limits if provided
-    if (body.target_locations && body.target_locations.length > 20) {
+    const targetLocations = body.targetLocations || body.target_locations;
+    if (targetLocations && targetLocations.length > 20) {
       return NextResponse.json(
         { error: 'Maximum 20 target locations allowed' },
         { status: 400 }
       );
     }
 
-    if (body.store_images && body.store_images.length > 6) {
+    const storeImages = body.storeImages || body.store_images;
+    if (storeImages && storeImages.length > 6) {
       return NextResponse.json(
         { error: 'Maximum 6 store images allowed' },
         { status: 400 }
       );
     }
 
-    // Build update object with only provided fields
+    // Build update object - map camelCase to snake_case
     const updateData: Record<string, unknown> = {};
 
-    const allowedFields = [
-      'listing_id',
-      'company_name',
-      'company_domain',
-      'company_logo_source',
-      'company_logo_url',
-      'agent_name',
-      'agent_company',
-      'agent_email',
-      'agent_phone',
-      'agent_domain',
-      'agent_logo_source',
-      'agent_logo_url',
-      'requirements_summary',
-      'sqft_min',
-      'sqft_max',
-      'use_class',
-      'sector',
-      'additional_notes',
-      'target_locations',
-      'store_images',
-      'brand_color',
-    ];
+    const fieldMap: Record<string, string> = {
+      listingId: 'listing_id',
+      companyName: 'company_name',
+      companyDomain: 'company_domain',
+      companyLogoSource: 'company_logo_source',
+      companyLogoUrl: 'company_logo_url',
+      companyAbout: 'company_about',
+      agentName: 'agent_name',
+      agentCompany: 'agent_company',
+      agentEmail: 'agent_email',
+      agentPhone: 'agent_phone',
+      agentDomain: 'agent_domain',
+      agentLogoSource: 'agent_logo_source',
+      agentLogoUrl: 'agent_logo_url',
+      requirementsSummary: 'requirements_summary',
+      sqftMin: 'sqft_min',
+      sqftMax: 'sqft_max',
+      useClass: 'use_class',
+      sector: 'sector',
+      additionalNotes: 'additional_notes',
+      targetLocations: 'target_locations',
+      storeImages: 'store_images',
+      brandColor: 'brand_color',
+    };
 
+    // Handle camelCase fields
+    for (const [camelKey, snakeKey] of Object.entries(fieldMap)) {
+      if (body[camelKey] !== undefined) {
+        updateData[snakeKey] = body[camelKey];
+      }
+    }
+
+    // Also handle snake_case fields for backward compatibility
+    const allowedFields = Object.values(fieldMap);
     for (const field of allowedFields) {
-      if (body[field] !== undefined) {
+      if (body[field] !== undefined && updateData[field] === undefined) {
         updateData[field] = body[field];
       }
     }
