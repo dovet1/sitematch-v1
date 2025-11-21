@@ -39,6 +39,13 @@ interface ChartData {
   nationalAverage?: number;
 }
 
+// Age group ordering from youngest to oldest - extract first number for sorting
+const getAgeGroupSortValue = (label: string): number => {
+  // Extract the first number from the label (e.g., "5 9" -> 5, "10 14" -> 10, "85+" -> 85)
+  const match = label.match(/^(\d+)/);
+  return match ? parseInt(match[1], 10) : 999;
+};
+
 export function DemographicsResults({
   loading,
   error,
@@ -136,14 +143,20 @@ export function DemographicsResults({
         grandTotal += Number(value) || 0;
       });
 
-      return Object.entries(data)
+      const items = Object.entries(data)
         .map(([label, value]) => ({
           label,
           value: Number(value) || 0,
           percentage: grandTotal > 0 ? (Number(value) / grandTotal) * 100 : 0,
           nationalAverage: findNationalAverage(label, field),
-        }))
-        .sort((a, b) => b.value - a.value);
+        }));
+
+      // Sort age groups by age order (youngest to oldest), others by count
+      if (field === 'age_groups') {
+        return items.sort((a, b) => getAgeGroupSortValue(a.label) - getAgeGroupSortValue(b.label));
+      }
+
+      return items.sort((a, b) => b.value - a.value);
     };
 
     const getTotalPopulation = (): number => {
@@ -503,7 +516,8 @@ export function DemographicsResults({
                               </div>
                             </div>
 
-                            {chart.data.slice(0, 10).map((item: ChartData, idx) => (
+                            {/* Show all items for Age profile, limit to 10 for others */}
+                            {(chart.title === 'Age profile' ? chart.data : chart.data.slice(0, 10)).map((item: ChartData, idx) => (
                               <div key={idx} className="flex items-center gap-2 text-xs">
                                 <div className="flex-1 text-gray-700 text-[11px]" title={item.label}>
                                   {item.label}
@@ -537,7 +551,7 @@ export function DemographicsResults({
                                 )}
                               </div>
                             ))}
-                            {chart.data.length > 10 && (
+                            {chart.title !== 'Age profile' && chart.data.length > 10 && (
                               <p className="text-[10px] text-gray-400 mt-2 text-center">
                                 +{chart.data.length - 10} more
                               </p>

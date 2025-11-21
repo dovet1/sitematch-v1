@@ -175,6 +175,14 @@ function cleanLabel(componentId: string, prefix?: string): string {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
+  // For age groups, format as "X to Y" (e.g., "5 9" -> "5 to 9")
+  if (prefix === COMPONENT_PREFIXES.age_groups) {
+    // Match patterns like "5 9", "10 14", "80 84"
+    label = label.replace(/^(\d+)\s+(\d+)$/, '$1 to $2');
+    // Handle "85 And Over" -> "85+"
+    label = label.replace(/^(\d+)\s+And\s+Over$/i, '$1+');
+  }
+
   return label;
 }
 

@@ -29,6 +29,13 @@ interface ChartData {
   percentage: number;
 }
 
+// Age group ordering from youngest to oldest - extract first number for sorting
+const getAgeGroupSortValue = (label: string): number => {
+  // Extract the first number from the label (e.g., "5 9" -> 5, "10 14" -> 10, "85+" -> 85)
+  const match = label.match(/^(\d+)/);
+  return match ? parseInt(match[1], 10) : 999;
+};
+
 // Helper functions for category styling (Tailwind doesn't support dynamic class names)
 function getCategoryIconClasses(color: string): string {
   const classes = {
@@ -88,14 +95,20 @@ export function MobileFullReport({ open, onClose, rawData, location }: MobileFul
         grandTotal += Number(value) || 0;
       });
 
-      return Object.entries(data)
+      const items = Object.entries(data)
         .map(([label, value]) => ({
           label,
           value: Number(value) || 0,
           percentage: grandTotal > 0 ? (Number(value) / grandTotal) * 100 : 0,
         }))
-        .sort((a, b) => b.value - a.value)
         .filter(item => item.value > 0); // Only show non-zero items
+
+      // Sort age groups by age order (youngest to oldest), others by count
+      if (field === 'age_groups') {
+        return items.sort((a, b) => getAgeGroupSortValue(a.label) - getAgeGroupSortValue(b.label));
+      }
+
+      return items.sort((a, b) => b.value - a.value);
     };
 
     const getTotalPopulation = (): number => aggregatedData.population_total || 0;
@@ -248,7 +261,8 @@ export function MobileFullReport({ open, onClose, rawData, location }: MobileFul
                                 <div key={idx} className="bg-gray-50 rounded-xl p-4">
                                   <h4 className="text-sm font-medium text-gray-700 mb-3">{chart.title}</h4>
                                   <div className="space-y-2">
-                                    {chart.data.slice(0, 8).map((item: ChartData, itemIdx: number) => (
+                                    {/* Show all items for Age profile, limit to 8 for others */}
+                                    {(chart.title === 'Age profile' ? chart.data : chart.data.slice(0, 8)).map((item: ChartData, itemIdx: number) => (
                                       <div key={itemIdx} className="flex items-center justify-between text-sm">
                                         <span className="text-gray-600 truncate flex-1 pr-2">
                                           {item.label}
@@ -260,7 +274,7 @@ export function MobileFullReport({ open, onClose, rawData, location }: MobileFul
                                         </span>
                                       </div>
                                     ))}
-                                    {chart.data.length > 8 && (
+                                    {chart.title !== 'Age profile' && chart.data.length > 8 && (
                                       <p className="text-xs text-gray-500 pt-1">
                                         +{chart.data.length - 8} more items
                                       </p>
