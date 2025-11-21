@@ -24,7 +24,7 @@ interface LocationInputPanelProps {
   onMeasurementModeChange: (mode: MeasurementMode) => void;
   measurementValue: number;
   onMeasurementValueChange: (value: number) => void;
-  onAnalyze: () => void;
+  onAnalyze: (location?: LocationResult, shouldReset?: boolean) => void;
   onReset: () => void;
   loading: boolean;
   hasResults: boolean;
@@ -112,8 +112,12 @@ export function LocationInputPanel({
 
   // Search locations with debounce
   useEffect(() => {
-    // Don't search if we already have a selected location
-    if (selectedLocation) {
+    // If user is typing something different from the selected location, allow search
+    const selectedLocationDisplay = selectedLocation ? formatLocationDisplay(selectedLocation) : '';
+    const isTypingNewQuery = locationQuery !== selectedLocationDisplay;
+
+    // Don't search if query matches selected location (user hasn't changed it)
+    if (selectedLocation && !isTypingNewQuery) {
       setLocationResults([]);
       setShowLocationDropdown(false);
       return;
@@ -147,6 +151,8 @@ export function LocationInputPanel({
     setShowLocationDropdown(false);
     setLocationResults([]);
     searchInputRef.current?.blur();
+    // Auto-analyze with the new location, reset first if we have existing results
+    onAnalyze(location, hasResults);
   };
 
   const handleClearLocation = () => {
@@ -263,7 +269,7 @@ export function LocationInputPanel({
       {/* Premium Action Buttons */}
       <div className="flex gap-2">
         <Button
-          onClick={onAnalyze}
+          onClick={() => onAnalyze()}
           disabled={!canAnalyze}
           className="h-9 px-5 text-sm font-medium bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
         >

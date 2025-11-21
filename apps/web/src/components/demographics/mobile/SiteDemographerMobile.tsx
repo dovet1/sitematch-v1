@@ -9,6 +9,7 @@ import { DemographicsMap } from '../DemographicsMap';
 import { useDemographicsData } from '../shared/hooks/useDemographicsData';
 import { useLsoaSelection } from '../shared/hooks/useLsoaSelection';
 import { useLocationSearch } from '../shared/hooks/useLocationSearch';
+import type { LocationResult } from '@/lib/mapbox';
 
 // Conversion constants
 const WALK_SPEED_MPH = 3;
@@ -58,6 +59,7 @@ export function SiteDemographerMobile() {
     error,
     analyze,
     updateData,
+    reset: resetDemographics,
   } = useDemographicsData();
 
   const {
@@ -65,6 +67,7 @@ export function SiteDemographerMobile() {
     allLsoaCodes,
     toggleLsoa,
     initializeSelection,
+    reset: resetSelection,
   } = useLsoaSelection();
 
   const {
@@ -74,6 +77,7 @@ export function SiteDemographerMobile() {
     setSelectedLocation,
     setMeasurementMode,
     setMeasurementValue,
+    reset: resetLocation,
   } = useLocationSearch();
 
   // Mobile-specific state
@@ -132,6 +136,26 @@ export function SiteDemographerMobile() {
     if (result.success && result.lsoaCodes) {
       initializeSelection(result.lsoaCodes);
       // Expand sheet to show results
+      setSheetHeight('halfway');
+    }
+  };
+
+  // Handle location selection - reset previous data and auto-analyze
+  const handleLocationSelect = async (location: LocationResult) => {
+    // Reset previous data if we had results
+    if (rawDemographicsData) {
+      resetDemographics();
+      resetSelection();
+    }
+
+    // Set new location
+    setSelectedLocation(location);
+
+    // Auto-analyze the new location
+    const result = await analyze(location, measurementMode, measurementValue);
+
+    if (result.success && result.lsoaCodes) {
+      initializeSelection(result.lsoaCodes);
       setSheetHeight('halfway');
     }
   };
@@ -203,7 +227,7 @@ export function SiteDemographerMobile() {
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
         selectedLocation={selectedLocation}
-        onLocationSelect={setSelectedLocation}
+        onLocationSelect={handleLocationSelect}
         measurementMode={measurementMode}
         measurementValue={measurementValue}
         onMeasurementModeChange={setMeasurementMode}

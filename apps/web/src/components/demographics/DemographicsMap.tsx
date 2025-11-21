@@ -153,15 +153,8 @@ export function DemographicsMap({
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    // Check if center or radius has actually changed
-    const centerChanged = !lastCenter.current ||
-      lastCenter.current.lat !== center.lat ||
-      lastCenter.current.lng !== center.lng;
-    const radiusChanged = lastRadius.current !== radiusMiles;
-
-    // Only redraw if something actually changed (allow redraw when isochrone arrives)
-    // Note: isochroneGeometry is in the dependency array, so this effect will re-run when it changes
-    if (!centerChanged && !radiusChanged && isochroneGeometry === null) return;
+    // Always redraw when dependencies change - the effect only runs when center, radius,
+    // isochroneGeometry, or mapLoaded changes, so we should always proceed with the draw
 
     const addCircle = () => {
       if (!map.current || !map.current.isStyleLoaded()) return;

@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useDemographicsData } from '../shared/hooks/useDemographicsData';
 import { useLsoaSelection } from '../shared/hooks/useLsoaSelection';
 import { useLocationSearch } from '../shared/hooks/useLocationSearch';
+import type { LocationResult } from '@/lib/mapbox';
 
 // Conversion constants
 const WALK_SPEED_MPH = 3;
@@ -102,10 +103,17 @@ export function SiteDemographerDesktop() {
     return () => clearTimeout(timeoutId);
   }, [selectedLsoaCodes, updateData]); // Removed rawDemographicsData to prevent infinite loop
 
-  const handleAnalyze = async () => {
-    if (!selectedLocation) return;
+  const handleAnalyze = async (locationOverride?: LocationResult, shouldReset?: boolean) => {
+    const location = locationOverride || selectedLocation;
+    if (!location) return;
 
-    const result = await analyze(selectedLocation, measurementMode, measurementValue);
+    // Reset previous data if requested (when selecting a new location)
+    if (shouldReset) {
+      resetDemographics();
+      resetSelection();
+    }
+
+    const result = await analyze(location, measurementMode, measurementValue);
 
     if (result.success && result.lsoaCodes) {
       // Initialize LSOA selection with all codes
