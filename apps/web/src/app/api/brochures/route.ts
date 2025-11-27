@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
         target_locations: body.targetLocations || body.target_locations || [],
         store_images: body.storeImages || body.store_images || [],
         brand_color: body.brandColor || body.brand_color || '#7c3aed',
+        template: body.template || 'clean-modern',
       })
       .select()
       .single();

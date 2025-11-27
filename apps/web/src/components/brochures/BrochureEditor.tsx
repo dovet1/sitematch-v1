@@ -139,6 +139,7 @@ export function BrochureEditor({ initialData, brochureId }: BrochureEditorProps)
     company_logo_source: formData.companyLogoSource,
     company_about: formData.companyAbout || null,
     brand_color: formData.brandColor,
+    template: formData.template,
     sector: formData.sector || null,
     sector_label: formData.sectorLabel || null,
     use_class: formData.useClass || null,
@@ -211,6 +212,19 @@ export function BrochureEditor({ initialData, brochureId }: BrochureEditorProps)
         <div className="space-y-4 pb-6">
           {/* Styling Section */}
           <CollapsibleSection title="Styling" defaultOpen={true}>
+            <div>
+              <Label htmlFor="template">Template</Label>
+              <select
+                id="template"
+                value={formData.template}
+                onChange={(e) => updateField('template', e.target.value as 'clean-modern' | 'gails-style')}
+                className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm"
+              >
+                <option value="clean-modern">Clean Modern</option>
+                <option value="gails-style">Gail's Style</option>
+              </select>
+            </div>
+
             <div>
               <Label htmlFor="brandColor">Brand Colour</Label>
               <div className="flex gap-2">

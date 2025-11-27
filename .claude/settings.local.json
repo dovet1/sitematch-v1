@@ -64,7 +64,8 @@
       "Bash(for file in accommodation-type-ts044.csv age-by-five-year-age-bands-ts007a.csv ethnic-groups-ts021.csv)",
       "Bash(do echo \"=== $file ===\")",
       "Bash(head:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Read(//Users/tomdove/.claude/plugins/**)"
     ],
     "deny": []
   }

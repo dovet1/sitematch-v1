@@ -133,6 +133,7 @@ export async function PUT(
       targetLocations: 'target_locations',
       storeImages: 'store_images',
       brandColor: 'brand_color',
+      template: 'template',
     };
 
     // Handle camelCase fields

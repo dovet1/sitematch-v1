@@ -30,12 +30,42 @@ export const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
   : null
 
+// Billing interval type
+export type BillingInterval = 'month' | 'year'
+
 // Subscription configuration
 export const SUBSCRIPTION_CONFIG = {
-  PRICE_ID: process.env.STRIPE_PRICE_ID || '', // £975/year price ID
+  // Annual plan
+  ANNUAL_PRICE_ID: process.env.STRIPE_PRICE_ID || '', // £975/year price ID
+  ANNUAL_FULL_PRICE: 97500, // £975.00 in pence
+  ANNUAL_DISCOUNTED_PRICE: 48750, // £487.50 in pence
+
+  // Monthly plan
+  MONTHLY_PRICE_ID: process.env.STRIPE_MONTHLY_PRICE_ID || '', // £99/month price ID
+  MONTHLY_FULL_PRICE: 9900, // £99.00 in pence
+  MONTHLY_DISCOUNTED_PRICE: 4900, // £49.00 in pence
+
+  // Shared config
   TRIAL_DAYS: 30,
   CURRENCY: 'gbp',
-  ANNUAL_PRICE: 97500, // £975.00 in pence
+
+  // Coupons
+  ANNUAL_COUPON_ID: process.env.STRIPE_COUPON_ID || '', // 50% off once for annual
+  MONTHLY_COUPON_ID: process.env.STRIPE_MONTHLY_COUPON_ID || '', // 50% off for 12 months
+
+  // Helper to get price ID by interval
+  getPriceId: (interval: BillingInterval = 'year') => {
+    return interval === 'month'
+      ? process.env.STRIPE_MONTHLY_PRICE_ID || ''
+      : process.env.STRIPE_PRICE_ID || ''
+  },
+
+  // Helper to get coupon ID by interval
+  getCouponId: (interval: BillingInterval = 'year') => {
+    return interval === 'month'
+      ? process.env.STRIPE_MONTHLY_COUPON_ID || ''
+      : process.env.STRIPE_COUPON_ID || ''
+  },
 } as const
 
 // Webhook configuration

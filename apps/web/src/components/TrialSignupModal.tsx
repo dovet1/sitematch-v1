@@ -34,6 +34,7 @@ interface TrialSignupModalProps {
   children: React.ReactNode
   context: 'search' | 'sitesketcher' | 'agency' | 'general'
   redirectPath?: string
+  billingInterval?: 'month' | 'year'
   testimonial?: {
     quote: string
     author: string
@@ -96,7 +97,7 @@ const contextConfig = {
   }
 }
 
-export function TrialSignupModal({ children, context, redirectPath, testimonial, forceOpen, onClose, onLoadingChange }: TrialSignupModalProps) {
+export function TrialSignupModal({ children, context, redirectPath, billingInterval = 'year', testimonial, forceOpen, onClose, onLoadingChange }: TrialSignupModalProps) {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -160,7 +161,8 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
         },
         body: JSON.stringify({
           userType: context,
-          redirectPath: redirectPath || '/search'
+          redirectPath: redirectPath || '/search',
+          billingInterval: billingInterval
         }),
       })
 
@@ -282,8 +284,12 @@ export function TrialSignupModal({ children, context, redirectPath, testimonial,
             {/* Pricing highlight */}
             <div className="text-center mt-3 p-2 bg-white/10 backdrop-blur-sm rounded-lg">
               <div className="text-base font-semibold">
-                <span className="line-through text-white/70">£975</span>{' '}
-                <span className="text-white">£487.50/year</span> - 30 days free
+                <span className="line-through text-white/70">
+                  {billingInterval === 'year' ? '£975' : '£99'}
+                </span>{' '}
+                <span className="text-white">
+                  {billingInterval === 'year' ? '£487.50/year' : '£49/month'}
+                </span> - 30 days free
               </div>
               <div className="text-xs text-violet-100">Add payment method, cancel anytime</div>
             </div>

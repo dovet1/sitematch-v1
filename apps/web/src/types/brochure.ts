@@ -6,6 +6,7 @@
 import type { LocationSelection } from '@/types/locations';
 
 export type LogoSource = 'logo_dev' | 'upload' | 'none';
+export type BrochureTemplate = 'clean-modern' | 'gails-style';
 
 // Database row type (matches Supabase table)
 export interface BrochureRow {
@@ -45,6 +46,7 @@ export interface BrochureRow {
 
   // Branding
   brand_color: string | null;
+  template: BrochureTemplate;
 
   // Timestamps
   created_at: string;
@@ -86,8 +88,9 @@ export interface BrochureFormData {
   targetLocations: LocationSelection[];
   storeImages: string[];
 
-  // Step 4 - Brand Colour
+  // Step 4 - Brand Colour & Template
   brandColor: string;
+  template: BrochureTemplate;
 }
 
 // Initial empty form data
@@ -119,6 +122,7 @@ export const INITIAL_BROCHURE_FORM_DATA: BrochureFormData = {
   storeImages: [],
 
   brandColor: '#7c3aed', // Default violet
+  template: 'clean-modern', // Default template
 };
 
 // Wizard step configuration
