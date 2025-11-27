@@ -82,9 +82,15 @@ function SubscriptionSuccessContent() {
 
           // Restore session if user is not currently logged in
           if (data.userId) {
+            console.log('[SUCCESS] Got userId from Stripe:', data.userId)
             const { createClientClient } = await import('@/lib/supabase')
             const supabase = createClientClient()
-            const { data: { session: currentSession } } = await supabase.auth.getSession()
+            const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+
+            console.log('[SUCCESS] Current session check:', {
+              hasSession: !!currentSession,
+              sessionError: sessionError?.message
+            })
 
             if (!currentSession) {
               console.log('[SUCCESS] No session found, restoring for user:', data.userId)
@@ -94,27 +100,44 @@ function SubscriptionSuccessContent() {
                 body: JSON.stringify({ userId: data.userId })
               })
 
+              console.log('[SUCCESS] Restore response status:', restoreResponse.status)
+
               if (restoreResponse.ok) {
                 const { token, type } = await restoreResponse.json()
+                console.log('[SUCCESS] Got token, verifying OTP...')
+
                 const { error: verifyError } = await supabase.auth.verifyOtp({
                   token_hash: token,
                   type: type || 'magiclink'
                 })
 
-                if (!verifyError) {
+                if (verifyError) {
+                  console.error('[SUCCESS] Error verifying OTP:', verifyError)
+                } else {
+                  console.log('[SUCCESS] OTP verified, updating session...')
                   const updateResponse = await fetch('/api/auth/update-session', {
                     method: 'POST',
                     credentials: 'include'
                   })
                   const sessionData = await updateResponse.json()
+                  console.log('[SUCCESS] Update session response:', sessionData)
+
                   if (sessionData.success && sessionData.sessionId) {
                     localStorage.setItem('session_id', sessionData.sessionId)
                     const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:'
                     document.cookie = `session_id=${sessionData.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; samesite=lax${isSecure ? '; secure' : ''}`
+                    console.log('[SUCCESS] Session fully restored!')
                   }
                 }
+              } else {
+                const errorData = await restoreResponse.json()
+                console.error('[SUCCESS] Failed to restore session:', errorData)
               }
+            } else {
+              console.log('[SUCCESS] Session already exists, no need to restore')
             }
+          } else {
+            console.log('[SUCCESS] No userId in Stripe session data')
           }
         } else {
           throw new Error('Failed to fetch session')
