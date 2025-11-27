@@ -144,19 +144,21 @@ export function Pricing() {
               >
                 Monthly
               </button>
-              <button
-                className={`px-6 py-2 rounded-full transition font-medium text-sm relative ${
-                  billingInterval === 'year'
-                    ? 'bg-violet-600 text-white shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                onClick={() => setBillingInterval('year')}
-              >
-                Annual
-                <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+              <div className="relative">
+                <button
+                  className={`px-6 py-2 rounded-full transition font-medium text-sm ${
+                    billingInterval === 'year'
+                      ? 'bg-violet-600 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  onClick={() => setBillingInterval('year')}
+                >
+                  Annual
+                </button>
+                <span className="absolute -top-4 -right-3 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium">
                   Save 17%
                 </span>
-              </button>
+              </div>
             </div>
           </div>
         </div>
