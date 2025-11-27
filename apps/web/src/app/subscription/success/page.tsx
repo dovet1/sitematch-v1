@@ -48,13 +48,19 @@ function SubscriptionSuccessContent() {
   const sessionId = searchParams?.get('session_id')
   const redirectParam = searchParams?.get('redirect') ?? null
 
+  // Debug: Component mounted
+  console.log('[SUCCESS PAGE] Component mounted, sessionId:', sessionId)
+
   // Get validated button configuration
   const buttonConfig = getButtonConfig(redirectParam)
 
 
   useEffect(() => {
     async function fetchSessionDetails() {
+      console.log('[SUCCESS] fetchSessionDetails called, sessionId:', sessionId)
+
       if (!sessionId) {
+        console.log('[SUCCESS] No sessionId in URL, using fallback')
         // Fallback if no session ID
         const endDate = new Date()
         endDate.setDate(endDate.getDate() + 30)
@@ -68,7 +74,9 @@ function SubscriptionSuccessContent() {
       }
 
       try {
+        console.log('[SUCCESS] Fetching Stripe session details...')
         const response = await fetch(`/api/stripe/session?session_id=${sessionId}`)
+        console.log('[SUCCESS] Stripe session response status:', response.status)
 
         if (response.ok) {
           const data = await response.json()
