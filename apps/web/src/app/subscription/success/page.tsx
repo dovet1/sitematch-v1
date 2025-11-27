@@ -51,60 +51,6 @@ function SubscriptionSuccessContent() {
   // Get validated button configuration
   const buttonConfig = getButtonConfig(redirectParam)
 
-  // Refresh Supabase session on mount to restore auth after Stripe redirect
-  useEffect(() => {
-    async function refreshSupabaseSession() {
-      try {
-        const { createClientClient } = await import('@/lib/supabase')
-        const supabase = createClientClient()
-
-        // Get the current session
-        const { data: { session }, error } = await supabase.auth.getSession()
-
-        if (error) {
-          console.error('Error getting session:', error)
-          // Try to refresh the session
-          const { error: refreshError } = await supabase.auth.refreshSession()
-          if (refreshError) {
-            console.error('Error refreshing session:', refreshError)
-          }
-        } else if (!session) {
-          console.log('No session found, attempting to refresh')
-          // Try to refresh the session
-          const { error: refreshError } = await supabase.auth.refreshSession()
-          if (refreshError) {
-            console.error('Error refreshing session:', refreshError)
-          }
-        } else {
-          // Session exists - establish session_id cookie for middleware
-          console.log('[SUCCESS] Session exists, establishing session_id cookie')
-          try {
-            const response = await fetch('/api/auth/update-session', {
-              method: 'POST',
-              credentials: 'include'
-            })
-            const data = await response.json()
-
-            if (data.success && data.sessionId) {
-              console.log('[SUCCESS] Session ID established:', data.sessionId.substring(0, 8) + '...')
-              // Store in localStorage as backup
-              localStorage.setItem('session_id', data.sessionId)
-              // Cookie is set by server, but also set client-side as backup
-              document.cookie = `session_id=${data.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; samesite=lax`
-            } else {
-              console.error('[SUCCESS] Failed to establish session ID:', data)
-            }
-          } catch (sessionError) {
-            console.error('[SUCCESS] Error establishing session ID:', sessionError)
-          }
-        }
-      } catch (error) {
-        console.error('Error in session refresh:', error)
-      }
-    }
-
-    refreshSupabaseSession()
-  }, [])
 
   useEffect(() => {
     async function fetchSessionDetails() {
@@ -133,6 +79,43 @@ function SubscriptionSuccessContent() {
             year: 'numeric'
           }))
           setSubscriptionAmount(data.amount)
+
+          // Restore session if user is not currently logged in
+          if (data.userId) {
+            const { createClientClient } = await import('@/lib/supabase')
+            const supabase = createClientClient()
+            const { data: { session: currentSession } } = await supabase.auth.getSession()
+
+            if (!currentSession) {
+              console.log('[SUCCESS] No session found, restoring for user:', data.userId)
+              const restoreResponse = await fetch('/api/auth/restore-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: data.userId })
+              })
+
+              if (restoreResponse.ok) {
+                const { token, type } = await restoreResponse.json()
+                const { error: verifyError } = await supabase.auth.verifyOtp({
+                  token_hash: token,
+                  type: type || 'magiclink'
+                })
+
+                if (!verifyError) {
+                  const updateResponse = await fetch('/api/auth/update-session', {
+                    method: 'POST',
+                    credentials: 'include'
+                  })
+                  const sessionData = await updateResponse.json()
+                  if (sessionData.success && sessionData.sessionId) {
+                    localStorage.setItem('session_id', sessionData.sessionId)
+                    const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:'
+                    document.cookie = `session_id=${sessionData.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; samesite=lax${isSecure ? '; secure' : ''}`
+                  }
+                }
+              }
+            }
+          }
         } else {
           throw new Error('Failed to fetch session')
         }

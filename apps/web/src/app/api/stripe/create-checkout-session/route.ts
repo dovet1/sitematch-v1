@@ -141,6 +141,7 @@ export async function POST(request: NextRequest) {
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
+      client_reference_id: userId, // Pass user ID to success page for session restoration
       line_items: [
         {
           price: priceId,
