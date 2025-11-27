@@ -23,6 +23,7 @@ const DEFAULT_BROCHURE: BrochureFormData = {
   companyLogoSource: 'none',
   companyAbout: '',
   brandColor: '#7c3aed',
+  template: 'clean-modern',
   sector: 'retail',
   useClass: 'E',
   sqftMin: 2000,
