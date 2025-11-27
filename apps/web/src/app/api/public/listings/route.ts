@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase';
+import { createServerClient, createAdminClient } from '@/lib/supabase';
 import { SearchFilters, SearchResponse } from '@/types/search';
 import { calculateDistance } from '@/lib/mapbox';
 import { checkSubscriptionAccess } from '@/lib/subscription';
@@ -243,17 +243,28 @@ export async function GET(request: NextRequest) {
     }
     
     // Fetch logo files for all listings
+    // Use admin client to bypass RLS and batch to avoid URL length limits
     let logoFiles: any[] = [];
-    
+
     if (listingIds.length > 0) {
-      const { data: files } = await supabase
-        .from('file_uploads')
-        .select('listing_id, file_path, bucket_name, file_type')
-        .in('listing_id', listingIds)
-        .eq('file_type', 'logo')
-        .order('created_at', { ascending: false }); // Get most recent logo if multiple exist
-      
-      logoFiles = files || [];
+      const adminSupabase = createAdminClient();
+      const LOGO_BATCH_SIZE = 100;
+
+      for (let i = 0; i < listingIds.length; i += LOGO_BATCH_SIZE) {
+        const batch = listingIds.slice(i, i + LOGO_BATCH_SIZE);
+        const { data: files, error: filesError } = await adminSupabase
+          .from('file_uploads')
+          .select('listing_id, file_path, bucket_name, file_type')
+          .in('listing_id', batch)
+          .eq('file_type', 'logo')
+          .order('created_at', { ascending: false }); // Get most recent logo if multiple exist
+
+        if (filesError) {
+          console.error(`Error fetching logo files batch ${Math.floor(i / LOGO_BATCH_SIZE) + 1}:`, filesError);
+        } else if (files) {
+          logoFiles = [...logoFiles, ...files];
+        }
+      }
     }
     
     // Create a map of listing_id to logo URL (taking the first/most recent one if multiple exist)
