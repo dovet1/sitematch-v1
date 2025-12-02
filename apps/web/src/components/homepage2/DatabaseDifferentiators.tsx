@@ -2,8 +2,10 @@
 
 import { CheckCircle, TrendingUp, Award, Star } from 'lucide-react';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 
 export function DatabaseDifferentiators() {
+
   const differentiators = [
     {
       emoji: '🎯',
@@ -40,8 +42,28 @@ export function DatabaseDifferentiators() {
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
+        {/* How we help - Transition title */}
+        <motion.div
+          className="text-center mb-12 md:mb-16"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-4">
+            How we help
+          </h2>
+          <div className="w-24 h-1.5 bg-white mx-auto rounded-full"></div>
+        </motion.div>
+
         {/* Bold header with number badge */}
-        <div className="mb-12 md:mb-16 max-w-4xl">
+        <motion.div
+          className="mb-12 md:mb-16 max-w-4xl"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
+        >
           <div className="flex items-start gap-4 mb-6">
             <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 bg-white rounded-2xl shadow-2xl flex items-center justify-center transform rotate-3">
               <span className="text-3xl md:text-4xl font-black text-violet-600">#1</span>
@@ -58,18 +80,26 @@ export function DatabaseDifferentiators() {
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Differentiator Cards - Bold asymmetric design */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10 mb-16 md:mb-20">
           {differentiators.map((diff, index) => {
             const Icon = diff.icon;
             return (
-              <div
+              <motion.div
                 key={index}
                 className={`group relative ${
                   index === 1 ? 'md:mt-12' : index === 2 ? 'md:mt-6' : ''
                 }`}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{
+                  duration: 0.5,
+                  delay: 0.4 + index * 0.15,
+                  ease: "easeOut"
+                }}
               >
                 {/* Giant emoji background */}
                 <div className="absolute -top-8 -right-8 text-9xl md:text-[12rem] opacity-10 group-hover:opacity-20 transition-opacity duration-500 select-none pointer-events-none">
@@ -107,13 +137,19 @@ export function DatabaseDifferentiators() {
                     {diff.description}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
 
         {/* Kerry's Testimonial - Bold dramatic design */}
-        <div className="max-w-5xl mx-auto">
+        <motion.div
+          className="max-w-5xl mx-auto"
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, delay: 0.85, ease: "easeOut" }}
+        >
           <div className="relative bg-white/95 backdrop-blur-sm rounded-[2.5rem] p-8 md:p-12 lg:p-16 border-4 border-white/60 shadow-2xl overflow-hidden">
             {/* Decorative gradient accent in corner */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-yellow-300/30 via-orange-300/20 to-transparent rounded-full blur-3xl"></div>
@@ -163,7 +199,7 @@ export function DatabaseDifferentiators() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

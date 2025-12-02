@@ -1,6 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export function TheProblem() {
   const painPoints = [
@@ -31,7 +32,13 @@ export function TheProblem() {
 
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
         {/* Bold asymmetric header */}
-        <div className="mb-12 md:mb-16 max-w-4xl">
+        <motion.div
+          className="mb-12 md:mb-16 max-w-4xl"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
           <div className="inline-block mb-4 px-4 py-2 bg-red-100 rounded-full border-2 border-red-300 rotate-[-1deg]">
             <span className="text-sm font-bold text-red-700 uppercase tracking-wide">Sound familiar?</span>
           </div>
@@ -48,16 +55,24 @@ export function TheProblem() {
           <p className="text-xl md:text-2xl text-gray-700 font-medium">
             You are not alone. Finding the right occupiers should not feel like searching for a needle in a haystack.
           </p>
-        </div>
+        </motion.div>
 
         {/* Staggered pain point cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
           {painPoints.map((point, index) => (
-            <div
+            <motion.div
               key={index}
               className={`relative group ${
                 index === 1 ? 'md:mt-8' : index === 2 ? 'md:mt-16' : ''
               }`}
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{
+                duration: 0.5,
+                delay: index * 0.15,
+                ease: "easeOut"
+              }}
             >
               {/* Big emoji background */}
               <div className="absolute -top-6 -right-6 text-8xl md:text-9xl opacity-10 group-hover:opacity-20 transition-opacity duration-300 select-none">
@@ -82,7 +97,7 @@ export function TheProblem() {
                   {point.description}
                 </p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>

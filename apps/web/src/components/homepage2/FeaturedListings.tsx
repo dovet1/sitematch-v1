@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { useAuth } from '@/contexts/auth-context';
 import { ListingModal } from '@/components/listings/ListingModal';
+import { motion } from 'framer-motion';
 
 interface Listing {
   id: string;
@@ -112,7 +113,13 @@ export function FeaturedListings() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
         {/* Bold header */}
-        <div className="mb-12 md:mb-16 max-w-5xl mx-auto">
+        <motion.div
+          className="mb-12 md:mb-16 max-w-5xl mx-auto"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
           <div className="inline-block mb-4 px-4 py-2 bg-blue-100 rounded-full border-2 border-blue-300 rotate-[1deg]">
             <span className="text-sm font-bold text-blue-700 uppercase tracking-wide">Live Examples</span>
           </div>
@@ -126,7 +133,7 @@ export function FeaturedListings() {
           <p className="text-xl md:text-2xl text-gray-700 font-medium text-center max-w-3xl mx-auto">
             Browse completely free - no sign-up required
           </p>
-        </div>
+        </motion.div>
 
         {/* Listings Grid - Bold card design */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 md:mb-16">
@@ -136,12 +143,20 @@ export function FeaturedListings() {
             const primarySector = listing.sectors?.[0]?.name;
 
             return (
-              <button
+              <motion.button
                 key={listing.id}
                 onClick={() => setSelectedListingId(listing.id)}
                 className={`group relative bg-white rounded-3xl p-6 border-2 border-violet-200 hover:border-violet-400 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 text-left w-full ${
                   index % 4 === 1 ? 'md:mt-6' : index % 4 === 3 ? 'md:mt-8' : ''
                 }`}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{
+                  duration: 0.5,
+                  delay: 0.2 + index * 0.15,
+                  ease: "easeOut"
+                }}
               >
                 {/* Gradient accent corner */}
                 <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-violet-200/40 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -207,7 +222,7 @@ export function FeaturedListings() {
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
                   </span>
                 </div>
-              </button>
+              </motion.button>
             );
           })}
         </div>
@@ -220,7 +235,13 @@ export function FeaturedListings() {
         />
 
         {/* Bold CTA */}
-        <div className="text-center">
+        <motion.div
+          className="text-center"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, delay: 1.4, ease: "easeOut" }}
+        >
           {user ? (
             <Button
               asChild
@@ -246,7 +267,7 @@ export function FeaturedListings() {
           <p className="text-base md:text-lg text-gray-600 font-semibold mt-5">
             {user ? 'Access our full directory' : '30-day free trial • Cancel anytime'}
           </p>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

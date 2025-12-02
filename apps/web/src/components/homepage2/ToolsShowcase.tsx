@@ -5,6 +5,7 @@ import { Ruler, BarChart3, ArrowRight, Sparkles, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 
 export function ToolsShowcase() {
   const { user } = useAuth();
@@ -68,7 +69,13 @@ export function ToolsShowcase() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
         {/* Bold header */}
-        <div className="mb-12 md:mb-16 max-w-5xl mx-auto">
+        <motion.div
+          className="mb-12 md:mb-16 max-w-5xl mx-auto"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
           <div className="flex items-start gap-4 mb-6 justify-center">
             <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 bg-white rounded-2xl shadow-2xl flex items-center justify-center transform -rotate-3">
               <span className="text-3xl md:text-4xl font-black text-blue-600">#2</span>
@@ -89,7 +96,7 @@ export function ToolsShowcase() {
           <p className="text-xl md:text-2xl text-gray-700 font-medium text-center max-w-3xl mx-auto">
             Our growing toolkit helps you make faster, data-driven decisions
           </p>
-        </div>
+        </motion.div>
 
         {/* Tools Grid - Bold design */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 mb-16 md:mb-20">
@@ -113,11 +120,19 @@ export function ToolsShowcase() {
             }[tool.color];
 
             return (
-              <div
+              <motion.div
                 key={tool.id}
                 className={`group relative bg-white rounded-3xl border-3 border-gray-200 hover:border-${tool.color}-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 overflow-hidden ${
                   index === 1 ? 'lg:mt-8' : ''
                 }`}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{
+                  duration: 0.5,
+                  delay: 0.2 + index * 0.15,
+                  ease: "easeOut"
+                }}
               >
                 {/* Decorative corner gradient */}
                 <div className={`absolute top-0 right-0 w-40 h-40 bg-gradient-to-br ${colorClasses.icon} opacity-5 rounded-bl-full`}></div>
@@ -185,13 +200,19 @@ export function ToolsShowcase() {
                     </p>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
 
         {/* Henry's Testimonial - Bold design */}
-        <div className="max-w-5xl mx-auto">
+        <motion.div
+          className="max-w-5xl mx-auto"
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
+        >
           <div className="relative bg-white/95 backdrop-blur-sm rounded-[2.5rem] p-8 md:p-12 lg:p-16 border-4 border-white/60 shadow-2xl overflow-hidden">
             {/* Decorative gradient accent */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-cyan-300/30 via-blue-300/20 to-transparent rounded-full blur-3xl"></div>
@@ -241,7 +262,7 @@ export function ToolsShowcase() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Bottom CTA */}
         {user && (

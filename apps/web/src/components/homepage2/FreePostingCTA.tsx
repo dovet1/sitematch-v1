@@ -5,6 +5,7 @@ import { PenTool, Mail, Star, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { useAuth } from '@/contexts/auth-context';
+import { motion } from 'framer-motion';
 
 export function FreePostingCTA() {
   const { user } = useAuth();
@@ -19,12 +20,24 @@ export function FreePostingCTA() {
 
       <div className="relative max-w-5xl mx-auto px-4 sm:px-6">
         {/* Main Card with bold design */}
-        <div className="relative bg-white rounded-[2.5rem] p-8 md:p-12 lg:p-16 border-4 border-orange-200 shadow-2xl overflow-hidden">
+        <motion.div
+          className="relative bg-white rounded-[2.5rem] p-8 md:p-12 lg:p-16 border-4 border-orange-200 shadow-2xl overflow-hidden"
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
           {/* Decorative corner accent */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-orange-200/40 to-transparent rounded-bl-full"></div>
 
           {/* Bold badge with #3 */}
-          <div className="flex justify-center mb-6 md:mb-8">
+          <motion.div
+            className="flex justify-center mb-6 md:mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
+          >
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-xl shadow-xl flex items-center justify-center transform rotate-3 border-2 border-orange-300">
                 <span className="text-2xl md:text-3xl font-black text-orange-600">#3</span>
@@ -33,10 +46,16 @@ export function FreePostingCTA() {
                 <span className="text-sm md:text-base font-bold text-orange-700 uppercase tracking-wide">Solution Three</span>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Header with highlighted text */}
-          <div className="relative text-center mb-10 md:mb-12">
+          <motion.div
+            className="relative text-center mb-10 md:mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+          >
             <h2 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-gray-900 mb-4 md:mb-5 leading-tight">
               Looking to buy or lease a site?{' '}
               <span className="relative inline-block">
@@ -51,12 +70,18 @@ export function FreePostingCTA() {
               <Sparkles className="w-5 h-5 md:w-6 md:h-6" />
               <span>Get discovered by 1,400+ property professionals</span>
             </div>
-          </div>
+          </motion.div>
 
           {/* Two Options - Bold design */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-10 md:mb-12">
             {/* Option 1: DIY */}
-            <div className="group relative bg-gradient-to-br from-violet-50 to-purple-50 rounded-3xl p-6 md:p-8 border-3 border-violet-300 hover:border-violet-400 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
+            <motion.div
+              className="group relative bg-gradient-to-br from-violet-50 to-purple-50 rounded-3xl p-6 md:p-8 border-3 border-violet-300 hover:border-violet-400 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
+            >
               {/* Decorative accent */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-300/30 to-transparent rounded-bl-full"></div>
 
@@ -98,10 +123,16 @@ export function FreePostingCTA() {
                   </AuthChoiceModal>
                 )}
               </div>
-            </div>
+            </motion.div>
 
             {/* Option 2: Let us do it */}
-            <div className="group relative bg-gradient-to-br from-blue-50 to-cyan-50 rounded-3xl p-6 md:p-8 border-3 border-blue-300 hover:border-blue-400 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
+            <motion.div
+              className="group relative bg-gradient-to-br from-blue-50 to-cyan-50 rounded-3xl p-6 md:p-8 border-3 border-blue-300 hover:border-blue-400 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.5, delay: 0.55, ease: "easeOut" }}
+            >
               {/* Decorative accent */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-300/30 to-transparent rounded-bl-full"></div>
 
@@ -128,11 +159,17 @@ export function FreePostingCTA() {
                   </a>
                 </Button>
               </div>
-            </div>
+            </motion.div>
           </div>
 
           {/* Why note - Bold design */}
-          <div className="relative bg-gradient-to-r from-amber-50 to-yellow-50 rounded-2xl p-6 md:p-8 border-2 border-amber-200 shadow-lg overflow-hidden">
+          <motion.div
+            className="relative bg-gradient-to-r from-amber-50 to-yellow-50 rounded-2xl p-6 md:p-8 border-2 border-amber-200 shadow-lg overflow-hidden"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6, delay: 0.7, ease: "easeOut" }}
+          >
             {/* Decorative sparkle */}
             <div className="absolute top-2 right-2 opacity-20">
               <Sparkles className="w-16 h-16 text-amber-500" />
@@ -142,8 +179,8 @@ export function FreePostingCTA() {
               <span className="font-black text-gray-900 text-lg md:text-xl">Why?</span>{' '}
               We believe everyone should have access to the market, not just those who can afford premium listings. Your requirements deserve to be seen.
             </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );
