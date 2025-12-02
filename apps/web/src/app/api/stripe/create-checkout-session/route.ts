@@ -8,8 +8,9 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId: providedUserId, userType, redirectPath } = await request.json()
+    const { userId: providedUserId, userType, redirectPath, billingInterval = 'year' } = await request.json()
     console.log('API called with userId:', providedUserId)
+    console.log('Billing interval:', billingInterval)
 
     let userId = providedUserId
 
@@ -126,11 +127,13 @@ export async function POST(request: NextRequest) {
 
     const customText = getCustomText(userType)
 
-    // Prepare discount configuration
-    const couponId = process.env.STRIPE_COUPON_ID // SITEMATCHERINTRO coupon (50% off once)
+    // Select price ID and coupon based on billing interval
+    const priceId = SUBSCRIPTION_CONFIG.getPriceId(billingInterval as 'month' | 'year')
+    const couponId = SUBSCRIPTION_CONFIG.getCouponId(billingInterval as 'month' | 'year')
 
     console.log('Creating checkout session for user:', userId)
-    console.log('Using price:', SUBSCRIPTION_CONFIG.PRICE_ID)
+    console.log('Billing interval:', billingInterval)
+    console.log('Using price:', priceId)
     console.log('Applying coupon:', couponId)
 
     // Create Stripe Checkout session with discount at top level
@@ -138,9 +141,10 @@ export async function POST(request: NextRequest) {
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
+      client_reference_id: userId, // Pass user ID to success page for session restoration
       line_items: [
         {
-          price: SUBSCRIPTION_CONFIG.PRICE_ID,
+          price: priceId,
           quantity: 1,
         },
       ],
@@ -158,7 +162,8 @@ export async function POST(request: NextRequest) {
         },
         metadata: {
           user_id: userId,
-          user_type: userType || 'unknown'
+          user_type: userType || 'unknown',
+          billing_interval: billingInterval
         }
       },
       success_url: successUrl,
@@ -180,7 +185,8 @@ export async function POST(request: NextRequest) {
       },
       metadata: {
         user_id: userId,
-        user_type: userType || 'unknown'
+        user_type: userType || 'unknown',
+        billing_interval: billingInterval
       }
     }
 

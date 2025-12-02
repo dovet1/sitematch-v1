@@ -8,6 +8,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Skip session validation for subscription success page (users return from Stripe without session_id cookie)
+  if (request.nextUrl.pathname === '/subscription/success') {
+    return NextResponse.next()
+  }
+
   // Skip session validation if already being logged out
   const logoutReason = request.nextUrl.searchParams.get('logout_reason')
   if (logoutReason === 'session_invalid' && request.nextUrl.pathname === '/') {

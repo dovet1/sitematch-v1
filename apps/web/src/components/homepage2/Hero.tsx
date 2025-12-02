@@ -128,19 +128,11 @@ export function Hero() {
                 ) : (
                   <>
                     <Button
-                      onClick={handleProCheckout}
-                      disabled={isLoadingCheckout}
+                      asChild
                       size="lg"
                       className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300"
                     >
-                      {isLoadingCheckout ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Loading...
-                        </>
-                      ) : (
-                        'Start Free Trial'
-                      )}
+                      <Link href="/pricing">Start Free Trial</Link>
                     </Button>
                     <Button
                       asChild

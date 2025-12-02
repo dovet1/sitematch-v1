@@ -57,7 +57,8 @@ export async function GET(request: NextRequest) {
       amount: finalAmount,
       trialEndDate: trialEnd.toISOString(),
       hasDiscount: !!discount,
-      originalAmount: baseAmount
+      originalAmount: baseAmount,
+      userId: session.client_reference_id // Include user ID for session restoration
     })
 
   } catch (error) {

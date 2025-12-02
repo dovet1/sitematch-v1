@@ -15,6 +15,7 @@ export default function PricingPage() {
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<'active' | 'trialing' | null>(null);
   const [showAlreadySubscribed, setShowAlreadySubscribed] = useState(false);
+  const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('year');
 
   // Fetch subscription status when component mounts and user is logged in
   useEffect(() => {
@@ -58,7 +59,8 @@ export default function PricingPage() {
         body: JSON.stringify({
           userId: user.id,
           userType: 'search',
-          redirectPath: '/search'
+          redirectPath: '/search',
+          billingInterval: billingInterval
         }),
       });
 
@@ -101,9 +103,9 @@ export default function PricingPage() {
     },
     {
       name: 'Pro',
-      price: '£487.50',
-      originalPrice: '£975',
-      period: '/year',
+      price: billingInterval === 'year' ? '£487.50' : '£49',
+      originalPrice: billingInterval === 'year' ? '£975' : '£99',
+      period: billingInterval === 'year' ? '/year' : '/month',
       description: 'For property professionals',
       features: [
         'Everything in Free',
@@ -130,6 +132,37 @@ export default function PricingPage() {
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Start with Free, upgrade to Pro when you're ready. 30-day free trial on Pro.
             </p>
+
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center gap-3 mt-8">
+              <div className="inline-flex items-center gap-0 bg-gray-100 rounded-full p-1">
+                <button
+                  className={`px-6 py-2 rounded-full transition font-medium text-sm ${
+                    billingInterval === 'month'
+                      ? 'bg-white shadow-sm text-gray-900'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  onClick={() => setBillingInterval('month')}
+                >
+                  Monthly
+                </button>
+                <div className="relative">
+                  <button
+                    className={`px-6 py-2 rounded-full transition font-medium text-sm ${
+                      billingInterval === 'year'
+                        ? 'bg-violet-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                    onClick={() => setBillingInterval('year')}
+                  >
+                    Annual
+                  </button>
+                  <span className="absolute -top-4 -right-3 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium">
+                    Save 17%
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Pricing Cards */}
@@ -232,7 +265,7 @@ export default function PricingPage() {
                     </Button>
                   )
                 ) : (
-                  <TrialSignupModal context="search" redirectPath="/search">
+                  <TrialSignupModal context="search" redirectPath="/search" billingInterval={billingInterval}>
                     <Button
                       className={`w-full mb-6 py-6 text-lg font-semibold rounded-xl ${
                         plan.highlighted

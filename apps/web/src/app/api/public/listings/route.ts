@@ -243,25 +243,26 @@ export async function GET(request: NextRequest) {
     }
     
     // Fetch logo files for all listings
-    // Use admin client to bypass RLS since we've already verified listings are approved
-    // Batch requests to avoid "Request Header Fields Too Large" error
+    // Use admin client to bypass RLS and batch to avoid URL length limits
     let logoFiles: any[] = [];
 
     if (listingIds.length > 0) {
       const adminSupabase = createAdminClient();
-      const BATCH_SIZE = 100; // Process 100 IDs at a time
+      const LOGO_BATCH_SIZE = 100;
 
-      for (let i = 0; i < listingIds.length; i += BATCH_SIZE) {
-        const batch = listingIds.slice(i, i + BATCH_SIZE);
-        const { data: files } = await adminSupabase
+      for (let i = 0; i < listingIds.length; i += LOGO_BATCH_SIZE) {
+        const batch = listingIds.slice(i, i + LOGO_BATCH_SIZE);
+        const { data: files, error: filesError } = await adminSupabase
           .from('file_uploads')
           .select('listing_id, file_path, bucket_name, file_type')
           .in('listing_id', batch)
           .eq('file_type', 'logo')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false }); // Get most recent logo if multiple exist
 
-        if (files) {
-          logoFiles.push(...files);
+        if (filesError) {
+          console.error(`Error fetching logo files batch ${Math.floor(i / LOGO_BATCH_SIZE) + 1}:`, filesError);
+        } else if (files) {
+          logoFiles = [...logoFiles, ...files];
         }
       }
     }

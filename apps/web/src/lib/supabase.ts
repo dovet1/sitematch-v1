@@ -12,14 +12,22 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Create a new browser client instance each time for fresh auth state
 export const createClientClient = () => createBrowserClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    flowType: 'pkce'
+    flowType: 'pkce',
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined
   }
 })
 
 // Legacy export for backward compatibility
 export const browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    flowType: 'pkce'
+    flowType: 'pkce',
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined
   }
 })
 export const supabase = browserClient
@@ -27,7 +35,11 @@ export const supabase = browserClient
 // Default createClient export for API routes
 export const createClient = () => createBrowserClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    flowType: 'pkce'
+    flowType: 'pkce',
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined
   }
 })
 

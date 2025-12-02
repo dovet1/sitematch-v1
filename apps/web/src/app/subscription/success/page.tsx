@@ -48,12 +48,19 @@ function SubscriptionSuccessContent() {
   const sessionId = searchParams?.get('session_id')
   const redirectParam = searchParams?.get('redirect') ?? null
 
+  // Debug: Component mounted
+  console.log('[SUCCESS PAGE] Component mounted, sessionId:', sessionId)
+
   // Get validated button configuration
   const buttonConfig = getButtonConfig(redirectParam)
 
+
   useEffect(() => {
     async function fetchSessionDetails() {
+      console.log('[SUCCESS] fetchSessionDetails called, sessionId:', sessionId)
+
       if (!sessionId) {
+        console.log('[SUCCESS] No sessionId in URL, using fallback')
         // Fallback if no session ID
         const endDate = new Date()
         endDate.setDate(endDate.getDate() + 30)
@@ -67,7 +74,9 @@ function SubscriptionSuccessContent() {
       }
 
       try {
+        console.log('[SUCCESS] Fetching Stripe session details...')
         const response = await fetch(`/api/stripe/session?session_id=${sessionId}`)
+        console.log('[SUCCESS] Stripe session response status:', response.status)
 
         if (response.ok) {
           const data = await response.json()
@@ -78,6 +87,66 @@ function SubscriptionSuccessContent() {
             year: 'numeric'
           }))
           setSubscriptionAmount(data.amount)
+
+          // Restore session if user is not currently logged in
+          if (data.userId) {
+            console.log('[SUCCESS] Got userId from Stripe:', data.userId)
+            const { createClientClient } = await import('@/lib/supabase')
+            const supabase = createClientClient()
+            const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+
+            console.log('[SUCCESS] Current session check:', {
+              hasSession: !!currentSession,
+              sessionError: sessionError?.message
+            })
+
+            if (!currentSession) {
+              console.log('[SUCCESS] No session found, restoring for user:', data.userId)
+              const restoreResponse = await fetch('/api/auth/restore-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: data.userId })
+              })
+
+              console.log('[SUCCESS] Restore response status:', restoreResponse.status)
+
+              if (restoreResponse.ok) {
+                const { token, type } = await restoreResponse.json()
+                console.log('[SUCCESS] Got token, verifying OTP...')
+
+                const { error: verifyError } = await supabase.auth.verifyOtp({
+                  token_hash: token,
+                  type: type || 'magiclink'
+                })
+
+                if (verifyError) {
+                  console.error('[SUCCESS] Error verifying OTP:', verifyError)
+                } else {
+                  console.log('[SUCCESS] OTP verified, updating session...')
+                  const updateResponse = await fetch('/api/auth/update-session', {
+                    method: 'POST',
+                    credentials: 'include'
+                  })
+                  const sessionData = await updateResponse.json()
+                  console.log('[SUCCESS] Update session response:', sessionData)
+
+                  if (sessionData.success && sessionData.sessionId) {
+                    localStorage.setItem('session_id', sessionData.sessionId)
+                    const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:'
+                    document.cookie = `session_id=${sessionData.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; samesite=lax${isSecure ? '; secure' : ''}`
+                    console.log('[SUCCESS] Session fully restored!')
+                  }
+                }
+              } else {
+                const errorData = await restoreResponse.json()
+                console.error('[SUCCESS] Failed to restore session:', errorData)
+              }
+            } else {
+              console.log('[SUCCESS] Session already exists, no need to restore')
+            }
+          } else {
+            console.log('[SUCCESS] No userId in Stripe session data')
+          }
         } else {
           throw new Error('Failed to fetch session')
         }

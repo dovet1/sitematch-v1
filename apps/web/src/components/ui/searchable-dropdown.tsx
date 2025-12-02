@@ -22,7 +22,8 @@ export interface SearchableOption {
 
 interface SearchableDropdownProps {
   value?: string
-  onChange: (value: string) => void
+  selected?: string[]
+  onChange?: (value: string) => void
   options: SearchableOption[]
   placeholder?: string
   searchPlaceholder?: string
@@ -32,10 +33,12 @@ interface SearchableDropdownProps {
   disabled?: boolean
   required?: boolean
   clearable?: boolean
+  multiple?: boolean
 }
 
 export function SearchableDropdown({
   value,
+  selected = [],
   onChange,
   options,
   placeholder = "Select an option...",
@@ -45,16 +48,18 @@ export function SearchableDropdown({
   className,
   disabled = false,
   required = false,
-  clearable = false
+  clearable = false,
+  multiple = false
 }: SearchableDropdownProps) {
   const [open, setOpen] = React.useState(false)
   const [searchValue, setSearchValue] = React.useState("")
 
   const selectedOption = options.find((option) => option.value === value)
+  const selectedOptions = options.filter((option) => selected.includes(option.value))
 
   const filteredOptions = React.useMemo(() => {
     if (!searchValue) return options
-    
+
     return options.filter((option) =>
       option.label.toLowerCase().includes(searchValue.toLowerCase()) ||
       option.description?.toLowerCase().includes(searchValue.toLowerCase())
@@ -62,15 +67,34 @@ export function SearchableDropdown({
   }, [options, searchValue])
 
   const handleSelect = (optionValue: string) => {
-    onChange(optionValue)
-    setOpen(false)
-    setSearchValue("")
+    if (multiple) {
+      // Toggle selection for multiple mode
+      const newSelected = selected.includes(optionValue)
+        ? selected.filter(v => v !== optionValue)
+        : [...selected, optionValue]
+      onChange?.(newSelected as any)
+      setSearchValue("")
+    } else {
+      onChange?.(optionValue)
+      setOpen(false)
+      setSearchValue("")
+    }
   }
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation()
-    onChange("")
+    if (multiple) {
+      onChange?.([] as any)
+    } else {
+      onChange?.("")
+    }
     setSearchValue("")
+  }
+
+  const handleRemoveItem = (e: React.MouseEvent, valueToRemove: string) => {
+    e.stopPropagation()
+    const newSelected = selected.filter(v => v !== valueToRemove)
+    onChange?.(newSelected as any)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -96,14 +120,36 @@ export function SearchableDropdown({
             role="combobox"
             aria-expanded={open}
             className={cn(
-              "w-full justify-between bg-white hover:bg-gray-50 hover:text-foreground",
-              !selectedOption && "text-muted-foreground",
+              "w-full justify-between bg-white hover:bg-gray-50 hover:text-foreground min-h-[40px] h-auto",
+              !selectedOption && !selectedOptions.length && "text-muted-foreground",
               disabled && "opacity-50 cursor-not-allowed"
             )}
             disabled={disabled}
           >
             <div className="flex items-center flex-1 min-w-0">
-              {selectedOption ? (
+              {multiple ? (
+                selectedOptions.length > 0 ? (
+                  <div className="flex flex-wrap gap-1 py-1">
+                    {selectedOptions.map((option) => (
+                      <div
+                        key={option.value}
+                        className="inline-flex items-center gap-1 bg-violet-100 text-violet-900 px-2 py-0.5 rounded text-sm"
+                      >
+                        <span>{option.label}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleRemoveItem(e, option.value)}
+                          className="hover:bg-violet-200 rounded p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span>{placeholder}</span>
+                )
+              ) : selectedOption ? (
                 <div className="flex flex-col items-start min-w-0">
                   <span className="truncate text-sm">{selectedOption.label}</span>
                   {selectedOption.description && (
@@ -116,9 +162,9 @@ export function SearchableDropdown({
                 <span>{placeholder}</span>
               )}
             </div>
-            
-            <div className="flex items-center gap-1">
-              {clearable && selectedOption && !disabled && (
+
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {clearable && ((multiple && selectedOptions.length > 0) || (!multiple && selectedOption)) && !disabled && (
                 <div
                   onClick={handleClear}
                   className="hover:bg-muted rounded p-1 transition-colors"
@@ -131,51 +177,58 @@ export function SearchableDropdown({
           </Button>
         </PopoverTrigger>
         
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-          <Command shouldFilter={false}>
-            <div className="flex items-center border-b px-3">
-              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-              <Input
-                placeholder={searchPlaceholder}
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                className="border-0 px-0 py-2 focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-            </div>
-            
-            <Command.Group className="max-h-[300px] overflow-y-auto">
-              {filteredOptions.length === 0 ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  {emptyText}
-                </div>
-              ) : (
-                filteredOptions.map((option) => (
-                  <Command.Item
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] p-0"
+          align="start"
+          style={{ maxHeight: '400px', display: 'flex', flexDirection: 'column' }}
+        >
+          <div className="flex items-center border-b px-3 flex-shrink-0">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <Input
+              placeholder={searchPlaceholder}
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="border-0 px-0 py-2 focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+          </div>
+
+          <div
+            className="overflow-y-scroll p-2 flex-1"
+            style={{ maxHeight: '300px', overflowY: 'scroll', WebkitOverflowScrolling: 'touch' }}
+          >
+            {filteredOptions.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                {emptyText}
+              </div>
+            ) : (
+              filteredOptions.map((option) => {
+                const isSelected = multiple
+                  ? selected.includes(option.value)
+                  : value === option.value
+
+                return (
+                  <button
                     key={option.value}
-                    value={option.value}
-                    onSelect={() => handleSelect(option.value)}
+                    type="button"
+                    onClick={() => handleSelect(option.value)}
                     disabled={option.disabled}
-                    className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-accent"
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-accent rounded-sm text-left",
+                      option.disabled && "opacity-50 cursor-not-allowed"
+                    )}
                   >
                     <Check
                       className={cn(
-                        "h-4 w-4",
-                        value === option.value ? "opacity-100" : "opacity-0"
+                        "h-4 w-4 flex-shrink-0",
+                        isSelected ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="truncate">{option.label}</span>
-                      {option.description && (
-                        <span className="text-xs text-muted-foreground truncate">
-                          {option.description}
-                        </span>
-                      )}
-                    </div>
-                  </Command.Item>
-                ))
-              )}
-            </Command.Group>
-          </Command>
+                    <span className="truncate">{option.label}</span>
+                  </button>
+                )
+              })
+            )}
+          </div>
         </PopoverContent>
       </Popover>
     </div>
