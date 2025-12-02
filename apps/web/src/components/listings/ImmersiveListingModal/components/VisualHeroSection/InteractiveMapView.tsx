@@ -172,13 +172,21 @@ export function InteractiveMapView({ locations, onMapStateChange }: InteractiveM
                   .addTo(map.current);
               });
 
-              // Fit map to show all markers if multiple locations
-              if (validLocations.length > 1 && bounds) {
-                map.current.fitBounds(bounds, {
-                  padding: { top: 80, bottom: 80, left: 80, right: 80 },  // More padding to zoom out further
-                  maxZoom: 8  // Limit maximum zoom to ensure more area is visible
-                });
-              }
+              // Fit map to show all markers - do this after a short delay to ensure proper sizing
+              setTimeout(() => {
+                if (validLocations.length > 1 && bounds) {
+                  map.current.fitBounds(bounds, {
+                    padding: 80,  // Uniform padding on all sides
+                    linear: true,
+                    duration: 0
+                  });
+                } else if (validLocations.length === 1) {
+                  // For single location, zoom out to show context
+                  const firstCoords = getCoordinates(validLocations[0])!;
+                  map.current.setCenter([firstCoords.lng, firstCoords.lat]);
+                  map.current.setZoom(6);
+                }
+              }, 200);
             });
 
             map.current.on('error', (e: any) => {

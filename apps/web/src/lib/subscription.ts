@@ -42,7 +42,13 @@ export async function checkSubscriptionAccess(userId: string): Promise<boolean> 
 
   // Check if trial is active
   if (user.subscription_status === 'trialing') {
-    if (user.trial_end_date && new Date() < new Date(user.trial_end_date)) {
+    // If no trial_end_date is set, grant access (trial is active)
+    if (!user.trial_end_date) {
+      return true
+    }
+
+    // If trial_end_date exists, check if it's still valid
+    if (new Date() < new Date(user.trial_end_date)) {
       return true // Trial active
     } else {
       // Trial expired - update status
