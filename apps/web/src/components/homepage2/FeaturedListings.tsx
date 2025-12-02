@@ -107,15 +107,12 @@ export function FeaturedListings() {
       <div className="max-w-7xl mx-auto px-6">
         {/* Header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-violet-50 rounded-full border border-violet-200 mb-4">
-            <Building2 className="w-4 h-4 text-violet-600" />
-            <span className="text-sm font-semibold text-violet-700">Live Requirements</span>
-          </div>
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Featured Property Requirements
+            Wondering what this looks like?{' '}
+            <span className="text-violet-600">Here are some live requirements</span>
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Companies actively seeking their next location. See which opportunities match your portfolio.
+            Browse completely free - no sign-up required
           </p>
         </div>
 
@@ -228,7 +225,7 @@ export function FeaturedListings() {
             </TrialSignupModal>
           )}
           <p className="text-sm text-gray-500 mt-4">
-            {user ? 'Access our full directory' : 'No credit card required • 30-day free trial'}
+            {user ? 'Access our full directory' : '30-day free trial • Cancel anytime'}
           </p>
         </div>
       </div>

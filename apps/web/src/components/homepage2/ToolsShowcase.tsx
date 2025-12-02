@@ -1,9 +1,10 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Ruler, BarChart3, ArrowRight, Sparkles } from 'lucide-react';
+import { Ruler, BarChart3, ArrowRight, Sparkles, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
+import Image from 'next/image';
 
 export function ToolsShowcase() {
   const { user } = useAuth();
@@ -14,7 +15,7 @@ export function ToolsShowcase() {
       name: 'SiteSketcher',
       icon: Ruler,
       tagline: 'Visualize site potential instantly',
-      description: 'Draw building footprints, add parking layouts, and assess site capacity with our intuitive mapping tool. Perfect for quick feasibility studies.',
+      description: 'Draw building footprints, calculate areas, plan parking—see if a site works before you commit. Perfect for quick feasibility studies.',
       features: [
         'Draw unlimited polygons and buildings',
         'Calculate areas and dimensions',
@@ -37,7 +38,7 @@ export function ToolsShowcase() {
       name: 'SiteAnalyser',
       icon: BarChart3,
       tagline: 'Understand your catchment area',
-      description: 'Analyze demographics, traffic patterns, and population data for any location. Make data-driven decisions about site selection.',
+      description: 'Analyze demographics, traffic patterns, and catchment data to understand who will walk through the door. Make data-driven site decisions.',
       features: [
         'Population and affluence analysis',
         'Traffic flow visualization',
@@ -63,14 +64,14 @@ export function ToolsShowcase() {
         {/* Header */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full border border-blue-200 mb-4">
-            <Sparkles className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-semibold text-blue-700">Professional Tools</span>
+            <Star className="w-4 h-4 text-blue-600" />
+            <span className="text-sm font-semibold text-blue-700">Solution #2</span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Powerful tools for property professionals
+            Assess site viability in minutes, not hours
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Evaluate sites, analyze demographics, and make informed decisions with our suite of professional tools.
+            Our growing toolkit helps you make faster, data-driven decisions
           </p>
         </div>
 
@@ -164,6 +165,41 @@ export function ToolsShowcase() {
               </div>
             );
           })}
+        </div>
+
+        {/* Henry's Testimonial */}
+        <div className="mt-16 max-w-4xl mx-auto">
+          <div className="bg-gradient-to-br from-blue-50 via-cyan-50 to-sky-50 rounded-3xl p-6 md:p-10 border-2 border-blue-200 shadow-lg">
+            {/* Stars */}
+            <div className="flex gap-1 mb-4 justify-center md:justify-start">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+              ))}
+            </div>
+
+            {/* Quote */}
+            <blockquote className="text-lg md:text-xl text-gray-800 mb-6 leading-relaxed font-medium text-center md:text-left">
+              "SiteMatcher shows me who is active and exactly what they are looking for. I get contacts instantly, and if I want to test an idea, SiteSketcher lets me draw a quick feasibility in minutes. It is straightforward, simple, and saves a huge amount of time."
+            </blockquote>
+
+            {/* Author */}
+            <div className="flex items-center gap-4 justify-center md:justify-start">
+              <div className="flex-shrink-0 w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden relative ring-4 ring-white shadow-lg">
+                <Image
+                  src="/testimonials/henry-foreman.jpg"
+                  alt="Henry Foreman"
+                  width={64}
+                  height={64}
+                  className="object-cover"
+                />
+              </div>
+              <div className="text-center md:text-left">
+                <p className="font-bold text-gray-900 text-lg">Henry Foreman</p>
+                <p className="text-sm text-gray-700">Partner</p>
+                <p className="text-sm text-gray-600">FMX Urban Property Advisory</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Bottom CTA */}

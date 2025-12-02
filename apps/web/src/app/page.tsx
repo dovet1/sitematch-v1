@@ -1,11 +1,10 @@
 import { Hero } from '@/components/homepage2/Hero';
-import { Partners } from '@/components/homepage2/Partners';
-import { Benefits } from '@/components/homepage2/Benefits';
+import { TheProblem } from '@/components/homepage2/TheProblem';
+import { DatabaseDifferentiators } from '@/components/homepage2/DatabaseDifferentiators';
 import { FeaturedListings } from '@/components/homepage2/FeaturedListings';
 import { ToolsShowcase } from '@/components/homepage2/ToolsShowcase';
-import { HowItWorks } from '@/components/homepage2/HowItWorks';
+import { FreePostingCTA } from '@/components/homepage2/FreePostingCTA';
 import { Pricing } from '@/components/homepage2/Pricing';
-import { Testimonials } from '@/components/homepage2/Testimonials';
 import { FAQ } from '@/components/homepage2/FAQ';
 import { FinalCTA } from '@/components/homepage2/FinalCTA';
 import { Footer } from '@/components/homepage2/Footer';
@@ -16,26 +15,23 @@ export default function Home() {
       {/* Hero Section */}
       <Hero />
 
-      {/* Partners Section */}
-      <Partners />
+      {/* The Problem */}
+      <TheProblem />
 
-      {/* Benefits Section */}
-      <Benefits />
+      {/* Solution #1: Database + Kerry Testimonial */}
+      <DatabaseDifferentiators />
 
       {/* Featured Listings */}
       <FeaturedListings />
 
-      {/* Tools Showcase */}
+      {/* Solution #2: Tools + Henry Testimonial */}
       <ToolsShowcase />
 
-      {/* How It Works */}
-      <HowItWorks />
+      {/* Solution #3: Free Posting */}
+      <FreePostingCTA />
 
       {/* Pricing Section */}
       <Pricing />
-
-      {/* Testimonials */}
-      <Testimonials />
 
       {/* FAQ */}
       <FAQ />
