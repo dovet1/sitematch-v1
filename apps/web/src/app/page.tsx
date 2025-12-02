@@ -1,6 +1,7 @@
 import { Hero } from '@/components/homepage2/Hero';
 import { Partners } from '@/components/homepage2/Partners';
 import { Benefits } from '@/components/homepage2/Benefits';
+import { FeaturedListings } from '@/components/homepage2/FeaturedListings';
 import { HowItWorks } from '@/components/homepage2/HowItWorks';
 import { Pricing } from '@/components/homepage2/Pricing';
 import { Testimonials } from '@/components/homepage2/Testimonials';
@@ -19,6 +20,9 @@ export default function Home() {
 
       {/* Benefits Section */}
       <Benefits />
+
+      {/* Featured Listings */}
+      <FeaturedListings />
 
       {/* How It Works */}
       <HowItWorks />

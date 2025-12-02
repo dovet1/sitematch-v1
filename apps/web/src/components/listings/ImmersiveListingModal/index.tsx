@@ -12,6 +12,8 @@ import { useMobileBreakpoint } from './hooks/useMobileBreakpoint';
 import { SimpleMobileBottomSheet } from './SimpleMobileBottomSheet';
 import { MobileVisualHero } from './MobileVisualHero';
 import { MobileTabNavigation } from './MobileTabNavigation';
+import { FreeListingBanner } from '../FreeListingBanner';
+import { useAuth } from '@/contexts/auth-context';
 import styles from './ImmersiveListingModal.module.css';
 
 interface ImmersiveListingModalProps {
@@ -40,6 +42,7 @@ export function ImmersiveListingModal({
   const { isMobile } = useMobileBreakpoint();
   const router = useRouter();
   const [selectedAgencyId, setSelectedAgencyId] = useState<string | null>(null);
+  const { user } = useAuth();
   
   // Stable callbacks to prevent gesture hook recreation
   const handleClose = useCallback(() => {
@@ -651,6 +654,9 @@ export function ImmersiveListingModal({
             </div>
           </div>
         )}
+
+        {/* Free Listing Banner for non-authenticated users */}
+        {!user && <FreeListingBanner />}
       </div>
     );
   };
