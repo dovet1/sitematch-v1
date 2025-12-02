@@ -103,6 +103,7 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<'signup' | 'login'>('signup')
   const [loadingStage, setLoadingStage] = useState<'creating_account' | 'setting_up_trial' | 'redirecting'>('creating_account')
+  const [selectedInterval, setSelectedInterval] = useState<'month' | 'year'>(billingInterval || 'year')
 
   const { signUp, signIn, user } = useAuth()
   const config = contextConfig[context]
@@ -162,7 +163,7 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
         body: JSON.stringify({
           userType: context,
           redirectPath: redirectPath || '/search',
-          billingInterval: billingInterval
+          billingInterval: selectedInterval
         }),
       })
 
@@ -281,14 +282,49 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
               )}
             </DialogHeader>
 
+            {/* Billing Interval Toggle */}
+            <div className="flex justify-center mt-3">
+              <div className="inline-flex items-center gap-0 bg-white/20 backdrop-blur-sm rounded-full p-1">
+                <button
+                  type="button"
+                  onClick={() => setSelectedInterval('month')}
+                  disabled={isLoading}
+                  className={`px-4 py-1.5 rounded-full transition font-medium text-xs ${
+                    selectedInterval === 'month'
+                      ? 'bg-white text-violet-600 shadow-sm'
+                      : 'text-white/90 hover:text-white'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedInterval('year')}
+                    disabled={isLoading}
+                    className={`px-4 py-1.5 rounded-full transition font-medium text-xs ${
+                      selectedInterval === 'year'
+                        ? 'bg-white text-violet-600 shadow-sm'
+                        : 'text-white/90 hover:text-white'
+                    }`}
+                  >
+                    Annual
+                  </button>
+                  <span className="absolute -top-3 -right-2 bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium">
+                    Save 17%
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Pricing highlight */}
             <div className="text-center mt-3 p-2 bg-white/10 backdrop-blur-sm rounded-lg">
               <div className="text-base font-semibold">
                 <span className="line-through text-white/70">
-                  {billingInterval === 'year' ? '£975' : '£99'}
+                  {selectedInterval === 'year' ? '£975' : '£99'}
                 </span>{' '}
                 <span className="text-white">
-                  {billingInterval === 'year' ? '£487.50/year' : '£49/month'}
+                  {selectedInterval === 'year' ? '£487.50/year' : '£49/month'}
                 </span> - 30 days free
               </div>
               <div className="text-xs text-violet-100">Add payment method, cancel anytime</div>
