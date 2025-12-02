@@ -26,7 +26,7 @@ export function DatabaseDifferentiators() {
       icon: Award,
       title: 'Founders who get it',
       stat: 'Led by industry veterans',
-      description: 'Our CEO, Rob Lithgow, was an Acquisitions Director for Aldi and M&S for over a decade. We know what property professionals care about.',
+      description: 'Our CEO, Rob Lithgow, has been an Acquisitions Director for Aldi, Lidl and M&S for over a decade. We know what property professionals care about.',
       color: 'from-violet-500 to-purple-600'
     }
   ];
@@ -51,7 +51,7 @@ export function DatabaseDifferentiators() {
                 <span className="text-xs md:text-sm font-bold text-white uppercase tracking-wider">Solution One</span>
               </div>
               <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-3 leading-tight">
-                The UK's most trusted directory
+                SiteMatcher - The UK's most trusted directory
               </h2>
               <p className="text-lg md:text-2xl text-violet-100 font-medium">
                 What makes our database different

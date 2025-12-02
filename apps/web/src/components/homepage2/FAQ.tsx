@@ -25,7 +25,7 @@ export function FAQ() {
     },
     {
       question: "How do you make sure listed requirements are active?",
-      answer: "We contact each listing poster at least once a year to confirm that their requirement is still current. If we don’t receive confirmation, the listing is removed from the site. In addition, we monitor property market news and act promptly if we learn information that affects any requirements.",
+      answer: "We contact each listing poster at least once a quarter to confirm that their requirement is still current. If we don’t receive confirmation, the listing is removed from the site. In addition, we monitor property market news and act promptly if we learn information that affects any requirements.",
     },
   ];
 

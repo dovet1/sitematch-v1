@@ -15,7 +15,7 @@ export function ToolsShowcase() {
       name: 'SiteSketcher',
       icon: Ruler,
       tagline: 'Visualize site potential instantly',
-      description: 'Draw building footprints, calculate areas, plan parking—see if a site works before you commit. Perfect for quick feasibility studies.',
+      description: 'Draw building footprints, calculate areas, plan parking - see if a site works before you commit. Perfect for quick feasibility studies.',
       features: [
         'Draw unlimited polygons and buildings',
         'Calculate areas and dimensions',

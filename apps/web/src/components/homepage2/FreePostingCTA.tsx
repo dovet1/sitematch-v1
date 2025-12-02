@@ -124,7 +124,7 @@ export function FreePostingCTA() {
                   className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-black rounded-xl py-6 text-base md:text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
                 >
                   <a href="mailto:rob@sitematcher.co.uk?subject=Add my requirement">
-                    Email your flyer
+                    rob@sitematcher.co.uk
                   </a>
                 </Button>
               </div>
