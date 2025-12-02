@@ -59,83 +59,106 @@ export function ToolsShowcase() {
   ];
 
   return (
-    <section className="py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-6">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full border border-blue-200 mb-4">
-            <Star className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-semibold text-blue-700">Solution #2</span>
+    <section className="relative py-16 md:py-24 bg-gradient-to-br from-cyan-50 via-blue-50 to-indigo-50 overflow-hidden">
+      {/* Decorative elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-10 right-20 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-10 left-20 w-80 h-80 bg-cyan-300/20 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
+        {/* Bold header */}
+        <div className="mb-12 md:mb-16 max-w-5xl mx-auto">
+          <div className="flex items-start gap-4 mb-6 justify-center">
+            <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 bg-white rounded-2xl shadow-2xl flex items-center justify-center transform -rotate-3">
+              <span className="text-3xl md:text-4xl font-black text-blue-600">#2</span>
+            </div>
+            <div className="text-center md:text-left">
+              <div className="inline-block mb-2 px-3 py-1 bg-blue-100 rounded-full border-2 border-blue-300">
+                <span className="text-xs md:text-sm font-bold text-blue-700 uppercase tracking-wider">Solution Two</span>
+              </div>
+            </div>
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Assess site viability in minutes, not hours
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-4 leading-tight text-center">
+            Assess site viability in{' '}
+            <span className="relative inline-block">
+              <span className="relative z-10">minutes, not hours</span>
+              <span className="absolute inset-0 bg-cyan-200 transform -skew-y-1 rotate-1"></span>
+            </span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl md:text-2xl text-gray-700 font-medium text-center max-w-3xl mx-auto">
             Our growing toolkit helps you make faster, data-driven decisions
           </p>
         </div>
 
-        {/* Tools Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {tools.map((tool) => {
+        {/* Tools Grid - Bold design */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 mb-16 md:mb-20">
+          {tools.map((tool, index) => {
             const Icon = tool.icon;
             const colorClasses = {
               blue: {
-                badge: 'bg-blue-50 border-blue-200 text-blue-700',
+                badge: 'bg-blue-100 border-blue-300 text-blue-800',
                 icon: 'from-blue-500 to-blue-600',
-                button: 'bg-blue-600 hover:bg-blue-700 border-blue-600',
-                accent: 'text-blue-600'
+                button: 'from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700',
+                accent: 'text-blue-600',
+                highlight: 'bg-blue-200/60'
               },
               violet: {
-                badge: 'bg-violet-50 border-violet-200 text-violet-700',
-                icon: 'from-violet-500 to-violet-600',
-                button: 'bg-violet-600 hover:bg-violet-700 border-violet-600',
-                accent: 'text-violet-600'
+                badge: 'bg-violet-100 border-violet-300 text-violet-800',
+                icon: 'from-violet-500 to-purple-600',
+                button: 'from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700',
+                accent: 'text-violet-600',
+                highlight: 'bg-violet-200/60'
               }
             }[tool.color];
 
             return (
               <div
                 key={tool.id}
-                className="group bg-white rounded-2xl border-2 border-gray-200 hover:border-gray-300 hover:shadow-xl transition-all duration-300 overflow-hidden"
+                className={`group relative bg-white rounded-3xl border-3 border-gray-200 hover:border-${tool.color}-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 overflow-hidden ${
+                  index === 1 ? 'lg:mt-8' : ''
+                }`}
               >
+                {/* Decorative corner gradient */}
+                <div className={`absolute top-0 right-0 w-40 h-40 bg-gradient-to-br ${colorClasses.icon} opacity-5 rounded-bl-full`}></div>
+
                 {/* Tool Header */}
-                <div className="p-8 pb-6">
+                <div className="relative p-6 md:p-8 pb-6">
                   <div className="flex items-start gap-4 mb-6">
-                    <div className={`w-14 h-14 bg-gradient-to-br ${colorClasses.icon} rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg`}>
-                      <Icon className="w-7 h-7 text-white" />
+                    <div className={`relative w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br ${colorClasses.icon} rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
+                      <Icon className="w-8 h-8 md:w-10 md:h-10 text-white relative z-10" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                      <h3 className="text-2xl md:text-3xl font-black text-gray-900 mb-2">
                         {tool.name}
                       </h3>
-                      <p className={`text-sm font-medium ${colorClasses.accent}`}>
+                      <p className={`text-sm md:text-base font-bold ${colorClasses.accent}`}>
                         {tool.tagline}
                       </p>
                     </div>
                   </div>
 
-                  <p className="text-gray-600 leading-relaxed mb-6">
+                  <p className="text-base md:text-lg text-gray-700 leading-relaxed font-medium mb-6">
                     {tool.description}
                   </p>
 
                   {/* Free Features Badge */}
                   {!user && (
-                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 ${colorClasses.badge} border rounded-full text-xs font-semibold mb-4`}>
-                      <Sparkles className="w-3 h-3" />
+                    <div className={`inline-flex items-center gap-2 px-4 py-2 ${colorClasses.badge} border-2 rounded-full text-sm font-bold mb-5`}>
+                      <Sparkles className="w-4 h-4" />
                       Try free with limited features
                     </div>
                   )}
 
-                  {/* Features List */}
+                  {/* Features List - Bolder */}
                   <div className="space-y-2 mb-6">
-                    <p className="text-sm font-semibold text-gray-900 mb-3">
+                    <p className="text-base md:text-lg font-black text-gray-900 mb-4">
                       {user ? 'Key Features:' : 'Free features include:'}
                     </p>
-                    <ul className="space-y-2">
+                    <ul className="space-y-3">
                       {(user ? tool.features : tool.freeFeatures).slice(0, 4).map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
-                          <svg className={`w-5 h-5 flex-shrink-0 mt-0.5 ${colorClasses.accent}`} fill="currentColor" viewBox="0 0 20 20">
+                        <li key={idx} className="flex items-start gap-3 text-sm md:text-base text-gray-700 font-medium">
+                          <svg className={`w-6 h-6 flex-shrink-0 mt-0.5 ${colorClasses.accent}`} fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                           </svg>
                           <span>{feature}</span>
@@ -145,19 +168,19 @@ export function ToolsShowcase() {
                   </div>
                 </div>
 
-                {/* CTA */}
-                <div className="px-8 pb-8">
+                {/* Bold CTA */}
+                <div className="px-6 md:px-8 pb-6 md:pb-8">
                   <Button
                     asChild
-                    className={`w-full ${colorClasses.button} text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg`}
+                    className={`w-full bg-gradient-to-r ${colorClasses.button} text-white font-black rounded-xl py-6 text-base md:text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300`}
                   >
                     <Link href={tool.href}>
                       {user ? `Open ${tool.name}` : `Try ${tool.name} Free`}
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                      <ArrowRight className="ml-2 h-5 w-5" />
                     </Link>
                   </Button>
                   {!user && (
-                    <p className="text-center text-xs text-gray-500 mt-3">
+                    <p className="text-center text-sm text-gray-600 font-semibold mt-4">
                       No sign-up required to try • Upgrade for full access
                     </p>
                   )}
@@ -167,36 +190,54 @@ export function ToolsShowcase() {
           })}
         </div>
 
-        {/* Henry's Testimonial */}
-        <div className="mt-16 max-w-4xl mx-auto">
-          <div className="bg-gradient-to-br from-blue-50 via-cyan-50 to-sky-50 rounded-3xl p-6 md:p-10 border-2 border-blue-200 shadow-lg">
-            {/* Stars */}
-            <div className="flex gap-1 mb-4 justify-center md:justify-start">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-              ))}
-            </div>
+        {/* Henry's Testimonial - Bold design */}
+        <div className="max-w-5xl mx-auto">
+          <div className="relative bg-white/95 backdrop-blur-sm rounded-[2.5rem] p-8 md:p-12 lg:p-16 border-4 border-white/60 shadow-2xl overflow-hidden">
+            {/* Decorative gradient accent */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-cyan-300/30 via-blue-300/20 to-transparent rounded-full blur-3xl"></div>
 
-            {/* Quote */}
-            <blockquote className="text-lg md:text-xl text-gray-800 mb-6 leading-relaxed font-medium text-center md:text-left">
-              "SiteMatcher shows me who is active and exactly what they are looking for. I get contacts instantly, and if I want to test an idea, SiteSketcher lets me draw a quick feasibility in minutes. It is straightforward, simple, and saves a huge amount of time."
-            </blockquote>
+            {/* Giant quotation mark */}
+            <div className="absolute -top-6 -left-4 text-[16rem] md:text-[20rem] font-serif text-white/40 select-none pointer-events-none leading-none">"</div>
 
-            {/* Author */}
-            <div className="flex items-center gap-4 justify-center md:justify-start">
-              <div className="flex-shrink-0 w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden relative ring-4 ring-white shadow-lg">
-                <Image
-                  src="/testimonials/henry-foreman.jpg"
-                  alt="Henry Foreman"
-                  width={64}
-                  height={64}
-                  className="object-cover"
-                />
+            <div className="relative z-10">
+              {/* Stars - Bigger with glow */}
+              <div className="flex gap-2 mb-6 md:mb-8 justify-center md:justify-start">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="relative">
+                    <Star className="w-7 h-7 md:w-8 md:h-8 text-yellow-400 fill-current drop-shadow-lg" />
+                    <Star className="absolute inset-0 w-7 h-7 md:w-8 md:h-8 text-yellow-300 fill-current blur-sm" />
+                  </div>
+                ))}
               </div>
-              <div className="text-center md:text-left">
-                <p className="font-bold text-gray-900 text-lg">Henry Foreman</p>
-                <p className="text-sm text-gray-700">Partner</p>
-                <p className="text-sm text-gray-600">FMX Urban Property Advisory</p>
+
+              {/* Quote - Much larger and bolder */}
+              <blockquote className="text-xl md:text-2xl lg:text-3xl text-gray-900 mb-8 md:mb-10 leading-relaxed font-bold text-center md:text-left">
+                <span className="relative">
+                  "SiteMatcher shows me who is active and exactly what they are looking for. I get contacts instantly, and if I want to test an idea,{' '}
+                  <span className="relative inline-block">
+                    <span className="relative z-10">SiteSketcher lets me draw a quick feasibility in minutes</span>
+                    <span className="absolute inset-0 bg-cyan-200/60 transform -skew-y-1"></span>
+                  </span>
+                  . It is straightforward, simple, and saves a huge amount of time."
+                </span>
+              </blockquote>
+
+              {/* Author - Larger */}
+              <div className="flex items-center gap-5 md:gap-6 justify-center md:justify-start">
+                <div className="flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden relative ring-4 ring-white shadow-2xl transform hover:scale-110 transition-transform duration-300">
+                  <Image
+                    src="/testimonials/henry-foreman.jpg"
+                    alt="Henry Foreman"
+                    width={96}
+                    height={96}
+                    className="object-cover"
+                  />
+                </div>
+                <div className="text-center md:text-left">
+                  <p className="font-black text-gray-900 text-xl md:text-2xl mb-1">Henry Foreman</p>
+                  <p className="text-base md:text-lg font-bold text-blue-600">Partner</p>
+                  <p className="text-sm md:text-base text-gray-600 font-medium">FMX Urban Property Advisory</p>
+                </div>
               </div>
             </div>
           </div>

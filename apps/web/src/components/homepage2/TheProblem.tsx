@@ -7,7 +7,7 @@ export function TheProblem() {
     {
       emoji: '📄',
       title: 'Flyers everywhere',
-      description: 'Distributing hundreds of flyers with no way to track engagement'
+      description: 'Requirements scattered across multiple platforms and formats'
     },
     {
       emoji: '📅',
