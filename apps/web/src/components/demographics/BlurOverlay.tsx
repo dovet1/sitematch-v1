@@ -16,8 +16,8 @@ export function BlurOverlay({ children, onUpgradeClick, title = "Premium Feature
         {children}
       </div>
 
-      {/* Overlay with upgrade prompt */}
-      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-violet-50/95 via-purple-50/95 to-violet-50/95 backdrop-blur-sm">
+      {/* Overlay with upgrade prompt - stretch to fill parent section */}
+      <div className="absolute flex items-center justify-center bg-gradient-to-br from-violet-50/95 via-purple-50/95 to-violet-50/95 backdrop-blur-sm" style={{ left: '-1rem', right: '-1rem', top: '-0.75rem', bottom: '-0.75rem' }}>
         <button
           onClick={onUpgradeClick}
           className="group flex flex-col items-center gap-3 p-6 rounded-2xl bg-white/90 backdrop-blur-sm border-2 border-violet-200 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"

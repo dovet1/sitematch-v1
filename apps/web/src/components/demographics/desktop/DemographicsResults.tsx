@@ -431,10 +431,11 @@ export function DemographicsResults({
               {/* Content - Collapsible */}
               {isExpanded && categoryDataObj && (
                 <div className="border-t border-gray-100 bg-gray-50">
-                  <div className="px-4 py-3 space-y-4">
-                    {categoryDataObj.charts.map((chart, index) => {
-                      const chartShouldBlur = shouldBlurChart(category.value, chart.title);
-                      const chartContent = (
+                  {shouldBlurCategory(category.value) ? (
+                    <BlurOverlay onUpgradeClick={handleUpgradeClick} title="Detailed Demographics">
+                      <div className="px-4 py-3 space-y-4">
+                        {categoryDataObj.charts.map((chart, index) => {
+                          const chartContent = (
                         <div key={index}>
                           <div className="flex items-center gap-1.5 mb-2">
                             <h4 className="text-xs font-semibold text-gray-700">{chart.title}</h4>
@@ -596,16 +597,171 @@ export function DemographicsResults({
                         </div>
                       );
 
-                      // Return blurred content if needed, otherwise regular content
-                      return chartShouldBlur ? (
-                        <BlurOverlay key={index} onUpgradeClick={handleUpgradeClick} title="Detailed Demographics">
-                          {chartContent}
-                        </BlurOverlay>
-                      ) : (
-                        chartContent
-                      );
-                    })}
-                  </div>
+                          return chartContent;
+                        })}
+                      </div>
+                    </BlurOverlay>
+                  ) : (
+                    <div className="px-4 py-3 space-y-4">
+                      {categoryDataObj.charts.map((chart, index) => {
+                        const chartShouldBlur = shouldBlurChart(category.value, chart.title);
+                        const chartContent = (
+                          <div key={index}>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <h4 className="text-xs font-semibold text-gray-700">{chart.title}</h4>
+                          {chart.title === 'Affluence Score' && (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  className="inline-flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors p-0.5"
+                                  aria-label="Learn about affluence score calculation"
+                                >
+                                  <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-80" align="start">
+                                <div className="space-y-3">
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-medium text-gray-900">
+                                      How is this calculated?
+                                    </p>
+                                    <p className="text-xs text-gray-600 leading-relaxed">
+                                      The Affluence Score combines Census 2021 socioeconomic measures (70%) with household income data (30%) to create a single score from 0–100 (50 being the median).
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => setMethodologyModalOpen(true)}
+                                    className="text-xs font-medium text-violet-600 hover:text-violet-700 underline-offset-2 hover:underline"
+                                  >
+                                    Learn more about the methodology →
+                                  </button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        </div>
+
+                        {chart.data.length === 0 ? (
+                          <div className="text-center py-2 text-xs text-gray-400">No data</div>
+                        ) : chart.data.length === 1 && chart.data[0].label.includes('Total') ? (
+                          <div className="text-center py-2">
+                            <p className="text-2xl font-bold text-gray-900">
+                              {formatNumber(chart.data[0].value)}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">{chart.data[0].label}</p>
+                          </div>
+                        ) : chart.title === 'Affluence Score' ? (
+                          // Special display for affluence score
+                          (() => {
+                            const score = chart.data[0].value;
+                            const ukAverage = nationalAverages['affluence_score'] || 57.0;
+                            const difference = score - ukAverage;
+                            const isAboveAverage = difference > 0.5;
+                            const isBelowAverage = difference < -0.5;
+
+                            const getRating = (score: number) => {
+                              if (score >= 70) return { label: 'Very High Affluence', color: 'text-blue-600', bg: 'bg-blue-50', barColor: 'bg-blue-500' };
+                              if (score >= 55) return { label: 'High Affluence', color: 'text-emerald-600', bg: 'bg-emerald-50', barColor: 'bg-emerald-500' };
+                              if (score >= 45) return { label: 'Medium Affluence', color: 'text-amber-600', bg: 'bg-amber-50', barColor: 'bg-amber-500' };
+                              return { label: 'Low Affluence', color: 'text-rose-600', bg: 'bg-rose-50', barColor: 'bg-rose-500' };
+                            };
+
+                            const rating = getRating(score);
+
+                            return (
+                              <div className={`${rating.bg} rounded-lg p-4 space-y-3`}>
+                                <div className="text-center">
+                                  <div className="flex items-baseline gap-1 justify-center">
+                                    <span className="text-4xl font-bold text-gray-900">{score.toFixed(1)}</span>
+                                    <span className="text-base text-gray-500">/100</span>
+                                  </div>
+                                  <p className={`text-sm font-medium ${rating.color} mt-2`}>{rating.label}</p>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full ${rating.barColor} rounded-full transition-all`}
+                                      style={{ width: `${Math.min(score, 100)}%` }}
+                                    />
+                                  </div>
+
+                                  <div className="flex justify-between text-[9px] text-gray-500 px-0.5">
+                                    <span>0</span>
+                                    <span>25</span>
+                                    <span>50</span>
+                                    <span>75</span>
+                                    <span>100</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <div className="space-y-1.5">
+                            {/* Column headers */}
+                            <div className="flex items-center gap-2 text-xs pb-1 border-b border-gray-200">
+                              <div className="flex-1 text-[9px] uppercase tracking-wide text-gray-500 font-medium">
+                                Category
+                              </div>
+                              <div className="w-12 text-right text-[9px] uppercase tracking-wide text-gray-500 font-medium">
+                                Count
+                              </div>
+                              <div className="w-10 text-right text-[9px] uppercase tracking-wide text-gray-500 font-medium">
+                                %
+                              </div>
+                              <div className="w-14 text-right text-[9px] uppercase tracking-wide text-gray-500 font-medium">
+                                vs UK
+                              </div>
+                            </div>
+
+                            {chart.data.slice(0, chart.title === 'Age profile' ? chart.data.length : 10).map((item, idx) => (
+                              <div key={idx} className="flex items-center gap-2 text-xs">
+                                <div className="flex-1 text-gray-700 text-[11px]" title={item.label}>
+                                  {item.label}
+                                </div>
+                                <div className="w-12 text-right font-medium text-gray-900 text-[11px]">
+                                  {formatNumber(item.value)}
+                                </div>
+                                <div className="w-10 text-right text-gray-500 text-[11px]">
+                                  {formatPercentage(item.percentage)}
+                                </div>
+                                {'nationalAverage' in item && item.nationalAverage !== undefined && item.nationalAverage > 0 && (
+                                  <div
+                                    className={`w-14 text-right text-[10px] font-medium tabular-nums ${
+                                      item.percentage > item.nationalAverage + 0.5
+                                        ? 'text-emerald-600'
+                                        : item.percentage < item.nationalAverage - 0.5
+                                          ? 'text-rose-600'
+                                          : 'text-gray-500'
+                                    }`}
+                                    title={`${item.percentage > item.nationalAverage ? 'Above' : item.percentage < item.nationalAverage ? 'Below' : 'At'} UK average by ${Math.abs(item.percentage - item.nationalAverage).toFixed(1)}%`}
+                                  >
+                                    {item.percentage > item.nationalAverage + 0.5 ? (
+                                      <>↑ {(item.percentage - item.nationalAverage).toFixed(1)}%</>
+                                    ) : item.percentage < item.nationalAverage - 0.5 ? (
+                                      <>↓ {(item.nationalAverage - item.percentage).toFixed(1)}%</>
+                                    ) : (
+                                      <>0%</>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            {chart.title !== 'Age profile' && chart.data.length > 10 && (
+                              <p className="text-[10px] text-gray-400 mt-2 text-center">
+                                +{chart.data.length - 10} more
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        </div>
+                        );
+
+                        return chartContent;
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
