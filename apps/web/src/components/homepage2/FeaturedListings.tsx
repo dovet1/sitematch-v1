@@ -249,7 +249,7 @@ export function FeaturedListings() {
               className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-10 py-7 text-lg md:text-xl font-black rounded-2xl shadow-2xl hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
             >
               <Link href="/search">
-                View All {listings.length > 8 ? '8,700+' : ''} Requirements
+                View All {listings.length > 8 ? '7,500+' : ''} Requirements
                 <ArrowRight className="ml-2 h-5 w-5 md:h-6 md:w-6" />
               </Link>
             </Button>

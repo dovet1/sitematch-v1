@@ -229,7 +229,7 @@ export function Hero() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-3xl font-black text-gray-900">8,700+</p>
+                  <p className="text-3xl font-black text-gray-900">7,500+</p>
                   <p className="text-sm font-bold text-gray-600">Active Requirements</p>
                 </div>
               </div>
