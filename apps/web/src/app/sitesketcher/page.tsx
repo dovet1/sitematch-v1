@@ -874,31 +874,34 @@ function SiteSketcherContent() {
     <div className="h-screen bg-background">
       {/* Desktop Layout */}
       <div className="hidden md:flex md:flex-col md:h-full">
-        {/* Header */}
-        <header className="border-b bg-background/95 backdrop-blur-sm z-40 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted transition-colors"
-                title="Back to SiteMatcher"
+        {/* Premium Header */}
+        <header className="relative z-40 px-8 py-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
+          {/* Subtle gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-violet-50/30 via-transparent to-purple-50/30 pointer-events-none" />
+
+          <div className="relative flex items-center justify-between gap-6">
+            {/* Left: Premium Title Section */}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.push('/')}
+                className="h-8 w-8 rounded-lg hover:bg-violet-50 hover:text-violet-700 transition-all duration-200"
               >
-                <ArrowLeft className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-              </Link>
-              <div>
-                <h1 className="text-xl font-bold text-primary">SiteSketcher</h1>
-                <p className="text-sm text-muted-foreground">
-                  Site drawing tool
-                </p>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-1 bg-gradient-to-b from-violet-500 to-purple-600 rounded-full" />
+                <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
+                  SiteSketcher
+                </h1>
+                {isFreeTier && (
+                  <span className="ml-2 px-2.5 py-0.5 bg-violet-100 border-2 border-violet-300 rounded-full text-xs font-bold text-violet-700">
+                    FREE
+                  </span>
+                )}
               </div>
             </div>
-            {/* Free tier indicator */}
-            {isFreeTier && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-100 border-2 border-violet-300 rounded-full">
-                <span className="text-xs font-bold text-violet-700">FREE VERSION</span>
-                <span className="text-xs text-violet-600">Limited to 2 polygons & 2 parking blocks</span>
-              </div>
-            )}
           </div>
         </header>
 
