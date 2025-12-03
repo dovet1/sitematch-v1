@@ -565,21 +565,21 @@ export function DemographicsResults({
                                   {formatPercentage(item.percentage)}
                                 </div>
                                 {/* Comparison badge */}
-                                {'nationalAverage' in item && item.nationalAverage !== undefined && item.nationalAverage > 0 && (
+                                {'nationalAverage' in item && item.nationalAverage !== undefined && item.nationalAverage !== null && item.nationalAverage > 0 && (
                                   <div
                                     className={`w-14 text-right text-[10px] font-medium tabular-nums ${
-                                      item.percentage > item.nationalAverage + 0.5
+                                      item.percentage > (item.nationalAverage || 0) + 0.5
                                         ? 'text-emerald-600'
-                                        : item.percentage < item.nationalAverage - 0.5
+                                        : item.percentage < (item.nationalAverage || 0) - 0.5
                                           ? 'text-rose-600'
                                           : 'text-gray-500'
                                     }`}
-                                    title={`${item.percentage > item.nationalAverage ? 'Above' : item.percentage < item.nationalAverage ? 'Below' : 'At'} UK average by ${Math.abs(item.percentage - item.nationalAverage).toFixed(1)}%`}
+                                    title={`${item.percentage > (item.nationalAverage || 0) ? 'Above' : item.percentage < (item.nationalAverage || 0) ? 'Below' : 'At'} UK average by ${Math.abs(item.percentage - (item.nationalAverage || 0)).toFixed(1)}%`}
                                   >
-                                    {item.percentage > item.nationalAverage + 0.5 ? (
-                                      <>↑ {(item.percentage - item.nationalAverage).toFixed(1)}%</>
-                                    ) : item.percentage < item.nationalAverage - 0.5 ? (
-                                      <>↓ {(item.nationalAverage - item.percentage).toFixed(1)}%</>
+                                    {item.percentage > (item.nationalAverage || 0) + 0.5 ? (
+                                      <>↑ {(item.percentage - (item.nationalAverage || 0)).toFixed(1)}%</>
+                                    ) : item.percentage < (item.nationalAverage || 0) - 0.5 ? (
+                                      <>↓ {((item.nationalAverage || 0) - item.percentage).toFixed(1)}%</>
                                     ) : (
                                       <>0%</>
                                     )}
@@ -715,39 +715,44 @@ export function DemographicsResults({
                               </div>
                             </div>
 
-                            {chart.data.slice(0, chart.title === 'Age profile' ? chart.data.length : 10).map((item, idx) => (
-                              <div key={idx} className="flex items-center gap-2 text-xs">
-                                <div className="flex-1 text-gray-700 text-[11px]" title={item.label}>
-                                  {item.label}
-                                </div>
-                                <div className="w-12 text-right font-medium text-gray-900 text-[11px]">
-                                  {formatNumber(item.value)}
-                                </div>
-                                <div className="w-10 text-right text-gray-500 text-[11px]">
-                                  {formatPercentage(item.percentage)}
-                                </div>
-                                {'nationalAverage' in item && item.nationalAverage !== undefined && item.nationalAverage > 0 && (
-                                  <div
-                                    className={`w-14 text-right text-[10px] font-medium tabular-nums ${
-                                      item.percentage > item.nationalAverage + 0.5
-                                        ? 'text-emerald-600'
-                                        : item.percentage < item.nationalAverage - 0.5
-                                          ? 'text-rose-600'
-                                          : 'text-gray-500'
-                                    }`}
-                                    title={`${item.percentage > item.nationalAverage ? 'Above' : item.percentage < item.nationalAverage ? 'Below' : 'At'} UK average by ${Math.abs(item.percentage - item.nationalAverage).toFixed(1)}%`}
-                                  >
-                                    {item.percentage > item.nationalAverage + 0.5 ? (
-                                      <>↑ {(item.percentage - item.nationalAverage).toFixed(1)}%</>
-                                    ) : item.percentage < item.nationalAverage - 0.5 ? (
-                                      <>↓ {(item.nationalAverage - item.percentage).toFixed(1)}%</>
-                                    ) : (
-                                      <>0%</>
-                                    )}
+                            {chart.data.slice(0, chart.title === 'Age profile' ? chart.data.length : 10).map((item, idx) => {
+                              const typedItem = item as ChartData;
+                              const natAvg = typedItem.nationalAverage ?? 0;
+                              const showNationalComparison = typedItem.nationalAverage !== undefined && typedItem.nationalAverage > 0;
+                              return (
+                                <div key={idx} className="flex items-center gap-2 text-xs">
+                                  <div className="flex-1 text-gray-700 text-[11px]" title={typedItem.label}>
+                                    {typedItem.label}
                                   </div>
-                                )}
-                              </div>
-                            ))}
+                                  <div className="w-12 text-right font-medium text-gray-900 text-[11px]">
+                                    {formatNumber(typedItem.value)}
+                                  </div>
+                                  <div className="w-10 text-right text-gray-500 text-[11px]">
+                                    {formatPercentage(typedItem.percentage)}
+                                  </div>
+                                  {showNationalComparison && (
+                                    <div
+                                      className={`w-14 text-right text-[10px] font-medium tabular-nums ${
+                                        typedItem.percentage > natAvg + 0.5
+                                          ? 'text-emerald-600'
+                                          : typedItem.percentage < natAvg - 0.5
+                                            ? 'text-rose-600'
+                                            : 'text-gray-500'
+                                      }`}
+                                      title={`${typedItem.percentage > natAvg ? 'Above' : typedItem.percentage < natAvg ? 'Below' : 'At'} UK average by ${Math.abs(typedItem.percentage - natAvg).toFixed(1)}%`}
+                                    >
+                                      {typedItem.percentage > natAvg + 0.5 ? (
+                                        <>↑ {(typedItem.percentage - natAvg).toFixed(1)}%</>
+                                      ) : typedItem.percentage < natAvg - 0.5 ? (
+                                        <>↓ {(natAvg - typedItem.percentage).toFixed(1)}%</>
+                                      ) : (
+                                        <>0%</>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                             {chart.title !== 'Age profile' && chart.data.length > 10 && (
                               <p className="text-[10px] text-gray-400 mt-2 text-center">
                                 +{chart.data.length - 10} more
