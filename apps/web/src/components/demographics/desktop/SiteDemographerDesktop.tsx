@@ -146,6 +146,15 @@ export function SiteDemographerDesktop() {
     }
   };
 
+  const handleCountPointsToggle = () => {
+    if (isFreeTier && !showCountPoints) {
+      // Show upgrade prompt for free tier users trying to enable count points
+      setShowUpgradeBanner(true);
+    } else {
+      setShowCountPoints(!showCountPoints);
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col bg-gradient-to-b from-gray-50 to-white">
       {/* Premium Header with Controls */}
@@ -248,12 +257,15 @@ export function SiteDemographerDesktop() {
                   )}
                 </Button>
                 <Button
-                  onClick={() => setShowCountPoints(!showCountPoints)}
+                  onClick={handleCountPointsToggle}
                   variant={showCountPoints ? "default" : "outline"}
                   size="sm"
                   className={showCountPoints ? "bg-cyan-500 hover:bg-cyan-600" : "bg-white"}
                 >
                   {showCountPoints ? "Hide Count Points" : "Show Count Points"}
+                  {isFreeTier && !showCountPoints && (
+                    <span className="ml-1.5 text-xs">🔒</span>
+                  )}
                 </Button>
               </div>
             </>
@@ -295,7 +307,8 @@ export function SiteDemographerDesktop() {
                 'Employment and occupation data',
                 'Travel to work and mobility patterns',
                 'Health and disability statistics',
-                'Export comprehensive reports',
+                'Access to all site requirements',
+                'Full access to all SiteMatcher tools',
               ]}
               context="sitesketcher"
               onDismiss={() => setShowUpgradeBanner(false)}

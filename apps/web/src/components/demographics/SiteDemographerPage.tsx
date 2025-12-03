@@ -15,7 +15,7 @@ import { SiteDemographerMobile } from './mobile/SiteDemographerMobile';
  * Both implementations share the same data hooks from /shared
  */
 export function SiteDemographerPage() {
-  const { isMobile } = useMobileBreakpoint();
+  const { isMobileUI } = useMobileBreakpoint();
 
-  return isMobile ? <SiteDemographerMobile /> : <SiteDemographerDesktop />;
+  return isMobileUI ? <SiteDemographerMobile /> : <SiteDemographerDesktop />;
 }
