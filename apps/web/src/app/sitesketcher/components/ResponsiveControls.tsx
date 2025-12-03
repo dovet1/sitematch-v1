@@ -97,6 +97,9 @@ interface ResponsiveControlsProps {
   onViewModeToggle: () => void;
   show3DBuildings: boolean;
   onToggle3DBuildings: () => void;
+  // Free tier props
+  isFreeTier?: boolean;
+  onUpgradeClick?: () => void;
   // Polygon props
   polygons: MapboxDrawPolygon[];
   onPolygonDelete: (polygonId: string) => void;
@@ -138,6 +141,8 @@ export function ResponsiveControls({
   onViewModeToggle,
   show3DBuildings,
   onToggle3DBuildings,
+  isFreeTier = false,
+  onUpgradeClick,
   polygons,
   onPolygonDelete,
   showSideLengths,
@@ -220,6 +225,44 @@ export function ResponsiveControls({
             className="w-full max-w-xs"
           />
         </div>
+
+        {/* Free Tier Usage Counter */}
+        {isFreeTier && (
+          <Card className="bg-violet-50 border-violet-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-bold text-violet-900">Usage Limits</span>
+                <span className="text-xs font-semibold text-violet-600 bg-violet-100 px-2 py-1 rounded-full">
+                  FREE TIER
+                </span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">Polygons:</span>
+                  <span className={`text-sm font-bold ${polygons.length >= 2 ? 'text-orange-600' : 'text-violet-600'}`}>
+                    {polygons.length}/2
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">Parking blocks:</span>
+                  <span className={`text-sm font-bold ${parkingOverlays.length >= 2 ? 'text-orange-600' : 'text-violet-600'}`}>
+                    {parkingOverlays.length}/2
+                  </span>
+                </div>
+              </div>
+              {(polygons.length >= 2 || parkingOverlays.length >= 2) && (
+                <div className="mt-3 pt-3 border-t border-violet-200">
+                  <button
+                    onClick={onUpgradeClick}
+                    className="text-xs text-violet-700 font-medium hover:text-violet-900 hover:underline transition-all cursor-pointer w-full text-left"
+                  >
+                    Upgrade for unlimited access →
+                  </button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Add Rectangle Button - Only show in draw mode */}
         {drawingMode === 'draw' && (

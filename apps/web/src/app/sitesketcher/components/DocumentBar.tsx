@@ -41,6 +41,7 @@ interface DocumentBarProps {
   onExportPDF: () => void;
   onShowVersionHistory?: () => void;
   isSaving?: boolean;
+  isFreeTier?: boolean;
   className?: string;
 }
 
@@ -59,6 +60,7 @@ export function DocumentBar({
   onExportPDF,
   onShowVersionHistory,
   isSaving = false,
+  isFreeTier = false,
   className = '',
 }: DocumentBarProps) {
   const [isEditingName, setIsEditingName] = useState(false);
@@ -183,7 +185,11 @@ export function DocumentBar({
             <span className="ml-auto text-xs text-muted-foreground">⌘N</span>
           </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={onOpenSketch}>
+          <DropdownMenuItem
+            onClick={onOpenSketch}
+            disabled={isFreeTier}
+            title={isFreeTier ? 'Sign in and upgrade to load sketches' : undefined}
+          >
             <FolderOpen className="mr-2 h-4 w-4" />
             Open...
             <span className="ml-auto text-xs text-muted-foreground">⌘O</span>
@@ -193,14 +199,19 @@ export function DocumentBar({
 
           <DropdownMenuItem
             onClick={onSave}
-            disabled={!hasUnsavedChanges || isSaving}
+            disabled={!hasUnsavedChanges || isSaving || isFreeTier}
+            title={isFreeTier ? 'Sign in and upgrade to save your work' : undefined}
           >
             <Save className="mr-2 h-4 w-4" />
             Save
             <span className="ml-auto text-xs text-muted-foreground">⌘S</span>
           </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={onSaveAs}>
+          <DropdownMenuItem
+            onClick={onSaveAs}
+            disabled={isFreeTier}
+            title={isFreeTier ? 'Sign in and upgrade to save your work' : undefined}
+          >
             <Copy className="mr-2 h-4 w-4" />
             Save As...
             <span className="ml-auto text-xs text-muted-foreground">⌘⇧S</span>

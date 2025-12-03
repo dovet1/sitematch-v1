@@ -7,6 +7,8 @@ import type { MeasurementMode } from './LocationInputPanel';
 import { useState, useMemo } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { AffluenceMethodologyModal } from '../AffluenceMethodologyModal';
+import { BlurOverlay } from '../BlurOverlay';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 
 interface DemographicsResultsProps {
   loading: boolean;
@@ -18,6 +20,7 @@ interface DemographicsResultsProps {
   rawData?: Record<string, any> | null;
   selectedLsoaCodes?: Set<string>;
   nationalAverages?: Record<string, number>;
+  isFreeTier?: boolean;
 }
 
 type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health' | 'affluence';
@@ -56,6 +59,7 @@ export function DemographicsResults({
   rawData,
   selectedLsoaCodes,
   nationalAverages = {},
+  isFreeTier = false,
 }: DemographicsResultsProps) {
   // Default to first 3 categories expanded
   const [expandedCategories, setExpandedCategories] = useState<Set<CategoryType>>(
@@ -64,6 +68,9 @@ export function DemographicsResults({
 
   // State for methodology modal
   const [methodologyModalOpen, setMethodologyModalOpen] = useState(false);
+
+  // State for upgrade banner
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
 
   const toggleCategory = (category: CategoryType) => {
     setExpandedCategories((prev) => {
@@ -235,6 +242,32 @@ export function DemographicsResults({
   const formatNumber = (num: number) => num.toLocaleString();
   const formatPercentage = (num: number) => `${num.toFixed(1)}%`;
 
+  // Helper to determine if a category should be blurred for free tier
+  const shouldBlurCategory = (category: CategoryType): boolean => {
+    if (!isFreeTier) return false;
+    // Blur: demographics, employment, education, mobility, health
+    // Keep visible: population, affluence
+    return ['demographics', 'employment', 'education', 'mobility', 'health'].includes(category);
+  };
+
+  // Helper to determine if a specific chart should be blurred
+  const shouldBlurChart = (category: CategoryType, chartTitle: string): boolean => {
+    if (!isFreeTier) return false;
+
+    // Population & Households: keep all visible
+    if (category === 'population') return false;
+
+    // Affluence: keep all visible
+    if (category === 'affluence') return false;
+
+    // All other categories should be blurred
+    return shouldBlurCategory(category);
+  };
+
+  const handleUpgradeClick = () => {
+    setShowUpgradeBanner(true);
+  };
+
   // Empty State
   if (!loading && !rawData && !error) {
     return (
@@ -399,10 +432,12 @@ export function DemographicsResults({
               {isExpanded && categoryDataObj && (
                 <div className="border-t border-gray-100 bg-gray-50">
                   <div className="px-4 py-3 space-y-4">
-                    {categoryDataObj.charts.map((chart, index) => (
-                      <div key={index}>
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <h4 className="text-xs font-semibold text-gray-700">{chart.title}</h4>
+                    {categoryDataObj.charts.map((chart, index) => {
+                      const chartShouldBlur = shouldBlurChart(category.value, chart.title);
+                      const chartContent = (
+                        <div key={index}>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <h4 className="text-xs font-semibold text-gray-700">{chart.title}</h4>
                           {chart.title === 'Affluence Score' && (
                             <Popover>
                               <PopoverTrigger asChild>
@@ -558,8 +593,18 @@ export function DemographicsResults({
                             )}
                           </div>
                         )}
-                      </div>
-                    ))}
+                        </div>
+                      );
+
+                      // Return blurred content if needed, otherwise regular content
+                      return chartShouldBlur ? (
+                        <BlurOverlay key={index} onUpgradeClick={handleUpgradeClick} title="Detailed Demographics">
+                          {chartContent}
+                        </BlurOverlay>
+                      ) : (
+                        chartContent
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -567,6 +612,30 @@ export function DemographicsResults({
           );
         })}
       </div>
+
+      {/* Upgrade Banner Modal */}
+      {showUpgradeBanner && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowUpgradeBanner(false)}
+        >
+          <div className="max-w-2xl w-full relative" onClick={(e) => e.stopPropagation()}>
+            <UpgradeBanner
+              title="Unlock Full Demographics"
+              features={[
+                'Age profile and demographic breakdowns',
+                'Employment and occupation data',
+                'Education qualification levels',
+                'Travel to work and mobility patterns',
+                'Health and disability statistics',
+                'Export comprehensive reports',
+              ]}
+              context="sitesketcher"
+              onDismiss={() => setShowUpgradeBanner(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

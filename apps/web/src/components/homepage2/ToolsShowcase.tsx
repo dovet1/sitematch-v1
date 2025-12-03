@@ -102,22 +102,19 @@ export function ToolsShowcase() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 mb-16 md:mb-20">
           {tools.map((tool, index) => {
             const Icon = tool.icon;
-            const colorClasses = {
-              blue: {
-                badge: 'bg-blue-100 border-blue-300 text-blue-800',
-                icon: 'from-blue-500 to-blue-600',
-                button: 'from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700',
-                accent: 'text-blue-600',
-                highlight: 'bg-blue-200/60'
-              },
-              violet: {
-                badge: 'bg-violet-100 border-violet-300 text-violet-800',
-                icon: 'from-violet-500 to-purple-600',
-                button: 'from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700',
-                accent: 'text-violet-600',
-                highlight: 'bg-violet-200/60'
-              }
-            }[tool.color];
+            const colorClasses = (tool.color === 'blue' ? {
+              badge: 'bg-blue-100 border-blue-300 text-blue-800',
+              icon: 'from-blue-500 to-blue-600',
+              button: 'from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700',
+              accent: 'text-blue-600',
+              highlight: 'bg-blue-200/60'
+            } : {
+              badge: 'bg-violet-100 border-violet-300 text-violet-800',
+              icon: 'from-violet-500 to-purple-600',
+              button: 'from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700',
+              accent: 'text-violet-600',
+              highlight: 'bg-violet-200/60'
+            });
 
             return (
               <motion.div

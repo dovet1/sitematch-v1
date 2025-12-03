@@ -189,8 +189,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Subscription-protected routes (excluding search and agencies/create which we handle differently)
-  const subscriptionRoutes = ['/sitesketcher']
+  // Subscription-protected routes (excluding search, agencies/create, sitesketcher, and site-demographer which are now freemium)
+  const subscriptionRoutes: string[] = []
 
   // Allow access to SiteSketcher landing page for unpaid users only
   const isLandingPage = request.nextUrl.pathname === '/sitesketcher/landing'
@@ -242,11 +242,6 @@ export async function middleware(request: NextRequest) {
             }
           }
 
-          // For SiteSketcher, redirect free users to landing page
-          if (request.nextUrl.pathname.startsWith('/sitesketcher')) {
-            return NextResponse.redirect(new URL('/sitesketcher/landing', request.url))
-          }
-
           // For other subscription routes, redirect to pricing with return URL
           const pricingUrl = new URL('/pricing', request.url)
           pricingUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
@@ -255,21 +250,13 @@ export async function middleware(request: NextRequest) {
         }
       } catch (error) {
         console.error('Subscription check error:', error)
-        // On error, redirect to landing for SiteSketcher, pricing for others
-        if (request.nextUrl.pathname.startsWith('/sitesketcher')) {
-          return NextResponse.redirect(new URL('/sitesketcher/landing', request.url))
-        }
+        // On error, redirect to pricing
         const pricingUrl = new URL('/pricing', request.url)
         pricingUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
         return NextResponse.redirect(pricingUrl)
       }
     } else {
-      // Not logged in - redirect to landing page for SiteSketcher
-      if (request.nextUrl.pathname.startsWith('/sitesketcher')) {
-        return NextResponse.redirect(new URL('/sitesketcher/landing', request.url))
-      }
-
-      // For other routes, redirect to pricing
+      // Not logged in - redirect to pricing
       const pricingUrl = new URL('/pricing', request.url)
       pricingUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
       pricingUrl.searchParams.set('reason', 'subscription_required')
