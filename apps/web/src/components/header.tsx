@@ -15,13 +15,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { LoginModal } from '@/components/auth/login-modal'
 import { SignUpModalEnhanced } from '@/components/auth/signup-modal-enhanced'
 import { AuthChoiceModal } from '@/components/auth/auth-choice-modal'
 import { UserMenu } from '@/components/auth/user-menu'
 import { UserStatusHeader } from '@/components/auth/user-status-header'
 import { useAuth } from '@/contexts/auth-context'
-import { Menu, X, Sparkles, LogOut, User, Shield, LayoutDashboard, CreditCard, Loader2, LogOutIcon } from 'lucide-react'
+import { Menu, X, Sparkles, LogOut, User, Shield, LayoutDashboard, CreditCard, Loader2, LogOutIcon, ChevronDown } from 'lucide-react'
 import { useEffect } from 'react'
 
 export function Header() {
@@ -43,17 +49,21 @@ export function Header() {
     setIsMobileMenuOpen(false)
   }
 
+  const freeToolsItems = [
+    {
+      href: '/sitesketcher',
+      label: 'SiteSketcher',
+    },
+    {
+      href: '/new-dashboard/tools/site-demographer',
+      label: 'SiteAnalyser',
+    }
+  ]
+
   const navigationItems = [
     {
       href: '/search',
       label: 'Browse Requirements',
-      primary: false,
-      showWhen: 'always',
-      requiresAuth: false
-    },
-    {
-      href: '/sitesketcher/landing',
-      label: 'SiteSketcher',
       primary: false,
       showWhen: 'always',
       requiresAuth: false
@@ -99,9 +109,12 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-1" aria-label="Main navigation">
-            {navigationItems.map((item) => (
-              shouldShowNavItem(item) && (
-                item.requiresAuth && !user ? (
+            {navigationItems.map((item) => {
+              if (!shouldShowNavItem(item)) return null;
+
+              // Render Browse Requirements first
+              if (!item.primary) {
+                return item.requiresAuth && !user ? (
                   <AuthChoiceModal
                     key={item.href}
                     redirectTo={item.href}
@@ -136,9 +149,79 @@ export function Header() {
                   >
                     {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
                   </Link>
-                )
-              )
-            ))}
+                );
+              }
+              return null;
+            })}
+
+            {/* Free Tools Dropdown - Between Browse Requirements and Post Requirement */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="inline-flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2"
+                >
+                  Free Tools
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                {freeToolsItems.map((tool) => (
+                  <DropdownMenuItem key={tool.href} asChild>
+                    <Link
+                      href={tool.href}
+                      className="cursor-pointer"
+                    >
+                      {tool.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Render Post Requirement (primary) last */}
+            {navigationItems.map((item) => {
+              if (!shouldShowNavItem(item)) return null;
+
+              if (item.primary) {
+                return item.requiresAuth && !user ? (
+                  <AuthChoiceModal
+                    key={item.href}
+                    redirectTo={item.href}
+                    title="Sign in to post requirements"
+                    description="Access your account to create and manage property listings"
+                  >
+                    <button
+                      className={`
+                        px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch cursor-pointer
+                        ${item.primary
+                          ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }
+                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
+                      `}
+                    >
+                      {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
+                    </button>
+                  </AuthChoiceModal>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`
+                      px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch cursor-pointer
+                      ${item.primary
+                        ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      }
+                      focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
+                    `}
+                  >
+                    {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
+                  </Link>
+                );
+              }
+              return null;
+            })}
           </nav>
 
           {/* Desktop Auth Section */}
@@ -203,6 +286,7 @@ export function Header() {
           <div className="px-4 pt-4 pb-3">
             {/* Secondary Navigation Links */}
             <nav className="space-y-1 mb-4">
+              {/* Browse Requirements */}
               {navigationItems.filter(item => !item.primary && shouldShowNavItem(item)).map((item) => (
                 <Link
                   key={item.href}
@@ -213,6 +297,23 @@ export function Header() {
                   {item.label}
                 </Link>
               ))}
+
+              {/* Free Tools Section */}
+              <div className="space-y-1">
+                <div className="px-4 py-2 text-sm font-semibold text-muted-foreground">
+                  Free Tools
+                </div>
+                {freeToolsItems.map((tool) => (
+                  <Link
+                    key={tool.href}
+                    href={tool.href}
+                    onClick={closeMobileMenu}
+                    className="block px-4 py-3.5 rounded-xl text-base font-medium text-foreground hover:bg-muted/60 transition-all duration-200 violet-bloom-touch active:scale-[0.98]"
+                  >
+                    {tool.label}
+                  </Link>
+                ))}
+              </div>
             </nav>
 
             {/* Primary CTA - Prominent */}
