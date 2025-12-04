@@ -207,29 +207,38 @@ function SearchPageContent() {
       />
 
       {/* Main Content - Show for all users (free tier gets limited listings) */}
-      <div className={isMapView ? "map-view-container" : "container mx-auto px-4 py-6"}>
+      <div className={isMapView ? "map-view-container" : "relative bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50 overflow-hidden"}>
+        {/* Decorative elements - only in list view */}
+        {!isMapView && (
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-20 left-10 w-72 h-72 bg-violet-300/20 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl"></div>
+          </div>
+        )}
+
+        <div className={!isMapView ? "relative container mx-auto px-4 py-8 md:py-12" : ""}>
         {/* Results Header - Only show in list view */}
         {!isMapView && (
-          <div className="mb-6 space-y-4">
+          <div className="mb-8 md:mb-12 space-y-4">
             {/* Search State Breadcrumb */}
-            <div className="flex items-center gap-1 sm:gap-2 text-sm text-muted-foreground overflow-hidden">
+            <div className="flex items-center gap-1 sm:gap-2 text-sm md:text-base text-muted-foreground overflow-hidden">
               {searchFilters.location || searchFilters.isNationwide ? (
                 <>
                   <button
                     onClick={() => handleFiltersChange({ ...searchFilters, location: '', coordinates: null, isNationwide: false })}
-                    className="text-primary-600 hover:text-primary-700 hover:underline transition-colors flex-shrink-0"
+                    className="text-violet-600 hover:text-violet-700 hover:underline transition-colors flex-shrink-0 font-semibold"
                   >
                     All Requirements
                   </button>
                   <span className="flex-shrink-0">›</span>
-                  <span className="text-foreground font-medium truncate min-w-0">
+                  <span className="text-foreground font-black truncate min-w-0">
                     {searchFilters.isNationwide
                       ? "Nationwide Only"
                       : `Search: "${searchFilters.location}"`}
                   </span>
                 </>
               ) : (
-                <span className="text-foreground font-medium">All Requirements</span>
+                <span className="text-foreground font-black">All Requirements</span>
               )}
             </div>
 
@@ -251,6 +260,7 @@ function SearchPageContent() {
               onUpgradeClick={handleUpgradeClick}
             />
           )}
+        </div>
         </div>
       </div>
 

@@ -210,13 +210,17 @@ export function ListingCard({ listing, onClick, searchCoordinates, index = 999 }
   const loadingStrategy = isAboveFold ? 'eager' : 'lazy';
   const fetchPriority = isAboveFold ? 'high' : 'auto';
 
+  // Get primary sector for display
+  const primarySector = listing.sectors?.[0]?.name;
+
   return (
-    <article 
+    <article
       className={cn(
-        "listing-card group",
-        "flex flex-col bg-white rounded-xl overflow-hidden",
-        "cursor-pointer transition-all duration-200",
-        "hover:shadow-md"
+        "listing-card group relative",
+        "bg-white rounded-[2rem] p-7 md:p-8 border-3 border-violet-200",
+        "cursor-pointer transition-all duration-500",
+        "hover:shadow-2xl hover:border-violet-400 hover:-translate-y-3",
+        index % 4 === 1 ? 'md:mt-6' : index % 4 === 3 ? 'md:mt-8' : ''
       )}
       onClick={onClick}
       role="button"
@@ -229,114 +233,67 @@ export function ListingCard({ listing, onClick, searchCoordinates, index = 999 }
       }}
       aria-label={`View ${listing.company_name} listing`}
     >
-      {/* Logo Section - Optimized for Clearbit logos */}
-      <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center p-4">
-          {logoUrl ? (
-            <div className="w-full h-full flex items-center justify-center">
-              <img
-                src={logoUrl}
-                alt={`${listing.company_name} logo`}
-                className="max-w-full max-h-full object-contain"
-                loading={loadingStrategy}
-                fetchPriority={fetchPriority as 'high' | 'low' | 'auto'}
-                onLoad={() => setImageLoaded(true)}
-                onError={(e) => {
-                  // Hide broken image and show placeholder
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  setImageLoaded(true);
-                }}
-              />
-            </div>
-          ) : null}
-          
-          {/* Placeholder - always visible, only hide when image loads */}
-          <div className={cn(
-            "logo-placeholder",
-            "w-28 h-28 bg-white text-gray-700 rounded-2xl shadow-sm",
-            "flex items-center justify-center text-4xl font-bold tracking-tight",
-            "border border-gray-200",
-            logoUrl && imageLoaded ? "hidden" : ""
-          )}>
+      {/* Gradient accent corner */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-300/30 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+      {/* Logo/Company */}
+      <div className="relative flex items-center gap-4 mb-7">
+        {logoUrl ? (
+          <div className="w-16 h-16 md:w-18 md:h-18 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+            <img
+              src={logoUrl}
+              alt={`${listing.company_name} logo`}
+              className="w-full h-full object-contain p-1.5"
+              loading={loadingStrategy}
+              fetchPriority={fetchPriority as 'high' | 'low' | 'auto'}
+              onLoad={() => setImageLoaded(true)}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                if (target.parentElement) {
+                  target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-500 to-purple-600 text-white font-bold text-lg">${getInitials(listing.company_name)}</div>`;
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <div className="w-16 h-16 md:w-18 md:h-18 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
             {getInitials(listing.company_name)}
           </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <h3 className="relative font-black text-gray-900 text-base md:text-lg pb-2 break-words">
+            {listing.company_name}
+            <span className="absolute bottom-0 left-0 w-16 h-1 bg-violet-300 group-hover:w-full transition-all duration-500 rounded-full"></span>
+          </h3>
+          {primarySector && (
+            <p className="text-sm text-violet-600 font-bold mt-1">{formatSectorName(primarySector)}</p>
+          )}
         </div>
       </div>
-      
-      {/* Content Section */}
-      <div className="flex flex-col flex-1 p-3">
-        {/* Company Name */}
-        <h3 className="text-base font-semibold text-gray-900 mb-1 line-clamp-1">
-          {listing.company_name}
-        </h3>
 
-        {/* Location */}
-        <div className="flex items-center gap-1 text-sm text-gray-600 mb-2">
-          <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+      {/* Details with bold icons */}
+      <div className="space-y-3 text-base text-gray-700 font-semibold mb-5">
+        <div className="flex items-start gap-3">
+          <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0 text-violet-500" />
           <span className="line-clamp-1">{locationText}</span>
         </div>
+        {siteSizeText && siteSizeText !== 'No site size preference' && (
+          <div className="flex items-start gap-3">
+            <Building2 className="w-5 h-5 mt-0.5 flex-shrink-0 text-violet-500" />
+            <span>{siteSizeText}</span>
+          </div>
+        )}
+      </div>
 
-        {/* Site Size */}
-        <div className="flex items-center gap-1 text-sm text-gray-500 mb-3">
-          <Ruler className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="line-clamp-1">{siteSizeText}</span>
-        </div>
-        
-        {/* Sectors and Use Classes Pills */}
-        <div className="flex flex-wrap gap-2 mt-auto">
-          {/* Sectors */}
-          {listing.sectors && listing.sectors.length > 0 && (
-            <div className="flex items-center gap-1">
-              <Building2 className="w-3.5 h-3.5 text-gray-400" />
-              <div className="flex flex-wrap gap-1">
-                {listing.sectors.slice(0, 2).map((sector, index) => (
-                  <span 
-                    key={sector.id || index}
-                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
-                    title={sector.name}
-                  >
-                    {formatSectorName(sector.name)}
-                  </span>
-                ))}
-                {listing.sectors.length > 2 && (
-                  <span 
-                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
-                    title={`${listing.sectors.length - 2} more sectors`}
-                  >
-                    +{listing.sectors.length - 2}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* Use Classes */}
-          {listing.use_classes && listing.use_classes.length > 0 && (
-            <div className="flex items-center gap-1">
-              <Briefcase className="w-3.5 h-3.5 text-gray-400" />
-              <div className="flex flex-wrap gap-1">
-                {listing.use_classes.slice(0, 1).map((useClass, index) => (
-                  <span 
-                    key={useClass.id || index}
-                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"
-                    title={useClass.name}
-                  >
-                    {useClass.code ? useClass.code : formatUseClassName(useClass.name)}
-                  </span>
-                ))}
-                {listing.use_classes.length > 1 && (
-                  <span 
-                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"
-                    title={`${listing.use_classes.length - 1} more use classes`}
-                  >
-                    +{listing.use_classes.length - 1}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Bold hover indicator */}
+      <div className="mt-5 pt-5 border-t-3 border-violet-100 group-hover:border-violet-300 transition-colors duration-300">
+        <span className="text-base text-violet-600 font-black flex items-center gap-2">
+          View details
+          <svg className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </span>
       </div>
     </article>
   );
