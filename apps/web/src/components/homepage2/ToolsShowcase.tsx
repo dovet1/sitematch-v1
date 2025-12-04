@@ -87,9 +87,9 @@ export function ToolsShowcase() {
             </div>
           </div>
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-4 leading-tight text-center">
-            Assess site viability in{' '}
+            Assess your sites in{' '}
             <span className="relative inline-block">
-              <span className="relative z-10">minutes, not hours</span>
+              <span className="relative z-10">minutes, not days</span>
               <span className="absolute inset-0 bg-cyan-200 transform -skew-y-1 rotate-1"></span>
             </span>
           </h2>
@@ -158,7 +158,7 @@ export function ToolsShowcase() {
                   {!user && (
                     <div className={`inline-flex items-center gap-2 px-4 py-2 ${colorClasses.badge} border-2 rounded-full text-sm font-bold mb-5`}>
                       <Sparkles className="w-4 h-4" />
-                      Try free with limited features
+                      Use free with limited features
                     </div>
                   )}
 

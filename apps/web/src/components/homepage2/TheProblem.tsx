@@ -13,7 +13,7 @@ export function TheProblem() {
     {
       emoji: '📅',
       title: 'Out-of-date listings',
-      description: 'Following up on requirements that are months old'
+      description: 'Following up on requirements that are no longer active'
     },
     {
       emoji: '🔍',
