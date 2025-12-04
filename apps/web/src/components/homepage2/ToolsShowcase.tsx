@@ -80,11 +80,6 @@ export function ToolsShowcase() {
             <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 bg-white rounded-2xl shadow-2xl flex items-center justify-center transform -rotate-3">
               <span className="text-3xl md:text-4xl font-black text-blue-600">#2</span>
             </div>
-            <div className="text-center md:text-left">
-              <div className="inline-block mb-2 px-3 py-1 bg-blue-100 rounded-full border-2 border-blue-300">
-                <span className="text-xs md:text-sm font-bold text-blue-700 uppercase tracking-wider">Solution Two</span>
-              </div>
-            </div>
           </div>
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-4 leading-tight text-center">
             Assess your sites in{' '}

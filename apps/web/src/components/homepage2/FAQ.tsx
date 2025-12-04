@@ -48,14 +48,6 @@ export function FAQ() {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <div className="flex items-start gap-4 mb-6 justify-center">
-            <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 bg-white rounded-2xl shadow-2xl flex items-center justify-center transform -rotate-3">
-              <span className="text-3xl md:text-4xl font-black text-indigo-600">#4</span>
-            </div>
-            <div className="text-center md:text-left">
-              <div className="inline-block mb-2 px-3 py-1 bg-indigo-100 rounded-full border-2 border-indigo-300">
-                <span className="text-xs md:text-sm font-bold text-indigo-700 uppercase tracking-wider">Got Questions?</span>
-              </div>
-            </div>
           </div>
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-4 md:mb-6 leading-tight">
             Frequently{' '}
@@ -147,15 +139,17 @@ export function FAQ() {
               <p className="text-base md:text-lg text-gray-700 font-medium mb-6 text-center">
                 Our team is here to help. Get in touch and we'll respond within 24 hours.
               </p>
-              <a
-                href="mailto:rob@sitematcher.co.uk"
-                className="inline-flex items-center gap-3 px-8 py-4 text-lg md:text-xl font-black text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
-              >
-                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                rob@sitematcher.co.uk
-              </a>
+              <div className="flex justify-center">
+                <a
+                  href="mailto:rob@sitematcher.co.uk"
+                  className="inline-flex items-center gap-3 px-8 py-4 text-lg md:text-xl font-black text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                >
+                  <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  rob@sitematcher.co.uk
+                </a>
+              </div>
             </div>
           </div>
         </motion.div>

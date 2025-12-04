@@ -69,9 +69,6 @@ export function DatabaseDifferentiators() {
               <span className="text-3xl md:text-4xl font-black text-violet-600">#1</span>
             </div>
             <div>
-              <div className="inline-block mb-2 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full">
-                <span className="text-xs md:text-sm font-bold text-white uppercase tracking-wider">Solution One</span>
-              </div>
               <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-3 leading-tight">
                 SiteMatcher - The UK's most trusted directory
               </h2>

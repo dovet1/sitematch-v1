@@ -42,9 +42,6 @@ export function FreePostingCTA() {
               <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-xl shadow-xl flex items-center justify-center transform rotate-3 border-2 border-orange-300">
                 <span className="text-2xl md:text-3xl font-black text-orange-600">#3</span>
               </div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 rounded-full border-2 border-orange-300">
-                <span className="text-sm md:text-base font-bold text-orange-700 uppercase tracking-wide">Solution Three</span>
-              </div>
             </div>
           </motion.div>
 
