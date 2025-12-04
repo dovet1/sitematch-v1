@@ -19,6 +19,8 @@ interface Listing {
   listing_type: string;
   sectors?: Array<{ name: string }>;
   place_name?: string;
+  locations?: Array<{ place_name: string; coordinates?: any }>;
+  is_nationwide?: boolean;
   logo_url?: string;
   clearbit_logo?: boolean;
   company_domain?: string;
@@ -72,6 +74,38 @@ export function FeaturedListings() {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const formatLocations = (listing: Listing): string => {
+    if (listing.is_nationwide) {
+      return 'Nationwide';
+    }
+
+    // Use multiple locations if available
+    if (listing.locations && listing.locations.length > 0) {
+      const formattedLocations = listing.locations.map(loc => {
+        // Extract just the first part (city/town name)
+        const placeParts = loc.place_name.split(',').map(p => p.trim());
+        return placeParts[0];
+      });
+
+      // Return formatted locations
+      if (formattedLocations.length === 1) {
+        return formattedLocations[0];
+      } else if (formattedLocations.length === 2) {
+        return formattedLocations.join(' & ');
+      } else {
+        return `${formattedLocations[0]} + ${formattedLocations.length - 1} more`;
+      }
+    }
+
+    // Fallback to legacy place_name field
+    if (listing.place_name) {
+      const parts = listing.place_name.split(',').map(part => part.trim());
+      return parts[0];
+    }
+
+    return 'Location not specified';
   };
 
   if (loading) {
@@ -141,6 +175,7 @@ export function FeaturedListings() {
             const logoUrl = getLogoUrl(listing);
             const sizeRange = formatSizeRange(listing.site_size_min, listing.site_size_max);
             const primarySector = listing.sectors?.[0]?.name;
+            const locationText = formatLocations(listing);
 
             return (
               <motion.button
@@ -162,7 +197,7 @@ export function FeaturedListings() {
                 <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-violet-200/40 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
                 {/* Logo/Company */}
-                <div className="relative flex items-center gap-3 mb-4">
+                <div className="relative flex items-center gap-3 mb-6">
                   {logoUrl ? (
                     <div className="w-14 h-14 rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300">
                       <img
@@ -193,20 +228,12 @@ export function FeaturedListings() {
                   </div>
                 </div>
 
-                {/* Title with subtle underline */}
-                <h4 className="font-bold text-gray-900 mb-4 line-clamp-2 min-h-[3rem] text-base relative">
-                  {listing.title}
-                  <span className="absolute bottom-0 left-0 w-12 h-1 bg-violet-200 group-hover:w-full transition-all duration-500"></span>
-                </h4>
-
                 {/* Details with bold icons */}
                 <div className="space-y-2.5 text-sm text-gray-700 font-medium mb-4">
-                  {listing.place_name && (
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-violet-500" />
-                      <span className="line-clamp-1">{listing.place_name}</span>
-                    </div>
-                  )}
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-violet-500" />
+                    <span className="line-clamp-1">{locationText}</span>
+                  </div>
                   {sizeRange && (
                     <div className="flex items-start gap-2">
                       <Building2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-violet-500" />
