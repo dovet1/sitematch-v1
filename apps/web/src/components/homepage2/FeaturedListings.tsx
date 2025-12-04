@@ -170,7 +170,7 @@ export function FeaturedListings() {
         </motion.div>
 
         {/* Listings Grid - Bold card design */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 md:mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-12 md:mb-16">
           {listings.map((listing, index) => {
             const logoUrl = getLogoUrl(listing);
             const sizeRange = formatSizeRange(listing.site_size_min, listing.site_size_max);
@@ -181,7 +181,7 @@ export function FeaturedListings() {
               <motion.button
                 key={listing.id}
                 onClick={() => setSelectedListingId(listing.id)}
-                className={`group relative bg-white rounded-3xl p-6 border-2 border-violet-200 hover:border-violet-400 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 text-left w-full ${
+                className={`group relative bg-white rounded-[2rem] p-7 md:p-8 border-3 border-violet-200 hover:border-violet-400 hover:shadow-2xl hover:-translate-y-3 transition-all duration-500 text-left w-full ${
                   index % 4 === 1 ? 'md:mt-6' : index % 4 === 3 ? 'md:mt-8' : ''
                 }`}
                 initial={{ opacity: 0, y: 40 }}
@@ -194,59 +194,60 @@ export function FeaturedListings() {
                 }}
               >
                 {/* Gradient accent corner */}
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-violet-200/40 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-300/30 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
                 {/* Logo/Company */}
-                <div className="relative flex items-center gap-3 mb-6">
+                <div className="relative flex items-center gap-4 mb-7">
                   {logoUrl ? (
-                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300">
+                    <div className="w-16 h-16 md:w-18 md:h-18 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
                       <img
                         src={logoUrl}
                         alt={listing.company_name}
-                        className="w-full h-full object-contain p-1"
+                        className="w-full h-full object-contain p-1.5"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
                           if (target.parentElement) {
-                            target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-500 to-purple-600 text-white font-bold text-base">${getCompanyInitials(listing.company_name)}</div>`;
+                            target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-500 to-purple-600 text-white font-bold text-lg">${getCompanyInitials(listing.company_name)}</div>`;
                           }
                         }}
                       />
                     </div>
                   ) : (
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-base flex-shrink-0 shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all duration-300">
+                    <div className="w-16 h-16 md:w-18 md:h-18 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
                       {getCompanyInitials(listing.company_name)}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-black text-gray-900 text-base truncate">
+                    <h3 className="relative font-black text-gray-900 text-base md:text-lg pb-2 break-words">
                       {listing.company_name}
+                      <span className="absolute bottom-0 left-0 w-16 h-1 bg-violet-300 group-hover:w-full transition-all duration-500 rounded-full"></span>
                     </h3>
                     {primarySector && (
-                      <p className="text-xs text-violet-600 font-semibold truncate">{primarySector}</p>
+                      <p className="text-sm text-violet-600 font-bold mt-1">{primarySector}</p>
                     )}
                   </div>
                 </div>
 
                 {/* Details with bold icons */}
-                <div className="space-y-2.5 text-sm text-gray-700 font-medium mb-4">
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-violet-500" />
+                <div className="space-y-3 text-base text-gray-700 font-semibold mb-5">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0 text-violet-500" />
                     <span className="line-clamp-1">{locationText}</span>
                   </div>
                   {sizeRange && (
-                    <div className="flex items-start gap-2">
-                      <Building2 className="w-4 h-4 mt-0.5 flex-shrink-0 text-violet-500" />
+                    <div className="flex items-start gap-3">
+                      <Building2 className="w-5 h-5 mt-0.5 flex-shrink-0 text-violet-500" />
                       <span>{sizeRange}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Bold hover indicator */}
-                <div className="mt-4 pt-4 border-t-2 border-violet-100 group-hover:border-violet-300 transition-colors duration-300">
-                  <span className="text-sm text-violet-600 font-bold flex items-center gap-1">
+                <div className="mt-5 pt-5 border-t-3 border-violet-100 group-hover:border-violet-300 transition-colors duration-300">
+                  <span className="text-base text-violet-600 font-black flex items-center gap-2">
                     View details
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" />
                   </span>
                 </div>
               </motion.button>
