@@ -103,8 +103,8 @@ export function Pricing() {
     },
     {
       name: 'Pro',
-      price: billingInterval === 'year' ? '£487.50' : '£49',
-      originalPrice: billingInterval === 'year' ? '£975' : '£99',
+      price: billingInterval === 'year' ? '£490' : '£49',
+      originalPrice: billingInterval === 'year' ? '£980' : '£99',
       period: billingInterval === 'year' ? '/year' : '/month',
       description: 'For property professionals',
       features: [
@@ -175,7 +175,7 @@ export function Pricing() {
                   Annual
                 </button>
                 <span className="absolute -top-6 -right-4 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs md:text-sm px-3 py-1 rounded-full whitespace-nowrap font-black shadow-lg transform rotate-6">
-                  Save 17%
+                  2 Months Free
                 </span>
               </div>
             </div>
