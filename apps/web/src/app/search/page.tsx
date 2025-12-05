@@ -207,13 +207,25 @@ function SearchPageContent() {
       />
 
       {/* Main Content - Show for all users (free tier gets limited listings) */}
-      <div className={isMapView ? "map-view-container" : "relative bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 overflow-hidden"}>
-        {/* Decorative elements - only in list view */}
+      <div className={isMapView ? "map-view-container" : "relative bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 overflow-hidden min-h-screen"}>
+        {/* Enhanced Decorative elements - only in list view */}
         {!isMapView && (
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-20 left-10 w-[500px] h-[500px] bg-violet-300/30 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-20 right-10 w-[500px] h-[500px] bg-purple-300/30 rounded-full blur-3xl"></div>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-blue-200/20 rounded-full blur-3xl"></div>
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {/* Main gradient orbs */}
+            <div className="absolute top-20 right-10 w-[600px] h-[600px] bg-gradient-to-br from-violet-400/40 to-purple-400/30 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s' }}></div>
+            <div className="absolute bottom-20 left-10 w-[600px] h-[600px] bg-gradient-to-tr from-purple-400/40 to-blue-400/30 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '10s' }}></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-r from-blue-300/25 to-violet-300/25 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '12s' }}></div>
+
+            {/* Additional accent orbs for depth */}
+            <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-violet-200/20 rounded-full blur-2xl"></div>
+            <div className="absolute bottom-1/3 right-1/4 w-[350px] h-[350px] bg-purple-200/20 rounded-full blur-2xl"></div>
+
+            {/* Geometric accent shapes */}
+            <div className="absolute top-40 left-1/3 w-32 h-32 bg-violet-300/10 rounded-2xl rotate-12 blur-xl"></div>
+            <div className="absolute bottom-40 right-1/3 w-40 h-40 bg-purple-300/10 rounded-3xl -rotate-12 blur-xl"></div>
+
+            {/* Subtle grid pattern overlay */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.03)_1px,transparent_1px)] bg-[size:64px_64px]"></div>
           </div>
         )}
 
