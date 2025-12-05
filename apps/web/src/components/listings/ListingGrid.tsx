@@ -130,26 +130,40 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
     }
   }, [isLoadingMore, hasMore, isLoading, page]);
 
-  // Infinite scroll detection
+  // Infinite scroll detection with debouncing to prevent multiple rapid loads
   const observerTarget = useRef<HTMLDivElement>(null);
-  
+  const lastLoadTime = useRef<number>(0);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoadingMore && !isLoading) {
+        const now = Date.now();
+        // Debounce: only allow loading once per second
+        if (
+          entries[0].isIntersecting &&
+          hasMore &&
+          !isLoadingMore &&
+          !isLoading &&
+          now - lastLoadTime.current > 1000
+        ) {
+          lastLoadTime.current = now;
           loadMore();
         }
       },
-      { threshold: 0.1, rootMargin: '100px' }
+      {
+        threshold: 0,
+        rootMargin: '800px' // Very large margin for early loading
+      }
     );
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
     }
 
     return () => {
-      if (observerTarget.current) {
-        observer.unobserve(observerTarget.current);
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
       }
     };
   }, [loadMore, hasMore, isLoadingMore, isLoading]);
@@ -311,7 +325,7 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
       )}
 
       {/* Load More Button (fallback for accessibility) */}
-      {hasMore && !isLoadingMore && (
+      {hasMore && !isLoadingMore && !isFreeTier && (
         <div className="flex justify-center py-10">
           <button
             onClick={loadMore}
@@ -329,8 +343,8 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
         </div>
       )}
 
-      {/* Infinite Scroll Trigger */}
-      <div ref={observerTarget} className="h-4" />
+      {/* Infinite Scroll Trigger - at the very bottom with large rootMargin for early triggering */}
+      {hasMore && !isFreeTier && <div ref={observerTarget} className="h-1" />}
     </div>
   );
 }

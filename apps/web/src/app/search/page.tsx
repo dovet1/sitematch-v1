@@ -207,12 +207,13 @@ function SearchPageContent() {
       />
 
       {/* Main Content - Show for all users (free tier gets limited listings) */}
-      <div className={isMapView ? "map-view-container" : "relative bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50 overflow-hidden"}>
+      <div className={isMapView ? "map-view-container" : "relative bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 overflow-hidden"}>
         {/* Decorative elements - only in list view */}
         {!isMapView && (
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-20 left-10 w-72 h-72 bg-violet-300/20 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl"></div>
+            <div className="absolute top-20 left-10 w-[500px] h-[500px] bg-violet-300/30 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-20 right-10 w-[500px] h-[500px] bg-purple-300/30 rounded-full blur-3xl"></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-blue-200/20 rounded-full blur-3xl"></div>
           </div>
         )}
 
@@ -221,24 +222,27 @@ function SearchPageContent() {
         {!isMapView && (
           <div className="mb-8 md:mb-12 space-y-4">
             {/* Search State Breadcrumb */}
-            <div className="flex items-center gap-1 sm:gap-2 text-sm md:text-base text-muted-foreground overflow-hidden">
+            <div className="flex items-center gap-2 text-base md:text-lg overflow-hidden">
               {searchFilters.location || searchFilters.isNationwide ? (
                 <>
                   <button
                     onClick={() => handleFiltersChange({ ...searchFilters, location: '', coordinates: null, isNationwide: false })}
-                    className="text-violet-600 hover:text-violet-700 hover:underline transition-colors flex-shrink-0 font-semibold"
+                    className="text-violet-600 hover:text-violet-700 hover:underline transition-colors flex-shrink-0 font-black"
                   >
                     All Requirements
                   </button>
-                  <span className="flex-shrink-0">›</span>
-                  <span className="text-foreground font-black truncate min-w-0">
-                    {searchFilters.isNationwide
-                      ? "Nationwide Only"
-                      : `Search: "${searchFilters.location}"`}
+                  <span className="flex-shrink-0 text-violet-400 font-black">›</span>
+                  <span className="relative inline-block">
+                    <span className="relative z-10 text-gray-900 font-black truncate min-w-0">
+                      {searchFilters.isNationwide
+                        ? "Nationwide Only"
+                        : `Search: "${searchFilters.location}"`}
+                    </span>
+                    <span className="absolute inset-0 bg-violet-200 transform skew-y-1 rotate-1 -z-10"></span>
                   </span>
                 </>
               ) : (
-                <span className="text-foreground font-black">All Requirements</span>
+                <span className="text-gray-900 font-black text-xl">All Requirements</span>
               )}
             </div>
 
