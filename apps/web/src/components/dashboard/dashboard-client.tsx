@@ -212,7 +212,28 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-gray-900 truncate">{userEmail}</p>
-              <p className="text-xs text-violet-600 font-medium">Logged in</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                {subscriptionStatus === 'trialing' && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-blue-100 text-blue-700 border border-blue-300">
+                    Trial
+                  </span>
+                )}
+                {subscriptionStatus === 'active' && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-violet-100 text-violet-700 border border-violet-300">
+                    Pro
+                  </span>
+                )}
+                {subscriptionStatus === 'past_due' && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-300">
+                    Past Due
+                  </span>
+                )}
+                {!subscriptionStatus || subscriptionStatus === 'canceled' ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-gray-100 text-gray-700 border border-gray-300">
+                    Free
+                  </span>
+                ) : null}
+              </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
