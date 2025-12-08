@@ -207,25 +207,33 @@ function SearchPageContent() {
       />
 
       {/* Main Content - Show for all users (free tier gets limited listings) */}
-      <div className={isMapView ? "map-view-container" : "relative bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 overflow-hidden min-h-screen"}>
-        {/* Enhanced Decorative elements - only in list view */}
+      <div className={isMapView ? "map-view-container" : "relative bg-gradient-to-br from-violet-100 via-purple-100 to-blue-100 overflow-hidden min-h-screen"}>
+        {/* BOLD Decorative elements - only in list view */}
         {!isMapView && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {/* Main gradient orbs */}
-            <div className="absolute top-20 right-10 w-[600px] h-[600px] bg-gradient-to-br from-violet-400/40 to-purple-400/30 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s' }}></div>
-            <div className="absolute bottom-20 left-10 w-[600px] h-[600px] bg-gradient-to-tr from-purple-400/40 to-blue-400/30 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '10s' }}></div>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-r from-blue-300/25 to-violet-300/25 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '12s' }}></div>
+            {/* Massive gradient orbs with stronger colors */}
+            <div className="absolute -top-20 -right-20 w-[800px] h-[800px] bg-gradient-to-br from-violet-500/50 to-purple-500/40 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '7s' }}></div>
+            <div className="absolute -bottom-20 -left-20 w-[800px] h-[800px] bg-gradient-to-tr from-purple-500/50 to-blue-500/40 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '9s' }}></div>
+            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-gradient-to-r from-blue-400/35 to-violet-400/35 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '11s' }}></div>
 
-            {/* Additional accent orbs for depth */}
-            <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-violet-200/20 rounded-full blur-2xl"></div>
-            <div className="absolute bottom-1/3 right-1/4 w-[350px] h-[350px] bg-purple-200/20 rounded-full blur-2xl"></div>
+            {/* Bold accent orbs */}
+            <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-gradient-to-br from-violet-300/30 to-transparent rounded-full blur-2xl animate-pulse" style={{ animationDuration: '13s' }}></div>
+            <div className="absolute bottom-1/3 left-1/3 w-[450px] h-[450px] bg-gradient-to-tl from-purple-300/30 to-transparent rounded-full blur-2xl animate-pulse" style={{ animationDuration: '15s' }}></div>
 
-            {/* Geometric accent shapes */}
-            <div className="absolute top-40 left-1/3 w-32 h-32 bg-violet-300/10 rounded-2xl rotate-12 blur-xl"></div>
-            <div className="absolute bottom-40 right-1/3 w-40 h-40 bg-purple-300/10 rounded-3xl -rotate-12 blur-xl"></div>
+            {/* Vibrant geometric accent shapes */}
+            <div className="absolute top-32 left-1/4 w-48 h-48 bg-gradient-to-br from-violet-400/20 to-purple-400/15 rounded-3xl rotate-12 blur-xl animate-pulse" style={{ animationDuration: '6s' }}></div>
+            <div className="absolute bottom-32 right-1/4 w-56 h-56 bg-gradient-to-tr from-purple-400/20 to-blue-400/15 rounded-3xl -rotate-12 blur-xl animate-pulse" style={{ animationDuration: '8s' }}></div>
+            <div className="absolute top-2/3 left-1/5 w-40 h-40 bg-gradient-to-r from-blue-400/15 to-violet-400/15 rounded-2xl rotate-45 blur-lg animate-pulse" style={{ animationDuration: '10s' }}></div>
 
-            {/* Subtle grid pattern overlay */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.03)_1px,transparent_1px)] bg-[size:64px_64px]"></div>
+            {/* Bold grid pattern overlay */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.08)_1px,transparent_1px)] bg-[size:64px_64px]"></div>
+
+            {/* Radial gradient overlay for vignette effect */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(139,92,246,0.1)_100%)]"></div>
+
+            {/* Animated light beams */}
+            <div className="absolute top-0 left-1/4 w-1 h-full bg-gradient-to-b from-transparent via-violet-300/30 to-transparent animate-pulse" style={{ animationDuration: '5s' }}></div>
+            <div className="absolute top-0 right-1/3 w-1 h-full bg-gradient-to-b from-transparent via-purple-300/30 to-transparent animate-pulse" style={{ animationDuration: '7s', animationDelay: '1s' }}></div>
           </div>
         )}
 
