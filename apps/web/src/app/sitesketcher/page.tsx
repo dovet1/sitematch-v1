@@ -37,12 +37,15 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Toaster } from 'sonner';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 
 const STORAGE_KEY = 'sitesketcher-state';
 const RECENT_SEARCHES_KEY = 'sitesketcher-recent-searches';
 
 function SiteSketcherContent() {
   const { user, loading, profile } = useAuth();
+  const { isFreeTier, isPro, loading: tierLoading } = useSubscriptionTier();
   const router = useRouter();
   const searchParams = useSearchParams();
   const showWelcome = searchParams?.get('welcome') === 'true';
@@ -83,19 +86,13 @@ function SiteSketcherContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSelectingExportArea, setIsSelectingExportArea] = useState(false);
   const [showMobileFileMenu, setShowMobileFileMenu] = useState(false);
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
+  const [upgradeBannerType, setUpgradeBannerType] = useState<'polygon' | 'parking'>('polygon');
   const mapRef = useRef<MapboxMapRef>(null);
   const originalMeasurementsRef = useRef<AreaMeasurement | null>(null);
 
-  // Authentication guard - redirect to landing if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      // Add a small delay to prevent flash
-      const timer = setTimeout(() => {
-        router.push('/sitesketcher/landing');
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [user, loading, router]);
+  // Note: No authentication guard - allow all users to access SiteSketcher
+  // Free tier users will have limited functionality (2 polygons, 2 parking, no save/load)
 
   // Detect unsaved changes by comparing current state with saved snapshot
   useEffect(() => {
@@ -202,10 +199,21 @@ function SiteSketcherContent() {
   // Remove mode handling - tool is always in draw mode
 
   const handlePolygonCreate = useCallback((polygon: MapboxDrawPolygon) => {
+    // Check free tier limit before adding polygon
     setState(prev => {
+      if (isFreeTier && prev.polygons.length >= 2) {
+        // Show upgrade banner and prevent polygon creation
+        setShowUpgradeBanner(true);
+        setUpgradeBannerType('polygon');
+        // Delete the polygon from the map
+        mapRef.current?.deletePolygon(String(polygon.id || polygon.properties?.id || ''));
+        toast.error('Free tier limit reached: 2 polygons maximum');
+        return prev;
+      }
+
       // Add color to the polygon
       const color = getPolygonColor(prev.polygons.length);
-      
+
       const polygonWithColor = {
         ...polygon,
         properties: {
@@ -214,16 +222,16 @@ function SiteSketcherContent() {
           user_color: color // Use both properties to ensure compatibility
         }
       };
-      
+
       const newState = {
         ...prev,
         polygons: [...prev.polygons, polygonWithColor],
         selectedPolygonId: String(polygonWithColor.id || polygonWithColor.properties?.id || '')
       };
-      
+
       return newState;
     });
-  }, []);
+  }, [isFreeTier]);
 
   const handlePolygonUpdate = useCallback((polygon: MapboxDrawPolygon) => {
     setState(prev => {
@@ -308,11 +316,21 @@ function SiteSketcherContent() {
   }, []);
 
   const handleAddParkingOverlay = useCallback((overlay: ParkingOverlay) => {
-    setState(prev => ({
-      ...prev,
-      parkingOverlays: [...prev.parkingOverlays, overlay]
-    }));
-  }, []);
+    setState(prev => {
+      // Check free tier limit before adding parking overlay
+      if (isFreeTier && prev.parkingOverlays.length >= 2) {
+        setShowUpgradeBanner(true);
+        setUpgradeBannerType('parking');
+        toast.error('Free tier limit reached: 2 parking blocks maximum');
+        return prev;
+      }
+
+      return {
+        ...prev,
+        parkingOverlays: [...prev.parkingOverlays, overlay]
+      };
+    });
+  }, [isFreeTier]);
 
   const handleRemoveParkingOverlay = useCallback((overlayId: string) => {
     setState(prev => ({
@@ -803,8 +821,8 @@ function SiteSketcherContent() {
     }
   }, [handleSave, pendingAction]);
 
-  // Show loading while checking authentication
-  if (loading) {
+  // Show loading while checking authentication and subscription tier
+  if (loading || tierLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -813,11 +831,6 @@ function SiteSketcherContent() {
         </div>
       </div>
     );
-  }
-
-  // Don't render if not authenticated (redirect will happen)
-  if (!user) {
-    return null;
   }
 
   if (mapboxError) {
@@ -861,22 +874,32 @@ function SiteSketcherContent() {
     <div className="h-screen bg-background">
       {/* Desktop Layout */}
       <div className="hidden md:flex md:flex-col md:h-full">
-        {/* Header */}
-        <header className="border-b bg-background/95 backdrop-blur-sm z-40 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link 
-                href="/"
-                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted transition-colors"
-                title="Back to SiteMatcher"
+        {/* Premium Header */}
+        <header className="relative z-40 px-8 py-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
+          {/* Subtle gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-violet-50/30 via-transparent to-purple-50/30 pointer-events-none" />
+
+          <div className="relative flex items-center justify-between gap-6">
+            {/* Left: Premium Title Section */}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.push('/')}
+                className="h-8 w-8 rounded-lg hover:bg-violet-50 hover:text-violet-700 transition-all duration-200"
               >
-                <ArrowLeft className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-              </Link>
-              <div>
-                <h1 className="text-xl font-bold text-primary">SiteSketcher</h1>
-                <p className="text-sm text-muted-foreground">
-                  Site drawing tool
-                </p>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-1 bg-gradient-to-b from-violet-500 to-purple-600 rounded-full" />
+                <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
+                  SiteSketcher
+                </h1>
+                {isFreeTier && (
+                  <span className="ml-2 px-2.5 py-0.5 bg-violet-100 border-2 border-violet-300 rounded-full text-xs font-bold text-violet-700">
+                    FREE
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -887,6 +910,7 @@ function SiteSketcherContent() {
           sketchName={currentSketchName}
           hasUnsavedChanges={hasUnsavedChanges}
           isSaving={isSaving}
+          isFreeTier={isFreeTier}
           onRenameSketch={handleRenameSketch}
           onNewSketch={handleNewSketch}
           onOpenSketch={handleLoad}
@@ -914,6 +938,11 @@ function SiteSketcherContent() {
                 onViewModeToggle={handleViewModeToggle}
                 show3DBuildings={state.show3DBuildings}
                 onToggle3DBuildings={handleToggle3DBuildings}
+                isFreeTier={isFreeTier}
+                onUpgradeClick={() => {
+                  setUpgradeBannerType('polygon');
+                  setShowUpgradeBanner(true);
+                }}
                 polygons={state.polygons}
                 onPolygonDelete={handlePolygonDelete}
                 parkingOverlays={state.parkingOverlays}
@@ -1115,6 +1144,11 @@ function SiteSketcherContent() {
             onViewModeToggle={handleViewModeToggle}
             show3DBuildings={state.show3DBuildings}
             onToggle3DBuildings={handleToggle3DBuildings}
+            isFreeTier={isFreeTier}
+            onUpgradeClick={() => {
+              setUpgradeBannerType('polygon');
+              setShowUpgradeBanner(true);
+            }}
             polygons={state.polygons}
             onPolygonDelete={handlePolygonDelete}
             parkingOverlays={state.parkingOverlays}
@@ -1176,6 +1210,45 @@ function SiteSketcherContent() {
         }}
         onSelect={handleCuboidStorySelect}
       />
+
+      {/* Upgrade Banner Modal */}
+      {showUpgradeBanner && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowUpgradeBanner(false)}
+        >
+          <div className="max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+            <UpgradeBanner
+              title={
+                upgradeBannerType === 'polygon'
+                  ? 'Unlock Unlimited Polygons'
+                  : 'Unlock Unlimited Parking Blocks'
+              }
+              features={
+                upgradeBannerType === 'polygon'
+                  ? [
+                      'Draw unlimited polygons',
+                      'Draw unlimited parking blocks',
+                      'Save sketches',
+                      '3D visualization for all shapes',
+                      'Access all requirement listings',
+                      'Pro access to SiteAnalyser',
+                    ]
+                  : [
+                      'Draw unlimited polygons',
+                      'Draw unlimited parking blocks',
+                      'Save sketches',
+                      '3D visualization for all shapes',
+                      'Access all requirement listings',
+                      'Pro access to SiteAnalyser',
+                    ]
+              }
+              context="sitesketcher"
+              onDismiss={() => setShowUpgradeBanner(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

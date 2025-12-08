@@ -130,26 +130,40 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
     }
   }, [isLoadingMore, hasMore, isLoading, page]);
 
-  // Infinite scroll detection
+  // Infinite scroll detection with debouncing to prevent multiple rapid loads
   const observerTarget = useRef<HTMLDivElement>(null);
-  
+  const lastLoadTime = useRef<number>(0);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoadingMore && !isLoading) {
+        const now = Date.now();
+        // Debounce: only allow loading once per second
+        if (
+          entries[0].isIntersecting &&
+          hasMore &&
+          !isLoadingMore &&
+          !isLoading &&
+          now - lastLoadTime.current > 1000
+        ) {
+          lastLoadTime.current = now;
           loadMore();
         }
       },
-      { threshold: 0.1, rootMargin: '100px' }
+      {
+        threshold: 0,
+        rootMargin: '800px' // Very large margin for early loading
+      }
     );
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
     }
 
     return () => {
-      if (observerTarget.current) {
-        observer.unobserve(observerTarget.current);
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
       }
     };
   }, [loadMore, hasMore, isLoadingMore, isLoading]);
@@ -223,16 +237,16 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
     <div className="space-y-8">
       {/* Local Listings */}
       {localListings.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {showDelineation && (
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-gray-900">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl md:text-2xl font-black text-gray-900">
                 Near {filters.location || 'your search location'}
               </h2>
-              <span className="text-sm text-gray-500">({localListings.length})</span>
+              <span className="text-base md:text-lg text-gray-500 font-bold">({localListings.length})</span>
             </div>
           )}
-          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
             {localListings.map((listing, index) => (
               <ListingCard
                 key={listing.id}
@@ -248,13 +262,13 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
 
       {/* Nationwide Listings Divider */}
       {showDelineation && (
-        <div className="relative py-8">
+        <div className="relative py-10 md:py-12">
           <div className="absolute inset-0 flex items-center" aria-hidden="true">
-            <div className="w-full border-t border-gray-300"></div>
+            <div className="w-full border-t-2 border-violet-200"></div>
           </div>
           <div className="relative flex justify-center">
-            <span className="bg-background px-4 text-sm font-medium text-gray-500 flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span className="bg-background px-6 text-base md:text-lg font-black text-gray-700 flex items-center gap-3">
+              <svg className="w-6 h-6 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Nationwide Listings
@@ -265,8 +279,8 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
 
       {/* All Listings (when no location filter) or Nationwide Listings (when location filter) */}
       {!hasLocationFilter && listings.length > 0 ? (
-        <div className="space-y-4">
-          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="space-y-6">
+          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
             {listings.map((listing, index) => (
               <ListingCard
                 key={listing.id}
@@ -279,8 +293,8 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
           </div>
         </div>
       ) : nationwideListings.length > 0 ? (
-        <div className="space-y-4">
-          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="space-y-6">
+          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
             {nationwideListings.map((listing, index) => (
               <ListingCard
                 key={listing.id}
@@ -311,11 +325,11 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
       )}
 
       {/* Load More Button (fallback for accessibility) */}
-      {hasMore && !isLoadingMore && (
-        <div className="flex justify-center py-8">
+      {hasMore && !isLoadingMore && !isFreeTier && (
+        <div className="flex justify-center py-10">
           <button
             onClick={loadMore}
-            className="px-6 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors duration-200 font-medium shadow-sm hover:shadow-md"
+            className="px-8 py-4 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-black text-base shadow-xl hover:shadow-2xl hover:scale-105"
           >
             Load More Listings
           </button>
@@ -324,13 +338,13 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
 
       {/* Listing Count */}
       {listings.length > 0 && (
-        <div className="text-center text-sm text-gray-600">
+        <div className="text-center text-base text-gray-600 font-semibold">
           Showing {listings.length} {totalCount > 0 && `of ${totalCount}`} listings
         </div>
       )}
 
-      {/* Infinite Scroll Trigger */}
-      <div ref={observerTarget} className="h-4" />
+      {/* Infinite Scroll Trigger - at the very bottom with large rootMargin for early triggering */}
+      {hasMore && !isFreeTier && <div ref={observerTarget} className="h-1" />}
     </div>
   );
 }

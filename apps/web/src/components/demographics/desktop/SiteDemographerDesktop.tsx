@@ -10,6 +10,8 @@ import { useRouter } from 'next/navigation';
 import { useDemographicsData } from '../shared/hooks/useDemographicsData';
 import { useLsoaSelection } from '../shared/hooks/useLsoaSelection';
 import { useLocationSearch } from '../shared/hooks/useLocationSearch';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 import type { LocationResult } from '@/lib/mapbox';
 
 // Conversion constants
@@ -30,6 +32,7 @@ function convertToRadiusMiles(mode: 'distance' | 'drive_time' | 'walk_time', val
 
 export function SiteDemographerDesktop() {
   const router = useRouter();
+  const { isFreeTier, isPro, loading: tierLoading } = useSubscriptionTier();
 
   // Shared hooks for data management
   const {
@@ -67,6 +70,7 @@ export function SiteDemographerDesktop() {
   // Desktop-specific state
   const [showTraffic, setShowTraffic] = useState(false);
   const [showCountPoints, setShowCountPoints] = useState(false);
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
 
   // Track the location that has been analyzed (map only moves when this changes)
   const [analyzedLocation, setAnalyzedLocation] = useState<LocationResult | null>(null);
@@ -133,6 +137,24 @@ export function SiteDemographerDesktop() {
     setAnalyzedLocation(null);
   };
 
+  const handleTrafficToggle = () => {
+    if (isFreeTier && !showTraffic) {
+      // Show upgrade prompt for free tier users trying to enable traffic
+      setShowUpgradeBanner(true);
+    } else {
+      setShowTraffic(!showTraffic);
+    }
+  };
+
+  const handleCountPointsToggle = () => {
+    if (isFreeTier && !showCountPoints) {
+      // Show upgrade prompt for free tier users trying to enable count points
+      setShowUpgradeBanner(true);
+    } else {
+      setShowCountPoints(!showCountPoints);
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col bg-gradient-to-b from-gray-50 to-white">
       {/* Premium Header with Controls */}
@@ -156,6 +178,11 @@ export function SiteDemographerDesktop() {
               <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
                 SiteAnalyser
               </h1>
+              {isFreeTier && (
+                <span className="ml-2 px-2.5 py-0.5 bg-violet-100 border-2 border-violet-300 rounded-full text-xs font-bold text-violet-700">
+                  FREE
+                </span>
+              )}
             </div>
           </div>
 
@@ -192,6 +219,7 @@ export function SiteDemographerDesktop() {
               rawData={rawDemographicsData}
               selectedLsoaCodes={selectedLsoaCodes}
               nationalAverages={nationalAverages}
+              isFreeTier={isFreeTier}
             />
           </div>
         </div>
@@ -218,20 +246,26 @@ export function SiteDemographerDesktop() {
               {/* Traffic Layer Toggles - Floating Buttons */}
               <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2">
                 <Button
-                  onClick={() => setShowTraffic(!showTraffic)}
+                  onClick={handleTrafficToggle}
                   variant={showTraffic ? "default" : "outline"}
                   size="sm"
                   className={showTraffic ? "bg-violet-600 hover:bg-violet-700" : "bg-white"}
                 >
                   {showTraffic ? "Hide Traffic" : "Show Traffic"}
+                  {isFreeTier && !showTraffic && (
+                    <span className="ml-1.5 text-xs">🔒</span>
+                  )}
                 </Button>
                 <Button
-                  onClick={() => setShowCountPoints(!showCountPoints)}
+                  onClick={handleCountPointsToggle}
                   variant={showCountPoints ? "default" : "outline"}
                   size="sm"
                   className={showCountPoints ? "bg-cyan-500 hover:bg-cyan-600" : "bg-white"}
                 >
                   {showCountPoints ? "Hide Count Points" : "Show Count Points"}
+                  {isFreeTier && !showCountPoints && (
+                    <span className="ml-1.5 text-xs">🔒</span>
+                  )}
                 </Button>
               </div>
             </>
@@ -257,6 +291,31 @@ export function SiteDemographerDesktop() {
           )}
         </div>
       </div>
+
+      {/* Upgrade Banner Modal */}
+      {showUpgradeBanner && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowUpgradeBanner(false)}
+        >
+          <div className="max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+            <UpgradeBanner
+              title="Unlock Traffic Layer & Full Demographics"
+              features={[
+                'Real-time traffic layer visualization',
+                'Age profile and demographic breakdowns',
+                'Employment and occupation data',
+                'Travel to work and mobility patterns',
+                'Health and disability statistics',
+                'Access to all site requirements',
+                'Full access to all SiteMatcher tools',
+              ]}
+              context="sitesketcher"
+              onDismiss={() => setShowUpgradeBanner(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

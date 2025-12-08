@@ -187,13 +187,13 @@ export function SearchHeaderBar({
   return (
     <>
       {/* Main Search Header */}
-      <div 
+      <div
         ref={headerRef}
         className={cn(
           "sticky top-0 z-sticky transition-all duration-300 ease-in-out",
-          isScrolled 
-            ? "bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200" 
-            : "bg-white/80 backdrop-blur-sm border-b border-gray-100",
+          isScrolled
+            ? "bg-gradient-to-br from-violet-50/95 via-purple-50/95 to-blue-50/95 backdrop-blur-md shadow-2xl border-b border-violet-200"
+            : "bg-gradient-to-br from-violet-50/90 via-purple-50/90 to-blue-50/90 backdrop-blur-sm border-b border-violet-100",
           className
         )}
       >
@@ -222,10 +222,10 @@ export function SearchHeaderBar({
                     setIsLocationFocused(true);
                   }, 300);
                 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border-gray-200 hover:border-primary-300 transition-all duration-200"
+                className="flex items-center gap-3 px-6 py-2.5 rounded-full border-2 border-violet-300 hover:border-violet-400 bg-white hover:bg-violet-50 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
-                <Search className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
+                <Search className="w-5 h-5 text-violet-600" />
+                <span className="text-sm font-bold text-gray-700">
                   {searchFilters.location || searchFilters.companyName || "Search location or company..."}
                 </span>
               </Button>
@@ -234,15 +234,15 @@ export function SearchHeaderBar({
               <div className="flex-1 relative">
                 <div
                   className={cn(
-                    "flex items-center gap-4 bg-white rounded-full border-2 transition-all duration-200",
+                    "flex items-center gap-4 bg-white rounded-full border-3 transition-all duration-300",
                     isLocationFocused
-                      ? "border-primary-300 shadow-lg ring-4 ring-primary-100"
-                      : "border-gray-200 hover:border-gray-300 shadow-sm"
+                      ? "border-violet-400 shadow-2xl ring-4 ring-violet-200"
+                      : "border-violet-200 hover:border-violet-300 shadow-lg"
                   )}
                 >
                 <div className="flex-1 px-4 py-3">
                   <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-violet-500" />
                     <UnifiedSearch
                       value={localSearchValue}
                       onChange={handleSearchChange}
@@ -268,7 +268,7 @@ export function SearchHeaderBar({
                         }
                       }}
                       placeholder="Search location or company name"
-                      className="w-full border-0 outline-none bg-transparent text-gray-700 placeholder-gray-400 font-medium pl-12 pr-4"
+                      className="w-full border-0 outline-none bg-transparent text-gray-900 placeholder-gray-500 font-semibold text-base pl-12 pr-4"
                       hideIcon={true}
                     />
                   </div>
@@ -287,7 +287,7 @@ export function SearchHeaderBar({
                       });
                     }
                   }}
-                  className="violet-bloom-touch flex items-center justify-center h-12 w-12 rounded-full bg-primary-600 hover:bg-primary-700 transition-colors shrink-0 mr-2"
+                  className="violet-bloom-touch flex items-center justify-center h-14 w-14 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 shrink-0 mr-2"
                   aria-label="Search"
                 >
                   <Search className="w-5 h-5 text-white" />
@@ -303,9 +303,9 @@ export function SearchHeaderBar({
                 <Button
                   variant="outline"
                   onClick={() => setIsFilterDrawerOpen(true)}
-                  className="px-3 py-2 rounded-full border-primary-200 bg-primary-50 text-primary-700"
+                  className="px-4 py-2.5 rounded-full border-2 border-violet-300 bg-violet-100 text-violet-700 font-bold shadow-lg hover:shadow-xl"
                 >
-                  <Filter className="w-4 h-4 mr-1" />
+                  <Filter className="w-4 h-4 mr-1.5" />
                   {activeFiltersCount}
                 </Button>
               )
@@ -315,18 +315,18 @@ export function SearchHeaderBar({
                 variant="outline"
                 onClick={() => setIsFilterDrawerOpen(true)}
                 className={cn(
-                  "px-6 py-3 h-auto rounded-full font-medium transition-all duration-200 relative",
-                  activeFiltersCount > 0 
-                    ? "bg-primary-50 border-primary-200 text-primary-700 shadow-sm" 
-                    : "border-gray-200 hover:border-gray-300 shadow-sm"
+                  "px-6 py-3.5 h-auto rounded-full font-bold text-base transition-all duration-300 relative border-2",
+                  activeFiltersCount > 0
+                    ? "bg-violet-100 border-violet-300 text-violet-700 shadow-lg hover:shadow-xl hover:scale-105"
+                    : "border-violet-200 hover:border-violet-300 bg-white shadow-md hover:shadow-lg hover:scale-105"
                 )}
               >
-                <Filter className="w-4 h-4 mr-2" />
+                <Filter className="w-5 h-5 mr-2" />
                 Filters
                 {activeFiltersCount > 0 && (
-                  <Badge 
-                    variant="secondary" 
-                    className="ml-2 bg-primary-100 text-primary-700 border-primary-200"
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 bg-violet-200 text-violet-800 border border-violet-300 font-black px-2"
                   >
                     {activeFiltersCount}
                   </Badge>
@@ -336,16 +336,16 @@ export function SearchHeaderBar({
 
             {/* View Toggle */}
             {showViewToggle && onMapViewToggle && (
-              <div className="flex items-center bg-gray-100 rounded-full p-1">
+              <div className="flex items-center bg-violet-100 rounded-full p-1.5 border-2 border-violet-200">
                 <Button
                   variant={!isMapView ? "default" : "ghost"}
                   size="sm"
                   onClick={() => onMapViewToggle(false)}
                   className={cn(
-                    "px-4 py-2 rounded-full font-medium transition-all duration-200",
-                    !isMapView 
-                      ? "bg-white shadow-sm text-gray-900" 
-                      : "text-gray-600 hover:text-gray-800"
+                    "px-5 py-2.5 rounded-full font-bold transition-all duration-300",
+                    !isMapView
+                      ? "bg-white shadow-lg text-violet-700 hover:scale-105"
+                      : "text-violet-600 hover:text-violet-800 hover:bg-violet-50"
                   )}
                 >
                   <List className="w-4 h-4 mr-2" />
@@ -356,10 +356,10 @@ export function SearchHeaderBar({
                   size="sm"
                   onClick={() => onMapViewToggle(true)}
                   className={cn(
-                    "px-4 py-2 rounded-full font-medium transition-all duration-200",
-                    isMapView 
-                      ? "bg-white shadow-sm text-gray-900" 
-                      : "text-gray-600 hover:text-gray-800"
+                    "px-5 py-2.5 rounded-full font-bold transition-all duration-300",
+                    isMapView
+                      ? "bg-white shadow-lg text-violet-700 hover:scale-105"
+                      : "text-violet-600 hover:text-violet-800 hover:bg-violet-50"
                   )}
                 >
                   <MapPin className="w-4 h-4 mr-2" />
@@ -376,10 +376,10 @@ export function SearchHeaderBar({
               <Button
                 variant="ghost"
                 onClick={() => setIsLocationFocused(true)}
-                className="flex-1 justify-start px-4 py-3 h-auto bg-white border border-gray-200 rounded-full shadow-sm hover:shadow-md transition-all duration-200"
+                className="flex-1 justify-start px-5 py-3.5 h-auto bg-white border-2 border-violet-200 rounded-full shadow-lg hover:shadow-xl hover:border-violet-300 transition-all duration-300"
               >
-                <Search className="w-4 h-4 mr-3 text-gray-400" />
-                <span className="text-left text-gray-600 font-medium truncate">
+                <Search className="w-5 h-5 mr-3 text-violet-500" />
+                <span className="text-left text-gray-700 font-bold truncate">
                   {searchFilters.isNationwide
                     ? "Nationwide search"
                     : localSearchValue || searchFilters.location || searchFilters.companyName || "Search location or company..."}
@@ -391,13 +391,13 @@ export function SearchHeaderBar({
                 variant="outline"
                 size="sm"
                 onClick={() => setIsFilterDrawerOpen(true)}
-                className="p-3 rounded-full border-gray-200 relative"
+                className="p-3.5 rounded-full border-2 border-violet-200 relative bg-white shadow-lg hover:shadow-xl hover:border-violet-300 transition-all duration-300"
               >
-                <Filter className="w-4 h-4" />
+                <Filter className="w-5 h-5 text-violet-600" />
                 {activeFiltersCount > 0 && (
-                  <Badge 
-                    variant="secondary" 
-                    className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs bg-primary-100 text-primary-700 border-primary-200"
+                  <Badge
+                    variant="secondary"
+                    className="absolute -top-1 -right-1 h-6 w-6 p-0 flex items-center justify-center text-xs font-black bg-violet-200 text-violet-800 border-2 border-violet-300"
                   >
                     {activeFiltersCount}
                   </Badge>
@@ -410,12 +410,12 @@ export function SearchHeaderBar({
                   variant="outline"
                   size="sm"
                   onClick={() => onMapViewToggle(!isMapView)}
-                  className="p-3 rounded-full border-gray-200"
+                  className="p-3.5 rounded-full border-2 border-violet-200 bg-white shadow-lg hover:shadow-xl hover:border-violet-300 transition-all duration-300"
                 >
                   {isMapView ? (
-                    <List className="w-4 h-4" />
+                    <List className="w-5 h-5 text-violet-600" />
                   ) : (
-                    <MapPin className="w-4 h-4" />
+                    <MapPin className="w-5 h-5 text-violet-600" />
                   )}
                 </Button>
               )}
@@ -426,12 +426,12 @@ export function SearchHeaderBar({
         {/* Active Filters Display - Smooth Collapsible - Hidden on Map View */}
         {activeFiltersCount > 0 && !isMapView && (
           <div className={cn(
-            "border-t border-gray-100 bg-gray-50/50 backdrop-blur-sm transition-all duration-300 ease-in-out overflow-hidden",
-            isCollapsed 
-              ? "max-h-0 py-0 opacity-0" 
-              : isScrolled 
-                ? "max-h-20 py-1 opacity-100" 
-                : "max-h-20 py-2 opacity-100"
+            "border-t border-violet-200 bg-violet-50/60 backdrop-blur-sm transition-all duration-300 ease-in-out overflow-hidden",
+            isCollapsed
+              ? "max-h-0 py-0 opacity-0"
+              : isScrolled
+                ? "max-h-20 py-2 opacity-100"
+                : "max-h-20 py-2.5 opacity-100"
           )}>
             <div className="container mx-auto px-4">
               <div className="flex flex-wrap items-center gap-2 justify-between">
@@ -520,12 +520,13 @@ export function SearchHeaderBar({
                     </AnimatedFilterPill>
                   )}
                 </FilterPillsContainer>
-                
+
+
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleClearFilters}
-                  className="text-gray-500 hover:text-gray-700 px-3 py-1 h-auto font-medium"
+                  className="text-violet-600 hover:text-violet-800 hover:bg-violet-100 px-4 py-2 h-auto font-bold rounded-full transition-all duration-200"
                 >
                   Clear all
                 </Button>
@@ -537,18 +538,18 @@ export function SearchHeaderBar({
 
       {/* Mobile Search Modal */}
       {isLocationFocused && (
-        <div className="fixed inset-0 z-modal bg-white md:hidden">
+        <div className="fixed inset-0 z-modal bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 md:hidden">
           <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Search</h2>
+            <div className="flex items-center justify-between p-4 border-b-2 border-violet-200 bg-white/90 backdrop-blur-md">
+              <h2 className="text-xl font-black text-gray-900">Search</h2>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsLocationFocused(false)}
-                className="p-2"
+                className="p-2 hover:bg-violet-100 rounded-full"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6 text-violet-600" />
               </Button>
             </div>
 
@@ -573,7 +574,7 @@ export function SearchHeaderBar({
                     }
                   }}
                   placeholder="Search location or company"
-                  className="w-full pl-12 pr-10 py-4 border border-gray-200 rounded-lg text-lg"
+                  className="w-full pl-12 pr-10 py-4 border-2 border-violet-200 rounded-2xl text-lg font-semibold bg-white shadow-lg"
                   autoFocus
                 />
 
@@ -585,7 +586,7 @@ export function SearchHeaderBar({
                       onFiltersChange({ ...searchFilters, location: localSearchValue.trim() });
                       setIsLocationFocused(false);
                     }}
-                    className="w-full p-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
+                    className="w-full p-4 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-2xl font-black text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
                   >
                     Search for "{localSearchValue}"
                   </button>
@@ -599,11 +600,11 @@ export function SearchHeaderBar({
                   onFiltersChange({ ...searchFilters, isNationwide: true });
                   setIsLocationFocused(false);
                 }}
-                className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full p-4 text-left border-2 border-violet-200 rounded-2xl hover:bg-violet-50 bg-white shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <div className="flex items-center">
-                  <Search className="w-5 h-5 mr-3 text-gray-400" />
-                  <span className="text-gray-700 font-medium">View all listings nationwide</span>
+                  <Search className="w-5 h-5 mr-3 text-violet-500" />
+                  <span className="text-gray-900 font-bold">View all listings nationwide</span>
                 </div>
               </button>
             </div>

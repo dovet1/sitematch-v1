@@ -14,13 +14,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { LoginModal } from '@/components/auth/login-modal';
 import { SignUpModalEnhanced } from '@/components/auth/signup-modal-enhanced';
 import { UserMenu } from '@/components/auth/user-menu';
 import { UserStatusHeader } from '@/components/auth/user-status-header';
 import { useAuth } from '@/contexts/auth-context';
 import { SearchHeaderBar } from './SearchHeaderBar';
-import { Menu, X, Sparkles, LogOut, Shield, LayoutDashboard, CreditCard, Loader2, LogOutIcon } from 'lucide-react';
+import { Menu, X, Sparkles, LogOut, Shield, LayoutDashboard, CreditCard, Loader2, LogOutIcon, ChevronDown } from 'lucide-react';
 import { SearchFilters } from '@/types/search';
 import { cn } from '@/lib/utils';
 
@@ -292,6 +298,19 @@ export function UnifiedHeader({
     setIsMobileMenuOpen(false);
   };
 
+  const freeToolsItems = [
+    {
+      href: '/sitesketcher',
+      label: 'SiteSketcher',
+      description: 'Sketch your ideal site location',
+    },
+    {
+      href: '/new-dashboard/tools/site-demographer',
+      label: 'SiteAnalyser',
+      description: 'Analyse demographics around any site',
+    }
+  ];
+
   const navigationItems = [
     {
       href: '/search',
@@ -300,15 +319,9 @@ export function UnifiedHeader({
       showWhen: 'always' as const
     },
     {
-      href: '/sitesketcher/landing',
-      label: 'SiteSketcher',
-      primary: false,
-      showWhen: 'always' as const
-    },
-    {
       href: '/occupier/create-listing-quick',
       label: 'Post Requirement',
-      badge: '(Free!)',
+      badge: ' (Free!)',
       primary: true,
       showWhen: 'always' as const
     }
@@ -324,11 +337,11 @@ export function UnifiedHeader({
   return (
     <div className="sticky top-0 z-sticky">
       {/* Navigation Header */}
-      <header className="w-full bg-background border-b border-border">
+      <header className="w-full bg-white border-b-2 border-violet-200 shadow-md">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className={cn(
             "flex items-center justify-between transition-all duration-300",
-            isScrolled ? "h-12" : "h-14"
+            isScrolled ? "h-14" : "h-16"
           )}>
             {/* Logo */}
             <div className="flex items-center">
@@ -351,24 +364,66 @@ export function UnifiedHeader({
             {/* Desktop Navigation - Hide when scrolled */}
             {!isScrolled && (
               <nav className="hidden md:flex items-center space-x-1" aria-label="Main navigation">
-                {navigationItems.map((item) => (
-                  shouldShowNavItem(item) && (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`
-                        px-4 py-2 rounded-lg font-medium transition-all duration-200 violet-bloom-touch
-                        ${item.primary
-                          ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                        }
-                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 focus-visible:outline-offset-2
-                      `}
+                {navigationItems.map((item) => {
+                  if (!shouldShowNavItem(item)) return null;
+
+                  // Render Browse Requirements first
+                  if (!item.primary) {
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch text-gray-700 hover:text-violet-700 hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
+                      >
+                        {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
+                      </Link>
+                    );
+                  }
+                  return null;
+                })}
+
+                {/* Free Tools Dropdown - Between Browse Requirements and Post Requirement */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch cursor-pointer text-gray-700 hover:text-violet-700 hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
                     >
-                      {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
-                    </Link>
-                  )
-                ))}
+                      Free Tools
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-64 border-2 border-violet-200 shadow-lg">
+                    {freeToolsItems.map((tool) => (
+                      <DropdownMenuItem key={tool.href} asChild className="!items-start">
+                        <Link
+                          href={tool.href}
+                          className="cursor-pointer hover:bg-violet-50 flex flex-col items-start py-3 w-full"
+                        >
+                          <span className="font-semibold">{tool.label}</span>
+                          <span className="text-xs text-gray-600 font-normal mt-0.5">{tool.description}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Render Post Requirement (primary) last */}
+                {navigationItems.map((item) => {
+                  if (!shouldShowNavItem(item)) return null;
+
+                  if (item.primary) {
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch bg-violet-100 text-violet-700 hover:bg-violet-200 hover:text-violet-800 shadow-sm hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
+                      >
+                        {item.label}{('badge' in item) && <span className="text-orange-600 font-black ml-1">{item.badge}</span>}
+                      </Link>
+                    );
+                  }
+                  return null;
+                })}
               </nav>
             )}
 
@@ -376,20 +431,20 @@ export function UnifiedHeader({
             <div className="hidden md:flex items-center space-x-3">
               {loading && !user ? (
                 <div className="flex items-center space-x-2">
-                  <div className="h-9 w-16 bg-muted animate-pulse rounded-md violet-bloom-loading" />
-                  <div className="h-9 w-20 bg-muted animate-pulse rounded-md violet-bloom-loading" />
+                  <div className="h-10 w-20 bg-violet-100 animate-pulse rounded-full violet-bloom-loading" />
+                  <div className="h-10 w-24 bg-violet-100 animate-pulse rounded-full violet-bloom-loading" />
                 </div>
               ) : user ? (
                 <UserMenu />
               ) : (
                 <div className="flex items-center space-x-2">
                   <LoginModal>
-                    <Button variant="ghost" size="sm" className="font-medium">
+                    <Button variant="ghost" size="sm" className="font-bold rounded-full px-5 py-2 hover:bg-violet-50 hover:text-violet-700">
                       Sign In
                     </Button>
                   </LoginModal>
                   <SignUpModalEnhanced>
-                    <Button size="sm" className="font-medium shadow-sm">
+                    <Button size="sm" className="font-bold shadow-lg hover:shadow-xl rounded-full px-5 py-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 transition-all duration-300">
                       Sign Up
                     </Button>
                   </SignUpModalEnhanced>
@@ -427,23 +482,42 @@ export function UnifiedHeader({
         {isMobileMenuOpen && (
           <div
             id="mobile-menu"
-            className="md:hidden bg-background border-t border-border shadow-lg"
+            className="md:hidden bg-white border-t-2 border-violet-200 shadow-xl"
             role="navigation"
             aria-label="Mobile navigation"
           >
             <div className="px-4 pt-4 pb-3">
               {/* Secondary Navigation Links */}
-              <nav className="space-y-1 mb-4">
+              <nav className="space-y-2 mb-4">
+                {/* Browse Requirements */}
                 {navigationItems.filter(item => !item.primary && shouldShowNavItem(item)).map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={closeMobileMenu}
-                    className="block px-4 py-3.5 rounded-xl text-base font-medium text-foreground hover:bg-muted/60 transition-all duration-200 violet-bloom-touch active:scale-[0.98]"
+                    className="block px-5 py-3.5 rounded-2xl text-base font-bold text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition-all duration-300 violet-bloom-touch active:scale-[0.98]"
                   >
                     {item.label}
                   </Link>
                 ))}
+
+                {/* Free Tools Section */}
+                <div className="space-y-2">
+                  <div className="px-5 py-2 text-sm font-black text-violet-600 uppercase tracking-wide">
+                    Free Tools
+                  </div>
+                  {freeToolsItems.map((tool) => (
+                    <Link
+                      key={tool.href}
+                      href={tool.href}
+                      onClick={closeMobileMenu}
+                      className="block px-5 py-3.5 rounded-2xl hover:bg-violet-50 hover:text-violet-700 transition-all duration-300 violet-bloom-touch active:scale-[0.98]"
+                    >
+                      <div className="text-base font-bold text-gray-700">{tool.label}</div>
+                      <div className="text-xs text-gray-600 mt-0.5">{tool.description}</div>
+                    </Link>
+                  ))}
+                </div>
               </nav>
 
               {/* Primary CTA - Prominent */}
@@ -452,31 +526,31 @@ export function UnifiedHeader({
                   key={item.href}
                   href={item.href}
                   onClick={closeMobileMenu}
-                  className="block w-full px-5 py-4 rounded-xl font-semibold text-base text-center bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md hover:shadow-lg active:scale-[0.98] transition-all duration-200 violet-bloom-touch"
+                  className="block w-full px-6 py-4 rounded-2xl font-black text-base text-center bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-xl hover:shadow-2xl active:scale-[0.98] hover:from-violet-700 hover:to-purple-700 transition-all duration-300 violet-bloom-touch"
                 >
-                  {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
+                  {item.label}{('badge' in item) && <span className="text-orange-300 font-black ml-1">{item.badge}</span>}
                 </Link>
               ))}
             </div>
 
             {/* Mobile Auth Section */}
-            <div className="px-4 py-4 border-t border-border/60">
+            <div className="px-4 py-4 border-t-2 border-violet-100">
               {loading && !user ? (
-                <div className="space-y-2.5">
-                  <div className="h-11 bg-muted animate-pulse rounded-xl violet-bloom-loading" />
-                  <div className="h-11 bg-muted animate-pulse rounded-xl violet-bloom-loading" />
+                <div className="space-y-3">
+                  <div className="h-12 bg-violet-100 animate-pulse rounded-2xl violet-bloom-loading" />
+                  <div className="h-12 bg-violet-100 animate-pulse rounded-2xl violet-bloom-loading" />
                 </div>
               ) : user ? (
                 <MobileUserSection onClose={closeMobileMenu} />
               ) : (
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   <LoginModal>
-                    <Button variant="ghost" className="w-full h-11 justify-center text-base font-medium violet-bloom-touch rounded-xl">
+                    <Button variant="ghost" className="w-full h-12 justify-center text-base font-bold violet-bloom-touch rounded-2xl hover:bg-violet-50 hover:text-violet-700">
                       Sign In
                     </Button>
                   </LoginModal>
                   <SignUpModalEnhanced>
-                    <Button className="w-full h-11 text-base font-semibold shadow-sm violet-bloom-touch rounded-xl">
+                    <Button className="w-full h-12 text-base font-black shadow-xl hover:shadow-2xl violet-bloom-touch rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 transition-all duration-300">
                       Sign Up
                     </Button>
                   </SignUpModalEnhanced>

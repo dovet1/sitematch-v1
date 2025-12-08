@@ -9,6 +9,7 @@ import { DemographicsMap } from '../DemographicsMap';
 import { useDemographicsData } from '../shared/hooks/useDemographicsData';
 import { useLsoaSelection } from '../shared/hooks/useLsoaSelection';
 import { useLocationSearch } from '../shared/hooks/useLocationSearch';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 import type { LocationResult } from '@/lib/mapbox';
 
 // Conversion constants
@@ -27,6 +28,8 @@ function convertToRadiusMiles(mode: 'distance' | 'drive_time' | 'walk_time', val
 }
 
 export function SiteDemographerMobile() {
+  const { isFreeTier, isPro } = useSubscriptionTier();
+
   // Prevent overscroll/bounce on mobile
   useEffect(() => {
     // Prevent pull-to-refresh and overscroll bounce
@@ -218,6 +221,7 @@ export function SiteDemographerMobile() {
             measurementValue={measurementValue}
             rawData={rawDemographicsData}
             selectedLsoaCodes={selectedLsoaCodes}
+            isFreeTier={isFreeTier}
           />
         </MobileBottomSheet>
       </div>

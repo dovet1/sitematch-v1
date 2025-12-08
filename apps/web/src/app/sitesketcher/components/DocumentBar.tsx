@@ -22,7 +22,8 @@ import {
   History,
   Copy,
   Pencil,
-  Menu
+  Menu,
+  Lock
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -41,6 +42,7 @@ interface DocumentBarProps {
   onExportPDF: () => void;
   onShowVersionHistory?: () => void;
   isSaving?: boolean;
+  isFreeTier?: boolean;
   className?: string;
 }
 
@@ -59,6 +61,7 @@ export function DocumentBar({
   onExportPDF,
   onShowVersionHistory,
   isSaving = false,
+  isFreeTier = false,
   className = '',
 }: DocumentBarProps) {
   const [isEditingName, setIsEditingName] = useState(false);
@@ -156,13 +159,20 @@ export function DocumentBar({
           </button>
         )}
 
-        {hasUnsavedChanges && !isSaving && (
+        {isFreeTier && (
+          <span className="text-xs text-gray-500 flex-shrink-0 flex items-center gap-1" title="Upgrade to Pro to save your work">
+            <Lock className="h-3 w-3" />
+            <span className="hidden sm:inline">Upgrade to save this sketch</span>
+          </span>
+        )}
+
+        {!isFreeTier && hasUnsavedChanges && !isSaving && (
           <span className="text-orange-500 text-lg leading-none flex-shrink-0" title="Unsaved changes">
             ●
           </span>
         )}
 
-        {isSaving && (
+        {!isFreeTier && isSaving && (
           <span className="text-blue-500 text-sm flex-shrink-0 animate-pulse">
             Saving...
           </span>
@@ -183,27 +193,51 @@ export function DocumentBar({
             <span className="ml-auto text-xs text-muted-foreground">⌘N</span>
           </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={onOpenSketch}>
+          <DropdownMenuItem
+            onClick={onOpenSketch}
+            disabled={isFreeTier}
+            title={isFreeTier ? 'Upgrade to Pro to load sketches' : undefined}
+            className={isFreeTier ? 'opacity-60' : ''}
+          >
             <FolderOpen className="mr-2 h-4 w-4" />
-            Open...
-            <span className="ml-auto text-xs text-muted-foreground">⌘O</span>
+            <span className="flex-1">Open...</span>
+            {isFreeTier ? (
+              <span className="ml-2 text-xs font-bold text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded">PRO</span>
+            ) : (
+              <span className="ml-auto text-xs text-muted-foreground">⌘O</span>
+            )}
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
           <DropdownMenuItem
             onClick={onSave}
-            disabled={!hasUnsavedChanges || isSaving}
+            disabled={!hasUnsavedChanges || isSaving || isFreeTier}
+            title={isFreeTier ? 'Upgrade to Pro to save your work' : undefined}
+            className={isFreeTier ? 'opacity-60' : ''}
           >
             <Save className="mr-2 h-4 w-4" />
-            Save
-            <span className="ml-auto text-xs text-muted-foreground">⌘S</span>
+            <span className="flex-1">Save</span>
+            {isFreeTier ? (
+              <span className="ml-2 text-xs font-bold text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded">PRO</span>
+            ) : (
+              <span className="ml-auto text-xs text-muted-foreground">⌘S</span>
+            )}
           </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={onSaveAs}>
+          <DropdownMenuItem
+            onClick={onSaveAs}
+            disabled={isFreeTier}
+            title={isFreeTier ? 'Upgrade to Pro to save your work' : undefined}
+            className={isFreeTier ? 'opacity-60' : ''}
+          >
             <Copy className="mr-2 h-4 w-4" />
-            Save As...
-            <span className="ml-auto text-xs text-muted-foreground">⌘⇧S</span>
+            <span className="flex-1">Save As...</span>
+            {isFreeTier ? (
+              <span className="ml-2 text-xs font-bold text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded">PRO</span>
+            ) : (
+              <span className="ml-auto text-xs text-muted-foreground">⌘⇧S</span>
+            )}
           </DropdownMenuItem>
 
           {onShowVersionHistory && (

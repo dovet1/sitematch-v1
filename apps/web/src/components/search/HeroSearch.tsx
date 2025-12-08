@@ -115,7 +115,7 @@ export function HeroSearch({ searchFilters }: HeroSearchProps) {
           <div className="flex justify-center items-center gap-8 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-primary-500 rounded-full" />
-              <span>8,700+ Active Requirements</span>
+              <span>7,500+ Active Requirements</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-success rounded-full" />

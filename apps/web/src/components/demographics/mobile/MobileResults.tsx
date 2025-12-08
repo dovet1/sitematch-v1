@@ -15,6 +15,7 @@ interface MobileResultsProps {
   measurementValue: number;
   rawData?: Record<string, any> | null;
   selectedLsoaCodes?: Set<string>;
+  isFreeTier?: boolean;
 }
 
 function formatNumber(num: number): string {
@@ -35,6 +36,7 @@ export function MobileResults({
   measurementValue,
   rawData,
   selectedLsoaCodes,
+  isFreeTier = false,
 }: MobileResultsProps) {
   const [isFullReportOpen, setIsFullReportOpen] = useState(false);
 
@@ -190,6 +192,7 @@ export function MobileResults({
         onClose={() => setIsFullReportOpen(false)}
         rawData={rawData || null}
         location={location ? formatLocationDisplay(location) : ''}
+        isFreeTier={isFreeTier}
       />
 
       {/* Interaction Hint */}

@@ -3,12 +3,15 @@
 import { X, ChevronDown, Users, Home, Briefcase, GraduationCap, Car, Heart, TrendingUp } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BlurOverlay } from '../BlurOverlay';
+import { UpgradeBanner } from '@/components/UpgradeBanner';
 
 interface MobileFullReportProps {
   open: boolean;
   onClose: () => void;
   rawData: Record<string, any> | null;
   location: string;
+  isFreeTier?: boolean;
 }
 
 type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health' | 'affluence';
@@ -63,10 +66,11 @@ function getCategoryIconColorClasses(color: string): string {
   return classes[color as keyof typeof classes] || classes.violet;
 }
 
-export function MobileFullReport({ open, onClose, rawData, location }: MobileFullReportProps) {
+export function MobileFullReport({ open, onClose, rawData, location, isFreeTier = false }: MobileFullReportProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<CategoryType>>(
     new Set<CategoryType>(['population', 'affluence'])
   );
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
 
   const toggleCategory = (category: CategoryType) => {
     setExpandedCategories((prev) => {
@@ -78,6 +82,18 @@ export function MobileFullReport({ open, onClose, rawData, location }: MobileFul
       }
       return newSet;
     });
+  };
+
+  // Helper to determine if a category should be blurred for free tier
+  const shouldBlurCategory = (category: CategoryType): boolean => {
+    if (!isFreeTier) return false;
+    // Blur: demographics, employment, education, mobility, health
+    // Keep visible: population, affluence
+    return ['demographics', 'employment', 'education', 'mobility', 'health'].includes(category);
+  };
+
+  const handleUpgradeClick = () => {
+    setShowUpgradeBanner(true);
   };
 
   const allCategoryData = useMemo(() => {
@@ -256,33 +272,64 @@ export function MobileFullReport({ open, onClose, rawData, location }: MobileFul
                             transition={{ duration: 0.2 }}
                             className="overflow-hidden"
                           >
-                            <div className="px-4 pb-4 space-y-4">
-                              {categoryData.charts.map((chart: any, idx: number) => (
-                                <div key={idx} className="bg-gray-50 rounded-xl p-4">
-                                  <h4 className="text-sm font-medium text-gray-700 mb-3">{chart.title}</h4>
-                                  <div className="space-y-2">
-                                    {/* Show all items for Age profile, limit to 8 for others */}
-                                    {(chart.title === 'Age profile' ? chart.data : chart.data.slice(0, 8)).map((item: ChartData, itemIdx: number) => (
-                                      <div key={itemIdx} className="flex items-center justify-between text-sm">
-                                        <span className="text-gray-600 truncate flex-1 pr-2">
-                                          {item.label}
-                                        </span>
-                                        <span className="font-medium text-gray-900 whitespace-nowrap">
-                                          {item.percentage < 100
-                                            ? formatPercentage(item.percentage)
-                                            : formatNumber(item.value)}
-                                        </span>
+                            {shouldBlurCategory(category.value) ? (
+                              <BlurOverlay onUpgradeClick={handleUpgradeClick} title="Detailed Demographics">
+                                <div className="px-4 pb-4 space-y-4">
+                                  {categoryData.charts.map((chart: any, idx: number) => (
+                                    <div key={idx} className="bg-gray-50 rounded-xl p-4">
+                                      <h4 className="text-sm font-medium text-gray-700 mb-3">{chart.title}</h4>
+                                      <div className="space-y-2">
+                                        {(chart.title === 'Age profile' ? chart.data : chart.data.slice(0, 8)).map((item: ChartData, itemIdx: number) => (
+                                          <div key={itemIdx} className="flex items-center justify-between text-sm">
+                                            <span className="text-gray-600 truncate flex-1 pr-2">
+                                              {item.label}
+                                            </span>
+                                            <span className="font-medium text-gray-900 whitespace-nowrap">
+                                              {item.percentage < 100
+                                                ? formatPercentage(item.percentage)
+                                                : formatNumber(item.value)}
+                                            </span>
+                                          </div>
+                                        ))}
+                                        {chart.title !== 'Age profile' && chart.data.length > 8 && (
+                                          <p className="text-xs text-gray-500 pt-1">
+                                            +{chart.data.length - 8} more items
+                                          </p>
+                                        )}
                                       </div>
-                                    ))}
-                                    {chart.title !== 'Age profile' && chart.data.length > 8 && (
-                                      <p className="text-xs text-gray-500 pt-1">
-                                        +{chart.data.length - 8} more items
-                                      </p>
-                                    )}
-                                  </div>
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
+                              </BlurOverlay>
+                            ) : (
+                              <div className="px-4 pb-4 space-y-4">
+                                {categoryData.charts.map((chart: any, idx: number) => (
+                                  <div key={idx} className="bg-gray-50 rounded-xl p-4">
+                                    <h4 className="text-sm font-medium text-gray-700 mb-3">{chart.title}</h4>
+                                    <div className="space-y-2">
+                                      {/* Show all items for Age profile, limit to 8 for others */}
+                                      {(chart.title === 'Age profile' ? chart.data : chart.data.slice(0, 8)).map((item: ChartData, itemIdx: number) => (
+                                        <div key={itemIdx} className="flex items-center justify-between text-sm">
+                                          <span className="text-gray-600 truncate flex-1 pr-2">
+                                            {item.label}
+                                          </span>
+                                          <span className="font-medium text-gray-900 whitespace-nowrap">
+                                            {item.percentage < 100
+                                              ? formatPercentage(item.percentage)
+                                              : formatNumber(item.value)}
+                                          </span>
+                                        </div>
+                                      ))}
+                                      {chart.title !== 'Age profile' && chart.data.length > 8 && (
+                                        <p className="text-xs text-gray-500 pt-1">
+                                          +{chart.data.length - 8} more items
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -292,6 +339,30 @@ export function MobileFullReport({ open, onClose, rawData, location }: MobileFul
               </div>
             )}
           </div>
+
+          {/* Upgrade Banner Modal */}
+          {showUpgradeBanner && (
+            <div
+              className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+              onClick={() => setShowUpgradeBanner(false)}
+            >
+              <div className="max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+                <UpgradeBanner
+                  title="Unlock Full Demographics"
+                  features={[
+                    'Age profile and demographic breakdowns',
+                    'Employment and occupation data',
+                    'Education qualification levels',
+                    'Travel to work and mobility patterns',
+                    'Health and disability statistics',
+                    'Export comprehensive reports',
+                  ]}
+                  context="sitesketcher"
+                  onDismiss={() => setShowUpgradeBanner(false)}
+                />
+              </div>
+            </div>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
