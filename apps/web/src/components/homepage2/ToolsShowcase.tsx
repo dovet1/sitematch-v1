@@ -15,7 +15,7 @@ export function ToolsShowcase() {
       id: 'sitesketcher',
       name: 'SiteSketcher',
       icon: Ruler,
-      tagline: 'Visualize site potential instantly',
+      tagline: 'Visualise site potential instantly',
       description: 'Draw building footprints, calculate areas, plan parking - see if a site works before you commit. Perfect for quick feasibility studies.',
       features: [
         'Draw unlimited polygons and buildings',
@@ -39,7 +39,7 @@ export function ToolsShowcase() {
       name: 'SiteAnalyser',
       icon: BarChart3,
       tagline: 'Understand your catchment area',
-      description: 'Analyze demographics, traffic patterns, and catchment data to understand who will walk through the door. Make data-driven site decisions.',
+      description: 'Analyse demographics, traffic patterns, and catchment data to understand who will walk through the door. Make data-driven site decisions.',
       features: [
         'Population and affluence analysis',
         'Traffic flow visualization',

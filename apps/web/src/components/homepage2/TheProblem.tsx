@@ -18,7 +18,7 @@ export function TheProblem() {
     {
       emoji: '🔍',
       title: 'Hidden opportunities',
-      description: 'Missing active occupiers because they are not on traditional portals'
+      description: 'Missing active companies as they are not on traditional portals'
     }
   ];
 
@@ -43,17 +43,17 @@ export function TheProblem() {
             <span className="text-sm font-bold text-red-700 uppercase tracking-wide">Sound familiar?</span>
           </div>
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-gray-900 mb-4 leading-tight">
-            Tired of <span className="relative inline-block">
-              <span className="relative z-10">outdated requirements</span>
+            Hard to keep track of <span className="relative inline-block">
+              <span className="relative z-10">live requirements</span>
               <span className="absolute inset-0 bg-red-200 transform -skew-y-1 -rotate-1"></span>
             </span>{' '}
-            and <span className="relative inline-block">
-              <span className="relative z-10">wasted flyers</span>
+            and who's <span className="relative inline-block">
+              <span className="relative z-10">genuinely in the market</span>
               <span className="absolute inset-0 bg-orange-200 transform skew-y-1 rotate-1"></span>
             </span>?
           </h2>
           <p className="text-xl md:text-2xl text-gray-700 font-medium">
-            You are not alone. Finding the right occupiers should not feel like searching for a needle in a haystack.
+            Finding out who's looking for what shouldn't feel like detective work
           </p>
         </motion.div>
 
