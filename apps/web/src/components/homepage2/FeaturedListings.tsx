@@ -62,7 +62,8 @@ export function FeaturedListings() {
       return listing.logo_url;
     }
     if (listing.clearbit_logo && listing.company_domain) {
-      return `https://logo.clearbit.com/${listing.company_domain}`;
+      const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+      return token ? `https://img.logo.dev/${listing.company_domain}?token=${token}` : null;
     }
     return null;
   };
