@@ -1231,12 +1231,16 @@ function SiteSketcherContent() {
                       'Draw unlimited parking blocks',
                       'Save sketches',
                       '3D visualization for all shapes',
+                      'Access all requirement listings',
+                      'Pro access to SiteAnalyser',
                     ]
                   : [
                       'Draw unlimited polygons',
                       'Draw unlimited parking blocks',
                       'Save sketches',
                       '3D visualization for all shapes',
+                      'Access all requirement listings',
+                      'Pro access to SiteAnalyser',
                     ]
               }
               context="sitesketcher"

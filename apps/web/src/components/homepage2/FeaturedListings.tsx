@@ -285,9 +285,10 @@ export function FeaturedListings() {
             <TrialSignupModal context="search" redirectPath="/search">
               <Button
                 size="lg"
-                className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-10 py-7 text-lg md:text-xl font-black rounded-2xl shadow-2xl hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
+                className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-6 sm:px-10 py-7 text-base sm:text-lg md:text-xl font-black rounded-2xl shadow-2xl hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
               >
-                View All Requirements - Start Free Trial
+                <span className="hidden sm:inline">View All Requirements - Start Free Trial</span>
+                <span className="sm:hidden">View All Requirements</span>
                 <ArrowRight className="ml-2 h-5 w-5 md:h-6 md:w-6" />
               </Button>
             </TrialSignupModal>

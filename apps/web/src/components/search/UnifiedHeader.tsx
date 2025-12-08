@@ -302,10 +302,12 @@ export function UnifiedHeader({
     {
       href: '/sitesketcher',
       label: 'SiteSketcher',
+      description: 'Sketch your ideal site location',
     },
     {
       href: '/new-dashboard/tools/site-demographer',
       label: 'SiteAnalyser',
+      description: 'Analyse demographics around any site',
     }
   ];
 
@@ -390,14 +392,15 @@ export function UnifiedHeader({
                       <ChevronDown className="h-4 w-4" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48 border-2 border-violet-200 shadow-lg">
+                  <DropdownMenuContent align="start" className="w-64 border-2 border-violet-200 shadow-lg">
                     {freeToolsItems.map((tool) => (
-                      <DropdownMenuItem key={tool.href} asChild>
+                      <DropdownMenuItem key={tool.href} asChild className="!items-start">
                         <Link
                           href={tool.href}
-                          className="cursor-pointer font-semibold hover:bg-violet-50"
+                          className="cursor-pointer hover:bg-violet-50 flex flex-col items-start py-3 w-full"
                         >
-                          {tool.label}
+                          <span className="font-semibold">{tool.label}</span>
+                          <span className="text-xs text-gray-600 font-normal mt-0.5">{tool.description}</span>
                         </Link>
                       </DropdownMenuItem>
                     ))}
@@ -508,9 +511,10 @@ export function UnifiedHeader({
                       key={tool.href}
                       href={tool.href}
                       onClick={closeMobileMenu}
-                      className="block px-5 py-3.5 rounded-2xl text-base font-bold text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition-all duration-300 violet-bloom-touch active:scale-[0.98]"
+                      className="block px-5 py-3.5 rounded-2xl hover:bg-violet-50 hover:text-violet-700 transition-all duration-300 violet-bloom-touch active:scale-[0.98]"
                     >
-                      {tool.label}
+                      <div className="text-base font-bold text-gray-700">{tool.label}</div>
+                      <div className="text-xs text-gray-600 mt-0.5">{tool.description}</div>
                     </Link>
                   ))}
                 </div>
