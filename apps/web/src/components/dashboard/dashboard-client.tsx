@@ -3,10 +3,28 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { LayoutDashboard, FileText, Building2, Wrench, Search, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FileText, Building2, Wrench, Search, Menu, X, MoreVertical, LogOut, LogOutIcon, CreditCard, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Toaster } from 'sonner';
+import { useAuth } from '@/contexts/auth-context';
 import { OverviewTab } from './overview-tab';
 import { RequirementsTab } from './requirements-tab';
 import { SavedSearchesTab } from '@/components/saved-searches/saved-searches-tab';
@@ -30,6 +48,12 @@ const navigationItems = [
 export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoadingPortal, setIsLoadingPortal] = useState(false);
+  const [showSignoutAllDialog, setShowSignoutAllDialog] = useState(false);
+  const [isSigningOutAll, setIsSigningOutAll] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<'trialing' | 'active' | 'past_due' | 'canceled' | null>(null);
+  const { signOut } = useAuth();
 
   useEffect(() => {
     const handleTabChange = (event: CustomEvent<TabType>) => {
@@ -41,6 +65,81 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
       window.removeEventListener('dashboard-tab-change', handleTabChange as EventListener);
     };
   }, []);
+
+  // Fetch subscription status
+  useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      try {
+        const response = await fetch('/api/user/subscription-status');
+        if (response.ok) {
+          const data = await response.json();
+          setSubscriptionStatus(data.subscriptionStatus);
+        }
+      } catch (error) {
+        console.error('Error fetching subscription status:', error);
+      }
+    };
+
+    fetchSubscriptionStatus();
+  }, [userId]);
+
+  const handleManageSubscription = async () => {
+    setIsLoadingPortal(true);
+    try {
+      const response = await fetch('/api/stripe/create-portal-session', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Portal session error:', errorData);
+        throw new Error(errorData.details || 'Failed to create portal session');
+      }
+
+      const { url } = await response.json();
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Error opening billing portal:', error);
+      alert(error instanceof Error ? error.message : 'Failed to open billing portal. Please try again.');
+    } finally {
+      setIsLoadingPortal(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setIsLoading(true);
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignOutAllDevices = async () => {
+    setIsSigningOutAll(true);
+    try {
+      const response = await fetch('/api/auth/signout-all-devices', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to sign out all devices');
+      }
+
+      // Close the dialog and sign out current device
+      setShowSignoutAllDialog(false);
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out all devices:', error);
+      alert('Failed to sign out all devices. Please try again.');
+    } finally {
+      setIsSigningOutAll(false);
+    }
+  };
+
+  const hasSubscription = subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || subscriptionStatus === 'past_due';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50">
@@ -115,6 +214,47 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
               <p className="text-sm font-bold text-gray-900 truncate">{userEmail}</p>
               <p className="text-xs text-violet-600 font-medium">Logged in</p>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-violet-100">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {hasSubscription && (
+                  <>
+                    <DropdownMenuItem
+                      onClick={handleManageSubscription}
+                      disabled={isLoadingPortal}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      {isLoadingPortal ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CreditCard className="h-4 w-4" />
+                      )}
+                      <span>{isLoadingPortal ? 'Opening...' : 'Manage Subscription'}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem
+                  onClick={() => setShowSignoutAllDialog(true)}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <LogOutIcon className="h-4 w-4" />
+                  <span>Log out all devices</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>{isLoading ? 'Signing out...' : 'Log out'}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </aside>
@@ -146,6 +286,28 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
 
       {/* Toast Notifications */}
       <Toaster position="top-right" />
+
+      {/* Sign out all devices confirmation dialog */}
+      <AlertDialog open={showSignoutAllDialog} onOpenChange={setShowSignoutAllDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log out all devices?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will log you out from all devices where you're currently signed in, including this one. You'll need to sign in again on each device.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSigningOutAll}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSignOutAllDevices}
+              disabled={isSigningOutAll}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSigningOutAll ? 'Logging out...' : 'Log out all devices'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

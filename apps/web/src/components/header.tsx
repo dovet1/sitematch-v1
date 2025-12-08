@@ -37,7 +37,7 @@ export function Header() {
   
   // Hide header on specific pages that need full-screen experience
   // Only hide on the actual SiteSketcher app, not the landing page
-  if (pathname === '/search' || pathname === '/sitesketcher') {
+  if (pathname === '/search' || pathname === '/sitesketcher' || pathname?.startsWith('/new-dashboard')) {
     return null
   }
 
