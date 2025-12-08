@@ -108,91 +108,163 @@ export function RequirementsTab({ userId }: RequirementsTabProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Your Requirements</h1>
-          <p className="text-gray-500 mt-1">Manage your property requirement listings</p>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900">Your Requirements</h1>
+          <p className="text-gray-600 mt-1 sm:mt-2 text-base sm:text-lg font-medium">Manage your property requirement listings</p>
         </div>
-        <Link href="/occupier/create-listing-quick">
-          <Button className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg">
+        <Link href="/occupier/create-listing-quick" className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg font-bold rounded-xl px-6 py-5 sm:py-3">
             <Plus className="h-4 w-4 mr-2" />
             New Requirement
           </Button>
         </Link>
       </div>
 
-      {/* Requirements Table */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        {listings.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">No requirements yet</p>
-            <Link href="/occupier/create-listing-quick">
-              <Button className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                Create your first requirement
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Company Name</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {listings.map((listing) => (
-                <TableRow key={listing.id}>
-                  <TableCell className="font-medium">{listing.company_name}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className={statusConfig[listing.status].className}>
-                      {statusConfig[listing.status].label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-gray-500">
-                    {new Date(listing.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link href={`/occupier/listing/${listing.id}/preview`}>
+      {/* Requirements List */}
+      {listings.length === 0 ? (
+        <div className="bg-white rounded-2xl sm:rounded-3xl border-3 border-violet-200 shadow-xl text-center py-12 px-6">
+          <p className="text-gray-500 mb-4 text-base sm:text-lg">No requirements yet</p>
+          <Link href="/occupier/create-listing-quick">
+            <Button className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl">
+              <Plus className="h-4 w-4 mr-2" />
+              Create your first requirement
+            </Button>
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {listings.map((listing) => (
+              <div
+                key={listing.id}
+                className="bg-white rounded-2xl border-3 border-violet-200 p-5 shadow-lg"
+              >
+                <div className="space-y-3">
+                  {/* Company Name */}
+                  <div>
+                    <p className="text-xs font-bold text-violet-600 uppercase tracking-wide mb-1">Company</p>
+                    <p className="text-base font-bold text-gray-900">{listing.company_name}</p>
+                  </div>
+
+                  {/* Status & Date */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-violet-600 uppercase tracking-wide mb-1">Status</p>
+                      <Badge variant="secondary" className={`${statusConfig[listing.status].className} font-bold`}>
+                        {statusConfig[listing.status].label}
+                      </Badge>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-violet-600 uppercase tracking-wide mb-1">Created</p>
+                      <p className="text-sm text-gray-600 font-medium">
+                        {new Date(listing.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-3 border-t-2 border-violet-100">
+                    <p className="text-xs font-bold text-violet-600 uppercase tracking-wide mb-2">Actions</p>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/occupier/listing/${listing.id}/preview`} className="flex-1">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          className="text-violet-600 hover:text-violet-700 hover:bg-violet-50"
+                          className="w-full text-violet-600 border-violet-300 hover:bg-violet-50 font-bold rounded-lg"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-4 w-4 mr-1.5" />
+                          View
                         </Button>
                       </Link>
-                      <Link href={`/occupier/listing/${listing.id}`}>
+                      <Link href={`/occupier/listing/${listing.id}`} className="flex-1">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                          className="w-full border-gray-300 hover:bg-gray-50 font-bold rounded-lg"
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="h-4 w-4 mr-1.5" />
+                          Edit
                         </Button>
                       </Link>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => setDeleteListingId(listing.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="border-red-300 text-red-600 hover:bg-red-50 font-bold rounded-lg px-3"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </TableCell>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white rounded-3xl border-3 border-violet-200 shadow-xl overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b-2 border-violet-200">
+                  <TableHead className="font-black text-violet-600 uppercase tracking-wide">Company Name</TableHead>
+                  <TableHead className="font-black text-violet-600 uppercase tracking-wide">Status</TableHead>
+                  <TableHead className="font-black text-violet-600 uppercase tracking-wide">Created</TableHead>
+                  <TableHead className="text-right font-black text-violet-600 uppercase tracking-wide">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+              </TableHeader>
+              <TableBody>
+                {listings.map((listing) => (
+                  <TableRow key={listing.id} className="border-b border-violet-100">
+                    <TableCell className="font-bold text-gray-900">{listing.company_name}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className={`${statusConfig[listing.status].className} font-bold`}>
+                        {statusConfig[listing.status].label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-gray-600 font-medium">
+                      {new Date(listing.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/occupier/listing/${listing.id}/preview`}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 font-bold rounded-lg"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Link href={`/occupier/listing/${listing.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 font-bold rounded-lg"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteListingId(listing.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 font-bold rounded-lg"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteListingId} onOpenChange={() => setDeleteListingId(null)}>
