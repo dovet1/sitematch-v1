@@ -85,27 +85,28 @@ export function OverviewTab({ userId }: OverviewTabProps) {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Overview</h1>
-        <p className="text-gray-500 mt-1">Your workspace at a glance</p>
+        <h1 className="text-4xl md:text-5xl font-black text-gray-900">Overview</h1>
+        <p className="text-gray-600 mt-2 text-lg font-medium">Your workspace at a glance</p>
       </div>
 
       {/* Hero CTA - Only show when no requirements */}
       {!hasRequirements && (
-        <div className="bg-gradient-to-br from-violet-600 to-purple-700 rounded-xl p-8 text-white shadow-xl">
-          <div className="max-w-2xl">
-            <h2 className="text-2xl font-bold mb-3">Welcome to SiteMatcher! 🎉</h2>
-            <p className="text-violet-100 mb-6 text-lg">
+        <div className="bg-gradient-to-br from-violet-600 to-purple-700 rounded-3xl p-8 md:p-12 text-white shadow-2xl border-4 border-violet-400/30 overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+          <div className="relative max-w-2xl">
+            <h2 className="text-3xl md:text-4xl font-black mb-4">Welcome to SiteMatcher! 🎉</h2>
+            <p className="text-violet-100 mb-8 text-lg md:text-xl font-medium">
               Post requirements or use our site assessment tools to get started.
             </p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-4">
               <Link href="/occupier/create-listing-quick">
-                <Button size="lg" className="bg-white text-violet-700 hover:bg-gray-50 font-semibold shadow-lg">
+                <Button size="lg" className="bg-white text-violet-700 hover:bg-gray-100 font-black shadow-xl hover:shadow-2xl rounded-xl px-8 py-6 text-lg">
                   <Plus className="h-5 w-5 mr-2" />
                   Post a Requirement
                 </Button>
               </Link>
-              <Link href="/site-sketcher">
-                <Button size="lg" variant="outline" className="bg-transparent border-2 border-white text-white hover:bg-white/10">
+              <Link href="/sitesketcher">
+                <Button size="lg" variant="outline" className="bg-transparent border-3 border-white text-white hover:bg-white/20 font-black rounded-xl px-8 py-6 text-lg">
                   <Wrench className="h-5 w-5 mr-2" />
                   Use SiteSketcher
                 </Button>
@@ -117,21 +118,21 @@ export function OverviewTab({ userId }: OverviewTabProps) {
 
       {/* Quick Stats Bar */}
       {hasRequirements && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Requirements Stat */}
           <button
             onClick={() => {
               const event = new CustomEvent('dashboard-tab-change', { detail: 'requirements' });
               window.dispatchEvent(event);
             }}
-            className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-violet-300 transition-all text-left group"
+            className="bg-white rounded-2xl border-3 border-violet-200 p-6 shadow-lg hover:shadow-2xl hover:border-violet-400 hover:-translate-y-1 transition-all duration-300 text-left group"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Requirements</p>
-                <p className="text-3xl font-bold text-gray-900">{totalRequirements}</p>
+                <p className="text-sm font-bold text-violet-600 mb-2 uppercase tracking-wide">Requirements</p>
+                <p className="text-4xl font-black text-gray-900">{totalRequirements}</p>
               </div>
-              <FileText className="h-8 w-8 text-violet-600 group-hover:text-violet-700" />
+              <FileText className="h-10 w-10 text-violet-600 group-hover:scale-110 transition-transform duration-300" />
             </div>
           </button>
 
@@ -141,14 +142,14 @@ export function OverviewTab({ userId }: OverviewTabProps) {
               const event = new CustomEvent('dashboard-tab-change', { detail: 'searches' });
               window.dispatchEvent(event);
             }}
-            className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-violet-300 transition-all text-left group"
+            className="bg-white rounded-2xl border-3 border-violet-200 p-6 shadow-lg hover:shadow-2xl hover:border-violet-400 hover:-translate-y-1 transition-all duration-300 text-left group"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Saved Searches</p>
-                <p className="text-3xl font-bold text-gray-900">{savedSearchCount}</p>
+                <p className="text-sm font-bold text-violet-600 mb-2 uppercase tracking-wide">Saved Searches</p>
+                <p className="text-4xl font-black text-gray-900">{savedSearchCount}</p>
               </div>
-              <Search className="h-8 w-8 text-violet-600 group-hover:text-violet-700" />
+              <Search className="h-10 w-10 text-violet-600 group-hover:scale-110 transition-transform duration-300" />
             </div>
           </button>
 
@@ -158,27 +159,29 @@ export function OverviewTab({ userId }: OverviewTabProps) {
               const event = new CustomEvent('dashboard-tab-change', { detail: 'sites' });
               window.dispatchEvent(event);
             }}
-            className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-violet-300 transition-all text-left group"
+            className="bg-white rounded-2xl border-3 border-violet-200 p-6 shadow-lg hover:shadow-2xl hover:border-violet-400 hover:-translate-y-1 transition-all duration-300 text-left group"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Assessed Sites</p>
-                <p className="text-3xl font-bold text-gray-900">{assessedSites}</p>
+                <p className="text-sm font-bold text-violet-600 mb-2 uppercase tracking-wide">Assessed Sites</p>
+                <p className="text-4xl font-black text-gray-900">{assessedSites}</p>
               </div>
-              <Building2 className="h-8 w-8 text-violet-600 group-hover:text-violet-700" />
+              <Building2 className="h-10 w-10 text-violet-600 group-hover:scale-110 transition-transform duration-300" />
             </div>
           </button>
         </div>
       )}
 
       {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Requirements Column */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+        <div className="bg-white rounded-3xl border-3 border-violet-200 p-8 shadow-xl">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-violet-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Requirements</h2>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-violet-100 rounded-xl">
+                <FileText className="h-6 w-6 text-violet-600" />
+              </div>
+              <h2 className="text-xl md:text-2xl font-black text-gray-900">Requirements</h2>
             </div>
             {hasRequirements && needsAttention > 0 && (
               <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
@@ -261,57 +264,75 @@ export function OverviewTab({ userId }: OverviewTabProps) {
         </div>
 
         {/* Site Assessment Tools Column */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <Wrench className="h-5 w-5 text-violet-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Site Assessment Tools</h2>
+        <div className="bg-white rounded-3xl border-3 border-violet-200 p-8 shadow-xl">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-violet-100 rounded-xl">
+              <Wrench className="h-6 w-6 text-violet-600" />
+            </div>
+            <h2 className="text-xl md:text-2xl font-black text-gray-900">Site Assessment Tools</h2>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Tools List */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               {/* SiteSketcher */}
-              <Link href="/site-sketcher">
-                <div className="border border-gray-200 rounded-lg p-4 hover:border-violet-300 hover:shadow-md transition-all group cursor-pointer">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 text-sm group-hover:text-violet-700 transition-colors">
-                        SiteSketcher
-                      </h3>
-                      <p className="text-xs text-gray-500 mt-1">
+              <Link href="/sitesketcher">
+                <div className="border-3 border-violet-200 rounded-2xl p-6 hover:border-violet-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group cursor-pointer bg-white">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2.5 bg-blue-100 rounded-xl flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                      <Wrench className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="text-base font-bold text-gray-900 group-hover:text-violet-700 transition-colors">
+                          SiteSketcher
+                        </h3>
+                        <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-violet-600 transition-colors flex-shrink-0" />
+                      </div>
+                      <p className="text-sm text-gray-600 font-medium mt-1">
                         Draw and measure site boundaries with aerial imagery
                       </p>
                     </div>
-                    <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-violet-600 transition-colors flex-shrink-0 ml-2" />
                   </div>
                 </div>
               </Link>
 
-              {/* Coming Soon Tools */}
-              <div className="border border-gray-200 rounded-lg p-4 opacity-60">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 text-sm">
-                      SiteAppraiser
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-1">
-                      AI-powered site valuation and market analysis
-                    </p>
-                    <p className="text-xs text-violet-600 mt-2 font-medium">Coming soon</p>
+              {/* SiteAnalyser */}
+              <Link href="/new-dashboard/tools/site-demographer">
+                <div className="border-3 border-violet-200 rounded-2xl p-6 hover:border-violet-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group cursor-pointer bg-white">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2.5 bg-violet-100 rounded-xl flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                      <Building2 className="h-5 w-5 text-violet-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="text-base font-bold text-gray-900 group-hover:text-violet-700 transition-colors">
+                          SiteAnalyser
+                        </h3>
+                        <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-violet-600 transition-colors flex-shrink-0" />
+                      </div>
+                      <p className="text-sm text-gray-600 font-medium mt-1">
+                        Analyse demographics around any site
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Link>
 
-              <div className="border border-gray-200 rounded-lg p-4 opacity-60">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 text-sm">
-                      SiteAnalyser
+              {/* Coming Soon Tool */}
+              <div className="border-2 border-gray-200 rounded-2xl p-6 bg-gray-50/50">
+                <div className="flex items-start gap-4 opacity-60">
+                  <div className="p-2.5 bg-gray-200 rounded-xl flex-shrink-0">
+                    <FileText className="h-5 w-5 text-gray-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-bold text-gray-900">
+                      SiteBrochure
                     </h3>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Detailed demographic insights for your area
+                    <p className="text-sm text-gray-600 font-medium mt-1">
+                      Generate professional requirement brochures
                     </p>
-                    <p className="text-xs text-violet-600 mt-2 font-medium">Coming soon</p>
+                    <p className="text-sm text-violet-600 mt-2 font-bold">Coming soon</p>
                   </div>
                 </div>
               </div>

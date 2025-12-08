@@ -43,31 +43,31 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50">
       {/* Mobile header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-40 flex items-center px-4">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/95 backdrop-blur-sm border-b-2 border-violet-200 shadow-md z-40 flex items-center px-4">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="mr-2"
+          className="mr-2 hover:bg-violet-50"
         >
           {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
-        <h1 className="text-lg font-semibold">Dashboard</h1>
+        <h1 className="text-lg font-black">Dashboard</h1>
       </div>
 
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed top-0 left-0 z-50 h-screen w-64 bg-white border-r border-gray-200 transition-transform duration-300 ease-in-out',
+          'fixed top-0 left-0 z-50 h-screen w-64 bg-white border-r-2 border-violet-200 shadow-xl transition-transform duration-300 ease-in-out',
           'lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-gray-200">
-          <Link href="/" className="flex items-center">
+        <div className="h-16 flex items-center px-6 border-b-2 border-violet-200 bg-gradient-to-r from-violet-50/30 to-transparent">
+          <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
             <Image
               src="/logos/logo.svg"
               alt="SiteMatcher"
@@ -92,10 +92,10 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
                   setSidebarOpen(false);
                 }}
                 className={cn(
-                  'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200',
+                  'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200',
                   isActive
-                    ? 'bg-gradient-to-r from-violet-50 to-purple-50 text-violet-700 shadow-sm'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-violet-600'
+                    ? 'bg-gradient-to-r from-violet-100 to-purple-100 text-violet-700 shadow-lg border-2 border-violet-300'
+                    : 'text-gray-700 hover:bg-violet-50 hover:text-violet-600 hover:shadow-sm'
                 )}
               >
                 <Icon className={cn('h-5 w-5', isActive && 'text-violet-600')} />
@@ -106,14 +106,14 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
         </nav>
 
         {/* User info at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t-2 border-violet-200 bg-gradient-to-r from-violet-50/30 to-transparent">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-medium">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-lg">
               {userEmail.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{userEmail}</p>
-              <p className="text-xs text-gray-500">Logged in</p>
+              <p className="text-sm font-bold text-gray-900 truncate">{userEmail}</p>
+              <p className="text-xs text-violet-600 font-medium">Logged in</p>
             </div>
           </div>
         </div>
