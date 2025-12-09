@@ -29,20 +29,54 @@ import { OverviewTab } from './overview-tab';
 import { RequirementsTab } from './requirements-tab';
 import { SavedSearchesTab } from '@/components/saved-searches/saved-searches-tab';
 import { ToolsTab } from './tools-tab';
+import { AgencyTab } from './agency-tab';
 
 interface DashboardClientProps {
   userId: string;
   userEmail: string;
 }
 
-type TabType = 'overview' | 'requirements' | 'searches' | 'sites' | 'tools';
+type TabType = 'overview' | 'requirements' | 'searches' | 'sites' | 'tools' | 'agency';
 
-const navigationItems = [
-  { id: 'overview' as TabType, label: 'Overview', icon: LayoutDashboard },
-  { id: 'requirements' as TabType, label: 'Requirements', icon: FileText },
-  { id: 'searches' as TabType, label: 'Saved Searches', icon: Search },
-  { id: 'sites' as TabType, label: 'Sites', icon: Building2 },
-  { id: 'tools' as TabType, label: 'Tools', icon: Wrench },
+interface NavigationSection {
+  header?: string;
+  items: Array<{
+    id: TabType | 'external';
+    label: string;
+    icon: any;
+    href?: string;
+    external?: boolean;
+  }>;
+}
+
+const navigationSections: NavigationSection[] = [
+  {
+    items: [
+      { id: 'overview' as TabType, label: 'Overview', icon: LayoutDashboard },
+    ],
+  },
+  {
+    header: 'Directories',
+    items: [
+      { id: 'external', label: 'Requirement Directory', icon: Search, href: '/search', external: true },
+      { id: 'external', label: 'Agency Directory', icon: Building2, href: '/agencies', external: true },
+    ],
+  },
+  {
+    header: 'Your Listings',
+    items: [
+      { id: 'requirements' as TabType, label: 'Your Requirements', icon: FileText },
+      { id: 'agency' as TabType, label: 'Your Agency', icon: Building2 },
+    ],
+  },
+  {
+    header: 'Site Assistance',
+    items: [
+      { id: 'searches' as TabType, label: 'Saved Searches', icon: Search },
+      { id: 'sites' as TabType, label: 'Your Sites', icon: Building2 },
+      { id: 'tools' as TabType, label: 'Tools', icon: Wrench },
+    ],
+  },
 ];
 
 export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
@@ -178,30 +212,58 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-1">
-          {navigationItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
+        <nav className="p-4 space-y-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 16rem)' }}>
+          {navigationSections.map((section, sectionIndex) => (
+            <div key={sectionIndex}>
+              {section.header && (
+                <h3 className="px-4 mb-2 text-xs font-black text-violet-600 uppercase tracking-wider">
+                  {section.header}
+                </h3>
+              )}
+              <div className="space-y-1">
+                {section.items.map((item, itemIndex) => {
+                  const Icon = item.icon;
+                  const isActive = !item.external && activeTab === item.id;
+                  const key = `${sectionIndex}-${itemIndex}`;
 
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setSidebarOpen(false);
-                }}
-                className={cn(
-                  'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200',
-                  isActive
-                    ? 'bg-gradient-to-r from-violet-100 to-purple-100 text-violet-700 shadow-lg border-2 border-violet-300'
-                    : 'text-gray-700 hover:bg-violet-50 hover:text-violet-600 hover:shadow-sm'
-                )}
-              >
-                <Icon className={cn('h-5 w-5', isActive && 'text-violet-600')} />
-                {item.label}
-              </button>
-            );
-          })}
+                  if (item.external && item.href) {
+                    return (
+                      <Link
+                        key={key}
+                        href={item.href}
+                        onClick={() => setSidebarOpen(false)}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 text-gray-700 hover:bg-violet-50 hover:text-violet-600 hover:shadow-sm"
+                      >
+                        <Icon className="h-5 w-5" />
+                        {item.label}
+                      </Link>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        if (item.id !== 'external') {
+                          setActiveTab(item.id as TabType);
+                          setSidebarOpen(false);
+                        }
+                      }}
+                      className={cn(
+                        'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200',
+                        isActive
+                          ? 'bg-gradient-to-r from-violet-100 to-purple-100 text-violet-700 shadow-lg border-2 border-violet-300'
+                          : 'text-gray-700 hover:bg-violet-50 hover:text-violet-600 hover:shadow-sm'
+                      )}
+                    >
+                      <Icon className={cn('h-5 w-5', isActive && 'text-violet-600')} />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* User info at bottom */}
@@ -293,6 +355,7 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
         <div className="p-6 lg:p-8">
           {activeTab === 'overview' && <OverviewTab userId={userId} />}
           {activeTab === 'requirements' && <RequirementsTab userId={userId} />}
+          {activeTab === 'agency' && <AgencyTab userId={userId} />}
           {activeTab === 'searches' && <SavedSearchesTab userId={userId} />}
           {activeTab === 'sites' && (
             <div className="text-center py-12">
