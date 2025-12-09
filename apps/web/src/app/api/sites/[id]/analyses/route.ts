@@ -1,0 +1,256 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/auth';
+import { checkSubscriptionAccess } from '@/lib/subscription';
+
+export const dynamic = 'force-dynamic';
+
+// GET /api/sites/[id]/analyses - List saved analyses for site (Pro only)
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check Pro status
+    const hasPro = await checkSubscriptionAccess(user.id);
+    if (!hasPro) {
+      return NextResponse.json(
+        { error: 'Pro subscription required' },
+        { status: 403 }
+      );
+    }
+
+    const supabase = createServerClient();
+
+    // Verify site ownership
+    const { data: site, error: siteError } = await supabase
+      .from('user_sites')
+      .select('id')
+      .eq('id', params.id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (siteError || !site) {
+      return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+    }
+
+    // Fetch analyses
+    const { data: analyses, error } = await supabase
+      .from('site_demographic_analyses')
+      .select('*')
+      .eq('site_id', params.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching analyses:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch analyses' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ analyses: analyses || [] });
+  } catch (error) {
+    console.error('Error in GET /api/sites/[id]/analyses:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/sites/[id]/analyses - Save a new analysis (Pro only)
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check Pro status
+    const hasPro = await checkSubscriptionAccess(user.id);
+    if (!hasPro) {
+      return NextResponse.json(
+        { error: 'Pro subscription required to save analyses' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+
+    // Validation
+    if (!body.name || body.name.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Analysis name is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.lng || !body.lat) {
+      return NextResponse.json(
+        { error: 'Location coordinates are required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.location_name) {
+      return NextResponse.json(
+        { error: 'Location name is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.measurement_mode || !['distance', 'drive_time', 'walk_time'].includes(body.measurement_mode)) {
+      return NextResponse.json(
+        { error: 'Valid measurement mode is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.measurement_value || body.measurement_value <= 0) {
+      return NextResponse.json(
+        { error: 'Valid measurement value is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.selected_lsoa_codes || !Array.isArray(body.selected_lsoa_codes) || body.selected_lsoa_codes.length === 0) {
+      return NextResponse.json(
+        { error: 'LSOA codes are required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.demographics_data) {
+      return NextResponse.json(
+        { error: 'Demographics data is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.national_averages) {
+      return NextResponse.json(
+        { error: 'National averages data is required' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServerClient();
+
+    // If site_id provided (params.id !== 'standalone'), verify site ownership
+    let site_id = null;
+    if (params.id !== 'standalone') {
+      const { data: site, error: siteError } = await supabase
+        .from('user_sites')
+        .select('id')
+        .eq('id', params.id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (siteError || !site) {
+        return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+      }
+      site_id = params.id;
+    }
+
+    // Create the analysis
+    const { data: newAnalysis, error: insertError } = await supabase
+      .from('site_demographic_analyses')
+      .insert({
+        site_id,
+        user_id: user.id,
+        name: body.name.trim(),
+        location: `POINT(${body.lng} ${body.lat})`,
+        location_name: body.location_name,
+        measurement_mode: body.measurement_mode,
+        measurement_value: body.measurement_value,
+        selected_lsoa_codes: body.selected_lsoa_codes,
+        demographics_data: body.demographics_data,
+        national_averages: body.national_averages,
+        isochrone_geometry: body.isochrone_geometry || null,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error creating analysis:', insertError);
+      return NextResponse.json(
+        { error: 'Failed to create analysis' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ analysis: newAnalysis }, { status: 201 });
+  } catch (error) {
+    console.error('Error in POST /api/sites/[id]/analyses:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/sites/[id]/analyses - Delete an analysis (Pro only)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check Pro status
+    const hasPro = await checkSubscriptionAccess(user.id);
+    if (!hasPro) {
+      return NextResponse.json(
+        { error: 'Pro subscription required' },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const analysis_id = searchParams.get('analysis_id');
+
+    if (!analysis_id) {
+      return NextResponse.json(
+        { error: 'analysis_id query parameter is required' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServerClient();
+
+    // Delete the analysis (verify ownership)
+    const { error } = await supabase
+      .from('site_demographic_analyses')
+      .delete()
+      .eq('id', analysis_id)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error deleting analysis:', error);
+      return NextResponse.json(
+        { error: 'Failed to delete analysis' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error in DELETE /api/sites/[id]/analyses:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

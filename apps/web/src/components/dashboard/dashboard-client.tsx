@@ -30,6 +30,7 @@ import { RequirementsTab } from './requirements-tab';
 import { SavedSearchesTab } from '@/components/saved-searches/saved-searches-tab';
 import { ToolsTab } from './tools-tab';
 import { AgencyTab } from './agency-tab';
+import { SitesTab } from './sites-tab';
 
 interface DashboardClientProps {
   userId: string;
@@ -357,13 +358,7 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
           {activeTab === 'requirements' && <RequirementsTab userId={userId} />}
           {activeTab === 'agency' && <AgencyTab userId={userId} />}
           {activeTab === 'searches' && <SavedSearchesTab userId={userId} />}
-          {activeTab === 'sites' && (
-            <div className="text-center py-12">
-              <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Sites</h3>
-              <p className="text-gray-500">Coming soon</p>
-            </div>
-          )}
+          {activeTab === 'sites' && <SitesTab userId={userId} />}
           {activeTab === 'tools' && <ToolsTab />}
         </div>
       </main>

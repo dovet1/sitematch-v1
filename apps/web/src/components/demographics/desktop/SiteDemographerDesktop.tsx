@@ -220,6 +220,7 @@ export function SiteDemographerDesktop() {
               selectedLsoaCodes={selectedLsoaCodes}
               nationalAverages={nationalAverages}
               isFreeTier={isFreeTier}
+              isochroneGeometry={isochroneGeometry}
             />
           </div>
         </div>

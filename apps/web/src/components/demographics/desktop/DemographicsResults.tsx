@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, Home, Briefcase, GraduationCap, Car, Heart, AlertCircle, TrendingUp, ChevronDown, Info } from 'lucide-react';
+import { Users, Home, Briefcase, GraduationCap, Car, Heart, AlertCircle, TrendingUp, ChevronDown, Info, Save } from 'lucide-react';
 import type { LocationResult } from '@/lib/mapbox';
 import { formatLocationDisplay } from '@/lib/mapbox';
 import type { MeasurementMode } from './LocationInputPanel';
@@ -9,6 +9,9 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { AffluenceMethodologyModal } from '../AffluenceMethodologyModal';
 import { BlurOverlay } from '../BlurOverlay';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
+import { SaveAnalysisModal } from '../SaveAnalysisModal';
+import { Button } from '@/components/ui/button';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 
 interface DemographicsResultsProps {
   loading: boolean;
@@ -21,6 +24,7 @@ interface DemographicsResultsProps {
   selectedLsoaCodes?: Set<string>;
   nationalAverages?: Record<string, number>;
   isFreeTier?: boolean;
+  isochroneGeometry?: any;
 }
 
 type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health' | 'affluence';
@@ -60,7 +64,10 @@ export function DemographicsResults({
   selectedLsoaCodes,
   nationalAverages = {},
   isFreeTier = false,
+  isochroneGeometry,
 }: DemographicsResultsProps) {
+  const { isPro } = useSubscriptionTier();
+
   // Default to first 3 categories expanded
   const [expandedCategories, setExpandedCategories] = useState<Set<CategoryType>>(
     new Set(['population', 'demographics', 'affluence'] as CategoryType[])
@@ -71,6 +78,9 @@ export function DemographicsResults({
 
   // State for upgrade banner
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
+
+  // State for save analysis modal
+  const [showSaveModal, setShowSaveModal] = useState(false);
 
   const toggleCategory = (category: CategoryType) => {
     setExpandedCategories((prev) => {
@@ -394,6 +404,16 @@ export function DemographicsResults({
               </div>
             </div>
           </div>
+
+          {/* Save Analysis Button */}
+          <Button
+            onClick={() => setShowSaveModal(true)}
+            className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl text-sm"
+            size="sm"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {isPro ? 'Save Analysis' : 'Save Analysis (Pro)'}
+          </Button>
         </div>
       </div>
 
@@ -797,6 +817,28 @@ export function DemographicsResults({
           </div>
         </div>
       )}
+
+      {/* Save Analysis Modal */}
+      <SaveAnalysisModal
+        open={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSuccess={() => {
+          setShowSaveModal(false);
+        }}
+        analysisData={location && selectedLsoaCodes && rawData ? {
+          location: {
+            lat: location.center[1],
+            lng: location.center[0],
+          },
+          location_name: formatLocationDisplay(location),
+          measurement_mode: measurementMode,
+          measurement_value: measurementValue,
+          selected_lsoa_codes: Array.from(selectedLsoaCodes),
+          demographics_data: rawData,
+          national_averages: nationalAverages,
+          isochrone_geometry: isochroneGeometry,
+        } : null}
+      />
     </div>
   );
 }
