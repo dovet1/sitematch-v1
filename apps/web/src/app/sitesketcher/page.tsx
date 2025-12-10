@@ -49,7 +49,12 @@ function SiteSketcherContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const showWelcome = searchParams?.get('welcome') === 'true';
-  
+
+  // Check if we should center on a specific location from URL params (e.g., from "Create Sketch" on a site)
+  const initialAddress = searchParams?.get('address');
+  const initialLat = searchParams?.get('lat');
+  const initialLng = searchParams?.get('lng');
+
   const [state, setState] = useState<SiteSketcherState>({
     polygons: [],
     parkingOverlays: [],
@@ -135,6 +140,37 @@ function SiteSketcherContent() {
       setMapboxError(error instanceof Error ? error.message : 'Mapbox configuration error');
     }
   }, []);
+
+  // Center map on initial location from URL parameters (e.g., from site address)
+  useEffect(() => {
+    if (initialAddress && initialLat && initialLng && mapRef.current) {
+      const lat = parseFloat(initialLat);
+      const lng = parseFloat(initialLng);
+
+      if (!isNaN(lat) && !isNaN(lng)) {
+        // Create a search result to trigger the map centering
+        const locationResult: SearchResult = {
+          id: `site-location-${Date.now()}`,
+          place_name: initialAddress,
+          center: [lng, lat],
+          place_type: ['address'],
+          properties: {}
+        };
+
+        // Set the search result which will trigger the map to fly to this location
+        setTimeout(() => {
+          setSearchResult(locationResult);
+        }, 500); // Small delay to ensure map is fully initialized
+
+        // Optionally remove the params from URL to keep it clean
+        const url = new URL(window.location.href);
+        url.searchParams.delete('address');
+        url.searchParams.delete('lat');
+        url.searchParams.delete('lng');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, [initialAddress, initialLat, initialLng]);
 
   // Save state to localStorage when it changes
   useEffect(() => {

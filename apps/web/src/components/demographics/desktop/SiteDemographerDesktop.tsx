@@ -6,13 +6,14 @@ import { LocationInputPanel } from './LocationInputPanel';
 import { DemographicsResults } from './DemographicsResults';
 import { DemographicsMap } from '../DemographicsMap';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDemographicsData } from '../shared/hooks/useDemographicsData';
 import { useLsoaSelection } from '../shared/hooks/useLsoaSelection';
 import { useLocationSearch } from '../shared/hooks/useLocationSearch';
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 import { UpgradeBanner } from '@/components/UpgradeBanner';
 import type { LocationResult } from '@/lib/mapbox';
+import { toast } from 'sonner';
 
 // Conversion constants
 const WALK_SPEED_MPH = 3;
@@ -32,6 +33,7 @@ function convertToRadiusMiles(mode: 'distance' | 'drive_time' | 'walk_time', val
 
 export function SiteDemographerDesktop() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isFreeTier, isPro, loading: tierLoading } = useSubscriptionTier();
 
   // Shared hooks for data management
@@ -45,6 +47,7 @@ export function SiteDemographerDesktop() {
     analyze,
     reset: resetDemographics,
     updateData,
+    loadSavedAnalysis,
   } = useDemographicsData();
 
   const {
@@ -71,9 +74,69 @@ export function SiteDemographerDesktop() {
   const [showTraffic, setShowTraffic] = useState(false);
   const [showCountPoints, setShowCountPoints] = useState(false);
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
 
   // Track the location that has been analyzed (map only moves when this changes)
   const [analyzedLocation, setAnalyzedLocation] = useState<LocationResult | null>(null);
+
+  // Load saved analysis from query parameter
+  useEffect(() => {
+    const analysisId = searchParams?.get('analysis');
+    if (!analysisId || loadingAnalysis) return;
+
+    const loadAnalysis = async () => {
+      setLoadingAnalysis(true);
+      try {
+        const response = await fetch(`/api/demographic-analyses/${analysisId}`);
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to load analysis');
+        }
+
+        const { analysis } = await response.json();
+
+        // Reconstruct location object from saved data
+        const reconstructedLocation: LocationResult = {
+          id: `saved-${analysis.id}`,
+          place_type: ['place'],
+          text: analysis.location_name,
+          place_name: analysis.location_name,
+          center: [analysis.location.lng, analysis.location.lat],
+          context: [],
+        };
+
+        // Load saved state
+        setSelectedLocation(reconstructedLocation);
+        setMeasurementMode(analysis.measurement_mode);
+        setMeasurementValue(analysis.measurement_value);
+
+        // Load demographics data
+        loadSavedAnalysis({
+          demographics_data: analysis.demographics_data,
+          isochrone_geometry: analysis.isochrone_geometry,
+          national_averages: analysis.national_averages,
+        });
+
+        // Initialize LSOA selection
+        initializeSelection(analysis.selected_lsoa_codes);
+
+        // Set analyzed location for map
+        setAnalyzedLocation(reconstructedLocation);
+
+        toast.success('Analysis loaded successfully');
+      } catch (error) {
+        console.error('Error loading saved analysis:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to load analysis');
+        // Clear the query parameter on error
+        router.replace('/new-dashboard/tools/site-demographer');
+      } finally {
+        setLoadingAnalysis(false);
+      }
+    };
+
+    loadAnalysis();
+  }, [searchParams]); // Only run when searchParams changes
 
   // Re-fetch aggregated data when selection changes
   useEffect(() => {

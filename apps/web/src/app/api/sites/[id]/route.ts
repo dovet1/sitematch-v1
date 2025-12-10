@@ -17,16 +17,42 @@ export async function GET(
 
     const supabase = createServerClient();
 
-    // Fetch the site
-    const { data: site, error } = await supabase
-      .from('user_sites')
-      .select('*')
-      .eq('id', params.id)
-      .eq('user_id', user.id)
-      .single();
+    // Try to fetch the site with location coordinates using the PostGIS function
+    const { data: siteData, error: siteError } = await supabase
+      .rpc('get_site_with_location', { p_site_id: params.id });
 
-    if (error || !site) {
-      return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+    let site = null;
+
+    if (siteError || !siteData || siteData.length === 0) {
+      // Fallback: fetch without coordinates
+      console.log('get_site_with_location RPC not available, using fallback');
+      const { data: basicSite, error: basicError } = await supabase
+        .from('user_sites')
+        .select(`
+          id,
+          user_id,
+          name,
+          address,
+          description,
+          created_at,
+          updated_at
+        `)
+        .eq('id', params.id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (basicError || !basicSite) {
+        return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+      }
+
+      // Set location to null since we can't extract it
+      site = { ...basicSite, location: null };
+    } else {
+      site = siteData[0];
+      // Verify ownership
+      if (site.user_id !== user.id) {
+        return NextResponse.json({ error: 'Site not found' }, { status: 404 });
+      }
     }
 
     // Fetch all attachments

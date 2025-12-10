@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Ruler, BarChart3, Loader2, Plus, ExternalLink, Trash2, Lock, X } from 'lucide-react';
+import { Search, Ruler, BarChart3, Loader2, Plus, ExternalLink, Trash2, Lock, X, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -61,11 +61,20 @@ interface Analysis {
   created_at: string;
 }
 
+interface Site {
+  id: string;
+  name: string;
+  address: string;
+  location: any;
+  description?: string;
+}
+
 export function SiteDetailView({ siteId, siteName, open, onClose, onUpdate }: SiteDetailViewProps) {
   const router = useRouter();
   const { isPro, isFreeTier } = useSubscriptionTier();
 
   const [loading, setLoading] = useState(true);
+  const [site, setSite] = useState<Site | null>(null);
   const [searches, setSearches] = useState<SavedSearch[]>([]);
   const [sketches, setSketches] = useState<Sketch[]>([]);
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
@@ -95,6 +104,7 @@ export function SiteDetailView({ siteId, siteName, open, onClose, onUpdate }: Si
       if (!response.ok) throw new Error('Failed to fetch site details');
 
       const data = await response.json();
+      setSite(data.site);
       setSearches(data.site.searches || []);
       setSketches(data.site.sketches || []);
       setAnalyses(data.site.analyses || []);
@@ -292,7 +302,19 @@ export function SiteDetailView({ siteId, siteName, open, onClose, onUpdate }: Si
                       View Sketches
                     </Button>
                     <Button
-                      onClick={() => router.push('/sitesketcher')}
+                      onClick={() => {
+                        // Pass site location to SiteSketcher via URL params
+                        if (site?.location) {
+                          const params = new URLSearchParams({
+                            address: site.address,
+                            lat: site.location.lat.toString(),
+                            lng: site.location.lng.toString(),
+                          });
+                          router.push(`/sitesketcher?${params.toString()}`);
+                        } else {
+                          router.push('/sitesketcher');
+                        }
+                      }}
                       className="w-full bg-white border-2 border-gray-200 hover:bg-gray-50 text-gray-700 font-bold rounded-xl"
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -508,7 +530,8 @@ export function SiteDetailView({ siteId, siteName, open, onClose, onUpdate }: Si
                     {analyses.map((analysis) => (
                       <div
                         key={analysis.id}
-                        className="bg-white rounded-xl border-2 border-purple-200 p-4 hover:shadow-lg transition-shadow"
+                        className="bg-white rounded-xl border-2 border-purple-200 p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => router.push(`/new-dashboard/tools/site-demographer?analysis=${analysis.id}`)}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
@@ -521,7 +544,16 @@ export function SiteDetailView({ siteId, siteName, open, onClose, onUpdate }: Si
                               <span>{formatDate(analysis.created_at)}</span>
                             </div>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => router.push(`/new-dashboard/tools/site-demographer?analysis=${analysis.id}`)}
+                              className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                              title="View full analysis"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -530,6 +562,7 @@ export function SiteDetailView({ siteId, siteName, open, onClose, onUpdate }: Si
                                 setDetachingType('analysis');
                               }}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              title="Delete analysis"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -688,7 +721,7 @@ export function SiteDetailView({ siteId, siteName, open, onClose, onUpdate }: Si
                 'Access all requirement listings',
                 'Pro access to all tools',
               ]}
-              context="sites"
+              context="general"
               onDismiss={() => setShowUpgradeBanner(false)}
             />
           </div>

@@ -31,13 +31,14 @@ import { SavedSearchesTab } from '@/components/saved-searches/saved-searches-tab
 import { ToolsTab } from './tools-tab';
 import { AgencyTab } from './agency-tab';
 import { SitesTab } from './sites-tab';
+import { OutputsTab } from './outputs-tab';
 
 interface DashboardClientProps {
   userId: string;
   userEmail: string;
 }
 
-type TabType = 'overview' | 'requirements' | 'searches' | 'sites' | 'tools' | 'agency';
+type TabType = 'overview' | 'requirements' | 'searches' | 'sites' | 'outputs' | 'tools' | 'agency';
 
 interface NavigationSection {
   header?: string;
@@ -71,10 +72,10 @@ const navigationSections: NavigationSection[] = [
     ],
   },
   {
-    header: 'Site Assistance',
+    header: 'Site Tools',
     items: [
-      { id: 'searches' as TabType, label: 'Saved Searches', icon: Search },
       { id: 'sites' as TabType, label: 'Your Sites', icon: Building2 },
+      { id: 'outputs' as TabType, label: 'My Outputs', icon: FileText },
       { id: 'tools' as TabType, label: 'Tools', icon: Wrench },
     ],
   },
@@ -359,6 +360,7 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
           {activeTab === 'agency' && <AgencyTab userId={userId} />}
           {activeTab === 'searches' && <SavedSearchesTab userId={userId} />}
           {activeTab === 'sites' && <SitesTab userId={userId} />}
+          {activeTab === 'outputs' && <OutputsTab userId={userId} />}
           {activeTab === 'tools' && <ToolsTab />}
         </div>
       </main>
