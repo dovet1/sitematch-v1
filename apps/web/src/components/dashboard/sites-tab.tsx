@@ -2,10 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Building2, Plus, Loader2, MapPin, Search, Ruler, BarChart3, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Building2, Plus, Loader2, MapPin, Search, Ruler, BarChart3, MoreVertical, Pencil, Trash2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { SiteCreationModal } from './site-creation-modal';
 import { SiteDetailView } from './site-detail-view';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -164,101 +173,183 @@ export function SitesTab({ userId }: SitesTabProps) {
             </div>
           </div>
         ) : (
-          /* Sites Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {sites.map((site) => (
-              <div
-                key={site.id}
-                className="bg-white rounded-2xl border-3 border-violet-200 shadow-lg hover:shadow-xl transition-all duration-200 overflow-hidden"
-              >
-                {/* Card Header */}
-                <div className="p-5 sm:p-6 border-b-2 border-violet-100">
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex-1 break-words">
-                      {site.name}
-                    </h3>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+          <>
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+              {sites.map((site) => (
+                <div
+                  key={site.id}
+                  className="bg-white rounded-2xl border-3 border-violet-200 p-5 shadow-lg"
+                >
+                  <div className="space-y-3">
+                    {/* Site Name */}
+                    <div>
+                      <p className="text-xs font-bold text-violet-600 uppercase tracking-wide mb-1">Site Name</p>
+                      <p className="text-base font-bold text-gray-900">{site.name}</p>
+                    </div>
+
+                    {/* Address */}
+                    <div>
+                      <p className="text-xs font-bold text-violet-600 uppercase tracking-wide mb-1">Address</p>
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-violet-600" />
+                        <p className="text-sm text-gray-600 font-medium break-words">{site.address}</p>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    {site.description && (
+                      <div>
+                        <p className="text-xs font-bold text-violet-600 uppercase tracking-wide mb-1">Description</p>
+                        <p className="text-sm text-gray-600">{site.description}</p>
+                      </div>
+                    )}
+
+                    {/* Attachment Counts */}
+                    <div>
+                      <p className="text-xs font-bold text-violet-600 uppercase tracking-wide mb-2">Attachments</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="secondary" className="bg-violet-100 text-violet-700 border-violet-300 font-bold">
+                          <Search className="h-3 w-3 mr-1" />
+                          {site.attachment_counts.searches} Searches
+                        </Badge>
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-300 font-bold">
+                          <Ruler className="h-3 w-3 mr-1" />
+                          {site.attachment_counts.sketches} Sketches
+                        </Badge>
+                        <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-300 font-bold">
+                          <BarChart3 className="h-3 w-3 mr-1" />
+                          {site.attachment_counts.analyses} Analyses
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Created Date */}
+                    <div>
+                      <p className="text-xs font-bold text-violet-600 uppercase tracking-wide mb-1">Created</p>
+                      <p className="text-sm text-gray-600 font-medium">
+                        {new Date(site.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-3 border-t-2 border-violet-100">
+                      <p className="text-xs font-bold text-violet-600 uppercase tracking-wide mb-2">Actions</p>
+                      <div className="flex items-center gap-2">
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg hover:bg-violet-50"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(site)}
+                          className="flex-1 text-violet-600 border-violet-300 hover:bg-violet-50 font-bold rounded-lg"
                         >
-                          <MoreVertical className="h-4 w-4" />
+                          <Eye className="h-4 w-4 mr-1.5" />
+                          View
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(site)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteClick(site.id)}
-                          className="text-red-600 focus:text-red-600"
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(site)}
+                          className="flex-1 border-gray-300 hover:bg-gray-50 font-bold rounded-lg"
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          <Pencil className="h-4 w-4 mr-1.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteClick(site.id)}
+                          className="border-red-300 text-red-600 hover:bg-red-50 font-bold rounded-lg px-3"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="flex items-start gap-2 text-sm text-gray-600 mb-3">
-                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-violet-600" />
-                    <span className="break-words">{site.address}</span>
-                  </div>
-
-                  {site.description && (
-                    <p className="text-sm text-gray-600 line-clamp-2">
-                      {site.description}
-                    </p>
-                  )}
                 </div>
+              ))}
+            </div>
 
-                {/* Attachment Summary */}
-                <div className="p-5 sm:p-6 bg-gradient-to-br from-violet-50/50 to-purple-50/50">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Search className="h-4 w-4 text-violet-600" />
-                        <span className="font-medium">Saved Searches</span>
-                      </div>
-                      <span className="font-bold text-violet-600">
-                        {site.attachment_counts.searches}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Ruler className="h-4 w-4 text-blue-600" />
-                        <span className="font-medium">Sketches</span>
-                      </div>
-                      <span className="font-bold text-blue-600">
-                        {site.attachment_counts.sketches}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <BarChart3 className="h-4 w-4 text-purple-600" />
-                        <span className="font-medium">Analyses</span>
-                      </div>
-                      <span className="font-bold text-purple-600">
-                        {site.attachment_counts.analyses}
-                      </span>
-                    </div>
-                  </div>
-
-                  <Button
-                    className="w-full mt-4 bg-white border-2 border-violet-200 hover:bg-violet-50 text-violet-700 font-bold rounded-xl"
-                    onClick={() => handleViewDetails(site)}
-                  >
-                    View Details
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-white rounded-3xl border-3 border-violet-200 shadow-xl overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b-2 border-violet-200">
+                    <TableHead className="font-black text-violet-600 uppercase tracking-wide">Site Name</TableHead>
+                    <TableHead className="font-black text-violet-600 uppercase tracking-wide">Address</TableHead>
+                    <TableHead className="font-black text-violet-600 uppercase tracking-wide text-center">Searches</TableHead>
+                    <TableHead className="font-black text-violet-600 uppercase tracking-wide text-center">Sketches</TableHead>
+                    <TableHead className="font-black text-violet-600 uppercase tracking-wide text-center">Analyses</TableHead>
+                    <TableHead className="font-black text-violet-600 uppercase tracking-wide">Created</TableHead>
+                    <TableHead className="text-right font-black text-violet-600 uppercase tracking-wide">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sites.map((site) => (
+                    <TableRow key={site.id} className="border-b border-violet-100">
+                      <TableCell
+                        className="font-bold text-gray-900 cursor-pointer hover:text-violet-600"
+                        onClick={() => handleViewDetails(site)}
+                      >
+                        {site.name}
+                      </TableCell>
+                      <TableCell className="text-gray-600 font-medium max-w-xs truncate" title={site.address}>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3 w-3 text-violet-600 flex-shrink-0" />
+                          <span className="truncate">{site.address}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary" className="bg-violet-100 text-violet-700 border-violet-300 font-bold">
+                          {site.attachment_counts.searches}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-300 font-bold">
+                          {site.attachment_counts.sketches}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-purple-300 font-bold">
+                          {site.attachment_counts.analyses}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-gray-600 font-medium">
+                        {new Date(site.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewDetails(site)}
+                            className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 font-bold rounded-lg"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(site)}
+                            className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 font-bold rounded-lg"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(site.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 font-bold rounded-lg"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </div>
 
