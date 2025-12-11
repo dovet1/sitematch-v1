@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BarChart3, Plus, Eye, Trash2, Users, Loader2 } from 'lucide-react';
+import { BarChart3, Plus, Eye, Trash2, Users, Loader2, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import {
@@ -16,6 +16,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Analysis {
   id: string;
@@ -45,6 +51,9 @@ export function SiteAnalysesSection({
 }: SiteAnalysesSectionProps) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [availableAnalyses, setAvailableAnalyses] = useState<Analysis[]>([]);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
 
   const handleCreateNew = () => {
     const params = new URLSearchParams({
@@ -84,6 +93,44 @@ export function SiteAnalysesSection({
     }
   };
 
+  const fetchAvailableAnalyses = async () => {
+    try {
+      const response = await fetch('/api/demographic-analyses');
+      if (!response.ok) throw new Error('Failed to fetch analyses');
+
+      const data = await response.json();
+      // Filter out analyses already attached
+      const attachedIds = new Set(analyses.map(a => a.id));
+      setAvailableAnalyses(data.analyses.filter((a: Analysis) => !attachedIds.has(a.id)));
+    } catch (error) {
+      console.error('Error fetching analyses:', error);
+      toast.error('Failed to load analyses');
+    }
+  };
+
+  const handleLinkAnalysis = async (analysisId: string) => {
+    setLinkingId(analysisId);
+
+    try {
+      const response = await fetch(`/api/sites/${siteId}/analyses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysis_id: analysisId })
+      });
+
+      if (!response.ok) throw new Error('Failed to link analysis');
+
+      toast.success('Analysis linked successfully');
+      setShowLinkModal(false);
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error linking analysis:', error);
+      toast.error('Failed to link analysis');
+    } finally {
+      setLinkingId(null);
+    }
+  };
+
   const formatMeasurement = (mode: string, value: number) => {
     if (mode === 'distance') {
       return `${value} mile${value !== 1 ? 's' : ''}`;
@@ -110,14 +157,27 @@ export function SiteAnalysesSection({
           <h2 className="text-2xl font-black text-gray-900">Market Analysis</h2>
           <p className="text-sm text-gray-600 mt-1">Demographic and catchment area analyses for this site</p>
         </div>
-        <Button
-          onClick={handleCreateNew}
-          className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-bold rounded-xl shadow-lg"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Create New</span>
-          <span className="sm:hidden">New</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => {
+              fetchAvailableAnalyses();
+              setShowLinkModal(true);
+            }}
+            variant="outline"
+            className="border-2 border-purple-300 hover:bg-purple-50 text-purple-700 font-bold rounded-xl hidden sm:flex"
+          >
+            <Link2 className="h-4 w-4 mr-2" />
+            Link Existing
+          </Button>
+          <Button
+            onClick={handleCreateNew}
+            className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-bold rounded-xl shadow-lg"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Create New</span>
+            <span className="sm:hidden">New</span>
+          </Button>
+        </div>
       </div>
 
       {/* Analyses Grid */}
@@ -203,6 +263,52 @@ export function SiteAnalysesSection({
           ))}
         </div>
       )}
+
+      {/* Link Analysis Modal */}
+      <Dialog open={showLinkModal} onOpenChange={setShowLinkModal}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black">Link Existing Analysis</DialogTitle>
+          </DialogHeader>
+
+          {availableAnalyses.length === 0 ? (
+            <div className="text-center py-8">
+              <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600">No available analyses to link</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {availableAnalyses.map((analysis) => (
+                <div
+                  key={analysis.id}
+                  className="bg-white rounded-xl border-2 border-purple-200 p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 mb-1">{analysis.name}</h4>
+                      <p className="text-sm text-gray-600 mb-2">{analysis.location_name}</p>
+                      <Badge className="bg-purple-600 text-white font-bold text-xs">
+                        {formatMeasurement(analysis.measurement_mode, analysis.measurement_value)}
+                      </Badge>
+                    </div>
+                    <Button
+                      onClick={() => handleLinkAnalysis(analysis.id)}
+                      disabled={linkingId === analysis.id}
+                      className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-bold rounded-xl"
+                    >
+                      {linkingId === analysis.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Link'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>

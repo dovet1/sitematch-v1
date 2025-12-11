@@ -85,7 +85,56 @@ export async function POST(
     }
 
     const body = await request.json();
+    const supabase = createServerClient();
 
+    // Check if this is a link request (has analysis_id) or a create request
+    if (body.analysis_id) {
+      // LINK EXISTING ANALYSIS
+      // Verify the analysis exists and belongs to the user
+      const { data: analysis, error: analysisError } = await supabase
+        .from('site_demographic_analyses')
+        .select('id, user_id, site_id')
+        .eq('id', body.analysis_id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (analysisError || !analysis) {
+        return NextResponse.json(
+          { error: 'Analysis not found' },
+          { status: 404 }
+        );
+      }
+
+      // If already linked to this site, return success
+      if (analysis.site_id === params.id) {
+        return NextResponse.json({
+          success: true,
+          message: 'Analysis already linked to this site'
+        });
+      }
+
+      // Link the analysis to the site
+      const { error: updateError } = await supabase
+        .from('site_demographic_analyses')
+        .update({ site_id: params.id })
+        .eq('id', body.analysis_id)
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        console.error('Error linking analysis:', updateError);
+        return NextResponse.json(
+          { error: 'Failed to link analysis' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Analysis linked successfully'
+      });
+    }
+
+    // CREATE NEW ANALYSIS
     // Validation
     if (!body.name || body.name.trim().length === 0) {
       return NextResponse.json(
@@ -142,8 +191,6 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    const supabase = createServerClient();
 
     // If site_id provided (params.id !== 'standalone'), verify site ownership
     let site_id = null;

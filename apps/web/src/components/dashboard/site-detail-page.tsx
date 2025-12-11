@@ -115,7 +115,13 @@ export function SiteDetailPage({ siteId, userId }: SiteDetailPageProps) {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <Button
               variant="ghost"
-              onClick={() => router.push('/new-dashboard')}
+              onClick={() => {
+                router.push('/new-dashboard');
+                // Trigger tab change after navigation
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('dashboard-tab-change', { detail: 'sites' }));
+                }, 100);
+              }}
               className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 font-bold rounded-xl"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
