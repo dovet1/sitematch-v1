@@ -48,9 +48,10 @@ interface RequirementMatchesSectionProps {
   siteId: string;
   searches: SavedSearch[];
   onUpdate?: () => void;
+  onListingClick?: (listingId: string) => void;
 }
 
-export function RequirementMatchesSection({ siteId, searches: initialSearches, onUpdate }: RequirementMatchesSectionProps) {
+export function RequirementMatchesSection({ siteId, searches: initialSearches, onUpdate, onListingClick }: RequirementMatchesSectionProps) {
   const [searches, setSearches] = useState(initialSearches);
   const [expandedSearches, setExpandedSearches] = useState<Set<string>>(new Set());
   const [matches, setMatches] = useState<Record<string, MatchingListing[]>>({});
@@ -309,10 +310,10 @@ export function RequirementMatchesSection({ siteId, searches: initialSearches, o
                     ) : (
                       <div className="space-y-2">
                         {searchMatches.slice(0, 5).map((listing) => (
-                          <Link
+                          <button
                             key={listing.id}
-                            href={`/listing/${listing.id}`}
-                            className="block bg-white rounded-xl border-2 border-violet-200 p-4 hover:shadow-md hover:border-violet-400 transition-all"
+                            onClick={() => onListingClick?.(listing.id)}
+                            className="w-full text-left bg-white rounded-xl border-2 border-violet-200 p-4 hover:shadow-md hover:border-violet-400 transition-all"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1">
@@ -323,7 +324,7 @@ export function RequirementMatchesSection({ siteId, searches: initialSearches, o
                               </div>
                               <Building className="h-5 w-5 text-violet-600 flex-shrink-0" />
                             </div>
-                          </Link>
+                          </button>
                         ))}
                         {searchMatches.length > 5 && (
                           <Link href={`/search?saved_search=${search.id}`}>

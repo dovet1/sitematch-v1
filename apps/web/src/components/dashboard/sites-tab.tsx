@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Plus, Loader2, MapPin, Search, Ruler, BarChart3, MoreVertical, Pencil, Trash2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { SiteCreationModal } from './site-creation-modal';
-import { SiteDetailView } from './site-detail-view';
 import {
   Table,
   TableBody,
@@ -51,12 +51,12 @@ interface SitesTabProps {
 }
 
 export function SitesTab({ userId }: SitesTabProps) {
+  const router = useRouter();
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingSite, setEditingSite] = useState<Site | null>(null);
   const [deletingSiteId, setDeletingSiteId] = useState<string | null>(null);
-  const [viewingSite, setViewingSite] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     fetchSites();
@@ -113,7 +113,7 @@ export function SitesTab({ userId }: SitesTabProps) {
   };
 
   const handleViewDetails = (site: Site) => {
-    setViewingSite({ id: site.id, name: site.name });
+    router.push(`/new-dashboard/sites/${site.id}`);
   };
 
   if (loading) {
@@ -363,17 +363,6 @@ export function SitesTab({ userId }: SitesTabProps) {
         onSuccess={handleCreateSuccess}
         editingSite={editingSite}
       />
-
-      {/* Site Detail View Modal */}
-      {viewingSite && (
-        <SiteDetailView
-          siteId={viewingSite.id}
-          siteName={viewingSite.name}
-          open={!!viewingSite}
-          onClose={() => setViewingSite(null)}
-          onUpdate={fetchSites}
-        />
-      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deletingSiteId} onOpenChange={() => setDeletingSiteId(null)}>

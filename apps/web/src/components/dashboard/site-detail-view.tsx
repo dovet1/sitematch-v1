@@ -8,6 +8,7 @@ import {
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog';
+import { ListingModal } from '@/components/listings/ListingModal';
 import { SiteHeaderSection } from './site-report/SiteHeaderSection';
 import { RequirementMatchesSection } from './site-report/RequirementMatchesSection';
 import { SiteSketchesSection } from './site-report/SiteSketchesSection';
@@ -61,6 +62,7 @@ export function SiteDetailView({ siteId, siteName, open, onClose, onUpdate }: Si
   const [searches, setSearches] = useState<SavedSearch[]>([]);
   const [sketches, setSketches] = useState<Sketch[]>([]);
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -93,79 +95,93 @@ export function SiteDetailView({ siteId, siteName, open, onClose, onUpdate }: Si
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[95vh] overflow-y-auto p-0">
-        {loading ? (
-          <div className="flex items-center justify-center py-32">
-            <Loader2 className="h-12 w-12 animate-spin text-violet-600" />
-          </div>
-        ) : site ? (
-          <div className="relative">
-            {/* Close Button - Fixed position */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="absolute top-4 right-4 z-10 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-gray-100 border-2 border-gray-200"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-
-            {/* Content with padding */}
-            <div className="p-6 md:p-8 space-y-8 md:space-y-12">
-              {/* Site Header Section */}
-              <SiteHeaderSection
-                siteId={siteId}
-                name={site.name}
-                address={site.address}
-                description={site.description}
-                location={site.location}
-                onUpdate={handleUpdate}
-              />
-
-              {/* Divider */}
-              <div className="border-t-3 border-gray-200" />
-
-              {/* Requirement Matches Section */}
-              <RequirementMatchesSection
-                siteId={siteId}
-                searches={searches}
-                onUpdate={handleUpdate}
-              />
-
-              {/* Divider */}
-              <div className="border-t-3 border-gray-200" />
-
-              {/* Site Sketches Section */}
-              <SiteSketchesSection
-                siteId={siteId}
-                siteName={site.name}
-                siteAddress={site.address}
-                siteLocation={site.location}
-                sketches={sketches}
-                onUpdate={handleUpdate}
-              />
-
-              {/* Divider */}
-              <div className="border-t-3 border-gray-200" />
-
-              {/* Site Analyses Section */}
-              <SiteAnalysesSection
-                siteId={siteId}
-                siteName={site.name}
-                siteAddress={site.address}
-                siteLocation={site.location}
-                analyses={analyses}
-                onUpdate={handleUpdate}
-              />
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[95vh] overflow-y-auto p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-32">
+              <Loader2 className="h-12 w-12 animate-spin text-violet-600" />
             </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center py-32">
-            <p className="text-gray-600">Site not found</p>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          ) : site ? (
+            <div className="relative">
+              {/* Close Button - Fixed position */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="absolute top-4 right-4 z-10 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-gray-100 border-2 border-gray-200"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+
+              {/* Content with padding */}
+              <div className="p-6 md:p-8 space-y-8 md:space-y-12">
+                {/* Site Header Section */}
+                <SiteHeaderSection
+                  siteId={siteId}
+                  name={site.name}
+                  address={site.address}
+                  description={site.description}
+                  location={site.location}
+                  onUpdate={handleUpdate}
+                />
+
+                {/* Divider */}
+                <div className="border-t-3 border-gray-200" />
+
+                {/* Requirement Matches Section */}
+                <RequirementMatchesSection
+                  siteId={siteId}
+                  searches={searches}
+                  onUpdate={handleUpdate}
+                  onListingClick={setSelectedListingId}
+                />
+
+                {/* Divider */}
+                <div className="border-t-3 border-gray-200" />
+
+                {/* Site Sketches Section */}
+                <SiteSketchesSection
+                  siteId={siteId}
+                  siteName={site.name}
+                  siteAddress={site.address}
+                  siteLocation={site.location}
+                  sketches={sketches}
+                  onUpdate={handleUpdate}
+                />
+
+                {/* Divider */}
+                <div className="border-t-3 border-gray-200" />
+
+                {/* Site Analyses Section */}
+                <SiteAnalysesSection
+                  siteId={siteId}
+                  siteName={site.name}
+                  siteAddress={site.address}
+                  siteLocation={site.location}
+                  analyses={analyses}
+                  onUpdate={handleUpdate}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-32">
+              <p className="text-gray-600">Site not found</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Listing Modal - Rendered as a sibling to the site dialog with higher z-index */}
+      {selectedListingId && (
+        <div className="relative z-[10020]">
+          <ListingModal
+            listingId={selectedListingId}
+            isOpen={!!selectedListingId}
+            onClose={() => setSelectedListingId(null)}
+          />
+        </div>
+      )}
+    </>
   );
 }
