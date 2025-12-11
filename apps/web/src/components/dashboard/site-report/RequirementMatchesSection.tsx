@@ -34,9 +34,14 @@ interface SavedSearch {
 
 interface MatchingListing {
   id: string;
-  title: string;
-  address?: string;
-  listing_type?: string;
+  company_name: string;
+  listing_type: 'commercial' | 'residential';
+  location?: {
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  distance_miles?: number;
 }
 
 interface RequirementMatchesSectionProps {
@@ -311,9 +316,9 @@ export function RequirementMatchesSection({ siteId, searches: initialSearches, o
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1">
-                                <h4 className="font-bold text-gray-900 mb-1">{listing.title}</h4>
-                                {listing.address && (
-                                  <p className="text-sm text-gray-600">{listing.address}</p>
+                                <h4 className="font-bold text-gray-900 mb-1">{listing.company_name}</h4>
+                                {listing.location?.address && (
+                                  <p className="text-sm text-gray-600">{listing.location.address}</p>
                                 )}
                               </div>
                               <Building className="h-5 w-5 text-violet-600 flex-shrink-0" />

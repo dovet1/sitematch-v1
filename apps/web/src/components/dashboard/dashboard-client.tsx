@@ -74,6 +74,7 @@ const navigationSections: NavigationSection[] = [
   {
     header: 'Site Tools',
     items: [
+      { id: 'searches' as TabType, label: 'Saved Searches', icon: Search },
       { id: 'sites' as TabType, label: 'Your Sites', icon: Building2 },
       { id: 'outputs' as TabType, label: 'My Outputs', icon: FileText },
       { id: 'tools' as TabType, label: 'Tools', icon: Wrench },
