@@ -16,6 +16,7 @@ import {
   Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { LinkToSiteModal } from './LinkToSiteModal';
 import {
   Table,
   TableBody,
@@ -69,6 +70,13 @@ interface Analysis {
 interface Site {
   id: string;
   name: string;
+  address: string;
+  created_at: string;
+  attachment_counts?: {
+    searches: number;
+    sketches: number;
+    analyses: number;
+  };
 }
 
 interface OutputsTabProps {
@@ -91,10 +99,19 @@ export function OutputsTab({ userId }: OutputsTabProps) {
   const [deletingType, setDeletingType] = useState<'search' | 'sketch' | 'analysis' | null>(null);
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const [linkingType, setLinkingType] = useState<'search' | 'sketch' | 'analysis' | null>(null);
-  const [selectedSiteId, setSelectedSiteId] = useState<string>('');
+  const [recentSiteIds, setRecentSiteIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetchAllData();
+    // Load recent site IDs from localStorage
+    try {
+      const stored = localStorage.getItem('recentSiteIds');
+      if (stored) {
+        setRecentSiteIds(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Failed to load recent sites:', error);
+    }
   }, [userId]);
 
   const fetchAllData = async () => {
@@ -242,17 +259,17 @@ export function OutputsTab({ userId }: OutputsTabProps) {
     }
   };
 
-  const handleLink = async () => {
-    if (!linkingId || !linkingType || !selectedSiteId) return;
+  const handleLink = async (siteId: string) => {
+    if (!linkingId || !linkingType) return;
 
     try {
       let endpoint = '';
       if (linkingType === 'search') {
-        endpoint = `/api/sites/${selectedSiteId}/searches`;
+        endpoint = `/api/sites/${siteId}/searches`;
       } else if (linkingType === 'sketch') {
-        endpoint = `/api/sites/${selectedSiteId}/sketches`;
+        endpoint = `/api/sites/${siteId}/sketches`;
       } else if (linkingType === 'analysis') {
-        endpoint = `/api/sites/${selectedSiteId}/analyses`;
+        endpoint = `/api/sites/${siteId}/analyses`;
       }
 
       const body: any = {};
@@ -268,6 +285,15 @@ export function OutputsTab({ userId }: OutputsTabProps) {
 
       if (!response.ok) throw new Error('Failed to link');
 
+      // Track recently used site
+      const updatedRecent = [siteId, ...recentSiteIds.filter(id => id !== siteId)].slice(0, 5);
+      setRecentSiteIds(updatedRecent);
+      try {
+        localStorage.setItem('recentSiteIds', JSON.stringify(updatedRecent));
+      } catch (error) {
+        console.error('Failed to save recent sites:', error);
+      }
+
       toast.success(`${linkingType} linked to site successfully`);
       await fetchAllData();
     } catch (error) {
@@ -276,7 +302,6 @@ export function OutputsTab({ userId }: OutputsTabProps) {
     } finally {
       setLinkingId(null);
       setLinkingType(null);
-      setSelectedSiteId('');
     }
   };
 
@@ -950,45 +975,23 @@ export function OutputsTab({ userId }: OutputsTabProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Link to Site Dialog */}
-      <AlertDialog open={!!linkingId} onOpenChange={() => {
-        setLinkingId(null);
-        setLinkingType(null);
-        setSelectedSiteId('');
-      }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Link {linkingType} to Site</AlertDialogTitle>
-            <AlertDialogDescription>
-              Choose a site to link this {linkingType} to.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4">
-            <select
-              value={selectedSiteId}
-              onChange={(e) => setSelectedSiteId(e.target.value)}
-              className="w-full rounded-lg border-2 border-gray-200 p-2 font-medium"
-            >
-              <option value="">Select a site...</option>
-              {sites.map((site) => (
-                <option key={site.id} value={site.id}>
-                  {site.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleLink}
-              disabled={!selectedSiteId}
-              className="bg-violet-600 hover:bg-violet-700"
-            >
-              Link to Site
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Link to Site Modal */}
+      <LinkToSiteModal
+        open={!!linkingId}
+        onClose={() => {
+          setLinkingId(null);
+          setLinkingType(null);
+        }}
+        onLink={handleLink}
+        sites={sites.map(site => ({
+          ...site,
+          searches_count: site.attachment_counts?.searches,
+          sketches_count: site.attachment_counts?.sketches,
+          analyses_count: site.attachment_counts?.analyses,
+        }))}
+        outputType={linkingType || 'search'}
+        recentSiteIds={recentSiteIds}
+      />
     </>
   );
 }

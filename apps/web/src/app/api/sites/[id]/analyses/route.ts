@@ -230,20 +230,52 @@ export async function DELETE(
 
     const supabase = createServerClient();
 
-    // Delete the analysis (verify ownership)
-    const { error } = await supabase
+    // First, verify the analysis exists and belongs to the user
+    const { data: analysis, error: fetchError } = await supabase
       .from('site_demographic_analyses')
-      .delete()
+      .select('id, site_id')
       .eq('id', analysis_id)
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .single();
 
-    if (error) {
-      console.error('Error deleting analysis:', error);
+    if (fetchError || !analysis) {
+      console.error('Error fetching analysis:', fetchError);
       return NextResponse.json(
-        { error: 'Failed to delete analysis' },
+        { error: 'Analysis not found' },
+        { status: 404 }
+      );
+    }
+
+    // If already unlinked, return success
+    if (analysis.site_id === null) {
+      return NextResponse.json({ success: true, message: 'Analysis already unlinked' });
+    }
+
+    // If linked to a different site, return error
+    if (analysis.site_id !== params.id) {
+      return NextResponse.json(
+        { error: 'Analysis is linked to a different site' },
+        { status: 400 }
+      );
+    }
+
+    // Unlink the analysis from the site
+    const { data: updatedData, error: updateError } = await supabase
+      .from('site_demographic_analyses')
+      .update({ site_id: null })
+      .eq('id', analysis_id)
+      .eq('user_id', user.id)
+      .select();
+
+    if (updateError) {
+      console.error('Error unlinking analysis:', updateError);
+      return NextResponse.json(
+        { error: 'Failed to unlink analysis' },
         { status: 500 }
       );
     }
+
+    console.log('Unlinked analysis:', analysis_id, 'Updated rows:', updatedData?.length);
 
     return NextResponse.json({ success: true });
   } catch (error) {
