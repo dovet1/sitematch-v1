@@ -25,6 +25,7 @@ interface DemographicsResultsProps {
   nationalAverages?: Record<string, number>;
   isFreeTier?: boolean;
   isochroneGeometry?: any;
+  linkedSiteId?: string | null;
 }
 
 type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health' | 'affluence';
@@ -65,6 +66,7 @@ export function DemographicsResults({
   nationalAverages = {},
   isFreeTier = false,
   isochroneGeometry,
+  linkedSiteId,
 }: DemographicsResultsProps) {
   const { isPro } = useSubscriptionTier();
 
@@ -838,6 +840,7 @@ export function DemographicsResults({
           national_averages: nationalAverages,
           isochrone_geometry: isochroneGeometry,
         } : null}
+        linkedSiteId={linkedSiteId}
       />
     </div>
   );

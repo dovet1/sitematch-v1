@@ -303,29 +303,40 @@ export function SiteDetailView({ siteId, siteName, open, onClose, onUpdate }: Si
                     </Button>
                     <Button
                       onClick={() => {
-                        // Pass site location to SiteSketcher via URL params
+                        // Pass site context to SiteSketcher via URL params
+                        const params = new URLSearchParams({
+                          site_id: siteId,
+                          site_name: siteName,
+                        });
                         if (site?.location) {
-                          const params = new URLSearchParams({
-                            address: site.address,
-                            lat: site.location.lat.toString(),
-                            lng: site.location.lng.toString(),
-                          });
-                          router.push(`/sitesketcher?${params.toString()}`);
-                        } else {
-                          router.push('/sitesketcher');
+                          params.append('address', site.address);
+                          params.append('lat', site.location.lat.toString());
+                          params.append('lng', site.location.lng.toString());
                         }
+                        router.push(`/sitesketcher?${params.toString()}`);
                       }}
-                      className="w-full bg-white border-2 border-gray-200 hover:bg-gray-50 text-gray-700 font-bold rounded-xl"
+                      className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold rounded-xl shadow-lg"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Create Sketch
+                      Create & Link Sketch
                     </Button>
                     <Button
-                      onClick={() => router.push('/new-dashboard/tools/site-demographer')}
-                      className="w-full bg-white border-2 border-gray-200 hover:bg-gray-50 text-gray-700 font-bold rounded-xl"
+                      onClick={() => {
+                        const params = new URLSearchParams({
+                          site_id: siteId,
+                          site_name: siteName,
+                        });
+                        if (site?.location) {
+                          params.append('address', site.address);
+                          params.append('lat', site.location.lat.toString());
+                          params.append('lng', site.location.lng.toString());
+                        }
+                        router.push(`/new-dashboard/tools/site-demographer?${params.toString()}`);
+                      }}
+                      className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Run Analysis
+                      Create & Link Analysis
                     </Button>
                   </div>
                 </div>

@@ -596,7 +596,7 @@ export function OutputsTab({ userId }: OutputsTabProps) {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => router.push(`/sitesketcher`)}
+                          onClick={() => router.push(`/sitesketcher?sketch=${sketch.id}`)}
                           className="flex-1 text-blue-600 border-blue-300 hover:bg-blue-50 font-bold"
                         >
                           <Eye className="h-4 w-4 mr-1.5" />
@@ -678,7 +678,7 @@ export function OutputsTab({ userId }: OutputsTabProps) {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => router.push(`/sitesketcher`)}
+                                onClick={() => router.push(`/sitesketcher?sketch=${sketch.id}`)}
                                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold"
                               >
                                 <Eye className="h-4 w-4" />

@@ -31,6 +31,7 @@ interface SaveAnalysisModalProps {
     national_averages: any;
     isochrone_geometry?: any;
   } | null;
+  linkedSiteId?: string | null;
 }
 
 export function SaveAnalysisModal({
@@ -38,6 +39,7 @@ export function SaveAnalysisModal({
   onClose,
   onSuccess,
   analysisData,
+  linkedSiteId,
 }: SaveAnalysisModalProps) {
   const { isPro, isFreeTier } = useSubscriptionTier();
 
@@ -69,8 +71,14 @@ export function SaveAnalysisModal({
         }
         setName(`${location_name} - ${measurementText}`);
       }
+
+      // If linkedSiteId is provided, auto-select it
+      if (linkedSiteId) {
+        setSaveOption('existing');
+        setSelectedSiteId(linkedSiteId);
+      }
     }
-  }, [open, isPro, analysisData]);
+  }, [open, isPro, analysisData, linkedSiteId]);
 
   const fetchSites = async () => {
     setLoadingSites(true);

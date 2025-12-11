@@ -14,7 +14,7 @@ import { SaveSketchModal } from './components/SaveSketchModal';
 import { SketchesList } from './components/SketchesList';
 import { DocumentBar } from './components/DocumentBar';
 import { UnsavedChangesDialog } from './components/UnsavedChangesDialog';
-import { AlertTriangle, Pencil, MousePointer, ArrowLeft, Menu } from 'lucide-react';
+import { AlertTriangle, Pencil, MousePointer, ArrowLeft, Menu, Building2 } from 'lucide-react';
 import type {
   MapboxDrawPolygon,
   ParkingOverlay,
@@ -54,6 +54,13 @@ function SiteSketcherContent() {
   const initialAddress = searchParams?.get('address');
   const initialLat = searchParams?.get('lat');
   const initialLng = searchParams?.get('lng');
+
+  // Check if linked to a site (will auto-link on save)
+  const linkedSiteId = searchParams?.get('site_id');
+  const linkedSiteName = searchParams?.get('site_name');
+
+  // Check if we should load a specific sketch from URL params
+  const sketchIdToLoad = searchParams?.get('sketch');
 
   const [state, setState] = useState<SiteSketcherState>({
     polygons: [],
@@ -95,6 +102,7 @@ function SiteSketcherContent() {
   const [upgradeBannerType, setUpgradeBannerType] = useState<'polygon' | 'parking'>('polygon');
   const mapRef = useRef<MapboxMapRef>(null);
   const originalMeasurementsRef = useRef<AreaMeasurement | null>(null);
+  const hasLoadedFromUrlRef = useRef(false);
 
   // Note: No authentication guard - allow all users to access SiteSketcher
   // Free tier users will have limited functionality (2 polygons, 2 parking, no save/load)
@@ -140,6 +148,62 @@ function SiteSketcherContent() {
       setMapboxError(error instanceof Error ? error.message : 'Mapbox configuration error');
     }
   }, []);
+
+  // Load sketch from URL parameter if present
+  useEffect(() => {
+    if (sketchIdToLoad && !hasLoadedFromUrlRef.current) {
+      hasLoadedFromUrlRef.current = true; // Mark as loaded immediately to prevent double execution
+
+      const loadSketchFromUrl = async () => {
+        try {
+          const response = await fetch(`/api/sitesketcher/sketches/${sketchIdToLoad}`);
+          if (!response.ok) throw new Error('Failed to load sketch');
+
+          const { sketch } = await response.json();
+
+          // Load the sketch data
+          setState(sketch.data);
+          setCurrentSketchId(sketch.id);
+          setCurrentSketchName(sketch.name);
+
+          // Update saved snapshot and clear unsaved changes
+          setSavedStateSnapshot(JSON.stringify(sketch.data));
+          setHasUnsavedChanges(false);
+
+          // Navigate to sketch location if available
+          if (sketch.location) {
+            setTimeout(() => {
+              setSearchResult({
+                id: `sketch-location-${sketch.id}`,
+                place_name: sketch.name,
+                center: sketch.location.center,
+                place_type: ['place'],
+                properties: {}
+              });
+            }, 1000);
+          }
+
+          toast.success(`Sketch "${sketch.name}" loaded`);
+
+          // Clean up URL parameter
+          const url = new URL(window.location.href);
+          url.searchParams.delete('sketch');
+          window.history.replaceState({}, '', url.toString());
+        } catch (error) {
+          console.error('Error loading sketch from URL:', error);
+          toast.error('Failed to load sketch');
+          hasLoadedFromUrlRef.current = false; // Reset on error so user can retry
+
+          // Clean up URL parameter on error
+          const url = new URL(window.location.href);
+          url.searchParams.delete('sketch');
+          window.history.replaceState({}, '', url.toString());
+        }
+      };
+
+      loadSketchFromUrl();
+    }
+  }, [sketchIdToLoad]);
 
   // Center map on initial location from URL parameters (e.g., from site address)
   useEffect(() => {
@@ -657,6 +721,26 @@ function SiteSketcherContent() {
         });
         setCurrentSketchId(sketch.id);
         setCurrentSketchName(sketch.name);
+
+        // If linked to a site, attach the sketch to it
+        if (linkedSiteId) {
+          try {
+            const linkResponse = await fetch(`/api/sites/${linkedSiteId}/sketches`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sketch_id: sketch.id }),
+            });
+
+            if (linkResponse.ok) {
+              toast.success(`Sketch linked to ${linkedSiteName || 'site'} successfully`);
+            } else {
+              toast.error('Sketch saved but failed to link to site');
+            }
+          } catch (linkError) {
+            console.error('Failed to link sketch to site:', linkError);
+            toast.error('Sketch saved but failed to link to site');
+          }
+        }
       }
 
       // Update saved snapshot
@@ -669,7 +753,7 @@ function SiteSketcherContent() {
     } finally {
       setIsSaving(false);
     }
-  }, [state, currentSketchId, currentSketchName]);
+  }, [state, currentSketchId, currentSketchName, linkedSiteId, linkedSiteName]);
 
   // Handle New Sketch
   const handleNewSketch = useCallback(() => {
@@ -940,6 +1024,37 @@ function SiteSketcherContent() {
             </div>
           </div>
         </header>
+
+        {/* Site Link Banner */}
+        {linkedSiteId && linkedSiteName && (
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b-2 border-blue-200 px-8 py-3">
+            <div className="flex items-center gap-3">
+              <Building2 className="h-5 w-5 text-blue-600" />
+              <div className="flex-1">
+                <p className="text-sm font-bold text-blue-900">
+                  Saving to site: <span className="text-blue-700">{linkedSiteName}</span>
+                </p>
+                <p className="text-xs text-blue-600">
+                  This sketch will be automatically linked to the site when you save
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete('site_id');
+                  url.searchParams.delete('site_name');
+                  window.history.replaceState({}, '', url.toString());
+                  window.location.reload();
+                }}
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+              >
+                Remove Link
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Document Bar */}
         <DocumentBar

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LocationInputPanel } from './LocationInputPanel';
 import { DemographicsResults } from './DemographicsResults';
@@ -35,6 +35,10 @@ export function SiteDemographerDesktop() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isFreeTier, isPro, loading: tierLoading } = useSubscriptionTier();
+
+  // Get site context from URL params
+  const linkedSiteId = searchParams?.get('site_id');
+  const linkedSiteName = searchParams?.get('site_name');
 
   // Shared hooks for data management
   const {
@@ -267,6 +271,37 @@ export function SiteDemographerDesktop() {
         </div>
       </div>
 
+      {/* Site Context Banner */}
+      {linkedSiteId && linkedSiteName && (
+        <div className="bg-gradient-to-r from-purple-50 to-violet-50 border-b-2 border-purple-200 px-8 py-3">
+          <div className="flex items-center gap-3">
+            <Building2 className="h-5 w-5 text-purple-600" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-purple-900">
+                Saving to site: <span className="text-purple-700">{linkedSiteName}</span>
+              </p>
+              <p className="text-xs text-purple-600">
+                This analysis will be automatically linked to the site when you save
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('site_id');
+                url.searchParams.delete('site_name');
+                window.history.replaceState({}, '', url.toString());
+                window.location.reload();
+              }}
+              className="text-purple-600 hover:text-purple-700 hover:bg-purple-100"
+            >
+              Remove Link
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Left Panel - Results (30%) */}
@@ -284,6 +319,7 @@ export function SiteDemographerDesktop() {
               nationalAverages={nationalAverages}
               isFreeTier={isFreeTier}
               isochroneGeometry={isochroneGeometry}
+              linkedSiteId={linkedSiteId}
             />
           </div>
         </div>
