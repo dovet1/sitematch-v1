@@ -205,7 +205,8 @@ export async function DELETE(
 
     const supabase = createServerClient();
 
-    // Unlink attachments (set site_id to null) before deleting site
+    // Unlink all attachments (set site_id to null) before deleting site
+    // This ensures searches, sketches, and analyses remain accessible to the user
     await Promise.all([
       supabase
         .from('saved_searches')
@@ -215,9 +216,11 @@ export async function DELETE(
         .from('site_sketches')
         .update({ site_id: null })
         .eq('site_id', params.id),
+      supabase
+        .from('site_demographic_analyses')
+        .update({ site_id: null })
+        .eq('site_id', params.id),
     ]);
-
-    // Note: site_demographic_analyses will CASCADE DELETE due to foreign key
 
     // Delete the site
     const { error } = await supabase
