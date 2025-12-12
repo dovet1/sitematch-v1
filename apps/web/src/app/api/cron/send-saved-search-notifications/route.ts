@@ -128,20 +128,21 @@ export async function GET(request: NextRequest) {
         });
 
         // Send email
+        const userEmail = user.email!; // Already checked above that email exists
         const emailResult = await sendEmail({
-          to: [user.email],
+          to: [userEmail],
           subject: `${totalMatches} new requirement${totalMatches === 1 ? '' : 's'} match your saved searches`,
           html,
           text
         });
 
         if (emailResult.success) {
-          console.log(`✅ CRON: Sent email to ${user.email} (${totalMatches} matches)`);
+          console.log(`✅ CRON: Sent email to ${userEmail} (${totalMatches} matches)`);
           emailsSent++;
           // Collect notification IDs to mark as sent
           notificationIdsSent.push(...userNotifications.map(n => n.id));
         } else {
-          console.error(`❌ CRON: Failed to send email to ${user.email}:`, emailResult.error);
+          console.error(`❌ CRON: Failed to send email to ${userEmail}:`, emailResult.error);
           emailsFailed++;
         }
 
