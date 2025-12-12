@@ -87,13 +87,15 @@ export async function GET(request: NextRequest) {
     for (const [userId, userNotifications] of Array.from(notificationsByUser.entries())) {
       try {
         // Fetch user email
-        const { data: user, error: userError } = await supabase.auth.admin.getUserById(userId);
+        const { data, error: userError } = await supabase.auth.admin.getUserById(userId);
 
-        if (userError || !user || !user.email) {
+        if (userError || !data?.user || !data.user.email) {
           console.error(`⚠️  CRON: Could not fetch user ${userId}:`, userError);
           emailsFailed++;
           continue;
         }
+
+        const user = data.user;
 
         // Group notifications by search
         const notificationsBySearch = new Map<string, any[]>();
