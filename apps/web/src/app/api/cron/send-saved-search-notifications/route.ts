@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     const notificationIdsSent: string[] = [];
 
     // Process each user
-    for (const [userId, userNotifications] of notificationsByUser) {
+    for (const [userId, userNotifications] of Array.from(notificationsByUser.entries())) {
       try {
         // Fetch user email
         const { data: user, error: userError } = await supabase.auth.admin.getUserById(userId);
