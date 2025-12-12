@@ -103,14 +103,11 @@ export async function GET(
             cached_at: cachedMatches[0]?.cached_at
           });
         }
-      } else if (cachedMatches && cachedMatches.length === 0) {
-        // Cache exists but is empty (no matches)
-        console.log(`✅ CACHE: No matches found (cached empty result)`);
-        return NextResponse.json({
-          matches: [],
-          cached: true,
-          cached_at: new Date().toISOString()
-        });
+      } else {
+        // Cache is empty - fall through to live query
+        // Note: We can't distinguish between "cache populated with 0 matches" vs "cache not yet populated"
+        // So we always fall back to live query when cache is empty to ensure new searches work
+        console.log(`⚠️ CACHE: Empty cache, falling back to live query`);
       }
     }
 
