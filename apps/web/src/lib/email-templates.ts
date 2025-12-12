@@ -388,16 +388,139 @@ export async function sendApprovalEmail(data: ApprovalEmailData & { contactEmail
 
 export async function sendSubmissionEmail(data: SubmissionEmailData & { contactEmail?: string }) {
   const emailTemplate = createSubmissionEmail(data);
-  
+
   const { sendEmail } = await import('./resend');
-  
+
   // Use contactEmail if provided, fallback to contactName for backward compatibility
   const emailAddress = data.contactEmail || data.contactName;
-  
+
   return sendEmail({
     to: [emailAddress],
     subject: emailTemplate.subject,
     html: emailTemplate.html,
     text: emailTemplate.text
   });
+}
+
+// =====================================================
+// Saved Search Notification Email
+// =====================================================
+
+interface SavedSearchMatch {
+  company_name: string;
+  listing_type: string;
+  listing_id: string;
+  created_at: string;
+}
+
+interface SavedSearchNotificationData {
+  searches: Array<{
+    name: string;
+    matches: SavedSearchMatch[];
+  }>;
+  totalMatches: number;
+  siteUrl: string;
+}
+
+export function generateSavedSearchNotificationEmail(data: SavedSearchNotificationData): { html: string; text: string } {
+  const { searches, totalMatches, siteUrl } = data;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Requirements Match Your Saved Searches</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+
+  <!-- Header -->
+  <div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+    <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">
+      ${totalMatches} New Requirement${totalMatches === 1 ? '' : 's'} 🎯
+    </h1>
+    <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 16px;">
+      ${totalMatches === 1 ? 'A requirement matches' : 'Requirements match'} your saved searches
+    </p>
+  </div>
+
+  <!-- Intro -->
+  <p style="font-size: 16px; margin-bottom: 25px;">
+    Great news! We found ${totalMatches} new requirement${totalMatches === 1 ? '' : 's'} that ${totalMatches === 1 ? 'matches' : 'match'} your saved search criteria.
+  </p>
+
+  <!-- Searches and Matches -->
+  ${searches.map(search => `
+    <div style="background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+      <h2 style="color: #7c3aed; font-size: 18px; font-weight: bold; margin: 0 0 15px 0;">
+        📍 ${search.name}
+      </h2>
+
+      ${search.matches.map(match => `
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+            <h3 style="font-size: 16px; font-weight: 600; margin: 0; color: #111827;">
+              ${match.company_name}
+            </h3>
+            <span style="background: #ddd6fe; color: #6b21a8; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase;">
+              ${match.listing_type}
+            </span>
+          </div>
+          <p style="color: #6b7280; font-size: 13px; margin: 0 0 12px 0;">
+            Posted ${new Date(match.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </p>
+          <a href="${siteUrl}/search?listingId=${match.listing_id}" style="display: inline-block; background: #7c3aed; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+            View Requirement →
+          </a>
+        </div>
+      `).join('')}
+    </div>
+  `).join('')}
+
+  <!-- CTA -->
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${siteUrl}/new-dashboard?tab=searches" style="display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+      View All Saved Searches
+    </a>
+  </div>
+
+  <!-- Footer -->
+  <div style="border-top: 2px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+    <p style="color: #6b7280; font-size: 13px; margin: 0 0 10px 0;">
+      You're receiving this because you have email notifications enabled for your saved searches.
+    </p>
+    <p style="color: #6b7280; font-size: 13px; margin: 0;">
+      <a href="${siteUrl}/new-dashboard?tab=searches" style="color: #7c3aed; text-decoration: none;">Manage your notification preferences</a>
+    </p>
+  </div>
+
+</body>
+</html>
+  `;
+
+  const text = `
+New Requirements Match Your Saved Searches
+
+${totalMatches} new requirement${totalMatches === 1 ? '' : 's'} ${totalMatches === 1 ? 'matches' : 'match'} your saved searches!
+
+${searches.map(search => `
+${search.name}
+${'='.repeat(search.name.length)}
+
+${search.matches.map(match => `
+- ${match.company_name} (${match.listing_type})
+  Posted: ${new Date(match.created_at).toLocaleDateString('en-GB')}
+  View: ${siteUrl}/search?listingId=${match.listing_id}
+`).join('\n')}
+`).join('\n')}
+
+View all your saved searches: ${siteUrl}/new-dashboard?tab=searches
+
+---
+You're receiving this because you have email notifications enabled for your saved searches.
+Manage your preferences: ${siteUrl}/new-dashboard?tab=searches
+  `.trim();
+
+  return { html, text };
 }

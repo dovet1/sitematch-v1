@@ -55,11 +55,11 @@ export function OverviewTab({ userId }: OverviewTabProps) {
 
       const data = await response.json();
 
-      // Fetch match counts for each search
+      // Fetch match counts for each search (using cache for performance)
       const searchesWithCounts = await Promise.all(
         data.searches.map(async (search: SavedSearchWithMatches) => {
           try {
-            const matchesResponse = await fetch(`/api/saved-searches/${search.id}/matches`);
+            const matchesResponse = await fetch(`/api/saved-searches/${search.id}/matches?use_cache=true`);
             if (matchesResponse.ok) {
               const matchesData = await matchesResponse.json();
               return {

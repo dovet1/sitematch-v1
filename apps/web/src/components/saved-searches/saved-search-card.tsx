@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Edit, Trash2, MapPin } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Search, Edit, Trash2, MapPin, Bell, BellOff } from 'lucide-react';
 import type { SavedSearchWithMatches } from '@/lib/saved-searches-types';
 import {
   AlertDialog,
@@ -26,6 +27,10 @@ interface SavedSearchCardProps {
 export function SavedSearchCard({ search, onEdit, onDelete }: SavedSearchCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(
+    search.email_notifications_enabled ?? true
+  );
+  const [updatingNotifications, setUpdatingNotifications] = useState(false);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -46,6 +51,34 @@ export function SavedSearchCard({ search, onEdit, onDelete }: SavedSearchCardPro
     } finally {
       setDeleting(false);
       setShowDeleteDialog(false);
+    }
+  };
+
+  const handleToggleNotifications = async (enabled: boolean) => {
+    setUpdatingNotifications(true);
+    try {
+      const response = await fetch(`/api/saved-searches/${search.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email_notifications_enabled: enabled }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update notification settings');
+      }
+
+      setEmailNotificationsEnabled(enabled);
+      toast.success(
+        enabled
+          ? 'Email notifications enabled'
+          : 'Email notifications disabled'
+      );
+    } catch (error) {
+      console.error('Error updating notifications:', error);
+      toast.error('Failed to update notification settings');
+      setEmailNotificationsEnabled(!enabled); // Revert on error
+    } finally {
+      setUpdatingNotifications(false);
     }
   };
 
@@ -135,6 +168,29 @@ export function SavedSearchCard({ search, onEdit, onDelete }: SavedSearchCardPro
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
+        </div>
+
+        {/* Email Notifications Toggle */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {emailNotificationsEnabled ? (
+                <Bell className="h-4 w-4 text-violet-600" />
+              ) : (
+                <BellOff className="h-4 w-4 text-gray-400" />
+              )}
+              <span className="text-sm text-gray-700">Email notifications</span>
+            </div>
+            <Switch
+              checked={emailNotificationsEnabled}
+              onCheckedChange={handleToggleNotifications}
+              disabled={updatingNotifications}
+              className="data-[state=checked]:bg-violet-600"
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-1 ml-6">
+            Get notified when new requirements match this search
+          </p>
         </div>
       </div>
 

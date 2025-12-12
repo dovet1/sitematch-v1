@@ -74,7 +74,7 @@ export function RequirementMatchesSection({ siteId, searches: initialSearches, o
     await Promise.all(
       initialSearches.map(async (search) => {
         try {
-          const response = await fetch(`/api/saved-searches/${search.id}/matches`);
+          const response = await fetch(`/api/saved-searches/${search.id}/matches?use_cache=true`);
           if (response.ok) {
             const data = await response.json();
             counts[search.id] = data.matches?.length || 0;
@@ -92,7 +92,7 @@ export function RequirementMatchesSection({ siteId, searches: initialSearches, o
     setLoadingMatches(prev => ({ ...prev, [searchId]: true }));
 
     try {
-      const response = await fetch(`/api/saved-searches/${searchId}/matches`);
+      const response = await fetch(`/api/saved-searches/${searchId}/matches?use_cache=true`);
       if (!response.ok) throw new Error('Failed to fetch matches');
 
       const data = await response.json();

@@ -62,11 +62,11 @@ export function SavedSearchesTab({ userId }: SavedSearchesTabProps) {
 
       const data = await response.json();
 
-      // Fetch match counts for each search
+      // Fetch match counts for each search (using cache for performance)
       const searchesWithCounts = await Promise.all(
         data.searches.map(async (search: SavedSearch) => {
           try {
-            const matchesResponse = await fetch(`/api/saved-searches/${search.id}/matches`);
+            const matchesResponse = await fetch(`/api/saved-searches/${search.id}/matches?use_cache=true`);
             if (matchesResponse.ok) {
               const matchesData = await matchesResponse.json();
               return {
@@ -93,11 +93,11 @@ export function SavedSearchesTab({ userId }: SavedSearchesTabProps) {
   const fetchAllMatches = async () => {
     setMatchesLoading(true);
     try {
-      // Fetch matches for all searches
+      // Fetch matches for all searches (using cache for performance)
       const allMatches = await Promise.all(
         searches.map(async (search) => {
           try {
-            const response = await fetch(`/api/saved-searches/${search.id}/matches`);
+            const response = await fetch(`/api/saved-searches/${search.id}/matches?use_cache=true`);
             if (response.ok) {
               const data = await response.json();
               return data.matches || [];

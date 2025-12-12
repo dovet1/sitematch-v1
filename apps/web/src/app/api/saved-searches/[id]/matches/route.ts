@@ -20,7 +20,7 @@ export async function GET(
     const supabase = createServerClient();
 
     // Get the saved search
-    const { data: savedSearch, error: searchError } = await supabase
+    const { data: savedSearch, error: searchError} = await supabase
       .from('saved_searches')
       .select('*')
       .eq('id', params.id)
@@ -33,6 +33,89 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Check if we should use cache (default: true, unless explicitly disabled)
+    const { searchParams } = new URL(request.url);
+    const useCache = searchParams.get('use_cache') !== 'false';
+
+    // If using cache, return cached matches (FAST PATH)
+    if (useCache) {
+      console.log(`📊 CACHE: Fetching cached matches for search ${params.id}`);
+
+      // Fetch cached listing IDs
+      const { data: cachedMatches, error: cacheError } = await supabase
+        .from('saved_search_matches_cache')
+        .select('listing_id, distance_miles, cached_at')
+        .eq('search_id', params.id);
+
+      if (cacheError) {
+        console.error('⚠️ CACHE: Error fetching cached matches, falling back to live query:', cacheError);
+        // Fall through to live query
+      } else if (cachedMatches && cachedMatches.length > 0) {
+        // Enrich cached listing IDs with full listing data
+        const listingIds = cachedMatches.map(m => m.listing_id);
+
+        const { data: listings, error: listingsError } = await supabase
+          .from('listings')
+          .select(`
+            id,
+            company_name,
+            listing_type,
+            status,
+            created_at,
+            site_size_min,
+            site_size_max,
+            site_acreage_min,
+            site_acreage_max
+          `)
+          .in('id', listingIds)
+          .eq('status', 'approved');
+
+        if (!listingsError && listings) {
+          // Create distance map for quick lookup
+          const distanceMap = new Map(
+            cachedMatches.map(m => [m.listing_id, m.distance_miles])
+          );
+
+          // Build matching listings array
+          const matchingListings: MatchingListing[] = listings.map(listing => ({
+            id: listing.id,
+            company_name: listing.company_name,
+            listing_type: listing.listing_type,
+            status: listing.status,
+            created_at: listing.created_at,
+            matched_search_id: savedSearch.id,
+            matched_search_name: savedSearch.name,
+            distance_miles: distanceMap.get(listing.id) || undefined,
+          }));
+
+          // Sort by created_at (newest first)
+          matchingListings.sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+
+          console.log(`✅ CACHE: Returned ${matchingListings.length} cached matches`);
+
+          return NextResponse.json({
+            matches: matchingListings,
+            cached: true,
+            cached_at: cachedMatches[0]?.cached_at
+          });
+        }
+      } else if (cachedMatches && cachedMatches.length === 0) {
+        // Cache exists but is empty (no matches)
+        console.log(`✅ CACHE: No matches found (cached empty result)`);
+        return NextResponse.json({
+          matches: [],
+          cached: true,
+          cached_at: new Date().toISOString()
+        });
+      }
+    }
+
+    // LIVE QUERY (SLOW PATH) - Used when cache is disabled or unavailable
+    console.log(`🔄 LIVE: Running live match query for search ${params.id}`);
 
     // Step 1: Get all approved listings first to fetch their versions
     const { data: allListings, error: allListingsError } = await supabase
