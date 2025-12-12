@@ -173,24 +173,20 @@ export function SavedSearchCard({ search, onEdit, onDelete }: SavedSearchCardPro
         {/* Email Notifications Toggle */}
         <div className="mt-4 pt-4 border-t border-gray-200">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {emailNotificationsEnabled ? (
-                <Bell className="h-4 w-4 text-violet-600" />
-              ) : (
-                <BellOff className="h-4 w-4 text-gray-400" />
-              )}
-              <span className="text-sm text-gray-700">Email notifications</span>
-            </div>
-            <Switch
-              checked={emailNotificationsEnabled}
-              onCheckedChange={handleToggleNotifications}
+            <span className="text-sm text-gray-700">Email notifications</span>
+            <button
+              onClick={() => handleToggleNotifications(!emailNotificationsEnabled)}
               disabled={updatingNotifications}
-              className="data-[state=checked]:bg-violet-600"
-            />
+              className="p-2 rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={emailNotificationsEnabled ? 'Disable email notifications' : 'Enable email notifications'}
+            >
+              {emailNotificationsEnabled ? (
+                <Bell className="h-5 w-5 text-violet-600" />
+              ) : (
+                <BellOff className="h-5 w-5 text-gray-400" />
+              )}
+            </button>
           </div>
-          <p className="text-xs text-gray-500 mt-1 ml-6">
-            Get notified when new requirements match this search
-          </p>
         </div>
       </div>
 
