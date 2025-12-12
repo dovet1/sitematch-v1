@@ -303,7 +303,7 @@ export function RequirementMatchesSection({ siteId, searches: initialSearches, o
                     </div>
 
                     <div className="flex gap-2 flex-shrink-0">
-                      <Link href={`/search?saved_search=${search.id}`}>
+                      <Link href="/new-dashboard?tab=saved-searches">
                         <Button
                           size="sm"
                           variant="outline"
@@ -374,7 +374,7 @@ export function RequirementMatchesSection({ siteId, searches: initialSearches, o
                           </button>
                         ))}
                         {searchMatches.length > 5 && (
-                          <Link href={`/search?saved_search=${search.id}`}>
+                          <Link href="/new-dashboard?tab=saved-searches">
                             <Button
                               variant="outline"
                               className="w-full mt-2 border-2 border-violet-300 hover:bg-violet-50 text-violet-700 font-bold rounded-xl"
