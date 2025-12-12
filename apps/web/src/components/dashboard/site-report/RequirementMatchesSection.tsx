@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building, Plus, ExternalLink, Trash2, ChevronDown, ChevronUp, Loader2, Search } from 'lucide-react';
+import { Building, Plus, ExternalLink, Trash2, ChevronDown, ChevronUp, Loader2, Search, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import {
@@ -22,6 +22,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { CreateSearchModal } from '@/components/saved-searches/create-search-modal';
+import type { SearchableOption } from '@/components/ui/searchable-dropdown';
+import { getSectorOptions, getUseClassOptions } from '@/lib/reference-data';
 
 interface SavedSearch {
   id: string;
@@ -63,9 +66,15 @@ export function RequirementMatchesSection({ siteId, searches: initialSearches, o
   const [attachingId, setAttachingId] = useState<string | null>(null);
   const [detachingId, setDetachingId] = useState<string | null>(null);
 
+  // Create Search Modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [sectorOptions, setSectorOptions] = useState<SearchableOption[]>([]);
+  const [useClassOptions, setUseClassOptions] = useState<SearchableOption[]>([]);
+
   useEffect(() => {
     setSearches(initialSearches);
     fetchAllMatchCounts();
+    loadReferenceData();
   }, [initialSearches]);
 
   const fetchAllMatchCounts = async () => {
@@ -178,6 +187,24 @@ export function RequirementMatchesSection({ siteId, searches: initialSearches, o
     }
   };
 
+  const loadReferenceData = async () => {
+    try {
+      const [sectors, useClasses] = await Promise.all([
+        getSectorOptions(),
+        getUseClassOptions(),
+      ]);
+      setSectorOptions(sectors);
+      setUseClassOptions(useClasses);
+    } catch (error) {
+      console.error('Error loading reference data:', error);
+    }
+  };
+
+  const handleCreateSuccess = () => {
+    setShowCreateModal(false);
+    onUpdate?.();
+  };
+
   return (
     <div className="space-y-4">
       {/* Section Header */}
@@ -186,16 +213,26 @@ export function RequirementMatchesSection({ siteId, searches: initialSearches, o
           <h2 className="text-2xl font-black text-gray-900">Target Occupiers</h2>
           <p className="text-sm text-gray-600 mt-1">Saved searches showing companies looking for sites like this</p>
         </div>
-        <Button
-          onClick={() => {
-            fetchAvailableSearches();
-            setShowAttachModal(true);
-          }}
-          className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Link Search
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Search
+          </Button>
+          <Button
+            onClick={() => {
+              fetchAvailableSearches();
+              setShowAttachModal(true);
+            }}
+            variant="outline"
+            className="border-2 border-violet-300 hover:bg-violet-50 text-violet-700 font-bold rounded-xl"
+          >
+            <Link2 className="h-4 w-4 mr-2" />
+            Link Search
+          </Button>
+        </div>
       </div>
 
       {/* Searches List */}
@@ -204,18 +241,28 @@ export function RequirementMatchesSection({ siteId, searches: initialSearches, o
           <Search className="h-16 w-16 text-violet-400 mx-auto mb-4" />
           <h3 className="text-xl font-black text-gray-900 mb-2">No Searches Linked Yet</h3>
           <p className="text-gray-600 mb-6 max-w-md mx-auto">
-            Link saved searches to see which companies are looking for sites matching your criteria
+            Create or link saved searches to see which companies are looking for sites matching your criteria
           </p>
-          <Button
-            onClick={() => {
-              fetchAvailableSearches();
-              setShowAttachModal(true);
-            }}
-            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Link Your First Search
-          </Button>
+          <div className="flex gap-3 justify-center">
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Search
+            </Button>
+            <Button
+              onClick={() => {
+                fetchAvailableSearches();
+                setShowAttachModal(true);
+              }}
+              variant="outline"
+              className="border-2 border-violet-300 hover:bg-violet-50 text-violet-700 font-bold rounded-xl"
+            >
+              <Link2 className="h-4 w-4 mr-2" />
+              Link Search
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -421,6 +468,16 @@ export function RequirementMatchesSection({ siteId, searches: initialSearches, o
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Search Modal */}
+      <CreateSearchModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={handleCreateSuccess}
+        sectorOptions={sectorOptions}
+        useClassOptions={useClassOptions}
+        siteId={siteId}
+      />
     </div>
   );
 }

@@ -23,6 +23,7 @@ interface CreateSearchModalProps {
   editingSearch?: SavedSearch | null;
   sectorOptions: SearchableOption[];
   useClassOptions: SearchableOption[];
+  siteId?: string; // Optional: if provided, will auto-link the search to this site
 }
 
 export function CreateSearchModal({
@@ -32,6 +33,7 @@ export function CreateSearchModal({
   editingSearch,
   sectorOptions,
   useClassOptions,
+  siteId,
 }: CreateSearchModalProps) {
   const [loading, setLoading] = useState(false);
   const [locationQuery, setLocationQuery] = useState('');
@@ -156,7 +158,31 @@ export function CreateSearchModal({
         throw new Error(error.error || 'Failed to save search');
       }
 
-      toast.success(editingSearch ? 'Search updated successfully' : 'Search saved successfully');
+      const data = await response.json();
+      const newSearchId = data.search?.id;
+
+      // If siteId is provided and we're creating a new search, auto-link it to the site
+      if (siteId && !editingSearch && newSearchId) {
+        try {
+          const linkResponse = await fetch(`/api/sites/${siteId}/searches`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ search_id: newSearchId }),
+          });
+
+          if (!linkResponse.ok) {
+            throw new Error('Failed to link search to site');
+          }
+
+          toast.success('Search created and linked to site');
+        } catch (linkError) {
+          console.error('Error linking search to site:', linkError);
+          toast.error('Search created but failed to link to site');
+        }
+      } else {
+        toast.success(editingSearch ? 'Search updated successfully' : 'Search saved successfully');
+      }
+
       onSuccess();
       onClose();
     } catch (error) {
