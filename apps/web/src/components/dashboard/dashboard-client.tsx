@@ -32,6 +32,7 @@ import { ToolsTab } from './tools-tab';
 import { AgencyTab } from './agency-tab';
 import { SitesTab } from './sites-tab';
 import { OutputsTab } from './outputs-tab';
+import { OnboardingTour } from './onboarding-tour';
 
 interface DashboardClientProps {
   userId: string;
@@ -48,7 +49,9 @@ interface NavigationSection {
     icon: any;
     href?: string;
     external?: boolean;
+    tourId?: string;
   }>;
+  tourId?: string;
 }
 
 const navigationSections: NavigationSection[] = [
@@ -59,6 +62,7 @@ const navigationSections: NavigationSection[] = [
   },
   {
     header: 'Directories',
+    tourId: 'directories',
     items: [
       { id: 'external', label: 'Requirement Directory', icon: Search, href: '/search', external: true },
       { id: 'external', label: 'Agency Directory', icon: Building2, href: '/agencies', external: true },
@@ -67,17 +71,17 @@ const navigationSections: NavigationSection[] = [
   {
     header: 'Your Listings',
     items: [
-      { id: 'requirements' as TabType, label: 'Your Requirements', icon: FileText },
+      { id: 'requirements' as TabType, label: 'Your Requirements', icon: FileText, tourId: 'requirements' },
       { id: 'agency' as TabType, label: 'Your Agency', icon: Building2 },
     ],
   },
   {
     header: 'Site Tools',
     items: [
-      { id: 'sites' as TabType, label: 'Your Sites', icon: Building2 },
-      { id: 'searches' as TabType, label: 'Saved Searches', icon: Search },
+      { id: 'sites' as TabType, label: 'Your Sites', icon: Building2, tourId: 'sites' },
+      { id: 'searches' as TabType, label: 'Saved Searches', icon: Search, tourId: 'searches' },
       { id: 'outputs' as TabType, label: 'My Outputs', icon: FileText },
-      { id: 'tools' as TabType, label: 'Tools', icon: Wrench },
+      { id: 'tools' as TabType, label: 'Tools', icon: Wrench, tourId: 'tools' },
     ],
   },
 ];
@@ -90,6 +94,7 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
   const [isSigningOutAll, setIsSigningOutAll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<'trialing' | 'active' | 'past_due' | 'canceled' | null>(null);
+  const [showTour, setShowTour] = useState(false);
   const { signOut } = useAuth();
 
   useEffect(() => {
@@ -217,7 +222,7 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
         {/* Navigation */}
         <nav className="p-4 space-y-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 16rem)' }}>
           {navigationSections.map((section, sectionIndex) => (
-            <div key={sectionIndex}>
+            <div key={sectionIndex} {...(section.tourId ? { 'data-tour': section.tourId } : {})}>
               {section.header && (
                 <h3 className="px-4 mb-2 text-xs font-black text-violet-600 uppercase tracking-wider">
                   {section.header}
@@ -252,6 +257,7 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
                           setSidebarOpen(false);
                         }
                       }}
+                      {...(item.tourId ? { 'data-tour': item.tourId } : {})}
                       className={cn(
                         'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200',
                         isActive
@@ -302,7 +308,7 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-violet-100">
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-violet-100" data-tour="account">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -324,6 +330,14 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
                     <DropdownMenuSeparator />
                   </>
                 )}
+                <DropdownMenuItem
+                  onClick={() => setShowTour(true)}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span>Show Dashboard Tour</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setShowSignoutAllDialog(true)}
                   className="flex items-center gap-2 cursor-pointer"
@@ -368,6 +382,13 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
 
       {/* Toast Notifications */}
       <Toaster position="top-right" />
+
+      {/* Onboarding Tour */}
+      <OnboardingTour
+        userId={userId}
+        forceStart={showTour}
+        onComplete={() => setShowTour(false)}
+      />
 
       {/* Sign out all devices confirmation dialog */}
       <AlertDialog open={showSignoutAllDialog} onOpenChange={setShowSignoutAllDialog}>

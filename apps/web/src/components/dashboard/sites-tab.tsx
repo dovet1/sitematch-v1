@@ -132,7 +132,7 @@ export function SitesTab({ userId }: SitesTabProps) {
           <div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900">Your Sites</h1>
             <p className="text-gray-600 mt-1 sm:mt-2 text-base sm:text-lg font-medium">
-              Organize your searches, sketches, and analyses by location
+              Organise your searches, sketches, and analyses by location
             </p>
           </div>
           {sites.length > 0 && (
