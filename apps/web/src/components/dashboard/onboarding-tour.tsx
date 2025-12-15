@@ -200,31 +200,67 @@ export function OnboardingTour({ userId, onComplete, forceStart = false }: Onboa
           primaryColor: '#7c3aed',
           backgroundColor: '#ffffff',
           textColor: '#1f2937',
-          borderRadius: 12,
           zIndex: 10000,
+        },
+        beacon: {
+          background: 'linear-gradient(to right, #7c3aed, #9333ea)',
+        },
+        beaconInner: {
+          backgroundColor: '#7c3aed',
+        },
+        beaconOuter: {
+          backgroundColor: 'rgba(124, 58, 237, 0.2)',
+          borderColor: '#7c3aed',
         },
         buttonNext: {
           background: 'linear-gradient(to right, #7c3aed, #9333ea)',
-          borderRadius: '8px',
-          padding: '10px 20px',
+          borderRadius: '12px',
+          padding: '12px 24px',
           fontWeight: 700,
           fontSize: '14px',
+          boxShadow: '0 4px 6px -1px rgba(124, 58, 237, 0.3)',
         },
         buttonBack: {
           color: '#7c3aed',
-          fontWeight: 600,
-          marginRight: '8px',
+          fontWeight: 700,
+          marginRight: '12px',
+          padding: '12px 20px',
+          borderRadius: '12px',
+          border: '2px solid #ddd6fe',
+          backgroundColor: 'transparent',
         },
         buttonSkip: {
           color: '#6b7280',
-          fontWeight: 500,
+          fontWeight: 600,
+          fontSize: '14px',
         },
         tooltip: {
-          borderRadius: '12px',
-          padding: '20px',
+          borderRadius: '20px',
+          padding: '24px',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          border: '3px solid #ddd6fe',
+        },
+        tooltipContainer: {
+          textAlign: 'left',
         },
         tooltipContent: {
-          padding: '0',
+          padding: '0 0 16px 0',
+        },
+        tooltipTitle: {
+          fontSize: '18px',
+          fontWeight: 900,
+          marginBottom: '8px',
+        },
+        tooltipFooter: {
+          marginTop: '16px',
+          paddingTop: '16px',
+          borderTop: '2px solid #f3f4f6',
+        },
+        spotlight: {
+          borderRadius: '12px',
+        },
+        overlay: {
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
         },
       }}
       locale={{
