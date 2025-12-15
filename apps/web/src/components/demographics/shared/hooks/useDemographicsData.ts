@@ -121,6 +121,18 @@ export function useDemographicsData() {
     setRawDemographicsData(newData);
   }, []);
 
+  const loadSavedAnalysis = useCallback((analysisData: {
+    demographics_data: Record<string, any>;
+    isochrone_geometry: any;
+    national_averages: Record<string, number>;
+  }) => {
+    setRawDemographicsData(analysisData.demographics_data);
+    setIsochroneGeometry(analysisData.isochrone_geometry);
+    setNationalAverages(analysisData.national_averages);
+    setLsoaTooltipData({}); // Tooltip data isn't saved, can be refetched if needed
+    initialLoadComplete.current = true;
+  }, []);
+
   return {
     rawDemographicsData,
     isochroneGeometry,
@@ -132,5 +144,6 @@ export function useDemographicsData() {
     analyze,
     reset,
     updateData,
+    loadSavedAnalysis,
   };
 }

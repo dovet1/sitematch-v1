@@ -7,6 +7,7 @@ import { Plus, Loader2, FileText, Building2, Wrench, Search, AlertCircle, Extern
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import type { SavedSearchWithMatches } from '@/lib/saved-searches-types';
 
 interface Listing {
   id: string;
@@ -21,10 +22,12 @@ export function OverviewTab({ userId }: OverviewTabProps) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [savedSearchCount, setSavedSearchCount] = useState(0);
+  const [savedSearches, setSavedSearches] = useState<SavedSearchWithMatches[]>([]);
+  const [searchesLoading, setSearchesLoading] = useState(true);
 
   useEffect(() => {
     fetchListings();
-    fetchSavedSearchCount();
+    fetchSavedSearches();
   }, [userId]);
 
   const fetchListings = async () => {
@@ -45,15 +48,38 @@ export function OverviewTab({ userId }: OverviewTabProps) {
     }
   };
 
-  const fetchSavedSearchCount = async () => {
+  const fetchSavedSearches = async () => {
     try {
       const response = await fetch('/api/saved-searches');
-      if (response.ok) {
-        const data = await response.json();
-        setSavedSearchCount(data.searches?.length || 0);
-      }
+      if (!response.ok) throw new Error('Failed to fetch searches');
+
+      const data = await response.json();
+
+      // Fetch match counts for each search (using cache for performance)
+      const searchesWithCounts = await Promise.all(
+        data.searches.map(async (search: SavedSearchWithMatches) => {
+          try {
+            const matchesResponse = await fetch(`/api/saved-searches/${search.id}/matches?use_cache=true`);
+            if (matchesResponse.ok) {
+              const matchesData = await matchesResponse.json();
+              return {
+                ...search,
+                match_count: matchesData.matches?.length || 0,
+              };
+            }
+            return { ...search, match_count: 0 };
+          } catch (error) {
+            return { ...search, match_count: 0 };
+          }
+        })
+      );
+
+      setSavedSearches(searchesWithCounts);
+      setSavedSearchCount(searchesWithCounts.length);
     } catch (error) {
-      console.error('Error fetching saved search count:', error);
+      console.error('Error fetching saved searches:', error);
+    } finally {
+      setSearchesLoading(false);
     }
   };
 
@@ -364,21 +390,95 @@ export function OverviewTab({ userId }: OverviewTabProps) {
       </div>
 
       {/* Saved Searches Section - Full Width */}
-      <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-lg border border-violet-200 p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-violet-100 rounded-lg">
-              <Search className="h-5 w-5 text-violet-600" />
+      <div className="bg-white rounded-2xl sm:rounded-3xl border-3 border-violet-200 p-6 sm:p-8 shadow-xl">
+        <div className="flex items-center justify-between mb-5 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-violet-100 rounded-lg sm:rounded-xl">
+              <Search className="h-5 w-5 sm:h-6 sm:w-6 text-violet-600" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Saved Searches</h2>
-              <p className="text-sm text-gray-600">Get notified when requirements match your criteria</p>
+            <h2 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900">Saved Searches</h2>
+          </div>
+        </div>
+
+        {searchesLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-violet-600" />
+          </div>
+        ) : savedSearches.length === 0 ? (
+          /* Empty State */
+          <div className="py-12 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+              <Search className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">No saved searches yet</h3>
+            <p className="text-xs text-gray-500 mb-4">Save searches to track matching requirements</p>
+            <Button
+              size="sm"
+              onClick={() => {
+                const event = new CustomEvent('dashboard-tab-change', { detail: 'searches' });
+                window.dispatchEvent(event);
+              }}
+              className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Create Saved Search
+            </Button>
+          </div>
+        ) : (
+          /* Populated State - Show search summaries */
+          <div className="space-y-4">
+            {/* Search List - Show up to 5 */}
+            <div className="space-y-2">
+              {savedSearches.slice(0, 5).map((search) => (
+                <button
+                  key={search.id}
+                  onClick={() => {
+                    const event = new CustomEvent('dashboard-tab-change', { detail: 'searches' });
+                    window.dispatchEvent(event);
+                  }}
+                  className="w-full bg-violet-50 border-2 border-violet-200 rounded-xl p-4 hover:border-violet-400 hover:shadow-md hover:-translate-y-0.5 transition-all text-left group"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm sm:text-base font-bold text-gray-900 group-hover:text-violet-700 transition-colors mb-1">
+                        {search.name}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                        {search.location_address && (
+                          <span className="truncate">{search.location_address}</span>
+                        )}
+                        {search.listing_type && (
+                          <>
+                            {search.location_address && <span>•</span>}
+                            <span className="capitalize">{search.listing_type}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <Badge className="bg-violet-600 text-white font-bold flex-shrink-0">
+                      {search.match_count} {search.match_count === 1 ? 'match' : 'matches'}
+                    </Badge>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* View All Button */}
+            <div className="pt-4 border-t-2 border-violet-100">
+              <Button
+                variant="outline"
+                className="w-full border-2 border-violet-200 text-violet-700 hover:bg-violet-50 font-bold"
+                onClick={() => {
+                  const event = new CustomEvent('dashboard-tab-change', { detail: 'searches' });
+                  window.dispatchEvent(event);
+                }}
+              >
+                View All Saved Searches
+                <ExternalLink className="h-4 w-4 ml-2" />
+              </Button>
             </div>
           </div>
-          <Badge variant="secondary" className="bg-violet-200 text-violet-700">
-            Coming Soon
-          </Badge>
-        </div>
+        )}
       </div>
     </div>
   );

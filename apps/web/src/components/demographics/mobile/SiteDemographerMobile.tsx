@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Building2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { MobileHeader } from './MobileHeader';
 import { MobileBottomSheet, type SheetHeight } from './MobileBottomSheet';
 import { MobileLocationSearch } from './MobileLocationSearch';
@@ -11,6 +14,7 @@ import { useLsoaSelection } from '../shared/hooks/useLsoaSelection';
 import { useLocationSearch } from '../shared/hooks/useLocationSearch';
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 import type { LocationResult } from '@/lib/mapbox';
+import { toast } from 'sonner';
 
 // Conversion constants
 const WALK_SPEED_MPH = 3;
@@ -28,7 +32,13 @@ function convertToRadiusMiles(mode: 'distance' | 'drive_time' | 'walk_time', val
 }
 
 export function SiteDemographerMobile() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { isFreeTier, isPro } = useSubscriptionTier();
+
+  // Get site context from URL params
+  const linkedSiteId = searchParams?.get('site_id');
+  const linkedSiteName = searchParams?.get('site_name');
 
   // Prevent overscroll/bounce on mobile
   useEffect(() => {
@@ -63,6 +73,7 @@ export function SiteDemographerMobile() {
     analyze,
     updateData,
     reset: resetDemographics,
+    loadSavedAnalysis,
   } = useDemographicsData();
 
   const {
@@ -87,6 +98,66 @@ export function SiteDemographerMobile() {
   const [sheetHeight, setSheetHeight] = useState<SheetHeight>('collapsed');
   const [searchOpen, setSearchOpen] = useState(false);
   const [isRefetchingData, setIsRefetchingData] = useState(false);
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+
+  // Load saved analysis from query parameter
+  useEffect(() => {
+    const analysisId = searchParams?.get('analysis');
+    if (!analysisId || loadingAnalysis) return;
+
+    const loadAnalysis = async () => {
+      setLoadingAnalysis(true);
+      try {
+        const response = await fetch(`/api/demographic-analyses/${analysisId}`);
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to load analysis');
+        }
+
+        const { analysis } = await response.json();
+
+        // Reconstruct location object from saved data
+        const reconstructedLocation: LocationResult = {
+          id: `saved-${analysis.id}`,
+          place_type: ['place'],
+          text: analysis.location_name,
+          place_name: analysis.location_name,
+          center: [analysis.location.lng, analysis.location.lat],
+          context: [],
+        };
+
+        // Load saved state
+        setSelectedLocation(reconstructedLocation);
+        setMeasurementMode(analysis.measurement_mode);
+        setMeasurementValue(analysis.measurement_value);
+
+        // Load demographics data
+        loadSavedAnalysis({
+          demographics_data: analysis.demographics_data,
+          isochrone_geometry: analysis.isochrone_geometry,
+          national_averages: analysis.national_averages,
+        });
+
+        // Initialize LSOA selection
+        initializeSelection(analysis.selected_lsoa_codes);
+
+        // Expand sheet to show results on mobile
+        setSheetHeight('halfway');
+
+        toast.success('Analysis loaded successfully');
+      } catch (error) {
+        console.error('Error loading saved analysis:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to load analysis');
+        // Clear the query parameter on error
+        router.replace('/new-dashboard/tools/site-demographer');
+      } finally {
+        setLoadingAnalysis(false);
+      }
+    };
+
+    loadAnalysis();
+  }, [searchParams]); // Only run when searchParams changes
 
   // Refetch data when LSOA selection changes
   useEffect(() => {
@@ -174,6 +245,37 @@ export function SiteDemographerMobile() {
         onAnalyze={handleAnalyze}
         loading={loading}
       />
+
+      {/* Site Context Banner */}
+      {linkedSiteId && linkedSiteName && (
+        <div className="bg-gradient-to-r from-purple-50 to-violet-50 border-b-2 border-purple-200 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-purple-600 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-purple-900">
+                Saving to site: <span className="text-purple-700">{linkedSiteName}</span>
+              </p>
+              <p className="text-xs text-purple-600">
+                Auto-linked on save
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('site_id');
+                url.searchParams.delete('site_name');
+                window.history.replaceState({}, '', url.toString());
+                window.location.reload();
+              }}
+              className="text-purple-600 hover:text-purple-700 hover:bg-purple-100 text-xs px-2 py-1 h-auto"
+            >
+              Remove
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Map Container - Takes remaining height, non-scrollable */}
       <div className="flex-1 relative overflow-hidden">

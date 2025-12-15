@@ -20,6 +20,10 @@ export interface SavedSearch {
   min_size?: number | null;
   max_size?: number | null;
 
+  // Email notifications
+  email_notifications_enabled?: boolean;
+  last_notified_at?: string | null;
+
   // Timestamps
   created_at: string;
   updated_at: string;
@@ -36,6 +40,7 @@ export interface CreateSavedSearch {
   planning_use_classes?: string[] | null;
   min_size?: number | null;
   max_size?: number | null;
+  email_notifications_enabled?: boolean;
 }
 
 export interface UpdateSavedSearch extends Partial<CreateSavedSearch> {}

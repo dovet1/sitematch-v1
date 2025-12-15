@@ -7,6 +7,7 @@ import { CreateSearchModal } from './create-search-modal';
 import { SavedSearchCard } from './saved-search-card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { ListingModal } from '@/components/listings/ListingModal';
 import type { SavedSearchWithMatches, MatchingListing, SavedSearch } from '@/lib/saved-searches-types';
 import type { SearchableOption } from '@/components/ui/searchable-dropdown';
 import { getSectorOptions, getUseClassOptions } from '@/lib/reference-data';
@@ -24,6 +25,7 @@ export function SavedSearchesTab({ userId }: SavedSearchesTabProps) {
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingSearch, setEditingSearch] = useState<SavedSearch | null>(null);
+  const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
 
   // Reference data
   const [sectorOptions, setSectorOptions] = useState<SearchableOption[]>([]);
@@ -60,11 +62,11 @@ export function SavedSearchesTab({ userId }: SavedSearchesTabProps) {
 
       const data = await response.json();
 
-      // Fetch match counts for each search
+      // Fetch match counts for each search (using cache for performance)
       const searchesWithCounts = await Promise.all(
         data.searches.map(async (search: SavedSearch) => {
           try {
-            const matchesResponse = await fetch(`/api/saved-searches/${search.id}/matches`);
+            const matchesResponse = await fetch(`/api/saved-searches/${search.id}/matches?use_cache=true`);
             if (matchesResponse.ok) {
               const matchesData = await matchesResponse.json();
               return {
@@ -91,11 +93,11 @@ export function SavedSearchesTab({ userId }: SavedSearchesTabProps) {
   const fetchAllMatches = async () => {
     setMatchesLoading(true);
     try {
-      // Fetch matches for all searches
+      // Fetch matches for all searches (using cache for performance)
       const allMatches = await Promise.all(
         searches.map(async (search) => {
           try {
-            const response = await fetch(`/api/saved-searches/${search.id}/matches`);
+            const response = await fetch(`/api/saved-searches/${search.id}/matches?use_cache=true`);
             if (response.ok) {
               const data = await response.json();
               return data.matches || [];
@@ -264,10 +266,10 @@ export function SavedSearchesTab({ userId }: SavedSearchesTabProps) {
             ) : (
               <div className="space-y-3">
                 {filteredMatches.map((match) => (
-                  <Link
+                  <button
                     key={match.id}
-                    href={`/listing/${match.id}`}
-                    className="block bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-violet-300 transition-all"
+                    onClick={() => setSelectedListingId(match.id)}
+                    className="w-full text-left bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md hover:border-violet-300 transition-all"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
@@ -292,7 +294,7 @@ export function SavedSearchesTab({ userId }: SavedSearchesTabProps) {
                         </div>
                       </div>
                     </div>
-                  </Link>
+                  </button>
                 ))}
               </div>
             )}
@@ -312,6 +314,15 @@ export function SavedSearchesTab({ userId }: SavedSearchesTabProps) {
         sectorOptions={sectorOptions}
         useClassOptions={useClassOptions}
       />
+
+      {/* Listing Modal */}
+      {selectedListingId && (
+        <ListingModal
+          listingId={selectedListingId}
+          isOpen={!!selectedListingId}
+          onClose={() => setSelectedListingId(null)}
+        />
+      )}
     </div>
   );
 }

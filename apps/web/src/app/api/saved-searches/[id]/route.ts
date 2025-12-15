@@ -134,6 +134,7 @@ export async function PUT(
 
     if (body.min_size !== undefined) updateData.min_size = body.min_size;
     if (body.max_size !== undefined) updateData.max_size = body.max_size;
+    if (body.email_notifications_enabled !== undefined) updateData.email_notifications_enabled = body.email_notifications_enabled;
 
     const { data: updatedSearch, error: updateError } = await supabase
       .from('saved_searches')
