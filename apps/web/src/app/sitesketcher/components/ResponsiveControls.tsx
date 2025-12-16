@@ -21,13 +21,14 @@ import {
 } from 'lucide-react';
 import { ModeToggleSwitch } from './ModeToggleSwitch';
 import { ViewModeToggle } from './ViewModeToggle';
-import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode, ViewMode } from '@/types/sitesketcher';
+import type { AreaMeasurement, MeasurementUnit, MapboxDrawPolygon, ParkingOverlay, DrawingMode, ViewMode, StoreShape } from '@/types/sitesketcher';
 import { LocationSearch } from './LocationSearch';
 import { formatArea, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { MobileBottomSheet } from './MobileBottomSheet';
 import { TouchOptimizedButton } from './TouchOptimizedButton';
 import { ParkingOverlay as ParkingOverlayComponent } from './ParkingOverlay';
 import { RectangleDimensionsModal } from './RectangleDimensionsModal';
+import { StoreShapesSection } from './StoreShapesSection';
 import { cn } from '@/lib/utils';
 
 // Memoized height input to prevent re-renders from parent polygon updates
@@ -112,6 +113,8 @@ interface ResponsiveControlsProps {
   onPolygonHeightChange?: (polygonId: string, height: number) => void;
   // Rectangle props
   onAddRectangle: (width: number, length: number) => void;
+  // Store shapes props
+  onStoreShapeSelect: (shape: StoreShape) => void;
   // Parking props
   parkingOverlays: ParkingOverlay[];
   selectedOverlayId: string | null;
@@ -151,6 +154,7 @@ export function ResponsiveControls({
   onPolygonSideLengthToggle,
   onPolygonHeightChange,
   onAddRectangle,
+  onStoreShapeSelect,
   parkingOverlays,
   selectedOverlayId,
   onAddOverlay,
@@ -287,6 +291,12 @@ export function ResponsiveControls({
             </Button>
           )
         )}
+
+        {/* Store Shapes Section */}
+        <StoreShapesSection
+          onShapeSelect={onStoreShapeSelect}
+          isMobile={isMobile}
+        />
 
         {/* Measurements Section */}
         <Card>

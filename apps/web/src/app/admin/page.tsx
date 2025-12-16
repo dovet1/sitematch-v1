@@ -96,6 +96,12 @@ export default async function AdminDashboard() {
               Agency Management
             </Link>
           </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/store-shapes">
+              <Building2 className="h-4 w-4 mr-2" />
+              Store Shapes Upload
+            </Link>
+          </Button>
           <Button variant="outline" disabled>
             <span>Manage Users (Coming Soon)</span>
           </Button>

@@ -65,7 +65,9 @@
       "Bash(do echo \"=== $file ===\")",
       "Bash(head:*)",
       "Bash(done)",
-      "Read(//Users/tomdove/.claude/plugins/**)"
+      "Read(//Users/tomdove/.claude/plugins/**)",
+      "Bash(/usr/bin/python3:*)",
+      "Bash(/opt/homebrew/bin/node:*)"
     ],
     "deny": []
   }

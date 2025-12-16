@@ -89,10 +89,12 @@ export interface Cuboid3D {
 
 export interface SiteSketcherState {
   polygons: MapboxDrawPolygon[];
+  placedStoreShapes: PlacedStoreShape[];  // NEW: Pre-defined store shapes placed on map
   parkingOverlays: ParkingOverlay[];
   cuboids: Cuboid3D[];
   measurements: AreaMeasurement | null;
   selectedPolygonId: string | null;
+  selectedPlacedShapeId: string | null;  // NEW: Selected store shape
   selectedParkingId: string | null;
   selectedCuboidId: string | null;
   measurementUnit: MeasurementUnit;
@@ -145,4 +147,49 @@ export interface SavedSketch {
   } | null;
   created_at: string;
   updated_at: string;
+}
+
+// Store Shapes - Pre-defined store footprints with detailed architectural elements
+export interface StoreShape {
+  id: string;
+  name: string;
+  description: string | null;
+  company_name: string;
+  geojson: GeoJSON.FeatureCollection | GeoJSON.Feature;  // Support detailed FeatureCollections
+  metadata?: {
+    scale_factor?: number;
+    source_units?: string;
+    insunits_code?: number;
+    bbox?: {
+      width?: number;
+      height?: number;
+      width_meters?: number;
+      height_meters?: number;
+    };
+    conversion_method?: 'metadata' | 'heuristic' | 'manual';
+    source_filename?: string;
+    target_width_meters?: number;
+    geojson_feature_count?: number;
+    optimized_feature_count?: number;
+  };
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlacedStoreShape {
+  id: string;                    // Unique instance ID
+  storeShapeId: string;          // Reference to store_shapes.id
+  storeShapeName: string;        // Cached name for display
+  geojson: GeoJSON.FeatureCollection | GeoJSON.Feature;  // Full GeoJSON with all features
+  centroid: [number, number];    // Cached centroid for placement and rotation
+  properties: {
+    id?: string;
+    isStoreShape: true;          // Flag to distinguish from regular polygons
+    isLocked: boolean;           // Cannot edit vertices
+    rotation: number;            // Rotation angle in degrees
+    color?: string;
+    [key: string]: any;
+  };
 }

@@ -1,0 +1,135 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            1.3768824936576436e-05,
+            0.00047384104281934965
+          ],
+          [
+            0.0004629244124320849,
+            0.0004738410428193483
+          ]
+        ]
+      },
+      "properties": {
+        "layer": "A-010-M_LINE",
+        "type": "LINE"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            1.3768824936576436e-05,
+            0.00047384104281934965
+          ],
+          [
+            1.3768824936576078e-05,
+            0.00034497830476688785
+          ]
+        ]
+      },
+      "properties": {
+        "layer": "A-010-M_LINE",
+        "type": "LINE"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            1.3768824936576346e-05,
+            0.0004401543737571864
+          ],
+          [
+            0.00046292441243208466,
+            0.00044015437375718514
+          ]
+        ]
+      },
+      "properties": {
+        "layer": "A-010-M_LINE",
+        "type": "LINE"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            1.3768824936576078e-05,
+            0.00034497830476688785
+          ],
+          [
+            0.00046292441243208455,
+            0.0003449783047668866
+          ]
+        ]
+      },
+      "properties": {
+        "layer": "A-010-M_LINE",
+        "type": "LINE"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            0.0004629244124320849,
+            0.0004738410428193483
+          ],
+          [
+            0.00046292441243208455,
+            0.0003449783047668866
+          ]
+        ]
+      },
+      "properties": {
+        "layer": "A-010-M_LINE",
+        "type": "LINE"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.4998278325528742e-05,
+          0.00046214008058109355
+        ]
+      },
+      "properties": {
+        "layer": "A-000-T_TEXT",
+        "type": "MTEXT",
+        "text": "TYPE 15 STORE SPECIFICATION"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.4998278325528742e-05,
+          0.00042781997340195357
+        ]
+      },
+      "properties": {
+        "layer": "A-000-T_TEXT",
+        "type": "MTEXT",
+        "text": "BUILDING AREAS:"
+      }
+    }
+  ]
+}

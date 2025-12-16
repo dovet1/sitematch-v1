@@ -1,0 +1,21 @@
+{
+  "source_filename": "1765897924868_LD_15_-PL-06_-_Proposed_Building_Plan.dxf",
+  "insunits_code": 4,
+  "source_units": "Millimeters",
+  "units_to_meters": 0.001,
+  "bbox": {
+    "width": 149256.10000000033,
+    "height": 75291.96947461336,
+    "width_meters": 149.25610000000032,
+    "height_meters": 75.29196947461337
+  },
+  "layer_counts": {
+    "A-010-M_LINE": 5,
+    "0": 1,
+    "A-000-T_TEXT": 2
+  },
+  "total_entities": 8,
+  "scale_factor": 8.983111749910168e-09,
+  "conversion_method": "metadata",
+  "geojson_feature_count": 31716
+}
