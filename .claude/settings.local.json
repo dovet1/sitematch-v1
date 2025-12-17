@@ -69,7 +69,8 @@
       "Bash(/usr/bin/python3:*)",
       "Bash(/opt/homebrew/bin/node:*)",
       "Bash(PATH=\"/opt/homebrew/bin:$PATH\" npm run type-check:*)",
-      "Bash(pgrep:*)"
+      "Bash(pgrep:*)",
+      "Bash(bc:*)"
     ],
     "deny": []
   }

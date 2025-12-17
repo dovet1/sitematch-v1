@@ -5,18 +5,20 @@ export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/sitesketcher/store-shapes
- * Fetch all active store shapes from the public library
+ * Fetch store shape metadata (no GeoJSON) from the public library
  * No authentication required - this is public data
+ * For performance: excludes large geojson column (fetch via /store-shapes/[id] instead)
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('[Store Shapes API] Fetching store shapes...');
+    console.log('[Store Shapes API] Fetching store shapes metadata...');
     const supabase = createServerClient();
 
-    // Fetch active shapes ordered by display_order, then name
+    // Fetch ONLY metadata fields - exclude massive geojson column for performance
+    // This reduces payload from ~4MB to ~5KB per shape
     const { data: shapes, error } = await supabase
       .from('store_shapes')
-      .select('*')
+      .select('id, name, description, company_name, display_order, metadata, is_active, created_at, updated_at')
       .eq('is_active', true)
       .order('display_order', { ascending: true })
       .order('name', { ascending: true });
@@ -29,7 +31,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('[Store Shapes API] Successfully fetched', shapes?.length || 0, 'shapes');
+    console.log('[Store Shapes API] Successfully fetched', shapes?.length || 0, 'shapes (metadata only)');
     return NextResponse.json({ shapes: shapes || [] });
   } catch (error: any) {
     console.error('[Store Shapes API] Unexpected error:', error);

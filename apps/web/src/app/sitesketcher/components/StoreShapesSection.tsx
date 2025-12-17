@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Building2, Info } from 'lucide-react';
-import type { StoreShape } from '@/types/sitesketcher';
-import { fetchStoreShapes } from '@/lib/sitesketcher/store-shapes-service';
+import { ChevronRight, Building2, Info, Loader2 } from 'lucide-react';
+import type { StoreShapeMetadata, StoreShape } from '@/types/sitesketcher';
+import { fetchStoreShapesMetadata, fetchStoreShapeDetail } from '@/lib/sitesketcher/store-shapes-service';
 import { cn } from '@/lib/utils';
 import { TouchOptimizedButton } from './TouchOptimizedButton';
 
@@ -17,31 +17,62 @@ interface StoreShapesSectionProps {
 
 export function StoreShapesSection({ onShapeSelect, isMobile = false }: StoreShapesSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [shapes, setShapes] = useState<StoreShape[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [metadataList, setMetadataList] = useState<StoreShapeMetadata[]>([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+  const [loadingShapeId, setLoadingShapeId] = useState<string | null>(null);
 
+  // Cache for full shapes (id -> StoreShape)
+  const [shapeCache, setShapeCache] = useState<Map<string, StoreShape>>(new Map());
+
+  // Lazy load: Only fetch when user opens the collapsible
   useEffect(() => {
-    const loadShapes = async () => {
-      try {
-        const fetchedShapes = await fetchStoreShapes();
-        setShapes(fetchedShapes);
-        setError(null);
-      } catch (err) {
-        console.error('Failed to load store shapes:', err);
-        setError('Failed to load store shapes');
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (isOpen && metadataList.length === 0 && !loading) {
+      const loadMetadata = async () => {
+        setLoading(true);
+        try {
+          const metadata = await fetchStoreShapesMetadata();
+          setMetadataList(metadata);
+          setError(null);
+        } catch (err) {
+          console.error('Failed to load store shapes metadata:', err);
+          setError('Failed to load store shapes');
+        } finally {
+          setLoading(false);
+        }
+      };
 
-    loadShapes();
-  }, []);
+      loadMetadata();
+    }
+  }, [isOpen, metadataList.length, loading]);
 
-  const handleShapeClick = (shape: StoreShape) => {
-    setSelectedShapeId(shape.id);
-    onShapeSelect(shape);
+  const handleShapeClick = async (metadata: StoreShapeMetadata) => {
+    setSelectedShapeId(metadata.id);
+
+    // Check cache first
+    const cachedShape = shapeCache.get(metadata.id);
+    if (cachedShape) {
+      onShapeSelect(cachedShape);
+      return;
+    }
+
+    // Fetch full shape with GeoJSON
+    setLoadingShapeId(metadata.id);
+    try {
+      const fullShape = await fetchStoreShapeDetail(metadata.id);
+
+      // Cache it
+      setShapeCache(prev => new Map(prev).set(metadata.id, fullShape));
+
+      // Notify parent
+      onShapeSelect(fullShape);
+    } catch (err) {
+      console.error('Failed to load shape detail:', err);
+      setError(`Failed to load ${metadata.name}`);
+    } finally {
+      setLoadingShapeId(null);
+    }
   };
 
   const ButtonComponent = isMobile ? TouchOptimizedButton : Button;
@@ -54,9 +85,9 @@ export function StoreShapesSection({ onShapeSelect, isMobile = false }: StoreSha
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
               <span className="font-medium">Store Shapes</span>
-              {shapes.length > 0 && (
+              {metadataList.length > 0 && (
                 <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
-                  {shapes.length}
+                  {metadataList.length}
                 </span>
               )}
             </div>
@@ -83,7 +114,8 @@ export function StoreShapesSection({ onShapeSelect, isMobile = false }: StoreSha
             </div>
 
             {loading && (
-              <div className="text-center py-4 text-sm text-muted-foreground">
+              <div className="text-center py-4 text-sm text-muted-foreground flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Loading shapes...
               </div>
             )}
@@ -94,7 +126,7 @@ export function StoreShapesSection({ onShapeSelect, isMobile = false }: StoreSha
               </div>
             )}
 
-            {!loading && !error && shapes.length === 0 && (
+            {!loading && !error && metadataList.length === 0 && (
               <div className="text-center py-6 px-2">
                 <Building2 className="h-8 w-8 text-muted-foreground/60 mx-auto mb-2" />
                 <p className="text-sm font-medium text-muted-foreground mb-1">
@@ -106,31 +138,41 @@ export function StoreShapesSection({ onShapeSelect, isMobile = false }: StoreSha
               </div>
             )}
 
-            {!loading && !error && shapes.length > 0 && (
+            {!loading && !error && metadataList.length > 0 && (
               <div className="space-y-2">
-                {shapes.map((shape) => (
+                {metadataList.map((metadata) => (
                   <ButtonComponent
-                    key={shape.id}
-                    variant={selectedShapeId === shape.id ? "default" : "outline"}
+                    key={metadata.id}
+                    variant={selectedShapeId === metadata.id ? "default" : "outline"}
                     className={cn(
                       "w-full justify-start text-left h-auto py-3",
-                      selectedShapeId === shape.id && "bg-primary text-primary-foreground"
+                      selectedShapeId === metadata.id && "bg-primary text-primary-foreground"
                     )}
-                    onClick={() => handleShapeClick(shape)}
+                    onClick={() => handleShapeClick(metadata)}
+                    disabled={loadingShapeId === metadata.id}
                     minSize={isMobile ? 48 : undefined}
                   >
                     <div className="flex items-center gap-3 w-full">
-                      <Building2 className="h-5 w-5 flex-shrink-0" />
+                      {loadingShapeId === metadata.id ? (
+                        <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin" />
+                      ) : (
+                        <Building2 className="h-5 w-5 flex-shrink-0" />
+                      )}
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{shape.name}</div>
-                        {shape.description && (
+                        <div className="font-medium truncate">{metadata.name}</div>
+                        {metadata.description && (
                           <div className="text-xs opacity-80 mt-0.5 truncate">
-                            {shape.description}
+                            {metadata.description}
                           </div>
                         )}
-                        {shape.company_name && shape.company_name !== shape.name && (
+                        {metadata.company_name && metadata.company_name !== metadata.name && (
                           <div className="text-xs opacity-70 mt-0.5">
-                            {shape.company_name}
+                            {metadata.company_name}
+                          </div>
+                        )}
+                        {loadingShapeId === metadata.id && (
+                          <div className="text-xs opacity-70 mt-0.5">
+                            Loading details...
                           </div>
                         )}
                       </div>

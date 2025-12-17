@@ -10,8 +10,16 @@ export interface MapboxDrawPolygon {
     color?: string;
     measurementUnit?: MeasurementUnit;
     showSideLengths?: boolean;
-    storeShapeName?: string;      // NEW: Original store shape name (if converted from store shape)
-    isFromStoreShape?: boolean;   // NEW: Flag to identify shapes created from store shapes
+    storeShapeName?: string;      // Original store shape name (if converted from store shape)
+    isFromStoreShape?: boolean;   // Flag to identify shapes created from store shapes
+    storeShapeId?: string;        // Link to store shape ID for fetching detail
+
+    // Detail geometry overlay support (loaded on-demand for performance)
+    detailGeometry?: GeoJSON.FeatureCollection | GeoJSON.Feature;  // Full interior layout
+    detailGeometryLoading?: boolean;  // Loading state for progressive enhancement
+    detailOpacity?: number;       // 0-1, default 0.3 for semi-transparent overlay
+    showDetailGeometry?: boolean; // Toggle visibility, default true
+
     [key: string]: any;
   };
 }
@@ -150,12 +158,23 @@ export interface SavedSketch {
 }
 
 // Store Shapes - Pre-defined store footprints with detailed architectural elements
-export interface StoreShape {
+
+// Lightweight metadata for list view (no GeoJSON - fetch on-demand for performance)
+export interface StoreShapeMetadata {
   id: string;
   name: string;
   description: string | null;
   company_name: string;
-  geojson: GeoJSON.FeatureCollection | GeoJSON.Feature;  // Support detailed FeatureCollections
+  display_order: number;
+  is_active: boolean;
+  bbox?: {
+    min_lng?: number;
+    min_lat?: number;
+    max_lng?: number;
+    max_lat?: number;
+    width_degrees?: number;
+    height_degrees?: number;
+  };
   metadata?: {
     scale_factor?: number;
     source_units?: string;
@@ -172,10 +191,13 @@ export interface StoreShape {
     geojson_feature_count?: number;
     optimized_feature_count?: number;
   };
-  is_active: boolean;
-  display_order: number;
   created_at: string;
   updated_at: string;
+}
+
+// Full shape with GeoJSON (extends metadata)
+export interface StoreShape extends StoreShapeMetadata {
+  geojson: GeoJSON.FeatureCollection | GeoJSON.Feature;  // Support detailed FeatureCollections
 }
 
 export interface PlacedStoreShape {
