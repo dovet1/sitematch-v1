@@ -254,6 +254,143 @@ export function translateFeatureCollection(
   return scaled;
 }
 
+/**
+ * Rotate entire FeatureCollection around a center point
+ * Uses Web Mercator projection for accurate geographic rotation
+ *
+ * @param geojson - The GeoJSON to rotate
+ * @param center - Center point for rotation
+ * @param angleRadians - Rotation angle in radians (positive = counterclockwise)
+ */
+export function rotateFeatureCollection(
+  geojson: FeatureCollection | Feature,
+  center: [number, number],
+  angleRadians: number
+): FeatureCollection | Feature {
+  const cosAngle = Math.cos(angleRadians);
+  const sinAngle = Math.sin(angleRadians);
+
+  // Web Mercator projection helpers
+  const toWebMercator = (lng: number, lat: number): [number, number] => {
+    const x = (lng * 20037508.34) / 180;
+    let y = Math.log(Math.tan(((90 + lat) * Math.PI) / 360)) / (Math.PI / 180);
+    y = (y * 20037508.34) / 180;
+    return [x, y];
+  };
+
+  const fromWebMercator = (x: number, y: number): [number, number] => {
+    const lng = (x / 20037508.34) * 180;
+    let lat = (y / 20037508.34) * 180;
+    lat = (180 / Math.PI) * (2 * Math.atan(Math.exp((lat * Math.PI) / 180)) - Math.PI / 2);
+    return [lng, lat];
+  };
+
+  const rotateCoord = (coord: number[]): number[] => {
+    const [x, y] = toWebMercator(coord[0], coord[1]);
+    const [cx, cy] = toWebMercator(center[0], center[1]);
+
+    // Translate to origin
+    const translatedX = x - cx;
+    const translatedY = y - cy;
+
+    // Rotate
+    const rotatedX = translatedX * cosAngle - translatedY * sinAngle;
+    const rotatedY = translatedX * sinAngle + translatedY * cosAngle;
+
+    // Translate back and convert from Web Mercator
+    const [lng, lat] = fromWebMercator(rotatedX + cx, rotatedY + cy);
+    return [lng, lat];
+  };
+
+  const rotateGeometry = (geometry: Geometry): Geometry => {
+    switch (geometry.type) {
+      case 'Point':
+        return { ...geometry, coordinates: rotateCoord(geometry.coordinates) };
+      case 'LineString':
+        return { ...geometry, coordinates: geometry.coordinates.map(rotateCoord) };
+      case 'Polygon':
+        return { ...geometry, coordinates: geometry.coordinates.map(ring => ring.map(rotateCoord)) };
+      case 'MultiPoint':
+        return { ...geometry, coordinates: geometry.coordinates.map(rotateCoord) };
+      case 'MultiLineString':
+        return { ...geometry, coordinates: geometry.coordinates.map(line => line.map(rotateCoord)) };
+      case 'MultiPolygon':
+        return { ...geometry, coordinates: geometry.coordinates.map(polygon => polygon.map(ring => ring.map(rotateCoord))) };
+      case 'GeometryCollection':
+        return { ...geometry, geometries: geometry.geometries.map(rotateGeometry) };
+      default:
+        return geometry;
+    }
+  };
+
+  if (geojson.type === 'FeatureCollection') {
+    return {
+      ...geojson,
+      features: geojson.features.map(f => ({
+        ...f,
+        geometry: f.geometry ? rotateGeometry(f.geometry) : f.geometry
+      }))
+    };
+  } else if (geojson.type === 'Feature') {
+    return {
+      ...geojson,
+      geometry: geojson.geometry ? rotateGeometry(geojson.geometry) : geojson.geometry
+    };
+  }
+
+  return geojson;
+}
+
+/**
+ * Extract the outer boundary polygon from a store shape GeoJSON
+ * Calculates the bounding box of all features and returns it as a simple polygon
+ *
+ * @param geojson - The complex store shape GeoJSON with many features (can be Feature or FeatureCollection)
+ * @returns Polygon coordinates in MapboxDrawPolygon format [[[lng, lat], ...]]
+ */
+export function extractOuterBoundary(geojson: FeatureCollection | Feature): number[][][] {
+  // Collect all coordinates from all features
+  const allCoords: [number, number][] = [];
+
+  // Handle both FeatureCollection and single Feature
+  const features = geojson.type === 'FeatureCollection'
+    ? geojson.features
+    : [geojson];
+
+  features.forEach(feature => {
+    if (feature.geometry) {
+      const coords = extractAllCoordinates(feature.geometry);
+      allCoords.push(...coords as [number, number][]);
+    }
+  });
+
+  if (allCoords.length === 0) {
+    // Return a small default polygon if no coordinates found
+    return [[[0, 0], [0.0001, 0], [0.0001, 0.0001], [0, 0.0001], [0, 0]]];
+  }
+
+  // Find bounding box (rectangular boundary)
+  let minLng = Infinity, minLat = Infinity;
+  let maxLng = -Infinity, maxLat = -Infinity;
+
+  allCoords.forEach(([lng, lat]) => {
+    minLng = Math.min(minLng, lng);
+    minLat = Math.min(minLat, lat);
+    maxLng = Math.max(maxLng, lng);
+    maxLat = Math.max(maxLat, lat);
+  });
+
+  // Return as closed polygon (bounding box rectangle)
+  // Order: bottom-left, bottom-right, top-right, top-left, close
+  return [[
+    [minLng, minLat],
+    [maxLng, minLat],
+    [maxLng, maxLat],
+    [minLng, maxLat],
+    [minLng, minLat] // Close the ring
+  ]];
+}
+
 // Legacy functions for backwards compatibility
 export const calculatePolygonCentroid = (coordinates: number[][][]): [number, number] => {
   const ring = coordinates[0];

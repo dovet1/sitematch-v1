@@ -5,8 +5,10 @@ import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { createMapboxMap, getMapboxToken, flyToLocation, addGridOverlay, removeGridOverlay } from '@/lib/sitesketcher/mapbox-utils';
 import type { MapboxDrawPolygon, ParkingOverlay, SearchResult, AreaMeasurement, MeasurementUnit, DrawingMode, ViewMode, Cuboid3D, StoreShape, PlacedStoreShape } from '@/types/sitesketcher';
+import type { FeatureCollection } from 'geojson';
 import { calculateDistance, formatDistance, calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { createRectangleCoordinates, feetToMeters } from '@/lib/sitesketcher/rectangle-utils';
+import { translateFeatureCollection, rotateFeatureCollection } from '@/lib/sitesketcher/store-shapes-service';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
@@ -32,18 +34,14 @@ interface MapboxMapProps {
   showSideLengths: boolean;
   rectangleToPlace?: { width: number; length: number } | null;
   onRectanglePlaced?: () => void;
+  storeShapeToPlace?: StoreShape | null;
+  onStoreShapePlaced?: (clickedLocation: [number, number]) => void;
   viewMode: ViewMode;
   show3DBuildings: boolean;
   cuboids: Cuboid3D[];
   onCuboidClick?: (cuboid: Cuboid3D) => void;
   onCuboidUpdate?: (cuboid: Cuboid3D) => void;
   selectedCuboidId: string | null;
-  // Store shapes props
-  placedStoreShapes: PlacedStoreShape[];
-  selectedPlacedShapeId: string | null;
-  shapeToPlace?: StoreShape | null;
-  onShapePlaced?: (clickedLocation: [number, number]) => void;
-  onPlacedShapeUpdate?: (shape: PlacedStoreShape) => void;
   className?: string;
 }
 
@@ -84,17 +82,14 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   showSideLengths,
   rectangleToPlace,
   onRectanglePlaced,
+  storeShapeToPlace,
+  onStoreShapePlaced,
   viewMode,
   show3DBuildings,
   cuboids,
   onCuboidClick,
   onCuboidUpdate,
   selectedCuboidId,
-  placedStoreShapes,
-  selectedPlacedShapeId,
-  shapeToPlace,
-  onShapePlaced,
-  onPlacedShapeUpdate,
   className = ''
 }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -117,8 +112,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   const keydownHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
   const keyupHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
   const rectangleToPlaceRef = useRef<{ width: number; length: number } | null>(rectangleToPlace || null);
-  const shapeToPlaceRef = useRef<StoreShape | null>(shapeToPlace || null);
-  const onShapePlacedRef = useRef<((clickedLocation: [number, number]) => void) | undefined>(onShapePlaced);
+  const storeShapeToPlaceRef = useRef<StoreShape | null>(storeShapeToPlace || null);
+  const onStoreShapePlacedRef = useRef<((clickedLocation: [number, number]) => void) | undefined>(onStoreShapePlaced);
 
   // Helper function to detect mobile devices
   const isMobile = () => window.innerWidth < 768;
@@ -868,6 +863,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
           }
         });
 
+
         // Add 3D buildings layer from Mapbox vector tiles
         // First check if composite source exists (it won't on satellite style)
         const compositeSource = map.getSource('composite');
@@ -1503,6 +1499,8 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         }
       };
 
+
+
       // Handle parking overlay clicks for desktop
       map.on('click', 'parking-overlays-fill', handleParkingOverlaySelection);
 
@@ -1621,45 +1619,26 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         return true;
       };
 
-      // Function to handle store shape placement
+      // Function to handle store shape placement (shared between click and touch)
       const placeStoreShape = (lngLat: { lng: number; lat: number }) => {
-        console.log('placeStoreShape called:', {
-          hasShapeToPlace: !!shapeToPlaceRef.current,
-          shapeToPlaceName: shapeToPlaceRef.current?.name,
-          drawingMode: drawingModeRef.current,
-          hasCallback: !!onShapePlacedRef.current
-        });
+        if (!storeShapeToPlaceRef.current || drawingModeRef.current !== 'draw') return false;
 
-        if (!shapeToPlaceRef.current || drawingModeRef.current !== 'draw' || !onShapePlacedRef.current) {
-          console.log('placeStoreShape returning false - conditions not met');
-          return false;
+        // Call parent callback to place the shape at this location
+        if (onStoreShapePlacedRef.current) {
+          onStoreShapePlacedRef.current([lngLat.lng, lngLat.lat]);
         }
-
-        console.log('Calling onShapePlaced with:', [lngLat.lng, lngLat.lat]);
-        // Call parent callback with clicked location
-        onShapePlacedRef.current([lngLat.lng, lngLat.lat]);
 
         return true;
       };
 
-      // Handle touch events for mobile rectangle and store shape placement
+      // Handle touch events for mobile rectangle placement
       let rectangleTouchStart: { x: number; y: number; time: number } | null = null;
-      let shapeTouchStart: { x: number; y: number; time: number } | null = null;
 
       map.on('touchstart', (e) => {
         if (rectangleToPlaceRef.current && drawingModeRef.current === 'draw') {
           const touch = (e.originalEvent as TouchEvent).touches[0];
           if (touch) {
             rectangleTouchStart = {
-              x: touch.clientX,
-              y: touch.clientY,
-              time: Date.now()
-            };
-          }
-        } else if (shapeToPlace && drawingModeRef.current === 'draw') {
-          const touch = (e.originalEvent as TouchEvent).touches[0];
-          if (touch) {
-            shapeTouchStart = {
               x: touch.clientX,
               y: touch.clientY,
               time: Date.now()
@@ -1685,22 +1664,12 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
             }
           }
           rectangleTouchStart = null;
-        } else if (shapeToPlace && drawingModeRef.current === 'draw' && shapeTouchStart) {
-          const touch = (e.originalEvent as TouchEvent).changedTouches[0];
-          if (touch) {
-            const touchDuration = Date.now() - shapeTouchStart.time;
-            const distance = Math.sqrt(
-              Math.pow(touch.clientX - shapeTouchStart.x, 2) +
-              Math.pow(touch.clientY - shapeTouchStart.y, 2)
-            );
+        }
 
-            // If it was a quick tap (not a drag), place the shape
-            if (touchDuration < 300 && distance < 10) {
-              placeStoreShape(e.lngLat);
-              e.preventDefault();
-            }
-          }
-          shapeTouchStart = null;
+        // Handle store shape touch placement
+        if (storeShapeToPlaceRef.current && drawingModeRef.current === 'draw') {
+          placeStoreShape(e.lngLat);
+          e.preventDefault();
         }
       });
 
@@ -1725,23 +1694,23 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
         const features = map.queryRenderedFeatures(e.point, {
           layers: ['parking-overlays-fill', 'polygon-rotation-handles', 'parking-rotation-handles']
         });
-        
+
         // Also check for Mapbox Draw features (polygons)
         const drawFeatures = map.queryRenderedFeatures(e.point, {
           filter: ['==', '$type', 'Polygon']
         });
-        
+
         console.log('Click deselect check:', {
           drawingMode: drawingModeRef.current,
           featuresFound: features.length,
           drawFeaturesFound: drawFeatures.length,
           point: e.point
         });
-        
+
         // If no features were clicked (empty area), deselect everything
         if (features.length === 0 && drawFeatures.length === 0) {
           console.log('Deselecting all shapes - empty area clicked');
-          
+
           // Immediately clear rotation handles
           updateRotationHandles(); // Clear polygon rotation handles
           updateParkingRotationHandles(null); // Clear parking rotation handles
@@ -2035,18 +2004,19 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
 
       map.on('mousemove', (e) => {
         const mousePoint = e.lngLat;
-        
+
+
         // Check if we're dragging a parking overlay - this takes priority
-        if (isDraggingParkingRef.current && draggedParkingIdRef.current && originalOverlayRef.current) {          
+        if (isDraggingParkingRef.current && draggedParkingIdRef.current && originalOverlayRef.current) {
           const updatedOverlay = {
             ...originalOverlayRef.current,
             position: [mousePoint.lng, mousePoint.lat] as [number, number]
           };
-          
+
           onParkingOverlayUpdate(updatedOverlay);
           return; // Exit early to prevent polygon interactions
         }
-        
+
         // Don't handle polygon rotation if parking is being interacted with
         if (parkingClickedRef.current) {
           return;
@@ -2116,6 +2086,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       });
 
       map.on('mouseup', () => {
+
         // Handle parking drag end
         if (isDraggingParkingRef.current) {
           isDraggingParkingRef.current = false;
@@ -2696,13 +2667,6 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     polygonsRef.current = polygons;
   }, [polygons]);
 
-  useEffect(() => {
-    shapeToPlaceRef.current = shapeToPlace;
-  }, [shapeToPlace]);
-
-  useEffect(() => {
-    onShapePlacedRef.current = onShapePlaced;
-  }, [onShapePlaced]);
 
   useEffect(() => {
     measurementUnitRef.current = measurementUnit;
@@ -2870,139 +2834,26 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     });
   }, [polygons, isMapLoaded]);
 
-  // Render detailed store shapes with all internal walls and features
-  useEffect(() => {
-    if (!mapRef.current || !isMapLoaded) return;
+  // Helper function to extract coordinates from any geometry type
+  const extractCoordinates = useCallback((geometry: any): number[][] => {
+    const coords: number[][] = [];
 
-    const map = mapRef.current;
+    if (geometry.type === 'Point') {
+      coords.push(geometry.coordinates);
+    } else if (geometry.type === 'LineString') {
+      coords.push(...geometry.coordinates);
+    } else if (geometry.type === 'Polygon') {
+      geometry.coordinates.forEach((ring: number[][]) => coords.push(...ring));
+    }
 
-    // Keep track of all active shape source/layer IDs
-    const activeShapeIds = new Set(placedStoreShapes.map(shape => shape.id));
+    return coords;
+  }, []);
 
-    // Remove old sources/layers for deleted shapes
-    const allSources = map.getStyle().sources;
-    Object.keys(allSources).forEach(sourceId => {
-      if (sourceId.startsWith('store-shape-')) {
-        const shapeId = sourceId.replace('store-shape-', '').replace('-label', '');
-        if (!activeShapeIds.has(shapeId)) {
-          // Remove layers first
-          const baseSourceId = sourceId.replace('-label', '');
-          const fillLayerId = `${baseSourceId}-fill`;
-          const lineLayerId = `${baseSourceId}-line`;
-          const symbolLayerId = `${baseSourceId}-symbol`;
 
-          if (map.getLayer(fillLayerId)) map.removeLayer(fillLayerId);
-          if (map.getLayer(lineLayerId)) map.removeLayer(lineLayerId);
-          if (map.getLayer(symbolLayerId)) map.removeLayer(symbolLayerId);
 
-          // Then remove sources (both main and label)
-          if (map.getSource(sourceId)) map.removeSource(sourceId);
-          const labelSourceId = `${baseSourceId}-label`;
-          if (map.getSource(labelSourceId)) map.removeSource(labelSourceId);
-        }
-      }
-    });
 
-    // Add/update sources and layers for each placed shape
-    placedStoreShapes.forEach((placedShape) => {
-      const sourceId = `store-shape-${placedShape.id}`;
-      const fillLayerId = `${sourceId}-fill`;
-      const lineLayerId = `${sourceId}-line`;
-      const symbolLayerId = `${sourceId}-symbol`;
 
-      // Add or update source
-      if (!map.getSource(sourceId)) {
-        map.addSource(sourceId, {
-          type: 'geojson',
-          data: placedShape.geojson
-        });
-      } else {
-        (map.getSource(sourceId) as mapboxgl.GeoJSONSource).setData(placedShape.geojson);
-      }
 
-      // Add FILL layer for polygon features
-      if (!map.getLayer(fillLayerId)) {
-        map.addLayer({
-          id: fillLayerId,
-          type: 'fill',
-          source: sourceId,
-          filter: ['==', ['geometry-type'], 'Polygon'],
-          paint: {
-            'fill-color': placedShape.properties.color || '#3b82f6',
-            'fill-opacity': 0.2
-          }
-        });
-      }
-
-      // Add LINE layer for all features (both LineStrings and polygon outlines)
-      if (!map.getLayer(lineLayerId)) {
-        map.addLayer({
-          id: lineLayerId,
-          type: 'line',
-          source: sourceId,
-          paint: {
-            'line-color': placedShape.properties.color || '#3b82f6',
-            'line-width': [
-              'case',
-              ['==', ['geometry-type'], 'Polygon'], 2,  // Thicker for polygons
-              1  // Thinner for lines
-            ],
-            'line-dasharray': [2, 2]  // Dashed to distinguish from regular polygons
-          }
-        });
-      }
-
-      // Add SYMBOL layer for store name label at centroid
-      if (!map.getLayer(symbolLayerId)) {
-        // Create a point feature at the centroid for the label
-        const labelFeature = {
-          type: 'FeatureCollection' as const,
-          features: [{
-            type: 'Feature' as const,
-            geometry: {
-              type: 'Point' as const,
-              coordinates: placedShape.centroid
-            },
-            properties: {
-              name: placedShape.storeShapeName
-            }
-          }]
-        };
-
-        // Update source to include label point
-        const currentSource = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
-        if (currentSource) {
-          // We need to combine the original features with the label point
-          // For now, add a separate source for the label
-          const labelSourceId = `${sourceId}-label`;
-          if (!map.getSource(labelSourceId)) {
-            map.addSource(labelSourceId, {
-              type: 'geojson',
-              data: labelFeature
-            });
-          }
-
-          map.addLayer({
-            id: symbolLayerId,
-            type: 'symbol',
-            source: labelSourceId,
-            layout: {
-              'text-field': ['get', 'name'],
-              'text-size': 12,
-              'text-anchor': 'center',
-              'text-allow-overlap': false,
-              'text-ignore-placement': false
-            },
-            paint: {
-              'text-color': '#1e40af',
-              'text-halo-color': '#ffffff',
-              'text-halo-width': 2
-            }
-          });
-        }
-      }
-    });
-  }, [placedStoreShapes, isMapLoaded]);
 
   // Toggle 3D polygons visibility based on viewMode
   useEffect(() => {
@@ -3545,6 +3396,7 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     }
   }, [parkingOverlays, isMapLoaded]);
 
+
   // Update polygon rotation handles for selected polygon
   useEffect(() => {
     if (!selectedPolygonId) {
@@ -3553,13 +3405,13 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       totalRotationRef.current = 0;
       return;
     }
-    
+
     // Find the selected polygon
-    const selectedPolygon = polygons.find(p => 
-      String(p.id) === selectedPolygonId || 
+    const selectedPolygon = polygons.find(p =>
+      String(p.id) === selectedPolygonId ||
       String(p.properties?.id) === selectedPolygonId
     );
-    
+
     updateRotationHandles(selectedPolygon);
   }, [polygons, selectedPolygonId, updateRotationHandles]);
 
@@ -3614,6 +3466,155 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
   const totalRotationRef = useRef<number>(0);
   const originalDragStartAngleRef = useRef<number>(0);
   const isRotatingRef = useRef<boolean>(false);
+
+
+  // Utility function to translate GeoJSON by a delta
+  const translateGeoJSONByDelta = useCallback((
+    geojson: FeatureCollection,
+    delta: [number, number]
+  ): FeatureCollection => {
+    const translateCoord = (coord: number[]): number[] => [
+      coord[0] + delta[0],
+      coord[1] + delta[1]
+    ];
+
+    const translateGeometry = (geometry: any): any => {
+      if (geometry.type === 'Point') {
+        return { ...geometry, coordinates: translateCoord(geometry.coordinates) };
+      }
+      if (geometry.type === 'LineString') {
+        return { ...geometry, coordinates: geometry.coordinates.map(translateCoord) };
+      }
+      if (geometry.type === 'Polygon') {
+        return {
+          ...geometry,
+          coordinates: geometry.coordinates.map((ring: number[][]) => ring.map(translateCoord))
+        };
+      }
+      if (geometry.type === 'MultiPoint') {
+        return { ...geometry, coordinates: geometry.coordinates.map(translateCoord) };
+      }
+      if (geometry.type === 'MultiLineString') {
+        return {
+          ...geometry,
+          coordinates: geometry.coordinates.map((line: number[][]) => line.map(translateCoord))
+        };
+      }
+      if (geometry.type === 'MultiPolygon') {
+        return {
+          ...geometry,
+          coordinates: geometry.coordinates.map((polygon: number[][][]) =>
+            polygon.map(ring => ring.map(translateCoord))
+          )
+        };
+      }
+      if (geometry.type === 'GeometryCollection') {
+        return {
+          ...geometry,
+          geometries: geometry.geometries.map(translateGeometry)
+        };
+      }
+      return geometry;
+    };
+
+    return {
+      ...geojson,
+      features: geojson.features.map(f => ({
+        ...f,
+        geometry: translateGeometry(f.geometry)
+      }))
+    };
+  }, []);
+
+  // Utility function to rotate GeoJSON using Web Mercator projection
+  const rotateGeoJSON = useCallback((
+    geojson: FeatureCollection,
+    center: [number, number],
+    angleRadians: number
+  ): FeatureCollection => {
+    const cosAngle = Math.cos(angleRadians);
+    const sinAngle = Math.sin(angleRadians);
+
+    // Web Mercator projection helpers
+    const toWebMercator = (lng: number, lat: number): [number, number] => {
+      const x = (lng * 20037508.34) / 180;
+      let y = Math.log(Math.tan(((90 + lat) * Math.PI) / 360)) / (Math.PI / 180);
+      y = (y * 20037508.34) / 180;
+      return [x, y];
+    };
+
+    const fromWebMercator = (x: number, y: number): [number, number] => {
+      const lng = (x / 20037508.34) * 180;
+      let lat = (y / 20037508.34) * 180;
+      lat = (180 / Math.PI) * (2 * Math.atan(Math.exp((lat * Math.PI) / 180)) - Math.PI / 2);
+      return [lng, lat];
+    };
+
+    const rotateCoord = (coord: number[]): number[] => {
+      // Web Mercator projection
+      const [x, y] = toWebMercator(coord[0], coord[1]);
+      const [cx, cy] = toWebMercator(center[0], center[1]);
+
+      // Translate to origin
+      const translatedX = x - cx;
+      const translatedY = y - cy;
+
+      // Rotate
+      const rotatedX = translatedX * cosAngle - translatedY * sinAngle;
+      const rotatedY = translatedX * sinAngle + translatedY * cosAngle;
+
+      // Translate back and convert from Web Mercator
+      const [lng, lat] = fromWebMercator(rotatedX + cx, rotatedY + cy);
+      return [lng, lat];
+    };
+
+    const rotateGeometry = (geometry: any): any => {
+      if (geometry.type === 'Point') {
+        return { ...geometry, coordinates: rotateCoord(geometry.coordinates) };
+      }
+      if (geometry.type === 'LineString') {
+        return { ...geometry, coordinates: geometry.coordinates.map(rotateCoord) };
+      }
+      if (geometry.type === 'Polygon') {
+        return {
+          ...geometry,
+          coordinates: geometry.coordinates.map((ring: number[][]) => ring.map(rotateCoord))
+        };
+      }
+      if (geometry.type === 'MultiPoint') {
+        return { ...geometry, coordinates: geometry.coordinates.map(rotateCoord) };
+      }
+      if (geometry.type === 'MultiLineString') {
+        return {
+          ...geometry,
+          coordinates: geometry.coordinates.map((line: number[][]) => line.map(rotateCoord))
+        };
+      }
+      if (geometry.type === 'MultiPolygon') {
+        return {
+          ...geometry,
+          coordinates: geometry.coordinates.map((polygon: number[][][]) =>
+            polygon.map(ring => ring.map(rotateCoord))
+          )
+        };
+      }
+      if (geometry.type === 'GeometryCollection') {
+        return {
+          ...geometry,
+          geometries: geometry.geometries.map(rotateGeometry)
+        };
+      }
+      return geometry;
+    };
+
+    return {
+      ...geojson,
+      features: geojson.features.map(f => ({
+        ...f,
+        geometry: rotateGeometry(f.geometry)
+      }))
+    };
+  }, []);
 
   // Direct rotation function with better precision
   const rotatePolygonDirect = useCallback((center: [number, number], deltaAngle: number) => {
@@ -3773,27 +3774,37 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
     rectangleToPlaceRef.current = rectangleToPlace || null;
   }, [rectangleToPlace]);
 
-  // Effect to switch drawing mode when rectangle placement is active
+  // Update storeShapeToPlace ref when prop changes
+  useEffect(() => {
+    storeShapeToPlaceRef.current = storeShapeToPlace || null;
+  }, [storeShapeToPlace]);
+
+  // Update onStoreShapePlaced ref when prop changes
+  useEffect(() => {
+    onStoreShapePlacedRef.current = onStoreShapePlaced;
+  }, [onStoreShapePlaced]);
+
+  // Effect to switch drawing mode when rectangle or store shape placement is active
   useEffect(() => {
     if (!drawRef.current || !isMapLoaded) return;
 
     const draw = drawRef.current;
 
-    if (rectangleToPlace && drawingMode === 'draw') {
+    if ((rectangleToPlace || storeShapeToPlace) && drawingMode === 'draw') {
       // Switch to simple_select to prevent polygon drawing
-      // This allows the map click handler to catch clicks for rectangle placement
+      // This allows the map click handler to catch clicks for placement
       if (draw.getMode() !== 'simple_select') {
         draw.changeMode('simple_select');
       }
-    } else if (!rectangleToPlace && drawingMode === 'draw') {
-      // Return to draw_polygon mode when not placing rectangles
+    } else if (!rectangleToPlace && !storeShapeToPlace && drawingMode === 'draw') {
+      // Return to draw_polygon mode when not placing anything
       if (draw.getMode() !== 'draw_polygon') {
         draw.changeMode('draw_polygon');
       }
     }
-  }, [rectangleToPlace, drawingMode, isMapLoaded]);
+  }, [rectangleToPlace, storeShapeToPlace, drawingMode, isMapLoaded]);
 
-  // Effect to change cursor when rectangle placement mode is active
+  // Effect to change cursor when rectangle or store shape placement mode is active
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -3803,38 +3814,14 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       // Show crosshair cursor with a visual indication we're in rectangle placement mode
       map.getCanvas().style.cursor = 'crosshair';
       map.getCanvas().title = `Click to place ${rectangleToPlace.width} x ${rectangleToPlace.length} ${measurementUnit === 'metric' ? 'm' : 'ft'} rectangle`;
-    } else {
-      map.getCanvas().title = '';
-    }
-  }, [rectangleToPlace, drawingMode, measurementUnit]);
-
-  // Effect to handle store shape placement mode
-  useEffect(() => {
-    if (!drawRef.current || !isMapLoaded || !shapeToPlace) return;
-
-    const draw = drawRef.current;
-
-    if (shapeToPlace && drawingMode === 'draw') {
-      // Switch to simple_select to prevent polygon drawing
-      if (draw.getMode() !== 'simple_select') {
-        draw.changeMode('simple_select');
-      }
-    }
-  }, [shapeToPlace, drawingMode, isMapLoaded]);
-
-  // Effect to change cursor when shape placement mode is active
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    const map = mapRef.current;
-
-    if (shapeToPlace && drawingMode === 'draw') {
+    } else if (storeShapeToPlace && drawingMode === 'draw') {
+      // Show crosshair cursor for store shape placement
       map.getCanvas().style.cursor = 'crosshair';
-      map.getCanvas().title = `Click to place ${shapeToPlace.name}`;
+      map.getCanvas().title = `Click to place ${storeShapeToPlace.name}`;
     } else {
       map.getCanvas().title = '';
     }
-  }, [shapeToPlace, drawingMode]);
+  }, [rectangleToPlace, storeShapeToPlace, drawingMode, measurementUnit]);
 
   return (
     <div className="relative w-full h-full">
@@ -3859,14 +3846,14 @@ export const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(({
       )}
 
       {/* Store Shape Placement Instruction Banner */}
-      {shapeToPlace && drawingMode === 'draw' && (
+      {storeShapeToPlace && drawingMode === 'draw' && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
           <div className="bg-primary text-primary-foreground px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
             <span className="font-semibold">
-              Click on the map to place {shapeToPlace.name}
+              Click on the map to place {storeShapeToPlace.name}
             </span>
           </div>
         </div>

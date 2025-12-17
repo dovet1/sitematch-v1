@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
+    console.log('[Store Shapes API] Fetching store shapes...');
     const supabase = createServerClient();
 
     // Fetch active shapes ordered by display_order, then name
@@ -21,18 +22,19 @@ export async function GET(request: NextRequest) {
       .order('name', { ascending: true });
 
     if (error) {
-      console.error('Error fetching store shapes:', error);
+      console.error('[Store Shapes API] Supabase error:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch store shapes' },
+        { error: 'Failed to fetch store shapes', details: error.message },
         { status: 500 }
       );
     }
 
+    console.log('[Store Shapes API] Successfully fetched', shapes?.length || 0, 'shapes');
     return NextResponse.json({ shapes: shapes || [] });
-  } catch (error) {
-    console.error('Unexpected error fetching store shapes:', error);
+  } catch (error: any) {
+    console.error('[Store Shapes API] Unexpected error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }

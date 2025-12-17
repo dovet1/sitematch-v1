@@ -10,6 +10,8 @@ export interface MapboxDrawPolygon {
     color?: string;
     measurementUnit?: MeasurementUnit;
     showSideLengths?: boolean;
+    storeShapeName?: string;      // NEW: Original store shape name (if converted from store shape)
+    isFromStoreShape?: boolean;   // NEW: Flag to identify shapes created from store shapes
     [key: string]: any;
   };
 }
@@ -89,12 +91,10 @@ export interface Cuboid3D {
 
 export interface SiteSketcherState {
   polygons: MapboxDrawPolygon[];
-  placedStoreShapes: PlacedStoreShape[];  // NEW: Pre-defined store shapes placed on map
   parkingOverlays: ParkingOverlay[];
   cuboids: Cuboid3D[];
   measurements: AreaMeasurement | null;
   selectedPolygonId: string | null;
-  selectedPlacedShapeId: string | null;  // NEW: Selected store shape
   selectedParkingId: string | null;
   selectedCuboidId: string | null;
   measurementUnit: MeasurementUnit;

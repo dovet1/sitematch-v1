@@ -30,7 +30,7 @@ import type {
 import { calculatePolygonArea } from '@/lib/sitesketcher/measurement-utils';
 import { getMapboxToken, flyToLocation } from '@/lib/sitesketcher/mapbox-utils';
 import { getPolygonColor } from '@/lib/sitesketcher/colors';
-import { translatePolygon, translateFeatureCollection, calculateFeatureCollectionCentroid } from '@/lib/sitesketcher/store-shapes-service';
+import { translatePolygon, translateFeatureCollection, calculateFeatureCollectionCentroid, extractOuterBoundary } from '@/lib/sitesketcher/store-shapes-service';
 import { createSketch, updateSketch } from '@/lib/sitesketcher/sketch-service';
 import { exportAsJSON, exportAsCSV, exportAsPNG, exportAsPDF } from '@/lib/sitesketcher/export-utils';
 import '@/styles/sitesketcher-mobile.css';
@@ -67,12 +67,10 @@ function SiteSketcherContent() {
 
   const [state, setState] = useState<SiteSketcherState>({
     polygons: [],
-    placedStoreShapes: [],
     parkingOverlays: [],
     cuboids: [],
     measurements: null,
     selectedPolygonId: null,
-    selectedPlacedShapeId: null,
     selectedParkingId: null,
     selectedCuboidId: null,
     measurementUnit: 'metric',
@@ -90,14 +88,8 @@ function SiteSketcherContent() {
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(showWelcome);
   const [rectangleToPlace, setRectangleToPlace] = useState<{ width: number; length: number } | null>(null);
-  const [shapeToPlace, setShapeToPlace] = useState<StoreShape | null>(null);
-  const [placementMode, setPlacementMode] = useState<'idle' | 'placing_shape'>('idle');
+  const [storeShapeToPlace, setStoreShapeToPlace] = useState<StoreShape | null>(null);
   const [showCuboidSelector, setShowCuboidSelector] = useState(false);
-
-  // Debug logging for shapeToPlace changes
-  useEffect(() => {
-    console.log('shapeToPlace changed:', shapeToPlace?.name || 'null');
-  }, [shapeToPlace]);
   const [pendingCuboidPolygon, setPendingCuboidPolygon] = useState<MapboxDrawPolygon | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -311,16 +303,15 @@ function SiteSketcherContent() {
   // Remove mode handling - tool is always in draw mode
 
   const handlePolygonCreate = useCallback((polygon: MapboxDrawPolygon) => {
-    // Check free tier limit before adding polygon (includes placed store shapes)
+    // Check free tier limit before adding polygon
     setState(prev => {
-      const totalShapes = prev.polygons.length + prev.placedStoreShapes.length;
-      if (isFreeTier && totalShapes >= 2) {
+      if (isFreeTier && prev.polygons.length >= 2) {
         // Show upgrade banner and prevent polygon creation
         setShowUpgradeBanner(true);
         setUpgradeBannerType('polygon');
         // Delete the polygon from the map
         mapRef.current?.deletePolygon(String(polygon.id || polygon.properties?.id || ''));
-        toast.error('Free tier limit reached: 2 shapes maximum (polygons + store shapes)');
+        toast.error('Free tier limit reached: 2 shapes maximum');
         return prev;
       }
 
@@ -658,102 +649,66 @@ function SiteSketcherContent() {
     setRectangleToPlace({ width, length });
   }, []);
 
-  // Store Shape handlers
+  // Store Shape handlers - Convert store shape to simple polygon
   const handleStoreShapeSelect = useCallback((shape: StoreShape) => {
     console.log('handleStoreShapeSelect called with:', shape.name);
-    setShapeToPlace(shape);
-    console.log('shapeToPlace set to:', shape);
-    setPlacementMode('placing_shape');
-    // Ensure we're in draw mode so clicks will place the shape
-    setState(prev => ({
-      ...prev,
-      drawingMode: 'draw'
-    }));
-    toast.info(`Click on the map to place ${shape.name}`);
-  }, []);
 
-  const handleStoreShapePlaced = useCallback((clickedLocation: [number, number]) => {
-    console.log('handleStoreShapePlaced called:', { clickedLocation, shapeToPlace: shapeToPlace?.name });
-    if (!shapeToPlace) {
-      console.log('No shapeToPlace, returning early');
+    // Check free tier limit
+    if (isFreeTier && state.polygons.length >= 2) {
+      setShowUpgradeBanner(true);
+      setUpgradeBannerType('polygon');
+      toast.error('Free tier limit reached: 2 shapes maximum');
       return;
     }
 
+    // Set the shape to be placed on map click
+    setStoreShapeToPlace(shape);
+    toast.info(`Click on the map to place ${shape.name}`);
+  }, [isFreeTier, state.polygons.length]);
+
+  const handleStoreShapePlaced = useCallback((clickedLocation: [number, number]) => {
+    if (!storeShapeToPlace) return;
+
     setState(prev => {
-      // Check free tier limit (combined polygons + placed shapes)
-      const totalShapes = prev.polygons.length + prev.placedStoreShapes.length;
+      // Extract outer boundary from complex GeoJSON
+      const boundary = extractOuterBoundary(storeShapeToPlace.geojson);
 
-      if (isFreeTier && totalShapes >= 2) {
-        setShowUpgradeBanner(true);
-        setUpgradeBannerType('polygon');
-        toast.error('Free tier limit reached: 2 shapes maximum (polygons + store shapes)');
-        return prev;
-      }
+      // Translate boundary to clicked location
+      // The boundary is at [0, 0], so we need to center it at the clicked location
+      const translatedBoundary = translatePolygon(boundary, clickedLocation);
 
-      // Translate entire FeatureCollection to clicked location
-      // Note: GeoJSON coordinates are already scaled during conversion,
-      // so we use scale 1.0 to preserve the correct size
-      const translatedGeoJSON = translateFeatureCollection(
-        shapeToPlace.geojson,
-        clickedLocation,
-        1.0 // Coordinates are already properly scaled
-      );
-
-      // Calculate centroid for the placed shape
-      const centroid = calculateFeatureCollectionCentroid(translatedGeoJSON);
-
-      console.log('Placing store shape:', {
-        originalCenter: calculateFeatureCollectionCentroid(shapeToPlace.geojson),
-        clickedLocation,
-        newCentroid: centroid,
-        featureCount: (translatedGeoJSON as any).features?.length
-      });
-
-      // Create placed shape instance
-      const placedShape: PlacedStoreShape = {
-        id: `placed-shape-${Date.now()}`,
-        storeShapeId: shapeToPlace.id,
-        storeShapeName: shapeToPlace.name,
-        geojson: translatedGeoJSON,
-        centroid,
+      // Create MapboxDrawPolygon from store shape
+      const polygon: MapboxDrawPolygon = {
+        id: `store-shape-${storeShapeToPlace.id}-${Date.now()}`,
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: translatedBoundary
+        },
         properties: {
-          isStoreShape: true,
-          isLocked: true,
-          rotation: 0,
-          color: getPolygonColor(prev.polygons.length + prev.placedStoreShapes.length)
+          id: `store-shape-${storeShapeToPlace.id}-${Date.now()}`,
+          color: getPolygonColor(prev.polygons.length),
+          storeShapeName: storeShapeToPlace.name,
+          isFromStoreShape: true,
+          measurementUnit: prev.measurementUnit || 'metric'
         }
       };
 
-      console.log('Created placed shape:', placedShape);
+      console.log('Created polygon from store shape:', polygon);
+
+      const newPolygons = [...prev.polygons, polygon];
+      toast.success(`Placed ${storeShapeToPlace.name}`);
 
       return {
         ...prev,
-        placedStoreShapes: [...prev.placedStoreShapes, placedShape],
-        selectedPlacedShapeId: placedShape.id
+        polygons: newPolygons,
+        selectedPolygonId: String(polygon.id)
       };
     });
 
-    // Reset placement mode
-    setPlacementMode('idle');
-    setShapeToPlace(null);
-  }, [shapeToPlace, isFreeTier]);
-
-  const handlePlacedShapeDelete = useCallback((shapeId: string) => {
-    setState(prev => ({
-      ...prev,
-      placedStoreShapes: prev.placedStoreShapes.filter(s => s.id !== shapeId),
-      selectedPlacedShapeId: prev.selectedPlacedShapeId === shapeId ? null : prev.selectedPlacedShapeId
-    }));
-  }, []);
-
-  const handlePlacedShapeUpdate = useCallback((updatedShape: PlacedStoreShape) => {
-    setState(prev => ({
-      ...prev,
-      placedStoreShapes: prev.placedStoreShapes.map(s =>
-        s.id === updatedShape.id ? updatedShape : s
-      )
-    }));
-  }, []);
+    // Clear the shape to place
+    setStoreShapeToPlace(null);
+  }, [storeShapeToPlace]);
 
   // Save/Load/Export handlers
   // Handle Save - updates existing or prompts for name if new
@@ -885,9 +840,7 @@ function SiteSketcherContent() {
           snapToGrid: false,
           gridSize: 10,
           showSideLengths: true,
-          exportAreaBounds: null,
-          placedStoreShapes: [],
-          selectedPlacedShapeId: null
+          exportAreaBounds: null
         });
         setCurrentSketchId(null);
         setCurrentSketchName('Untitled Sketch');
@@ -913,9 +866,7 @@ function SiteSketcherContent() {
         snapToGrid: false,
         gridSize: 10,
         showSideLengths: true,
-        exportAreaBounds: null,
-        placedStoreShapes: [],
-        selectedPlacedShapeId: null
+        exportAreaBounds: null
       });
       setCurrentSketchId(null);
       setCurrentSketchName('Untitled Sketch');
@@ -1255,15 +1206,12 @@ function SiteSketcherContent() {
               showSideLengths={state.showSideLengths}
               rectangleToPlace={rectangleToPlace}
               onRectanglePlaced={() => setRectangleToPlace(null)}
+              storeShapeToPlace={storeShapeToPlace}
+              onStoreShapePlaced={handleStoreShapePlaced}
               viewMode={state.viewMode}
               show3DBuildings={state.show3DBuildings}
               cuboids={state.cuboids}
               selectedCuboidId={state.selectedCuboidId}
-              placedStoreShapes={state.placedStoreShapes}
-              selectedPlacedShapeId={state.selectedPlacedShapeId}
-              shapeToPlace={shapeToPlace}
-              onShapePlaced={handleStoreShapePlaced}
-              onPlacedShapeUpdate={handlePlacedShapeUpdate}
               className="w-full h-full"
             />
 
@@ -1394,15 +1342,12 @@ function SiteSketcherContent() {
             showSideLengths={state.showSideLengths}
             rectangleToPlace={rectangleToPlace}
             onRectanglePlaced={() => setRectangleToPlace(null)}
+            storeShapeToPlace={storeShapeToPlace}
+            onStoreShapePlaced={handleStoreShapePlaced}
             viewMode={state.viewMode}
             show3DBuildings={state.show3DBuildings}
             cuboids={state.cuboids}
             selectedCuboidId={state.selectedCuboidId}
-            placedStoreShapes={state.placedStoreShapes}
-            selectedPlacedShapeId={state.selectedPlacedShapeId}
-            shapeToPlace={shapeToPlace}
-            onShapePlaced={handleStoreShapePlaced}
-            onPlacedShapeUpdate={handlePlacedShapeUpdate}
             className="w-full h-full"
           />
         </div>

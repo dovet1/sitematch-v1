@@ -67,7 +67,9 @@
       "Bash(done)",
       "Read(//Users/tomdove/.claude/plugins/**)",
       "Bash(/usr/bin/python3:*)",
-      "Bash(/opt/homebrew/bin/node:*)"
+      "Bash(/opt/homebrew/bin/node:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:$PATH\" npm run type-check:*)",
+      "Bash(pgrep:*)"
     ],
     "deny": []
   }
