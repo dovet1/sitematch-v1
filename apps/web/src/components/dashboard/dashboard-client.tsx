@@ -201,7 +201,7 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed top-0 left-0 z-50 h-screen w-64 bg-white border-r-2 border-violet-200 shadow-xl transition-transform duration-300 ease-in-out',
+          'fixed top-0 left-0 z-50 h-screen w-64 bg-white border-r-2 border-violet-200 shadow-xl transition-transform duration-300 ease-in-out flex flex-col',
           'lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
@@ -220,7 +220,7 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 16rem)' }}>
+        <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
           {navigationSections.map((section, sectionIndex) => (
             <div key={sectionIndex} {...(section.tourId ? { 'data-tour': section.tourId } : {})}>
               {section.header && (
@@ -276,7 +276,7 @@ export function DashboardClient({ userId, userEmail }: DashboardClientProps) {
         </nav>
 
         {/* User info at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t-2 border-violet-200 bg-gradient-to-r from-violet-50/30 to-transparent">
+        <div className="flex-shrink-0 p-4 border-t-2 border-violet-200 bg-white">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-lg">
               {userEmail.charAt(0).toUpperCase()}
