@@ -158,7 +158,7 @@ export function SitesTab({ userId }: SitesTabProps) {
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-3">No Sites Created Yet</h2>
               <p className="text-base sm:text-lg text-gray-600 font-medium mb-8">
-                Create sites to organize your saved searches, sketches, and demographic analyses in one place.
+                Create sites to organise your saved searches, sketches, and demographic analyses in one place.
               </p>
               <Button
                 className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg font-bold rounded-xl px-8 py-6 text-lg"

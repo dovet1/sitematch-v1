@@ -65,14 +65,14 @@ const navigationSections: NavigationSection[] = [
     tourId: 'directories',
     items: [
       { id: 'external', label: 'Requirement Directory', icon: Search, href: '/search', external: true },
-      { id: 'external', label: 'Agency Directory', icon: Building2, href: '/agencies', external: true },
+      // { id: 'external', label: 'Agency Directory', icon: Building2, href: '/agencies', external: true },
     ],
   },
   {
     header: 'Your Listings',
     items: [
       { id: 'requirements' as TabType, label: 'Your Requirements', icon: FileText, tourId: 'requirements' },
-      { id: 'agency' as TabType, label: 'Your Agency', icon: Building2 },
+      // { id: 'agency' as TabType, label: 'Your Agency', icon: Building2 },
     ],
   },
   {
