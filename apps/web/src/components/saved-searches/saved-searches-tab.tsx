@@ -279,7 +279,7 @@ export function SavedSearchesTab({ userId }: SavedSearchesTabProps) {
                         {match.location && (
                           <p className="text-sm text-gray-600 mb-1">
                             {match.location.address}
-                            {match.distance_miles && ` • ${match.distance_miles} miles away`}
+                            {match.distance_miles != null && ` • ${match.distance_miles.toFixed(1)} miles away`}
                           </p>
                         )}
                         <div className="flex items-center gap-2 text-xs text-gray-500">
