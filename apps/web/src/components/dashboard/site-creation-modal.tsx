@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +38,7 @@ export function SiteCreationModal({
   const [locationResults, setLocationResults] = useState<LocationResult[]>([]);
   const [locationLoading, setLocationLoading] = useState(false);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const isSelectingLocationRef = useRef(false);
 
   // Form state
   const [name, setName] = useState('');
@@ -69,6 +70,12 @@ export function SiteCreationModal({
 
   // Search locations as user types
   useEffect(() => {
+    // Don't search if we just selected a location
+    if (isSelectingLocationRef.current) {
+      isSelectingLocationRef.current = false;
+      return;
+    }
+
     if (!locationQuery || locationQuery.length < 3) {
       setLocationResults([]);
       return;
@@ -91,9 +98,11 @@ export function SiteCreationModal({
   }, [locationQuery]);
 
   const handleLocationSelect = (location: LocationResult) => {
+    isSelectingLocationRef.current = true; // Set ref flag before updating query
     setSelectedLocation(location);
     setLocationQuery(formatLocationDisplay(location));
     setShowLocationDropdown(false);
+    setLocationResults([]); // Clear results to prevent re-triggering
   };
 
   const handleClearLocation = () => {
