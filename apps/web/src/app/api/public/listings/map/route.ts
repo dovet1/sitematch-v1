@@ -205,14 +205,17 @@ export async function GET(request: NextRequest) {
       const listingIds = listings.map(l => l.id);
       const { data: logoFiles } = await supabase
         .from('file_uploads')
-        .select('listing_id, file_path')
+        .select('listing_id, file_path, bucket_name')
         .in('listing_id', listingIds)
         .eq('file_type', 'logo')
         .eq('is_primary', true);
 
       if (logoFiles) {
         logoData = Object.fromEntries(
-          logoFiles.map(file => [file.listing_id, file.file_path])
+          logoFiles.map(file => [
+            file.listing_id,
+            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${file.bucket_name}/${file.file_path}`
+          ])
         );
       }
     }

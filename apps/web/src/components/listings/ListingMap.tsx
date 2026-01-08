@@ -7,6 +7,7 @@ import '@/styles/map-mobile.css';
 import { SearchFilters } from '@/types/search';
 import { MapLoadingSkeleton } from '@/components/map/MapLoadingSkeleton';
 import { getClearbitLogoUrl } from '@/lib/clearbit-logo';
+import { getSearchResultLogoUrl } from '@/lib/search-logo-utils';
 
 interface ListingMapProps {
   filters: SearchFilters;
@@ -451,44 +452,31 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
                 >
                   <div className="flex items-center gap-3">
                     {/* Company Logo */}
-                    <div className="w-10 h-10 bg-gray-200 rounded flex-shrink-0 flex items-center justify-center overflow-hidden">
-                      {listing.clearbit_logo && listing.company_domain ? (
-                        <img
-                          src={getClearbitLogoUrl(listing.company_domain, 128) || ''}
-                          alt={`${listing.company_name} logo`}
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            // If clearbit fails, show fallback
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const fallback = target.nextElementSibling as HTMLElement;
-                            if (fallback) fallback.style.display = 'flex';
-                          }}
-                        />
-                      ) : !listing.clearbit_logo && listing.logo_url ? (
-                        <img
-                          src={listing.logo_url}
-                          alt={`${listing.company_name} logo`}
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            // If uploaded logo fails, show fallback
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const fallback = target.nextElementSibling as HTMLElement;
-                            if (fallback) fallback.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      {/* Fallback initials */}
-                      <span
-                        className="text-xs font-medium text-gray-600"
-                        style={{
-                          display: ((listing.clearbit_logo && listing.company_domain) || (!listing.clearbit_logo && listing.logo_url)) ? 'none' : 'flex'
-                        }}
-                      >
-                        {listing.company_name?.charAt(0) || '?'}
-                      </span>
-                    </div>
+                    {(() => {
+                      const logoUrl = getSearchResultLogoUrl(listing);
+                      return (
+                        <div className="w-10 h-10 bg-gray-200 rounded flex-shrink-0 flex items-center justify-center overflow-hidden">
+                          {logoUrl ? (
+                            <img
+                              src={logoUrl}
+                              alt={`${listing.company_name} logo`}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                if (target.parentElement) {
+                                  target.parentElement.innerHTML = `<span class="text-xs font-medium text-gray-600">${listing.company_name?.charAt(0) || '?'}</span>`;
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span className="text-xs font-medium text-gray-600">
+                              {listing.company_name?.charAt(0) || '?'}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
