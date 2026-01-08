@@ -181,6 +181,12 @@ export function SiteDemographerDesktop() {
     const location = locationOverride || selectedLocation;
     if (!location) return;
 
+    // Validate measurement value
+    if (!measurementValue || typeof measurementValue !== 'number' || measurementValue <= 0) {
+      toast.error('Please enter a valid distance or time value');
+      return;
+    }
+
     // Reset previous data if requested (when selecting a new location)
     if (shouldReset) {
       resetDemographics();

@@ -150,7 +150,7 @@ export function SubmissionSuccessTransition({
           <div className="space-y-3">
             <div className="flex gap-3">
               <Button
-                onClick={onViewDashboard || (() => router.push('/occupier/dashboard'))}
+                onClick={onViewDashboard || (() => router.push('/new-dashboard'))}
                 className="flex-1 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white h-12 shadow-lg hover:shadow-xl transition-all duration-200 group"
               >
                 <Home className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />

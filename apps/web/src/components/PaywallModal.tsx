@@ -144,7 +144,7 @@ export function PaywallModal({
   }
 
   const handleContinueToFree = () => {
-    router.push('/occupier/dashboard')
+    router.push('/new-dashboard')
     handleOpenChange(false)
   }
 

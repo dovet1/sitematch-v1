@@ -111,8 +111,8 @@ export function ListingLocationsMap({
           <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-3">
             <MapPin className="w-8 h-8 text-violet-500" />
           </div>
-          <p className="text-gray-700 font-medium">Nationwide Coverage</p>
-          <p className="text-sm text-gray-600 mt-1">Open to opportunities across the UK</p>
+          <p className="text-gray-700 font-medium">Open to UK opportunities</p>
+          <p className="text-sm text-gray-600 mt-1">No individual target locations have been specified.</p>
         </div>
       </div>
     );

@@ -7,7 +7,7 @@ import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
+import { Loader2, PenTool, Mail } from 'lucide-react';
 
 export function Hero() {
   const { user } = useAuth();
@@ -167,14 +167,17 @@ export function Hero() {
               )}
             </div>
 
-            {/* Secondary CTA for occupiers - Enhanced */}
-            <div className="mt-5 md:mt-6 hidden sm:block">
-              <div className="inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-3 px-6 py-4 bg-gradient-to-r from-orange-100 to-amber-100 rounded-2xl border-2 border-orange-300 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                <p className="text-sm md:text-base font-bold text-gray-700 text-center sm:text-left">Looking to buy or lease a site?</p>
+            {/* Secondary CTA for occupiers - Mobile: simple button */}
+            <div className="mt-5 md:mt-6 sm:hidden">
+              <div className="inline-flex flex-col items-center gap-3 px-6 py-4 bg-gradient-to-r from-orange-100 to-amber-100 rounded-2xl border-2 border-orange-300 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <p className="text-sm md:text-base font-bold text-gray-700 text-center">
+                  Looking to buy or lease a site?
+                </p>
+
                 {user ? (
                   <Link
                     href="/occupier/create-listing-quick"
-                    className="text-sm md:text-base font-black text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1 whitespace-nowrap"
+                    className="text-sm md:text-base font-black text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1"
                   >
                     Post for free
                     <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,7 +190,7 @@ export function Hero() {
                     title="Sign in to post requirements"
                     description="Access your account to create and manage property listings"
                   >
-                    <button className="text-sm md:text-base font-black text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1 whitespace-nowrap">
+                    <button className="text-sm md:text-base font-black text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1">
                       Post for free
                       <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -195,6 +198,100 @@ export function Hero() {
                     </button>
                   </AuthChoiceModal>
                 )}
+              </div>
+            </div>
+
+            {/* Secondary CTA for occupiers - Desktop: card design */}
+            <div className="mt-6 md:mt-8 hidden sm:block">
+              <div className="inline-block">
+                {/* Headline */}
+                <div className="text-center mb-4">
+                  <span className="text-xs md:text-sm font-bold text-gray-600">
+                    Looking to buy or lease a site?
+                  </span>
+                </div>
+
+                {/* Two mini-cards */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Option 1: Post yourself */}
+                  <div className="group relative bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-5 border-2 border-violet-300 hover:border-violet-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden">
+                    {/* Decorative accent */}
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-violet-300/30 to-transparent rounded-bl-full"></div>
+
+                    <div className="relative">
+                      {/* Icon */}
+                      <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center mb-3 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                        <PenTool className="w-6 h-6 text-white" />
+                      </div>
+
+                      {/* Text */}
+                      <h3 className="text-base font-black text-gray-900 mb-1">
+                        Post for free
+                      </h3>
+                      <p className="text-xs text-gray-600 font-medium mb-3">
+                        Quick form in under 2 mins
+                      </p>
+
+                      {/* CTA Link */}
+                      {user ? (
+                        <Link
+                          href="/occupier/create-listing-quick"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-violet-600 hover:text-violet-700"
+                        >
+                          Get started
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Link>
+                      ) : (
+                        <AuthChoiceModal
+                          redirectTo="/occupier/create-listing-quick"
+                          title="Sign in to post requirements"
+                          description="Access your account to create and manage property listings"
+                        >
+                          <button className="inline-flex items-center gap-1 text-xs font-bold text-violet-600 hover:text-violet-700">
+                            Get started
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        </AuthChoiceModal>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Option 2: Email us */}
+                  <div className="group relative bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-5 border-2 border-blue-300 hover:border-blue-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden">
+                    {/* Decorative accent */}
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-300/30 to-transparent rounded-bl-full"></div>
+
+                    <div className="relative">
+                      {/* Icon */}
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center mb-3 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                        <Mail className="w-6 h-6 text-white" />
+                      </div>
+
+                      {/* Text */}
+                      <h3 className="text-base font-black text-gray-900 mb-1">
+                        Email us - free
+                      </h3>
+                      <p className="text-xs text-gray-600 font-medium mb-3">
+                        We'll post for you
+                      </p>
+
+                      {/* CTA Link */}
+                      <a
+                        href="mailto:rob@sitematcher.co.uk?subject=Site%20Requirement"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700"
+                      >
+                        Email rob@sitematcher.co.uk
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

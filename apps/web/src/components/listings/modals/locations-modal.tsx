@@ -171,13 +171,13 @@ export function LocationsModal({
               "font-medium text-gray-700 mb-1",
               isMobileUI ? "text-base" : "text-sm"
             )}>
-              Nationwide Coverage
+              Open to UK opportunities
             </p>
             <p className={cn(
               "text-gray-500",
               isMobileUI ? "text-sm" : "text-xs"
             )}>
-              Open to opportunities across the UK
+              No individual target locations have been specified.
             </p>
           </div>
         )}

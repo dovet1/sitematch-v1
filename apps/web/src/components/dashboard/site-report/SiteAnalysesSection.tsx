@@ -186,7 +186,7 @@ export function SiteAnalysesSection({
           <BarChart3 className="h-16 w-16 text-purple-400 mx-auto mb-4" />
           <h3 className="text-xl font-black text-gray-900 mb-2">No Analyses Yet</h3>
           <p className="text-gray-600 mb-6 max-w-md mx-auto">
-            Run demographic analyses to understand the catchment area and target market for this site
+            Run location analyses to understand the catchment area and target market for this site
           </p>
           <Button
             onClick={handleCreateNew}

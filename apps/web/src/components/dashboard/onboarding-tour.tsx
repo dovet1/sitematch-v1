@@ -74,7 +74,7 @@ export function OnboardingTour({ userId, onComplete, forceStart = false }: Onboa
         <div className="space-y-2">
           <h3 className="text-lg font-black text-gray-900">Access Public Directories</h3>
           <p className="text-gray-700">
-            Quickly access the Requirement Directory to browse all available property requirements, or explore the Agency Directory to find property agencies.
+            Quickly access the Requirement Directory to browse all available property requirements.
           </p>
         </div>
       ),
@@ -98,9 +98,9 @@ export function OnboardingTour({ userId, onComplete, forceStart = false }: Onboa
       target: '[data-tour="sites"]',
       content: (
         <div className="space-y-2">
-          <h3 className="text-lg font-black text-gray-900">Assess and Organize Sites</h3>
+          <h3 className="text-lg font-black text-gray-900">Assess and Organise Sites</h3>
           <p className="text-gray-700">
-            Add sites you're assessing and aggregate information about them. Link saved searches, sketches, and demographic analyses to each site to build comprehensive site reports.
+            Add sites you're assessing and aggregate information about them. Link saved searches, sketches, and location analyses to each site to build comprehensive site reports.
           </p>
         </div>
       ),
@@ -149,11 +149,15 @@ export function OnboardingTour({ userId, onComplete, forceStart = false }: Onboa
   ];
 
   const handleJoyrideCallback = async (data: CallBackProps) => {
-    const { status, type, index } = data;
+    const { status, type, index, action } = data;
 
     if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
-      // Update step index
-      setStepIndex(index + (type === EVENTS.STEP_AFTER ? 1 : 0));
+      // Update step index based on action (next or prev)
+      if (action === 'prev') {
+        setStepIndex(index - 1);
+      } else {
+        setStepIndex(index + (type === EVENTS.STEP_AFTER ? 1 : 0));
+      }
     }
 
     if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {

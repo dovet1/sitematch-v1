@@ -478,7 +478,7 @@ function MobileUserSection({ onClose }: { onClose: () => void }) {
         {/* Menu Items */}
         <div className="space-y-1.5">
           <Link
-            href="/occupier/dashboard"
+            href="/new-dashboard"
             onClick={onClose}
             className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted/60 transition-all duration-200 active:scale-[0.98] violet-bloom-touch"
           >

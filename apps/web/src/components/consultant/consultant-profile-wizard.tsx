@@ -187,7 +187,7 @@ export default function ConsultantProfileWizard({ className }: ConsultantProfile
 
       if (data.success) {
         toast.success('Profile completed successfully!');
-        router.push('/occupier/dashboard');
+        router.push('/new-dashboard');
       } else {
         toast.error(data.message || 'Failed to complete profile');
         if (data.errors) {

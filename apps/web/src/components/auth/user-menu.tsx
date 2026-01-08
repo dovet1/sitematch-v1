@@ -172,7 +172,7 @@ export function UserMenu() {
           <div className="p-1">
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link href="/occupier/dashboard" className="flex items-center gap-2 cursor-pointer">
+                <Link href="/new-dashboard" className="flex items-center gap-2 cursor-pointer">
                   <LayoutDashboard className="h-4 w-4" />
                   <span>Dashboard</span>
                 </Link>

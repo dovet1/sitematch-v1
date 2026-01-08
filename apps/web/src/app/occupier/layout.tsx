@@ -9,7 +9,7 @@ export default async function OccupierLayout({
   const user = await getCurrentUser();
   
   if (!user) {
-    redirect('/?login=1&redirect=/occupier/dashboard');
+    redirect('/?login=1&redirect=/new-dashboard');
   }
 
   if (user.role !== 'occupier' && user.role !== 'admin') {

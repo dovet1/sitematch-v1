@@ -161,9 +161,9 @@ export function SaveAnalysisModal({
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-2xl">
           <UpgradeBanner
-            title="Save Your Demographic Analyses"
+            title="Save Your Location Analyses"
             features={[
-              'Save unlimited demographic analyses',
+              'Save unlimited location analyses',
               'Attach analyses to sites',
               'Access historical demographic data',
               'Export analysis reports',

@@ -22,7 +22,7 @@ export default async function ConsultantProfileEditPage() {
     .single();
 
   if (userError || userData?.user_type !== 'Consultant') {
-    redirect('/occupier/dashboard');
+    redirect('/new-dashboard');
   }
 
   // Check if profile exists

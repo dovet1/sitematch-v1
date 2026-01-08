@@ -96,7 +96,8 @@ export default function PricingPage() {
       description: 'Perfect for occupiers',
       features: [
         'Post and manage unlimited requirements',
-        'Access to our agency directory',
+        'Basic access to SiteSketcher',
+        'Basic access to SiteAnalyser',
       ],
       cta: 'Get Started',
       highlighted: false,
@@ -111,8 +112,8 @@ export default function PricingPage() {
       features: [
         'Everything in Free',
         'Browse 1000s of verified requirements',
-        'SiteSketcher access',
-        'Create an agency profile',
+        'Full SiteSketcher access',
+        'Full SiteAnalyser access',
       ],
       cta: 'Start Free Trial',
       highlighted: true,

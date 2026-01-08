@@ -23,7 +23,7 @@ export default async function ConsultantLayout({
     .single();
 
   if (userError || userData?.user_type !== 'Consultant') {
-    redirect('/occupier/dashboard');
+    redirect('/new-dashboard');
   }
 
   return <>{children}</>;

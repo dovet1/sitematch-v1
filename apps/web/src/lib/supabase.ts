@@ -107,6 +107,7 @@ export interface Database {
           email: string
           role: 'occupier' | 'admin'
           user_type: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
+          user_company_name: string | null
           org_id: string | null
           subscription_status: string | null
           stripe_customer_id: string | null
@@ -119,6 +120,7 @@ export interface Database {
           email: string
           role?: 'occupier' | 'admin'
           user_type: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
+          user_company_name?: string | null
           org_id?: string | null
           subscription_status?: string | null
           stripe_customer_id?: string | null
@@ -131,6 +133,7 @@ export interface Database {
           email?: string
           role?: 'occupier' | 'admin'
           user_type?: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
+          user_company_name?: string | null
           org_id?: string | null
           subscription_status?: string | null
           stripe_customer_id?: string | null

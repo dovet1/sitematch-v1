@@ -336,12 +336,6 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
         </div>
       )}
 
-      {/* Listing Count */}
-      {listings.length > 0 && (
-        <div className="text-center text-base text-gray-600 font-semibold">
-          Showing {listings.length} {totalCount > 0 && `of ${totalCount}`} listings
-        </div>
-      )}
 
       {/* Infinite Scroll Trigger - at the very bottom with large rootMargin for early triggering */}
       {hasMore && !isFreeTier && <div ref={observerTarget} className="h-1" />}
