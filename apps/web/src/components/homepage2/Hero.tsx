@@ -1,47 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import { useAuth } from '@/contexts/auth-context';
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import Link from 'next/link';
 import { Loader2, PenTool, Mail } from 'lucide-react';
 
 export function Hero() {
   const { user } = useAuth();
+  const { hasAccess: hasSubscription } = useSubscriptionAccess();
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<'active' | 'trialing' | null>(null);
   const [showAlreadySubscribed, setShowAlreadySubscribed] = useState(false);
-
-  // Fetch subscription status when component mounts and user is logged in
-  useEffect(() => {
-    const fetchSubscriptionStatus = async () => {
-      if (!user?.id) {
-        setSubscriptionStatus(null);
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/user/subscription-status');
-        if (response.ok) {
-          const data = await response.json();
-          setSubscriptionStatus(data.subscriptionStatus);
-        }
-      } catch (error) {
-        console.error('Error fetching subscription status:', error);
-      }
-    };
-
-    fetchSubscriptionStatus();
-  }, [user?.id]);
 
   const handleProCheckout = async () => {
     if (!user) return;
 
     // First check if user is already subscribed
-    if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') {
+    if (hasSubscription) {
       setShowAlreadySubscribed(true);
       return;
     }
@@ -63,8 +42,7 @@ export function Hero() {
       const data = await response.json();
 
       if (!response.ok) {
-        if (data.subscriptionStatus === 'active' || data.subscriptionStatus === 'trialing') {
-          setSubscriptionStatus(data.subscriptionStatus);
+        if (data.hasAccess) {
           setShowAlreadySubscribed(true);
           setIsLoadingCheckout(false);
           return;
@@ -121,7 +99,7 @@ export function Hero() {
             {/* CTAs - Bold gradient buttons */}
             <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
               {user ? (
-                subscriptionStatus === 'active' || subscriptionStatus === 'trialing' ? (
+                hasSubscription ? (
                   <Button
                     asChild
                     size="lg"
@@ -336,11 +314,11 @@ export function Hero() {
       </div>
 
       {/* Already Subscribed Modal */}
-      {subscriptionStatus && (
+      {showAlreadySubscribed && (
         <AlreadySubscribedModal
           open={showAlreadySubscribed}
           onClose={() => setShowAlreadySubscribed(false)}
-          subscriptionStatus={subscriptionStatus}
+          subscriptionStatus="active"
         />
       )}
     </section>
