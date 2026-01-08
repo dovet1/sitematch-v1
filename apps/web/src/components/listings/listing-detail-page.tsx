@@ -4079,8 +4079,8 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                                 <Globe className="w-8 h-8 text-violet-500" />
                               </div>
-                              <h5 className="font-semibold text-gray-900 mb-1">Nationwide Coverage</h5>
-                              <p className="text-sm text-gray-600 mb-4">Open to opportunities across the UK</p>
+                              <h5 className="font-semibold text-gray-900 mb-1">Open to UK opportunities</h5>
+                              <p className="text-sm text-gray-600 mb-4">No individual target locations have been specified.</p>
                               <div className="flex items-center justify-center gap-2 text-xs text-violet-600">
                                 <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse"></div>
                                 <span>Tap Add to specify target areas</span>
@@ -5725,10 +5725,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           </div>
                           
                           <h3 className="text-2xl font-bold text-white mb-3">
-                            Nationwide Coverage
+                            Open to UK opportunities
                           </h3>
                           <p className="text-violet-200 text-lg mb-6 max-w-sm mx-auto leading-relaxed">
-                            Open to opportunities across the UK
+                            No individual target locations have been specified.
                           </p>
                           
                           <Button 
@@ -7237,10 +7237,10 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   ) : (
                     <div className="p-4 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100">
                       <p className="font-medium text-gray-800 flex items-center gap-2 mb-2">
-                        <span className="text-xl">🌍</span> Nationwide Coverage
+                        <span className="text-xl">🌍</span> Open to UK opportunities
                       </p>
                       <p className="text-gray-600 text-sm">
-                        This listing is open to opportunities across the UK
+                        No individual target locations have been specified.
                       </p>
                     </div>
                   )}

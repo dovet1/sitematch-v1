@@ -228,10 +228,10 @@ export function ToolsShowcase() {
                 <span className="relative">
                   "SiteMatcher shows me who is active and exactly what they are looking for. I get contacts instantly, and if I want to test an idea,{' '}
                   <span className="relative inline-block">
-                    <span className="relative z-10">SiteSketcher lets me draw a quick feasibility in minutes</span>
+                    <span className="relative z-10">SiteSketcher lets me draw a quick feasibility in minutes.</span>
                     <span className="absolute inset-0 bg-cyan-200/60 transform -skew-y-1"></span>
                   </span>
-                  . It is straightforward, simple, and saves a huge amount of time."
+                  It is straightforward, simple, and saves a huge amount of time."
                 </span>
               </blockquote>
 

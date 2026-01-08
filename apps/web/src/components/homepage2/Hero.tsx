@@ -276,7 +276,7 @@ export function Hero() {
                         Email us - free
                       </h3>
                       <p className="text-xs text-gray-600 font-medium mb-3">
-                        We'll post it for you
+                        We'll post for you
                       </p>
 
                       {/* CTA Link */}

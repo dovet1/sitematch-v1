@@ -100,7 +100,7 @@ export function OnboardingTour({ userId, onComplete, forceStart = false }: Onboa
         <div className="space-y-2">
           <h3 className="text-lg font-black text-gray-900">Assess and Organise Sites</h3>
           <p className="text-gray-700">
-            Add sites you're assessing and aggregate information about them. Link saved searches, sketches, and demographic analyses to each site to build comprehensive site reports.
+            Add sites you're assessing and aggregate information about them. Link saved searches, sketches, and location analyses to each site to build comprehensive site reports.
           </p>
         </div>
       ),

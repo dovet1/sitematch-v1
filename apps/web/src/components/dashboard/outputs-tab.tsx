@@ -357,7 +357,7 @@ export function OutputsTab({ userId }: OutputsTabProps) {
         <div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900">My Outputs</h1>
           <p className="text-gray-600 mt-1 sm:mt-2 text-base sm:text-lg font-medium">
-            All your saved searches, sketches, and demographic analyses in one place
+            All your saved searches, sketches, and location analyses in one place
           </p>
         </div>
 
@@ -759,7 +759,7 @@ export function OutputsTab({ userId }: OutputsTabProps) {
               <div className="bg-white rounded-3xl border-3 border-purple-200 shadow-xl p-12 text-center">
                 <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 font-medium">No analyses yet</p>
-                <p className="text-sm text-gray-500 mt-2">Create demographic analyses using SiteAnalyser</p>
+                <p className="text-sm text-gray-500 mt-2">Create location analyses using SiteAnalyser</p>
                 <Button
                   onClick={() => router.push('/new-dashboard/tools/site-demographer')}
                   className="mt-4 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl"

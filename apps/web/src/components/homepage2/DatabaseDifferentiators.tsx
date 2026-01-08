@@ -11,7 +11,7 @@ export function DatabaseDifferentiators() {
       emoji: '🎯',
       icon: CheckCircle,
       title: 'Bang up to date',
-      stat: '50% verified in last 30 days',
+      stat: '50% verified in last 90 days',
       description: 'We continually verify our requirements. Half of our requirements were confirmed active within the last month. No more chasing dead leads.',
       color: 'from-green-500 to-emerald-600'
     },
@@ -19,7 +19,7 @@ export function DatabaseDifferentiators() {
       emoji: '📊',
       icon: TrendingUp,
       title: 'Largest in the UK',
-      stat: '700+ listings • 7,500+ locations',
+      stat: '700+ companies • 7,500+ locations',
       description: 'The largest directory of verified site requirements on the UK market. We are constantly growing, with new requirements added weekly.',
       color: 'from-blue-500 to-cyan-600'
     },
@@ -28,7 +28,7 @@ export function DatabaseDifferentiators() {
       icon: Award,
       title: 'Founders who get it',
       stat: 'Led by industry experts',
-      description: 'Our CEO, Rob Lithgow, has held senior property roles at major national retailers. We know what property professionals care about.',
+      description: 'Our CEO, Rob Lithgow, has led property teams at major national retailers. We know what property professionals care about.',
       color: 'from-violet-500 to-purple-600'
     }
   ];

@@ -404,9 +404,9 @@ export function ImmersiveListingModal({
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center mx-auto mb-3 shadow-sm">
                     <span className="text-2xl">🌍</span>
                   </div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Nationwide Coverage</h4>
+                  <h4 className="font-semibold text-gray-900 mb-1">Open to UK opportunities</h4>
                   <p className="text-sm text-gray-600 mb-3">
-                    Open to opportunities across the UK
+                    No individual target locations have been specified.
                   </p>
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-100 rounded-full">
                     <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse"></div>
