@@ -96,8 +96,11 @@ export default async function AdminDashboard() {
               Agency Management
             </Link>
           </Button>
-          <Button variant="outline" disabled>
-            <span>Manage Users (Coming Soon)</span>
+          <Button variant="outline" asChild>
+            <Link href="/admin/manage-users">
+              <Users className="h-4 w-4 mr-2" />
+              Manage Users
+            </Link>
           </Button>
           <Button variant="outline" disabled>
             <span>Audit Trail (Coming Soon)</span>
