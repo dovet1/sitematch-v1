@@ -127,6 +127,37 @@ export async function PATCH(
       updateData.rejection_reason = validatedStatusUpdate.reason;
     }
 
+    // If approving, also set live_version_id to the latest approved version
+    if (validatedStatusUpdate.status === 'approved') {
+      // Find the latest approved version
+      const { data: latestVersion } = await adminClient
+        .from('listing_versions')
+        .select('id')
+        .eq('listing_id', listingId)
+        .eq('status', 'approved')
+        .order('version_number', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (latestVersion) {
+        updateData.live_version_id = latestVersion.id;
+        updateData.current_version_id = latestVersion.id;
+
+        // Mark this version as live
+        await adminClient
+          .from('listing_versions')
+          .update({ is_live: true })
+          .eq('id', latestVersion.id);
+
+        // Mark all other versions as not live
+        await adminClient
+          .from('listing_versions')
+          .update({ is_live: false })
+          .eq('listing_id', listingId)
+          .neq('id', latestVersion.id);
+      }
+    }
+
     const { data: updatedListing, error: updateError } = await (adminClient
       .from('listings') as any)
       .update(updateData)

@@ -43,23 +43,23 @@ export async function GET(
       );
     }
 
-    // Get the version specified by current_version_id (primary source of truth)
+    // Get the version specified by live_version_id (primary source of truth for approved listings)
     // Use adminSupabase to bypass RLS since we've already verified listing is approved
     let versionResult;
 
-    if (listing.current_version_id) {
-      // Step 1: Try to fetch the version specified by current_version_id
-      const currentVersionResult = await adminSupabase
+    if (listing.live_version_id) {
+      // Step 1: Try to fetch the version specified by live_version_id
+      const liveVersionResult = await adminSupabase
         .from('listing_versions')
         .select('content, version_number, created_at, is_live')
-        .eq('id', listing.current_version_id)
+        .eq('id', listing.live_version_id)
         .eq('status', 'approved')
         .single();
 
-      if (currentVersionResult.data) {
-        versionResult = currentVersionResult;
+      if (liveVersionResult.data) {
+        versionResult = liveVersionResult;
       } else {
-        console.warn(`[DETAILED-API] current_version_id ${listing.current_version_id} not found or not approved for listing ${id}, falling back`);
+        console.warn(`[DETAILED-API] live_version_id ${listing.live_version_id} not found or not approved for listing ${id}, falling back`);
         // Fallback to highest approved version
         versionResult = await adminSupabase
           .from('listing_versions')
@@ -71,7 +71,7 @@ export async function GET(
           .single();
       }
     } else {
-      console.warn(`[DETAILED-API] No current_version_id set for listing ${id}, using fallback`);
+      console.warn(`[DETAILED-API] No live_version_id set for listing ${id}, using fallback`);
       // Fallback to highest approved version
       versionResult = await adminSupabase
         .from('listing_versions')
