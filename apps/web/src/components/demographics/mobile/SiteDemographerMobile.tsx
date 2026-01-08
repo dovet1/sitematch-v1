@@ -205,6 +205,12 @@ export function SiteDemographerMobile() {
   const handleAnalyze = async () => {
     if (!selectedLocation) return;
 
+    // Validate measurement value
+    if (!measurementValue || typeof measurementValue !== 'number' || measurementValue <= 0) {
+      toast.error('Please enter a valid distance or time value');
+      return;
+    }
+
     const result = await analyze(selectedLocation, measurementMode, measurementValue);
 
     if (result.success && result.lsoaCodes) {
@@ -224,6 +230,12 @@ export function SiteDemographerMobile() {
 
     // Set new location
     setSelectedLocation(location);
+
+    // Validate measurement value before auto-analyzing
+    if (!measurementValue || typeof measurementValue !== 'number' || measurementValue <= 0) {
+      toast.error('Please enter a valid distance or time value');
+      return;
+    }
 
     // Auto-analyze the new location
     const result = await analyze(location, measurementMode, measurementValue);

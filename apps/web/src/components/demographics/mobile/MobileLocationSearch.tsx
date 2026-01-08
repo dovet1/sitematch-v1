@@ -155,9 +155,13 @@ export function MobileLocationSearch({
               max={config.max}
               value={measurementValue}
               onChange={(e) => {
-                const val = Number(e.target.value);
-                if (!isNaN(val) && val >= config.min && val <= config.max) {
-                  onMeasurementValueChange(val);
+                if (e.target.value === '') {
+                  onMeasurementValueChange('');
+                } else {
+                  const val = Number(e.target.value);
+                  if (!isNaN(val) && val >= config.min && val <= config.max) {
+                    onMeasurementValueChange(val);
+                  }
                 }
               }}
               className="h-12 pr-16 text-base"

@@ -164,7 +164,7 @@ export function LocationInputPanel({
     setLocationResults([]);
   };
 
-  const canAnalyze = selectedLocation && !loading;
+  const canAnalyze = selectedLocation && !loading && measurementValue && Number(measurementValue) > 0;
 
   return (
     <div className="flex items-center gap-2.5">
@@ -255,9 +255,13 @@ export function LocationInputPanel({
             max={config.max}
             value={measurementValue}
             onChange={(e) => {
-              const val = Number(e.target.value);
-              if (!isNaN(val) && val >= config.min && val <= config.max) {
-                onMeasurementValueChange(val);
+              if (e.target.value === '') {
+                onMeasurementValueChange('');
+              } else {
+                const val = Number(e.target.value);
+                if (!isNaN(val) && val >= config.min && val <= config.max) {
+                  onMeasurementValueChange(val);
+                }
               }
             }}
             className="h-9 pr-14 text-sm border-gray-200 bg-white hover:border-gray-300 focus:border-violet-400 focus:ring-violet-400/20 shadow-sm hover:shadow transition-all duration-200"

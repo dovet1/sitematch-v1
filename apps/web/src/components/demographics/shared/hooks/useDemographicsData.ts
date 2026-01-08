@@ -22,6 +22,12 @@ export function useDemographicsData() {
     measurementMode: MeasurementMode,
     measurementValue: number
   ) => {
+    // Validate measurement value
+    if (!measurementValue || typeof measurementValue !== 'number' || measurementValue <= 0) {
+      setError('Invalid measurement value');
+      return { success: false, error: 'Invalid measurement value' };
+    }
+
     setLoading(true);
     setError(null);
 
