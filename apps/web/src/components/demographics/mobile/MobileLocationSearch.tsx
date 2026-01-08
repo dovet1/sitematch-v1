@@ -156,7 +156,7 @@ export function MobileLocationSearch({
               value={measurementValue}
               onChange={(e) => {
                 if (e.target.value === '') {
-                  onMeasurementValueChange('');
+                  onMeasurementValueChange(config.min);
                 } else {
                   const val = Number(e.target.value);
                   if (!isNaN(val) && val >= config.min && val <= config.max) {
