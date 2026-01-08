@@ -128,6 +128,8 @@ export async function approveListingAction(
     const content = version.content;
     const updateData: any = {
       status: 'approved',
+      live_version_id: versionId,
+      current_version_id: versionId,
       updated_at: new Date().toISOString()
     };
 
