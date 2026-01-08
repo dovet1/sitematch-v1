@@ -124,7 +124,7 @@ export default async function AdminDashboard() {
                   <div>
                     <p className="body-base font-medium">{user.email}</p>
                     <p className="body-small text-muted-foreground">
-                      {user.role} • {user.org_id ? `Org: ${user.org_id.slice(0, 8)}...` : 'No organization'}
+                      {user.user_type || 'No type'} • {user.user_company_name || 'No company'} • {user.subscription_status || 'No subscription'}
                     </p>
                   </div>
                 </div>
