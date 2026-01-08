@@ -130,7 +130,7 @@ export async function PATCH(
     // If approving, also set live_version_id to the latest approved version
     if (validatedStatusUpdate.status === 'approved') {
       // Find the latest approved version
-      const { data: latestVersion, error: versionError } = await adminClient
+      const versionResult = await adminClient
         .from('listing_versions')
         .select('id')
         .eq('listing_id', listingId)
@@ -139,7 +139,8 @@ export async function PATCH(
         .limit(1)
         .single();
 
-      if (!versionError && latestVersion) {
+      if (!versionResult.error && versionResult.data) {
+        const latestVersion = versionResult.data as { id: string };
         updateData.live_version_id = latestVersion.id;
         updateData.current_version_id = latestVersion.id;
 
