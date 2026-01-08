@@ -364,7 +364,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Use window.location.replace for a full page reload that replaces history
     // This ensures cookies are properly set and no race conditions occur
     const targetUrl = redirectTo && redirectTo !== 'SKIP_REDIRECT' ? redirectTo :
-                      (!redirectTo || redirectTo !== 'SKIP_REDIRECT' ? '/occupier/dashboard' : null)
+                      (!redirectTo || redirectTo !== 'SKIP_REDIRECT' ? '/new-dashboard' : null)
 
     if (targetUrl) {
       console.log('[AUTH-CONTEXT] Redirecting to:', targetUrl)

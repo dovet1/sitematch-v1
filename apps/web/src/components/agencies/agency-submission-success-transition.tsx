@@ -66,7 +66,7 @@ export function AgencySubmissionSuccessTransition({
         setCountdown(prev => {
           if (prev <= 1) {
             clearInterval(countdownInterval);
-            router.push(`/occupier/dashboard`);
+            router.push(`/new-dashboard`);
             return 0;
           }
           return prev - 1;
@@ -171,7 +171,7 @@ export function AgencySubmissionSuccessTransition({
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
-                onClick={onViewDashboard || (() => router.push('/occupier/dashboard'))}
+                onClick={onViewDashboard || (() => router.push('/new-dashboard'))}
                 className="w-full sm:flex-1 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white h-11 sm:h-12 shadow-lg hover:shadow-xl transition-all duration-200 group"
               >
                 <Home className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />

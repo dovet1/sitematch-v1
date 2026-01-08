@@ -1,0 +1,25 @@
+{
+  "source_filename": "1766161966925_BBS2025_Type_15_Building.dxf",
+  "insunits_code": 4,
+  "source_units": "Millimeters",
+  "units_to_meters": 0.001,
+  "bbox": {
+    "width": 76921.1706297301,
+    "height": 40588.64306396592,
+    "width_meters": 76.9211706297301,
+    "height_meters": 40.588643063965925
+  },
+  "layer_counts": {
+    "0": 1,
+    "A210G400N_Wall_Ext": 2,
+    "A240G100N_Stairs": 1,
+    "A723G100N_Furn": 1
+  },
+  "total_entities": 5,
+  "scale_factor": 8.983111749910168e-9,
+  "conversion_method": "metadata",
+  "geojson_feature_count": 17736,
+  "optimized_feature_count": 17736,
+  "optimization_tolerance": 0.000001,
+  "coordinate_reduction_percent": "76.4"
+}
