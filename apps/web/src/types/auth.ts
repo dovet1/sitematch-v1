@@ -22,6 +22,7 @@ export interface UserProfile {
   role: UserRole
   user_company_name?: string | null
   user_type: UserType
+  subscription_status?: string | null
   newsletter_opt_in?: boolean
   created_at: string
   updated_at: string

@@ -6,15 +6,16 @@ import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import { useAuth } from '@/contexts/auth-context';
-import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 import Link from 'next/link';
 import { Loader2, PenTool, Mail } from 'lucide-react';
 
 export function Hero() {
-  const { user } = useAuth();
-  const { hasAccess: hasSubscription } = useSubscriptionAccess();
+  const { user, profile } = useAuth();
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [showAlreadySubscribed, setShowAlreadySubscribed] = useState(false);
+
+  // Check if user has active subscription directly from profile
+  const hasSubscription = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
 
   const handleProCheckout = async () => {
     if (!user) return;
