@@ -13,16 +13,17 @@ import { SearchContextToast } from '@/components/search/search-context-toast';
 import { UserTypeModal } from '@/components/auth/user-type-modal';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { PaywallModal } from '@/components/PaywallModal';
-import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess';
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, loading } = useAuth();
-  const { hasAccess, loading: subscriptionLoading } = useSubscriptionAccess();
+  const { user, profile, loading } = useAuth();
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
   const [isSignupInProgress, setIsSignupInProgress] = useState(false);
+
+  // Check if user has active subscription directly from profile
+  const hasAccess = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
 
   // Parse URL parameters into SearchFilters
   const [searchFilters, setSearchFilters] = useState<SearchFilters>(() => {
@@ -176,7 +177,7 @@ function SearchPageContent() {
   };
 
   // Show loading state while checking auth
-  if (loading || subscriptionLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
