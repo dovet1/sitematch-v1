@@ -203,8 +203,10 @@ export async function GET(request: NextRequest) {
     }
 
 
-    // Fetch the highest approved version for each listing
+    // Fetch versions using current_version_id as primary source of truth
     const listingIds = listings?.map(l => l.id) || [];
+    const listingsWithVersionIds = listings?.filter(l => l.current_version_id) || [];
+    const currentVersionIds = listingsWithVersionIds.map(l => l.current_version_id);
 
 
     let versionMap: Record<string, any> = {};
@@ -216,10 +218,17 @@ export async function GET(request: NextRequest) {
 
       for (let i = 0; i < listingIds.length; i += BATCH_SIZE) {
         const batch = listingIds.slice(i, i + BATCH_SIZE);
+
+        // Fetch both current versions and all versions for fallback
+        const batchCurrentVersionIds = listings
+          ?.slice(i, i + BATCH_SIZE)
+          .filter(l => l.current_version_id)
+          .map(l => l.current_version_id) || [];
+
         const { data: versions, error: versionsError } = await supabase
           .from('listing_versions')
-          .select('listing_id, content, version_number')
-          .in('listing_id', batch)
+          .select('id, listing_id, content, version_number')
+          .or(`id.in.(${batchCurrentVersionIds.join(',')}),listing_id.in.(${batch.join(',')})`)
           .eq('status', 'approved')
           .order('version_number', { ascending: false });
 
@@ -230,16 +239,40 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Keep only the highest version number per listing
-      const highestVersions = new Map<string, any>();
+      // Build version map, preferring current_version_id over highest version_number
+      const versionsByListing = new Map<string, any[]>();
       allVersions.forEach(version => {
-        if (!highestVersions.has(version.listing_id)) {
-          const content = typeof version.content === 'string' ? JSON.parse(version.content) : version.content;
-          highestVersions.set(version.listing_id, content);
+        if (!versionsByListing.has(version.listing_id)) {
+          versionsByListing.set(version.listing_id, []);
         }
+        versionsByListing.get(version.listing_id)!.push(version);
       });
 
-      versionMap = Object.fromEntries(highestVersions);
+      listings?.forEach(listing => {
+        const listingVersions = versionsByListing.get(listing.id) || [];
+
+        if (listing.current_version_id) {
+          // Use current_version_id if available
+          const currentVersion = listingVersions.find(v => v.id === listing.current_version_id);
+          if (currentVersion) {
+            const content = typeof currentVersion.content === 'string'
+              ? JSON.parse(currentVersion.content)
+              : currentVersion.content;
+            versionMap[listing.id] = content;
+            return;
+          } else {
+            console.warn(`[PUBLIC-LISTINGS] current_version_id ${listing.current_version_id} not found for listing ${listing.id}, using fallback`);
+          }
+        }
+
+        // Fallback: use highest version number
+        if (listingVersions.length > 0) {
+          const content = typeof listingVersions[0].content === 'string'
+            ? JSON.parse(listingVersions[0].content)
+            : listingVersions[0].content;
+          versionMap[listing.id] = content;
+        }
+      });
     }
     
     // Fetch logo files for all listings
