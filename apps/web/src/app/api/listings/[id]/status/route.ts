@@ -148,14 +148,14 @@ export async function PATCH(
         updateData.current_version_id = latestVersion.id;
 
         // Mark this version as live
-        await adminClient
-          .from('listing_versions')
+        await (adminClient
+          .from('listing_versions') as any)
           .update({ is_live: true })
           .eq('id', latestVersion.id);
 
         // Mark all other versions as not live
-        await adminClient
-          .from('listing_versions')
+        await (adminClient
+          .from('listing_versions') as any)
           .update({ is_live: false })
           .eq('listing_id', listingId)
           .neq('id', latestVersion.id);
