@@ -61,7 +61,8 @@ export async function sendEmail(request: EmailRequest): Promise<EmailResult> {
 
     console.log(`📧 RESEND: API key found, sending email...`);
     const result = await resend.emails.send({
-      from: 'SiteMatcher <onboarding@resend.dev>',
+      from: 'SiteMatcher <noreply@sitematcher.co.uk>',
+      replyTo: 'rob@sitematcher.co.uk',
       to: request.to,
       subject: request.subject,
       html: request.html,

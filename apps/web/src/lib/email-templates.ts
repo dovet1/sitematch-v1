@@ -35,6 +35,12 @@ interface SubmissionEmailData {
   previewUrl: string;
 }
 
+interface WelcomeEmailData {
+  userName: string;
+  userEmail: string;
+  dashboardUrl: string;
+}
+
 export function createRejectionEmail(data: RejectionEmailData): EmailTemplate {
   const reasonText = REJECTION_REASONS[data.rejectionReason];
   const fullReason = data.rejectionReason === 'other' && data.customReason 
@@ -90,10 +96,6 @@ export function createRejectionEmail(data: RejectionEmailData): EmailTemplate {
     <p>Best regards,<br>
     The SiteMatcher Team</p>
     
-    <div class="footer">
-      <p>This email was sent regarding your listing: <strong>${data.listingTitle}</strong></p>
-      <p>SiteMatcher - Connecting occupiers with the perfect property</p>
-    </div>
   </div>
 </body>
 </html>`;
@@ -119,7 +121,6 @@ Best regards,
 The SiteMatcher Team
 
 This email was sent regarding your listing: ${data.listingTitle}
-SiteMatcher - Connecting occupiers with the perfect property
 `;
 
   return { subject, html, text };
@@ -178,7 +179,6 @@ export function createApprovalEmail(data: ApprovalEmailData): EmailTemplate {
     
     <div class="footer">
       <p>Listing: <strong>${data.listingTitle}</strong></p>
-      <p>SiteMatcher - Connecting occupiers with the perfect property</p>
     </div>
   </div>
 </body>
@@ -207,7 +207,6 @@ Best regards,
 The SiteMatcher Team
 
 Listing: ${data.listingTitle}
-SiteMatcher - Connecting occupiers with the perfect property
 `;
 
   return { subject, html, text };
@@ -306,7 +305,6 @@ export function createSubmissionEmail(data: SubmissionEmailData): EmailTemplate 
     
     <div class="footer">
       <p><strong>Listing:</strong> ${data.listingTitle}</p>
-      <p>SiteMatcher - Connecting occupiers with the perfect property</p>
       <p style="font-size: 12px; color: #9ca3af; margin-top: 20px;">This email was sent because you submitted a property requirement listing on SiteMatcher.</p>
     </div>
   </div>
@@ -346,7 +344,6 @@ Best regards,
 The SiteMatcher Team
 
 Listing: ${data.listingTitle}
-SiteMatcher - Connecting occupiers with the perfect property
 `;
 
   return { subject, html, text };
@@ -396,6 +393,155 @@ export async function sendSubmissionEmail(data: SubmissionEmailData & { contactE
 
   return sendEmail({
     to: [emailAddress],
+    subject: emailTemplate.subject,
+    html: emailTemplate.html,
+    text: emailTemplate.text
+  });
+}
+
+// =====================================================
+// Welcome Email
+// =====================================================
+
+export function createWelcomeEmail(data: WelcomeEmailData): EmailTemplate {
+  const subject = "Welcome to SiteMatcher!";
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); color: white; padding: 30px 20px; border-radius: 12px 12px 0 0; text-align: center; }
+    .content { background: #f9fafb; padding: 40px 30px; border-radius: 0 0 12px 12px; }
+    .welcome-box { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; margin: 20px 0; }
+    .feature-list { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .feature-item { display: flex; align-items: start; margin: 15px 0; }
+    .feature-icon { width: 30px; height: 30px; border-radius: 50%; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; flex-shrink: 0; }
+    .button { display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px 5px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); }
+    .footer { color: #6b7280; font-size: 14px; margin-top: 30px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 style="margin: 0; font-size: 28px;">Welcome to SiteMatcher! 🎉</h1>
+    <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Your property search journey starts here</p>
+  </div>
+
+  <div class="content">
+    <div class="welcome-box">
+      <h2 style="margin: 0 0 10px 0; font-size: 20px;">Hello!</h2>
+      <p style="margin: 0; opacity: 0.95;">Thank you for joining SiteMatcher. We're here to help property professionals quickly match sites to property requirements.</p>
+    </div>
+
+    <h3 style="color: #1f2937; margin: 30px 0 20px 0; font-size: 18px;">What you can do with SiteMatcher:</h3>
+
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon">1</div>
+        <div>
+          <strong style="color: #1f2937;">Post your site requirements</strong><br>
+          <span style="color: #6b7280; font-size: 14px;">Create a detailed listing of your property requirements and let landlords come to you</span>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">2</div>
+        <div>
+          <strong style="color: #1f2937;">Browse our curated requirement directory</strong><br>
+          <span style="color: #6b7280; font-size: 14px;">We only list verified, active requirements and continually update our listings with the latest information</span>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">3</div>
+        <div>
+          <strong style="color: #1f2937;">Save your searches</strong><br>
+          <span style="color: #6b7280; font-size: 14px;">Save your searches in your dashboard and get notified when matching requirements are added to the directory</span>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">4</div>
+        <div>
+          <strong style="color: #1f2937;">Use our site assessment tools</strong><br>
+          <span style="color: #6b7280; font-size: 14px;">Use our growing set of tools to quickly assess if a site is worth considering</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${data.dashboardUrl}" class="button">Go to Your Dashboard</a>
+    </div>
+
+    <div style="background: #eff6ff; border-radius: 8px; padding: 20px; margin: 25px 0; border-left: 4px solid #3b82f6;">
+      <h4 style="color: #1e40af; margin: 0 0 10px 0;">💡 Getting Started</h4>
+      <p style="margin: 0; color: #1e40af; font-size: 14px;">Ready to get started? Head to your dashboard to browse requirements or add your own requirement. We aim to review all submitted listings within 48 hours.</p>
+    </div>
+
+    <p style="margin-top: 30px;">If you have any questions, we're here to help!</p>
+
+    <p>Best regards,<br>
+    The SiteMatcher Team</p>
+
+    <div class="footer">
+      <p style="margin-top: 15px;">
+        Need help? Contact us at <a href="mailto:rob@sitematcher.co.uk" style="color: #8b5cf6;">rob@sitematcher.co.uk</a>
+      </p>
+      <p style="font-size: 12px; color: #9ca3af; margin-top: 20px;">This email was sent because you created an account on SiteMatcher.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const text = `
+Welcome to SiteMatcher! 🎉
+
+Hello!
+
+Thank you for joining SiteMatcher. We're here to help property professionals quickly match sites to property requirements.
+
+WHAT YOU CAN DO WITH SITEMATCHER:
+
+1. Post your site requirements
+   Create a detailed listing of your property requirements and let landlords come to you
+
+2. Browse our curated requirement directory
+   We only list verified, active requirements and continually update our listings with the latest information
+
+3. Save your searches
+   Save your searches in your dashboard and get notified when matching requirements are added to the directory
+
+4. Use our site assessment tools
+   Use our growing set of tools to quickly assess if a site is worth considering
+
+Go to Your Dashboard: ${data.dashboardUrl}
+
+💡 Getting Started
+Ready to get started? Head to your dashboard to browse requirements or add your own requirement. We aim to review all submitted listings within 48 hours.
+
+If you have any questions, we're here to help!
+
+Best regards,
+The SiteMatcher Team
+
+Need help? Contact us at rob@sitematcher.co.uk
+
+This email was sent because you created an account on SiteMatcher.
+`;
+
+  return { subject, html, text };
+}
+
+export async function sendWelcomeEmail(data: WelcomeEmailData) {
+  const emailTemplate = createWelcomeEmail(data);
+  const { sendEmail } = await import('./resend');
+
+  return sendEmail({
+    to: [data.userEmail],
     subject: emailTemplate.subject,
     html: emailTemplate.html,
     text: emailTemplate.text
