@@ -424,6 +424,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Don't throw here - the auth signup was successful, profile creation is secondary
       } else {
         console.log('User profile created successfully')
+
+        // Send welcome email via API (non-blocking)
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ||
+                          (typeof window !== 'undefined' ? window.location.origin : 'https://sitematcher.co.uk');
+
+          const response = await fetch('/api/send-welcome-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userEmail: data.user.email!,
+              dashboardUrl: `${baseUrl}/new-dashboard`
+            })
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            console.log('✅ Welcome email sent to', data.user.email);
+          } else {
+            console.error('❌ Welcome email failed:', result.error);
+          }
+        } catch (emailError) {
+          console.error('❌ Failed to send welcome email:', emailError);
+          // Don't fail signup if email fails - just log the error
+        }
       }
     }
 
