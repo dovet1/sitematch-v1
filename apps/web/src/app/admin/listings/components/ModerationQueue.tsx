@@ -42,7 +42,7 @@ export function ModerationQueue({ listings: initialListings }: ModerationQueuePr
   const [rejectionModal, setRejectionModal] = useState<{ listingId: string; companyName: string; versionId?: string } | null>(null)
   const router = useRouter()
 
-  const handleStatusUpdate = async (listingId: string, status: 'approved' | 'rejected' | 'archived') => {
+  const handleStatusUpdate = async (listingId: string, status: 'approved' | 'rejected' | 'archived' | 'draft') => {
     console.log('🔵 handleStatusUpdate called:', { listingId, status })
     setIsLoading(listingId)
     try {
@@ -95,9 +95,9 @@ export function ModerationQueue({ listings: initialListings }: ModerationQueuePr
           toast.error('No pending review version found')
         }
       } else {
-        // For archived status, use the existing API
+        // For archived, draft, and other status changes, use the existing API
         const requestBody: any = { status }
-        
+
         const response = await fetch(`/api/listings/${listingId}/status`, {
           method: 'PATCH',
           headers: {
@@ -107,7 +107,11 @@ export function ModerationQueue({ listings: initialListings }: ModerationQueuePr
         })
 
         if (response.ok) {
-          toast.success('Listing archived successfully')
+          const statusMessages: Record<string, string> = {
+            archived: 'Listing archived successfully',
+            draft: 'Listing unarchived and moved to draft',
+          }
+          toast.success(statusMessages[status] || `Listing status updated to ${status}`)
           router.refresh()
         } else {
           toast.error('Failed to update listing status')
