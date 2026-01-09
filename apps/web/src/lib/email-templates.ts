@@ -420,8 +420,8 @@ export function createWelcomeEmail(data: WelcomeEmailData): EmailTemplate {
     .welcome-box { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; margin: 20px 0; }
     .feature-list { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; }
     .feature-item { display: flex; align-items: start; margin: 15px 0; }
-    .feature-icon { width: 30px; height: 30px; border-radius: 50%; background: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; flex-shrink: 0; }
-    .button { display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px 5px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); }
+    .feature-icon { width: 30px; height: 30px; border-radius: 50%; background: #eff6ff; color: #3b82f6; display: table-cell; text-align: center; vertical-align: middle; font-weight: bold; margin-right: 15px; flex-shrink: 0; line-height: 30px; }
+    .button { display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); color: white !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px 5px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); }
     .footer { color: #6b7280; font-size: 14px; margin-top: 30px; text-align: center; }
   </style>
 </head>
