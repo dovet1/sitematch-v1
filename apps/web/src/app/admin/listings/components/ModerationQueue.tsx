@@ -298,13 +298,25 @@ export function ModerationQueue({ listings: initialListings }: ModerationQueuePr
                         </>
                       )}
                       {(listing.status === 'approved' || listing.status === 'rejected') && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="text-muted-foreground hover:text-muted-foreground"
                           onClick={() => handleStatusUpdate(listing.id, 'archived')}
                           disabled={isLoading === listing.id}
                           title="Archive listing"
+                        >
+                          <ArchiveIcon className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {listing.status === 'archived' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => handleStatusUpdate(listing.id, 'draft')}
+                          disabled={isLoading === listing.id}
+                          title="Unarchive listing (restore to draft)"
                         >
                           <ArchiveIcon className="h-4 w-4" />
                         </Button>
