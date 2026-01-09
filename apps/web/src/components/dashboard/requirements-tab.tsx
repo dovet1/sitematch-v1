@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Eye, Pencil, Trash2, Plus, Loader2 } from 'lucide-react';
+import { Eye, Pencil, Trash2, Plus, Loader2, Archive, ArchiveRestore } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -51,19 +51,31 @@ export function RequirementsTab({ userId }: RequirementsTabProps) {
   const [loading, setLoading] = useState(true);
   const [deleteListingId, setDeleteListingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+  const [archivingListingId, setArchivingListingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchListings();
-  }, [userId]);
+  }, [userId, activeTab]);
 
   const fetchListings = async () => {
     try {
+      setLoading(true);
       const supabase = createClientClient();
-      const { data, error } = await supabase
+
+      let query = supabase
         .from('listings')
         .select('id, company_name, status, created_at, updated_at')
-        .eq('created_by', userId)
-        .order('created_at', { ascending: false });
+        .eq('created_by', userId);
+
+      // Filter by tab
+      if (activeTab === 'active') {
+        query = query.neq('status', 'archived');
+      } else {
+        query = query.eq('status', 'archived');
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       setListings(data || []);
@@ -99,6 +111,32 @@ export function RequirementsTab({ userId }: RequirementsTabProps) {
     }
   };
 
+  const handleArchiveToggle = async (listingId: string, isArchived: boolean) => {
+    setArchivingListingId(listingId);
+    try {
+      const response = await fetch(`/api/listings/${listingId}/archive`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archive: !isArchived }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to update listing');
+      }
+
+      toast.success(result.message);
+      // Refresh listings
+      await fetchListings();
+    } catch (error) {
+      console.error('Error toggling archive:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update listing');
+    } finally {
+      setArchivingListingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -123,16 +161,44 @@ export function RequirementsTab({ userId }: RequirementsTabProps) {
         </Link>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="flex gap-2 border-b-2 border-violet-200">
+        <button
+          onClick={() => setActiveTab('active')}
+          className={`px-6 py-3 font-bold rounded-t-lg transition-all ${
+            activeTab === 'active'
+              ? 'bg-violet-600 text-white'
+              : 'text-gray-600 hover:text-violet-600 hover:bg-violet-50'
+          }`}
+        >
+          Active Listings
+        </button>
+        <button
+          onClick={() => setActiveTab('archived')}
+          className={`px-6 py-3 font-bold rounded-t-lg transition-all ${
+            activeTab === 'archived'
+              ? 'bg-violet-600 text-white'
+              : 'text-gray-600 hover:text-violet-600 hover:bg-violet-50'
+          }`}
+        >
+          Archived
+        </button>
+      </div>
+
       {/* Requirements List */}
       {listings.length === 0 ? (
         <div className="bg-white rounded-2xl sm:rounded-3xl border-3 border-violet-200 shadow-xl text-center py-12 px-6">
-          <p className="text-gray-500 mb-4 text-base sm:text-lg">No requirements yet</p>
-          <Link href="/occupier/create-listing-quick">
-            <Button className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl">
-              <Plus className="h-4 w-4 mr-2" />
-              Create your first requirement
-            </Button>
-          </Link>
+          <p className="text-gray-500 mb-4 text-base sm:text-lg">
+            {activeTab === 'active' ? 'No active requirements' : 'No archived requirements'}
+          </p>
+          {activeTab === 'active' && (
+            <Link href="/occupier/create-listing-quick">
+              <Button className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl">
+                <Plus className="h-4 w-4 mr-2" />
+                Create your first requirement
+              </Button>
+            </Link>
+          )}
         </div>
       ) : (
         <>
@@ -193,6 +259,25 @@ export function RequirementsTab({ userId }: RequirementsTabProps) {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => handleArchiveToggle(listing.id, listing.status === 'archived')}
+                        disabled={archivingListingId === listing.id}
+                        className={`font-bold rounded-lg px-3 ${
+                          listing.status === 'archived'
+                            ? 'border-blue-300 text-blue-600 hover:bg-blue-50'
+                            : 'border-orange-300 text-orange-600 hover:bg-orange-50'
+                        }`}
+                      >
+                        {archivingListingId === listing.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : listing.status === 'archived' ? (
+                          <ArchiveRestore className="h-4 w-4" />
+                        ) : (
+                          <Archive className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => setDeleteListingId(listing.id)}
                         className="border-red-300 text-red-600 hover:bg-red-50 font-bold rounded-lg px-3"
                       >
@@ -248,6 +333,26 @@ export function RequirementsTab({ userId }: RequirementsTabProps) {
                             <Pencil className="h-4 w-4" />
                           </Button>
                         </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleArchiveToggle(listing.id, listing.status === 'archived')}
+                          disabled={archivingListingId === listing.id}
+                          className={`font-bold rounded-lg ${
+                            listing.status === 'archived'
+                              ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                              : 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'
+                          }`}
+                          title={listing.status === 'archived' ? 'Unarchive listing' : 'Archive listing'}
+                        >
+                          {archivingListingId === listing.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : listing.status === 'archived' ? (
+                            <ArchiveRestore className="h-4 w-4" />
+                          ) : (
+                            <Archive className="h-4 w-4" />
+                          )}
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
