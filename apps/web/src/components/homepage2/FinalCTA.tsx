@@ -36,7 +36,7 @@ export function FinalCTA() {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 pt-16 border-t border-white/20">
           <div>
-            <p className="text-5xl font-bold text-white mb-2">7,500+</p>
+            <p className="text-5xl font-bold text-white mb-2">3,500+</p>
             <p className="text-violet-100">Active Requirements</p>
           </div>
           <div>
