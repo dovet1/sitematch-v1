@@ -14,9 +14,9 @@ export default async function ArticlesPage() {
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="heading-1 mb-6">Commercial Property Insights</h1>
+            <h1 className="heading-1 mb-6">Articles</h1>
             <p className="body-large text-gray-600">
-              Expert analysis, market trends, and practical advice for commercial property professionals
+              Expert analysis, market trends, and case studies for commercial property professionals
             </p>
           </div>
         </div>

@@ -26,7 +26,6 @@ export function ImageUploadSection({ articleId, images }: ImageUploadSectionProp
     const file = e.target.files?.[0]
     if (!file) return
 
-    console.log('Starting upload for file:', file.name)
     setUploading(true)
 
     const formData = new FormData()
@@ -34,22 +33,17 @@ export function ImageUploadSection({ articleId, images }: ImageUploadSectionProp
     formData.append('articleId', articleId)
 
     try {
-      console.log('Uploading article image...')
       const response = await fetch('/api/articles/upload-image', {
         method: 'POST',
         body: formData,
       })
 
-      console.log('Upload response status:', response.status)
-
       if (!response.ok) {
         const errorData = await response.json()
-        console.error('Upload error:', errorData)
         throw new Error(errorData.error || 'Upload failed')
       }
 
       const uploadData = await response.json()
-      console.log('Upload successful:', uploadData)
 
       // Success! The upload endpoint already adds to article_images table
       toast.success('Image uploaded successfully')
@@ -58,7 +52,6 @@ export function ImageUploadSection({ articleId, images }: ImageUploadSectionProp
       // Force a hard refresh to reload the page with new images
       window.location.reload()
     } catch (error) {
-      console.error('Image upload error:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to upload image')
       // Reset the file input on error too
       e.target.value = ''

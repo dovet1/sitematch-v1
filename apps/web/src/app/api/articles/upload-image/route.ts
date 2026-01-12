@@ -9,8 +9,6 @@ export const maxDuration = 30
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Article image upload API: Request received')
-
     // Check authentication
     const currentUser = await getCurrentUser()
     if (!currentUser || currentUser.role !== 'admin') {
@@ -26,8 +24,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing file or articleId' }, { status: 400 })
     }
 
-    console.log('Uploading file:', file.name, 'for article:', articleId)
-
     const supabase = createServerClient()
 
     // Upload file to Supabase Storage
@@ -42,11 +38,8 @@ export async function POST(request: NextRequest) {
       })
 
     if (uploadError) {
-      console.error('Storage upload error:', uploadError)
       return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 })
     }
-
-    console.log('File uploaded to storage:', uploadData.path)
 
     // Get public URL
     const { data: urlData } = supabase.storage
@@ -68,8 +61,6 @@ export async function POST(request: NextRequest) {
       is_featured: currentImageCount === 0, // First image is featured
     })
 
-    console.log('Image added to article_images table:', imageData.id)
-
     return NextResponse.json({
       success: true,
       image: {
@@ -83,7 +74,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Article image upload error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Upload failed' },
       { status: 500 }

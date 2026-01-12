@@ -2,7 +2,7 @@ import { requireAdmin } from '@/lib/auth'
 import { AdminService } from '@/lib/admin'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Shield, Users, Activity, FileCheck, AlertTriangle, Building2 } from 'lucide-react'
+import { Shield, Users, Activity, FileCheck, AlertTriangle, Building2, FileText } from 'lucide-react'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic';
@@ -96,14 +96,17 @@ export default async function AdminDashboard() {
               Agency Management
             </Link>
           </Button>
+          <Button asChild>
+            <Link href="/admin/articles">
+              <FileText className="h-4 w-4 mr-2" />
+              Articles
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link href="/admin/manage-users">
               <Users className="h-4 w-4 mr-2" />
               Manage Users
             </Link>
-          </Button>
-          <Button variant="outline" disabled>
-            <span>Audit Trail (Coming Soon)</span>
           </Button>
         </CardContent>
       </Card>
