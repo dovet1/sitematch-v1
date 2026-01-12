@@ -206,7 +206,7 @@ export class ArticleService {
 
     // Clean up storage files
     if (images && images.length > 0) {
-      const filePaths = images.map(img => img.file_path)
+      const filePaths = images.map((img: ArticleImage) => img.file_path)
       await this.supabase.storage
         .from('article-images')
         .remove(filePaths)
