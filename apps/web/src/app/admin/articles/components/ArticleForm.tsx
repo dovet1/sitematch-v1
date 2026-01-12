@@ -188,6 +188,17 @@ export function ArticleForm({ article, onSubmit, onCancel }: ArticleFormProps) {
           Cancel
         </Button>
         <div className="flex gap-3">
+          {article && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => window.open(`/admin/articles/${article.id}/preview`, '_blank')}
+              disabled={isSubmitting}
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Preview
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
