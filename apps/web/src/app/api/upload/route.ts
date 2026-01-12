@@ -39,10 +39,11 @@ export async function POST(request: NextRequest) {
     // Determine bucket based on file type
     const bucketMap = {
       'logo': 'logos',
-      'brochure': 'brochures', 
+      'brochure': 'brochures',
       'sitePlan': 'site-plans',
       'fitOut': 'fit-outs',
-      'headshot': 'headshots'
+      'headshot': 'headshots',
+      'articleImage': 'article-images'
     }
     
     const bucket = bucketMap[fileType as keyof typeof bucketMap] || 'brochures'
