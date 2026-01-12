@@ -19,7 +19,7 @@ export function DatabaseDifferentiators() {
       emoji: '📊',
       icon: TrendingUp,
       title: 'Largest in the UK',
-      stat: '700+ companies • 7,500+ locations',
+      stat: '300+ companies • 3,500+ locations',
       description: 'The largest directory of verified site requirements on the UK market. We are constantly growing, with new requirements added weekly.',
       color: 'from-blue-500 to-cyan-600'
     },
