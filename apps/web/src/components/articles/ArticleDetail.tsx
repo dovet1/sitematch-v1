@@ -4,6 +4,7 @@ import { Article } from '@/types/articles'
 import { Calendar, User } from 'lucide-react'
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { ArticleImageGallery } from './ArticleImageGallery'
+import { ArticleTopNewsletter } from './ArticleTopNewsletter'
 
 interface ArticleDetailProps {
   article: Article
@@ -43,12 +44,10 @@ export function ArticleDetail({ article }: ArticleDetailProps) {
               <span>{formattedDate}</span>
             </div>
           </div>
-
-          {/* Excerpt */}
-          <p className="body-large text-gray-700 mt-8 p-6 bg-violet-50 rounded-2xl border-2 border-violet-100">
-            {article.excerpt}
-          </p>
         </header>
+
+        {/* Newsletter Signup */}
+        <ArticleTopNewsletter />
 
         {/* Featured Image */}
         {article.featured_image && (
