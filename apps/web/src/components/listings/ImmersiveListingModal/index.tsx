@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Building2 } from 'lucide-react';
+import { X, Building2, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { AgencyModal } from '@/components/agencies/AgencyModal';
@@ -14,6 +14,7 @@ import { MobileVisualHero } from './MobileVisualHero';
 import { MobileTabNavigation } from './MobileTabNavigation';
 import { FreeListingBanner } from '../FreeListingBanner';
 import { useAuth } from '@/contexts/auth-context';
+import { formatVerificationDate } from '@/lib/utils/date-formatting';
 import styles from './ImmersiveListingModal.module.css';
 
 interface ImmersiveListingModalProps {
@@ -266,6 +267,23 @@ export function ImmersiveListingModal({
                     </svg>
                   </div>
                 </a>
+              </div>
+            )}
+
+            {/* Verification Information */}
+            {listing.verified_at && (
+              <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900 mb-1">Verified Listing</h4>
+                    <p className="text-sm text-gray-600">
+                      Last verified on {formatVerificationDate(listing.verified_at)}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 

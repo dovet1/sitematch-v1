@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
         contact_phone,
         clearbit_logo,
         company_domain,
+        verified_at,
         created_at,
         live_version_id,
         current_version_id,
@@ -478,6 +479,7 @@ export async function GET(request: NextRequest) {
         logo_url: uploadedLogoUrl,
         clearbit_logo: listingData.clearbit_logo || false,
         company_domain: listingData.company_domain,
+        verified_at: listing.verified_at, // Always use from base listing table, not version
         created_at: listingData.created_at
       };
     }) || [];

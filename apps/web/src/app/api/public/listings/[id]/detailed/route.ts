@@ -23,7 +23,7 @@ export async function GET(
     // First check if listing exists and is approved
     const { data: listing, error: listingError } = await supabase
       .from('listings')
-      .select('id, status, company_name, created_at, live_version_id, current_version_id')
+      .select('id, status, company_name, verified_at, created_at, live_version_id, current_version_id')
       .eq('id', id)
       .single();
 
@@ -104,19 +104,20 @@ export async function GET(
         { data: listingUseClasses }
       ] = await Promise.all([
         supabase.from('listings').select(`
-          id, 
-          company_name, 
+          id,
+          company_name,
           company_domain,
           clearbit_logo,
-          title, 
-          description, 
-          site_size_min, 
-          site_size_max, 
-          contact_name, 
-          contact_title, 
-          contact_email, 
-          contact_phone, 
+          title,
+          description,
+          site_size_min,
+          site_size_max,
+          contact_name,
+          contact_title,
+          contact_email,
+          contact_phone,
           contact_area,
+          verified_at,
           created_at,
           listing_type,
           dwelling_count_min,
@@ -244,6 +245,7 @@ export async function GET(
         listing_type: currentListing?.listing_type,
         description: currentListing?.description,
         id: currentListing?.id,
+        verified_at: listing.verified_at, // From base listing table
         created_at: currentListing?.created_at,
         listing_agents: currentListing?.listing_agents
       };
@@ -423,6 +425,7 @@ export async function GET(
       listing_type: formattedListing.listing_type,
       description: formattedListing.description,
       id: formattedListing.id,
+      verified_at: listing.verified_at, // From base listing table, not version
       created_at: formattedListing.created_at,
       listing_agents: formattedListing.listing_agents
     };

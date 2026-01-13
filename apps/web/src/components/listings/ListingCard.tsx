@@ -1,9 +1,10 @@
 'use client';
 
-import { MapPin, Building2, Briefcase, Ruler } from 'lucide-react';
+import { MapPin, Building2, Briefcase, Ruler, CheckCircle2 } from 'lucide-react';
 import { SearchResult } from '@/types/search';
 import { cn } from '@/lib/utils';
 import { getSearchResultLogoUrl } from '@/lib/search-logo-utils';
+import { isRecentlyVerified, getRelativeVerificationTime } from '@/lib/utils/date-formatting';
 import { useState } from 'react';
 
 interface ListingCardProps {
@@ -282,6 +283,13 @@ export function ListingCard({ listing, onClick, searchCoordinates, index = 999 }
           <div className="flex items-start gap-3">
             <Building2 className="w-5 h-5 mt-0.5 flex-shrink-0 text-violet-500" />
             <span>{siteSizeText}</span>
+          </div>
+        )}
+        {/* Verification badge - only show if recently verified (within 90 days) */}
+        {listing.verified_at && isRecentlyVerified(listing.verified_at) && (
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0 text-green-500" />
+            <span className="text-sm text-green-600">Verified {getRelativeVerificationTime(listing.verified_at)}</span>
           </div>
         )}
       </div>
