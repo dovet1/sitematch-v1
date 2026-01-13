@@ -154,8 +154,6 @@ export function ImmersiveListingModal({
         }
 
         const data = await response.json();
-        console.log('Modal listing data received:', data);
-        console.log('verified_at value:', data.verified_at);
         setListing(data);
       } catch (err) {
         console.error('Error fetching listing details:', err);
@@ -273,24 +271,21 @@ export function ImmersiveListingModal({
             )}
 
             {/* Verification Information */}
-            {(() => {
-              console.log('Verification check - listing.verified_at:', listing.verified_at);
-              return listing.verified_at ? (
-                <div className="p-4 rounded-lg bg-green-50 border border-green-200">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900 mb-1">Verified Listing</h4>
-                      <p className="text-sm text-gray-600">
-                        Last verified on {formatVerificationDate(listing.verified_at)}
-                      </p>
-                    </div>
+            {listing.verified_at && (
+              <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900 mb-1">Verified Listing</h4>
+                    <p className="text-sm text-gray-600">
+                      Last verified on {formatVerificationDate(listing.verified_at)}
+                    </p>
                   </div>
                 </div>
-              ) : null;
-            })()}
+              </div>
+            )}
 
           </div>
         )}

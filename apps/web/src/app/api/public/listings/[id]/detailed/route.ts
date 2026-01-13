@@ -28,7 +28,6 @@ export async function GET(
       .eq('id', id)
       .single();
 
-
     if (listingError || !listing) {
       return NextResponse.json(
         { error: 'Listing not found' },
@@ -36,8 +35,11 @@ export async function GET(
       );
     }
 
+    // Type assertion for listing - adminSupabase doesn't have proper type inference
+    const typedListing = listing as any;
+
     // Only show approved listings publicly
-    if (listing.status !== 'approved') {
+    if (typedListing.status !== 'approved') {
       return NextResponse.json(
         { error: 'Listing not available' },
         { status: 404 }
@@ -48,19 +50,19 @@ export async function GET(
     // Use adminSupabase to bypass RLS since we've already verified listing is approved
     let versionResult;
 
-    if (listing.live_version_id) {
+    if (typedListing.live_version_id) {
       // Step 1: Try to fetch the version specified by live_version_id
       const liveVersionResult = await adminSupabase
         .from('listing_versions')
         .select('content, version_number, created_at, is_live')
-        .eq('id', listing.live_version_id)
+        .eq('id', typedListing.live_version_id)
         .eq('status', 'approved')
         .single();
 
       if (liveVersionResult.data) {
         versionResult = liveVersionResult;
       } else {
-        console.warn(`[DETAILED-API] live_version_id ${listing.live_version_id} not found or not approved for listing ${id}, falling back`);
+        console.warn(`[DETAILED-API] live_version_id ${typedListing.live_version_id} not found or not approved for listing ${id}, falling back`);
         // Fallback to highest approved version
         versionResult = await adminSupabase
           .from('listing_versions')
@@ -246,13 +248,10 @@ export async function GET(
         listing_type: currentListing?.listing_type,
         description: currentListing?.description,
         id: currentListing?.id,
-        verified_at: listing.verified_at, // From base listing table
+        verified_at: typedListing.verified_at, // From base listing table
         created_at: currentListing?.created_at,
         listing_agents: currentListing?.listing_agents
       };
-
-      console.log('API FALLBACK - base listing object:', { id: listing.id, verified_at: listing.verified_at });
-      console.log('API FALLBACK - fallbackResponse verified_at:', fallbackResponse.verified_at);
 
       const fallbackResponseWithHeaders = NextResponse.json(fallbackResponse);
       
@@ -429,15 +428,11 @@ export async function GET(
       listing_type: formattedListing.listing_type,
       description: formattedListing.description,
       id: formattedListing.id,
-      verified_at: listing.verified_at, // From base listing table, not version
+      verified_at: typedListing.verified_at, // From base listing table, not version
       created_at: formattedListing.created_at,
       listing_agents: formattedListing.listing_agents
     };
 
-    console.log('API - base listing object:', { id: listing.id, verified_at: listing.verified_at });
-    console.log('API - enhancedResponse verified_at:', enhancedResponse.verified_at);
-    
-    
     const response = NextResponse.json(enhancedResponse);
     
     // Prevent caching of dynamic listing data
