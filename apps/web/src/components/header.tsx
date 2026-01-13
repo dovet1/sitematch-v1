@@ -167,6 +167,14 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Articles Link */}
+            <Link
+              href="/articles"
+              className="inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch text-gray-700 hover:text-violet-700 hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
+            >
+              Articles
+            </Link>
+
             {/* Render Post Requirement (primary) last */}
             {navigationItems.map((item) => {
               if (!shouldShowNavItem(item)) return null;
@@ -290,6 +298,15 @@ export function Header() {
                   </Link>
                 ))}
               </div>
+
+              {/* Articles Link */}
+              <Link
+                href="/articles"
+                onClick={closeMobileMenu}
+                className="block px-5 py-3.5 rounded-2xl text-base font-bold text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition-all duration-300 violet-bloom-touch active:scale-[0.98]"
+              >
+                Articles
+              </Link>
             </nav>
 
             {/* Primary CTA - Prominent */}
