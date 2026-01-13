@@ -2,7 +2,7 @@ import { requireAdmin } from '@/lib/auth'
 import { AdminService } from '@/lib/admin'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Shield, Users, Activity, FileCheck, AlertTriangle, Building2, FileText } from 'lucide-react'
+import { Shield, Users, Activity, FileCheck, AlertTriangle, Building2, FileText, Database } from 'lucide-react'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic';
@@ -89,6 +89,12 @@ export default async function AdminDashboard() {
         <CardContent className="flex gap-4 flex-wrap">
           <Button asChild>
             <Link href="/admin/listings">Moderation Queue</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/listings/all">
+              <Database className="h-4 w-4 mr-2" />
+              All Listings
+            </Link>
           </Button>
           <Button asChild>
             <Link href="/admin/agencies">

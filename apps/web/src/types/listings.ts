@@ -44,6 +44,7 @@ export interface Listing {
   listing_type: 'residential' | 'commercial';
   status: ListingStatus;
   rejection_reason: string | null;
+  verified_at: string | null; // Date when admin last verified listing is active
   created_by: string;
   created_at: string;
   updated_at: string;

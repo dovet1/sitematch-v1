@@ -19,14 +19,14 @@ export async function GET(
 
     const supabase = createClient();
     const adminSupabase = createAdminClient();
-    
+
     // First check if listing exists and is approved
-    const { data: listing, error: listingError } = await supabase
+    // Use adminSupabase to get verified_at field which may not be accessible via RLS
+    const { data: listing, error: listingError } = await adminSupabase
       .from('listings')
-      .select('id, status, company_name, created_at, live_version_id, current_version_id')
+      .select('id, status, company_name, verified_at, created_at, live_version_id, current_version_id')
       .eq('id', id)
       .single();
-
 
     if (listingError || !listing) {
       return NextResponse.json(
@@ -35,8 +35,11 @@ export async function GET(
       );
     }
 
+    // Type assertion for listing - adminSupabase doesn't have proper type inference
+    const typedListing = listing as any;
+
     // Only show approved listings publicly
-    if (listing.status !== 'approved') {
+    if (typedListing.status !== 'approved') {
       return NextResponse.json(
         { error: 'Listing not available' },
         { status: 404 }
@@ -47,19 +50,19 @@ export async function GET(
     // Use adminSupabase to bypass RLS since we've already verified listing is approved
     let versionResult;
 
-    if (listing.live_version_id) {
+    if (typedListing.live_version_id) {
       // Step 1: Try to fetch the version specified by live_version_id
       const liveVersionResult = await adminSupabase
         .from('listing_versions')
         .select('content, version_number, created_at, is_live')
-        .eq('id', listing.live_version_id)
+        .eq('id', typedListing.live_version_id)
         .eq('status', 'approved')
         .single();
 
       if (liveVersionResult.data) {
         versionResult = liveVersionResult;
       } else {
-        console.warn(`[DETAILED-API] live_version_id ${listing.live_version_id} not found or not approved for listing ${id}, falling back`);
+        console.warn(`[DETAILED-API] live_version_id ${typedListing.live_version_id} not found or not approved for listing ${id}, falling back`);
         // Fallback to highest approved version
         versionResult = await adminSupabase
           .from('listing_versions')
@@ -104,19 +107,20 @@ export async function GET(
         { data: listingUseClasses }
       ] = await Promise.all([
         supabase.from('listings').select(`
-          id, 
-          company_name, 
+          id,
+          company_name,
           company_domain,
           clearbit_logo,
-          title, 
-          description, 
-          site_size_min, 
-          site_size_max, 
-          contact_name, 
-          contact_title, 
-          contact_email, 
-          contact_phone, 
+          title,
+          description,
+          site_size_min,
+          site_size_max,
+          contact_name,
+          contact_title,
+          contact_email,
+          contact_phone,
           contact_area,
+          verified_at,
           created_at,
           listing_type,
           dwelling_count_min,
@@ -244,6 +248,7 @@ export async function GET(
         listing_type: currentListing?.listing_type,
         description: currentListing?.description,
         id: currentListing?.id,
+        verified_at: typedListing.verified_at, // From base listing table
         created_at: currentListing?.created_at,
         listing_agents: currentListing?.listing_agents
       };
@@ -423,11 +428,11 @@ export async function GET(
       listing_type: formattedListing.listing_type,
       description: formattedListing.description,
       id: formattedListing.id,
+      verified_at: typedListing.verified_at, // From base listing table, not version
       created_at: formattedListing.created_at,
       listing_agents: formattedListing.listing_agents
     };
-    
-    
+
     const response = NextResponse.json(enhancedResponse);
     
     // Prevent caching of dynamic listing data

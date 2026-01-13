@@ -55,6 +55,7 @@ export interface SearchResult {
   // Legacy single location fields for backwards compatibility
   place_name: string | null;
   coordinates: { lat: number; lng: number } | null;
+  verified_at: string | null; // Date when admin last verified listing is active
   created_at: string;
 }
 
@@ -152,22 +153,22 @@ export interface EnhancedListingModalContent {
     dwelling_count: string;
     site_acreage: string;
   };
-  
-  // Enhanced contact information  
+
+  // Enhanced contact information
   contacts: {
     primary: ContactDetails;
     additional: ContactDetails[];
   };
-  
+
   // Location requirements
   locations: {
     all: Location[];
     is_nationwide: boolean;
   };
-  
+
   // FAQs with ordering
   faqs: FAQ[];
-  
+
   // File attachments
   files: {
     brochures: FileAttachment[];
@@ -190,6 +191,7 @@ export interface EnhancedListingModalContent {
   id: string;
   title: string;
   description: string;
+  verified_at: string | null; // Date when admin last verified listing is active
   created_at: string;
   listing_type: 'residential' | 'commercial';
   listing_agents?: Array<{
