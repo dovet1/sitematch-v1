@@ -19,9 +19,10 @@ export async function GET(
 
     const supabase = createClient();
     const adminSupabase = createAdminClient();
-    
+
     // First check if listing exists and is approved
-    const { data: listing, error: listingError } = await supabase
+    // Use adminSupabase to get verified_at field which may not be accessible via RLS
+    const { data: listing, error: listingError } = await adminSupabase
       .from('listings')
       .select('id, status, company_name, verified_at, created_at, live_version_id, current_version_id')
       .eq('id', id)
@@ -250,6 +251,9 @@ export async function GET(
         listing_agents: currentListing?.listing_agents
       };
 
+      console.log('API FALLBACK - base listing object:', { id: listing.id, verified_at: listing.verified_at });
+      console.log('API FALLBACK - fallbackResponse verified_at:', fallbackResponse.verified_at);
+
       const fallbackResponseWithHeaders = NextResponse.json(fallbackResponse);
       
       // Prevent caching of dynamic listing data
@@ -429,6 +433,9 @@ export async function GET(
       created_at: formattedListing.created_at,
       listing_agents: formattedListing.listing_agents
     };
+
+    console.log('API - base listing object:', { id: listing.id, verified_at: listing.verified_at });
+    console.log('API - enhancedResponse verified_at:', enhancedResponse.verified_at);
     
     
     const response = NextResponse.json(enhancedResponse);
