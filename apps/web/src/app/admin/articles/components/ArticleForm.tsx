@@ -17,6 +17,13 @@ interface ArticleFormProps {
 }
 
 export function ArticleForm({ article, onSubmit, onCancel }: ArticleFormProps) {
+  // Format date for input field (YYYY-MM-DD)
+  const formatDateForInput = (dateString: string | null) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    return date.toISOString().split('T')[0]
+  }
+
   const [formData, setFormData] = useState({
     title: article?.title || '',
     slug: article?.slug || '',
@@ -25,6 +32,7 @@ export function ArticleForm({ article, onSubmit, onCancel }: ArticleFormProps) {
     author_name: article?.author_name || '',
     author_title: article?.author_title || '',
     status: article?.status || 'draft',
+    published_at: article?.published_at ? formatDateForInput(article.published_at) : '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [autoSlug, setAutoSlug] = useState(!article)
@@ -49,9 +57,15 @@ export function ArticleForm({ article, onSubmit, onCancel }: ArticleFormProps) {
     setIsSubmitting(true)
 
     try {
+      // Convert the date string to ISO format if it exists
+      const published_at = formData.published_at
+        ? new Date(formData.published_at).toISOString()
+        : null
+
       await onSubmit({
         ...formData,
-        status: status || formData.status as any
+        status: status || formData.status as any,
+        published_at
       })
     } finally {
       setIsSubmitting(false)
@@ -126,7 +140,7 @@ export function ArticleForm({ article, onSubmit, onCancel }: ArticleFormProps) {
         </CardContent>
       </Card>
 
-      {/* Author */}
+      {/* Author & Date */}
       <Card>
         <CardContent className="pt-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -150,6 +164,19 @@ export function ArticleForm({ article, onSubmit, onCancel }: ArticleFormProps) {
                 required
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="published_at">Published Date</Label>
+            <Input
+              id="published_at"
+              type="date"
+              value={formData.published_at}
+              onChange={(e) => setFormData(prev => ({ ...prev, published_at: e.target.value }))}
+              className="max-w-xs"
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave empty to use the current date when publishing. This date will be displayed on the article.
+            </p>
           </div>
         </CardContent>
       </Card>
