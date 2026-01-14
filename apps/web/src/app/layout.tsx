@@ -7,6 +7,7 @@ import { LeadCaptureProvider } from '@/components/lead-capture-provider'
 import { SessionInvalidModal } from '@/components/auth/SessionInvalidModal'
 import { Termly } from '@/components/analytics/Termly'
 import { Hotjar } from '@/components/analytics/Hotjar'
+import { PostHogProvider } from '@/components/analytics/PostHogProvider'
 import { Analytics } from '@vercel/analytics/react'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -110,14 +111,16 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <Hotjar />
-        <AuthProvider>
-          <SessionInvalidModal />
-          <Header />
-          <main>
-            {children}
-          </main>
-          <LeadCaptureProvider />
-        </AuthProvider>
+        <PostHogProvider>
+          <AuthProvider>
+            <SessionInvalidModal />
+            <Header />
+            <main>
+              {children}
+            </main>
+            <LeadCaptureProvider />
+          </AuthProvider>
+        </PostHogProvider>
         <Analytics />
       </body>
     </html>
