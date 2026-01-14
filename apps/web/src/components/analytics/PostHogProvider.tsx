@@ -13,7 +13,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       if (apiKey) {
         posthog.init(apiKey, {
           api_host: apiHost,
-          capture_pageviews: true,
+          capture_pageview: true,
           capture_pageleave: true,
           autocapture: true,
         })
