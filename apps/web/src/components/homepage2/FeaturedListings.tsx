@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { MapPin, Building2, ArrowRight } from 'lucide-react';
+import { MapPin, Building2, ArrowRight, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { useAuth } from '@/contexts/auth-context';
 import { ListingModal } from '@/components/listings/ListingModal';
 import { motion } from 'framer-motion';
+import { isRecentlyVerified, getRelativeVerificationTime } from '@/lib/utils/date-formatting';
 
 interface Listing {
   id: string;
@@ -24,6 +25,7 @@ interface Listing {
   logo_url?: string;
   clearbit_logo?: boolean;
   company_domain?: string;
+  verified_at?: string | null;
 }
 
 export function FeaturedListings() {
@@ -240,6 +242,13 @@ export function FeaturedListings() {
                     <div className="flex items-start gap-3">
                       <Building2 className="w-5 h-5 mt-0.5 flex-shrink-0 text-violet-500" />
                       <span>{sizeRange}</span>
+                    </div>
+                  )}
+                  {/* Verification badge - only show if recently verified (within 90 days) */}
+                  {listing.verified_at && isRecentlyVerified(listing.verified_at) && (
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0 text-green-500" />
+                      <span className="text-sm text-green-600">Verified {getRelativeVerificationTime(listing.verified_at)}</span>
                     </div>
                   )}
                 </div>
