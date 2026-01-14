@@ -111,16 +111,16 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <Hotjar />
-        <PostHogProvider>
-          <AuthProvider>
+        <AuthProvider>
+          <PostHogProvider>
             <SessionInvalidModal />
             <Header />
             <main>
               {children}
             </main>
             <LeadCaptureProvider />
-          </AuthProvider>
-        </PostHogProvider>
+          </PostHogProvider>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>
