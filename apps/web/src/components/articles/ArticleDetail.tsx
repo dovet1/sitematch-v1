@@ -52,11 +52,11 @@ export function ArticleDetail({ article }: ArticleDetailProps) {
         {/* Featured Image */}
         {article.featured_image && (
           <div className="mb-12">
-            <div className="relative w-full aspect-[16/9] rounded-[2rem] overflow-hidden shadow-xl">
+            <div className="relative w-full h-[400px] md:h-[500px] rounded-[2rem] overflow-hidden">
               <img
                 src={article.featured_image.url}
                 alt={article.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             </div>
             {article.featured_image.caption && (
