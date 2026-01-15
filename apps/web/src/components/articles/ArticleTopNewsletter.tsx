@@ -30,7 +30,7 @@ export function ArticleTopNewsletter() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          persona: 'newsletter', // Default persona for newsletter signups
+          persona: 'other', // Default persona for newsletter signups
         }),
       })
 
@@ -53,7 +53,7 @@ export function ArticleTopNewsletter() {
       <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border-2 border-violet-200 rounded-2xl p-6 mb-8">
         <div className="flex items-center justify-center gap-3 text-violet-700">
           <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-          <p className="font-semibold">Thanks for subscribing! Check your inbox for confirmation.</p>
+          <p className="font-semibold">Thanks for subscribing! We'll keep you updated with our latest content.</p>
         </div>
       </div>
     )
