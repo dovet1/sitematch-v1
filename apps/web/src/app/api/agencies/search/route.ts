@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     
     const user = await getCurrentUser();
     
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     
     let dbQuery = supabase
       .from('agencies')

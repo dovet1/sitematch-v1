@@ -16,8 +16,8 @@ export interface UpdateOrganizationData {
 export class OrganizationService {
   private supabase: any
 
-  constructor(useServer = false) {
-    this.supabase = useServer ? createServerClient() : createClientClient()
+  constructor(supabaseClient: any) {
+    this.supabase = supabaseClient
   }
 
   async createOrganization(data: CreateOrganizationData): Promise<DbOrganisation> {
@@ -161,8 +161,9 @@ export class OrganizationService {
 }
 
 // Convenience functions
-export function createOrganizationService(useServer = false) {
-  return new OrganizationService(useServer)
+export async function createOrganizationService(useServer = false) {
+  const supabaseClient = useServer ? await createServerClient() : createClientClient()
+  return new OrganizationService(supabaseClient)
 }
 
 export async function getCurrentUserOrganization(): Promise<DbOrganisation | null> {

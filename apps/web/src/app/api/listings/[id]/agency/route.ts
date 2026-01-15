@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -14,11 +14,11 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: listingId } = params;
+    const { id: listingId } = await params;
     const body = await request.json();
     const { linkedAgencyId } = body;
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Check if user owns this listing
     const { data: listing, error: fetchError } = await supabase

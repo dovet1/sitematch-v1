@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 // GET /api/saved-searches/[id]/matches - Get matching listings for a saved search
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -17,13 +17,13 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Get the saved search
     const { data: savedSearch, error: searchError} = await supabase
       .from('saved_searches')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id)
       .single();
 
@@ -40,13 +40,13 @@ export async function GET(
 
     // If using cache, return cached matches (FAST PATH)
     if (useCache) {
-      console.log(`📊 CACHE: Fetching cached matches for search ${params.id}`);
+      console.log(`📊 CACHE: Fetching cached matches for search ${(await params).id}`);
 
       // Fetch cached listing IDs
       const { data: cachedMatches, error: cacheError } = await supabase
         .from('saved_search_matches_cache')
         .select('listing_id, distance_miles, cached_at')
-        .eq('search_id', params.id);
+        .eq('search_id', (await params).id);
 
       if (cacheError) {
         console.error('⚠️ CACHE: Error fetching cached matches, falling back to live query:', cacheError);
@@ -112,7 +112,7 @@ export async function GET(
     }
 
     // LIVE QUERY (SLOW PATH) - Used when cache is disabled or unavailable
-    console.log(`🔄 LIVE: Running live match query for search ${params.id}`);
+    console.log(`🔄 LIVE: Running live match query for search ${(await params).id}`);
 
     // Step 1: Get all approved listings first to fetch their versions
     const { data: allListings, error: allListingsError } = await supabase

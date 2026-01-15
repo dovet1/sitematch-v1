@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     try {
       // Search the listings table for company names
-      const supabase = createServerClient();
+      const supabase = await createServerClient();
 
       const { data: listings, error } = await supabase
         .from('listings')

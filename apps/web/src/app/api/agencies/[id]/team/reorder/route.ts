@@ -10,7 +10,7 @@ interface ReorderRequest {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -18,7 +18,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: agencyId } = params;
+    const { id: agencyId } = await params;
     const body: ReorderRequest = await request.json();
 
     if (!body.teamMemberIds || !Array.isArray(body.teamMemberIds)) {
@@ -28,7 +28,7 @@ export async function PUT(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Check if user owns this agency
     const { data: agency, error: fetchError } = await supabase

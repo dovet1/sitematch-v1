@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       }, { status: 200 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     
     // Check if consultant profile exists and is completed
     const { data: profileData, error: profileError } = await supabase

@@ -44,10 +44,10 @@ export const createClient = () => createBrowserClient(supabaseUrl, supabaseAnonK
 })
 
 // Server component client (for use in Server Components and API Routes)
-export const createServerClient = () => {
+export const createServerClient = async () => {
   try {
     const { cookies } = require('next/headers')
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     
     return createSSRServerClient(
       supabaseUrl,

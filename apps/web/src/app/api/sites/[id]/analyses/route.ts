@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 // GET /api/sites/[id]/analyses - List saved analyses for site (Pro only)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -25,13 +25,13 @@ export async function GET(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Verify site ownership
     const { data: site, error: siteError } = await supabase
       .from('user_sites')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id)
       .single();
 
@@ -43,7 +43,7 @@ export async function GET(
     const { data: analyses, error } = await supabase
       .from('site_demographic_analyses')
       .select('*')
-      .eq('site_id', params.id)
+      .eq('site_id', (await params).id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -67,7 +67,7 @@ export async function GET(
 // POST /api/sites/[id]/analyses - Save a new analysis (Pro only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -85,7 +85,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Check if this is a link request (has analysis_id) or a create request
     if (body.analysis_id) {
@@ -106,7 +106,7 @@ export async function POST(
       }
 
       // If already linked to this site, return success
-      if (analysis.site_id === params.id) {
+      if (analysis.site_id === (await params).id) {
         return NextResponse.json({
           success: true,
           message: 'Analysis already linked to this site'
@@ -116,7 +116,7 @@ export async function POST(
       // Link the analysis to the site
       const { error: updateError } = await supabase
         .from('site_demographic_analyses')
-        .update({ site_id: params.id })
+        .update({ site_id: (await params).id })
         .eq('id', body.analysis_id)
         .eq('user_id', user.id);
 
@@ -192,20 +192,20 @@ export async function POST(
       );
     }
 
-    // If site_id provided (params.id !== 'standalone'), verify site ownership
+    // If site_id provided ((await params).id !== 'standalone'), verify site ownership
     let site_id = null;
-    if (params.id !== 'standalone') {
+    if ((await params).id !== 'standalone') {
       const { data: site, error: siteError } = await supabase
         .from('user_sites')
         .select('id')
-        .eq('id', params.id)
+        .eq('id', (await params).id)
         .eq('user_id', user.id)
         .single();
 
       if (siteError || !site) {
         return NextResponse.json({ error: 'Site not found' }, { status: 404 });
       }
-      site_id = params.id;
+      site_id = (await params).id;
     }
 
     // Create the analysis
@@ -248,7 +248,7 @@ export async function POST(
 // DELETE /api/sites/[id]/analyses - Delete an analysis (Pro only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -275,7 +275,7 @@ export async function DELETE(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // First, verify the analysis exists and belongs to the user
     const { data: analysis, error: fetchError } = await supabase
@@ -299,7 +299,7 @@ export async function DELETE(
     }
 
     // If linked to a different site, return error
-    if (analysis.site_id !== params.id) {
+    if (analysis.site_id !== (await params).id) {
       return NextResponse.json(
         { error: 'Analysis is linked to a different site' },
         { status: 400 }

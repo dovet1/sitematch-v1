@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 
 export async function POST() {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   try {
     // Get the current user

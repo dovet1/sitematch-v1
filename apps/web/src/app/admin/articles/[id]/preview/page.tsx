@@ -8,14 +8,16 @@ import { PreviewBanner } from './PreviewBanner'
 export const dynamic = 'force-dynamic'
 
 interface PreviewArticlePageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function PreviewArticlePage({ params }: PreviewArticlePageProps) {
   await requireAdmin()
 
-  const articleService = createArticleService(true)
-  const article = await articleService.getArticleById(params.id)
+  const { id } = await params
+
+  const articleService = await createArticleService(true)
+  const article = await articleService.getArticleById(id)
 
   if (!article) {
     notFound()

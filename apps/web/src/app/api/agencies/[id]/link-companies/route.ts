@@ -6,22 +6,24 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: agencyId } = await params
+
     const user = await getCurrentUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { companyIds } = await request.json()
-    const supabase = createServerClient()
-    
+    const supabase = await createServerClient()
+
     // Verify the user owns this agency
     const { data: agency, error: agencyError } = await supabase
       .from('agencies')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', agencyId)
       .eq('created_by', user.id)
       .single()
 
@@ -48,8 +50,8 @@ export async function POST(
 
     // Get current links for this agency
     const currentlyLinkedListings = new Set(
-      userListings?.filter(listing => 
-        listing.listing_agents?.some(agent => agent.agency_id === params.id)
+      userListings?.filter(listing =>
+        listing.listing_agents?.some(agent => agent.agency_id === agencyId)
       ).map(listing => listing.id) || []
     )
 
@@ -67,7 +69,7 @@ export async function POST(
     if (toLink.length > 0) {
       const linksToInsert = toLink.map((listingId: string) => ({
         listing_id: listingId,
-        agency_id: params.id
+        agency_id: agencyId
       }))
 
       const { error: insertError } = await supabase
@@ -87,7 +89,7 @@ export async function POST(
       const { error: deleteError } = await supabase
         .from('listing_agents')
         .delete()
-        .eq('agency_id', params.id)
+        .eq('agency_id', agencyId)
         .in('listing_id', toUnlink)
 
       if (deleteError) {

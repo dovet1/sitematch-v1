@@ -4,8 +4,8 @@ import { Article, ArticleImage, CreateArticleData, UpdateArticleData } from '@/t
 export class ArticleService {
   private supabase: any
 
-  constructor(useAdmin = false) {
-    this.supabase = useAdmin ? createAdminClient() : createServerClient()
+  constructor(supabaseClient: any) {
+    this.supabase = supabaseClient
   }
 
   // Generate URL-friendly slug from title
@@ -313,6 +313,7 @@ export class ArticleService {
   }
 }
 
-export function createArticleService(useAdmin = false) {
-  return new ArticleService(useAdmin)
+export async function createArticleService(useAdmin = false) {
+  const supabaseClient = useAdmin ? createAdminClient() : await createServerClient()
+  return new ArticleService(supabaseClient)
 }

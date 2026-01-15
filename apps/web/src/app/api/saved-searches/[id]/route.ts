@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 // GET /api/saved-searches/[id] - Get a single saved search
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -16,12 +16,12 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { data: search, error } = await supabase
       .from('saved_searches')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id)
       .single();
 
@@ -45,7 +45,7 @@ export async function GET(
 // PUT /api/saved-searches/[id] - Update a saved search
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -79,13 +79,13 @@ export async function PUT(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Check that the search exists and belongs to the user
     const { data: existingSearch, error: fetchError } = await supabase
       .from('saved_searches')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id)
       .single();
 
@@ -139,7 +139,7 @@ export async function PUT(
     const { data: updatedSearch, error: updateError } = await supabase
       .from('saved_searches')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id)
       .select()
       .single();
@@ -165,7 +165,7 @@ export async function PUT(
 // DELETE /api/saved-searches/[id] - Delete a saved search
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -173,12 +173,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { error } = await supabase
       .from('saved_searches')
       .delete()
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id);
 
     if (error) {

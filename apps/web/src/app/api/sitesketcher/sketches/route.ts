@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Fetch sketches ordered by most recently updated
     const { data: sketches, error } = await supabase
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const body = await request.json();
     const { name, description, data, thumbnail_url, location } = body;

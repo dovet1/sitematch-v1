@@ -13,7 +13,7 @@ export async function createDraftListing(
   organizationId: string,
   userEmail?: string
 ): Promise<string> {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   try {
     // Get current user
@@ -94,7 +94,7 @@ export async function updateDraftListing(
     const { browserClient } = await import('@/lib/supabase');
     supabase = browserClient;
   } else {
-    supabase = createServerClient();
+    supabase = await createServerClient();
   }
 
   try {
@@ -168,7 +168,7 @@ export async function finalizeDraftListing(
     const { browserClient } = await import('@/lib/supabase');
     supabase = browserClient;
   } else {
-    supabase = createServerClient();
+    supabase = await createServerClient();
   }
 
   try {
@@ -265,7 +265,7 @@ export async function addContactsToDraftListing(
     const { browserClient } = await import('@/lib/supabase');
     supabase = browserClient;
   } else {
-    supabase = createServerClient();
+    supabase = await createServerClient();
   }
 
   try {
@@ -328,7 +328,7 @@ export async function addFAQsToDraftListing(
     const { browserClient } = await import('@/lib/supabase');
     supabase = browserClient;
   } else {
-    supabase = createServerClient();
+    supabase = await createServerClient();
   }
 
   try {
@@ -368,7 +368,7 @@ export async function addSectorsToDraftListing(
     const { browserClient } = await import('@/lib/supabase');
     supabase = browserClient;
   } else {
-    supabase = createServerClient();
+    supabase = await createServerClient();
   }
 
   try {
@@ -431,7 +431,7 @@ export async function addUseClassesToDraftListing(
     const { browserClient } = await import('@/lib/supabase');
     supabase = browserClient;
   } else {
-    supabase = createServerClient();
+    supabase = await createServerClient();
   }
 
   try {
@@ -501,7 +501,7 @@ export async function addLocationsToDraftListing(
     const { browserClient } = await import('@/lib/supabase');
     supabase = browserClient;
   } else {
-    supabase = createServerClient();
+    supabase = await createServerClient();
   }
 
   try {

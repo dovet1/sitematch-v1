@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -45,7 +45,7 @@ export async function PATCH(
 
     console.log('✅ Admin access confirmed for user:', user.email);
 
-    const listingId = params.id;
+    const listingId = (await params).id;
 
     // Validate UUID format
     if (!isValidUUID(listingId)) {
@@ -194,7 +194,7 @@ export async function PATCH(
     });
 
   } catch (error) {
-    console.error(`PATCH /api/listings/${params.id}/status error:`, error);
+    console.error(`PATCH /api/listings/${(await params).id}/status error:`, error);
     return NextResponse.json(
       {
         success: false,

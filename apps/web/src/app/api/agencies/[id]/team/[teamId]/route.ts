@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; teamId: string } }
+  { params }: { params: Promise<{ id: string; teamId: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -14,10 +14,10 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: agencyId, teamId } = params;
+    const { id: agencyId, teamId } = await params;
     const body = await request.json();
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Check if user owns this agency
     const { data: agency, error: fetchError } = await supabase
@@ -116,7 +116,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; teamId: string } }
+  { params }: { params: Promise<{ id: string; teamId: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -124,8 +124,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: agencyId, teamId } = params;
-    const supabase = createServerClient();
+    const { id: agencyId, teamId } = await params;
+    const supabase = await createServerClient();
 
     // Check if user owns this agency
     const { data: agency, error: fetchError } = await supabase

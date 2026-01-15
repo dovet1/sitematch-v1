@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 // GET /api/demographic-analyses/[id] - Get full saved analysis data (Pro only)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -25,12 +25,12 @@ export async function GET(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Fetch the analysis with location extracted as lat/lng
     // Use a raw query to extract coordinates from the geography point
     const { data, error } = await supabase
-      .rpc('get_demographic_analysis_with_location', { p_analysis_id: params.id });
+      .rpc('get_demographic_analysis_with_location', { p_analysis_id: (await params).id });
 
     if (error) {
       // Fallback: try regular query if RPC doesn't exist
@@ -38,7 +38,7 @@ export async function GET(
       const { data: analysisData, error: queryError } = await supabase
         .from('site_demographic_analyses')
         .select('*')
-        .eq('id', params.id)
+        .eq('id', (await params).id)
         .eq('user_id', user.id)
         .single();
 
@@ -56,7 +56,7 @@ export async function GET(
       const { data: coordData } = await supabase
         .from('site_demographic_analyses')
         .select('location')
-        .eq('id', params.id)
+        .eq('id', (await params).id)
         .single();
 
       // Convert PostGIS geography to { lat, lng }
@@ -112,7 +112,7 @@ export async function GET(
 // DELETE /api/demographic-analyses/[id] - Delete saved analysis (Pro only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -129,13 +129,13 @@ export async function DELETE(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Delete the analysis
     const { error } = await supabase
       .from('site_demographic_analyses')
       .delete()
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id);
 
     if (error) {

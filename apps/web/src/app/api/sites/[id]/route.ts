@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 // GET /api/sites/[id] - Get site details with all attachments
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -15,11 +15,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Try to fetch the site with location coordinates using the PostGIS function
     const { data: siteData, error: siteError } = await supabase
-      .rpc('get_site_with_location', { p_site_id: params.id });
+      .rpc('get_site_with_location', { p_site_id: (await params).id });
 
     let site = null;
 
@@ -37,7 +37,7 @@ export async function GET(
           created_at,
           updated_at
         `)
-        .eq('id', params.id)
+        .eq('id', (await params).id)
         .eq('user_id', user.id)
         .single();
 
@@ -64,17 +64,17 @@ export async function GET(
       supabase
         .from('saved_searches')
         .select('*')
-        .eq('site_id', params.id)
+        .eq('site_id', (await params).id)
         .order('created_at', { ascending: false }),
       supabase
         .from('site_sketches')
         .select('*')
-        .eq('site_id', params.id)
+        .eq('site_id', (await params).id)
         .order('created_at', { ascending: false }),
       supabase
         .from('site_demographic_analyses')
         .select('*')
-        .eq('site_id', params.id)
+        .eq('site_id', (await params).id)
         .order('created_at', { ascending: false }),
     ]);
 
@@ -98,7 +98,7 @@ export async function GET(
 // PATCH /api/sites/[id] - Update site
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -107,13 +107,13 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Verify ownership
     const { data: existing, error: fetchError } = await supabase
       .from('user_sites')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id)
       .single();
 
@@ -169,7 +169,7 @@ export async function PATCH(
     const { data: updatedSite, error: updateError } = await supabase
       .from('user_sites')
       .update(updates)
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id)
       .select()
       .single();
@@ -195,7 +195,7 @@ export async function PATCH(
 // DELETE /api/sites/[id] - Delete site
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -203,7 +203,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Unlink all attachments (set site_id to null) before deleting site
     // This ensures searches, sketches, and analyses remain accessible to the user
@@ -211,22 +211,22 @@ export async function DELETE(
       supabase
         .from('saved_searches')
         .update({ site_id: null })
-        .eq('site_id', params.id),
+        .eq('site_id', (await params).id),
       supabase
         .from('site_sketches')
         .update({ site_id: null })
-        .eq('site_id', params.id),
+        .eq('site_id', (await params).id),
       supabase
         .from('site_demographic_analyses')
         .update({ site_id: null })
-        .eq('site_id', params.id),
+        .eq('site_id', (await params).id),
     ]);
 
     // Delete the site
     const { error } = await supabase
       .from('user_sites')
       .delete()
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id);
 
     if (error) {

@@ -5,11 +5,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; teamId: string } }
+  { params }: { params: Promise<{ id: string; teamId: string }> }
 ) {
   try {
-    const { id: agencyId, teamId } = params;
-    const supabase = createServerClient();
+    const { id: agencyId, teamId } = await params;
+    const supabase = await createServerClient();
 
     // Get team member with agency information
     const { data: teamMember, error } = await supabase

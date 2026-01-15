@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: listingId } = await params;
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   try {
     const { data, error } = await supabase
@@ -61,7 +61,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: listingId } = await params;
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   try {
     const body: AddListingAgentRequest = await request.json();
@@ -136,7 +136,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: listingId } = await params;
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   try {
     const url = new URL(request.url);

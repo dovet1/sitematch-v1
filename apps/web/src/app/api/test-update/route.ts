@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     console.log('Test update endpoint called:', { listingId, updates });
 
     const { createServerClient } = require('@/lib/supabase');
-    const serverClient = createServerClient();
+    const serverClient = await createServerClient();
     const result = await updateListing(listingId, updates, serverClient);
 
     return NextResponse.json({

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       }, { status: 403 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Parse form data
     const formData = await request.formData();

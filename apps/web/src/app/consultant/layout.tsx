@@ -13,7 +13,7 @@ export default async function ConsultantLayout({
     redirect('/auth/login');
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   
   // Check if user is a consultant
   const { data: userData, error: userError } = await supabase

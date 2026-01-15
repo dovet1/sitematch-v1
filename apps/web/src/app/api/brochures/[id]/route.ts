@@ -6,10 +6,10 @@ export const dynamic = 'force-dynamic';
 // GET /api/brochures/[id] - Get a single brochure
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -18,7 +18,7 @@ export async function GET(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -63,10 +63,10 @@ export async function GET(
 // PUT /api/brochures/[id] - Update a brochure
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -75,7 +75,7 @@ export async function PUT(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -193,10 +193,10 @@ export async function PUT(
 // DELETE /api/brochures/[id] - Delete a brochure
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -205,7 +205,7 @@ export async function DELETE(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 

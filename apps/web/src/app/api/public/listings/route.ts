@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const page = Number(searchParams.get('page')) || 1;
     const limit = Math.min(Number(searchParams.get('limit')) || 20, 1000); // Max 1000 results per page for comprehensive search
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Check if user has subscription access
     const { data: { user } } = await supabase.auth.getUser();

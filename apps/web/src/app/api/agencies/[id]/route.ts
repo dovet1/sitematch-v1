@@ -6,11 +6,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
-    const supabase = createServerClient();
+    const { id } = await params;
+    const supabase = await createServerClient();
     const user = await getCurrentUser();
 
     // First fetch the agency with all versions and linked companies
@@ -159,7 +159,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     console.log('PUT /api/agencies/[id] - Starting request');
@@ -171,13 +171,13 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     console.log('Agency ID:', id);
     
     const body = await request.json();
     console.log('Request body keys:', Object.keys(body));
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     console.log('Supabase client created');
 
     // Check if user owns this agency

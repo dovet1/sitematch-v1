@@ -7,14 +7,16 @@ import { EditArticleForm } from './EditArticleForm'
 export const dynamic = 'force-dynamic'
 
 interface EditArticlePageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function EditArticlePage({ params }: EditArticlePageProps) {
   await requireAdmin()
 
-  const articleService = createArticleService(true)
-  const article = await articleService.getArticleById(params.id)
+  const { id } = await params
+
+  const articleService = await createArticleService(true)
+  const article = await articleService.getArticleById(id)
 
   if (!article) {
     notFound()

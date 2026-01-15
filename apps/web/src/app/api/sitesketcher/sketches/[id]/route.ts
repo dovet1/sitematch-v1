@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 // GET /api/sitesketcher/sketches/[id] - Get single sketch
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -19,12 +19,12 @@ export async function GET(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { data: sketch, error } = await supabase
       .from('site_sketches')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id)
       .single();
 
@@ -49,7 +49,7 @@ export async function GET(
 // PUT /api/sitesketcher/sketches/[id] - Update sketch
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -61,7 +61,7 @@ export async function PUT(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const body = await request.json();
     const { name, description, data, thumbnail_url, location } = body;
@@ -77,7 +77,7 @@ export async function PUT(
     const { data: sketch, error } = await supabase
       .from('site_sketches')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id)
       .select()
       .single();
@@ -103,7 +103,7 @@ export async function PUT(
 // DELETE /api/sitesketcher/sketches/[id] - Delete sketch
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -115,12 +115,12 @@ export async function DELETE(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { error } = await supabase
       .from('site_sketches')
       .delete()
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id);
 
     if (error) {

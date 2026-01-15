@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     console.log('✅ CRON: Starting saved search matches cache update');
     const startTime = Date.now();
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Fetch all saved searches
     const { data: searches, error: searchesError } = await supabase

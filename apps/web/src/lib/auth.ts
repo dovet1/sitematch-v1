@@ -3,7 +3,7 @@ import { UserRole, UserProfile, UserType } from '@/types/auth'
 import { redirect } from 'next/navigation'
 
 export async function getServerUser() {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   
   try {
     const {
@@ -29,7 +29,7 @@ export async function getServerUserProfile(): Promise<UserProfile | null> {
     return null
   }
 
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   
   try {
     const { data, error } = await supabase
@@ -101,7 +101,7 @@ export function isOccupier(userRole: UserRole): boolean {
 }
 
 export async function getCurrentUser(): Promise<any> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   
   try {
     const {

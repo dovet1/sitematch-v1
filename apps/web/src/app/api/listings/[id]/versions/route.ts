@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication
@@ -40,7 +40,7 @@ export async function GET(
     let query = supabase
       .from('listing_versions')
       .select('id, version_number, status, created_at, reviewed_at, reviewed_by, review_notes, is_live')
-      .eq('listing_id', params.id)
+      .eq('listing_id', (await params).id)
       .order('version_number', { ascending: false });
 
     // Apply filters

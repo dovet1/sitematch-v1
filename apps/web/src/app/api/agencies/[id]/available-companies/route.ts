@@ -6,21 +6,23 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: agencyId } = await params
+
     const user = await getCurrentUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = createServerClient()
-    
+    const supabase = await createServerClient()
+
     // First verify the user owns this agency
     const { data: agency, error: agencyError } = await supabase
       .from('agencies')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', agencyId)
       .eq('created_by', user.id)
       .single()
 
@@ -84,7 +86,7 @@ export async function GET(
     // Format the response
     const companies = approvedListings.map(listing => {
       const logo = logos.find(l => l.listing_id === listing.id)
-      const isLinkedToThisAgency = listing.listing_agents?.some((agent: any) => agent.agency_id === params.id) || false
+      const isLinkedToThisAgency = listing.listing_agents?.some((agent: any) => agent.agency_id === agencyId) || false
       
       return {
         id: listing.id,

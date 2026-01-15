@@ -8,10 +8,10 @@ export const dynamic = 'force-dynamic';
 // For MVP, we return the print URL that can be used with browser print or a PDF service
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -20,7 +20,7 @@ export async function POST(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const limit = parseInt(searchParams.get('limit') || '20');
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     
     // Get agencies that are approved or have approved versions
     let query = supabase

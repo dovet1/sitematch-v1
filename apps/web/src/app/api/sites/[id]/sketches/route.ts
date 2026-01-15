@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 // GET /api/sites/[id]/sketches - List attached sketches
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -15,13 +15,13 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Verify site ownership
     const { data: site, error: siteError } = await supabase
       .from('user_sites')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id)
       .single();
 
@@ -33,7 +33,7 @@ export async function GET(
     const { data: sketches, error } = await supabase
       .from('site_sketches')
       .select('*')
-      .eq('site_id', params.id)
+      .eq('site_id', (await params).id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -57,7 +57,7 @@ export async function GET(
 // POST /api/sites/[id]/sketches - Attach a sketch to site
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -75,13 +75,13 @@ export async function POST(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Verify site ownership
     const { data: site, error: siteError } = await supabase
       .from('user_sites')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .eq('user_id', user.id)
       .single();
 
@@ -102,7 +102,7 @@ export async function POST(
     }
 
     // Check if already attached
-    if (sketch.site_id === params.id) {
+    if (sketch.site_id === (await params).id) {
       return NextResponse.json(
         { error: 'Sketch already attached to this site' },
         { status: 400 }
@@ -112,7 +112,7 @@ export async function POST(
     // Attach sketch to site
     const { data: updatedSketch, error: updateError } = await supabase
       .from('site_sketches')
-      .update({ site_id: params.id })
+      .update({ site_id: (await params).id })
       .eq('id', sketch_id)
       .eq('user_id', user.id)
       .select()
@@ -139,7 +139,7 @@ export async function POST(
 // DELETE /api/sites/[id]/sketches - Detach a sketch from site
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -157,14 +157,14 @@ export async function DELETE(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Verify ownership and detach
     const { error } = await supabase
       .from('site_sketches')
       .update({ site_id: null })
       .eq('id', sketch_id)
-      .eq('site_id', params.id)
+      .eq('site_id', (await params).id)
       .eq('user_id', user.id);
 
     if (error) {

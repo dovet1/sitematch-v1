@@ -24,11 +24,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
-    const listingId = params.id;
+    const listingId = (await params).id;
 
     // Validate UUID format
     if (!isValidUUID(listingId)) {
@@ -64,7 +64,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error(`GET /api/listings/${params.id} error:`, error);
+    console.error(`GET /api/listings/${(await params).id} error:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -81,7 +81,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -92,7 +92,7 @@ export async function PUT(
       );
     }
 
-    const listingId = params.id;
+    const listingId = (await params).id;
 
     // Validate UUID format
     if (!isValidUUID(listingId)) {
@@ -147,7 +147,7 @@ export async function PUT(
 
     // Update the listing with proper server client
     const { createServerClient } = require('@/lib/supabase');
-    const serverClient = createServerClient();
+    const serverClient = await createServerClient();
     const updatedListing = await updateListing(listingId, updateData, serverClient);
 
     // Log the update for monitoring
@@ -160,7 +160,7 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error(`PUT /api/listings/${params.id} error:`, error);
+    console.error(`PUT /api/listings/${(await params).id} error:`, error);
 
     // Handle specific error types
     if (error instanceof Error) {
@@ -195,7 +195,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -206,7 +206,7 @@ export async function DELETE(
       );
     }
 
-    const listingId = params.id;
+    const listingId = (await params).id;
 
     // Validate UUID format
     if (!isValidUUID(listingId)) {
@@ -247,7 +247,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error(`DELETE /api/listings/${params.id} error:`, error);
+    console.error(`DELETE /api/listings/${(await params).id} error:`, error);
     return NextResponse.json(
       {
         success: false,

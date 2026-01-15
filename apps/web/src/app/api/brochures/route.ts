@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 // GET /api/brochures - List all brochures for the current user
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 // POST /api/brochures - Create a new brochure
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
