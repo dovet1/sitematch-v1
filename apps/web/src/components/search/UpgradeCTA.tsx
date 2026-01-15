@@ -44,7 +44,7 @@ export function UpgradeCTA({ onUpgradeClick }: UpgradeCTAProps) {
 
           {/* Heading */}
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Unlock 8,000+ more verified requirements
+            Unlock 3,500+ more verified requirements
           </h2>
 
           {/* Subheading */}
