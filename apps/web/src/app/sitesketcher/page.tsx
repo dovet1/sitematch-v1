@@ -1193,8 +1193,18 @@ function SiteSketcherContent() {
             <ArrowLeft className="h-5 w-5 text-gray-700" />
           </Link>
 
-          {/* Mobile File Menu Button */}
+          {/* Mobile Tutorial & File Menu Buttons */}
           <div className="flex items-center gap-2">
+            {/* Tutorial Button */}
+            <button
+              onClick={handleOpenTutorial}
+              className="flex items-center justify-center w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all"
+              title="Watch Tutorial"
+              aria-label="Watch tutorial video"
+            >
+              <HelpCircle className="h-5 w-5 text-blue-600" />
+            </button>
+
             {hasUnsavedChanges && (
               <div className="w-2 h-2 rounded-full bg-orange-500"></div>
             )}
@@ -1274,16 +1284,6 @@ function SiteSketcherContent() {
         <div className="mobile-map-container">
           <ModeIndicator mode={state.drawingMode} />
           <MobileFAB mode={state.drawingMode} onModeToggle={handleModeToggle} />
-
-          {/* Mobile Help Button */}
-          <button
-            onClick={handleOpenTutorial}
-            className="md:hidden fixed bottom-20 left-4 z-30 flex items-center justify-center w-12 h-12 bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all"
-            title="Watch Tutorial"
-            aria-label="Watch tutorial video"
-          >
-            <HelpCircle className="h-5 w-5 text-blue-600" />
-          </button>
 
           <MapboxMap
             ref={mapRef}
