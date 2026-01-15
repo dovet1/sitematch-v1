@@ -34,7 +34,7 @@ export function VideoLightbox({ isOpen, onClose, videoId, title = 'Video' }: Vid
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          className="fixed inset-0 z-[10020] flex items-center justify-center bg-black/90 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

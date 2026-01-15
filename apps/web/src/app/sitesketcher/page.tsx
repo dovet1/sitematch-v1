@@ -14,7 +14,8 @@ import { SaveSketchModal } from './components/SaveSketchModal';
 import { SketchesList } from './components/SketchesList';
 import { DocumentBar } from './components/DocumentBar';
 import { UnsavedChangesDialog } from './components/UnsavedChangesDialog';
-import { AlertTriangle, Pencil, MousePointer, ArrowLeft, Menu, Building2 } from 'lucide-react';
+import { AlertTriangle, Pencil, MousePointer, ArrowLeft, Menu, Building2, HelpCircle } from 'lucide-react';
+import { VideoLightbox } from '@/components/VideoLightbox';
 import type {
   MapboxDrawPolygon,
   ParkingOverlay,
@@ -100,12 +101,18 @@ function SiteSketcherContent() {
   const [showMobileFileMenu, setShowMobileFileMenu] = useState(false);
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
   const [upgradeBannerType, setUpgradeBannerType] = useState<'polygon' | 'parking'>('polygon');
+  const [showTutorialVideo, setShowTutorialVideo] = useState(false);
   const mapRef = useRef<MapboxMapRef>(null);
   const originalMeasurementsRef = useRef<AreaMeasurement | null>(null);
   const hasLoadedFromUrlRef = useRef(false);
 
   // Note: No authentication guard - allow all users to access SiteSketcher
   // Free tier users will have limited functionality (2 polygons, 2 parking, no save/load)
+
+  // Mark as visited (for first-time user detection)
+  useEffect(() => {
+    localStorage.setItem('sitesketcher-visited', 'true');
+  }, []);
 
   // Detect unsaved changes by comparing current state with saved snapshot
   useEffect(() => {
@@ -640,6 +647,10 @@ function SiteSketcherContent() {
     window.history.replaceState({}, '', url.toString());
   }, []);
 
+  const handleOpenTutorial = useCallback(() => {
+    setShowTutorialVideo(true);
+  }, []);
+
   const handleAddRectangle = useCallback((width: number, length: number) => {
     // Store rectangle dimensions for placement
     setRectangleToPlace({ width, length });
@@ -1022,6 +1033,17 @@ function SiteSketcherContent() {
                 )}
               </div>
             </div>
+
+            {/* Tutorial Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleOpenTutorial}
+              className="ml-auto h-8 px-3 rounded-lg hover:bg-violet-50 hover:text-violet-700 transition-all duration-200 flex items-center gap-2"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">Tutorial</span>
+            </Button>
           </div>
         </header>
 
@@ -1252,6 +1274,17 @@ function SiteSketcherContent() {
         <div className="mobile-map-container">
           <ModeIndicator mode={state.drawingMode} />
           <MobileFAB mode={state.drawingMode} onModeToggle={handleModeToggle} />
+
+          {/* Mobile Help Button */}
+          <button
+            onClick={handleOpenTutorial}
+            className="md:hidden fixed bottom-20 left-4 z-30 flex items-center justify-center w-12 h-12 bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all"
+            title="Watch Tutorial"
+            aria-label="Watch tutorial video"
+          >
+            <HelpCircle className="h-5 w-5 text-blue-600" />
+          </button>
+
           <MapboxMap
             ref={mapRef}
             onPolygonCreate={handlePolygonCreate}
@@ -1350,6 +1383,7 @@ function SiteSketcherContent() {
         isOpen={showWelcomeModal}
         onClose={handleWelcomeClose}
         userProfile={profile}
+        onOpenTutorial={handleOpenTutorial}
       />
 
       {/* Cuboid Story Selector Modal */}
@@ -1400,6 +1434,14 @@ function SiteSketcherContent() {
           </div>
         </div>
       )}
+
+      {/* Tutorial Video Lightbox */}
+      <VideoLightbox
+        isOpen={showTutorialVideo}
+        onClose={() => setShowTutorialVideo(false)}
+        videoId="DdBlMDdXe5w"
+        title="SiteSketcher Tutorial"
+      />
     </div>
   );
 }

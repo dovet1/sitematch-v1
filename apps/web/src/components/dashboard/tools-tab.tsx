@@ -18,7 +18,14 @@ export function ToolsTab() {
       gradient: 'from-blue-500 to-cyan-600',
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',
-      onClick: () => router.push('/sitesketcher'),
+      onClick: () => {
+        const hasVisited = localStorage.getItem('sitesketcher-visited');
+        if (!hasVisited) {
+          router.push('/sitesketcher?welcome=true');
+        } else {
+          router.push('/sitesketcher');
+        }
+      },
     },
     {
       id: 'site-demographer',
