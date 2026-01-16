@@ -485,7 +485,8 @@ export async function GET(request: NextRequest) {
     }) || [];
 
     // Apply location filtering if location is provided and not nationwide
-    if (location && !isNationwide) {
+    // Skip text-based filtering if coordinates are provided (Mode 2 will handle geographic search)
+    if (location && !isNationwide && (lat === null || lng === null)) {
       const locationLower = location.toLowerCase();
       
       // Separate listings into those with matching locations and nationwide
@@ -580,12 +581,14 @@ export async function GET(request: NextRequest) {
         });
 
         // Filter by radius (converted from miles to km)
-        if (minDistance <= radius) {
-          listingsWithDistances.push({ listing, distance: minDistance });
-        } else {
-          // Beyond radius - treat as nationwide
+        if (minDistance === Infinity) {
+          // Listing has locations but none have valid coordinates - treat as nationwide
           nationwideListings.push(listing);
+        } else if (minDistance <= radius) {
+          listingsWithDistances.push({ listing, distance: minDistance });
         }
+        // Note: Listings beyond radius are excluded entirely from coordinate-based searches
+        // Only listings with NO location data or invalid coordinates are treated as nationwide
       });
 
       // Sort by distance (closest first)
