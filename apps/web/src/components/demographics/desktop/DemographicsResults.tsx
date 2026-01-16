@@ -116,8 +116,17 @@ export function DemographicsResults({
 
     // Helper to convert display label back to component_id format
     const labelToComponentId = (label: string, prefix?: string): string => {
-      // Convert label to lowercase and replace spaces with underscores
-      let componentId = label.toLowerCase().replace(/\s+/g, '_');
+      let componentId = label.toLowerCase();
+
+      // Special handling for age groups: reverse "5 to 9" → "5_9"
+      if (prefix === 'age_') {
+        componentId = componentId
+          .replace(/(\d+)\s+to\s+(\d+)/, '$1_$2')  // "5 to 9" → "5_9"
+          .replace(/(\d+)\+/, '$1_and_over');       // "85+" → "85_and_over"
+      }
+
+      // Convert remaining spaces to underscores
+      componentId = componentId.replace(/\s+/g, '_');
 
       // Add prefix if provided
       if (prefix) {
