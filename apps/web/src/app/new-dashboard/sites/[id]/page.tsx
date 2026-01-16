@@ -2,12 +2,14 @@ import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { SiteDetailPage } from '@/components/dashboard/site-detail-page';
 
-export default async function SiteDetailPageRoute({ params }: { params: { id: string } }) {
+export default async function SiteDetailPageRoute({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+
   const user = await getCurrentUser();
 
   if (!user) {
     redirect('/login');
   }
 
-  return <SiteDetailPage siteId={params.id} userId={user.id} />;
+  return <SiteDetailPage siteId={id} userId={user.id} />;
 }

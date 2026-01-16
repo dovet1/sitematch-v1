@@ -3,15 +3,17 @@ import { notFound } from 'next/navigation';
 import { SharedListingPage } from './SharedListingPage';
 
 interface PageProps {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }
 
 // Generate metadata for SEO and social sharing
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { token } = await params
+
   try {
     // Fetch listing data for metadata
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/public/shared/${params.token}`,
+      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/public/shared/${token}`,
       { 
         next: { revalidate: 3600 } // Cache for 1 hour
       }
@@ -31,7 +33,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       ? `${listing.description.substring(0, 160)}...`
       : `View this commercial property requirement from ${companyName}`;
 
-    const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/shared/${params.token}`;
+    const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/shared/${token}`;
 
     return {
       title: `${title} - ${companyName}`,
@@ -70,6 +72,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-export default function Page({ params }: PageProps) {
-  return <SharedListingPage token={params.token} />;
+export default async function Page({ params }: PageProps) {
+  const { token } = await params
+  return <SharedListingPage token={token} />;
 }

@@ -84,7 +84,7 @@ export async function createEnhancedListing(
   data: EnhancedListingData,
   userId: string
 ) {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   console.log('Creating enhanced listing with sectors:', data.sectors, 'use_class_ids:', data.use_class_ids);
   console.log('Sector types:', data.sectors?.map(s => typeof s + ': ' + s));

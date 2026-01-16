@@ -63,7 +63,7 @@ export async function createListingImmediate(rawData: any): Promise<{ success: b
 
     // Create listing with version management
     const { createServerClient } = await import('@/lib/supabase');
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Create the main listing record
     const listingData = {

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser()
@@ -15,9 +15,9 @@ export async function POST(
     }
 
     const body = await request.json()
-    const articleService = createArticleService(true)
+    const articleService = await createArticleService(true)
 
-    const image = await articleService.addArticleImage(params.id, {
+    const image = await articleService.addArticleImage((await params).id, {
       file_path: body.file_path,
       file_name: body.file_name,
       file_size: body.file_size,

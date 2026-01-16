@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export default async function AdminArticlesPage() {
   await requireAdmin()
 
-  const articleService = createArticleService(true)
+  const articleService = await createArticleService(true)
   const articles = await articleService.getAllArticles()
 
   const stats = {

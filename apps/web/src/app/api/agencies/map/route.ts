@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const classification = searchParams.get('classification');
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     
     // Get approved agencies with office addresses
     let query = supabase

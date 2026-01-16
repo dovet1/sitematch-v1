@@ -12,7 +12,7 @@ export default async function ConsultantProfileCompletePage() {
     redirect('/auth/login?redirect=/consultant/profile/complete');
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   
   // Check if user is a consultant
   const { data: userData, error: userError } = await supabase

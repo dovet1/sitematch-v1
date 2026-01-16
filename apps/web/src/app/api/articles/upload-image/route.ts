@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing file or articleId' }, { status: 400 })
     }
 
-    const supabase = createServerClient()
+    const supabase = await createServerClient()
 
     // Upload file to Supabase Storage
     const fileBuffer = await file.arrayBuffer()
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(uploadData.path)
 
     // Get current article images to determine display order
-    const articleService = createArticleService(true)
+    const articleService = await createArticleService(true)
     const article = await articleService.getArticleById(articleId)
     const currentImageCount = article?.article_images?.length || 0
 

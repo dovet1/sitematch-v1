@@ -13,7 +13,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Fetch all saved searches for the user
     const { data: searches, error } = await supabase
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already has 50 searches
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     const { count, error: countError } = await supabase
       .from('saved_searches')
       .select('*', { count: 'exact', head: true })

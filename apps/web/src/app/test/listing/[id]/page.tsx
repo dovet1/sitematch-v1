@@ -5,19 +5,21 @@ import { Badge } from '@/components/ui/badge'
 import { User, Building, MapPin, FileText, Phone, Mail, Calendar } from 'lucide-react'
 
 interface Props {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function TestListingPage({ params }: Props) {
-  const supabase = createServerClient()
-  
+  const { id } = await params
+
+  const supabase = await createServerClient()
+
   // Get the main listing data
   const { data: listing, error: listingError } = await supabase
     .from('listings')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (listingError || !listing) {
@@ -28,27 +30,27 @@ export default async function TestListingPage({ params }: Props) {
   const { data: contacts } = await supabase
     .from('listing_contacts')
     .select('*')
-    .eq('listing_id', params.id)
+    .eq('listing_id', id)
     .order('is_primary_contact', { ascending: false })
 
   // Get all locations for this listing
   const { data: locations } = await supabase
     .from('listing_locations')
     .select('*')
-    .eq('listing_id', params.id)
+    .eq('listing_id', id)
 
   // Get all file uploads for this listing
   const { data: files } = await supabase
     .from('file_uploads')
     .select('*')
-    .eq('listing_id', params.id)
+    .eq('listing_id', id)
     .order('file_type')
 
   // Get all FAQs for this listing
   const { data: faqs } = await supabase
     .from('faqs')
     .select('*')
-    .eq('listing_id', params.id)
+    .eq('listing_id', id)
     .order('display_order')
 
   // Get organization info
@@ -62,7 +64,7 @@ export default async function TestListingPage({ params }: Props) {
     <div className="container mx-auto py-8 px-4 max-w-6xl">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Listing Test Page</h1>
-        <p className="text-muted-foreground">ID: {params.id}</p>
+        <p className="text-muted-foreground">ID: {id}</p>
       </div>
 
       <div className="grid gap-6">

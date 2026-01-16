@@ -19,7 +19,7 @@ export async function createListingVersion(
   supabase?: any
 ): Promise<{ success: boolean; versionId?: string; error?: string }> {
   try {
-    const client = supabase || createServerClient();
+    const client = supabase || await createServerClient();
 
     // First get the main listing data including linked agency
     const { data: listing, error: listingError } = await client
@@ -155,7 +155,7 @@ export async function createListingVersion(
  * Gets the live (published) version of a listing for public display
  */
 export async function getLiveListingVersion(listingId: string): Promise<any> {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   
   const { data: listing } = await supabase
     .from('listings')
@@ -183,7 +183,7 @@ export async function getLiveListingVersion(listingId: string): Promise<any> {
  * Gets the current draft version of a listing for editing
  */
 export async function getCurrentListingVersion(listingId: string): Promise<any> {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   
   const { data: listing } = await supabase
     .from('listings')
@@ -233,7 +233,7 @@ export async function submitListingForReview(
     if (result.success) {
       console.log('Version created successfully, updating listing status...');
       // Update the listing status
-      const supabase = createServerClient();
+      const supabase = await createServerClient();
       const { data, error: updateError } = await supabase
         .from('listings')
         .update({ 
@@ -269,7 +269,7 @@ export async function getListingFromVersion(
   usePublishedVersion: boolean = false
 ): Promise<any> {
   try {
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     
     // Get both version fields and determine which one to use
     const { data: listing } = await supabase
@@ -306,7 +306,7 @@ export async function getListingFromVersion(
  * Used when no version snapshot exists
  */
 async function getCurrentDatabaseState(listingId: string): Promise<any> {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   
   const [
     { data: listing },

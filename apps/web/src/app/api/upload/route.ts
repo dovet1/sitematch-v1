@@ -11,7 +11,7 @@ export const maxDuration = 30 // 30 seconds timeout
 export async function POST(request: NextRequest) {
   try {
     console.log('Upload API: Request received')
-    const supabase = createServerClient()
+    const supabase = await createServerClient()
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()

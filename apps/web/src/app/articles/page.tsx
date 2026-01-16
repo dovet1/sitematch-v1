@@ -5,7 +5,7 @@ import { ArticleNewsletterCTA } from '@/components/articles/ArticleNewsletterCTA
 export const dynamic = 'force-dynamic'
 
 export default async function ArticlesPage() {
-  const articleService = createArticleService()
+  const articleService = await createArticleService()
   const articles = await articleService.getPublishedArticles()
 
   return (

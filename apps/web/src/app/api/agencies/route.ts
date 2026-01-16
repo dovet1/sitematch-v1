@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '12');
     const offset = (page - 1) * limit;
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     
     // Get agencies that are approved or have approved versions
     let query = supabase
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Check if user already has an agency
     const { data: existingAgency } = await supabase

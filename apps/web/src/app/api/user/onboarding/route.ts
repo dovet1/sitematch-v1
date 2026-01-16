@@ -12,7 +12,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Fetch user metadata
     const { data: userData, error } = await supabase.auth.admin.getUserById(user.id);
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { skipped } = body;
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Update user metadata
     const { data, error } = await supabase.auth.admin.updateUserById(user.id, {

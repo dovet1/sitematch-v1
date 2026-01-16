@@ -8,14 +8,16 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 interface ListingReviewPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function ListingReviewPage({ params }: ListingReviewPageProps) {
   await requireAdmin()
-  
+
+  const { id } = await params
+
   const adminService = new AdminService()
-  const listing = await adminService.getListingById(params.id).catch(() => null)
+  const listing = await adminService.getListingById(id).catch(() => null)
   
   if (!listing) {
     notFound()

@@ -12,10 +12,6 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  // Experimental config to handle error pages
-  experimental: {
-    missingSuspenseWithCSRBailout: false,
-  },
   // Custom webpack config to handle styled-jsx SSR issues
   webpack: (config, { isServer }) => {
     if (isServer) {

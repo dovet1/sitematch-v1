@@ -18,7 +18,7 @@ export async function updateListingVerificationDate(
       return { success: false, error: 'Admin access required' }
     }
 
-    const supabase = createServerClient()
+    const supabase = await createServerClient()
 
     const { error } = await supabase
       .from('listings')

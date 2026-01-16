@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       }, { status: 403 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Get consultant profile
     const { data: profileData, error: profileError } = await supabase
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       }, { status: 403 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Parse and validate request body
     const body = await request.json();
@@ -192,7 +192,7 @@ export async function PUT(request: NextRequest) {
       }, { status: 403 });
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Parse and validate request body
     const body = await request.json();

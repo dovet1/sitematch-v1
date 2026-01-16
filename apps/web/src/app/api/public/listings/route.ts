@@ -4,6 +4,9 @@ import { SearchFilters, SearchResponse } from '@/types/search';
 import { calculateDistance } from '@/lib/mapbox';
 import { checkSubscriptionAccess } from '@/lib/subscription';
 
+// Force dynamic rendering for this API route (uses request.url for query params)
+export const dynamic = 'force-dynamic';
+
 // Cache responses for 30 minutes to reduce database load
 // This means new listings may take up to 30 minutes to appear in search results
 // But provides ~90% reduction in database queries for common searches
@@ -34,7 +37,7 @@ export async function GET(request: NextRequest) {
     const page = Number(searchParams.get('page')) || 1;
     const limit = Math.min(Number(searchParams.get('limit')) || 20, 1000); // Max 1000 results per page for comprehensive search
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Check if user has subscription access
     const { data: { user } } = await supabase.auth.getUser();
@@ -485,7 +488,8 @@ export async function GET(request: NextRequest) {
     }) || [];
 
     // Apply location filtering if location is provided and not nationwide
-    if (location && !isNationwide) {
+    // Skip text-based filtering if coordinates are provided (Mode 2 will handle geographic search)
+    if (location && !isNationwide && (lat === null || lng === null)) {
       const locationLower = location.toLowerCase();
       
       // Separate listings into those with matching locations and nationwide
@@ -580,12 +584,14 @@ export async function GET(request: NextRequest) {
         });
 
         // Filter by radius (converted from miles to km)
-        if (minDistance <= radius) {
-          listingsWithDistances.push({ listing, distance: minDistance });
-        } else {
-          // Beyond radius - treat as nationwide
+        if (minDistance === Infinity) {
+          // Listing has locations but none have valid coordinates - treat as nationwide
           nationwideListings.push(listing);
+        } else if (minDistance <= radius) {
+          listingsWithDistances.push({ listing, distance: minDistance });
         }
+        // Note: Listings beyond radius are excluded entirely from coordinate-based searches
+        // Only listings with NO location data or invalid coordinates are treated as nationwide
       });
 
       // Sort by distance (closest first)

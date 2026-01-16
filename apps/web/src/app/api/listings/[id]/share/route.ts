@@ -6,10 +6,10 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     if (!id) {
       return NextResponse.json(
@@ -18,7 +18,7 @@ export async function POST(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -104,10 +104,10 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     if (!id) {
       return NextResponse.json(
@@ -116,7 +116,7 @@ export async function DELETE(
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();

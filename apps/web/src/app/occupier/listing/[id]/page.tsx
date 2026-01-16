@@ -11,17 +11,19 @@ import { ListingDetailPage } from '@/components/listings/listing-detail-page';
 export const dynamic = 'force-dynamic';
 
 interface ListingDetailRouteProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function ListingDetailRoute({ params }: ListingDetailRouteProps) {
+  const { id } = await params
+
   // Check authentication and authorization
   const user = await getCurrentUser();
-  
+
   if (!user) {
-    redirect('/?login=1&redirect=/occupier/listing/' + params.id);
+    redirect('/?login=1&redirect=/occupier/listing/' + id);
   }
 
   if (user.role !== 'occupier' && user.role !== 'admin') {
@@ -29,8 +31,8 @@ export default async function ListingDetailRoute({ params }: ListingDetailRouteP
   }
 
   return (
-    <ListingDetailPage 
-      listingId={params.id}
+    <ListingDetailPage
+      listingId={id}
       userId={user.id}
       showHeaderBar={false}
     />

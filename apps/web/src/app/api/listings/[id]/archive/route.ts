@@ -15,10 +15,10 @@ export const dynamic = 'force-dynamic';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const listingId = params.id;
+    const listingId = (await params).id;
 
     // Validate UUID format
     if (!isValidUUID(listingId)) {
@@ -29,7 +29,7 @@ export async function PATCH(
     }
 
     // Create Supabase client with user session
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -143,7 +143,7 @@ export async function PATCH(
     });
 
   } catch (error) {
-    console.error(`PATCH /api/listings/${params.id}/archive error:`, error);
+    console.error(`PATCH /api/listings/${(await params).id}/archive error:`, error);
     return NextResponse.json(
       {
         success: false,

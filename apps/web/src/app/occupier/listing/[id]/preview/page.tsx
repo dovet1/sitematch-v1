@@ -11,24 +11,26 @@ import { OwnerListingPreview } from '@/components/listings/OwnerListingPreview';
 export const dynamic = 'force-dynamic';
 
 interface OwnerPreviewRouteProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function OwnerPreviewRoute({ params }: OwnerPreviewRouteProps) {
+  const { id } = await params
+
   // Check authentication
   const user = await getCurrentUser();
-  
+
   if (!user) {
-    redirect(`/?login=1&redirect=/occupier/listing/${params.id}/preview`);
+    redirect(`/?login=1&redirect=/occupier/listing/${id}/preview`);
   }
 
   if (user.role !== 'occupier' && user.role !== 'admin') {
     redirect('/unauthorized');
   }
 
-  return <OwnerListingPreview listingId={params.id} userId={user.id} />;
+  return <OwnerListingPreview listingId={id} userId={user.id} />;
 }
 
 export const metadata = {

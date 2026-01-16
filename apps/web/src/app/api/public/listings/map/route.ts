@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const dwellingMax = searchParams.get('maxDwelling') ? Number(searchParams.get('maxDwelling')) : null;
     const isNationwide = searchParams.get('isNationwide') === 'true';
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Check if user has subscription access
     const { data: { user } } = await supabase.auth.getUser();

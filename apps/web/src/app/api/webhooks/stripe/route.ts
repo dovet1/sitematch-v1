@@ -13,7 +13,8 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
-  const signature = headers().get('stripe-signature')
+  const headersList = await headers()
+  const signature = headersList.get('stripe-signature')
 
   if (!signature) {
     console.error('Missing stripe-signature header')

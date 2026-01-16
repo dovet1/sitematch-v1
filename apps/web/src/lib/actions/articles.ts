@@ -13,7 +13,7 @@ export async function createArticleAction(data: CreateArticleData): Promise<{ su
       return { success: false, error: 'Admin access required' }
     }
 
-    const articleService = createArticleService(true)
+    const articleService = await createArticleService(true)
     const article = await articleService.createArticle(data, currentUser.id)
 
     revalidatePath('/admin/articles')
@@ -35,7 +35,7 @@ export async function updateArticleAction(
       return { success: false, error: 'Admin access required' }
     }
 
-    const articleService = createArticleService(true)
+    const articleService = await createArticleService(true)
     await articleService.updateArticle(id, data, currentUser.id)
 
     revalidatePath('/admin/articles')
@@ -55,7 +55,7 @@ export async function deleteArticleAction(id: string): Promise<{ success: boolea
       return { success: false, error: 'Admin access required' }
     }
 
-    const articleService = createArticleService(true)
+    const articleService = await createArticleService(true)
     await articleService.deleteArticle(id)
 
     revalidatePath('/admin/articles')
@@ -77,7 +77,7 @@ export async function updateArticleImageAction(
       return { success: false, error: 'Admin access required' }
     }
 
-    const articleService = createArticleService(true)
+    const articleService = await createArticleService(true)
     await articleService.updateArticleImage(imageId, updates)
 
     revalidatePath('/admin/articles')
@@ -95,7 +95,7 @@ export async function deleteArticleImageAction(imageId: string): Promise<{ succe
       return { success: false, error: 'Admin access required' }
     }
 
-    const articleService = createArticleService(true)
+    const articleService = await createArticleService(true)
     await articleService.deleteArticleImage(imageId)
 
     revalidatePath('/admin/articles')

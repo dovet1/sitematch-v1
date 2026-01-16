@@ -29,11 +29,13 @@ export const dynamic = 'force-dynamic';
 export default async function CreateListingPage({
   searchParams
 }: {
-  searchParams: { edit?: string; fresh?: string }
+  searchParams: Promise<{ edit?: string; fresh?: string }>
 }) {
+  const params = await searchParams
+
   // Check authentication and authorization
   const user = await getCurrentUser();
-  
+
   if (!user) {
     redirect('/?login=1&redirect=/occupier/create-listing');
   }
@@ -43,8 +45,8 @@ export default async function CreateListingPage({
   }
 
   // Get edit listing ID from URL parameters
-  const editListingId = searchParams.edit;
-  const startFresh = searchParams.fresh === 'true';
+  const editListingId = params.edit;
+  const startFresh = params.fresh === 'true';
 
   // Organization requirements removed - listings are now independent
 
@@ -171,7 +173,7 @@ export default async function CreateListingPage({
           // Import update function
           const { updateListing } = await import('@/lib/listings');
           const { createServerClient } = await import('@/lib/supabase');
-          const serverClient = createServerClient();
+          const serverClient = await createServerClient();
           
           // Prepare sector and use class IDs for main table update
           let finalSectorId = sectorId;

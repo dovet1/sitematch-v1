@@ -496,7 +496,7 @@ export function createAdminService() {
 }
 
 export async function requireServerAdmin() {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {

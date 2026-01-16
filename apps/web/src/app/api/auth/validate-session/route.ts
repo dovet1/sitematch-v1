@@ -2,7 +2,7 @@ import { createServerClient } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
 
   try {
     // Get the current user

@@ -28,9 +28,9 @@ interface SubmissionSuccessData {
 }
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // =====================================================
@@ -38,6 +38,8 @@ interface PageProps {
 // =====================================================
 
 export default async function ListingSubmittedPage({ params }: PageProps) {
+  const { id } = await params
+
   // Check authentication
   const user = await getCurrentUser();
   
@@ -55,7 +57,7 @@ export default async function ListingSubmittedPage({ params }: PageProps) {
   try {
     const { createAdminService } = await import('@/lib/admin');
     const adminService = createAdminService();
-    const listing = await adminService.getListingById(params.id);
+    const listing = await adminService.getListingById(id);
     
     if (!listing) {
       notFound();
@@ -67,7 +69,7 @@ export default async function ListingSubmittedPage({ params }: PageProps) {
     }
     
     submissionData = {
-      listingId: params.id,
+      listingId: id,
       title: listing.title || `Property Requirement - ${listing.company_name}`,
       submittedAt: new Date(listing.created_at),
       estimatedReviewTime: '1-2 business days',
@@ -85,8 +87,8 @@ export default async function ListingSubmittedPage({ params }: PageProps) {
     console.error('Failed to fetch listing:', error);
     // Fallback to basic data if fetch fails
     submissionData = {
-      listingId: params.id,
-      title: `Property Requirement - Listing ${params.id}`,
+      listingId: id,
+      title: `Property Requirement - Listing ${id}`,
       submittedAt: new Date(),
       estimatedReviewTime: '1-2 business days',
       nextSteps: [

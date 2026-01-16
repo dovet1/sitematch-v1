@@ -27,7 +27,7 @@ export async function submitListingForReviewAction(
     // Verify user owns this listing (for occupiers)
     if (currentUser.role === 'occupier') {
       const { createServerClient } = await import('@/lib/supabase');
-      const supabase = createServerClient();
+      const supabase = await createServerClient();
       
       const { data: listing, error: listingError } = await supabase
         .from('listings')

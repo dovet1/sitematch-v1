@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     console.log('✅ CRON: Starting saved search email notifications');
     const startTime = Date.now();
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     // Fetch pending notifications
     const { data: notifications, error: notificationsError } = await supabase

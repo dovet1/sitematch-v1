@@ -6,12 +6,14 @@ import { ArticleNewsletterCTA } from '@/components/articles/ArticleNewsletterCTA
 export const dynamic = 'force-dynamic'
 
 interface ArticlePageProps {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
-  const articleService = createArticleService()
-  const article = await articleService.getArticleBySlug(params.slug)
+  const { slug } = await params
+
+  const articleService = await createArticleService()
+  const article = await articleService.getArticleBySlug(slug)
 
   if (!article) {
     notFound()
@@ -34,8 +36,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
 // Optional: Generate metadata for SEO
 export async function generateMetadata({ params }: ArticlePageProps) {
-  const articleService = createArticleService()
-  const article = await articleService.getArticleBySlug(params.slug)
+  const { slug } = await params
+
+  const articleService = await createArticleService()
+  const article = await articleService.getArticleBySlug(slug)
 
   if (!article) {
     return { title: 'Article Not Found' }

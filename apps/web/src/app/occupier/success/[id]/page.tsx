@@ -13,17 +13,19 @@ import { getCurrentUser } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function ListingSuccessPage({ params }: PageProps) {
+  const { id } = await params
+
   // Check authentication
   const user = await getCurrentUser();
   
   if (!user) {
-    redirect(`/?login=1&redirect=/occupier/success/${params.id}`);
+    redirect(`/?login=1&redirect=/occupier/success/${id}`);
   }
 
   if (user.role !== 'occupier' && user.role !== 'admin') {
@@ -35,7 +37,7 @@ export default async function ListingSuccessPage({ params }: PageProps) {
   try {
     const { createAdminService } = await import('@/lib/admin');
     const adminService = createAdminService();
-    const listing = await adminService.getListingById(params.id);
+    const listing = await adminService.getListingById(id);
     
     if (!listing) {
       notFound();
@@ -136,7 +138,7 @@ export default async function ListingSuccessPage({ params }: PageProps) {
                 Take a look at how your property requirement will appear to landlords and agents once it's approved.
               </p>
               <Button asChild variant="outline" className="w-full border-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-medium h-12 transition-all duration-200">
-                <Link href={`/occupier/listing/${params.id}`}>
+                <Link href={`/occupier/listing/${id}`}>
                   <Eye className="w-4 h-4 mr-2" />
                   Preview Listing
                 </Link>

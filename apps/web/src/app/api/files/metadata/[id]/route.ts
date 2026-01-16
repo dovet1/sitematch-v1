@@ -5,10 +5,10 @@ export const dynamic = 'force-dynamic';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createServerClient()
+    const supabase = await createServerClient()
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -16,7 +16,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const fileId = params.id
+    const fileId = (await params).id
 
     if (!fileId) {
       return NextResponse.json(
