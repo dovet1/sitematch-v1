@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { Suspense } from 'react'
 import './globals.css'
 import { AuthProvider } from '@/contexts/auth-context'
 import { Header } from '@/components/header'
@@ -113,7 +114,9 @@ export default function RootLayout({
         <Hotjar />
         <AuthProvider>
           <PostHogProvider>
-            <SessionInvalidModal />
+            <Suspense fallback={null}>
+              <SessionInvalidModal />
+            </Suspense>
             <Header />
             <main>
               {children}
