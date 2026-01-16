@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -34,6 +34,7 @@ export function Header() {
   const { user, loading, isAdmin } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
   
   // Hide header on specific pages that need full-screen experience
   // Only hide on the actual SiteSketcher app, not the landing page
@@ -49,11 +50,23 @@ export function Header() {
     setIsMobileMenuOpen(false)
   }
 
+  const handleSiteSketcherClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const hasVisited = localStorage.getItem('sitesketcher-visited')
+    if (!hasVisited) {
+      router.push('/sitesketcher?welcome=true')
+    } else {
+      router.push('/sitesketcher')
+    }
+    closeMobileMenu()
+  }
+
   const freeToolsItems = [
     {
       href: '/sitesketcher',
       label: 'SiteSketcher',
       description: 'Sketch your ideal site location',
+      onClick: handleSiteSketcherClick,
     },
     {
       href: '/new-dashboard/tools/site-demographer',
@@ -157,6 +170,7 @@ export function Header() {
                   <DropdownMenuItem key={tool.href} asChild className="!items-start">
                     <Link
                       href={tool.href}
+                      onClick={tool.onClick}
                       className="cursor-pointer hover:bg-violet-50 flex flex-col items-start py-3 w-full"
                     >
                       <span className="font-semibold">{tool.label}</span>
@@ -290,7 +304,7 @@ export function Header() {
                   <Link
                     key={tool.href}
                     href={tool.href}
-                    onClick={closeMobileMenu}
+                    onClick={tool.onClick || closeMobileMenu}
                     className="block px-5 py-3.5 rounded-2xl hover:bg-violet-50 hover:text-violet-700 transition-all duration-300 violet-bloom-touch active:scale-[0.98]"
                   >
                     <div className="text-base font-bold text-gray-700">{tool.label}</div>

@@ -29,6 +29,7 @@ interface WelcomeOnboardingProps {
   isOpen: boolean;
   onClose: () => void;
   userProfile?: UserProfile | null;
+  onOpenTutorial?: () => void;
 }
 
 const steps = [
@@ -38,12 +39,13 @@ const steps = [
     icon: MapPin,
     content: {
       title: 'Assess Commercial Property Feasibility',
-      description: 'SiteSketcher helps you quickly evaluate commercial properties through visual site analysis, building placement, and parking assessment.',
+      description: 'SiteSketcher helps you quickly evaluate sites through visual analysis, building placement, and parking assessment.',
       features: [
         'Measure site dimensions with precision',
         'Place building footprints',
         'Analyze parking requirements',
-        'Export professional assessments'
+        'View sketches in 3D',
+        'Save drawings for later'
       ]
     }
   },
@@ -109,7 +111,7 @@ const getRoleSpecificContent = (userType?: string) => {
   }
 };
 
-export default function WelcomeOnboarding({ isOpen, onClose, userProfile }: WelcomeOnboardingProps) {
+export default function WelcomeOnboarding({ isOpen, onClose, userProfile, onOpenTutorial }: WelcomeOnboardingProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const roleContent = getRoleSpecificContent(userProfile?.user_type);
 
@@ -193,6 +195,17 @@ export default function WelcomeOnboarding({ isOpen, onClose, userProfile }: Welc
             </CardContent>
           </Card>
 
+          {/* Video Tutorial Button - shown on step 2 */}
+          {currentStep === 2 && onOpenTutorial && (
+            <Button
+              variant="outline"
+              onClick={onOpenTutorial}
+              className="w-full sm:w-auto sm:mx-auto flex items-center justify-center gap-2 border-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+            >
+              <Play className="h-4 w-4" />
+              Watch Video Tutorial
+            </Button>
+          )}
 
           {/* Navigation */}
           <div className="flex justify-between items-center pt-4">
