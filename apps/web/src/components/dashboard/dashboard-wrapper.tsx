@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { LayoutDashboard, FileText, Building2, Wrench, Search, Menu, X, MoreVertical, LogOut, LogOutIcon, CreditCard, Loader2 } from 'lucide-react';
+import { LayoutDashboard, FileText, Building2, Wrench, Search, Menu, X, MoreVertical, LogOut, LogOutIcon, CreditCard, Loader2, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -75,6 +75,30 @@ const navigationSections: NavigationSection[] = [
   },
 ];
 
+function getBreadcrumbs(pathname: string): string[] {
+  if (pathname === '/new-dashboard') {
+    return ['Dashboard'];
+  }
+
+  const breadcrumbs = ['Dashboard'];
+
+  if (pathname.startsWith('/new-dashboard/get-started/browse')) {
+    breadcrumbs.push('Browse Requirements');
+  } else if (pathname.startsWith('/new-dashboard/get-started/post-requirement')) {
+    breadcrumbs.push('Post Requirement');
+  } else if (pathname.startsWith('/new-dashboard/get-started/assess-site')) {
+    breadcrumbs.push('Assess Site');
+  } else if (pathname.startsWith('/new-dashboard/brochures')) {
+    breadcrumbs.push('Brochure');
+  } else if (pathname.startsWith('/new-dashboard/sites')) {
+    breadcrumbs.push('Site');
+  } else if (pathname.startsWith('/new-dashboard/tools')) {
+    breadcrumbs.push('Tools');
+  }
+
+  return breadcrumbs;
+}
+
 export function DashboardWrapper({ userId, userEmail, children }: DashboardWrapperProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -122,6 +146,15 @@ export function DashboardWrapper({ userId, userEmail, children }: DashboardWrapp
 
     fetchSubscriptionStatus();
   }, [userId]);
+
+  // Breadcrumbs and back navigation
+  const breadcrumbs = getBreadcrumbs(pathname);
+  const isMainDashboard = pathname === '/new-dashboard';
+
+  const handleBackToDashboard = () => {
+    router.push('/new-dashboard');
+    setActiveTab('overview');
+  };
 
   const handleManageSubscription = async () => {
     setIsLoadingPortal(true);
@@ -373,8 +406,23 @@ export function DashboardWrapper({ userId, userEmail, children }: DashboardWrapp
         />
       )}
 
+      {/* Dashboard Header Bar */}
+      <div className="lg:ml-64 fixed top-16 lg:top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-sm border-b-2 border-violet-200 h-16 flex items-center px-6 shadow-sm">
+        {!isMainDashboard ? (
+          <button
+            onClick={handleBackToDashboard}
+            className="flex items-center gap-2 text-sm font-bold text-violet-600 hover:text-violet-700 transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Back to Dashboard</span>
+          </button>
+        ) : (
+          <span className="text-sm font-bold text-gray-700">Dashboard</span>
+        )}
+      </div>
+
       {/* Main content */}
-      <main className="lg:ml-64 pt-16 lg:pt-0">
+      <main className="lg:ml-64 pt-32 lg:pt-16">
         <div className="p-6 lg:p-8">
           {children}
         </div>
