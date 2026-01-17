@@ -87,6 +87,13 @@ export function DashboardWrapper({ userId, userEmail, children }: DashboardWrapp
   const [subscriptionStatus, setSubscriptionStatus] = useState<'trialing' | 'active' | 'past_due' | 'canceled' | null>(null);
   const { signOut } = useAuth();
 
+  // Set active tab based on pathname when on main dashboard
+  useEffect(() => {
+    if (pathname === '/new-dashboard') {
+      setActiveTab('overview');
+    }
+  }, [pathname]);
+
   // Listen for tab change events from dashboard-client
   useEffect(() => {
     const handleTabChange = (event: CustomEvent<TabType>) => {
@@ -248,11 +255,16 @@ export function DashboardWrapper({ userId, userEmail, children }: DashboardWrapp
                           // If we're not on the main dashboard page, navigate there first
                           if (pathname !== '/new-dashboard') {
                             router.push('/new-dashboard');
-                            // Dispatch event after a short delay to ensure navigation completes
-                            setTimeout(() => {
+
+                            const dispatchEvent = () => {
                               const event = new CustomEvent('dashboard-tab-change', { detail: item.id });
                               window.dispatchEvent(event);
-                            }, 100);
+                            };
+
+                            // Try dispatching the event multiple times with delays
+                            setTimeout(dispatchEvent, 150);
+                            setTimeout(dispatchEvent, 300);
+                            setTimeout(dispatchEvent, 500);
                           } else {
                             // Already on dashboard, just dispatch the event
                             const event = new CustomEvent('dashboard-tab-change', { detail: item.id });

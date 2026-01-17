@@ -151,7 +151,7 @@ export function RequirementsTab({ userId }: RequirementsTabProps) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900">Your Requirements</h1>
-          <p className="text-gray-600 mt-1 sm:mt-2 text-base sm:text-lg font-medium">Manage your property requirement listings</p>
+          <p className="text-gray-600 mt-1 sm:mt-2 text-base sm:text-lg font-medium">Manage your requirement listings</p>
         </div>
         <Link href="/occupier/create-listing-quick" className="w-full sm:w-auto">
           <Button className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg font-bold rounded-xl px-6 py-5 sm:py-3">

@@ -3,25 +3,24 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Search, Lightbulb } from 'lucide-react';
+import { ArrowRight, Search } from 'lucide-react';
 
 export default function GetStartedBrowsePage() {
   const router = useRouter();
 
   const handleSavedSearchClick = () => {
     router.push('/new-dashboard');
-    setTimeout(() => {
+
+    const dispatchEvent = () => {
       const event = new CustomEvent('dashboard-tab-change', { detail: 'searches' });
       window.dispatchEvent(event);
-    }, 150);
-    setTimeout(() => {
-      const event = new CustomEvent('dashboard-tab-change', { detail: 'searches' });
-      window.dispatchEvent(event);
-    }, 300);
-    setTimeout(() => {
-      const event = new CustomEvent('dashboard-tab-change', { detail: 'searches' });
-      window.dispatchEvent(event);
-    }, 500);
+    };
+
+    // Try dispatching the event multiple times with delays
+    setTimeout(dispatchEvent, 150);
+    setTimeout(dispatchEvent, 300);
+    setTimeout(dispatchEvent, 500);
+    setTimeout(dispatchEvent, 800);
   };
 
   return (
@@ -45,27 +44,14 @@ export default function GetStartedBrowsePage() {
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </Link>
-          </div>
 
-          <div className="mt-8 pt-8 border-t-2 border-violet-100">
-            <div className="flex items-center gap-2 mb-4">
-              <Lightbulb className="h-6 w-6 text-violet-600" />
-              <h2 className="text-xl font-black text-gray-900">Did you know?</h2>
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-gray-700 pl-8">
-                • Listings are verified every 90 days as a minimum
-              </p>
-              <p className="text-gray-700 pl-8">
-                • Want to be notified of new requirements matching your search criteria?{' '}
-                <button
-                  onClick={handleSavedSearchClick}
-                  className="text-violet-600 hover:text-violet-700 font-semibold underline"
-                >
-                  Add a saved search
-                </button>
-              </p>
+            <div className="mt-6">
+              <button
+                onClick={handleSavedSearchClick}
+                className="text-sm text-violet-600 hover:text-violet-700 font-semibold underline"
+              >
+                Or save a search to get notified of new requirements
+              </button>
             </div>
           </div>
         </div>
