@@ -148,7 +148,8 @@ export function DashboardWrapper({ userId, userEmail, children }: DashboardWrapp
   }, [userId]);
 
   // Breadcrumbs and back navigation
-  const breadcrumbs = getBreadcrumbs(pathname);
+  const currentPath = pathname ?? '/new-dashboard';
+  const breadcrumbs = getBreadcrumbs(currentPath);
   const isMainDashboard = pathname === '/new-dashboard';
 
   const handleBackToDashboard = () => {
