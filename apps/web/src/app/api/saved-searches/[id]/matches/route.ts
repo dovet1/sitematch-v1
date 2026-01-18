@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase';
+import { createServerClient, createAdminClient } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
 import { calculateDistance } from '@/lib/distance-utils';
 import type { MatchingListing } from '@/lib/saved-searches-types';
@@ -55,7 +55,10 @@ export async function GET(
         // Enrich cached listing IDs with full listing data
         const listingIds = cachedMatches.map(m => m.listing_id);
 
-        const { data: listings, error: listingsError } = await supabase
+        // Use admin client to bypass RLS since we're already filtering by approved status
+        // This ensures consistent results for both admin and non-admin users
+        const adminClient = createAdminClient();
+        const { data: listings, error: listingsError } = await adminClient
           .from('listings')
           .select(`
             id,
@@ -71,14 +74,14 @@ export async function GET(
           .in('id', listingIds)
           .eq('status', 'approved');
 
-        if (!listingsError && listings) {
+        if (!listingsError && listings && listings.length > 0) {
           // Create distance map for quick lookup
           const distanceMap = new Map(
             cachedMatches.map(m => [m.listing_id, m.distance_miles])
           );
 
           // Build matching listings array
-          const matchingListings: MatchingListing[] = listings.map(listing => ({
+          const matchingListings: MatchingListing[] = listings.map((listing: any) => ({
             id: listing.id,
             company_name: listing.company_name,
             listing_type: listing.listing_type,
@@ -114,8 +117,12 @@ export async function GET(
     // LIVE QUERY (SLOW PATH) - Used when cache is disabled or unavailable
     console.log(`🔄 LIVE: Running live match query for search ${(await params).id}`);
 
+    // Use admin client to bypass RLS since we're already filtering by approved status
+    // This ensures consistent results for both admin and non-admin users
+    const adminClient = createAdminClient();
+
     // Step 1: Get all approved listings first to fetch their versions
-    const { data: allListings, error: allListingsError } = await supabase
+    const { data: allListings, error: allListingsError } = await adminClient
       .from('listings')
       .select('id, current_version_id')
       .eq('status', 'approved');
@@ -132,7 +139,7 @@ export async function GET(
       return NextResponse.json({ matches: [] });
     }
 
-    const allListingIds = allListings.map(l => l.id);
+    const allListingIds = allListings.map((l: any) => l.id);
 
     // Step 2: Fetch listing versions to get versioned location data
     const BATCH_SIZE = 100;
@@ -140,7 +147,7 @@ export async function GET(
 
     for (let i = 0; i < allListingIds.length; i += BATCH_SIZE) {
       const batch = allListingIds.slice(i, i + BATCH_SIZE);
-      const { data: versions, error: versionsError } = await supabase
+      const { data: versions, error: versionsError } = await adminClient
         .from('listing_versions')
         .select('listing_id, content, version_number')
         .in('listing_id', batch)
@@ -173,7 +180,7 @@ export async function GET(
       savedSearch.location_radius_miles
     ) {
       // Fetch all listing_locations with coordinates from the table
-      const { data: allLocations, error: locationsError } = await supabase
+      const { data: allLocations, error: locationsError } = await adminClient
         .from('listing_locations')
         .select('id, listing_id, place_name, formatted_address, coordinates');
 
@@ -328,7 +335,7 @@ export async function GET(
     // Fetch sectors if needed (by ID)
     let listingSectors: Record<string, string[]> = {};
     if (savedSearch.sectors && savedSearch.sectors.length > 0) {
-      const { data: sectorsData } = await supabase
+      const { data: sectorsData } = await adminClient
         .from('listing_sectors')
         .select('listing_id, sector_id')
         .in('listing_id', listingIds);
@@ -346,7 +353,7 @@ export async function GET(
     // Fetch planning use classes if needed (by ID)
     let listingUseClasses: Record<string, string[]> = {};
     if (savedSearch.planning_use_classes && savedSearch.planning_use_classes.length > 0) {
-      const { data: useClassesData, error: useClassError } = await supabase
+      const { data: useClassesData, error: useClassError } = await adminClient
         .from('listing_use_classes')
         .select('listing_id, use_class_id')
         .in('listing_id', listingIds);
