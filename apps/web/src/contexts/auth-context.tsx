@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Shorter timeout for better UX - 3 seconds should be plenty
       const profilePromise = supabase
         .from('users')
-        .select('id, email, role, user_type, user_company_name, subscription_status, newsletter_opt_in, created_at, updated_at')
+        .select('id, email, role, user_type, user_company_name, subscription_status, newsletter_opt_in, hide_sitesketcher_tutorial, created_at, updated_at')
         .eq('id', userId)
         .single()
 

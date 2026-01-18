@@ -3,13 +3,6 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { MapboxMap, type MapboxMapRef } from './components/MapboxMap';
 import { ResponsiveControls } from './components/ResponsiveControls';
 import { ModeIndicator } from './components/ModeIndicator';
@@ -21,7 +14,7 @@ import { SaveSketchModal } from './components/SaveSketchModal';
 import { SketchesList } from './components/SketchesList';
 import { DocumentBar } from './components/DocumentBar';
 import { UnsavedChangesDialog } from './components/UnsavedChangesDialog';
-import { AlertTriangle, Pencil, MousePointer, ArrowLeft, Menu, Building2, HelpCircle, ChevronDown, Video, GraduationCap } from 'lucide-react';
+import { AlertTriangle, Pencil, MousePointer, ArrowLeft, Menu, Building2, HelpCircle } from 'lucide-react';
 import { VideoLightbox } from '@/components/VideoLightbox';
 import type {
   MapboxDrawPolygon,
@@ -1096,30 +1089,16 @@ function SiteSketcherContent() {
               </div>
             </div>
 
-            {/* Help Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="ml-auto h-8 px-3 rounded-lg hover:bg-violet-50 hover:text-violet-700 transition-all duration-200 flex items-center gap-2"
-                >
-                  <HelpCircle className="h-4 w-4" />
-                  <span className="text-sm font-medium">Help</span>
-                  <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem onClick={handleShowOnboarding} className="cursor-pointer">
-                  <GraduationCap className="h-4 w-4 mr-2" />
-                  <span>Show Onboarding</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleOpenTutorial} className="cursor-pointer">
-                  <Video className="h-4 w-4 mr-2" />
-                  <span>Watch Tutorial Video</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Help Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleShowOnboarding}
+              className="ml-auto h-8 px-3 rounded-lg hover:bg-violet-50 hover:text-violet-700 transition-all duration-200 flex items-center gap-2"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">Help</span>
+            </Button>
           </div>
         </header>
 
@@ -1271,12 +1250,12 @@ function SiteSketcherContent() {
 
           {/* Mobile Tutorial & File Menu Buttons */}
           <div className="flex items-center gap-2">
-            {/* Tutorial Button */}
+            {/* Help Button */}
             <button
-              onClick={handleOpenTutorial}
+              onClick={handleShowOnboarding}
               className="flex items-center justify-center w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all"
-              title="Watch Tutorial"
-              aria-label="Watch tutorial video"
+              title="Help"
+              aria-label="Open tutorial"
             >
               <HelpCircle className="h-5 w-5 text-blue-600" />
             </button>
@@ -1354,27 +1333,6 @@ function SiteSketcherContent() {
 
                 <div className="border-t border-gray-200 my-2" />
 
-                <button
-                  onClick={() => {
-                    handleShowOnboarding();
-                    setShowMobileFileMenu(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors flex items-center gap-2"
-                >
-                  <GraduationCap className="h-4 w-4" />
-                  <span>Show Onboarding</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleOpenTutorial();
-                    setShowMobileFileMenu(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors flex items-center gap-2"
-                >
-                  <Video className="h-4 w-4" />
-                  <span>Watch Tutorial Video</span>
-                </button>
               </div>
             </div>
           </>
