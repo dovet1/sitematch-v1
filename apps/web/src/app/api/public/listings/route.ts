@@ -328,9 +328,9 @@ export async function GET(request: NextRequest) {
       .select('listing_id, use_classes(id, name, code)')
       .in('listing_id', currentListingIds);
 
-    // Only fetch locations when actually needed for filtering or display
-    // Skip expensive location fetching when user is just browsing without location filters
-    const needsLocationData = (lat !== null && lng !== null) || location || isNationwide;
+    // Always fetch location data for display purposes
+    // Location data is essential for showing where listings are available
+    const needsLocationData = true;
     let allLocations: any[] = [];
 
     if (needsLocationData) {
