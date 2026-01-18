@@ -84,7 +84,7 @@ function SiteSketcherContent() {
 
   const [mapboxError, setMapboxError] = useState<string | null>(null);
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(showWelcome);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [rectangleToPlace, setRectangleToPlace] = useState<{ width: number; length: number } | null>(null);
   const [showCuboidSelector, setShowCuboidSelector] = useState(false);
   const [pendingCuboidPolygon, setPendingCuboidPolygon] = useState<MapboxDrawPolygon | null>(null);
@@ -113,6 +113,34 @@ function SiteSketcherContent() {
   useEffect(() => {
     localStorage.setItem('sitesketcher-visited', 'true');
   }, []);
+
+  // Check if we should show the welcome tutorial
+  useEffect(() => {
+    const checkTutorialPreference = async () => {
+      // If URL has ?welcome=true, always show the tutorial
+      if (showWelcome) {
+        setShowWelcomeModal(true);
+        return;
+      }
+
+      // If user is not logged in, don't show tutorial
+      if (!user) {
+        return;
+      }
+
+      // Check if user has opted out of the tutorial
+      if (profile?.hide_sitesketcher_tutorial === true) {
+        return;
+      }
+
+      // Show tutorial on first visit (when profile is loaded and user hasn't opted out)
+      if (profile && !profile.hide_sitesketcher_tutorial) {
+        setShowWelcomeModal(true);
+      }
+    };
+
+    checkTutorialPreference();
+  }, [user, profile, showWelcome]);
 
   // Detect unsaved changes by comparing current state with saved snapshot
   useEffect(() => {
@@ -651,6 +679,33 @@ function SiteSketcherContent() {
     setShowTutorialVideo(true);
   }, []);
 
+  const handleShowOnboarding = useCallback(() => {
+    setShowWelcomeModal(true);
+  }, []);
+
+  const handleDontShowAgain = useCallback(async (dontShow: boolean) => {
+    if (!dontShow) return;
+
+    try {
+      const response = await fetch('/api/sitesketcher/tutorial-preference', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ hide_tutorial: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save tutorial preference');
+      }
+
+      toast.success('Tutorial preference saved');
+    } catch (error) {
+      console.error('Error saving tutorial preference:', error);
+      toast.error('Failed to save preference');
+    }
+  }, []);
+
   const handleAddRectangle = useCallback((width: number, length: number) => {
     // Store rectangle dimensions for placement
     setRectangleToPlace({ width, length });
@@ -1034,15 +1089,15 @@ function SiteSketcherContent() {
               </div>
             </div>
 
-            {/* Tutorial Button */}
+            {/* Help Button */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleOpenTutorial}
+              onClick={handleShowOnboarding}
               className="ml-auto h-8 px-3 rounded-lg hover:bg-violet-50 hover:text-violet-700 transition-all duration-200 flex items-center gap-2"
             >
               <HelpCircle className="h-4 w-4" />
-              <span className="text-sm font-medium">Tutorial</span>
+              <span className="text-sm font-medium">Help</span>
             </Button>
           </div>
         </header>
@@ -1195,12 +1250,12 @@ function SiteSketcherContent() {
 
           {/* Mobile Tutorial & File Menu Buttons */}
           <div className="flex items-center gap-2">
-            {/* Tutorial Button */}
+            {/* Help Button */}
             <button
-              onClick={handleOpenTutorial}
+              onClick={handleShowOnboarding}
               className="flex items-center justify-center w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 active:scale-95 transition-all"
-              title="Watch Tutorial"
-              aria-label="Watch tutorial video"
+              title="Help"
+              aria-label="Open tutorial"
             >
               <HelpCircle className="h-5 w-5 text-blue-600" />
             </button>
@@ -1275,6 +1330,9 @@ function SiteSketcherContent() {
                 >
                   Save As...
                 </button>
+
+                <div className="border-t border-gray-200 my-2" />
+
               </div>
             </div>
           </>
@@ -1384,6 +1442,7 @@ function SiteSketcherContent() {
         onClose={handleWelcomeClose}
         userProfile={profile}
         onOpenTutorial={handleOpenTutorial}
+        onDontShowAgain={handleDontShowAgain}
       />
 
       {/* Cuboid Story Selector Modal */}

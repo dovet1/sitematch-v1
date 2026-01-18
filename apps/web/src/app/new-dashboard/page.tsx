@@ -1,15 +1,15 @@
-import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
-import { DashboardClient } from '@/components/dashboard/dashboard-client';
+import DashboardClient from '@/components/dashboard/dashboard-client';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NewDashboardPage() {
-  // Check authentication
+  // Layout handles auth redirect, but we still need to get user info for the client
   const user = await getCurrentUser();
 
+  // This should never happen since layout redirects, but TypeScript safety
   if (!user) {
-    redirect('/?login=1&redirect=/new-dashboard');
+    return null;
   }
 
   return <DashboardClient userId={user.id} userEmail={user.email} />;
