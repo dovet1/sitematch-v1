@@ -93,7 +93,7 @@ export function NationwideHeroVisual({ company, onAddLocations }: NationwideHero
       >
         <Globe className="w-8 h-8 text-violet-300 mx-auto mb-3" />
         <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
-          Open to UK opportunities
+          All locations considered
         </h3>
         <p className="text-violet-200 text-sm md:text-base mb-6">
           No individual target locations have been specified.

@@ -164,7 +164,7 @@ export function MultiListingPopup({ cluster, onListingClick, onClose }: MultiLis
             )}
             {listing.is_nationwide && (
               <Badge className="text-xs bg-primary-500 text-primary-foreground">
-                Nationwide
+                All locations considered
               </Badge>
             )}
           </div>

@@ -422,7 +422,7 @@ export function ImmersiveListingModal({
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center mx-auto mb-3 shadow-sm">
                     <span className="text-2xl">🌍</span>
                   </div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Open to UK opportunities</h4>
+                  <h4 className="font-semibold text-gray-900 mb-1">All locations considered</h4>
                   <p className="text-sm text-gray-600 mb-3">
                     No individual target locations have been specified.
                   </p>
@@ -872,7 +872,7 @@ export function ImmersiveListingModal({
                           </h2>
                           <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
                             <span>{listing.listing_type === 'residential' ? 'Residential' : 'Commercial'}</span>
-                            <span>📍 {listing.locations?.all && listing.locations.all.length > 0 ? `${listing.locations.all.length} Locations` : 'Nationwide'}</span>
+                            <span>📍 {listing.locations?.all && listing.locations.all.length > 0 ? `${listing.locations.all.length} Locations` : 'All locations considered'}</span>
                             {listing.listing_type === 'commercial' && listing.company?.site_size && (
                               <span>📐 {listing.company?.site_size}</span>
                             )}

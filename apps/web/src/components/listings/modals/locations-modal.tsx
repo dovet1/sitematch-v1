@@ -171,7 +171,7 @@ export function LocationsModal({
               "font-medium text-gray-700 mb-1",
               isMobileUI ? "text-base" : "text-sm"
             )}>
-              Open to UK opportunities
+              All locations considered
             </p>
             <p className={cn(
               "text-gray-500",
