@@ -40,14 +40,14 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
   const fetchListings = async (pageNum: number, append: boolean = false) => {
     // Before loading more, save scroll anchor to maintain position
     if (append) {
-      const cards = document.querySelectorAll<HTMLElement>('.listing-card');
+      const cards = Array.from(document.querySelectorAll<HTMLElement>('.listing-card'));
       const viewportMiddle = window.scrollY + window.innerHeight / 2;
 
       // Find the card closest to the middle of the viewport
       let closestCard: HTMLElement | null = null;
       let closestDistance = Infinity;
 
-      cards.forEach(card => {
+      for (const card of cards) {
         const rect = card.getBoundingClientRect();
         const cardMiddle = window.scrollY + rect.top + rect.height / 2;
         const distance = Math.abs(cardMiddle - viewportMiddle);
@@ -56,7 +56,7 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
           closestDistance = distance;
           closestCard = card;
         }
-      });
+      }
 
       if (closestCard) {
         const cardRect = closestCard.getBoundingClientRect();
