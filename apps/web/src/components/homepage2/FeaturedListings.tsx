@@ -81,7 +81,7 @@ export function FeaturedListings() {
 
   const formatLocations = (listing: Listing): string => {
     if (listing.is_nationwide) {
-      return 'Nationwide';
+      return 'All locations considered';
     }
 
     // Use multiple locations if available

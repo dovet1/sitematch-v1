@@ -4079,7 +4079,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                                 <Globe className="w-8 h-8 text-violet-500" />
                               </div>
-                              <h5 className="font-semibold text-gray-900 mb-1">Open to UK opportunities</h5>
+                              <h5 className="font-semibold text-gray-900 mb-1">All locations considered</h5>
                               <p className="text-sm text-gray-600 mb-4">No individual target locations have been specified.</p>
                               <div className="flex items-center justify-center gap-2 text-xs text-violet-600">
                                 <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse"></div>
@@ -5725,7 +5725,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                           </div>
                           
                           <h3 className="text-2xl font-bold text-white mb-3">
-                            Open to UK opportunities
+                            All locations considered
                           </h3>
                           <p className="text-violet-200 text-lg mb-6 max-w-sm mx-auto leading-relaxed">
                             No individual target locations have been specified.
@@ -7237,7 +7237,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                   ) : (
                     <div className="p-4 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100">
                       <p className="font-medium text-gray-800 flex items-center gap-2 mb-2">
-                        <span className="text-xl">🌍</span> Open to UK opportunities
+                        <span className="text-xl">🌍</span> All locations considered
                       </p>
                       <p className="text-gray-600 text-sm">
                         No individual target locations have been specified.
