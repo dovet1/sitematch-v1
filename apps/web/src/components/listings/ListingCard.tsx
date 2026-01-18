@@ -233,6 +233,7 @@ export function ListingCard({ listing, onClick, searchCoordinates, index = 999 }
         }
       }}
       aria-label={`View ${listing.company_name} listing`}
+      data-listing-id={listing.id}
     >
       {/* Gradient accent corner */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-300/30 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -245,6 +246,8 @@ export function ListingCard({ listing, onClick, searchCoordinates, index = 999 }
               src={logoUrl}
               alt={`${listing.company_name} logo`}
               className="w-full h-full object-contain p-1.5"
+              width={64}
+              height={64}
               loading={loadingStrategy}
               fetchPriority={fetchPriority as 'high' | 'low' | 'auto'}
               onLoad={() => setImageLoaded(true)}

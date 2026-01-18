@@ -25,6 +25,9 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
   const [isFreeTier, setIsFreeTier] = useState(false);
   const ITEMS_PER_PAGE = 15;
 
+  // Scroll anchoring: track the anchor element to maintain scroll position
+  const scrollAnchorRef = useRef<{ id: string; offsetTop: number } | null>(null);
+
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -35,13 +38,42 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
 
   // Fetch listings function
   const fetchListings = async (pageNum: number, append: boolean = false) => {
+    // Before loading more, save scroll anchor to maintain position
+    if (append) {
+      const cards = Array.from(document.querySelectorAll<HTMLElement>('.listing-card'));
+      const viewportMiddle = window.scrollY + window.innerHeight / 2;
+
+      // Find the card closest to the middle of the viewport
+      let closestCard: HTMLElement | null = null;
+      let closestDistance = Infinity;
+
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect();
+        const cardMiddle = window.scrollY + rect.top + rect.height / 2;
+        const distance = Math.abs(cardMiddle - viewportMiddle);
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestCard = card;
+        }
+      }
+
+      if (closestCard) {
+        const cardRect = closestCard.getBoundingClientRect();
+        scrollAnchorRef.current = {
+          id: closestCard.getAttribute('data-listing-id') || '',
+          offsetTop: cardRect.top
+        };
+      }
+    }
+
     if (!append) {
       setIsLoading(true);
     } else {
       setIsLoadingMore(true);
     }
     setError(null);
-    
+
     try {
       // Build query parameters
       const params = new URLSearchParams();
@@ -121,6 +153,27 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
     fetchListings(1, false);
   }, [filters]);
 
+  // Restore scroll position after new listings are appended
+  useEffect(() => {
+    if (scrollAnchorRef.current && listings.length > 0) {
+      const { id, offsetTop } = scrollAnchorRef.current;
+
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        const anchorCard = document.querySelector<HTMLElement>(`[data-listing-id="${id}"]`);
+        if (anchorCard) {
+          const currentRect = anchorCard.getBoundingClientRect();
+          const scrollAdjustment = currentRect.top - offsetTop;
+
+          if (Math.abs(scrollAdjustment) > 1) {
+            window.scrollBy(0, scrollAdjustment);
+          }
+        }
+        scrollAnchorRef.current = null;
+      });
+    }
+  }, [listings]);
+
   // Load more function
   const loadMore = useCallback(() => {
     if (!isLoadingMore && hasMore && !isLoading) {
@@ -152,7 +205,7 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
       },
       {
         threshold: 0,
-        rootMargin: '800px' // Very large margin for early loading
+        rootMargin: '100px' // Load more content when user is 100px from the bottom
       }
     );
 
@@ -273,8 +326,8 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
       )}
 
 
-      {/* Infinite Scroll Trigger - at the very bottom with large rootMargin for early triggering */}
-      {hasMore && !isFreeTier && <div ref={observerTarget} className="h-1" />}
+      {/* Infinite Scroll Trigger - at the very bottom */}
+      {hasMore && !isFreeTier && <div ref={observerTarget} className="h-20 min-h-[5rem]" />}
     </div>
   );
 }
