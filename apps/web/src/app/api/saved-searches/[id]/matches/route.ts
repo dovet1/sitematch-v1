@@ -74,14 +74,14 @@ export async function GET(
           .in('id', listingIds)
           .eq('status', 'approved');
 
-        if (!listingsError && listings) {
+        if (!listingsError && listings && listings.length > 0) {
           // Create distance map for quick lookup
           const distanceMap = new Map(
             cachedMatches.map(m => [m.listing_id, m.distance_miles])
           );
 
           // Build matching listings array
-          const matchingListings: MatchingListing[] = listings.map(listing => ({
+          const matchingListings: MatchingListing[] = listings.map((listing: any) => ({
             id: listing.id,
             company_name: listing.company_name,
             listing_type: listing.listing_type,
