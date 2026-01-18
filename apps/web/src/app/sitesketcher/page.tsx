@@ -3,6 +3,13 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { MapboxMap, type MapboxMapRef } from './components/MapboxMap';
 import { ResponsiveControls } from './components/ResponsiveControls';
 import { ModeIndicator } from './components/ModeIndicator';
@@ -14,7 +21,7 @@ import { SaveSketchModal } from './components/SaveSketchModal';
 import { SketchesList } from './components/SketchesList';
 import { DocumentBar } from './components/DocumentBar';
 import { UnsavedChangesDialog } from './components/UnsavedChangesDialog';
-import { AlertTriangle, Pencil, MousePointer, ArrowLeft, Menu, Building2, HelpCircle } from 'lucide-react';
+import { AlertTriangle, Pencil, MousePointer, ArrowLeft, Menu, Building2, HelpCircle, ChevronDown, Video, GraduationCap } from 'lucide-react';
 import { VideoLightbox } from '@/components/VideoLightbox';
 import type {
   MapboxDrawPolygon,
@@ -84,7 +91,7 @@ function SiteSketcherContent() {
 
   const [mapboxError, setMapboxError] = useState<string | null>(null);
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(showWelcome);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [rectangleToPlace, setRectangleToPlace] = useState<{ width: number; length: number } | null>(null);
   const [showCuboidSelector, setShowCuboidSelector] = useState(false);
   const [pendingCuboidPolygon, setPendingCuboidPolygon] = useState<MapboxDrawPolygon | null>(null);
@@ -113,6 +120,34 @@ function SiteSketcherContent() {
   useEffect(() => {
     localStorage.setItem('sitesketcher-visited', 'true');
   }, []);
+
+  // Check if we should show the welcome tutorial
+  useEffect(() => {
+    const checkTutorialPreference = async () => {
+      // If URL has ?welcome=true, always show the tutorial
+      if (showWelcome) {
+        setShowWelcomeModal(true);
+        return;
+      }
+
+      // If user is not logged in, don't show tutorial
+      if (!user) {
+        return;
+      }
+
+      // Check if user has opted out of the tutorial
+      if (profile?.hide_sitesketcher_tutorial === true) {
+        return;
+      }
+
+      // Show tutorial on first visit (when profile is loaded and user hasn't opted out)
+      if (profile && !profile.hide_sitesketcher_tutorial) {
+        setShowWelcomeModal(true);
+      }
+    };
+
+    checkTutorialPreference();
+  }, [user, profile, showWelcome]);
 
   // Detect unsaved changes by comparing current state with saved snapshot
   useEffect(() => {
@@ -651,6 +686,33 @@ function SiteSketcherContent() {
     setShowTutorialVideo(true);
   }, []);
 
+  const handleShowOnboarding = useCallback(() => {
+    setShowWelcomeModal(true);
+  }, []);
+
+  const handleDontShowAgain = useCallback(async (dontShow: boolean) => {
+    if (!dontShow) return;
+
+    try {
+      const response = await fetch('/api/sitesketcher/tutorial-preference', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ hide_tutorial: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save tutorial preference');
+      }
+
+      toast.success('Tutorial preference saved');
+    } catch (error) {
+      console.error('Error saving tutorial preference:', error);
+      toast.error('Failed to save preference');
+    }
+  }, []);
+
   const handleAddRectangle = useCallback((width: number, length: number) => {
     // Store rectangle dimensions for placement
     setRectangleToPlace({ width, length });
@@ -1034,16 +1096,30 @@ function SiteSketcherContent() {
               </div>
             </div>
 
-            {/* Tutorial Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleOpenTutorial}
-              className="ml-auto h-8 px-3 rounded-lg hover:bg-violet-50 hover:text-violet-700 transition-all duration-200 flex items-center gap-2"
-            >
-              <HelpCircle className="h-4 w-4" />
-              <span className="text-sm font-medium">Tutorial</span>
-            </Button>
+            {/* Help Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto h-8 px-3 rounded-lg hover:bg-violet-50 hover:text-violet-700 transition-all duration-200 flex items-center gap-2"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                  <span className="text-sm font-medium">Help</span>
+                  <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={handleShowOnboarding} className="cursor-pointer">
+                  <GraduationCap className="h-4 w-4 mr-2" />
+                  <span>Show Onboarding</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleOpenTutorial} className="cursor-pointer">
+                  <Video className="h-4 w-4 mr-2" />
+                  <span>Watch Tutorial Video</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
@@ -1275,6 +1351,30 @@ function SiteSketcherContent() {
                 >
                   Save As...
                 </button>
+
+                <div className="border-t border-gray-200 my-2" />
+
+                <button
+                  onClick={() => {
+                    handleShowOnboarding();
+                    setShowMobileFileMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors flex items-center gap-2"
+                >
+                  <GraduationCap className="h-4 w-4" />
+                  <span>Show Onboarding</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleOpenTutorial();
+                    setShowMobileFileMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded transition-colors flex items-center gap-2"
+                >
+                  <Video className="h-4 w-4" />
+                  <span>Watch Tutorial Video</span>
+                </button>
               </div>
             </div>
           </>
@@ -1384,6 +1484,7 @@ function SiteSketcherContent() {
         onClose={handleWelcomeClose}
         userProfile={profile}
         onOpenTutorial={handleOpenTutorial}
+        onDontShowAgain={handleDontShowAgain}
       />
 
       {/* Cuboid Story Selector Modal */}

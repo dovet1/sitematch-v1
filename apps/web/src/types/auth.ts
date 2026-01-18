@@ -24,6 +24,7 @@ export interface UserProfile {
   user_type: UserType
   subscription_status?: string | null
   newsletter_opt_in?: boolean
+  hide_sitesketcher_tutorial?: boolean
   created_at: string
   updated_at: string
 }
