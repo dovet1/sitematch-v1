@@ -227,86 +227,22 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
     );
   }
 
-  // Separate local and nationwide listings for visual delineation only when there's a location filter
-  const hasLocationFilter = filters.coordinates !== null || filters.location !== '';
-  const localListings = hasLocationFilter ? listings.filter(listing => !listing.is_nationwide) : [];
-  const nationwideListings = hasLocationFilter ? listings.filter(listing => listing.is_nationwide) : [];
-  const showDelineation = hasLocationFilter && localListings.length > 0 && nationwideListings.length > 0;
-
   return (
     <div className="space-y-8">
-      {/* Local Listings */}
-      {localListings.length > 0 && (
-        <div className="space-y-6">
-          {showDelineation && (
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl md:text-2xl font-black text-gray-900">
-                Near {filters.location || 'your search location'}
-              </h2>
-              <span className="text-base md:text-lg text-gray-500 font-bold">({localListings.length})</span>
-            </div>
-          )}
-          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-            {localListings.map((listing, index) => (
-              <ListingCard
-                key={listing.id}
-                listing={listing}
-                onClick={() => onListingClick(listing.id)}
-                searchCoordinates={filters.coordinates}
-                index={index}
-              />
-            ))}
-          </div>
+      {/* All Listings - single continuous grid */}
+      <div className="space-y-6">
+        <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+          {listings.map((listing, index) => (
+            <ListingCard
+              key={listing.id}
+              listing={listing}
+              onClick={() => onListingClick(listing.id)}
+              searchCoordinates={filters.coordinates}
+              index={index}
+            />
+          ))}
         </div>
-      )}
-
-      {/* Nationwide Listings Divider */}
-      {showDelineation && (
-        <div className="relative py-10 md:py-12">
-          <div className="absolute inset-0 flex items-center" aria-hidden="true">
-            <div className="w-full border-t-2 border-violet-200"></div>
-          </div>
-          <div className="relative flex justify-center">
-            <span className="bg-background px-6 text-base md:text-lg font-black text-gray-700 flex items-center gap-3">
-              <svg className="w-6 h-6 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Nationwide Listings
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* All Listings (when no location filter) or Nationwide Listings (when location filter) */}
-      {!hasLocationFilter && listings.length > 0 ? (
-        <div className="space-y-6">
-          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-            {listings.map((listing, index) => (
-              <ListingCard
-                key={listing.id}
-                listing={listing}
-                onClick={() => onListingClick(listing.id)}
-                searchCoordinates={filters.coordinates}
-                index={index}
-              />
-            ))}
-          </div>
-        </div>
-      ) : nationwideListings.length > 0 ? (
-        <div className="space-y-6">
-          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-            {nationwideListings.map((listing, index) => (
-              <ListingCard
-                key={listing.id}
-                listing={listing}
-                onClick={() => onListingClick(listing.id)}
-                searchCoordinates={filters.coordinates}
-                index={localListings.length + index}
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
+      </div>
 
       {/* Upgrade CTA for Free Tier Users */}
       {isFreeTier && listings.length > 0 && onUpgradeClick && (
