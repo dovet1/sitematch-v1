@@ -139,7 +139,7 @@ export async function GET(
       return NextResponse.json({ matches: [] });
     }
 
-    const allListingIds = allListings.map(l => l.id);
+    const allListingIds = allListings.map((l: any) => l.id);
 
     // Step 2: Fetch listing versions to get versioned location data
     const BATCH_SIZE = 100;
