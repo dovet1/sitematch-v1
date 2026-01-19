@@ -21,6 +21,12 @@ interface CompanyListingLinkProps {
   onListingClick?: (listingId: string) => void
 }
 
+// Utility function to correctly format possessive forms
+function makePossessive(name: string): string {
+  if (!name) return '';
+  return name.endsWith('s') ? `${name}'` : `${name}'s`;
+}
+
 export function CompanyListingLink({ company, agencyId, getCompanyLogo, onListingClick }: CompanyListingLinkProps) {
   const [listingId, setListingId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -63,7 +69,7 @@ export function CompanyListingLink({ company, agencyId, getCompanyLogo, onListin
     : `/search?viewAll=true&companyName=${encodeURIComponent(company.company_name)}`
 
   const title = listingId
-    ? `View ${company.company_name}'s property listing`
+    ? `View ${makePossessive(company.company_name)} property listing`
     : `View all listings from ${company.company_name}`
 
   return (

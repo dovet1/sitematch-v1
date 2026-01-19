@@ -28,6 +28,12 @@ interface SharedListingPageProps {
   token: string;
 }
 
+// Utility function to correctly format possessive forms
+function makePossessive(name: string): string {
+  if (!name) return '';
+  return name.endsWith('s') ? `${name}'` : `${name}'s`;
+}
+
 export function SharedListingPage({ token }: SharedListingPageProps) {
   const [listing, setListing] = useState<EnhancedListingModalContent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -130,7 +136,7 @@ export function SharedListingPage({ token }: SharedListingPageProps) {
       <div className="p-6">
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Requirements In {listing?.company?.name || 'Company'}'s Own Words</h3>
+            <h3 className="text-lg font-semibold">Requirements In {makePossessive(listing?.company?.name || 'Company')} Own Words</h3>
 
             {/* Requirements Brochures */}
             {listing.files?.brochures && listing.files.brochures.length > 0 && (
