@@ -110,26 +110,6 @@ export function SiteDetailPage({ siteId, userId }: SiteDetailPageProps) {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-pink-50">
-        {/* Header with back button */}
-        <div className="bg-white border-b-3 border-violet-200 sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                router.push('/new-dashboard');
-                // Trigger tab change after navigation
-                setTimeout(() => {
-                  window.dispatchEvent(new CustomEvent('dashboard-tab-change', { detail: 'sites' }));
-                }, 100);
-              }}
-              className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 font-bold rounded-xl"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-          </div>
-        </div>
-
         {/* Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-white rounded-3xl border-3 border-violet-200 shadow-xl p-6 md:p-8 space-y-8 md:space-y-12">
