@@ -259,12 +259,12 @@ export default function WelcomeOnboarding({
   if (isWelcomeScreen) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-[700px] h-[90vh] overflow-hidden p-0 bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 shadow-2xl !border-0 rounded-3xl flex flex-col">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 shadow-2xl !border-0 rounded-3xl flex flex-col">
           <DialogHeader className="sr-only">
             <DialogTitle>{welcomeScreen.title}</DialogTitle>
           </DialogHeader>
 
-          {/* Fixed Header - doesn't scroll on mobile */}
+          {/* Header */}
           <div className="flex-shrink-0 relative px-8 pt-8 pb-6 bg-gradient-to-r from-violet-600 to-purple-700 overflow-hidden">
             {/* Blur circles */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
@@ -285,12 +285,12 @@ export default function WelcomeOnboarding({
             </div>
           </div>
 
-          {/* Scrollable Content Area - only scrolls on mobile */}
-          <div className="flex-1 overflow-y-auto md:overflow-visible">
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto">
             <div className="px-8 py-8 space-y-6">
-            <p className="text-lg text-gray-700 font-medium text-center">
-              {welcomeScreen.description}
-            </p>
+              <p className="text-lg text-gray-700 font-medium text-center">
+                {welcomeScreen.description}
+              </p>
 
             <div className="grid grid-cols-1 gap-4">
               {/* Watch Tutorial - Premium gradient card */}
@@ -370,12 +370,12 @@ export default function WelcomeOnboarding({
   if (isFinalScreen) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-[600px] h-[90vh] overflow-hidden p-0 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 shadow-2xl !border-0 rounded-3xl flex flex-col">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 shadow-2xl !border-0 rounded-3xl flex flex-col">
           <DialogHeader className="sr-only">
             <DialogTitle>{finalScreen.title}</DialogTitle>
           </DialogHeader>
 
-          {/* Fixed Success Header - doesn't scroll on mobile */}
+          {/* Success Header */}
           <div className="flex-shrink-0 relative px-8 pt-8 pb-6 bg-gradient-to-r from-green-600 to-emerald-600 overflow-hidden">
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
               <div className="absolute -top-20 -right-20 w-[300px] h-[300px] bg-white rounded-full blur-3xl" />
@@ -391,12 +391,12 @@ export default function WelcomeOnboarding({
             </div>
           </div>
 
-          {/* Scrollable Content Area - only scrolls on mobile */}
-          <div className="flex-1 overflow-y-auto md:overflow-visible">
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto">
             <div className="px-8 py-8 space-y-6">
-            <p className="text-lg text-gray-700 font-semibold text-center leading-relaxed">
-              You now know the basics of SiteSketcher! Remember, you can access this tutorial anytime by clicking the <strong className="text-green-700">Help</strong> button in the top right corner.
-            </p>
+              <p className="text-lg text-gray-700 font-semibold text-center leading-relaxed">
+                You now know the basics of SiteSketcher! Remember, you can access this tutorial anytime by clicking the <strong className="text-green-700">Help</strong> button in the top right corner.
+              </p>
 
             {/* Contact card - Premium style */}
             <Card className="bg-white border-4 border-blue-200 rounded-2xl shadow-xl">
@@ -488,7 +488,7 @@ export default function WelcomeOnboarding({
           </div>
 
           {/* Scrollable Content Area */}
-          <div className="flex-1 overflow-y-auto md:overflow-visible">
+          <div className="flex-1 overflow-y-auto">
             {/* Two-column content */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 p-6 md:p-8">
               {/* Left: Video Player */}
