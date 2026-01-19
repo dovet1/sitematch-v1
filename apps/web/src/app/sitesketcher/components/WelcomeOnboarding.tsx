@@ -259,13 +259,13 @@ export default function WelcomeOnboarding({
   if (isWelcomeScreen) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-[700px] p-0 bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 shadow-2xl !border-0 rounded-3xl overflow-hidden">
+        <DialogContent className="sm:max-w-[700px] h-[90vh] overflow-hidden p-0 bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 shadow-2xl !border-0 rounded-3xl flex flex-col">
           <DialogHeader className="sr-only">
             <DialogTitle>{welcomeScreen.title}</DialogTitle>
           </DialogHeader>
 
-          {/* Header with gradient */}
-          <div className="relative px-8 pt-8 pb-6 bg-gradient-to-r from-violet-600 to-purple-700 overflow-hidden">
+          {/* Fixed Header - doesn't scroll on mobile */}
+          <div className="flex-shrink-0 relative px-8 pt-8 pb-6 bg-gradient-to-r from-violet-600 to-purple-700 overflow-hidden">
             {/* Blur circles */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
               <div className="absolute -top-20 -right-20 w-[300px] h-[300px] bg-white rounded-full blur-3xl" />
@@ -285,8 +285,9 @@ export default function WelcomeOnboarding({
             </div>
           </div>
 
-          {/* Content */}
-          <div className="px-8 py-8 space-y-6">
+          {/* Scrollable Content Area - only scrolls on mobile */}
+          <div className="flex-1 overflow-y-auto md:overflow-visible">
+            <div className="px-8 py-8 space-y-6">
             <p className="text-lg text-gray-700 font-medium text-center">
               {welcomeScreen.description}
             </p>
@@ -358,6 +359,7 @@ export default function WelcomeOnboarding({
                 Don't show this tutorial again
               </label>
             </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -368,13 +370,13 @@ export default function WelcomeOnboarding({
   if (isFinalScreen) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-[600px] p-0 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 shadow-2xl !border-0 rounded-3xl overflow-hidden">
+        <DialogContent className="sm:max-w-[600px] h-[90vh] overflow-hidden p-0 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 shadow-2xl !border-0 rounded-3xl flex flex-col">
           <DialogHeader className="sr-only">
             <DialogTitle>{finalScreen.title}</DialogTitle>
           </DialogHeader>
 
-          {/* Success header */}
-          <div className="relative px-8 pt-8 pb-6 bg-gradient-to-r from-green-600 to-emerald-600 overflow-hidden">
+          {/* Fixed Success Header - doesn't scroll on mobile */}
+          <div className="flex-shrink-0 relative px-8 pt-8 pb-6 bg-gradient-to-r from-green-600 to-emerald-600 overflow-hidden">
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
               <div className="absolute -top-20 -right-20 w-[300px] h-[300px] bg-white rounded-full blur-3xl" />
             </div>
@@ -389,8 +391,9 @@ export default function WelcomeOnboarding({
             </div>
           </div>
 
-          {/* Content */}
-          <div className="px-8 py-8 space-y-6">
+          {/* Scrollable Content Area - only scrolls on mobile */}
+          <div className="flex-1 overflow-y-auto md:overflow-visible">
+            <div className="px-8 py-8 space-y-6">
             <p className="text-lg text-gray-700 font-semibold text-center leading-relaxed">
               You now know the basics of SiteSketcher! Remember, you can access this tutorial anytime by clicking the <strong className="text-green-700">Help</strong> button in the top right corner.
             </p>
@@ -426,6 +429,7 @@ export default function WelcomeOnboarding({
               Start Using SiteSketcher
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -438,13 +442,13 @@ export default function WelcomeOnboarding({
 
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-[1000px] lg:max-w-[1200px] max-h-[90vh] overflow-hidden p-0 bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 shadow-2xl !border-0 rounded-3xl">
+        <DialogContent className="sm:max-w-[1000px] lg:max-w-[1200px] h-[90vh] overflow-hidden p-0 bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 shadow-2xl !border-0 rounded-3xl flex flex-col">
           <DialogHeader className="sr-only">
             <DialogTitle>{currentTutorialStep.title}</DialogTitle>
           </DialogHeader>
 
-          {/* Premium Gradient Header */}
-          <div className="relative px-6 md:px-8 pt-6 pb-4 bg-gradient-to-r from-violet-600 to-purple-700">
+          {/* Premium Gradient Header - Fixed on mobile */}
+          <div className="flex-shrink-0 relative px-6 md:px-8 pt-6 pb-4 bg-gradient-to-r from-violet-600 to-purple-700">
             {/* Background blur circles */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
               <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-white rounded-full blur-3xl" />
@@ -483,75 +487,78 @@ export default function WelcomeOnboarding({
             </div>
           </div>
 
-          {/* Two-column content */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 p-6 md:p-8">
-            {/* Left: Video Player */}
-            <div>
-              <video
-                key={currentStep}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full rounded-2xl border-4 border-violet-200 shadow-2xl"
-              >
-                <source src={`/onboarding-videos/step-${currentStep}.mp4`} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-            </div>
-
-            {/* Right: Instructions & Navigation */}
-            <div className="flex flex-col justify-between">
-              {/* Instructions Card */}
-              <Card className="bg-white/95 backdrop-blur-sm border-3 border-violet-200 rounded-2xl shadow-xl mb-6">
-                <CardContent className="pt-6">
-                  {currentTutorialStep.content.description && (
-                    <p className="text-gray-600 font-medium mb-4">
-                      {currentTutorialStep.content.description}
-                    </p>
-                  )}
-                  <ul className="space-y-3">
-                    {currentTutorialStep.content.instructions.map((instruction, index) => (
-                      <li key={index} className="flex items-start gap-3">
-                        <div className="mt-0.5 flex-shrink-0 w-6 h-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-md">
-                          <CheckCircle className="h-4 w-4 text-white" />
-                        </div>
-                        <span className="text-base text-gray-700 font-medium leading-relaxed">
-                          {instruction}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-
-              {/* Navigation Buttons */}
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentStep === 1}
-                  className="w-full sm:w-auto border-2 border-violet-300 hover:border-violet-400 hover:bg-violet-50 px-6 py-3 rounded-xl font-bold disabled:opacity-50"
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto md:overflow-visible">
+            {/* Two-column content */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 p-6 md:p-8">
+              {/* Left: Video Player */}
+              <div>
+                <video
+                  key={currentStep}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full rounded-2xl border-4 border-violet-200 shadow-2xl"
                 >
-                  <ArrowLeft className="mr-2 h-5 w-5" />
-                  Previous
-                </Button>
+                  <source src={`/onboarding-videos/step-${currentStep}.mp4`} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
 
-                <div className="flex gap-3 w-full sm:w-auto">
+              {/* Right: Instructions & Navigation */}
+              <div className="flex flex-col justify-between">
+                {/* Instructions Card */}
+                <Card className="bg-white/95 backdrop-blur-sm border-3 border-violet-200 rounded-2xl shadow-xl mb-6">
+                  <CardContent className="pt-6">
+                    {currentTutorialStep.content.description && (
+                      <p className="text-gray-600 font-medium mb-4">
+                        {currentTutorialStep.content.description}
+                      </p>
+                    )}
+                    <ul className="space-y-3">
+                      {currentTutorialStep.content.instructions.map((instruction, index) => (
+                        <li key={index} className="flex items-start gap-3">
+                          <div className="mt-0.5 flex-shrink-0 w-6 h-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-md">
+                            <CheckCircle className="h-4 w-4 text-white" />
+                          </div>
+                          <span className="text-base text-gray-700 font-medium leading-relaxed">
+                            {instruction}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                {/* Navigation Buttons */}
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
                   <Button
-                    variant="ghost"
-                    onClick={handleSkipTutorial}
-                    className="flex-1 sm:flex-none text-gray-600 hover:bg-gray-100 px-6 py-3 rounded-xl font-bold"
+                    variant="outline"
+                    onClick={handlePrevious}
+                    disabled={currentStep === 1}
+                    className="w-full sm:w-auto border-2 border-violet-300 hover:border-violet-400 hover:bg-violet-50 px-6 py-3 rounded-xl font-bold disabled:opacity-50"
                   >
-                    Skip
+                    <ArrowLeft className="mr-2 h-5 w-5" />
+                    Previous
                   </Button>
-                  <Button
-                    onClick={handleNext}
-                    className="flex-1 sm:flex-none bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-black shadow-lg hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
-                  >
-                    {isLastTutorialStep ? 'Finish' : 'Next'}
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
+
+                  <div className="flex gap-3 w-full sm:w-auto">
+                    <Button
+                      variant="ghost"
+                      onClick={handleSkipTutorial}
+                      className="flex-1 sm:flex-none text-gray-600 hover:bg-gray-100 px-6 py-3 rounded-xl font-bold"
+                    >
+                      Skip
+                    </Button>
+                    <Button
+                      onClick={handleNext}
+                      className="flex-1 sm:flex-none bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-black shadow-lg hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
+                    >
+                      {isLastTutorialStep ? 'Finish' : 'Next'}
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
