@@ -123,17 +123,18 @@ function SiteSketcherContent() {
         return;
       }
 
-      // If user is not logged in, don't show tutorial
+      // If user is not logged in, always show tutorial
       if (!user) {
+        setShowWelcomeModal(true);
         return;
       }
 
-      // Check if user has opted out of the tutorial
+      // Check if logged-in user has opted out of the tutorial
       if (profile?.hide_sitesketcher_tutorial === true) {
         return;
       }
 
-      // Show tutorial on first visit (when profile is loaded and user hasn't opted out)
+      // Show tutorial on first visit for logged-in users (when profile is loaded and user hasn't opted out)
       if (profile && !profile.hide_sitesketcher_tutorial) {
         setShowWelcomeModal(true);
       }

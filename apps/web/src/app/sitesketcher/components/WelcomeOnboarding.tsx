@@ -344,21 +344,23 @@ export default function WelcomeOnboarding({
               </button>
             </div>
 
-            {/* Don't show again checkbox - Enhanced */}
-            <div className="flex items-center space-x-3 pt-4 border-t-2 border-gray-200">
-              <Checkbox
-                id="dontShowAgain"
-                checked={dontShowAgain}
-                onCheckedChange={(checked) => setDontShowAgain(checked === true)}
-                className="h-5 w-5"
-              />
-              <label
-                htmlFor="dontShowAgain"
-                className="text-base text-gray-700 font-medium cursor-pointer select-none"
-              >
-                Don't show this tutorial again
-              </label>
-            </div>
+            {/* Don't show again checkbox - Only show for logged-in users */}
+            {userProfile && (
+              <div className="flex items-center space-x-3 pt-4 border-t-2 border-gray-200">
+                <Checkbox
+                  id="dontShowAgain"
+                  checked={dontShowAgain}
+                  onCheckedChange={(checked) => setDontShowAgain(checked === true)}
+                  className="h-5 w-5"
+                />
+                <label
+                  htmlFor="dontShowAgain"
+                  className="text-base text-gray-700 font-medium cursor-pointer select-none"
+                >
+                  Don't show this tutorial again
+                </label>
+              </div>
+            )}
             </div>
           </div>
         </DialogContent>

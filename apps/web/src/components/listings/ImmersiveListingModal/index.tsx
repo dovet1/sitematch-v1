@@ -26,6 +26,12 @@ interface ImmersiveListingModalProps {
   apiEndpoint?: string; // Allow custom API endpoint for owner preview
 }
 
+// Utility function to correctly format possessive forms
+function makePossessive(name: string): string {
+  if (!name) return '';
+  return name.endsWith('s') ? `${name}'` : `${name}'s`;
+}
+
 export function ImmersiveListingModal({
   listingId,
   isOpen,
@@ -204,7 +210,7 @@ export function ImmersiveListingModal({
       <div className="p-6">
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Requirements In {listing?.company?.name || 'Company'}'s Own Words</h3>
+            <h3 className="text-lg font-semibold">Requirements In {makePossessive(listing?.company?.name || 'Company')} Own Words</h3>
 
             {/* Requirements Brochures */}
             {listing.files?.brochures && listing.files.brochures.length > 0 && (
@@ -220,7 +226,7 @@ export function ImmersiveListingModal({
                   </div>
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-sm font-medium text-gray-900">
-                      {listing?.company?.name || 'Company'}'s Requirement Brochure
+                      {makePossessive(listing?.company?.name || 'Company')} Requirement Brochure
                     </p>
                   </div>
                   <div className="flex items-center gap-2 text-blue-600 group-hover:text-blue-700">
