@@ -246,6 +246,8 @@ export default function WelcomeOnboarding({
     if (dontShowAgain && onDontShowAgain) {
       onDontShowAgain(true);
     }
+    // Reset to welcome screen for next time
+    setCurrentStep(0);
     onClose();
   };
 
