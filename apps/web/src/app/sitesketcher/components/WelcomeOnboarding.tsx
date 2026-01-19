@@ -24,6 +24,7 @@ import {
   FolderOpen,
   CheckCircle,
   ArrowRight,
+  ArrowLeft,
   Play,
   Video,
   Mail
@@ -188,7 +189,7 @@ const tutorialSteps = [
 // Step 10: Final screen
 const finalScreen = {
   id: 10,
-  title: 'You\'re All Set!',
+  title: 'Tutorial Complete!',
   isFinal: true
 };
 
@@ -256,84 +257,101 @@ export default function WelcomeOnboarding({
   if (isWelcomeScreen) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-violet-100 rounded-lg">
-                <MapPin className="h-6 w-6 text-violet-600" />
-              </div>
-              <div>
-                <DialogTitle className="text-2xl font-bold">
-                  {welcomeScreen.title}
-                </DialogTitle>
-                <DialogDescription className="text-base text-gray-600 mt-1">
-                  {welcomeScreen.subtitle}
-                </DialogDescription>
-              </div>
-            </div>
+        <DialogContent className="sm:max-w-[700px] p-0 bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 shadow-2xl !border-0 rounded-3xl overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{welcomeScreen.title}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            <p className="text-gray-700 text-base">
+          {/* Header with gradient */}
+          <div className="relative px-8 pt-8 pb-6 bg-gradient-to-r from-violet-600 to-purple-700 overflow-hidden">
+            {/* Blur circles */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+              <div className="absolute -top-20 -right-20 w-[300px] h-[300px] bg-white rounded-full blur-3xl" />
+              <div className="absolute -bottom-20 -left-20 w-[250px] h-[250px] bg-purple-300 rounded-full blur-3xl" />
+            </div>
+
+            <div className="relative text-center">
+              <div className="inline-flex p-4 bg-white/20 backdrop-blur-sm rounded-3xl mb-4">
+                <MapPin className="h-12 w-12 text-white" />
+              </div>
+              <h1 className="text-3xl md:text-4xl font-black text-white mb-3">
+                {welcomeScreen.title}
+              </h1>
+              <p className="text-lg text-violet-100 font-semibold">
+                {welcomeScreen.subtitle}
+              </p>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="px-8 py-8 space-y-6">
+            <p className="text-lg text-gray-700 font-medium text-center">
               {welcomeScreen.description}
             </p>
 
-            <div className="grid grid-cols-1 gap-3">
-              {/* Watch Tutorial */}
-              <Button
+            <div className="grid grid-cols-1 gap-4">
+              {/* Watch Tutorial - Premium gradient card */}
+              <button
                 onClick={handleWatchTutorial}
-                className="w-full h-auto py-4 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
+                className="group relative bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-2xl p-6 shadow-2xl hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300 border-0"
               >
-                <div className="flex items-center gap-3">
-                  <Video className="h-5 w-5" />
-                  <div className="text-left">
-                    <div className="font-semibold">Watch Tutorial Video</div>
-                    <div className="text-xs text-violet-100">Quick overview of SiteSketcher</div>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                    <Video className="h-7 w-7 text-white" />
                   </div>
+                  <div className="text-left flex-1">
+                    <div className="text-xl font-black">Watch Tutorial Video</div>
+                    <div className="text-sm text-violet-100 font-medium">Quick overview of SiteSketcher</div>
+                  </div>
+                  <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
                 </div>
-              </Button>
+              </button>
 
-              {/* Follow Tutorial */}
-              <Button
+              {/* Follow Tutorial - Outlined premium card */}
+              <button
                 onClick={handleFollowTutorial}
-                variant="outline"
-                className="w-full h-auto py-4 border-2 border-violet-400 hover:bg-violet-50"
+                className="group relative bg-white hover:bg-violet-50 rounded-2xl p-6 shadow-xl hover:shadow-2xl border-4 border-violet-300 hover:border-violet-400 hover:scale-105 transition-all duration-300"
               >
-                <div className="flex items-center gap-3">
-                  <Play className="h-5 w-5 text-violet-600" />
-                  <div className="text-left">
-                    <div className="font-semibold text-violet-700">Follow Our Tutorial</div>
-                    <div className="text-xs text-gray-600">Step-by-step guided tour</div>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <Play className="h-7 w-7 text-white" />
                   </div>
+                  <div className="text-left flex-1">
+                    <div className="text-xl font-black text-gray-900">Follow Our Tutorial</div>
+                    <div className="text-sm text-gray-600 font-medium">Step-by-step guided tour</div>
+                  </div>
+                  <ArrowRight className="h-6 w-6 text-violet-600 group-hover:translate-x-1 transition-transform" />
                 </div>
-              </Button>
+              </button>
 
-              {/* Skip Tutorial */}
-              <Button
+              {/* Skip - Ghost style */}
+              <button
                 onClick={handleSkipTutorial}
-                variant="ghost"
-                className="w-full h-auto py-4 text-gray-600 hover:bg-gray-100"
+                className="group text-left hover:bg-gray-50 rounded-2xl p-6 border-2 border-gray-200 hover:border-gray-300 transition-all duration-300"
               >
-                <div className="flex items-center gap-3">
-                  <ArrowRight className="h-5 w-5" />
-                  <div className="text-left">
-                    <div className="font-semibold">Skip the Tutorial</div>
-                    <div className="text-xs text-gray-500">Access it anytime via the Help icon</div>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center">
+                    <ArrowRight className="h-7 w-7 text-gray-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xl font-bold text-gray-900">Skip the Tutorial</div>
+                    <div className="text-sm text-gray-500 font-medium">Access it anytime via the Help icon</div>
                   </div>
                 </div>
-              </Button>
+              </button>
             </div>
 
-            {/* Don't show again checkbox */}
-            <div className="flex items-center space-x-2 pt-4 border-t">
+            {/* Don't show again checkbox - Enhanced */}
+            <div className="flex items-center space-x-3 pt-4 border-t-2 border-gray-200">
               <Checkbox
                 id="dontShowAgain"
                 checked={dontShowAgain}
                 onCheckedChange={(checked) => setDontShowAgain(checked === true)}
+                className="h-5 w-5"
               />
               <label
                 htmlFor="dontShowAgain"
-                className="text-sm text-gray-700 cursor-pointer select-none"
+                className="text-base text-gray-700 font-medium cursor-pointer select-none"
               >
                 Don't show this tutorial again
               </label>
@@ -348,50 +366,63 @@ export default function WelcomeOnboarding({
   if (isFinalScreen) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <DialogTitle className="text-2xl font-bold">
-                  {finalScreen.title}
-                </DialogTitle>
-              </div>
-            </div>
+        <DialogContent className="sm:max-w-[600px] p-0 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 shadow-2xl !border-0 rounded-3xl overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{finalScreen.title}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            <p className="text-gray-700 text-base">
-              You now know the basics of SiteSketcher! Remember, you can access this tutorial anytime by clicking the <strong>Help</strong> button in the top right corner.
+          {/* Success header */}
+          <div className="relative px-8 pt-8 pb-6 bg-gradient-to-r from-green-600 to-emerald-600 overflow-hidden">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+              <div className="absolute -top-20 -right-20 w-[300px] h-[300px] bg-white rounded-full blur-3xl" />
+            </div>
+
+            <div className="relative text-center">
+              <div className="inline-flex p-4 bg-white/20 backdrop-blur-sm rounded-3xl mb-4">
+                <CheckCircle className="h-12 w-12 text-white" />
+              </div>
+              <h1 className="text-3xl md:text-4xl font-black text-white">
+                {finalScreen.title}
+              </h1>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="px-8 py-8 space-y-6">
+            <p className="text-lg text-gray-700 font-semibold text-center leading-relaxed">
+              You now know the basics of SiteSketcher! Remember, you can access this tutorial anytime by clicking the <strong className="text-green-700">Help</strong> button in the top right corner.
             </p>
 
-            <Card className="bg-blue-50 border-blue-200">
+            {/* Contact card - Premium style */}
+            <Card className="bg-white border-4 border-blue-200 rounded-2xl shadow-xl">
               <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <Mail className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm text-gray-700">
-                      Need assistance? Contact us at{' '}
-                      <a
-                        href="mailto:rob@sitematcher.co.uk"
-                        className="text-blue-600 hover:text-blue-700 font-semibold underline"
-                      >
-                        rob@sitematcher.co.uk
-                      </a>
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <Mail className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-base text-gray-700 font-medium mb-2">
+                      Need assistance? We're here to help!
                     </p>
+                    <a
+                      href="mailto:rob@sitematcher.co.uk"
+                      className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold text-lg transition-colors"
+                    >
+                      rob@sitematcher.co.uk
+                      <ArrowRight className="h-5 w-5" />
+                    </a>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* CTA Button */}
             <Button
               onClick={handleFinish}
-              className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
+              className="w-full h-14 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white text-lg font-black rounded-2xl shadow-2xl hover:shadow-green-500/50 hover:scale-105 transition-all duration-300"
             >
               Start Using SiteSketcher
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
         </DialogContent>
@@ -405,101 +436,121 @@ export default function WelcomeOnboarding({
 
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="relative">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-violet-100 rounded-lg">
-                <StepIcon className="h-6 w-6 text-violet-600" />
+        <DialogContent className="sm:max-w-[1000px] lg:max-w-[1200px] max-h-[90vh] overflow-hidden p-0 bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50 shadow-2xl !border-0 rounded-3xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{currentTutorialStep.title}</DialogTitle>
+          </DialogHeader>
+
+          {/* Premium Gradient Header */}
+          <div className="relative px-6 md:px-8 pt-6 pb-4 bg-gradient-to-r from-violet-600 to-purple-700">
+            {/* Background blur circles */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+              <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-white rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-[200px] h-[200px] bg-purple-300 rounded-full blur-3xl" />
+            </div>
+
+            <div className="relative flex items-center gap-3">
+              {/* Icon badge */}
+              <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-2xl">
+                <StepIcon className="h-7 w-7 text-white" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-semibold">
+                <h2 className="text-2xl md:text-3xl font-black text-white">
                   {currentTutorialStep.title}
-                </DialogTitle>
-                <DialogDescription className="text-sm text-gray-600">
+                </h2>
+                <p className="text-sm text-violet-100 font-medium">
                   Step {currentStep} of 9
-                </DialogDescription>
+                </p>
               </div>
             </div>
 
-            {/* Progress indicator */}
-            <div className="flex gap-2 mb-6">
+            {/* Progress indicator - redesigned */}
+            <div className="relative mt-4 flex gap-1.5">
               {tutorialSteps.map((step) => (
                 <div
                   key={step.id}
-                  className={`h-2 flex-1 rounded-full transition-colors ${
-                    step.id <= currentStep ? 'bg-violet-600' : 'bg-gray-200'
+                  className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                    step.id < currentStep
+                      ? 'bg-white'
+                      : step.id === currentStep
+                      ? 'bg-white shadow-lg shadow-white/50'
+                      : 'bg-white/30'
                   }`}
                 />
               ))}
             </div>
-          </DialogHeader>
+          </div>
 
-          <div className="space-y-6">
-            {/* Main content */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {currentTutorialStep.content.title}
-                </CardTitle>
-              </CardHeader>
-
-              {/* Video demonstration */}
-              <div className="px-6 pb-4">
-                <video
-                  key={currentStep}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full rounded-lg border border-gray-200"
-                  style={{ maxWidth: '550px' }}
-                >
-                  <source src={`/onboarding-videos/step-${currentStep}.mp4`} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-
-              <CardContent>
-                <p className="text-gray-600 mb-4">
-                  {currentTutorialStep.content.description}
-                </p>
-                <ul className="space-y-2">
-                  {currentTutorialStep.content.instructions.map((instruction, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700">{instruction}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-
-            {/* Navigation */}
-            <div className="flex justify-between items-center pt-4">
-              <Button
-                variant="ghost"
-                onClick={handlePrevious}
-                disabled={currentStep === 1}
-                className="text-gray-600"
+          {/* Two-column content */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 p-6 md:p-8">
+            {/* Left: Video Player */}
+            <div>
+              <video
+                key={currentStep}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full rounded-2xl border-4 border-violet-200 shadow-2xl"
               >
-                Previous
-              </Button>
+                <source src={`/onboarding-videos/step-${currentStep}.mp4`} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            </div>
 
-              <div className="flex gap-2">
+            {/* Right: Instructions & Navigation */}
+            <div className="flex flex-col justify-between">
+              {/* Instructions Card */}
+              <Card className="bg-white/95 backdrop-blur-sm border-3 border-violet-200 rounded-2xl shadow-xl mb-6">
+                <CardContent className="pt-6">
+                  {currentTutorialStep.content.description && (
+                    <p className="text-gray-600 font-medium mb-4">
+                      {currentTutorialStep.content.description}
+                    </p>
+                  )}
+                  <ul className="space-y-3">
+                    {currentTutorialStep.content.instructions.map((instruction, index) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <div className="mt-0.5 flex-shrink-0 w-6 h-6 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-md">
+                          <CheckCircle className="h-4 w-4 text-white" />
+                        </div>
+                        <span className="text-base text-gray-700 font-medium leading-relaxed">
+                          {instruction}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* Navigation Buttons */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
                 <Button
-                  variant="ghost"
-                  onClick={handleSkipTutorial}
-                  className="text-gray-600"
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={currentStep === 1}
+                  className="w-full sm:w-auto border-2 border-violet-300 hover:border-violet-400 hover:bg-violet-50 px-6 py-3 rounded-xl font-bold disabled:opacity-50"
                 >
-                  Skip
+                  <ArrowLeft className="mr-2 h-5 w-5" />
+                  Previous
                 </Button>
-                <Button
-                  onClick={handleNext}
-                  className="bg-violet-600 hover:bg-violet-700 text-white"
-                >
-                  {isLastTutorialStep ? 'Finish' : 'Next'}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+
+                <div className="flex gap-3 w-full sm:w-auto">
+                  <Button
+                    variant="ghost"
+                    onClick={handleSkipTutorial}
+                    className="flex-1 sm:flex-none text-gray-600 hover:bg-gray-100 px-6 py-3 rounded-xl font-bold"
+                  >
+                    Skip
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    className="flex-1 sm:flex-none bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-black shadow-lg hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
+                  >
+                    {isLastTutorialStep ? 'Finish' : 'Next'}
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
