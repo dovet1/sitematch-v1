@@ -324,7 +324,7 @@ export function SiteDemographerPage() {
                   </svg>
                 </div>
                 <p className="text-base font-medium text-gray-900 mb-2">Ready to analyse</p>
-                <p className="text-sm text-gray-500">Enter a UK location above to view demographic insights</p>
+                <p className="text-sm text-gray-500">Enter a location in England or Wales above to view demographic insights. Scotland and Northern Ireland comming soon!</p>
               </div>
             </div>
           )}

@@ -69,7 +69,7 @@ export function MobileHeader({
           <span className={selectedLocation ? "text-gray-900 font-medium" : "text-gray-400"}>
             {selectedLocation
               ? `${selectedLocation.text}${selectedLocation.place_name ? `, ${selectedLocation.place_name.split(',')[1]?.trim() || ''}` : ''}`
-              : 'Search UK location...'
+              : 'Search an England or Wales location...'
             }
           </span>
         </button>

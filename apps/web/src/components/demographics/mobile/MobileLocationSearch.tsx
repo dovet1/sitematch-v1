@@ -116,7 +116,7 @@ export function MobileLocationSearch({
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search UK location..."
+            placeholder="Search an England or Wales location..."
             className="pl-11 pr-10 h-12 text-base"
           />
           {loading && (

@@ -177,7 +177,7 @@ export function LocationInputPanel({
             value={locationQuery}
             onChange={(e) => setLocationQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search UK location..."
+            placeholder="Search an England or Wales location..."
             className="pl-11 pr-10 h-9 text-sm border-gray-200 bg-white hover:border-gray-300 focus:border-violet-400 focus:ring-violet-400/20 shadow-sm hover:shadow transition-all duration-200"
             disabled={loading}
           />

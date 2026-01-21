@@ -390,8 +390,13 @@ export function SiteDemographerDesktop() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                   </svg>
                 </div>
-                <p className="text-base font-medium text-gray-900 mb-2">Ready to analyse</p>
-                <p className="text-sm text-gray-500">Enter a UK location above to view demographic insights</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Ready to Analyse</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Enter a location in <span className="font-medium text-gray-900">England or Wales</span> above to view detailed demographic insights.
+                </p>
+                <p className="text-xs text-gray-400 mt-3 italic">
+                  Scotland and Northern Ireland coming soon!
+                </p>
               </div>
             </div>
           )}
