@@ -1,15 +1,19 @@
 'use client';
 
-import { Users, TrendingUp } from 'lucide-react';
+import { Users, TrendingUp, MapPin, Info } from 'lucide-react';
 import type { LocationResult } from '@/lib/mapbox';
 import { formatLocationDisplay } from '@/lib/mapbox';
 import type { MeasurementMode } from '../shared/types/demographics.types';
 import { useMemo, useState } from 'react';
 import { MobileFullReport } from './MobileFullReport';
+import type { CoverageStatus } from '@/lib/types/demographics';
+import { getCoverageMessages } from '@/lib/coverage-utils';
 
 interface MobileResultsProps {
   loading: boolean;
   error: string | null;
+  errorType?: 'coverage' | 'validation' | 'server' | null;
+  coverageStatus?: CoverageStatus | null;
   location: LocationResult | null;
   measurementMode: MeasurementMode;
   measurementValue: number;
@@ -31,6 +35,8 @@ function formatNumber(num: number): string {
 export function MobileResults({
   loading,
   error,
+  errorType,
+  coverageStatus,
   location,
   measurementMode,
   measurementValue,
@@ -81,6 +87,38 @@ export function MobileResults({
   }
 
   if (error) {
+    // Special handling for coverage errors
+    if (errorType === 'coverage' && coverageStatus) {
+      const messages = getCoverageMessages(coverageStatus, location?.place_name || 'this location');
+
+      return (
+        <div className="p-6">
+          <div className="text-center py-8">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+              <MapPin className="h-8 w-8 text-blue-400" />
+            </div>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">
+              {messages.emptyStateTitle}
+            </h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-4">
+              {messages.emptyStateDescription}
+            </p>
+            {messages.futureExpansion && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-left">
+                <div className="flex items-start gap-2">
+                  <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-blue-700 leading-relaxed">
+                    {messages.futureExpansion}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Generic error state
     return (
       <div className="p-6">
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">

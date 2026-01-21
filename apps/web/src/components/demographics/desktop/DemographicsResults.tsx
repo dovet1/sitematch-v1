@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, Home, Briefcase, GraduationCap, Car, Heart, AlertCircle, TrendingUp, ChevronDown, Info, Save } from 'lucide-react';
+import { Users, Home, Briefcase, GraduationCap, Car, Heart, AlertCircle, TrendingUp, ChevronDown, Info, Save, MapPin } from 'lucide-react';
 import type { LocationResult } from '@/lib/mapbox';
 import { formatLocationDisplay } from '@/lib/mapbox';
 import type { MeasurementMode } from './LocationInputPanel';
@@ -12,10 +12,14 @@ import { UpgradeBanner } from '@/components/UpgradeBanner';
 import { SaveAnalysisModal } from '../SaveAnalysisModal';
 import { Button } from '@/components/ui/button';
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import type { CoverageStatus } from '@/lib/types/demographics';
+import { getCoverageMessages } from '@/lib/coverage-utils';
 
 interface DemographicsResultsProps {
   loading: boolean;
   error: string | null;
+  errorType?: 'coverage' | 'validation' | 'server' | null;
+  coverageStatus?: CoverageStatus | null;
   location: LocationResult | null;
   measurementMode: MeasurementMode;
   measurementValue: number;
@@ -57,6 +61,8 @@ const getAgeGroupSortValue = (label: string): number => {
 export function DemographicsResults({
   loading,
   error,
+  errorType,
+  coverageStatus,
   location,
   measurementMode,
   measurementValue,
@@ -326,6 +332,38 @@ export function DemographicsResults({
 
   // Error State
   if (error) {
+    // Special handling for coverage errors
+    if (errorType === 'coverage' && coverageStatus) {
+      const messages = getCoverageMessages(coverageStatus, location?.place_name || 'this location');
+
+      return (
+        <div className="h-full flex items-center justify-center">
+          <div className="text-center max-w-md px-8">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+              <MapPin className="h-10 w-10 text-blue-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {messages.emptyStateTitle}
+            </h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-4">
+              {messages.emptyStateDescription}
+            </p>
+            {messages.futureExpansion && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-blue-700 text-left leading-relaxed">
+                    {messages.futureExpansion}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Generic error state
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center max-w-md px-8">
@@ -348,6 +386,21 @@ export function DemographicsResults({
 
   return (
     <div className="space-y-3">
+      {/* Partial Coverage Banner */}
+      {coverageStatus?.isPartiallyCovered && (
+        <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-xs font-medium text-amber-900">Partial Coverage</p>
+              <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                Your search area crosses regional boundaries. Results show only the England & Wales portion of your search area.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sticky Summary Header */}
       <div className="sticky top-0 bg-white border-b border-gray-200 pb-3 z-10 -mx-6 px-6 pt-0">
         <div className="space-y-3">

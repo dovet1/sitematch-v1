@@ -93,3 +93,21 @@ export interface DemographicsAPIResponse {
   aggregated: DemographicsResult;
   by_lsoa: Record<string, LSOADemographics>;
 }
+
+// Coverage types for handling searches outside England & Wales
+export type CoverageRegion = 'england_wales' | 'scotland' | 'northern_ireland';
+
+export interface CoverageStatus {
+  isFullyCovered: boolean;
+  isPartiallyCovered: boolean;
+  coveredRegions: CoverageRegion[];
+  primaryRegion: CoverageRegion | null;
+  lsoaCount: number;
+}
+
+export interface CoverageError {
+  error: 'COVERAGE_UNAVAILABLE';
+  error_type: 'coverage';
+  coverage_status: CoverageStatus;
+  lsoa_codes: string[];
+}
