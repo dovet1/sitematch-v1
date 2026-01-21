@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getLSOACodesInRadiusWithPolygons, getLSOACodesInIsochrone } from '@/lib/lsoa-boundaries-postgis';
 import { fetchIsochrone, getModeProfile } from '@/lib/mapbox-isochrone';
+import { determineCoverageStatus } from '@/lib/coverage-utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,26 +16,26 @@ type MeasurementMode = 'distance' | 'drive_time' | 'walk_time';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { lat, lng, radius_miles, measurement_mode = 'distance' } = body;
+    const { lat, lng, radius_miles, measurement_mode = 'distance', place_name } = body;
 
     // Validation
     if (typeof lat !== 'number' || typeof lng !== 'number' || typeof radius_miles !== 'number') {
       return NextResponse.json(
-        { error: 'Invalid input: lat, lng, and radius_miles must be numbers' },
+        { error: 'Invalid input: lat, lng, and radius_miles must be numbers', error_type: 'validation' },
         { status: 400 }
       );
     }
 
     if (lat < 49 || lat > 61 || lng < -8 || lng > 2) {
       return NextResponse.json(
-        { error: 'Location must be within UK bounds' },
+        { error: 'Location must be within UK bounds', error_type: 'validation' },
         { status: 400 }
       );
     }
 
     if (radius_miles < 1 || radius_miles > 50) {
       return NextResponse.json(
-        { error: 'Radius must be between 1 and 50 miles' },
+        { error: 'Radius must be between 1 and 50 miles', error_type: 'validation' },
         { status: 400 }
       );
     }
@@ -67,9 +68,31 @@ export async function POST(request: NextRequest) {
       console.log(`[Boundaries API] Isochrone type: ${isochroneGeometry.type}, coords length: ${isochroneGeometry.coordinates?.[0]?.length}`);
     }
 
+    // Determine coverage status
+    const coverageStatus = determineCoverageStatus(lsoaCodes, {
+      lat,
+      lng,
+      place_name: place_name || 'Selected location',
+    });
+
+    // Return coverage error if outside England & Wales
+    if (!coverageStatus.isFullyCovered) {
+      console.log(`[Boundaries API] Coverage unavailable:`, coverageStatus);
+      return NextResponse.json(
+        {
+          error: 'COVERAGE_UNAVAILABLE',
+          error_type: 'coverage',
+          coverage_status: coverageStatus,
+          lsoa_codes: lsoaCodes,
+        },
+        { status: 422 }
+      );
+    }
+
     return NextResponse.json({
       lsoa_codes: lsoaCodes,
       isochrone_geometry: isochroneGeometry,
+      coverage_status: coverageStatus,
     });
   } catch (error) {
     console.error('Error in boundaries API:', error);
@@ -77,6 +100,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Failed to fetch LSOA codes',
+        error_type: 'server',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }

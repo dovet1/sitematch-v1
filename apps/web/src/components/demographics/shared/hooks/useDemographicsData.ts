@@ -5,8 +5,11 @@
 
 import { useState, useRef, useCallback } from 'react';
 import type { LocationResult } from '@/lib/mapbox';
+import { formatLocationDisplay } from '@/lib/mapbox';
 import type { LSOATooltipData } from '@/lib/supabase-census-data';
 import type { MeasurementMode } from '../types/demographics.types';
+import type { CoverageStatus } from '@/lib/types/demographics';
+import { getCoverageMessages } from '@/lib/coverage-utils';
 
 export function useDemographicsData() {
   const [rawDemographicsData, setRawDemographicsData] = useState<Record<string, any> | null>(null);
@@ -15,6 +18,8 @@ export function useDemographicsData() {
   const [nationalAverages, setNationalAverages] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<'coverage' | 'validation' | 'server' | null>(null);
+  const [coverageStatus, setCoverageStatus] = useState<CoverageStatus | null>(null);
   const initialLoadComplete = useRef(false);
 
   const analyze = async (
@@ -30,6 +35,8 @@ export function useDemographicsData() {
 
     setLoading(true);
     setError(null);
+    setErrorType(null);
+    setCoverageStatus(null);
 
     try {
       const [lng, lat] = location.center;
@@ -43,12 +50,57 @@ export function useDemographicsData() {
           lng,
           radius_miles: measurementValue,
           measurement_mode: measurementMode,
+          place_name: formatLocationDisplay(location),
         }),
       });
 
       if (!boundariesResponse.ok) {
-        const errorData = await boundariesResponse.json().catch(() => ({}));
-        console.error('[useDemographicsData] Boundaries API error:', errorData);
+        let errorData: any = {};
+
+        try {
+          const responseText = await boundariesResponse.text();
+          console.log('[useDemographicsData] Raw error response:', responseText);
+
+          if (responseText) {
+            try {
+              errorData = JSON.parse(responseText);
+            } catch (jsonError) {
+              console.error('[useDemographicsData] Response is not valid JSON:', jsonError);
+              errorData = { error: 'Invalid server response', details: responseText };
+            }
+          } else {
+            console.error('[useDemographicsData] Empty error response');
+            errorData = { error: 'Empty error response from server' };
+          }
+        } catch (textError) {
+          console.error('[useDemographicsData] Failed to read error response:', textError);
+          errorData = { error: 'Failed to read error response' };
+        }
+
+        console.error('[useDemographicsData] Boundaries API error:', {
+          status: boundariesResponse.status,
+          statusText: boundariesResponse.statusText,
+          errorData,
+        });
+
+        // Handle coverage errors separately
+        if (errorData.error_type === 'coverage') {
+          const messages = getCoverageMessages(
+            errorData.coverage_status,
+            formatLocationDisplay(location)
+          );
+          setError(messages.validationError || 'This location is outside our coverage area');
+          setErrorType('coverage');
+          setCoverageStatus(errorData.coverage_status);
+          return {
+            lsoaCodes: [],
+            success: false,
+            error: messages.validationError,
+            errorType: 'coverage' as const,
+            coverageStatus: errorData.coverage_status,
+          };
+        }
+
         throw new Error(errorData.error || errorData.details || 'Failed to resolve geographic areas');
       }
 
@@ -120,6 +172,8 @@ export function useDemographicsData() {
     setLsoaTooltipData({});
     setNationalAverages({});
     setError(null);
+    setErrorType(null);
+    setCoverageStatus(null);
     initialLoadComplete.current = false;
   };
 
@@ -146,6 +200,8 @@ export function useDemographicsData() {
     nationalAverages,
     loading,
     error,
+    errorType,
+    coverageStatus,
     initialLoadComplete: initialLoadComplete.current,
     analyze,
     reset,

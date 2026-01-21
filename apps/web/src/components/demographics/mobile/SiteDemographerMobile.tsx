@@ -70,6 +70,8 @@ export function SiteDemographerMobile() {
     lsoaTooltipData,
     loading,
     error,
+    errorType,
+    coverageStatus,
     analyze,
     updateData,
     reset: resetDemographics,
@@ -330,6 +332,8 @@ export function SiteDemographerMobile() {
           <MobileResults
             loading={loading}
             error={error}
+            errorType={errorType}
+            coverageStatus={coverageStatus}
             location={selectedLocation}
             measurementMode={measurementMode}
             measurementValue={measurementValue}

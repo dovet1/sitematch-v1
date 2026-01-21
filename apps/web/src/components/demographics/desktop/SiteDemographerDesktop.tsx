@@ -229,7 +229,7 @@ export function SiteDemographerDesktop() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col bg-gradient-to-b from-gray-50 to-white">
+    <div className="h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white">
       {/* Premium Header with Controls */}
       <div className="relative z-50 px-8 py-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
         {/* Subtle gradient overlay */}
