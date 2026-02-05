@@ -45,6 +45,7 @@ export function SiteDemographerDesktop() {
     rawDemographicsData,
     isochroneGeometry,
     lsoaTooltipData,
+    dataZoneTooltipData,
     nationalAverages,
     loading,
     error,
@@ -57,9 +58,12 @@ export function SiteDemographerDesktop() {
   const {
     selectedLsoaCodes,
     allLsoaCodes,
+    selectedDataZoneCodes,
+    allDataZoneCodes,
     isRefetchingData,
     setIsRefetchingData,
     toggleLsoa,
+    toggleDataZone,
     initializeSelection,
     reset: resetSelection,
   } = useLsoaSelection();
@@ -195,9 +199,9 @@ export function SiteDemographerDesktop() {
 
     const result = await analyze(location, measurementMode, measurementValue);
 
-    if (result.success && result.lsoaCodes) {
-      // Initialize LSOA selection with all codes
-      initializeSelection(result.lsoaCodes);
+    if (result.success) {
+      // Initialize LSOA and Data Zone selection with all codes
+      initializeSelection(result.lsoaCodes || [], result.dataZoneCodes || []);
       // Update analyzed location - map will fly to this location
       setAnalyzedLocation(location);
     }
@@ -343,8 +347,12 @@ export function SiteDemographerDesktop() {
                 measurementValue={measurementValue}
                 selectedLsoaCodes={selectedLsoaCodes}
                 allLsoaCodes={allLsoaCodes}
+                selectedDataZoneCodes={selectedDataZoneCodes}
+                allDataZoneCodes={allDataZoneCodes}
                 onLsoaToggle={toggleLsoa}
+                onDataZoneToggle={toggleDataZone}
                 lsoaTooltipData={lsoaTooltipData}
+                dataZoneTooltipData={dataZoneTooltipData}
                 showTraffic={showTraffic}
                 showCountPoints={showCountPoints}
               />

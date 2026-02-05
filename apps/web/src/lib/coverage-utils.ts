@@ -9,9 +9,11 @@ export type CoverageRegion = 'england_wales' | 'scotland' | 'northern_ireland';
 export interface CoverageStatus {
   isFullyCovered: boolean;
   isPartiallyCovered: boolean;
+  isMixedRegion: boolean; // true if search spans England/Scotland border
   coveredRegions: CoverageRegion[];
   primaryRegion: CoverageRegion | null;
   lsoaCount: number;
+  dataZoneCount: number; // Number of Scottish Data Zones
 }
 
 // LSOA code patterns by region
@@ -38,17 +40,21 @@ const REGION_BOUNDS = {
 };
 
 /**
- * Determine coverage status based on LSOA lookup results
- * @param lsoaCodes - Array of LSOA codes returned from PostGIS query
+ * Determine coverage status based on LSOA and Data Zone lookup results
+ * @param lsoaCodes - Array of LSOA codes returned from PostGIS query (England/Wales)
+ * @param dataZoneCodes - Array of Data Zone codes returned from PostGIS query (Scotland)
  * @param searchLocation - The location being searched
  * @returns Coverage status indicating if area is covered
  */
 export function determineCoverageStatus(
   lsoaCodes: string[],
+  dataZoneCodes: string[],
   searchLocation: { lat: number; lng: number; place_name?: string }
 ): CoverageStatus {
-  if (lsoaCodes.length === 0) {
-    // No LSOAs found - either outside UK or outside current coverage
+  const totalCodes = lsoaCodes.length + dataZoneCodes.length;
+
+  if (totalCodes === 0) {
+    // No areas found - either outside UK or outside current coverage
     const detectedRegion = detectRegionFromCoordinates(
       searchLocation.lat,
       searchLocation.lng
@@ -57,33 +63,30 @@ export function determineCoverageStatus(
     return {
       isFullyCovered: false,
       isPartiallyCovered: false,
+      isMixedRegion: false,
       coveredRegions: [],
       primaryRegion: detectedRegion,
       lsoaCount: 0,
+      dataZoneCount: 0,
     };
   }
 
-  // Analyze LSOA codes to determine coverage
-  const regions = new Set<CoverageRegion>();
-  lsoaCodes.forEach((code) => {
-    if (REGION_PATTERNS.england_wales.test(code)) {
-      regions.add('england_wales');
-    } else if (REGION_PATTERNS.scotland.test(code)) {
-      regions.add('scotland');
-    } else if (REGION_PATTERNS.northern_ireland.test(code)) {
-      regions.add('northern_ireland');
-    }
-  });
+  const hasEnglandWales = lsoaCodes.length > 0;
+  const hasScotland = dataZoneCodes.length > 0;
+  const isMixed = hasEnglandWales && hasScotland;
 
-  const coveredRegions = Array.from(regions);
-  const hasEnglandWales = coveredRegions.includes('england_wales');
+  const regions: CoverageRegion[] = [];
+  if (hasEnglandWales) regions.push('england_wales');
+  if (hasScotland) regions.push('scotland');
 
   return {
-    isFullyCovered: hasEnglandWales && coveredRegions.length === 1,
-    isPartiallyCovered: hasEnglandWales && coveredRegions.length > 1,
-    coveredRegions,
-    primaryRegion: coveredRegions[0] || null,
+    isFullyCovered: true, // Both regions are now covered
+    isPartiallyCovered: false,
+    isMixedRegion: isMixed,
+    coveredRegions: regions,
+    primaryRegion: isMixed ? null : regions[0],
     lsoaCount: lsoaCodes.length,
+    dataZoneCount: dataZoneCodes.length,
   };
 }
 
@@ -146,16 +149,15 @@ export function getCoverageMessages(
       };
     }
 
-    // Outside coverage - Scotland
+    // Outside coverage - Scotland (now covered, but this handles edge cases)
     if (region === 'scotland') {
       return {
-        searchHint: 'Scotland coverage coming soon',
-        validationError: 'Scotland is not yet covered by our demographic data',
-        emptyStateTitle: 'Scotland Coverage Coming Soon',
+        searchHint: null,
+        validationError: 'No residential areas found in this location',
+        emptyStateTitle: 'No Residential Areas Found',
         emptyStateDescription:
-          "Our demographic data currently covers England and Wales. We're working to expand coverage to Scotland.",
-        futureExpansion:
-          "We're actively working to bring Census 2022 data for Scotland to the platform. Check back soon for updates!",
+          'This location appears to be in an unpopulated area (such as open water, parks, or rural land). Please try searching in a town or city.',
+        futureExpansion: null,
       };
     }
 
@@ -177,12 +179,23 @@ export function getCoverageMessages(
       searchHint: 'This location may be outside the UK',
       validationError: 'This location is outside our coverage area',
       emptyStateTitle: 'Location Not Covered',
-      emptyStateDescription: `Demographic data for ${locationName} is not available. Our service currently covers England and Wales.`,
+      emptyStateDescription: `Demographic data for ${locationName} is not available. Our service currently covers England, Wales, and Scotland.`,
       futureExpansion: null,
     };
   }
 
-  // Partial coverage
+  // Mixed region (England/Scotland border)
+  if (status.isMixedRegion) {
+    return {
+      searchHint: 'Your search area spans England and Scotland',
+      validationError: null, // Not an error - allow the search
+      emptyStateTitle: '',
+      emptyStateDescription: '',
+      futureExpansion: null,
+    };
+  }
+
+  // Partial coverage (edge case - shouldn't happen with current implementation)
   if (status.isPartiallyCovered) {
     return {
       searchHint: 'Your search area may cross regional boundaries',
@@ -210,6 +223,6 @@ export function getCoverageMessages(
 export function isLikelyOutsideCoverage(lat: number, lng: number): boolean {
   const region = detectRegionFromCoordinates(lat, lng);
 
-  // If it's in Scotland or Northern Ireland, it's outside current coverage
-  return region === 'scotland' || region === 'northern_ireland';
+  // Only Northern Ireland is outside current coverage
+  return region === 'northern_ireland';
 }

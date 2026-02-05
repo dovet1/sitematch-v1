@@ -68,6 +68,7 @@ export function SiteDemographerMobile() {
     rawDemographicsData,
     isochroneGeometry,
     lsoaTooltipData,
+    dataZoneTooltipData,
     loading,
     error,
     errorType,
@@ -81,7 +82,10 @@ export function SiteDemographerMobile() {
   const {
     selectedLsoaCodes,
     allLsoaCodes,
+    selectedDataZoneCodes,
+    allDataZoneCodes,
     toggleLsoa,
+    toggleDataZone,
     initializeSelection,
     reset: resetSelection,
   } = useLsoaSelection();
@@ -215,8 +219,8 @@ export function SiteDemographerMobile() {
 
     const result = await analyze(selectedLocation, measurementMode, measurementValue);
 
-    if (result.success && result.lsoaCodes) {
-      initializeSelection(result.lsoaCodes);
+    if (result.success) {
+      initializeSelection(result.lsoaCodes || [], result.dataZoneCodes || []);
       // Expand sheet to show results
       setSheetHeight('halfway');
     }
@@ -303,8 +307,12 @@ export function SiteDemographerMobile() {
             measurementValue={measurementValue}
             selectedLsoaCodes={selectedLsoaCodes}
             allLsoaCodes={allLsoaCodes}
+            selectedDataZoneCodes={selectedDataZoneCodes}
+            allDataZoneCodes={allDataZoneCodes}
             onLsoaToggle={toggleLsoa}
+            onDataZoneToggle={toggleDataZone}
             lsoaTooltipData={lsoaTooltipData}
+            dataZoneTooltipData={dataZoneTooltipData}
             showTraffic={false}
             showCountPoints={false}
             isMobile={true}

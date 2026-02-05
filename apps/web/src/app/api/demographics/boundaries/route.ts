@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLSOACodesInRadiusWithPolygons, getLSOACodesInIsochrone } from '@/lib/lsoa-boundaries-postgis';
+import { getAreaCodesInRadius, getAreaCodesInPolygon } from '@/lib/geographic-boundaries';
 import { fetchIsochrone, getModeProfile } from '@/lib/mapbox-isochrone';
 import { determineCoverageStatus } from '@/lib/coverage-utils';
 
@@ -9,9 +9,9 @@ type MeasurementMode = 'distance' | 'drive_time' | 'walk_time';
 
 /**
  * POST /api/demographics/boundaries
- * Returns LSOA codes and optional isochrone geometry for a given location and radius/isochrone
- * Note: Map visualization now uses Mapbox vector tileset (dovet.3xo625k3)
- * This endpoint only returns the list of LSOA codes for demographic data fetching
+ * Returns LSOA codes, Data Zone codes, and optional isochrone geometry for a given location and radius/isochrone
+ * Note: Map visualization uses Mapbox vector tilesets for both LSOAs and Data Zones
+ * This endpoint returns lists of codes for demographic data fetching from both regions
  */
 export async function POST(request: NextRequest) {
   try {
@@ -40,9 +40,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Fetching LSOA codes for lat=${lat}, lng=${lng}, measurement=${measurement_mode}, value=${radius_miles}`);
+    console.log(`Fetching area codes for lat=${lat}, lng=${lng}, measurement=${measurement_mode}, value=${radius_miles}`);
 
-    let lsoaCodes: string[];
+    let result: { lsoa_codes: string[]; data_zone_codes: string[]; is_mixed: boolean };
     let isochroneGeometry: any = null;
 
     // Use isochrone for time-based measurements, circular radius for distance
@@ -53,29 +53,40 @@ export async function POST(request: NextRequest) {
       const isochroneResult = await fetchIsochrone(lat, lng, radius_miles, profile);
 
       isochroneGeometry = isochroneResult.geometry;
-      lsoaCodes = await getLSOACodesInIsochrone(isochroneResult.geometry.coordinates);
 
-      console.log(`[Boundaries API] Isochrone returned ${lsoaCodes.length} LSOA codes`);
+      // Convert isochrone coordinates to WKT format
+      const rings = isochroneResult.geometry.coordinates.map((ring: number[][]) =>
+        `(${ring.map(coord => `${coord[0]} ${coord[1]}`).join(', ')})`
+      ).join(', ');
+      const polygonWKT = `POLYGON(${rings})`;
+
+      result = await getAreaCodesInPolygon(polygonWKT);
+
+      console.log(`[Boundaries API] Isochrone returned ${result.lsoa_codes.length} LSOAs, ${result.data_zone_codes.length} Data Zones`);
     } else {
       // Distance mode - use circular radius
-      lsoaCodes = await getLSOACodesInRadiusWithPolygons(lat, lng, radius_miles);
-      console.log(`[Boundaries API] Circular radius returned ${lsoaCodes.length} LSOA codes`);
+      result = await getAreaCodesInRadius(lat, lng, radius_miles);
+      console.log(`[Boundaries API] Circular radius returned ${result.lsoa_codes.length} LSOAs, ${result.data_zone_codes.length} Data Zones`);
     }
 
-    console.log(`Returning ${lsoaCodes.length} LSOA codes`);
+    console.log(`Returning ${result.lsoa_codes.length} LSOAs, ${result.data_zone_codes.length} Data Zones`);
     console.log(`[Boundaries API] Returning isochrone geometry:`, isochroneGeometry ? 'YES' : 'NO');
     if (isochroneGeometry) {
       console.log(`[Boundaries API] Isochrone type: ${isochroneGeometry.type}, coords length: ${isochroneGeometry.coordinates?.[0]?.length}`);
     }
 
     // Determine coverage status
-    const coverageStatus = determineCoverageStatus(lsoaCodes, {
-      lat,
-      lng,
-      place_name: place_name || 'Selected location',
-    });
+    const coverageStatus = determineCoverageStatus(
+      result.lsoa_codes,
+      result.data_zone_codes,
+      {
+        lat,
+        lng,
+        place_name: place_name || 'Selected location',
+      }
+    );
 
-    // Return coverage error if outside England & Wales
+    // Return coverage error if outside England, Wales, and Scotland
     if (!coverageStatus.isFullyCovered) {
       console.log(`[Boundaries API] Coverage unavailable:`, coverageStatus);
       return NextResponse.json(
@@ -83,14 +94,17 @@ export async function POST(request: NextRequest) {
           error: 'COVERAGE_UNAVAILABLE',
           error_type: 'coverage',
           coverage_status: coverageStatus,
-          lsoa_codes: lsoaCodes,
+          lsoa_codes: result.lsoa_codes,
+          data_zone_codes: result.data_zone_codes,
         },
         { status: 422 }
       );
     }
 
     return NextResponse.json({
-      lsoa_codes: lsoaCodes,
+      lsoa_codes: result.lsoa_codes,
+      data_zone_codes: result.data_zone_codes,
+      is_mixed: result.is_mixed,
       isochrone_geometry: isochroneGeometry,
       coverage_status: coverageStatus,
     });
@@ -99,7 +113,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error: 'Failed to fetch LSOA codes',
+        error: 'Failed to fetch area codes',
         error_type: 'server',
         details: error instanceof Error ? error.message : 'Unknown error',
       },

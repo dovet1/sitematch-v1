@@ -30,8 +30,12 @@ interface DemographicsMapProps {
   measurementValue: number;
   selectedLsoaCodes: Set<string>;
   allLsoaCodes: string[];
+  selectedDataZoneCodes: Set<string>;
+  allDataZoneCodes: string[];
   onLsoaToggle: (code: string) => void;
+  onDataZoneToggle: (code: string) => void;
   lsoaTooltipData: Record<string, LSOATooltipData>;
+  dataZoneTooltipData: Record<string, LSOATooltipData>;
   showTraffic?: boolean; // Optional toggle for traffic layer visibility
   showCountPoints?: boolean; // Optional toggle for DfT count points visibility
   isMobile?: boolean; // Optional flag for mobile layout adjustments
@@ -46,8 +50,12 @@ export function DemographicsMap({
   measurementValue,
   selectedLsoaCodes,
   allLsoaCodes,
+  selectedDataZoneCodes,
+  allDataZoneCodes,
   onLsoaToggle,
+  onDataZoneToggle,
   lsoaTooltipData,
+  dataZoneTooltipData,
   showTraffic = false,
   isMobile = false,
   showCountPoints = false,
@@ -344,7 +352,85 @@ export function DemographicsMap({
         },
       }, firstSymbolId);
 
-      // Add traffic layer immediately after LSOA layers
+      // Remove existing Data Zone layers and source
+      if (map.current.getSource('dz-boundaries')) {
+        const dzLayersToRemove = [
+          'dz-fill-selected',
+          'dz-fill-deselected',
+          'dz-outline-selected',
+          'dz-outline-deselected',
+        ];
+        dzLayersToRemove.forEach(layerId => {
+          if (map.current?.getLayer(layerId)) {
+            map.current.removeLayer(layerId);
+          }
+        });
+        map.current.removeSource('dz-boundaries');
+      }
+
+      // Add Data Zone boundaries from Mapbox vector tileset (Scotland)
+      if (allDataZoneCodes.length > 0) {
+        map.current.addSource('dz-boundaries', {
+          type: 'vector',
+          url: 'mapbox://dovet.d87na1g2',
+        });
+
+        // Add Data Zone fill layer for SELECTED Data Zones
+        map.current.addLayer({
+          id: 'dz-fill-selected',
+          type: 'fill',
+          source: 'dz-boundaries',
+          'source-layer': 'data_zones_for_mapbox-7be3nu',
+          layout: {},
+          filter: ['in', ['get', 'code'], ['literal', []]],
+          paint: {
+            'fill-color': '#9333ea',   // Selected: purple (distinct from E&W blue)
+            'fill-opacity': 0.3,
+          },
+        }, firstSymbolId);
+
+        // Add Data Zone fill layer for DESELECTED Data Zones
+        map.current.addLayer({
+          id: 'dz-fill-deselected',
+          type: 'fill',
+          source: 'dz-boundaries',
+          'source-layer': 'data_zones_for_mapbox-7be3nu',
+          layout: {},
+          filter: ['in', ['get', 'code'], ['literal', []]],
+          paint: {
+            'fill-color': '#64748b',   // Deselected: muted slate gray
+            'fill-opacity': 0.15,
+          },
+        }, firstSymbolId);
+
+        // Add Data Zone outline layer for SELECTED Data Zones
+        map.current.addLayer({
+          id: 'dz-outline-selected',
+          type: 'line',
+          source: 'dz-boundaries',
+          'source-layer': 'data_zones_for_mapbox-7be3nu',
+          filter: ['in', ['get', 'code'], ['literal', []]],
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': 2.5,  // Selected: thicker
+          },
+        }, firstSymbolId);
+
+        // Add Data Zone outline layer for DESELECTED Data Zones
+        map.current.addLayer({
+          id: 'dz-outline-deselected',
+          type: 'line',
+          source: 'dz-boundaries',
+          'source-layer': 'data_zones_for_mapbox-7be3nu',
+          filter: ['in', ['get', 'code'], ['literal', []]],
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': 1.5,  // Deselected: thinner
+          },
+        }, firstSymbolId);
+      }
+
+      // Add traffic layer immediately after LSOA and Data Zone layers
       // Only add if source doesn't already exist
       if (!map.current.getSource(TRAFFIC_SOURCE_ID)) {
         try {
@@ -450,7 +536,7 @@ export function DemographicsMap({
     } else {
       map.current.once('idle', tryAddBoundaries);
     }
-  }, [mapLoaded]);
+  }, [mapLoaded, allDataZoneCodes]);
 
   // Toggle traffic layer visibility based on showTraffic prop
   useEffect(() => {
@@ -582,8 +668,11 @@ export function DemographicsMap({
         return;
       }
 
-      // Check if layers exist
-      if (!map.current.getLayer('lsoa-fill-selected') || !map.current.getLayer('lsoa-fill-deselected')) {
+      // Check if LSOA layers exist
+      const lsoaLayersExist = map.current.getLayer('lsoa-fill-selected') && map.current.getLayer('lsoa-fill-deselected');
+      const dzLayersExist = map.current.getLayer('dz-fill-selected') && map.current.getLayer('dz-fill-deselected');
+
+      if (!lsoaLayersExist && !dzLayersExist) {
         // Try again after a short delay
         timeoutId = setTimeout(checkAndAttachHandlers, 100);
         return;
@@ -593,34 +682,46 @@ export function DemographicsMap({
         return;
       }
 
-      // Click handler to toggle LSOA selection
+      // Click handler to toggle LSOA/Data Zone selection
       const handleClick = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
         if (!e.features || e.features.length === 0) return;
 
         const feature = e.features[0];
         const lsoaCode = feature.properties?.LSOA21CD;
+        const dzCode = feature.properties?.code;
 
         if (lsoaCode) {
           onLsoaToggle(lsoaCode);
+        } else if (dzCode) {
+          onDataZoneToggle(dzCode);
         }
       };
 
       // Hover handlers with info box
-      let currentLsoaCode: string | null = null;
+      let currentCode: string | null = null;
 
       const updateHoverInfo = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
         if (!map.current || !e.features || e.features.length === 0) return;
 
         const feature = e.features[0];
         const lsoaCode = feature.properties?.LSOA21CD;
+        const dzCode = feature.properties?.code;
+        const code = lsoaCode || dzCode;
 
-        // Only update if LSOA has changed
-        if (lsoaCode === currentLsoaCode) return;
-        currentLsoaCode = lsoaCode;
+        // Only update if code has changed
+        if (code === currentCode) return;
+        currentCode = code;
 
-        const tooltipInfo = lsoaTooltipData[lsoaCode];
-        if (tooltipInfo) {
-          setHoveredLsoa(tooltipInfo);
+        if (lsoaCode) {
+          const tooltipInfo = lsoaTooltipData[lsoaCode];
+          if (tooltipInfo) {
+            setHoveredLsoa(tooltipInfo);
+          }
+        } else if (dzCode) {
+          const tooltipInfo = dataZoneTooltipData[dzCode];
+          if (tooltipInfo) {
+            setHoveredLsoa(tooltipInfo);
+          }
         }
       };
 
@@ -639,16 +740,18 @@ export function DemographicsMap({
           map.current.getCanvas().style.cursor = '';
         }
         setHoveredLsoa(null);
-        currentLsoaCode = null;
+        currentCode = null;
       };
 
-      // Add event listeners to both selected and deselected layers
-      const lsoaLayers = ['lsoa-fill-selected', 'lsoa-fill-deselected'];
-      lsoaLayers.forEach(layerId => {
-        map.current?.on('click', layerId, handleClick);
-        map.current?.on('mouseenter', layerId, handleMouseEnter);
-        map.current?.on('mousemove', layerId, handleMouseMove);
-        map.current?.on('mouseleave', layerId, handleMouseLeave);
+      // Add event listeners to all boundary layers
+      const boundaryLayers = ['lsoa-fill-selected', 'lsoa-fill-deselected', 'dz-fill-selected', 'dz-fill-deselected'];
+      boundaryLayers.forEach(layerId => {
+        if (map.current?.getLayer(layerId)) {
+          map.current?.on('click', layerId, handleClick);
+          map.current?.on('mouseenter', layerId, handleMouseEnter);
+          map.current?.on('mousemove', layerId, handleMouseMove);
+          map.current?.on('mouseleave', layerId, handleMouseLeave);
+        }
       });
 
       handlersAttached.current = true;
@@ -656,11 +759,13 @@ export function DemographicsMap({
       // Store cleanup function
       handlerCleanup = () => {
         if (map.current) {
-          lsoaLayers.forEach(layerId => {
-            map.current?.off('click', layerId, handleClick);
-            map.current?.off('mouseenter', layerId, handleMouseEnter);
-            map.current?.off('mousemove', layerId, handleMouseMove);
-            map.current?.off('mouseleave', layerId, handleMouseLeave);
+          boundaryLayers.forEach(layerId => {
+            if (map.current?.getLayer(layerId)) {
+              map.current?.off('click', layerId, handleClick);
+              map.current?.off('mouseenter', layerId, handleMouseEnter);
+              map.current?.off('mousemove', layerId, handleMouseMove);
+              map.current?.off('mouseleave', layerId, handleMouseLeave);
+            }
           });
         }
         handlersAttached.current = false;
@@ -673,44 +778,64 @@ export function DemographicsMap({
       if (timeoutId) clearTimeout(timeoutId);
       if (handlerCleanup) handlerCleanup();
     };
-  }, [mapLoaded, onLsoaToggle, lsoaTooltipData]);
+  }, [mapLoaded, onLsoaToggle, onDataZoneToggle, lsoaTooltipData, dataZoneTooltipData]);
 
   // Update filters when selection changes
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
     const updateFilters = () => {
-      if (!map.current ||
-          !map.current.getLayer('lsoa-fill-selected') ||
-          !map.current.getLayer('lsoa-fill-deselected')) {
-        // Layers not ready yet, try again after a short delay
-        setTimeout(updateFilters, 50);
-        return;
+      if (!map.current) return;
+
+      // Update LSOA filters
+      if (map.current.getLayer('lsoa-fill-selected') && map.current.getLayer('lsoa-fill-deselected')) {
+        console.log('[DemographicsMap] Updating filters for', allLsoaCodes.length, 'LSOAs');
+        console.log('[DemographicsMap] Selected count:', selectedLsoaCodes.size);
+
+        // Convert Sets to Arrays for filter expressions
+        const selectedArray = Array.from(selectedLsoaCodes);
+        const deselectedArray = allLsoaCodes.filter(code => !selectedLsoaCodes.has(code));
+
+        console.log('[DemographicsMap] Selected LSOAs:', selectedArray.length);
+        console.log('[DemographicsMap] Deselected LSOAs:', deselectedArray.length);
+
+        // Update selected layers to show only selected LSOAs
+        map.current.setFilter('lsoa-fill-selected', ['in', ['get', 'LSOA21CD'], ['literal', selectedArray]]);
+        map.current.setFilter('lsoa-outline-selected', ['in', ['get', 'LSOA21CD'], ['literal', selectedArray]]);
+
+        // Update deselected layers to show only deselected LSOAs
+        map.current.setFilter('lsoa-fill-deselected', ['in', ['get', 'LSOA21CD'], ['literal', deselectedArray]]);
+        map.current.setFilter('lsoa-outline-deselected', ['in', ['get', 'LSOA21CD'], ['literal', deselectedArray]]);
+
+        console.log('[DemographicsMap] LSOA filters updated');
       }
 
-      console.log('[DemographicsMap] Updating filters for', allLsoaCodes.length, 'LSOAs');
-      console.log('[DemographicsMap] Selected count:', selectedLsoaCodes.size);
+      // Update Data Zone filters
+      if (map.current.getLayer('dz-fill-selected') && map.current.getLayer('dz-fill-deselected')) {
+        console.log('[DemographicsMap] Updating filters for', allDataZoneCodes.length, 'Data Zones');
+        console.log('[DemographicsMap] Selected count:', selectedDataZoneCodes.size);
 
-      // Convert Sets to Arrays for filter expressions
-      const selectedArray = Array.from(selectedLsoaCodes);
-      const deselectedArray = allLsoaCodes.filter(code => !selectedLsoaCodes.has(code));
+        // Convert Sets to Arrays for filter expressions
+        const selectedDZArray = Array.from(selectedDataZoneCodes);
+        const deselectedDZArray = allDataZoneCodes.filter(code => !selectedDataZoneCodes.has(code));
 
-      console.log('[DemographicsMap] Selected LSOAs:', selectedArray.length);
-      console.log('[DemographicsMap] Deselected LSOAs:', deselectedArray.length);
+        console.log('[DemographicsMap] Selected Data Zones:', selectedDZArray.length);
+        console.log('[DemographicsMap] Deselected Data Zones:', deselectedDZArray.length);
 
-      // Update selected layers to show only selected LSOAs
-      map.current.setFilter('lsoa-fill-selected', ['in', ['get', 'LSOA21CD'], ['literal', selectedArray]]);
-      map.current.setFilter('lsoa-outline-selected', ['in', ['get', 'LSOA21CD'], ['literal', selectedArray]]);
+        // Update selected layers to show only selected Data Zones
+        map.current.setFilter('dz-fill-selected', ['in', ['get', 'code'], ['literal', selectedDZArray]]);
+        map.current.setFilter('dz-outline-selected', ['in', ['get', 'code'], ['literal', selectedDZArray]]);
 
-      // Update deselected layers to show only deselected LSOAs
-      map.current.setFilter('lsoa-fill-deselected', ['in', ['get', 'LSOA21CD'], ['literal', deselectedArray]]);
-      map.current.setFilter('lsoa-outline-deselected', ['in', ['get', 'LSOA21CD'], ['literal', deselectedArray]]);
+        // Update deselected layers to show only deselected Data Zones
+        map.current.setFilter('dz-fill-deselected', ['in', ['get', 'code'], ['literal', deselectedDZArray]]);
+        map.current.setFilter('dz-outline-deselected', ['in', ['get', 'code'], ['literal', deselectedDZArray]]);
 
-      console.log('[DemographicsMap] Filters updated');
+        console.log('[DemographicsMap] Data Zone filters updated');
+      }
     };
 
     updateFilters();
-  }, [selectedLsoaCodes, mapLoaded, allLsoaCodes]);
+  }, [selectedLsoaCodes, selectedDataZoneCodes, mapLoaded, allLsoaCodes, allDataZoneCodes]);
 
   // Add count points click handlers
   useEffect(() => {

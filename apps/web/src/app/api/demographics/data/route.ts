@@ -5,56 +5,101 @@ import {
   extractNationalAverages,
   getAggregatedAffluence
 } from '@/lib/supabase-census-data';
+import {
+  getAggregatedDataZoneMetrics,
+  convertAggregatedToDataZoneData,
+  extractNationalAverages as extractScotlandNationalAverages,
+  getAggregatedAffluence as getScotlandAffluence
+} from '@/lib/supabase-scotland-census-data';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/demographics/data
  * Fetches aggregated demographics data for given geographic areas from Supabase
+ * Supports both LSOAs (England/Wales) and Data Zones (Scotland)
  * Uses server-side aggregation for better performance and smaller payload
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { geography_codes } = body;
+    const { lsoa_codes, data_zone_codes } = body;
 
-    // Validation
-    if (!Array.isArray(geography_codes) || geography_codes.length === 0) {
+    // Validation - at least one array must be provided
+    const hasLSOAs = Array.isArray(lsoa_codes) && lsoa_codes.length > 0;
+    const hasDataZones = Array.isArray(data_zone_codes) && data_zone_codes.length > 0;
+
+    if (!hasLSOAs && !hasDataZones) {
       return NextResponse.json(
-        { error: 'Invalid input: geography_codes must be a non-empty array' },
+        { error: 'Invalid input: lsoa_codes or data_zone_codes must be a non-empty array' },
         { status: 400 }
       );
     }
 
-    console.log(`Fetching aggregated demographics for ${geography_codes.length} LSOAs from Supabase`);
+    let englandWalesData = null;
+    let scotlandData = null;
 
-    // Fetch both census metrics and affluence data in parallel
-    const [aggregatedMetrics, affluenceData] = await Promise.all([
-      getAggregatedLSOAMetrics(geography_codes),
-      getAggregatedAffluence(geography_codes),
-    ]);
+    // Fetch England/Wales data
+    if (hasLSOAs) {
+      console.log(`Fetching aggregated demographics for ${lsoa_codes.length} LSOAs from Supabase`);
 
-    // Convert to single aggregated LSOAData structure for backward compatibility
-    const aggregatedData = convertAggregatedToLSOAData(aggregatedMetrics);
+      const [aggregatedMetrics, affluenceData] = await Promise.all([
+        getAggregatedLSOAMetrics(lsoa_codes),
+        getAggregatedAffluence(lsoa_codes),
+      ]);
 
-    // Extract national averages from aggregated metrics
-    const nationalAverages = extractNationalAverages(aggregatedMetrics);
+      const aggregatedData = convertAggregatedToLSOAData(aggregatedMetrics);
+      const nationalAverages = extractNationalAverages(aggregatedMetrics);
 
-    // Add affluence data if available
-    if (affluenceData) {
-      aggregatedData.affluence = affluenceData;
+      if (affluenceData) {
+        aggregatedData.affluence = affluenceData;
+      }
+
+      englandWalesData = {
+        demographics: aggregatedData,
+        national_averages: nationalAverages,
+        area_count: lsoa_codes.length,
+        census_year: 2021,
+      };
+
+      console.log(`Successfully loaded ${aggregatedMetrics.length} aggregated metrics for ${lsoa_codes.length} LSOAs`);
     }
 
-    // Return as single "aggregated" LSOA for frontend with national averages
-    const response = {
-      by_lsoa: {
-        aggregated: aggregatedData,
-      },
-      national_averages: nationalAverages,
-    };
+    // Fetch Scotland data
+    if (hasDataZones) {
+      console.log(`Fetching aggregated demographics for ${data_zone_codes.length} Data Zones from Supabase`);
 
-    console.log(`Successfully loaded ${aggregatedMetrics.length} aggregated metrics${affluenceData ? ' and affluence data' : ''} for ${geography_codes.length} LSOAs`);
-    console.log(`Extracted ${Object.keys(nationalAverages).length} national averages`);
+      const [aggregatedMetrics, affluenceData] = await Promise.all([
+        getAggregatedDataZoneMetrics(data_zone_codes),
+        getScotlandAffluence(data_zone_codes),
+      ]);
+
+      const aggregatedData = convertAggregatedToDataZoneData(aggregatedMetrics);
+      const nationalAverages = extractScotlandNationalAverages(aggregatedMetrics);
+
+      if (affluenceData) {
+        aggregatedData.affluence = {
+          avg_raw_score: affluenceData.avg_raw_score,
+          lsoa_count: affluenceData.dz_count, // Map dz_count to lsoa_count for consistency
+        };
+      }
+
+      scotlandData = {
+        demographics: aggregatedData,
+        national_averages: nationalAverages,
+        area_count: data_zone_codes.length,
+        census_year: 2022,
+      };
+
+      console.log(`Successfully loaded ${aggregatedMetrics.length} aggregated metrics for ${data_zone_codes.length} Data Zones`);
+    }
+
+    // Return regional data
+    const response = {
+      england_wales: englandWalesData,
+      scotland: scotlandData,
+      is_mixed: hasLSOAs && hasDataZones,
+    };
 
     return NextResponse.json(response);
   } catch (error) {

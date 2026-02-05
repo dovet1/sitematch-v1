@@ -15,6 +15,7 @@ export function useDemographicsData() {
   const [rawDemographicsData, setRawDemographicsData] = useState<Record<string, any> | null>(null);
   const [isochroneGeometry, setIsochroneGeometry] = useState<any>(null);
   const [lsoaTooltipData, setLsoaTooltipData] = useState<Record<string, LSOATooltipData>>({});
+  const [dataZoneTooltipData, setDataZoneTooltipData] = useState<Record<string, LSOATooltipData>>({});
   const [nationalAverages, setNationalAverages] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +106,8 @@ export function useDemographicsData() {
       }
 
       const boundariesData = await boundariesResponse.json();
-      const lsoaCodes = boundariesData.lsoa_codes;
+      const lsoaCodes = boundariesData.lsoa_codes || [];
+      const dataZoneCodes = boundariesData.data_zone_codes || [];
 
       // Get demographics data and tooltip data in parallel
       const [dataResponse, tooltipResponse] = await Promise.all([
@@ -113,14 +115,16 @@ export function useDemographicsData() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            geography_codes: lsoaCodes,
+            lsoa_codes: lsoaCodes,
+            data_zone_codes: dataZoneCodes,
           }),
         }),
         fetch('/api/demographics/tooltip-data', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            geography_codes: lsoaCodes,
+            lsoa_codes: lsoaCodes,
+            data_zone_codes: dataZoneCodes,
           }),
         }),
       ]);
@@ -132,18 +136,27 @@ export function useDemographicsData() {
       const demographicsData = await dataResponse.json();
       const tooltipData = await tooltipResponse.json();
 
-      // Store data
-      setRawDemographicsData(demographicsData.by_lsoa);
-      setLsoaTooltipData(tooltipData.tooltip_data || {});
+      // Store data - handle both regions
+      setRawDemographicsData(demographicsData);
+      setLsoaTooltipData(tooltipData.lsoa_tooltip_data || {});
+      setDataZoneTooltipData(tooltipData.dz_tooltip_data || {});
 
-      // Store national averages
-      if (demographicsData.national_averages) {
-        setNationalAverages(demographicsData.national_averages);
-        console.log('[useDemographicsData] Loaded', Object.keys(demographicsData.national_averages).length, 'national averages');
+      // Store national averages (for single-region searches, use that region's averages)
+      if (demographicsData.is_mixed) {
+        // For mixed searches, we don't use a single national average
+        // This will be handled in the UI layer
+        setNationalAverages({});
+      } else if (demographicsData.england_wales) {
+        setNationalAverages(demographicsData.england_wales.national_averages || {});
+        console.log('[useDemographicsData] Loaded', Object.keys(demographicsData.england_wales.national_averages || {}).length, 'England/Wales national averages');
+      } else if (demographicsData.scotland) {
+        setNationalAverages(demographicsData.scotland.national_averages || {});
+        console.log('[useDemographicsData] Loaded', Object.keys(demographicsData.scotland.national_averages || {}).length, 'Scotland national averages');
       }
 
       // Store isochrone geometry
       console.log('[useDemographicsData] Received LSOA codes:', lsoaCodes.length);
+      console.log('[useDemographicsData] Received Data Zone codes:', dataZoneCodes.length);
       console.log('[useDemographicsData] Isochrone geometry:', boundariesData.isochrone_geometry);
       setIsochroneGeometry(boundariesData.isochrone_geometry);
 
@@ -151,6 +164,7 @@ export function useDemographicsData() {
 
       return {
         lsoaCodes,
+        dataZoneCodes,
         success: true,
       };
     } catch (err) {
@@ -170,6 +184,7 @@ export function useDemographicsData() {
     setRawDemographicsData(null);
     setIsochroneGeometry(null);
     setLsoaTooltipData({});
+    setDataZoneTooltipData({});
     setNationalAverages({});
     setError(null);
     setErrorType(null);
@@ -197,6 +212,7 @@ export function useDemographicsData() {
     rawDemographicsData,
     isochroneGeometry,
     lsoaTooltipData,
+    dataZoneTooltipData,
     nationalAverages,
     loading,
     error,
