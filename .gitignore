@@ -41,6 +41,12 @@ lerna-debug.log*
 *.swp
 *.swo
 
+# Claude Code local settings (may contain secrets)
+.claude/settings.local.json
+
+# Large GeoJSON files (use Mapbox instead)
+*.geojson
+
 # OS generated files
 .DS_Store
 .DS_Store?
