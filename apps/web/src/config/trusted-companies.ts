@@ -5,13 +5,18 @@
  * Add the domains of companies you want to display in the "Trusted by the biggest names in the industry" carousel
  */
 export const TRUSTED_COMPANY_DOMAINS = [
-  'mcdonalds.com',
-  'starbucks.com',
-  'costa.com',
-  'greggs.com',
-  'nandos.co.uk',
-  'wagamama.com',
-  'tesco.com',
-  'sainsburys.co.uk',
+  'cbre.co.uk',
+  'savills.co.uk',
+  'fmx.co.uk',
+  'vedragroup.co.uk',
+  'colliers.com',
+  'morganwilliams.co.uk',
+  'marksandspencer.com',
+  'knoops.com',
+  'fastnedcharging.com',
+  'travelodge.co.uk',
+  'flyingtiger.com',
+  'boxpark.co.uk',
+  'costa.co.uk',
   // Add more company domains here as needed
 ];

@@ -61,23 +61,29 @@ export function TrustedCompanies() {
                 className="relative flex-shrink-0 w-32 h-20 md:w-40 md:h-24 bg-white rounded-2xl md:rounded-3xl shadow-lg border-2 border-blue-200 flex items-center justify-center"
               >
                 <div className="flex items-center justify-center w-full h-full p-3 md:p-5">
-                  <img
-                    src={company.logo}
-                    alt={`${company.domain} logo`}
-                    className="max-w-full max-h-full object-contain"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const placeholder = target.nextElementSibling as HTMLElement;
-                      if (placeholder) {
-                        placeholder.style.display = 'flex';
-                      }
-                    }}
-                  />
-                  <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center hidden shadow-lg">
-                    <span className="text-white text-sm md:text-lg font-black">
-                      {company.domain.charAt(0).toUpperCase()}
-                    </span>
+                  <div className="w-full h-12 md:h-14 flex items-center justify-center">
+                    <img
+                      src={company.logo}
+                      alt={`${company.domain} logo`}
+                      className="max-w-full max-h-full object-contain"
+                      style={{
+                        height: '100%',
+                        width: 'auto'
+                      }}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const placeholder = target.nextElementSibling as HTMLElement;
+                        if (placeholder) {
+                          placeholder.style.display = 'flex';
+                        }
+                      }}
+                    />
+                    <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center hidden shadow-lg">
+                      <span className="text-white text-sm md:text-lg font-black">
+                        {company.domain.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
