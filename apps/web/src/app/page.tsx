@@ -4,6 +4,7 @@ import { DatabaseDifferentiators } from '@/components/homepage2/DatabaseDifferen
 import { FeaturedListings } from '@/components/homepage2/FeaturedListings';
 import { ToolsShowcase } from '@/components/homepage2/ToolsShowcase';
 import { FreePostingCTA } from '@/components/homepage2/FreePostingCTA';
+import { TrustedCompanies } from '@/components/homepage2/TrustedCompanies';
 import { Pricing } from '@/components/homepage2/Pricing';
 import { FAQ } from '@/components/homepage2/FAQ';
 import { FinalCTA } from '@/components/homepage2/FinalCTA';
@@ -14,6 +15,9 @@ export default function Home() {
     <main className="min-h-screen bg-white">
       {/* Hero Section */}
       <Hero />
+
+      {/* Trusted Companies */}
+      <TrustedCompanies />
 
       {/* The Problem */}
       <TheProblem />
