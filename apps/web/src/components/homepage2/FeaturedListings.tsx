@@ -8,7 +8,7 @@ import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { useAuth } from '@/contexts/auth-context';
 import { ListingModal } from '@/components/listings/ListingModal';
 import { motion } from 'framer-motion';
-import { isRecentlyVerified, getRelativeVerificationTime } from '@/lib/utils/date-formatting';
+import { getRelativeVerificationTime } from '@/lib/utils/date-formatting';
 
 interface Listing {
   id: string;
@@ -244,8 +244,8 @@ export function FeaturedListings() {
                       <span>{sizeRange}</span>
                     </div>
                   )}
-                  {/* Verification badge - only show if recently verified (within 90 days) */}
-                  {listing.verified_at && isRecentlyVerified(listing.verified_at) && (
+                  {/* Verification badge */}
+                  {listing.verified_at && (
                     <div className="flex items-start gap-3">
                       <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0 text-green-500" />
                       <span className="text-sm text-green-600">Verified {getRelativeVerificationTime(listing.verified_at)}</span>
