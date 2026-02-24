@@ -523,7 +523,21 @@ export async function GET(request: NextRequest) {
           listingsWithMatchingLocations.push(listing);
         }
       });
-      
+
+      // Sort matched results by verification date (most recent first)
+      listingsWithMatchingLocations.sort((a, b) => {
+        const aVerified = a.verified_at ? new Date(a.verified_at).getTime() : 0;
+        const bVerified = b.verified_at ? new Date(b.verified_at).getTime() : 0;
+        return bVerified - aVerified;
+      });
+
+      // Sort nationwide results by verification date as well
+      nationwideListings.sort((a, b) => {
+        const aVerified = a.verified_at ? new Date(a.verified_at).getTime() : 0;
+        const bVerified = b.verified_at ? new Date(b.verified_at).getTime() : 0;
+        return bVerified - aVerified;
+      });
+
       // Combine results: location-specific first, then nationwide
       results = [...listingsWithMatchingLocations, ...nationwideListings];
     }
@@ -531,6 +545,13 @@ export async function GET(request: NextRequest) {
     // Apply nationwide filtering if requested
     if (isNationwide) {
       results = results.filter(listing => listing.is_nationwide);
+
+      // Sort nationwide-only results by verification date
+      results.sort((a, b) => {
+        const aVerified = a.verified_at ? new Date(a.verified_at).getTime() : 0;
+        const bVerified = b.verified_at ? new Date(b.verified_at).getTime() : 0;
+        return bVerified - aVerified;
+      });
     }
 
     // Apply location-based filtering if coordinates are provided
@@ -594,8 +615,26 @@ export async function GET(request: NextRequest) {
         // Only listings with NO location data or invalid coordinates are treated as nationwide
       });
 
-      // Sort by distance (closest first)
-      listingsWithDistances.sort((a, b) => a.distance - b.distance);
+      // Sort by distance (primary) and verification date (secondary)
+      listingsWithDistances.sort((a, b) => {
+        // Primary sort: distance ascending (closest first)
+        if (a.distance !== b.distance) {
+          return a.distance - b.distance;
+        }
+
+        // Secondary sort: verified_at descending (most recent first)
+        // Unverified listings (null) get timestamp 0, appearing after verified listings
+        const aVerified = a.listing.verified_at ? new Date(a.listing.verified_at).getTime() : 0;
+        const bVerified = b.listing.verified_at ? new Date(b.listing.verified_at).getTime() : 0;
+        return bVerified - aVerified;
+      });
+
+      // Sort nationwide results by verification date as well
+      nationwideListings.sort((a, b) => {
+        const aVerified = a.verified_at ? new Date(a.verified_at).getTime() : 0;
+        const bVerified = b.verified_at ? new Date(b.verified_at).getTime() : 0;
+        return bVerified - aVerified;
+      });
 
       // Extract sorted listings and add distance metadata
       const sortedListingsWithinRadius = listingsWithDistances.map(item => ({
@@ -605,6 +644,15 @@ export async function GET(request: NextRequest) {
 
       // Combine results: location-specific (sorted by distance) first, then nationwide
       results = [...sortedListingsWithinRadius, ...nationwideListings];
+    }
+
+    // When no location filters are applied, sort by verification date
+    if (!location && !isNationwide && lat === null && lng === null) {
+      results.sort((a, b) => {
+        const aVerified = a.verified_at ? new Date(a.verified_at).getTime() : 0;
+        const bVerified = b.verified_at ? new Date(b.verified_at).getTime() : 0;
+        return bVerified - aVerified;
+      });
     }
 
     // Apply pagination
