@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
+import { VideoLightbox } from '@/components/VideoLightbox';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
 import { Loader2, PenTool, Mail } from 'lucide-react';
@@ -13,6 +14,10 @@ export function Hero() {
   const { user, profile } = useAuth();
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [showAlreadySubscribed, setShowAlreadySubscribed] = useState(false);
+  const [showVideoLightbox, setShowVideoLightbox] = useState(false);
+
+  // YouTube video ID for demo
+  const DEMO_VIDEO_ID = 'KBOKzYEdPm0';
 
   // Check if user has active subscription directly from profile
   const hasSubscription = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
@@ -118,12 +123,12 @@ export function Hero() {
                       <Link href="/pricing">Start Free Trial</Link>
                     </Button>
                     <Button
-                      asChild
+                      onClick={() => setShowVideoLightbox(true)}
                       size="lg"
                       variant="outline"
                       className="border-3 border-violet-300 hover:border-violet-400 hover:bg-violet-50 px-8 py-5 text-base md:text-lg font-black rounded-2xl hover:shadow-xl transition-all duration-300"
                     >
-                      <Link href="/pricing">View Pricing</Link>
+                      Watch Demo
                     </Button>
                   </>
                 )
@@ -135,12 +140,12 @@ export function Hero() {
                     </Button>
                   </TrialSignupModal>
                   <Button
-                    asChild
+                    onClick={() => setShowVideoLightbox(true)}
                     size="lg"
                     variant="outline"
                     className="border-3 border-violet-300 hover:border-violet-400 hover:bg-violet-50 px-8 py-5 text-base md:text-lg font-black rounded-2xl hover:shadow-xl transition-all duration-300"
                   >
-                    <Link href="/pricing">View Pricing</Link>
+                    Watch Demo
                   </Button>
                 </>
               )}
@@ -322,6 +327,14 @@ export function Hero() {
           subscriptionStatus="active"
         />
       )}
+
+      {/* Video Demo Modal */}
+      <VideoLightbox
+        isOpen={showVideoLightbox}
+        onClose={() => setShowVideoLightbox(false)}
+        videoId={DEMO_VIDEO_ID}
+        title="Product Demo"
+      />
     </section>
   );
 }
