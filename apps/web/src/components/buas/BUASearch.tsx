@@ -203,8 +203,6 @@ export function BUASearch({
                     <div className="font-medium text-gray-900 truncate">{bua.name}</div>
                     <div className="text-sm text-gray-600 mt-0.5">
                       Population: {bua.pop.toLocaleString()}
-                      <span className="text-gray-400 mx-2">•</span>
-                      {bua.pop_band}
                     </div>
                   </div>
                 </div>

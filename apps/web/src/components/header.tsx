@@ -75,8 +75,8 @@ export function Header() {
     },
     {
       href: '/buas',
-      label: 'BUA Explorer',
-      description: 'Explore built-up areas across GB',
+      label: 'Gap Analysis',
+      description: 'Find gaps in the market',
     }
   ]
 
