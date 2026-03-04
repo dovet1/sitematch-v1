@@ -371,6 +371,35 @@ export interface Database {
           updated_at?: string
         }
       }
+      built_up_areas: {
+        Row: {
+          gsscode: string
+          name: string
+          pop: number
+          pop_band: string
+          centroid_lat: number
+          centroid_lon: number
+          centroid: string | null
+          created_at: string | null
+        }
+        Insert: {
+          gsscode: string
+          name: string
+          pop: number
+          pop_band: string
+          centroid_lat: number
+          centroid_lon: number
+          created_at?: string | null
+        }
+        Update: {
+          gsscode?: string
+          name?: string
+          pop?: number
+          pop_band?: string
+          centroid_lat?: number
+          centroid_lon?: number
+        }
+      }
     }
   }
 }

@@ -72,6 +72,11 @@ export function Header() {
       href: '/new-dashboard/tools/site-demographer',
       label: 'SiteAnalyser',
       description: 'Analyse demographics around any site',
+    },
+    {
+      href: '/buas',
+      label: 'BUA Explorer',
+      description: 'Explore built-up areas across GB',
     }
   ]
 
