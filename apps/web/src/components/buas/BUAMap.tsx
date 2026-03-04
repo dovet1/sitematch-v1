@@ -182,7 +182,8 @@ export function BUAMap({
     } else {
       map.current.once('style.load', addBUALayer)
     }
-  }, [mapLoaded, onBUAClick])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapLoaded])
 
   // Update filter when population range changes
   useEffect(() => {
