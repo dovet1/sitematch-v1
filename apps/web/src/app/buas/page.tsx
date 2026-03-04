@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,7 @@ import { BUAMap } from '@/components/buas/BUAMap'
 import { BUASearch } from '@/components/buas/BUASearch'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 
 const MAX_POPULATION = 9787426 // London (largest BUA)
 const MIN_POPULATION = 0
@@ -17,9 +18,22 @@ export default function BUAsPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [center, setCenter] = useState<{ lat: number; lng: number } | undefined>()
-  const [minPop, setMinPop] = useState(MIN_POPULATION)
-  const [maxPop, setMaxPop] = useState(MAX_POPULATION)
+  const [minPopInput, setMinPopInput] = useState(MIN_POPULATION.toString())
+  const [maxPopInput, setMaxPopInput] = useState(MAX_POPULATION.toString())
+  const [minPopError, setMinPopError] = useState<string | null>(null)
+  const [maxPopError, setMaxPopError] = useState<string | null>(null)
   const [selectedBUA, setSelectedBUA] = useState<{ name: string; pop: number } | null>(null)
+
+  // Derived numeric values for map filtering
+  const minPop = useMemo(() => {
+    const num = Number(minPopInput)
+    return isNaN(num) || num < MIN_POPULATION ? MIN_POPULATION : Math.min(num, MAX_POPULATION)
+  }, [minPopInput])
+
+  const maxPop = useMemo(() => {
+    const num = Number(maxPopInput)
+    return isNaN(num) || num > MAX_POPULATION ? MAX_POPULATION : Math.max(num, MIN_POPULATION)
+  }, [maxPopInput])
 
   const handleBUASelect = (bua: {
     name: string
@@ -32,13 +46,95 @@ export default function BUAsPage() {
   }
 
   const handleMinPopChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? MIN_POPULATION : Number(e.target.value)
-    setMinPop(Math.max(MIN_POPULATION, Math.min(value, maxPop)))
+    const value = e.target.value
+    setMinPopInput(value)
+    // Clear error while typing
+    if (minPopError) setMinPopError(null)
   }
 
   const handleMaxPopChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? MAX_POPULATION : Number(e.target.value)
-    setMaxPop(Math.max(minPop, Math.min(value, MAX_POPULATION)))
+    const value = e.target.value
+    setMaxPopInput(value)
+    // Clear error while typing
+    if (maxPopError) setMaxPopError(null)
+  }
+
+  const handleMinPopBlur = () => {
+    const num = Number(minPopInput)
+    const maxNum = Number(maxPopInput)
+
+    // If empty, default to MIN_POPULATION
+    if (minPopInput.trim() === '') {
+      setMinPopInput(MIN_POPULATION.toString())
+      return
+    }
+
+    // Validate numeric
+    if (isNaN(num)) {
+      setMinPopError('Please enter a valid number')
+      setMinPopInput(MIN_POPULATION.toString())
+      return
+    }
+
+    // Validate range
+    if (num < MIN_POPULATION) {
+      setMinPopError(`Minimum is ${MIN_POPULATION.toLocaleString()}`)
+      setMinPopInput(MIN_POPULATION.toString())
+      return
+    }
+
+    if (num > MAX_POPULATION) {
+      setMinPopError(`Maximum is ${MAX_POPULATION.toLocaleString()}`)
+      setMinPopInput(MAX_POPULATION.toString())
+      return
+    }
+
+    // Validate min <= max
+    if (!isNaN(maxNum) && num > maxNum) {
+      setMinPopError('Minimum must be less than maximum')
+      return
+    }
+
+    setMinPopError(null)
+  }
+
+  const handleMaxPopBlur = () => {
+    const num = Number(maxPopInput)
+    const minNum = Number(minPopInput)
+
+    // If empty, default to MAX_POPULATION
+    if (maxPopInput.trim() === '') {
+      setMaxPopInput(MAX_POPULATION.toString())
+      return
+    }
+
+    // Validate numeric
+    if (isNaN(num)) {
+      setMaxPopError('Please enter a valid number')
+      setMaxPopInput(MAX_POPULATION.toString())
+      return
+    }
+
+    // Validate range
+    if (num < MIN_POPULATION) {
+      setMaxPopError(`Minimum is ${MIN_POPULATION.toLocaleString()}`)
+      setMaxPopInput(MIN_POPULATION.toString())
+      return
+    }
+
+    if (num > MAX_POPULATION) {
+      setMaxPopError(`Maximum is ${MAX_POPULATION.toLocaleString()}`)
+      setMaxPopInput(MAX_POPULATION.toString())
+      return
+    }
+
+    // Validate max >= min
+    if (!isNaN(minNum) && num < minNum) {
+      setMaxPopError('Maximum must be greater than minimum')
+      return
+    }
+
+    setMaxPopError(null)
   }
 
   const formatPopulation = (value: number): string => {
@@ -126,10 +222,17 @@ export default function BUAsPage() {
                       type="number"
                       min={MIN_POPULATION}
                       max={MAX_POPULATION}
-                      value={minPop}
+                      value={minPopInput}
                       onChange={handleMinPopChange}
-                      className="w-full"
+                      onBlur={handleMinPopBlur}
+                      className={cn(
+                        "w-full",
+                        minPopError && "border-red-500 focus-visible:ring-red-500"
+                      )}
                     />
+                    {minPopError && (
+                      <p className="text-xs text-red-600 mt-1">{minPopError}</p>
+                    )}
                   </div>
 
                   <div>
@@ -141,10 +244,17 @@ export default function BUAsPage() {
                       type="number"
                       min={MIN_POPULATION}
                       max={MAX_POPULATION}
-                      value={maxPop}
+                      value={maxPopInput}
                       onChange={handleMaxPopChange}
-                      className="w-full"
+                      onBlur={handleMaxPopBlur}
+                      className={cn(
+                        "w-full",
+                        maxPopError && "border-red-500 focus-visible:ring-red-500"
+                      )}
                     />
+                    {maxPopError && (
+                      <p className="text-xs text-red-600 mt-1">{maxPopError}</p>
+                    )}
                   </div>
                 </div>
 
@@ -287,10 +397,17 @@ export default function BUAsPage() {
                     type="number"
                     min={MIN_POPULATION}
                     max={MAX_POPULATION}
-                    value={minPop}
+                    value={minPopInput}
                     onChange={handleMinPopChange}
-                    className="w-full"
+                    onBlur={handleMinPopBlur}
+                    className={cn(
+                      "w-full",
+                      minPopError && "border-red-500 focus-visible:ring-red-500"
+                    )}
                   />
+                  {minPopError && (
+                    <p className="text-xs text-red-600 mt-1">{minPopError}</p>
+                  )}
                 </div>
 
                 <div>
@@ -302,10 +419,17 @@ export default function BUAsPage() {
                     type="number"
                     min={MIN_POPULATION}
                     max={MAX_POPULATION}
-                    value={maxPop}
+                    value={maxPopInput}
                     onChange={handleMaxPopChange}
-                    className="w-full"
+                    onBlur={handleMaxPopBlur}
+                    className={cn(
+                      "w-full",
+                      maxPopError && "border-red-500 focus-visible:ring-red-500"
+                    )}
                   />
+                  {maxPopError && (
+                    <p className="text-xs text-red-600 mt-1">{maxPopError}</p>
+                  )}
                 </div>
               </div>
 
