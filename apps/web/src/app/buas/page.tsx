@@ -1,39 +1,33 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Info } from 'lucide-react'
+import { ArrowLeft, Info, MapPin } from 'lucide-react'
 import { BUAMap } from '@/components/buas/BUAMap'
 import { BUASearch } from '@/components/buas/BUASearch'
 import { Label } from '@/components/ui/label'
+import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import type { BUA } from '@/lib/buas'
 
-const MAX_POPULATION = 9787426 // London (largest BUA)
+const MAX_POPULATION = 1500000 // 1.5 million
 const MIN_POPULATION = 0
 
 export default function BUAsPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [center, setCenter] = useState<{ lat: number; lng: number } | undefined>()
-  const [minPopInput, setMinPopInput] = useState(MIN_POPULATION.toString())
-  const [maxPopInput, setMaxPopInput] = useState(MAX_POPULATION.toString())
-  const [minPopError, setMinPopError] = useState<string | null>(null)
-  const [maxPopError, setMaxPopError] = useState<string | null>(null)
+  const [populationRange, setPopulationRange] = useState<[number, number]>([MIN_POPULATION, MAX_POPULATION])
   const [selectedBUA, setSelectedBUA] = useState<{ name: string; pop: number } | null>(null)
+  const [filteredBUAs, setFilteredBUAs] = useState<BUA[]>([])
+  const [isLoadingBUAs, setIsLoadingBUAs] = useState(false)
 
-  // Derived numeric values for map filtering
-  const minPop = useMemo(() => {
-    const num = Number(minPopInput)
-    return isNaN(num) || num < MIN_POPULATION ? MIN_POPULATION : Math.min(num, MAX_POPULATION)
-  }, [minPopInput])
-
-  const maxPop = useMemo(() => {
-    const num = Number(maxPopInput)
-    return isNaN(num) || num > MAX_POPULATION ? MAX_POPULATION : Math.max(num, MIN_POPULATION)
-  }, [maxPopInput])
+  // Derived values for map filtering
+  const minPop = populationRange[0]
+  const maxPop = populationRange[1]
 
   const handleBUASelect = (bua: {
     name: string
@@ -45,96 +39,22 @@ export default function BUAsPage() {
     setSelectedBUA({ name: bua.name, pop: bua.pop })
   }
 
-  const handleMinPopChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setMinPopInput(value)
-    // Clear error while typing
-    if (minPopError) setMinPopError(null)
+  const handlePopulationRangeChange = (value: number[]) => {
+    setPopulationRange([value[0], value[1]])
   }
 
-  const handleMaxPopChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setMaxPopInput(value)
-    // Clear error while typing
-    if (maxPopError) setMaxPopError(null)
+  const handleMinPopInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value)
+    if (!isNaN(value) && value >= MIN_POPULATION && value <= maxPop) {
+      setPopulationRange([value, maxPop])
+    }
   }
 
-  const handleMinPopBlur = () => {
-    const num = Number(minPopInput)
-    const maxNum = Number(maxPopInput)
-
-    // If empty, default to MIN_POPULATION
-    if (minPopInput.trim() === '') {
-      setMinPopInput(MIN_POPULATION.toString())
-      return
+  const handleMaxPopInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value)
+    if (!isNaN(value) && value >= minPop && value <= MAX_POPULATION) {
+      setPopulationRange([minPop, value])
     }
-
-    // Validate numeric
-    if (isNaN(num)) {
-      setMinPopError('Please enter a valid number')
-      setMinPopInput(MIN_POPULATION.toString())
-      return
-    }
-
-    // Validate range
-    if (num < MIN_POPULATION) {
-      setMinPopError(`Minimum is ${MIN_POPULATION.toLocaleString()}`)
-      setMinPopInput(MIN_POPULATION.toString())
-      return
-    }
-
-    if (num > MAX_POPULATION) {
-      setMinPopError(`Maximum is ${MAX_POPULATION.toLocaleString()}`)
-      setMinPopInput(MAX_POPULATION.toString())
-      return
-    }
-
-    // Validate min <= max
-    if (!isNaN(maxNum) && num > maxNum) {
-      setMinPopError('Minimum must be less than maximum')
-      return
-    }
-
-    setMinPopError(null)
-  }
-
-  const handleMaxPopBlur = () => {
-    const num = Number(maxPopInput)
-    const minNum = Number(minPopInput)
-
-    // If empty, default to MAX_POPULATION
-    if (maxPopInput.trim() === '') {
-      setMaxPopInput(MAX_POPULATION.toString())
-      return
-    }
-
-    // Validate numeric
-    if (isNaN(num)) {
-      setMaxPopError('Please enter a valid number')
-      setMaxPopInput(MAX_POPULATION.toString())
-      return
-    }
-
-    // Validate range
-    if (num < MIN_POPULATION) {
-      setMaxPopError(`Minimum is ${MIN_POPULATION.toLocaleString()}`)
-      setMaxPopInput(MIN_POPULATION.toString())
-      return
-    }
-
-    if (num > MAX_POPULATION) {
-      setMaxPopError(`Maximum is ${MAX_POPULATION.toLocaleString()}`)
-      setMaxPopInput(MAX_POPULATION.toString())
-      return
-    }
-
-    // Validate max >= min
-    if (!isNaN(minNum) && num < minNum) {
-      setMaxPopError('Maximum must be greater than minimum')
-      return
-    }
-
-    setMaxPopError(null)
   }
 
   const formatPopulation = (value: number): string => {
@@ -198,6 +118,36 @@ export default function BUAsPage() {
     return '8,585'
   }
 
+  // Fetch filtered BUAs when population range changes
+  useEffect(() => {
+    const fetchFilteredBUAs = async () => {
+      setIsLoadingBUAs(true)
+      try {
+        const response = await fetch(
+          `/api/public/buas/range?minPop=${minPop}&maxPop=${maxPop}&limit=100`
+        )
+        if (response.ok) {
+          const data = await response.json()
+          setFilteredBUAs(data.results || [])
+        }
+      } catch (error) {
+        console.error('Error fetching filtered BUAs:', error)
+        setFilteredBUAs([])
+      } finally {
+        setIsLoadingBUAs(false)
+      }
+    }
+
+    // Debounce the fetch to avoid too many API calls
+    const debounceTimer = setTimeout(fetchFilteredBUAs, 500)
+    return () => clearTimeout(debounceTimer)
+  }, [minPop, maxPop])
+
+  const handleBUAListItemClick = (bua: BUA) => {
+    setCenter({ lat: bua.centroid_lat, lng: bua.centroid_lon })
+    setSelectedBUA({ name: bua.name, pop: bua.pop })
+  }
+
   return (
     <div className="h-screen bg-background">
       {/* Desktop Layout */}
@@ -246,114 +196,47 @@ export default function BUAsPage() {
               <div className="space-y-4">
                 <Label className="text-sm font-medium">Population Range</Label>
 
-                <div className="space-y-3">
+                <div className="px-2">
+                  <Slider
+                    value={populationRange}
+                    onValueChange={handlePopulationRangeChange}
+                    min={MIN_POPULATION}
+                    max={MAX_POPULATION}
+                    step={1000}
+                    minStepsBetweenThumbs={1}
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Numerical Inputs */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="min-pop" className="text-xs text-gray-600 mb-1 block">
-                      Minimum
-                    </label>
+                    <Label htmlFor="min-pop-input" className="text-xs text-gray-600 mb-1 block">
+                      Min Population
+                    </Label>
                     <Input
-                      id="min-pop"
+                      id="min-pop-input"
                       type="number"
                       min={MIN_POPULATION}
-                      max={MAX_POPULATION}
-                      value={minPopInput}
-                      onChange={handleMinPopChange}
-                      onBlur={handleMinPopBlur}
-                      className={cn(
-                        "w-full",
-                        minPopError && "border-red-500 focus-visible:ring-red-500"
-                      )}
+                      max={maxPop}
+                      value={minPop}
+                      onChange={handleMinPopInputChange}
+                      className="h-9 text-sm"
                     />
-                    {minPopError && (
-                      <p className="text-xs text-red-600 mt-1">{minPopError}</p>
-                    )}
                   </div>
-
                   <div>
-                    <label htmlFor="max-pop" className="text-xs text-gray-600 mb-1 block">
-                      Maximum
-                    </label>
+                    <Label htmlFor="max-pop-input" className="text-xs text-gray-600 mb-1 block">
+                      Max Population
+                    </Label>
                     <Input
-                      id="max-pop"
+                      id="max-pop-input"
                       type="number"
-                      min={MIN_POPULATION}
+                      min={minPop}
                       max={MAX_POPULATION}
-                      value={maxPopInput}
-                      onChange={handleMaxPopChange}
-                      onBlur={handleMaxPopBlur}
-                      className={cn(
-                        "w-full",
-                        maxPopError && "border-red-500 focus-visible:ring-red-500"
-                      )}
+                      value={maxPop}
+                      onChange={handleMaxPopInputChange}
+                      className="h-9 text-sm"
                     />
-                    {maxPopError && (
-                      <p className="text-xs text-red-600 mt-1">{maxPopError}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-3">
-                  <div className="flex justify-between mb-1">
-                    <span className="font-medium">Active range:</span>
-                    <span>{formatPopulation(minPop)} - {formatPopulation(maxPop)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Showing approx:</span>
-                    <span>{getFilteredCount()} BUAs</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Selected BUA Info */}
-              {selectedBUA && (
-                <div className="bg-violet-50 border border-violet-200 rounded-lg p-3">
-                  <div className="text-xs font-medium text-violet-900 mb-1">
-                    Selected
-                  </div>
-                  <div className="text-sm font-semibold text-violet-700">
-                    {selectedBUA.name}
-                  </div>
-                  <div className="text-xs text-violet-600 mt-1">
-                    Population: {selectedBUA.pop.toLocaleString()}
-                  </div>
-                </div>
-              )}
-
-              {/* Legend */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Population Legend</Label>
-                <div className="space-y-1 text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: '#eff6ff' }}></div>
-                    <span className="text-gray-600">&lt; 1,000</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: '#dbeafe' }}></div>
-                    <span className="text-gray-600">1K - 5K</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: '#bfdbfe' }}></div>
-                    <span className="text-gray-600">5K - 10K</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: '#93c5fd' }}></div>
-                    <span className="text-gray-600">10K - 50K</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: '#60a5fa' }}></div>
-                    <span className="text-gray-600">50K - 100K</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
-                    <span className="text-gray-600">100K - 500K</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: '#2563eb' }}></div>
-                    <span className="text-gray-600">500K - 1M</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: '#1d4ed8' }}></div>
-                    <span className="text-gray-600">&gt; 1M</span>
                   </div>
                 </div>
               </div>
@@ -369,6 +252,54 @@ export default function BUAsPage() {
               onBUAClick={(gsscode, name, pop) => setSelectedBUA({ name, pop })}
               className="w-full h-full"
             />
+
+            {/* Floating BUAs List - Bottom Right */}
+            <div className="absolute bottom-4 right-4 w-80 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-violet-50 to-purple-50 px-4 py-3 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold text-gray-900">Matching BUAs</Label>
+                  <span className="text-xs text-gray-600 font-medium">
+                    {isLoadingBUAs ? 'Loading...' : `Top ${filteredBUAs.length}`}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-white">
+                {isLoadingBUAs ? (
+                  <div className="p-4 text-center text-sm text-gray-500">
+                    Loading BUAs...
+                  </div>
+                ) : filteredBUAs.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-gray-500">
+                    No BUAs match the current filters
+                  </div>
+                ) : (
+                  <div className="max-h-96 overflow-y-auto">
+                    {filteredBUAs.map((bua) => (
+                      <button
+                        key={bua.gsscode}
+                        onClick={() => handleBUAListItemClick(bua)}
+                        className={cn(
+                          "w-full px-4 py-3 text-left hover:bg-violet-50 transition-colors border-b border-gray-100 last:border-b-0",
+                          selectedBUA?.name === bua.name && "bg-violet-50"
+                        )}
+                      >
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate">
+                              {bua.name}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Pop: {bua.pop.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -421,74 +352,96 @@ export default function BUAsPage() {
             <div className="space-y-3">
               <Label className="text-sm font-medium">Population Range</Label>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="mobile-min-pop" className="text-xs text-gray-600 mb-1 block">
-                    Min
-                  </label>
-                  <Input
-                    id="mobile-min-pop"
-                    type="number"
-                    min={MIN_POPULATION}
-                    max={MAX_POPULATION}
-                    value={minPopInput}
-                    onChange={handleMinPopChange}
-                    onBlur={handleMinPopBlur}
-                    className={cn(
-                      "w-full",
-                      minPopError && "border-red-500 focus-visible:ring-red-500"
-                    )}
-                  />
-                  {minPopError && (
-                    <p className="text-xs text-red-600 mt-1">{minPopError}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="mobile-max-pop" className="text-xs text-gray-600 mb-1 block">
-                    Max
-                  </label>
-                  <Input
-                    id="mobile-max-pop"
-                    type="number"
-                    min={MIN_POPULATION}
-                    max={MAX_POPULATION}
-                    value={maxPopInput}
-                    onChange={handleMaxPopChange}
-                    onBlur={handleMaxPopBlur}
-                    className={cn(
-                      "w-full",
-                      maxPopError && "border-red-500 focus-visible:ring-red-500"
-                    )}
-                  />
-                  {maxPopError && (
-                    <p className="text-xs text-red-600 mt-1">{maxPopError}</p>
-                  )}
-                </div>
+              <div className="px-2">
+                <Slider
+                  value={populationRange}
+                  onValueChange={handlePopulationRangeChange}
+                  min={MIN_POPULATION}
+                  max={MAX_POPULATION}
+                  step={1000}
+                  minStepsBetweenThumbs={1}
+                  className="w-full"
+                />
               </div>
 
-              <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-2">
-                <div className="flex justify-between">
-                  <span>Range:</span>
-                  <span className="font-medium">{formatPopulation(minPop)} - {formatPopulation(maxPop)}</span>
+              {/* Numerical Inputs */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label htmlFor="mobile-min-pop-input" className="text-xs text-gray-600 mb-1 block">
+                    Min Population
+                  </Label>
+                  <Input
+                    id="mobile-min-pop-input"
+                    type="number"
+                    min={MIN_POPULATION}
+                    max={maxPop}
+                    value={minPop}
+                    onChange={handleMinPopInputChange}
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="mobile-max-pop-input" className="text-xs text-gray-600 mb-1 block">
+                    Max Population
+                  </Label>
+                  <Input
+                    id="mobile-max-pop-input"
+                    type="number"
+                    min={minPop}
+                    max={MAX_POPULATION}
+                    value={maxPop}
+                    onChange={handleMaxPopInputChange}
+                    className="h-9 text-sm"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Selected BUA */}
-            {selectedBUA && (
-              <div className="bg-violet-50 border border-violet-200 rounded-lg p-3">
-                <div className="text-xs font-medium text-violet-900 mb-1">
-                  Selected
-                </div>
-                <div className="text-sm font-semibold text-violet-700">
-                  {selectedBUA.name}
-                </div>
-                <div className="text-xs text-violet-600 mt-1">
-                  Population: {selectedBUA.pop.toLocaleString()}
-                </div>
+            {/* Filtered BUAs List (Mobile) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Matching BUAs</Label>
+                <span className="text-xs text-gray-500">
+                  {isLoadingBUAs ? 'Loading...' : `Top ${filteredBUAs.length}`}
+                </span>
               </div>
-            )}
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                {isLoadingBUAs ? (
+                  <div className="p-3 text-center text-sm text-gray-500">
+                    Loading...
+                  </div>
+                ) : filteredBUAs.length === 0 ? (
+                  <div className="p-3 text-center text-sm text-gray-500">
+                    No matches
+                  </div>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto">
+                    {filteredBUAs.slice(0, 50).map((bua) => (
+                      <button
+                        key={bua.gsscode}
+                        onClick={() => handleBUAListItemClick(bua)}
+                        className={cn(
+                          "w-full px-3 py-2 text-left hover:bg-violet-50 transition-colors border-b border-gray-100 last:border-b-0",
+                          selectedBUA?.name === bua.name && "bg-violet-50"
+                        )}
+                      >
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate">
+                              {bua.name}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Pop: {bua.pop.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
