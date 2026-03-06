@@ -4,8 +4,10 @@ import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Info, MapPin } from 'lucide-react'
+import { ArrowLeft, Info, MapPin, ChevronDown, Store } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Badge } from '@/components/ui/badge'
 import { BUAMap } from '@/components/buas/BUAMap'
 import { BUASearch } from '@/components/buas/BUASearch'
 import { ResultsPanel } from '@/components/buas/ResultsPanel'
@@ -188,8 +190,8 @@ export default function BUAsPage() {
               </TabsList>
 
               {/* Find Gaps Tab Content */}
-              <TabsContent value="find-gaps" className="flex-1 overflow-y-auto p-4 space-y-6 mt-0">
-                {/* Search */}
+              <TabsContent value="find-gaps" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
+                {/* Search - Always Visible */}
                 <div className="space-y-2">
                   <Label htmlFor="bua-search" className="text-sm font-medium">
                     Search by BUA Name
@@ -201,54 +203,116 @@ export default function BUAsPage() {
                   />
                 </div>
 
-                {/* Population Filter */}
-                <div className="space-y-4">
-                  <Label className="text-sm font-medium">Population Range</Label>
-
-                  <div className="px-2">
-                    <Slider
-                      value={populationRange}
-                      onValueChange={handlePopulationRangeChange}
-                      min={MIN_POPULATION}
-                      max={MAX_POPULATION}
-                      step={1000}
-                      minStepsBetweenThumbs={1}
-                      className="w-full"
-                    />
-                  </div>
-
-                  {/* Numerical Inputs */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="min-pop-input" className="text-xs text-gray-600 mb-1 block">
-                        Min Population
-                      </Label>
-                      <Input
-                        id="min-pop-input"
-                        type="number"
+                {/* Collapsible: Population Range */}
+                <Collapsible defaultOpen={true}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium text-gray-900">Population Range</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {minPop === MIN_POPULATION && maxPop === MAX_POPULATION ? 'All' : 'Filtered'}
+                    </Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-3 pb-3 pt-3 space-y-3">
+                    <div className="px-2">
+                      <Slider
+                        value={populationRange}
+                        onValueChange={handlePopulationRangeChange}
                         min={MIN_POPULATION}
-                        max={maxPop}
-                        value={minPop}
-                        onChange={handleMinPopInputChange}
-                        className="h-9 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="max-pop-input" className="text-xs text-gray-600 mb-1 block">
-                        Max Population
-                      </Label>
-                      <Input
-                        id="max-pop-input"
-                        type="number"
-                        min={minPop}
                         max={MAX_POPULATION}
-                        value={maxPop}
-                        onChange={handleMaxPopInputChange}
-                        className="h-9 text-sm"
+                        step={1000}
+                        minStepsBetweenThumbs={1}
+                        className="w-full"
                       />
                     </div>
-                  </div>
-                </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="min-pop-input" className="text-xs text-gray-600 mb-1 block">
+                          Min Population
+                        </Label>
+                        <Input
+                          id="min-pop-input"
+                          type="number"
+                          min={MIN_POPULATION}
+                          max={maxPop}
+                          value={minPop}
+                          onChange={handleMinPopInputChange}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="max-pop-input" className="text-xs text-gray-600 mb-1 block">
+                          Max Population
+                        </Label>
+                        <Input
+                          id="max-pop-input"
+                          type="number"
+                          min={minPop}
+                          max={MAX_POPULATION}
+                          value={maxPop}
+                          onChange={handleMaxPopInputChange}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Collapsible: Include Stores (Placeholder) */}
+                <Collapsible defaultOpen={false}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium text-gray-900">Include Stores</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">0 selected</Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-3 pb-3 pt-3">
+                    <div className="text-sm text-gray-500 text-center py-4">
+                      <Store className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                      <p>Show only BUAs that have specific stores</p>
+                      <p className="text-xs mt-1">Coming soon...</p>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Collapsible: Exclude Stores (Placeholder) */}
+                <Collapsible defaultOpen={false}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium text-gray-900">Exclude Stores</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">0 selected</Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-3 pb-3 pt-3">
+                    <div className="text-sm text-gray-500 text-center py-4">
+                      <Store className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                      <p>Hide BUAs that have specific stores</p>
+                      <p className="text-xs mt-1">Coming soon...</p>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Collapsible: Proximity Exclusion (Placeholder) */}
+                <Collapsible defaultOpen={false}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium text-gray-900">Proximity Exclusion</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">None</Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-3 pb-3 pt-3">
+                    <div className="text-sm text-gray-500 text-center py-4">
+                      <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                      <p>Exclude BUAs near specific stores</p>
+                      <p className="text-xs mt-1">Coming soon...</p>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </TabsContent>
 
               {/* Assess Area Tab Content (Placeholder) */}
