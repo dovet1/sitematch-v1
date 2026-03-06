@@ -1,33 +1,37 @@
 'use client'
 
-import { MapPin } from 'lucide-react'
+import { MapPin, Store as StoreIcon } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import type { BUA } from '@/lib/buas'
 
 interface ResultsPanelProps {
-  results: BUA[]
+  results: BUA[] | any[] // BUA[] for Find Gaps mode, Store[] for Assess Area mode
   isLoading: boolean
   selectedBUA: { name: string; pop: number } | null
-  onItemClick: (bua: BUA) => void
+  onItemClick: (item: any) => void
+  mode?: 'find-gaps' | 'assess-area'
 }
 
 export function ResultsPanel({
   results,
   isLoading,
   selectedBUA,
-  onItemClick
+  onItemClick,
+  mode = 'find-gaps'
 }: ResultsPanelProps) {
+  const isFindGapsMode = mode === 'find-gaps'
+
   return (
     <div className="w-[360px] border-l bg-background flex flex-col">
       {/* Header */}
       <div className="bg-gradient-to-r from-violet-50 to-purple-50 px-4 py-3 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <Label className="text-sm font-semibold text-gray-900">
-            Matching BUAs
+            {isFindGapsMode ? 'Matching BUAs' : 'Nearby Stores'}
           </Label>
           <span className="text-xs text-gray-600 font-medium">
-            {isLoading ? 'Loading...' : `Top ${results.length}`}
+            {isLoading ? 'Loading...' : `${results.length} result${results.length !== 1 ? 's' : ''}`}
           </span>
         </div>
       </div>
@@ -36,15 +40,17 @@ export function ResultsPanel({
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="p-4 text-center text-sm text-gray-500">
-            Loading BUAs...
+            {isFindGapsMode ? 'Loading BUAs...' : 'Loading stores...'}
           </div>
         ) : results.length === 0 ? (
           <div className="p-4 text-center text-sm text-gray-500">
-            No BUAs match the current filters
+            {isFindGapsMode
+              ? 'No BUAs match the current filters'
+              : 'No stores found in this area'}
           </div>
-        ) : (
+        ) : isFindGapsMode ? (
           <div className="divide-y divide-gray-100">
-            {results.map((bua) => (
+            {results.map((bua: BUA) => (
               <button
                 key={bua.gsscode}
                 onClick={() => onItemClick(bua)}
@@ -62,6 +68,31 @@ export function ResultsPanel({
                     <div className="text-xs text-gray-600">
                       Pop: {bua.pop.toLocaleString()}
                     </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {results.map((store: any) => (
+              <button
+                key={store.id}
+                onClick={() => onItemClick(store)}
+                className="w-full px-4 py-3 text-left hover:bg-violet-50 transition-colors"
+              >
+                <div className="flex items-start gap-2">
+                  <StoreIcon className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 truncate">
+                      {store.name}
+                    </div>
+                    {store.town && (
+                      <div className="text-xs text-gray-600 truncate">
+                        {store.town}
+                        {store.postcode && ` • ${store.postcode}`}
+                      </div>
+                    )}
                   </div>
                 </div>
               </button>

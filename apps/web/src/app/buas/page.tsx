@@ -42,6 +42,8 @@ export default function BUAsPage() {
   const [radiusMeters, setRadiusMeters] = useState(5000) // 5km default
   const [assessCompanies, setAssessCompanies] = useState<number[]>([])
   const [assessCategories, setAssessCategories] = useState<number[]>([])
+  const [nearbyStores, setNearbyStores] = useState<any[]>([])
+  const [isLoadingStores, setIsLoadingStores] = useState(false)
 
   // Derived values for map filtering
   const minPop = populationRange[0]
@@ -187,6 +189,48 @@ export default function BUAsPage() {
     const debounceTimer = setTimeout(fetchFilteredBUAs, 500)
     return () => clearTimeout(debounceTimer)
   }, [minPop, maxPop, includeCompanies, includeCategories, excludeCompanies, excludeCategories])
+
+  // Fetch nearby stores when point is selected (Assess Area mode)
+  useEffect(() => {
+    if (!selectedPoint || currentMode !== 'assess-area') {
+      setNearbyStores([])
+      return
+    }
+
+    const fetchNearbyStores = async () => {
+      setIsLoadingStores(true)
+      try {
+        const params = new URLSearchParams({
+          lat: selectedPoint.lat.toString(),
+          lon: selectedPoint.lng.toString(),
+          radius: radiusMeters.toString()
+        })
+
+        if (assessCompanies.length > 0) {
+          params.append('brandIds', assessCompanies.join(','))
+        }
+        if (assessCategories.length > 0) {
+          params.append('categoryIds', assessCategories.join(','))
+        }
+
+        const response = await fetch(`/api/public/stores/nearby?${params.toString()}`)
+
+        if (response.ok) {
+          const data = await response.json()
+          setNearbyStores(data.stores || [])
+        }
+      } catch (error) {
+        console.error('Error fetching nearby stores:', error)
+        setNearbyStores([])
+      } finally {
+        setIsLoadingStores(false)
+      }
+    }
+
+    // Debounce the fetch
+    const debounceTimer = setTimeout(fetchNearbyStores, 500)
+    return () => clearTimeout(debounceTimer)
+  }, [selectedPoint, radiusMeters, assessCompanies, assessCategories, currentMode])
 
   const handleBUAListItemClick = (bua: BUA) => {
     setCenter({ lat: bua.centroid_lat, lng: bua.centroid_lon })
@@ -525,10 +569,11 @@ export default function BUAsPage() {
 
           {/* Right Results Panel (360px) */}
           <ResultsPanel
-            results={filteredBUAs}
-            isLoading={isLoadingBUAs}
+            results={currentMode === 'find-gaps' ? filteredBUAs : nearbyStores}
+            isLoading={currentMode === 'find-gaps' ? isLoadingBUAs : isLoadingStores}
             selectedBUA={selectedBUA}
             onItemClick={handleBUAListItemClick}
+            mode={currentMode}
           />
         </div>
       </div>
