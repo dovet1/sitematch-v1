@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { BUAMap } from '@/components/buas/BUAMap'
 import { BUASearch } from '@/components/buas/BUASearch'
 import { ResultsPanel } from '@/components/buas/ResultsPanel'
+import { CompanySelector } from '@/components/buas/CompanySelector'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
@@ -28,6 +29,12 @@ export default function BUAsPage() {
   const [selectedBUA, setSelectedBUA] = useState<{ name: string; pop: number } | null>(null)
   const [filteredBUAs, setFilteredBUAs] = useState<BUA[]>([])
   const [isLoadingBUAs, setIsLoadingBUAs] = useState(false)
+
+  // Filter state for store inclusion/exclusion
+  const [includeCompanies, setIncludeCompanies] = useState<number[]>([])
+  const [includeCategories, setIncludeCategories] = useState<number[]>([])
+  const [excludeCompanies, setExcludeCompanies] = useState<number[]>([])
+  const [excludeCategories, setExcludeCategories] = useState<number[]>([])
 
   // Derived values for map filtering
   const minPop = populationRange[0]
@@ -122,14 +129,41 @@ export default function BUAsPage() {
     return '8,585'
   }
 
-  // Fetch filtered BUAs when population range changes
+  // Fetch filtered BUAs when filters change
   useEffect(() => {
     const fetchFilteredBUAs = async () => {
       setIsLoadingBUAs(true)
       try {
-        const response = await fetch(
-          `/api/public/buas/range?minPop=${minPop}&maxPop=${maxPop}&limit=100`
-        )
+        // Build filter payload
+        const filters: any = {
+          minPop,
+          maxPop
+        }
+
+        // Add include filters if any
+        if (includeCompanies.length > 0) {
+          filters.includeBrands = includeCompanies
+        }
+        if (includeCategories.length > 0) {
+          filters.includeCategories = includeCategories
+        }
+
+        // Add exclude filters if any
+        if (excludeCompanies.length > 0) {
+          filters.excludeBrands = excludeCompanies
+        }
+        if (excludeCategories.length > 0) {
+          filters.excludeCategories = excludeCategories
+        }
+
+        const response = await fetch('/api/public/gaps/find', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(filters)
+        })
+
         if (response.ok) {
           const data = await response.json()
           setFilteredBUAs(data.results || [])
@@ -145,7 +179,7 @@ export default function BUAsPage() {
     // Debounce the fetch to avoid too many API calls
     const debounceTimer = setTimeout(fetchFilteredBUAs, 500)
     return () => clearTimeout(debounceTimer)
-  }, [minPop, maxPop])
+  }, [minPop, maxPop, includeCompanies, includeCategories, excludeCompanies, excludeCategories])
 
   const handleBUAListItemClick = (bua: BUA) => {
     setCenter({ lat: bua.centroid_lat, lng: bua.centroid_lon })
@@ -260,39 +294,53 @@ export default function BUAsPage() {
                   </CollapsibleContent>
                 </Collapsible>
 
-                {/* Collapsible: Include Stores (Placeholder) */}
+                {/* Collapsible: Include Stores */}
                 <Collapsible defaultOpen={false}>
                   <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
                     <div className="flex items-center gap-2">
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                       <span className="font-medium text-gray-900">Include Stores</span>
                     </div>
-                    <Badge variant="secondary" className="text-xs">0 selected</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {includeCompanies.length + includeCategories.length} selected
+                    </Badge>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="px-3 pb-3 pt-3">
-                    <div className="text-sm text-gray-500 text-center py-4">
-                      <Store className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                      <p>Show only BUAs that have specific stores</p>
-                      <p className="text-xs mt-1">Coming soon...</p>
+                    <div className="text-xs text-gray-600 mb-3">
+                      Show only BUAs that have these stores
                     </div>
+                    <CompanySelector
+                      selectedCompanies={includeCompanies}
+                      selectedCategories={includeCategories}
+                      onCompaniesChange={setIncludeCompanies}
+                      onCategoriesChange={setIncludeCategories}
+                      mode="include"
+                    />
                   </CollapsibleContent>
                 </Collapsible>
 
-                {/* Collapsible: Exclude Stores (Placeholder) */}
+                {/* Collapsible: Exclude Stores */}
                 <Collapsible defaultOpen={false}>
                   <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
                     <div className="flex items-center gap-2">
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                       <span className="font-medium text-gray-900">Exclude Stores</span>
                     </div>
-                    <Badge variant="secondary" className="text-xs">0 selected</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {excludeCompanies.length + excludeCategories.length} selected
+                    </Badge>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="px-3 pb-3 pt-3">
-                    <div className="text-sm text-gray-500 text-center py-4">
-                      <Store className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                      <p>Hide BUAs that have specific stores</p>
-                      <p className="text-xs mt-1">Coming soon...</p>
+                    <div className="text-xs text-gray-600 mb-3">
+                      Hide BUAs that have these stores
                     </div>
+                    <CompanySelector
+                      selectedCompanies={excludeCompanies}
+                      selectedCategories={excludeCategories}
+                      onCompaniesChange={setExcludeCompanies}
+                      onCategoriesChange={setExcludeCategories}
+                      mode="exclude"
+                    />
                   </CollapsibleContent>
                 </Collapsible>
 
