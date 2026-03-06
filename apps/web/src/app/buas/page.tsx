@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Info, MapPin } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BUAMap } from '@/components/buas/BUAMap'
 import { BUASearch } from '@/components/buas/BUASearch'
+import { ResultsPanel } from '@/components/buas/ResultsPanel'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
@@ -175,76 +177,91 @@ export default function BUAsPage() {
           </div>
         </header>
 
-        {/* Main Content */}
+        {/* Main Content - Three Panel Layout */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Sidebar */}
-          <div className="w-80 border-r bg-background flex flex-col">
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              {/* Search */}
-              <div className="space-y-2">
-                <Label htmlFor="bua-search" className="text-sm font-medium">
-                  Search by BUA Name
-                </Label>
-                <BUASearch
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  onBUASelect={handleBUASelect}
-                />
-              </div>
+          {/* Left Sidebar (380px) */}
+          <div className="w-[380px] border-r bg-background flex flex-col">
+            <Tabs defaultValue="find-gaps" className="flex-1 flex flex-col">
+              <TabsList className="grid w-full grid-cols-2 m-2">
+                <TabsTrigger value="find-gaps">Find Gaps</TabsTrigger>
+                <TabsTrigger value="assess-area" disabled>Assess Area</TabsTrigger>
+              </TabsList>
 
-              {/* Population Filter */}
-              <div className="space-y-4">
-                <Label className="text-sm font-medium">Population Range</Label>
-
-                <div className="px-2">
-                  <Slider
-                    value={populationRange}
-                    onValueChange={handlePopulationRangeChange}
-                    min={MIN_POPULATION}
-                    max={MAX_POPULATION}
-                    step={1000}
-                    minStepsBetweenThumbs={1}
-                    className="w-full"
+              {/* Find Gaps Tab Content */}
+              <TabsContent value="find-gaps" className="flex-1 overflow-y-auto p-4 space-y-6 mt-0">
+                {/* Search */}
+                <div className="space-y-2">
+                  <Label htmlFor="bua-search" className="text-sm font-medium">
+                    Search by BUA Name
+                  </Label>
+                  <BUASearch
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    onBUASelect={handleBUASelect}
                   />
                 </div>
 
-                {/* Numerical Inputs */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="min-pop-input" className="text-xs text-gray-600 mb-1 block">
-                      Min Population
-                    </Label>
-                    <Input
-                      id="min-pop-input"
-                      type="number"
+                {/* Population Filter */}
+                <div className="space-y-4">
+                  <Label className="text-sm font-medium">Population Range</Label>
+
+                  <div className="px-2">
+                    <Slider
+                      value={populationRange}
+                      onValueChange={handlePopulationRangeChange}
                       min={MIN_POPULATION}
-                      max={maxPop}
-                      value={minPop}
-                      onChange={handleMinPopInputChange}
-                      className="h-9 text-sm"
+                      max={MAX_POPULATION}
+                      step={1000}
+                      minStepsBetweenThumbs={1}
+                      className="w-full"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="max-pop-input" className="text-xs text-gray-600 mb-1 block">
-                      Max Population
-                    </Label>
-                    <Input
-                      id="max-pop-input"
-                      type="number"
-                      min={minPop}
-                      max={MAX_POPULATION}
-                      value={maxPop}
-                      onChange={handleMaxPopInputChange}
-                      className="h-9 text-sm"
-                    />
+
+                  {/* Numerical Inputs */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="min-pop-input" className="text-xs text-gray-600 mb-1 block">
+                        Min Population
+                      </Label>
+                      <Input
+                        id="min-pop-input"
+                        type="number"
+                        min={MIN_POPULATION}
+                        max={maxPop}
+                        value={minPop}
+                        onChange={handleMinPopInputChange}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="max-pop-input" className="text-xs text-gray-600 mb-1 block">
+                        Max Population
+                      </Label>
+                      <Input
+                        id="max-pop-input"
+                        type="number"
+                        min={minPop}
+                        max={MAX_POPULATION}
+                        value={maxPop}
+                        onChange={handleMaxPopInputChange}
+                        className="h-9 text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </TabsContent>
+
+              {/* Assess Area Tab Content (Placeholder) */}
+              <TabsContent value="assess-area" className="flex-1 overflow-y-auto p-4">
+                <div className="text-sm text-gray-500">
+                  Assess Area mode coming soon...
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          {/* Map */}
-          <div className="flex-1 relative overflow-hidden">
+          {/* Map (flex-1) */}
+          <div className="flex-1 relative overflow-hidden min-w-[500px]">
             <BUAMap
               center={center}
               minPopulation={minPop}
@@ -252,55 +269,15 @@ export default function BUAsPage() {
               onBUAClick={(gsscode, name, pop) => setSelectedBUA({ name, pop })}
               className="w-full h-full"
             />
-
-            {/* Floating BUAs List - Bottom Right */}
-            <div className="absolute bottom-4 right-4 w-80 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-violet-50 to-purple-50 px-4 py-3 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold text-gray-900">Matching BUAs</Label>
-                  <span className="text-xs text-gray-600 font-medium">
-                    {isLoadingBUAs ? 'Loading...' : `Top ${filteredBUAs.length}`}
-                  </span>
-                </div>
-              </div>
-              <div className="bg-white">
-                {isLoadingBUAs ? (
-                  <div className="p-4 text-center text-sm text-gray-500">
-                    Loading BUAs...
-                  </div>
-                ) : filteredBUAs.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-gray-500">
-                    No BUAs match the current filters
-                  </div>
-                ) : (
-                  <div className="max-h-96 overflow-y-auto">
-                    {filteredBUAs.map((bua) => (
-                      <button
-                        key={bua.gsscode}
-                        onClick={() => handleBUAListItemClick(bua)}
-                        className={cn(
-                          "w-full px-4 py-3 text-left hover:bg-violet-50 transition-colors border-b border-gray-100 last:border-b-0",
-                          selectedBUA?.name === bua.name && "bg-violet-50"
-                        )}
-                      >
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">
-                              {bua.name}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              Pop: {bua.pop.toLocaleString()}
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
+
+          {/* Right Results Panel (360px) */}
+          <ResultsPanel
+            results={filteredBUAs}
+            isLoading={isLoadingBUAs}
+            selectedBUA={selectedBUA}
+            onItemClick={handleBUAListItemClick}
+          />
         </div>
       </div>
 
