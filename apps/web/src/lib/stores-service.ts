@@ -3,7 +3,7 @@
  * Uses precomputed summary tables for fast filtering
  */
 
-import { createServerClient } from '@/lib/supabase-server'
+import { createServerClient } from '@/lib/supabase'
 import type { Category, Brand, Store } from '@/lib/stores'
 
 export class StoreService {
