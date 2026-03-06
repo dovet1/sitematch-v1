@@ -36,6 +36,13 @@ export default function BUAsPage() {
   const [excludeCompanies, setExcludeCompanies] = useState<number[]>([])
   const [excludeCategories, setExcludeCategories] = useState<number[]>([])
 
+  // Assess Area mode state
+  const [currentMode, setCurrentMode] = useState<'find-gaps' | 'assess-area'>('find-gaps')
+  const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null)
+  const [radiusMeters, setRadiusMeters] = useState(5000) // 5km default
+  const [assessCompanies, setAssessCompanies] = useState<number[]>([])
+  const [assessCategories, setAssessCategories] = useState<number[]>([])
+
   // Derived values for map filtering
   const minPop = populationRange[0]
   const maxPop = populationRange[1]
@@ -217,10 +224,14 @@ export default function BUAsPage() {
         <div className="flex-1 flex overflow-hidden">
           {/* Left Sidebar (380px) */}
           <div className="w-[380px] border-r bg-background flex flex-col">
-            <Tabs defaultValue="find-gaps" className="flex-1 flex flex-col">
+            <Tabs
+              defaultValue="find-gaps"
+              className="flex-1 flex flex-col"
+              onValueChange={(value) => setCurrentMode(value as 'find-gaps' | 'assess-area')}
+            >
               <TabsList className="grid w-full grid-cols-2 m-2">
                 <TabsTrigger value="find-gaps">Find Gaps</TabsTrigger>
-                <TabsTrigger value="assess-area" disabled>Assess Area</TabsTrigger>
+                <TabsTrigger value="assess-area">Assess Area</TabsTrigger>
               </TabsList>
 
               {/* Find Gaps Tab Content */}
@@ -363,11 +374,136 @@ export default function BUAsPage() {
                 </Collapsible>
               </TabsContent>
 
-              {/* Assess Area Tab Content (Placeholder) */}
-              <TabsContent value="assess-area" className="flex-1 overflow-y-auto p-4">
-                <div className="text-sm text-gray-500">
-                  Assess Area mode coming soon...
+              {/* Assess Area Tab Content */}
+              <TabsContent value="assess-area" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
+                {/* Instructions */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-blue-900">
+                      Click anywhere on the map to analyze stores within a radius of that point.
+                    </p>
+                  </div>
                 </div>
+
+                {/* Point Selection Status */}
+                {selectedPoint ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-green-900">Point Selected</p>
+                        <p className="text-xs text-green-700 font-mono">
+                          {selectedPoint.lat.toFixed(4)}, {selectedPoint.lng.toFixed(4)}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedPoint(null)}
+                        className="h-8"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <MapPin className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                    <p className="text-sm text-gray-600 mb-3">
+                      Click on the map to select a location
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      You can analyze stores within a radius of any point
+                    </p>
+                  </div>
+                )}
+
+                {/* Radius Settings */}
+                <Collapsible defaultOpen={true}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium text-gray-900">Radius Settings</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {radiusMeters / 1000}km
+                    </Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-3 pb-3 pt-3 space-y-3">
+                    <div>
+                      <Label htmlFor="radius-slider" className="text-sm font-medium mb-2 block">
+                        Search Radius: {(radiusMeters / 1000).toFixed(1)} km
+                      </Label>
+                      <Slider
+                        id="radius-slider"
+                        value={[radiusMeters]}
+                        onValueChange={(value) => setRadiusMeters(value[0])}
+                        min={500}
+                        max={20000}
+                        step={500}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>0.5 km</span>
+                        <span>20 km</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        variant={radiusMeters === 1000 ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setRadiusMeters(1000)}
+                        className="text-xs"
+                      >
+                        1 km
+                      </Button>
+                      <Button
+                        variant={radiusMeters === 5000 ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setRadiusMeters(5000)}
+                        className="text-xs"
+                      >
+                        5 km
+                      </Button>
+                      <Button
+                        variant={radiusMeters === 10000 ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setRadiusMeters(10000)}
+                        className="text-xs"
+                      >
+                        10 km
+                      </Button>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Store Filters */}
+                <Collapsible defaultOpen={true}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium text-gray-900">Store Filters</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {assessCompanies.length + assessCategories.length === 0
+                        ? 'All'
+                        : `${assessCompanies.length + assessCategories.length} selected`}
+                    </Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-3 pb-3 pt-3">
+                    <div className="text-xs text-gray-600 mb-3">
+                      Filter which stores to show in results
+                    </div>
+                    <CompanySelector
+                      selectedCompanies={assessCompanies}
+                      selectedCategories={assessCategories}
+                      onCompaniesChange={setAssessCompanies}
+                      onCategoriesChange={setAssessCategories}
+                      mode="include"
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
               </TabsContent>
             </Tabs>
           </div>
@@ -380,6 +516,10 @@ export default function BUAsPage() {
               maxPopulation={maxPop}
               onBUAClick={(gsscode, name, pop) => setSelectedBUA({ name, pop })}
               className="w-full h-full"
+              mode={currentMode}
+              selectedPoint={selectedPoint}
+              onPointSelected={setSelectedPoint}
+              radiusMeters={radiusMeters}
             />
           </div>
 

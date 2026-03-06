@@ -18,6 +18,11 @@ interface BUAMapProps {
   maxPopulation: number
   onBUAClick?: (gsscode: string, name: string, pop: number) => void
   className?: string
+  // Assess Area mode props
+  mode?: 'find-gaps' | 'assess-area'
+  selectedPoint?: { lat: number; lng: number } | null
+  onPointSelected?: (point: { lat: number; lng: number }) => void
+  radiusMeters?: number
 }
 
 export function BUAMap({
@@ -25,12 +30,18 @@ export function BUAMap({
   minPopulation,
   maxPopulation,
   onBUAClick,
-  className = ''
+  className = '',
+  mode = 'find-gaps',
+  selectedPoint = null,
+  onPointSelected,
+  radiusMeters = 5000
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const popup = useRef<mapboxgl.Popup | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const pointMarker = useRef<mapboxgl.Marker | null>(null)
+  const radiusCircle = useRef<string | null>(null)
 
   // Initialize map
   useEffect(() => {
@@ -233,6 +244,143 @@ export function BUAMap({
       essential: true
     })
   }, [center, mapLoaded])
+
+  // Handle Assess Area mode - map click for point selection
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+
+    const handleMapClick = (e: mapboxgl.MapMouseEvent) => {
+      if (mode === 'assess-area' && onPointSelected) {
+        onPointSelected({ lat: e.lngLat.lat, lng: e.lngLat.lng })
+      }
+    }
+
+    // Change cursor style based on mode
+    if (mode === 'assess-area') {
+      if (map.current.getCanvas()) {
+        map.current.getCanvas().style.cursor = 'crosshair'
+      }
+      map.current.on('click', handleMapClick)
+    } else {
+      if (map.current.getCanvas()) {
+        map.current.getCanvas().style.cursor = ''
+      }
+    }
+
+    return () => {
+      if (map.current) {
+        map.current.off('click', handleMapClick)
+      }
+    }
+  }, [mode, mapLoaded, onPointSelected])
+
+  // Handle selected point marker and radius circle
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+
+    // Remove existing marker and circle
+    if (pointMarker.current) {
+      pointMarker.current.remove()
+      pointMarker.current = null
+    }
+    if (radiusCircle.current && map.current.getLayer(radiusCircle.current)) {
+      map.current.removeLayer(radiusCircle.current)
+      map.current.removeSource(radiusCircle.current)
+      radiusCircle.current = null
+    }
+
+    // Add new marker and circle if point is selected
+    if (selectedPoint && mode === 'assess-area') {
+      // Add marker
+      pointMarker.current = new mapboxgl.Marker({
+        color: '#8b5cf6' // violet-500
+      })
+        .setLngLat([selectedPoint.lng, selectedPoint.lat])
+        .addTo(map.current)
+
+      // Add radius circle
+      const radiusLayerId = 'radius-circle'
+      radiusCircle.current = radiusLayerId
+
+      // Create circle GeoJSON
+      const center = [selectedPoint.lng, selectedPoint.lat]
+      const radiusInKm = radiusMeters / 1000
+      const points = 64
+      const coords = {
+        latitude: selectedPoint.lat,
+        longitude: selectedPoint.lng
+      }
+
+      const ret = []
+      const distanceX = radiusInKm / (111.320 * Math.cos((coords.latitude * Math.PI) / 180))
+      const distanceY = radiusInKm / 110.574
+
+      for (let i = 0; i < points; i++) {
+        const theta = (i / points) * (2 * Math.PI)
+        const x = distanceX * Math.cos(theta)
+        const y = distanceY * Math.sin(theta)
+        ret.push([coords.longitude + x, coords.latitude + y])
+      }
+      ret.push(ret[0]) // Close the circle
+
+      map.current.addSource(radiusLayerId, {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: [ret]
+          },
+          properties: {}
+        }
+      })
+
+      map.current.addLayer({
+        id: radiusLayerId,
+        type: 'fill',
+        source: radiusLayerId,
+        paint: {
+          'fill-color': '#8b5cf6',
+          'fill-opacity': 0.1
+        }
+      })
+
+      map.current.addLayer({
+        id: `${radiusLayerId}-outline`,
+        type: 'line',
+        source: radiusLayerId,
+        paint: {
+          'line-color': '#8b5cf6',
+          'line-width': 2,
+          'line-opacity': 0.6
+        }
+      })
+
+      // Fly to the selected point
+      map.current.flyTo({
+        center: [selectedPoint.lng, selectedPoint.lat],
+        zoom: radiusMeters > 10000 ? 10 : radiusMeters > 5000 ? 11 : 12,
+        duration: 1000
+      })
+    }
+
+    return () => {
+      if (pointMarker.current) {
+        pointMarker.current.remove()
+      }
+      if (radiusCircle.current && map.current) {
+        if (map.current.getLayer(radiusCircle.current)) {
+          map.current.removeLayer(radiusCircle.current)
+        }
+        if (map.current.getLayer(`${radiusCircle.current}-outline`)) {
+          map.current.removeLayer(`${radiusCircle.current}-outline`)
+        }
+        if (map.current.getSource(radiusCircle.current)) {
+          map.current.removeSource(radiusCircle.current)
+        }
+      }
+    }
+  }, [selectedPoint, radiusMeters, mode, mapLoaded])
 
   return (
     <div className={`relative ${className}`}>
