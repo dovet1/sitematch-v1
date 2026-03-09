@@ -566,7 +566,12 @@ export default function BUAsPage() {
               onPointSelected={setSelectedPoint}
               radiusMeters={radiusMeters}
               stores={nearbyStores}
-              filteredGssCodes={currentMode === 'find-gaps' ? filteredBUAs.map(bua => bua.gsscode) : undefined}
+              filteredGssCodes={
+                currentMode === 'find-gaps' &&
+                (includeCompanies.length > 0 || includeCategories.length > 0 || excludeCompanies.length > 0 || excludeCategories.length > 0)
+                  ? filteredBUAs.map(bua => bua.gsscode)
+                  : undefined
+              }
             />
           </div>
 
