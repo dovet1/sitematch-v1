@@ -11,14 +11,14 @@ export interface Category {
 }
 
 export interface Brand {
-  id: number
+  id: string  // UUID in database
   name: string
   created_at: string
 }
 
 export interface Fascia {
-  id: number
-  brand_id: number
+  id: string  // UUID in database
+  brand_id: string  // UUID in database
   name: string
   definition: string | null
   created_at: string
@@ -34,8 +34,8 @@ export interface FasciaCategory {
 export interface Store {
   id: string  // UUID in database
   store_id: string
-  brand_id: number
-  fascia_id: number
+  brand_id: string  // UUID in database
+  fascia_id: string  // UUID in database
   name: string
   lon: number
   lat: number

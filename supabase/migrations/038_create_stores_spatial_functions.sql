@@ -11,8 +11,8 @@ CREATE OR REPLACE FUNCTION get_stores_near_point(
 RETURNS TABLE (
   id uuid,
   store_id text,
-  brand_id integer,
-  fascia_id integer,
+  brand_id uuid,
+  fascia_id uuid,
   name text,
   lon double precision,
   lat double precision,

@@ -41,7 +41,7 @@ export default function BUAsPage() {
   const [currentMode, setCurrentMode] = useState<'find-gaps' | 'assess-area'>('find-gaps')
   const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null)
   const [radiusMeters, setRadiusMeters] = useState(5000) // 5km default
-  const [assessCompanies, setAssessCompanies] = useState<number[]>([])
+  const [assessCompanies, setAssessCompanies] = useState<string[]>([])
   const [assessCategories, setAssessCategories] = useState<number[]>([])
   const [nearbyStores, setNearbyStores] = useState<StoreType[]>([])
   const [isLoadingStores, setIsLoadingStores] = useState(false)

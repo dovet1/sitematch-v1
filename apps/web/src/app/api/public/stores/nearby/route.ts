@@ -28,8 +28,7 @@ export async function GET(request: NextRequest) {
     const brandIds = searchParams
       .get('brandIds')
       ?.split(',')
-      .map(Number)
-      .filter(Boolean)
+      .filter(id => id.trim().length > 0)
     const categoryIds = searchParams
       .get('categoryIds')
       ?.split(',')

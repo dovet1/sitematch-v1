@@ -71,7 +71,7 @@ export class StoreService {
     lat: number,
     lon: number,
     radiusMeters: number,
-    brandIds?: number[],
+    brandIds?: string[],
     categoryIds?: number[]
   ): Promise<Store[]> {
     // Use PostGIS RPC function for spatial query

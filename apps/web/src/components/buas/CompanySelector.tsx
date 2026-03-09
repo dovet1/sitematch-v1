@@ -22,9 +22,9 @@ interface Brand {
 }
 
 interface CompanySelectorProps {
-  selectedCompanies: number[]
+  selectedCompanies: string[]  // Brand IDs are UUIDs
   selectedCategories: number[]
-  onCompaniesChange: (ids: number[]) => void
+  onCompaniesChange: (ids: string[]) => void
   onCategoriesChange: (ids: number[]) => void
   mode: 'include' | 'exclude' | 'proximity'
 }
