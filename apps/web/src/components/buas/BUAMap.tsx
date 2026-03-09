@@ -12,6 +12,15 @@ const BUA_LAYER_ID = 'bua-fill'
 const BUA_OUTLINE_LAYER_ID = 'bua-outline'
 const BUA_SOURCE_LAYER = 'bua'
 
+interface Store {
+  id: string
+  name: string
+  lat: number
+  lon: number
+  town?: string | null
+  postcode?: string | null
+}
+
 interface BUAMapProps {
   center?: { lat: number; lng: number }
   minPopulation: number
@@ -23,6 +32,7 @@ interface BUAMapProps {
   selectedPoint?: { lat: number; lng: number } | null
   onPointSelected?: (point: { lat: number; lng: number }) => void
   radiusMeters?: number
+  stores?: Store[]  // Stores to display as markers in Assess Area mode
 }
 
 export function BUAMap({
@@ -34,7 +44,8 @@ export function BUAMap({
   mode = 'find-gaps',
   selectedPoint = null,
   onPointSelected,
-  radiusMeters = 5000
+  radiusMeters = 5000,
+  stores = []
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -42,6 +53,7 @@ export function BUAMap({
   const [mapLoaded, setMapLoaded] = useState(false)
   const pointMarker = useRef<mapboxgl.Marker | null>(null)
   const radiusCircle = useRef<string | null>(null)
+  const storeMarkers = useRef<mapboxgl.Marker[]>([])
 
   // Initialize map
   useEffect(() => {
@@ -381,6 +393,61 @@ export function BUAMap({
       }
     }
   }, [selectedPoint, radiusMeters, mode, mapLoaded])
+
+  // Handle store markers in Assess Area mode
+  useEffect(() => {
+    if (!map.current || !mapLoaded || mode !== 'assess-area') {
+      // Remove all store markers if not in assess-area mode
+      storeMarkers.current.forEach(marker => marker.remove())
+      storeMarkers.current = []
+      return
+    }
+
+    // Remove existing store markers
+    storeMarkers.current.forEach(marker => marker.remove())
+    storeMarkers.current = []
+
+    // Add new store markers
+    if (stores && stores.length > 0) {
+      stores.forEach(store => {
+        // Create custom marker element (smaller pin)
+        const el = document.createElement('div')
+        el.className = 'store-marker'
+        el.style.width = '20px'
+        el.style.height = '20px'
+        el.style.borderRadius = '50% 50% 50% 0'
+        el.style.background = '#10b981' // emerald-500
+        el.style.border = '2px solid white'
+        el.style.transform = 'rotate(-45deg)'
+        el.style.cursor = 'pointer'
+        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)'
+
+        // Create popup
+        const popup = new mapboxgl.Popup({
+          offset: 25,
+          closeButton: false,
+          className: 'store-popup'
+        }).setHTML(`
+          <div style="padding: 4px;">
+            <div style="font-weight: 600; font-size: 13px; margin-bottom: 2px;">${store.name}</div>
+            ${store.town ? `<div style="font-size: 11px; color: #6b7280;">${store.town}${store.postcode ? ` • ${store.postcode}` : ''}</div>` : ''}
+          </div>
+        `)
+
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([store.lon, store.lat])
+          .setPopup(popup)
+          .addTo(map.current!)
+
+        storeMarkers.current.push(marker)
+      })
+    }
+
+    return () => {
+      storeMarkers.current.forEach(marker => marker.remove())
+      storeMarkers.current = []
+    }
+  }, [stores, mode, mapLoaded])
 
   return (
     <div className={`relative ${className}`}>

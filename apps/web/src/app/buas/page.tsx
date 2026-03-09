@@ -565,6 +565,7 @@ export default function BUAsPage() {
               selectedPoint={selectedPoint}
               onPointSelected={setSelectedPoint}
               radiusMeters={radiusMeters}
+              stores={nearbyStores}
             />
           </div>
 
