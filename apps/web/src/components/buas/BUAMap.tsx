@@ -422,6 +422,11 @@ export function BUAMap({
         el.style.cursor = 'pointer'
         el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)'
 
+        // Prevent map click when clicking on store marker
+        el.addEventListener('click', (e) => {
+          e.stopPropagation()
+        })
+
         // Create popup
         const popup = new mapboxgl.Popup({
           offset: 25,
