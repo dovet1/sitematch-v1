@@ -33,6 +33,7 @@ interface BUAMapProps {
   onPointSelected?: (point: { lat: number; lng: number }) => void
   radiusMeters?: number
   stores?: Store[]  // Stores to display as markers in Assess Area mode
+  filteredGssCodes?: string[]  // Optional list of BUA gsscodes to show (for company/category filtering)
 }
 
 export function BUAMap({
@@ -45,7 +46,8 @@ export function BUAMap({
   selectedPoint = null,
   onPointSelected,
   radiusMeters = 5000,
-  stores = []
+  stores = [],
+  filteredGssCodes
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -208,7 +210,7 @@ export function BUAMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapLoaded])
 
-  // Update filter when population range changes
+  // Update filter when population range or filtered gsscodes change
   useEffect(() => {
     if (!map.current || !mapLoaded) return
 
@@ -220,24 +222,28 @@ export function BUAMap({
       }
 
       try {
-        map.current.setFilter(BUA_LAYER_ID, [
+        // Build filter conditions
+        const filterConditions: any[] = [
           'all',
           ['>=', ['get', 'pop'], minPopulation],
           ['<=', ['get', 'pop'], maxPopulation]
-        ])
+        ]
 
-        map.current.setFilter(BUA_OUTLINE_LAYER_ID, [
-          'all',
-          ['>=', ['get', 'pop'], minPopulation],
-          ['<=', ['get', 'pop'], maxPopulation]
-        ])
+        // If we have filtered gsscodes (from company/category filters), add them to the filter
+        if (filteredGssCodes && filteredGssCodes.length > 0) {
+          // Use 'in' filter to show only BUAs with gsscodes in the list
+          filterConditions.push(['in', ['get', 'gsscode'], ['literal', filteredGssCodes]])
+        }
+
+        map.current.setFilter(BUA_LAYER_ID, filterConditions)
+        map.current.setFilter(BUA_OUTLINE_LAYER_ID, filterConditions)
       } catch (error) {
         console.error('Error updating filter:', error)
       }
     }
 
     updateFilter()
-  }, [minPopulation, maxPopulation, mapLoaded])
+  }, [minPopulation, maxPopulation, filteredGssCodes, mapLoaded])
 
   // Fly to location when center changes
   useEffect(() => {
