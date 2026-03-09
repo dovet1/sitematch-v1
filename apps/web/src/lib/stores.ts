@@ -32,7 +32,7 @@ export interface FasciaCategory {
 }
 
 export interface Store {
-  id: number
+  id: string  // UUID in database
   store_id: string
   brand_id: number
   fascia_id: number

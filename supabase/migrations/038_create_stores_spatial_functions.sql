@@ -9,7 +9,7 @@ CREATE OR REPLACE FUNCTION get_stores_near_point(
   p_radius_m integer
 )
 RETURNS TABLE (
-  id integer,
+  id uuid,
   store_id text,
   brand_id integer,
   fascia_id integer,
