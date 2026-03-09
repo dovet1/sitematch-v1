@@ -63,7 +63,7 @@ export function BUAMap({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/light-v11',
       center: [center?.lng || -3.5, center?.lat || 54.8],
-      zoom: center ? 10 : 5,
+      zoom: center ? 11 : 6,
       minZoom: 4,
       maxZoom: 18
     })
@@ -371,7 +371,7 @@ export function BUAMap({
       // Fly to the selected point
       map.current.flyTo({
         center: [selectedPoint.lng, selectedPoint.lat],
-        zoom: radiusMeters > 10000 ? 10 : radiusMeters > 5000 ? 11 : 12,
+        zoom: radiusMeters > 15000 ? 10 : radiusMeters > 8000 ? 11 : 12,
         duration: 1000
       })
     }

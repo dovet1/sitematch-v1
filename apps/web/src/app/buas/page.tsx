@@ -268,19 +268,19 @@ export default function BUAsPage() {
         {/* Main Content - Three Panel Layout */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Sidebar (380px) */}
-          <div className="w-[380px] border-r bg-background flex flex-col">
+          <div className="w-[380px] border-r bg-gradient-to-b from-gray-50/50 to-background flex flex-col">
             <Tabs
               defaultValue="find-gaps"
               className="flex-1 flex flex-col"
               onValueChange={(value) => setCurrentMode(value as 'find-gaps' | 'assess-area')}
             >
-              <TabsList className="grid w-full grid-cols-2 m-2">
+              <TabsList className="grid w-full grid-cols-2 m-3">
                 <TabsTrigger value="find-gaps">Find Gaps</TabsTrigger>
                 <TabsTrigger value="assess-area">Assess Area</TabsTrigger>
               </TabsList>
 
               {/* Find Gaps Tab Content */}
-              <TabsContent value="find-gaps" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
+              <TabsContent value="find-gaps" className="flex-1 overflow-y-auto p-6 space-y-6 mt-0 pt-1">
                 {/* Search - Always Visible */}
                 <div className="space-y-2">
                   <Label htmlFor="bua-search" className="text-sm font-medium">
@@ -295,7 +295,7 @@ export default function BUAsPage() {
 
                 {/* Collapsible: Population Range */}
                 <Collapsible defaultOpen={true}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
                     <div className="flex items-center gap-2">
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                       <span className="font-medium text-gray-900">Population Range</span>
@@ -304,7 +304,7 @@ export default function BUAsPage() {
                       {minPop === MIN_POPULATION && maxPop === MAX_POPULATION ? 'All' : 'Filtered'}
                     </Badge>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-3 pt-3 space-y-3">
+                  <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
                     <div className="px-2">
                       <Slider
                         value={populationRange}
@@ -317,7 +317,7 @@ export default function BUAsPage() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="min-pop-input" className="text-xs text-gray-600 mb-1 block">
                           Min Population
@@ -352,7 +352,7 @@ export default function BUAsPage() {
 
                 {/* Collapsible: Include Stores */}
                 <Collapsible defaultOpen={false}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
                     <div className="flex items-center gap-2">
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                       <span className="font-medium text-gray-900">Include Stores</span>
@@ -361,7 +361,7 @@ export default function BUAsPage() {
                       {includeCompanies.length + includeCategories.length} selected
                     </Badge>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-3 pt-3">
+                  <CollapsibleContent className="px-3 pb-6 pt-4">
                     <div className="text-xs text-gray-600 mb-3">
                       Show only BUAs that have these stores
                     </div>
@@ -377,7 +377,7 @@ export default function BUAsPage() {
 
                 {/* Collapsible: Exclude Stores */}
                 <Collapsible defaultOpen={false}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
                     <div className="flex items-center gap-2">
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                       <span className="font-medium text-gray-900">Exclude Stores</span>
@@ -386,7 +386,7 @@ export default function BUAsPage() {
                       {excludeCompanies.length + excludeCategories.length} selected
                     </Badge>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-3 pt-3">
+                  <CollapsibleContent className="px-3 pb-6 pt-4">
                     <div className="text-xs text-gray-600 mb-3">
                       Hide BUAs that have these stores
                     </div>
@@ -402,14 +402,14 @@ export default function BUAsPage() {
 
                 {/* Collapsible: Proximity Exclusion (Placeholder) */}
                 <Collapsible defaultOpen={false}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
                     <div className="flex items-center gap-2">
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                       <span className="font-medium text-gray-900">Proximity Exclusion</span>
                     </div>
                     <Badge variant="secondary" className="text-xs">None</Badge>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-3 pt-3">
+                  <CollapsibleContent className="px-3 pb-6 pt-4">
                     <div className="text-sm text-gray-500 text-center py-4">
                       <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                       <p>Exclude BUAs near specific stores</p>
@@ -420,7 +420,7 @@ export default function BUAsPage() {
               </TabsContent>
 
               {/* Assess Area Tab Content */}
-              <TabsContent value="assess-area" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
+              <TabsContent value="assess-area" className="flex-1 overflow-y-auto p-6 space-y-6 mt-0 pt-1">
                 {/* Instructions */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <div className="flex items-start gap-2">
@@ -465,7 +465,7 @@ export default function BUAsPage() {
 
                 {/* Radius Settings */}
                 <Collapsible defaultOpen={true}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
                     <div className="flex items-center gap-2">
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                       <span className="font-medium text-gray-900">Radius Settings</span>
@@ -474,7 +474,7 @@ export default function BUAsPage() {
                       {radiusMeters / 1000}km
                     </Badge>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-3 pt-3 space-y-3">
+                  <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
                     <div>
                       <Label htmlFor="radius-slider" className="text-sm font-medium mb-2 block">
                         Search Radius: {(radiusMeters / 1000).toFixed(1)} km
@@ -525,7 +525,7 @@ export default function BUAsPage() {
 
                 {/* Store Filters */}
                 <Collapsible defaultOpen={true}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
                     <div className="flex items-center gap-2">
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                       <span className="font-medium text-gray-900">Store Filters</span>
@@ -536,7 +536,7 @@ export default function BUAsPage() {
                         : `${assessCompanies.length + assessCategories.length} selected`}
                     </Badge>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-3 pt-3">
+                  <CollapsibleContent className="px-3 pb-6 pt-4">
                     <div className="text-xs text-gray-600 mb-3">
                       Filter which stores to show in results
                     </div>
