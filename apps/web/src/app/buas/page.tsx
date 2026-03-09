@@ -17,6 +17,7 @@ import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { BUA } from '@/lib/buas'
+import type { Store as StoreType } from '@/lib/stores'
 
 const MAX_POPULATION = 1500000 // 1.5 million
 const MIN_POPULATION = 0
@@ -42,7 +43,7 @@ export default function BUAsPage() {
   const [radiusMeters, setRadiusMeters] = useState(5000) // 5km default
   const [assessCompanies, setAssessCompanies] = useState<number[]>([])
   const [assessCategories, setAssessCategories] = useState<number[]>([])
-  const [nearbyStores, setNearbyStores] = useState<any[]>([])
+  const [nearbyStores, setNearbyStores] = useState<StoreType[]>([])
   const [isLoadingStores, setIsLoadingStores] = useState(false)
 
   // Derived values for map filtering
