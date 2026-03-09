@@ -239,7 +239,7 @@ export default function BUAsPage() {
   }
 
   return (
-    <div className="h-screen bg-background">
+    <div className="h-screen bg-background overflow-hidden">
       {/* Desktop Layout */}
       <div className="hidden md:flex md:flex-col md:h-full">
         {/* Premium Header - Match SiteSketcher */}
@@ -268,10 +268,10 @@ export default function BUAsPage() {
         {/* Main Content - Three Panel Layout */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Sidebar (380px) */}
-          <div className="w-[380px] border-r bg-gradient-to-b from-gray-50/50 to-background flex flex-col">
+          <div className="w-[380px] border-r bg-gradient-to-b from-gray-50/50 to-background flex flex-col h-full">
             <Tabs
               defaultValue="find-gaps"
-              className="flex-1 flex flex-col"
+              className="flex-1 flex flex-col overflow-hidden"
               onValueChange={(value) => setCurrentMode(value as 'find-gaps' | 'assess-area')}
             >
               <TabsList className="grid w-full grid-cols-2 m-3">
