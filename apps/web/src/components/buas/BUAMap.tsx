@@ -422,11 +422,6 @@ export function BUAMap({
         el.style.cursor = 'pointer'
         el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)'
 
-        // Prevent map click when clicking on store marker
-        el.addEventListener('click', (e) => {
-          e.stopPropagation()
-        })
-
         // Create popup
         const popup = new mapboxgl.Popup({
           offset: 25,
@@ -443,6 +438,12 @@ export function BUAMap({
           .setLngLat([store.lon, store.lat])
           .setPopup(popup)
           .addTo(map.current!)
+
+        // Prevent map click when clicking on store marker, but allow popup to show
+        el.addEventListener('click', (e) => {
+          e.stopPropagation()
+          marker.togglePopup()
+        })
 
         storeMarkers.current.push(marker)
       })
