@@ -38,20 +38,49 @@ export class StoreService {
    * @returns Array of matching brands ordered by name
    */
   async searchBrands(query: string, limit = 20): Promise<Brand[]> {
+    let dbQuery = this.supabase
+      .from('brands')
+      .select('*')
+      .order('name')
+      .limit(Math.min(limit, 2000))
+
+    // Only add the search filter if query is provided
+    if (query && query.length >= 2) {
+      dbQuery = dbQuery.ilike('name', `%${query}%`)
+    }
+
+    const { data, error } = await dbQuery
+
+    if (error) {
+      console.error('Failed to search brands:', error)
+      throw new Error(`Failed to search brands: ${error.message}`)
+    }
+
+    return data || []
+  }
+
+  /**
+   * Search for fascias by name (autocomplete)
+   * Returns fascias with their parent brand information
+   * @param query Search term (minimum 2 characters)
+   * @param limit Maximum number of results (default 50, max 100)
+   * @returns Array of matching fascias with brand info, ordered by name
+   */
+  async searchFascias(query: string, limit = 50): Promise<any[]> {
     if (query.length < 2) {
       return []
     }
 
     const { data, error } = await this.supabase
-      .from('brands')
-      .select('*')
+      .from('fascias')
+      .select('id, name, brand_id, brands(id, name)')
       .ilike('name', `%${query}%`)
       .order('name')
       .limit(Math.min(limit, 100))
 
     if (error) {
-      console.error('Failed to search brands:', error)
-      throw new Error(`Failed to search brands: ${error.message}`)
+      console.error('Failed to search fascias:', error)
+      throw new Error(`Failed to search fascias: ${error.message}`)
     }
 
     return data || []
@@ -72,7 +101,7 @@ export class StoreService {
     lon: number,
     radiusMeters: number,
     brandIds?: string[],
-    categoryIds?: number[]
+    categoryIds?: string[]  // Category IDs (UUIDs)
   ): Promise<Store[]> {
     // Use PostGIS RPC function for spatial query
     let query = this.supabase.rpc('get_stores_near_point', {
@@ -116,34 +145,38 @@ export class StoreService {
   async findGaps(filters: {
     minPop: number
     maxPop: number
-    includeBrands?: number[]
-    includeCategories?: number[]
-    excludeBrands?: number[]
-    excludeCategories?: number[]
+    includeBrands?: string[]  // Fascia IDs (UUIDs)
+    includeCategories?: string[]  // Category IDs (UUIDs)
+    excludeBrands?: string[]  // Fascia IDs (UUIDs)
+    excludeCategories?: string[]  // Category IDs (UUIDs)
     nearbyExclude?: Array<{
-      brandIds?: number[]
-      categoryIds?: number[]
+      brandIds?: string[]  // Fascia IDs (UUIDs)
+      categoryIds?: string[]  // Category IDs (UUIDs)
       distance: number
     }>
-  }): Promise<any[]> {
+  }): Promise<{ results: any[], total: number }> {
     let query = this.supabase
       .from('built_up_areas')
       .select('gsscode, name, pop, pop_band, centroid_lat, centroid_lon')
       .gte('pop', filters.minPop)
       .lte('pop', filters.maxPop)
 
-    // Include filters: BUAs that HAVE these stores
+    // Collect all GSScodes to exclude (we'll filter these at the end)
+    const allExcludeGsscodes = new Set<string>()
+
+    // Include filters: BUAs that HAVE these fascias
     if (filters.includeBrands && filters.includeBrands.length > 0) {
       const { data: buaCodes } = await this.supabase
         .from('bua_store_presence')
         .select('bua_gsscode')
-        .in('brand_id', filters.includeBrands)
+        .in('fascia_id', filters.includeBrands)
 
       if (buaCodes && buaCodes.length > 0) {
         const gsscodesToInclude = buaCodes.map((b: any) => b.bua_gsscode)
+        console.log('📍 Include filter - GSScodes to include:', gsscodesToInclude.length, 'BUAs')
         query = query.in('gsscode', gsscodesToInclude)
       } else {
-        // No BUAs have these brands, return empty
+        // No BUAs have these fascias, return empty
         return []
       }
     }
@@ -163,16 +196,16 @@ export class StoreService {
       }
     }
 
-    // Exclude filters: BUAs that DON'T have these stores
+    // Exclude filters: Collect BUAs to exclude
     if (filters.excludeBrands && filters.excludeBrands.length > 0) {
       const { data: buaCodes } = await this.supabase
         .from('bua_store_presence')
         .select('bua_gsscode')
-        .in('brand_id', filters.excludeBrands)
+        .in('fascia_id', filters.excludeBrands)
 
       if (buaCodes && buaCodes.length > 0) {
-        const gsscodesToExclude = buaCodes.map((b: any) => b.bua_gsscode)
-        query = query.not('gsscode', 'in', gsscodesToExclude)
+        buaCodes.forEach((b: any) => allExcludeGsscodes.add(b.bua_gsscode))
+        console.log('🚫 Exclude brands - GSScodes to exclude:', buaCodes.length, 'BUAs')
       }
     }
 
@@ -183,12 +216,12 @@ export class StoreService {
         .in('category_id', filters.excludeCategories)
 
       if (buaCodes && buaCodes.length > 0) {
-        const gsscodesToExclude = buaCodes.map((b: any) => b.bua_gsscode)
-        query = query.not('gsscode', 'in', gsscodesToExclude)
+        buaCodes.forEach((b: any) => allExcludeGsscodes.add(b.bua_gsscode))
+        console.log('🚫 Exclude categories - GSScodes to exclude:', buaCodes.length, 'BUAs')
       }
     }
 
-    // Proximity exclusion: BUAs that DON'T have stores within X km
+    // Proximity exclusion: Collect BUAs to exclude
     if (filters.nearbyExclude && filters.nearbyExclude.length > 0) {
       for (const exclude of filters.nearbyExclude) {
         if (exclude.brandIds && exclude.brandIds.length > 0) {
@@ -196,11 +229,10 @@ export class StoreService {
             .from('bua_store_nearby')
             .select('bua_gsscode')
             .eq('distance_m', exclude.distance)
-            .in('brand_id', exclude.brandIds)
+            .in('fascia_id', exclude.brandIds)
 
           if (buaCodes && buaCodes.length > 0) {
-            const gsscodesToExclude = buaCodes.map((b: any) => b.bua_gsscode)
-            query = query.not('gsscode', 'in', gsscodesToExclude)
+            buaCodes.forEach((b: any) => allExcludeGsscodes.add(b.bua_gsscode))
           }
         }
 
@@ -212,23 +244,156 @@ export class StoreService {
             .in('category_id', exclude.categoryIds)
 
           if (buaCodes && buaCodes.length > 0) {
-            const gsscodesToExclude = buaCodes.map((b: any) => b.bua_gsscode)
-            query = query.not('gsscode', 'in', gsscodesToExclude)
+            buaCodes.forEach((b: any) => allExcludeGsscodes.add(b.bua_gsscode))
           }
         }
       }
     }
 
-    query = query.order('pop', { ascending: false }).limit(1000)
+    // Get total count before applying limit (build a separate count query)
+    let countQuery = this.supabase
+      .from('built_up_areas')
+      .select('*', { count: 'exact', head: true })
+      .gte('pop', filters.minPop)
+      .lte('pop', filters.maxPop)
 
-    const { data, error } = await query
+    // Apply include filters to count query
+    let totalBeforeExclude: number | null = null
 
-    if (error) {
-      console.error('Failed to find gaps:', error)
-      throw new Error(`Failed to find gaps: ${error.message}`)
+    if (filters.includeBrands && filters.includeBrands.length > 0) {
+      const { data: buaCodes } = await this.supabase
+        .from('bua_store_presence')
+        .select('bua_gsscode')
+        .in('fascia_id', filters.includeBrands)
+
+      if (buaCodes && buaCodes.length > 0) {
+        const gsscodesToInclude = buaCodes.map((b: any) => b.bua_gsscode)
+        countQuery = countQuery.in('gsscode', gsscodesToInclude)
+        const { count } = await countQuery
+        totalBeforeExclude = count
+      } else {
+        totalBeforeExclude = 0
+      }
+    } else if (filters.includeCategories && filters.includeCategories.length > 0) {
+      const { data: buaCodes } = await this.supabase
+        .from('bua_store_presence')
+        .select('bua_gsscode')
+        .in('category_id', filters.includeCategories)
+
+      if (buaCodes && buaCodes.length > 0) {
+        const gsscodesToInclude = buaCodes.map((b: any) => b.bua_gsscode)
+        countQuery = countQuery.in('gsscode', gsscodesToInclude)
+        const { count } = await countQuery
+        totalBeforeExclude = count
+      } else {
+        totalBeforeExclude = 0
+      }
+    } else {
+      // No include filters - count all BUAs in population range
+      const { count } = await countQuery
+      totalBeforeExclude = count
     }
 
-    return data || []
+    query = query.order('pop', { ascending: false })
+
+    // If we have exclude filters, we need to get the correct total count
+    // Use the RPC function to get ALL matching gsscodes, then fetch detailed data
+    if (allExcludeGsscodes.size > 0) {
+      // Use the RPC function to get ALL matching gsscodes (with pagination)
+      const { gsscodes: allMatchingGsscodes, total } = await this.getFilteredGssCodes(filters)
+
+      console.log(`✅ [findGaps] RPC returned ${total} matching BUAs after all filters`)
+
+      // Now fetch detailed BUA data for top 1,000 by population
+      // We already have all gsscodes, so just query the top 1,000
+      const { data, error } = await this.supabase
+        .from('built_up_areas')
+        .select('gsscode, name, pop, pop_band, centroid_lat, centroid_lon')
+        .in('gsscode', allMatchingGsscodes.slice(0, 1000))  // Top 1,000 gsscodes (already sorted by pop)
+        .order('pop', { ascending: false })
+
+      if (error) {
+        console.error('Failed to fetch BUA details:', error)
+        throw new Error(`Failed to fetch BUA details: ${error.message}`)
+      }
+
+      return { results: data || [], total }
+    } else {
+      // No exclude filters - can safely limit at database level
+      query = query.limit(1000)
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error('Failed to find gaps:', error)
+        throw new Error(`Failed to find gaps: ${error.message}`)
+      }
+
+      const results = data || []
+      const total = totalBeforeExclude || results.length
+
+      return { results, total }
+    }
+  }
+
+  /**
+   * Get filtered gsscodes for map display (no limit, returns all matching gsscodes)
+   * This is used by the map to filter the Mapbox tileset client-side
+   * Uses the Supabase RPC function for efficient server-side filtering
+   * @param filters Complex filter object
+   * @returns Array of matching gsscodes and total count
+   */
+  async getFilteredGssCodes(filters: {
+    minPop: number
+    maxPop: number
+    includeBrands?: string[]  // Fascia IDs (UUIDs)
+    includeCategories?: string[]  // Category IDs (UUIDs)
+    excludeBrands?: string[]  // Fascia IDs (UUIDs)
+    excludeCategories?: string[]  // Category IDs (UUIDs)
+    nearbyExclude?: Array<{
+      brandIds?: string[]  // Fascia IDs (UUIDs)
+      categoryIds?: string[]  // Category IDs (UUIDs)
+      distance: number
+    }>
+  }): Promise<{ gsscodes: string[], total: number }> {
+    // Call the Supabase RPC function for efficient server-side filtering
+    // NOTE: Supabase's default max-rows is 1000. To get all results, we need to paginate.
+    // Since we can't override the limit for RPC calls easily, we'll paginate through results.
+
+    const allGsscodes: string[] = []
+    let offset = 0
+    const pageSize = 1000
+    let hasMore = true
+
+    while (hasMore) {
+      const { data, error } = await this.supabase
+        .rpc('get_filtered_bua_gsscodes', {
+          p_min_pop: filters.minPop,
+          p_max_pop: filters.maxPop,
+          p_include_fascias: filters.includeBrands && filters.includeBrands.length > 0 ? filters.includeBrands : null,
+          p_include_categories: filters.includeCategories && filters.includeCategories.length > 0 ? filters.includeCategories : null,
+          p_exclude_fascias: filters.excludeBrands && filters.excludeBrands.length > 0 ? filters.excludeBrands : null,
+          p_exclude_categories: filters.excludeCategories && filters.excludeCategories.length > 0 ? filters.excludeCategories : null
+        })
+        .range(offset, offset + pageSize - 1)
+
+      if (error) {
+        console.error('Failed to get filtered gsscodes:', error)
+        throw new Error(`Failed to get filtered gsscodes: ${error.message}`)
+      }
+
+      const gsscodes = (data || []).map((row: any) => row.gsscode)
+      allGsscodes.push(...gsscodes)
+
+      // If we got fewer results than pageSize, we've reached the end
+      hasMore = gsscodes.length === pageSize
+      offset += pageSize
+
+      console.log(`✅ [Map Filter RPC] Page ${Math.floor(offset / pageSize)}: ${gsscodes.length} BUAs (total so far: ${allGsscodes.length})`)
+    }
+
+    console.log(`✅ [Map Filter RPC] Finished - Total: ${allGsscodes.length} matching BUAs`)
+    return { gsscodes: allGsscodes, total: allGsscodes.length }
   }
 }
 

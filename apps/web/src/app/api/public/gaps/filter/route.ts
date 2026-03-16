@@ -4,7 +4,8 @@ import { createStoreService } from '@/lib/stores-service'
 export const dynamic = 'force-dynamic'
 
 /**
- * Find gaps - BUAs matching complex filter criteria
+ * Get filtered gsscodes for map display
+ * Returns only the gsscodes that match the filter criteria (for Mapbox filtering)
  *
  * Request body (JSON):
  * {
@@ -17,13 +18,13 @@ export const dynamic = 'force-dynamic'
  *   nearbyExclude?: Array<{
  *     brandIds?: string[],  // Fascia UUIDs
  *     categoryIds?: string[],  // Category UUIDs
- *     distance: number  // in meters: 1000, 3000, 5000, or 10000
+ *     distance: number
  *   }>
  * }
  *
  * Returns:
  * {
- *   results: BUA[],
+ *   gsscodes: string[],  // All matching gsscodes (no limit)
  *   total: number
  * }
  */
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     if (typeof filters.minPop !== 'number' || typeof filters.maxPop !== 'number') {
       return NextResponse.json(
         {
-          results: [],
+          gsscodes: [],
           total: 0,
           error: 'minPop and maxPop are required'
         },
@@ -44,18 +45,17 @@ export async function POST(request: NextRequest) {
     }
 
     const service = await createStoreService()
-    const { results, total } = await service.findGaps(filters)
+    const { gsscodes, total } = await service.getFilteredGssCodes(filters)
 
     return NextResponse.json({
-      results,
-      total,
-      showing: results.length
+      gsscodes,
+      total
     })
   } catch (error) {
-    console.error('Find gaps API error:', error)
+    console.error('Filter API error:', error)
     return NextResponse.json(
       {
-        results: [],
+        gsscodes: [],
         total: 0,
         error: error instanceof Error ? error.message : 'Internal server error'
       },

@@ -4,9 +4,9 @@
  */
 
 export interface Category {
-  id: number
+  id: string  // UUID in database
   name: string
-  parent_category_id: number | null
+  parent_category_id: string | null  // UUID in database
   created_at: string
 }
 
@@ -25,8 +25,8 @@ export interface Fascia {
 }
 
 export interface FasciaCategory {
-  fascia_id: number
-  category_id: number
+  fascia_id: string  // UUID in database
+  category_id: string  // UUID in database
   is_primary: boolean
   created_at: string
 }
@@ -54,9 +54,9 @@ export interface Store {
 
 export interface BUAStorePresence {
   bua_gsscode: string
-  category_id: number
-  brand_id: number
-  fascia_id: number
+  category_id: string  // UUID in database
+  brand_id: string  // UUID in database
+  fascia_id: string  // UUID in database
   store_count: number
   created_at: string
 }
@@ -64,9 +64,9 @@ export interface BUAStorePresence {
 export interface BUAStoreNearby {
   bua_gsscode: string
   distance_m: number  // 1000, 3000, 5000, or 10000
-  category_id: number
-  brand_id: number
-  fascia_id: number
+  category_id: string  // UUID in database
+  brand_id: string  // UUID in database
+  fascia_id: string  // UUID in database
   store_count: number
   created_at: string
 }
