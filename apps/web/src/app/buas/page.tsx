@@ -36,11 +36,11 @@ export default function BUAsPage() {
   const [isLoadingBUAs, setIsLoadingBUAs] = useState(false)
   const [mapGssCodes, setMapGssCodes] = useState<string[]>([])  // All gsscodes for map filtering
 
-  // Filter state for store inclusion/exclusion (fascia IDs are strings/UUIDs)
+  // Filter state for store inclusion/exclusion (fascia IDs and category IDs are strings/UUIDs)
   const [includeCompanies, setIncludeCompanies] = useState<string[]>([])
-  const [includeCategories, setIncludeCategories] = useState<number[]>([])
+  const [includeCategories, setIncludeCategories] = useState<string[]>([])
   const [excludeCompanies, setExcludeCompanies] = useState<string[]>([])
-  const [excludeCategories, setExcludeCategories] = useState<number[]>([])
+  const [excludeCategories, setExcludeCategories] = useState<string[]>([])
   const [proximityExclude, setProximityExclude] = useState<ProximityRule[]>([])
 
   // Filter modal states (three separate modals)
@@ -53,7 +53,7 @@ export default function BUAsPage() {
   const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null)
   const [radiusMeters, setRadiusMeters] = useState(5000) // 5km default
   const [assessCompanies, setAssessCompanies] = useState<string[]>([])
-  const [assessCategories, setAssessCategories] = useState<number[]>([])
+  const [assessCategories, setAssessCategories] = useState<string[]>([])
   const [nearbyStores, setNearbyStores] = useState<StoreType[]>([])
   const [isLoadingStores, setIsLoadingStores] = useState(false)
 
