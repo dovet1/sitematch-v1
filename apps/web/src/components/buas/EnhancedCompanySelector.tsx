@@ -12,9 +12,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { cn } from '@/lib/utils'
 
 interface Category {
-  id: number
+  id: string  // UUID
   name: string
-  parent_category_id: number | null
+  parent_category_id: string | null  // UUID
 }
 
 interface Fascia {
@@ -32,9 +32,9 @@ interface Brand {
 
 interface EnhancedCompanySelectorProps {
   selectedCompanies: string[]  // Fascia IDs (UUIDs)
-  selectedCategories: number[]
+  selectedCategories: string[]  // Category IDs (UUIDs)
   onCompaniesChange: (ids: string[]) => void
-  onCategoriesChange: (ids: number[]) => void
+  onCategoriesChange: (ids: string[]) => void
   mode: 'include' | 'exclude' | 'proximity'
 }
 
@@ -128,7 +128,7 @@ export function EnhancedCompanySelector({
   }, [allBrands, storeSearchQuery])
 
   const handleCategoryToggle = useCallback(
-    (categoryId: number) => {
+    (categoryId: string) => {
       const newSelection = selectedCategories.includes(categoryId)
         ? selectedCategories.filter((id) => id !== categoryId)
         : [...selectedCategories, categoryId]
