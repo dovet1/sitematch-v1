@@ -2,14 +2,19 @@
 -- This is necessary because PostgreSQL can't decide between overloaded functions
 DROP FUNCTION IF EXISTS get_filtered_bua_gsscodes(INTEGER, INTEGER, UUID[], INTEGER[], UUID[], INTEGER[]);
 
--- Now create the correct version with UUID[] for all ID parameters
+-- Drop the version without proximity parameters (if exists)
+DROP FUNCTION IF EXISTS get_filtered_bua_gsscodes(INTEGER, INTEGER, UUID[], UUID[], UUID[], UUID[]);
+
+-- Now create the correct version with UUID[] for all ID parameters + proximity exclusion
 CREATE OR REPLACE FUNCTION get_filtered_bua_gsscodes(
   p_min_pop INTEGER,
   p_max_pop INTEGER,
   p_include_fascias UUID[] DEFAULT NULL,
   p_include_categories UUID[] DEFAULT NULL,
   p_exclude_fascias UUID[] DEFAULT NULL,
-  p_exclude_categories UUID[] DEFAULT NULL
+  p_exclude_categories UUID[] DEFAULT NULL,
+  p_nearby_exclude_fascias JSONB[] DEFAULT NULL,
+  p_nearby_exclude_categories JSONB[] DEFAULT NULL
 )
 RETURNS TABLE(gsscode TEXT) AS $$
 BEGIN
@@ -51,6 +56,38 @@ BEGIN
         SELECT 1 FROM bua_store_presence sp
         WHERE sp.bua_gsscode = b.gsscode
           AND sp.category_id = ANY(p_exclude_categories)
+      )
+    )
+    -- Proximity exclusion: Exclude BUAs with specified fascias nearby
+    AND (
+      p_nearby_exclude_fascias IS NULL
+      OR NOT EXISTS (
+        SELECT 1
+        FROM unnest(p_nearby_exclude_fascias) AS rule
+        CROSS JOIN LATERAL (
+          SELECT (rule->>'distance_m')::integer AS dist,
+                 array(SELECT jsonb_array_elements_text(rule->'ids'))::uuid[] AS fascia_ids
+        ) AS parsed
+        JOIN bua_store_nearby sn
+          ON sn.bua_gsscode = b.gsscode
+         AND sn.distance_m = parsed.dist
+         AND sn.fascia_id = ANY(parsed.fascia_ids)
+      )
+    )
+    -- Proximity exclusion: Exclude BUAs with specified categories nearby
+    AND (
+      p_nearby_exclude_categories IS NULL
+      OR NOT EXISTS (
+        SELECT 1
+        FROM unnest(p_nearby_exclude_categories) AS rule
+        CROSS JOIN LATERAL (
+          SELECT (rule->>'distance_m')::integer AS dist,
+                 array(SELECT jsonb_array_elements_text(rule->'ids'))::uuid[] AS category_ids
+        ) AS parsed
+        JOIN bua_store_nearby sn
+          ON sn.bua_gsscode = b.gsscode
+         AND sn.distance_m = parsed.dist
+         AND sn.category_id = ANY(parsed.category_ids)
       )
     )
   ORDER BY b.pop DESC;

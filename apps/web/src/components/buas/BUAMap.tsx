@@ -33,7 +33,7 @@ interface BUAMapProps {
   onPointSelected?: (point: { lat: number; lng: number }) => void
   radiusMeters?: number
   stores?: Store[]  // Stores to display as markers in Assess Area mode
-  filteredGssCodes?: string[]  // Optional list of BUA gsscodes to show (for company/category filtering)
+  filteredGssCodes?: string[]  // List of BUA gsscodes to show (ALL matching gsscodes, no limit)
 }
 
 export function BUAMap({
@@ -230,7 +230,9 @@ export function BUAMap({
         ]
 
         // If we have filtered gsscodes (from company/category filters), add them to the filter
+        // This will show ONLY BUAs with gsscodes in the list (supports all gsscodes, no limit)
         if (filteredGssCodes && filteredGssCodes.length > 0) {
+          console.log('🗺️ Map filtering to', filteredGssCodes.length, 'BUAs')
           // Use 'in' filter to show only BUAs with gsscodes in the list
           filterConditions.push(['in', ['get', 'gsscode'], ['literal', filteredGssCodes]])
         }

@@ -11,7 +11,6 @@ export const TRUSTED_COMPANY_DOMAINS = [
   'vedragroup.co.uk',
   'colliers.com',
   'morganwilliams.co.uk',
-  'marksandspencer.com',
   'knoops.com',
   'fastnedcharging.com',
   'travelodge.co.uk',

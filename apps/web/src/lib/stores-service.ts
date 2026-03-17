@@ -360,6 +360,30 @@ export class StoreService {
     // NOTE: Supabase's default max-rows is 1000. To get all results, we need to paginate.
     // Since we can't override the limit for RPC calls easily, we'll paginate through results.
 
+    // Transform proximity exclusion rules into JSONB format for RPC
+    let nearbyExcludeFascias: any[] | null = null
+    let nearbyExcludeCategories: any[] | null = null
+
+    if (filters.nearbyExclude && filters.nearbyExclude.length > 0) {
+      // Group by fascias vs categories
+      const fasciaRules = filters.nearbyExclude
+        .filter(rule => rule.brandIds && rule.brandIds.length > 0)
+        .map(rule => ({
+          distance_m: rule.distance,
+          ids: rule.brandIds
+        }))
+
+      const categoryRules = filters.nearbyExclude
+        .filter(rule => rule.categoryIds && rule.categoryIds.length > 0)
+        .map(rule => ({
+          distance_m: rule.distance,
+          ids: rule.categoryIds
+        }))
+
+      nearbyExcludeFascias = fasciaRules.length > 0 ? fasciaRules : null
+      nearbyExcludeCategories = categoryRules.length > 0 ? categoryRules : null
+    }
+
     const allGsscodes: string[] = []
     let offset = 0
     const pageSize = 1000
@@ -373,7 +397,9 @@ export class StoreService {
           p_include_fascias: filters.includeBrands && filters.includeBrands.length > 0 ? filters.includeBrands : null,
           p_include_categories: filters.includeCategories && filters.includeCategories.length > 0 ? filters.includeCategories : null,
           p_exclude_fascias: filters.excludeBrands && filters.excludeBrands.length > 0 ? filters.excludeBrands : null,
-          p_exclude_categories: filters.excludeCategories && filters.excludeCategories.length > 0 ? filters.excludeCategories : null
+          p_exclude_categories: filters.excludeCategories && filters.excludeCategories.length > 0 ? filters.excludeCategories : null,
+          p_nearby_exclude_fascias: nearbyExcludeFascias,
+          p_nearby_exclude_categories: nearbyExcludeCategories
         })
         .range(offset, offset + pageSize - 1)
 
