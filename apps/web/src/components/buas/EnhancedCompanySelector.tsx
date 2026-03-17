@@ -158,7 +158,7 @@ export function EnhancedCompanySelector({
         onCompaniesChange(newSelection)
       } else {
         // Select all fascias of this brand
-        const newSelection = [...new Set([...selectedCompanies, ...fasciaIds])]
+        const newSelection = Array.from(new Set([...selectedCompanies, ...fasciaIds]))
         onCompaniesChange(newSelection)
       }
     },
