@@ -13,10 +13,10 @@ import { EnhancedCompanySelector } from './EnhancedCompanySelector'
 interface IncludeModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  includeCompanies: string[]  // Fascia IDs
-  includeCategories: number[]
+  includeCompanies: string[]  // Fascia UUIDs
+  includeCategories: string[]  // Category UUIDs
   onIncludeCompaniesChange: (ids: string[]) => void
-  onIncludeCategoriesChange: (ids: number[]) => void
+  onIncludeCategoriesChange: (ids: string[]) => void
 }
 
 export function IncludeModal({

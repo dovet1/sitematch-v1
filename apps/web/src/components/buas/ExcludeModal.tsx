@@ -13,10 +13,10 @@ import { EnhancedCompanySelector } from './EnhancedCompanySelector'
 interface ExcludeModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  excludeCompanies: string[]  // Fascia IDs
-  excludeCategories: number[]
+  excludeCompanies: string[]  // Fascia UUIDs
+  excludeCategories: string[]  // Category UUIDs
   onExcludeCompaniesChange: (ids: string[]) => void
-  onExcludeCategoriesChange: (ids: number[]) => void
+  onExcludeCategoriesChange: (ids: string[]) => void
 }
 
 export function ExcludeModal({
