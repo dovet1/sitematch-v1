@@ -30,6 +30,8 @@ export default function BUAsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [center, setCenter] = useState<{ lat: number; lng: number } | undefined>()
   const [populationRange, setPopulationRange] = useState<[number, number]>([MIN_POPULATION, MAX_POPULATION])
+  const [minPopInput, setMinPopInput] = useState<string>(MIN_POPULATION.toString())
+  const [maxPopInput, setMaxPopInput] = useState<string>(MAX_POPULATION.toString())
   const [selectedBUA, setSelectedBUA] = useState<{ name: string; pop: number } | null>(null)
   const [filteredBUAs, setFilteredBUAs] = useState<BUA[]>([])
   const [totalBUAs, setTotalBUAs] = useState<number>(0)
@@ -73,14 +75,16 @@ export default function BUAsPage() {
 
   const handlePopulationRangeChange = (value: number[]) => {
     setPopulationRange([value[0], value[1]])
+    setMinPopInput(value[0].toString())
+    setMaxPopInput(value[1].toString())
   }
 
   const handleMinPopInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value
+    setMinPopInput(inputValue)
 
     // Allow empty string (user is clearing/typing)
     if (inputValue === '') {
-      setPopulationRange([MIN_POPULATION, maxPop])
       return
     }
 
@@ -92,12 +96,18 @@ export default function BUAsPage() {
     }
   }
 
+  const handleMinPopInputBlur = () => {
+    if (minPopInput === '' || isNaN(Number(minPopInput))) {
+      setMinPopInput(minPop.toString())
+    }
+  }
+
   const handleMaxPopInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value
+    setMaxPopInput(inputValue)
 
     // Allow empty string (user is clearing/typing)
     if (inputValue === '') {
-      setPopulationRange([minPop, MAX_POPULATION])
       return
     }
 
@@ -106,6 +116,12 @@ export default function BUAsPage() {
       // Clamp to valid range
       const clampedValue = Math.max(minPop, Math.min(value, MAX_POPULATION))
       setPopulationRange([minPop, clampedValue])
+    }
+  }
+
+  const handleMaxPopInputBlur = () => {
+    if (maxPopInput === '' || isNaN(Number(maxPopInput))) {
+      setMaxPopInput(maxPop.toString())
     }
   }
 
@@ -389,8 +405,9 @@ export default function BUAsPage() {
                           type="number"
                           min={MIN_POPULATION}
                           max={maxPop}
-                          value={minPop}
+                          value={minPopInput}
                           onChange={handleMinPopInputChange}
+                          onBlur={handleMinPopInputBlur}
                           className="h-9 text-sm"
                         />
                       </div>
@@ -403,8 +420,9 @@ export default function BUAsPage() {
                           type="number"
                           min={minPop}
                           max={MAX_POPULATION}
-                          value={maxPop}
+                          value={maxPopInput}
                           onChange={handleMaxPopInputChange}
+                          onBlur={handleMaxPopInputBlur}
                           className="h-9 text-sm"
                         />
                       </div>
@@ -744,8 +762,9 @@ export default function BUAsPage() {
                     type="number"
                     min={MIN_POPULATION}
                     max={maxPop}
-                    value={minPop}
+                    value={minPopInput}
                     onChange={handleMinPopInputChange}
+                    onBlur={handleMinPopInputBlur}
                     className="h-9 text-sm"
                   />
                 </div>
@@ -758,8 +777,9 @@ export default function BUAsPage() {
                     type="number"
                     min={minPop}
                     max={MAX_POPULATION}
-                    value={maxPop}
+                    value={maxPopInput}
                     onChange={handleMaxPopInputChange}
+                    onBlur={handleMaxPopInputBlur}
                     className="h-9 text-sm"
                   />
                 </div>
