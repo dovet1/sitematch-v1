@@ -76,16 +76,36 @@ export default function BUAsPage() {
   }
 
   const handleMinPopInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Number(e.target.value)
-    if (!isNaN(value) && value >= MIN_POPULATION && value <= maxPop) {
-      setPopulationRange([value, maxPop])
+    const inputValue = e.target.value
+
+    // Allow empty string (user is clearing/typing)
+    if (inputValue === '') {
+      setPopulationRange([MIN_POPULATION, maxPop])
+      return
+    }
+
+    const value = Number(inputValue)
+    if (!isNaN(value)) {
+      // Clamp to valid range
+      const clampedValue = Math.max(MIN_POPULATION, Math.min(value, maxPop))
+      setPopulationRange([clampedValue, maxPop])
     }
   }
 
   const handleMaxPopInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Number(e.target.value)
-    if (!isNaN(value) && value >= minPop && value <= MAX_POPULATION) {
-      setPopulationRange([minPop, value])
+    const inputValue = e.target.value
+
+    // Allow empty string (user is clearing/typing)
+    if (inputValue === '') {
+      setPopulationRange([minPop, MAX_POPULATION])
+      return
+    }
+
+    const value = Number(inputValue)
+    if (!isNaN(value)) {
+      // Clamp to valid range
+      const clampedValue = Math.max(minPop, Math.min(value, MAX_POPULATION))
+      setPopulationRange([minPop, clampedValue])
     }
   }
 
