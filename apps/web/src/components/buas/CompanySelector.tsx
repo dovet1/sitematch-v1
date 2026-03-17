@@ -11,21 +11,21 @@ import { Search, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Category {
-  id: number
+  id: string  // UUID
   name: string
-  parent_category_id: number | null
+  parent_category_id: string | null  // UUID
 }
 
 interface Brand {
-  id: number
+  id: string  // UUID
   name: string
 }
 
 interface CompanySelectorProps {
-  selectedCompanies: string[]  // Brand IDs are UUIDs
-  selectedCategories: number[]
+  selectedCompanies: string[]  // Brand UUIDs
+  selectedCategories: string[]  // Category UUIDs
   onCompaniesChange: (ids: string[]) => void
-  onCategoriesChange: (ids: number[]) => void
+  onCategoriesChange: (ids: string[]) => void
   mode: 'include' | 'exclude' | 'proximity'
 }
 
@@ -85,7 +85,7 @@ export function CompanySelector({
   }, [brandSearchQuery])
 
   const handleCategoryToggle = useCallback(
-    (categoryId: number) => {
+    (categoryId: string) => {
       const newSelection = selectedCategories.includes(categoryId)
         ? selectedCategories.filter((id) => id !== categoryId)
         : [...selectedCategories, categoryId]
@@ -95,7 +95,7 @@ export function CompanySelector({
   )
 
   const handleBrandToggle = useCallback(
-    (brandId: number) => {
+    (brandId: string) => {
       const newSelection = selectedCompanies.includes(brandId)
         ? selectedCompanies.filter((id) => id !== brandId)
         : [...selectedCompanies, brandId]
