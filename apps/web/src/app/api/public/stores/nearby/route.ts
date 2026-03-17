@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
  * - lon: Longitude (required)
  * - radius: Radius in meters (default 5000, max 20000)
  * - brandIds: Comma-separated brand IDs (optional)
- * - categoryIds: Comma-separated category IDs (optional)
+ * - categoryIds: Comma-separated category UUIDs (optional)
  *
  * Returns:
  * {
@@ -32,8 +32,7 @@ export async function GET(request: NextRequest) {
     const categoryIds = searchParams
       .get('categoryIds')
       ?.split(',')
-      .map(Number)
-      .filter(Boolean)
+      .filter(id => id.trim().length > 0)
 
     // Validate coordinates
     if (isNaN(lat) || isNaN(lon)) {
