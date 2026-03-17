@@ -177,7 +177,7 @@ export class StoreService {
         query = query.in('gsscode', gsscodesToInclude)
       } else {
         // No BUAs have these fascias, return empty
-        return []
+        return { results: [], total: 0 }
       }
     }
 
@@ -192,7 +192,7 @@ export class StoreService {
         query = query.in('gsscode', gsscodesToInclude)
       } else {
         // No BUAs have these categories, return empty
-        return []
+        return { results: [], total: 0 }
       }
     }
 
