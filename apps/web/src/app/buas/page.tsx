@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Info, MapPin, ChevronDown, Store } from 'lucide-react'
+import { ArrowLeft, Info, MapPin, ChevronDown, Store, Settings } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,9 @@ import { BUAMap } from '@/components/buas/BUAMap'
 import { BUASearch } from '@/components/buas/BUASearch'
 import { ResultsPanel } from '@/components/buas/ResultsPanel'
 import { CompanySelector } from '@/components/buas/CompanySelector'
+import { IncludeModal } from '@/components/buas/IncludeModal'
+import { ExcludeModal } from '@/components/buas/ExcludeModal'
+import { ProximityModal, type ProximityRule } from '@/components/buas/ProximityModal'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
@@ -29,13 +32,21 @@ export default function BUAsPage() {
   const [populationRange, setPopulationRange] = useState<[number, number]>([MIN_POPULATION, MAX_POPULATION])
   const [selectedBUA, setSelectedBUA] = useState<{ name: string; pop: number } | null>(null)
   const [filteredBUAs, setFilteredBUAs] = useState<BUA[]>([])
+  const [totalBUAs, setTotalBUAs] = useState<number>(0)
   const [isLoadingBUAs, setIsLoadingBUAs] = useState(false)
+  const [mapGssCodes, setMapGssCodes] = useState<string[]>([])  // All gsscodes for map filtering
 
-  // Filter state for store inclusion/exclusion
-  const [includeCompanies, setIncludeCompanies] = useState<number[]>([])
+  // Filter state for store inclusion/exclusion (fascia IDs are strings/UUIDs)
+  const [includeCompanies, setIncludeCompanies] = useState<string[]>([])
   const [includeCategories, setIncludeCategories] = useState<number[]>([])
-  const [excludeCompanies, setExcludeCompanies] = useState<number[]>([])
+  const [excludeCompanies, setExcludeCompanies] = useState<string[]>([])
   const [excludeCategories, setExcludeCategories] = useState<number[]>([])
+  const [proximityExclude, setProximityExclude] = useState<ProximityRule[]>([])
+
+  // Filter modal states (three separate modals)
+  const [includeModalOpen, setIncludeModalOpen] = useState(false)
+  const [excludeModalOpen, setExcludeModalOpen] = useState(false)
+  const [proximityModalOpen, setProximityModalOpen] = useState(false)
 
   // Assess Area mode state
   const [currentMode, setCurrentMode] = useState<'find-gaps' | 'assess-area'>('find-gaps')
@@ -166,21 +177,52 @@ export default function BUAsPage() {
           filters.excludeCategories = excludeCategories
         }
 
-        const response = await fetch('/api/public/gaps/find', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(filters)
-        })
+        // Add proximity exclusion filters if any
+        if (proximityExclude.length > 0) {
+          filters.nearbyExclude = proximityExclude
+        }
 
-        if (response.ok) {
-          const data = await response.json()
+        console.log('🔍 Gap Analysis Filters:', JSON.stringify(filters, null, 2))
+
+        // Call both endpoints in parallel:
+        // 1. /api/public/gaps/find - Returns top 1,000 BUAs for the results panel
+        // 2. /api/public/gaps/filter - Returns ALL matching gsscodes for the map
+        const [findResponse, filterResponse] = await Promise.all([
+          fetch('/api/public/gaps/find', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(filters)
+          }),
+          fetch('/api/public/gaps/filter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(filters)
+          })
+        ])
+
+        if (findResponse.ok) {
+          const data = await findResponse.json()
+          console.log('📊 Results Panel API Response:', {
+            resultsCount: data.results?.length,
+            total: data.total,
+            showing: data.showing
+          })
           setFilteredBUAs(data.results || [])
+          setTotalBUAs(data.total || data.results?.length || 0)
+        }
+
+        if (filterResponse.ok) {
+          const data = await filterResponse.json()
+          console.log('🗺️ Map Filter API Response:', {
+            gsscodesCount: data.gsscodes?.length,
+            total: data.total
+          })
+          setMapGssCodes(data.gsscodes || [])
         }
       } catch (error) {
         console.error('Error fetching filtered BUAs:', error)
         setFilteredBUAs([])
+        setMapGssCodes([])
       } finally {
         setIsLoadingBUAs(false)
       }
@@ -189,7 +231,7 @@ export default function BUAsPage() {
     // Debounce the fetch to avoid too many API calls
     const debounceTimer = setTimeout(fetchFilteredBUAs, 500)
     return () => clearTimeout(debounceTimer)
-  }, [minPop, maxPop, includeCompanies, includeCategories, excludeCompanies, excludeCategories])
+  }, [minPop, maxPop, includeCompanies, includeCategories, excludeCompanies, excludeCategories, proximityExclude])
 
   // Fetch nearby stores when point is selected (Assess Area mode)
   useEffect(() => {
@@ -274,7 +316,7 @@ export default function BUAsPage() {
               className="flex-1 flex flex-col overflow-hidden"
               onValueChange={(value) => setCurrentMode(value as 'find-gaps' | 'assess-area')}
             >
-              <TabsList className="grid w-full grid-cols-2 m-3">
+              <TabsList className="grid w-full grid-cols-2 my-3">
                 <TabsTrigger value="find-gaps">Find Gaps</TabsTrigger>
                 <TabsTrigger value="assess-area">Assess Area</TabsTrigger>
               </TabsList>
@@ -350,73 +392,97 @@ export default function BUAsPage() {
                   </CollapsibleContent>
                 </Collapsible>
 
-                {/* Collapsible: Include Stores */}
-                <Collapsible defaultOpen={false}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
-                    <div className="flex items-center gap-2">
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium text-gray-900">Include Stores</span>
+                {/* Include Filters */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Include Stores</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIncludeModalOpen(true)}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  </div>
+                  {(includeCompanies.length > 0 || includeCategories.length > 0) ? (
+                    <div className="flex flex-wrap gap-1">
+                      {includeCompanies.length > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {includeCompanies.length} fascia{includeCompanies.length !== 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                      {includeCategories.length > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {includeCategories.length} categor{includeCategories.length !== 1 ? 'ies' : 'y'}
+                        </Badge>
+                      )}
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {includeCompanies.length + includeCategories.length} selected
-                    </Badge>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-6 pt-4">
-                    <div className="text-xs text-gray-600 mb-3">
-                      Show only BUAs that have these stores
+                  ) : (
+                    <div className="text-xs text-gray-500 text-center py-2 border border-dashed border-gray-200 rounded">
+                      No include filters
                     </div>
-                    <CompanySelector
-                      selectedCompanies={includeCompanies}
-                      selectedCategories={includeCategories}
-                      onCompaniesChange={setIncludeCompanies}
-                      onCategoriesChange={setIncludeCategories}
-                      mode="include"
-                    />
-                  </CollapsibleContent>
-                </Collapsible>
+                  )}
+                </div>
 
-                {/* Collapsible: Exclude Stores */}
-                <Collapsible defaultOpen={false}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
-                    <div className="flex items-center gap-2">
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium text-gray-900">Exclude Stores</span>
+                {/* Exclude Filters */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Exclude Stores</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setExcludeModalOpen(true)}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  </div>
+                  {(excludeCompanies.length > 0 || excludeCategories.length > 0) ? (
+                    <div className="flex flex-wrap gap-1">
+                      {excludeCompanies.length > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {excludeCompanies.length} fascia{excludeCompanies.length !== 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                      {excludeCategories.length > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {excludeCategories.length} categor{excludeCategories.length !== 1 ? 'ies' : 'y'}
+                        </Badge>
+                      )}
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {excludeCompanies.length + excludeCategories.length} selected
-                    </Badge>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-6 pt-4">
-                    <div className="text-xs text-gray-600 mb-3">
-                      Hide BUAs that have these stores
+                  ) : (
+                    <div className="text-xs text-gray-500 text-center py-2 border border-dashed border-gray-200 rounded">
+                      No exclude filters
                     </div>
-                    <CompanySelector
-                      selectedCompanies={excludeCompanies}
-                      selectedCategories={excludeCategories}
-                      onCompaniesChange={setExcludeCompanies}
-                      onCategoriesChange={setExcludeCategories}
-                      mode="exclude"
-                    />
-                  </CollapsibleContent>
-                </Collapsible>
+                  )}
+                </div>
 
-                {/* Collapsible: Proximity Exclusion (Placeholder) */}
-                <Collapsible defaultOpen={false}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
-                    <div className="flex items-center gap-2">
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium text-gray-900">Proximity Exclusion</span>
+                {/* Proximity Exclusion */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Proximity Exclusion</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setProximityModalOpen(true)}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  </div>
+                  {proximityExclude.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant="secondary" className="text-xs">
+                        {proximityExclude.length} rule{proximityExclude.length !== 1 ? 's' : ''}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="text-xs">None</Badge>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-6 pt-4">
-                    <div className="text-sm text-gray-500 text-center py-4">
-                      <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                      <p>Exclude BUAs near specific stores</p>
-                      <p className="text-xs mt-1">Coming soon...</p>
+                  ) : (
+                    <div className="text-xs text-gray-500 text-center py-2 border border-dashed border-gray-200 rounded">
+                      No proximity rules
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                  )}
+                </div>
               </TabsContent>
 
               {/* Assess Area Tab Content */}
@@ -569,7 +635,7 @@ export default function BUAsPage() {
               filteredGssCodes={
                 currentMode === 'find-gaps' &&
                 (includeCompanies.length > 0 || includeCategories.length > 0 || excludeCompanies.length > 0 || excludeCategories.length > 0)
-                  ? filteredBUAs.map(bua => bua.gsscode)
+                  ? mapGssCodes
                   : undefined
               }
             />
@@ -582,6 +648,7 @@ export default function BUAsPage() {
             selectedBUA={selectedBUA}
             onItemClick={handleBUAListItemClick}
             mode={currentMode}
+            total={currentMode === 'find-gaps' ? totalBUAs : undefined}
           />
         </div>
       </div>
@@ -681,11 +748,23 @@ export default function BUAsPage() {
 
             {/* Filtered BUAs List (Mobile) */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Matching BUAs</Label>
-                <span className="text-xs text-gray-500">
-                  {isLoadingBUAs ? 'Loading...' : `Top ${filteredBUAs.length}`}
-                </span>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Matching BUAs</Label>
+                  <span className={totalBUAs > 1000 ? "text-xs font-bold text-amber-600" : "text-xs text-gray-500"}>
+                    {(() => {
+                      console.log('🎨 Render check - totalBUAs:', totalBUAs, 'filteredBUAs.length:', filteredBUAs.length)
+                      if (isLoadingBUAs) return 'Loading...'
+                      if (totalBUAs > 1000) return `Showing ${filteredBUAs.length.toLocaleString()} of ${totalBUAs.toLocaleString()}`
+                      return `${filteredBUAs.length} result${filteredBUAs.length !== 1 ? 's' : ''}`
+                    })()}
+                  </span>
+                </div>
+                {!isLoadingBUAs && totalBUAs > 1000 && (
+                  <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                    Showing top 1,000 by population. Refine filters to see all {totalBUAs.toLocaleString()} results.
+                  </div>
+                )}
               </div>
               <div className="border border-gray-200 rounded-lg overflow-hidden">
                 {isLoadingBUAs ? (
@@ -727,6 +806,34 @@ export default function BUAsPage() {
           </div>
         </div>
       </div>
+
+      {/* Include Modal */}
+      <IncludeModal
+        open={includeModalOpen}
+        onOpenChange={setIncludeModalOpen}
+        includeCompanies={includeCompanies}
+        includeCategories={includeCategories}
+        onIncludeCompaniesChange={setIncludeCompanies}
+        onIncludeCategoriesChange={setIncludeCategories}
+      />
+
+      {/* Exclude Modal */}
+      <ExcludeModal
+        open={excludeModalOpen}
+        onOpenChange={setExcludeModalOpen}
+        excludeCompanies={excludeCompanies}
+        excludeCategories={excludeCategories}
+        onExcludeCompaniesChange={setExcludeCompanies}
+        onExcludeCategoriesChange={setExcludeCategories}
+      />
+
+      {/* Proximity Modal */}
+      <ProximityModal
+        open={proximityModalOpen}
+        onOpenChange={setProximityModalOpen}
+        proximityExclude={proximityExclude}
+        onProximityExcludeChange={setProximityExclude}
+      />
     </div>
   )
 }
