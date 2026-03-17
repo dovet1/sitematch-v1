@@ -74,7 +74,7 @@ export function ProximityModal({
     setLocalProximityRules(newRules)
   }
 
-  const updateRuleCategories = (index: number, categoryIds: number[]) => {
+  const updateRuleCategories = (index: number, categoryIds: string[]) => {
     const newRules = [...localProximityRules]
     newRules[index] = { ...newRules[index], categoryIds }
     setLocalProximityRules(newRules)
