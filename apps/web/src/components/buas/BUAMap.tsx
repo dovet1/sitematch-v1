@@ -7,7 +7,7 @@ import { formatPopulation } from '@/lib/format-population'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
-const BUA_TILESET_ID = 'dovet.drwqyy89'
+const BUA_TILESET_ID = 'dovet.ciilxjuj' // Updated tileset with pop_final field
 const BUA_SOURCE_ID = 'bua-source'
 const BUA_LAYER_ID = 'bua-fill'
 const BUA_OUTLINE_LAYER_ID = 'bua-outline'
