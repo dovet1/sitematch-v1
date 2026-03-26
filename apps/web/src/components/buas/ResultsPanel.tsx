@@ -4,6 +4,7 @@ import { MapPin, Store as StoreIcon } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import type { BUA } from '@/lib/buas'
+import { formatPopulation } from '@/lib/format-population'
 
 interface ResultsPanelProps {
   results: BUA[] | any[] // BUA[] for Find Gaps mode, Store[] for Assess Area mode
@@ -86,7 +87,7 @@ export function ResultsPanel({
                       {bua.name}
                     </div>
                     <div className="text-xs text-gray-600">
-                      Pop: {bua.pop.toLocaleString()}
+                      Pop: {formatPopulation(bua.pop_final)}
                     </div>
                   </div>
                 </div>

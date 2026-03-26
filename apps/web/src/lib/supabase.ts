@@ -376,6 +376,9 @@ export interface Database {
           gsscode: string
           name: string
           pop: number
+          pop_final: number | null
+          pop_official: number | null
+          name_clean: string | null
           pop_band: string
           centroid_lat: number
           centroid_lon: number
@@ -386,6 +389,9 @@ export interface Database {
           gsscode: string
           name: string
           pop: number
+          pop_final?: number | null
+          pop_official?: number | null
+          name_clean?: string | null
           pop_band: string
           centroid_lat: number
           centroid_lon: number
@@ -395,6 +401,9 @@ export interface Database {
           gsscode?: string
           name?: string
           pop?: number
+          pop_final?: number | null
+          pop_official?: number | null
+          name_clean?: string | null
           pop_band?: string
           centroid_lat?: number
           centroid_lon?: number

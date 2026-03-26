@@ -4,7 +4,9 @@ import type { Database } from '@/lib/supabase'
 export interface BUA {
   gsscode: string
   name: string
-  pop: number
+  pop: number  // Legacy - use pop_final instead
+  pop_final: number | null
+  pop_official: number | null
   pop_band: string
   centroid_lat: number
   centroid_lon: number
@@ -30,9 +32,9 @@ export class BUAService {
 
     const { data, error } = await this.supabase
       .from('built_up_areas')
-      .select('gsscode, name, pop, pop_band, centroid_lat, centroid_lon')
+      .select('gsscode, name, pop, pop_final, pop_official, pop_band, centroid_lat, centroid_lon')
       .ilike('name', `%${query}%`)
-      .order('pop', { ascending: false })
+      .order('pop_final', { ascending: false, nullsLast: true })
       .limit(Math.min(limit, 100))
 
     if (error) {
@@ -51,7 +53,7 @@ export class BUAService {
   async getBUAByCode(gsscode: string): Promise<BUA | null> {
     const { data, error } = await this.supabase
       .from('built_up_areas')
-      .select('gsscode, name, pop, pop_band, centroid_lat, centroid_lon')
+      .select('gsscode, name, pop, pop_final, pop_official, pop_band, centroid_lat, centroid_lon')
       .eq('gsscode', gsscode)
       .single()
 
@@ -81,10 +83,10 @@ export class BUAService {
   ): Promise<BUA[]> {
     const { data, error } = await this.supabase
       .from('built_up_areas')
-      .select('gsscode, name, pop, pop_band, centroid_lat, centroid_lon')
-      .gte('pop', minPop)
-      .lte('pop', maxPop)
-      .order('pop', { ascending: false })
+      .select('gsscode, name, pop, pop_final, pop_official, pop_band, centroid_lat, centroid_lon')
+      .gte('pop_final', minPop)
+      .lte('pop_final', maxPop)
+      .order('pop_final', { ascending: false, nullsLast: true })
       .limit(Math.min(limit, 1000))
 
     if (error) {

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { formatPopulation } from '@/lib/format-population'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
@@ -121,7 +122,7 @@ export function BUAMap({
         paint: {
           'fill-color': [
             'step',
-            ['get', 'pop'],
+            ['coalesce', ['get', 'pop_final'], ['get', 'pop']],
             '#eff6ff', // <1k: very light blue
             1000, '#dbeafe', // 1k-5k
             5000, '#bfdbfe', // 5k-10k
@@ -155,6 +156,7 @@ export function BUAMap({
         const gsscode = feature.properties?.gsscode
         const name = feature.properties?.name
         const pop = feature.properties?.pop
+        const pop_final = feature.properties?.pop_final
 
         if (gsscode && name && pop !== undefined) {
           // Show popup
@@ -172,7 +174,7 @@ export function BUAMap({
               <div style="padding: 8px;">
                 <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1e293b;">${name}</h3>
                 <div style="font-size: 14px; color: #64748b; margin-bottom: 4px;">
-                  <strong>Population:</strong> ${pop.toLocaleString()}
+                  <strong>Population:</strong> ${formatPopulation(pop_final)}
                 </div>
                 <div style="font-size: 12px; color: #94a3b8;">
                   GSS Code: ${gsscode}
@@ -223,10 +225,18 @@ export function BUAMap({
 
       try {
         // Build filter conditions
+        const pop = ['coalesce', ['get', 'pop_final'], ['get', 'pop']]
         const filterConditions: any[] = [
           'all',
-          ['>=', ['get', 'pop'], minPopulation],
-          ['<=', ['get', 'pop'], maxPopulation]
+          // If minPopulation < 5000, include all BUAs with pop < 5000
+          // Otherwise apply normal min population filter
+          minPopulation < 5000
+            ? ['any',
+                ['<', pop, 5000],
+                ['>=', pop, minPopulation]
+              ]
+            : ['>=', pop, minPopulation],
+          ['<=', pop, maxPopulation]
         ]
 
         // If we have filtered gsscodes (from company/category filters), add them to the filter

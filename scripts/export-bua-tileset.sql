@@ -18,7 +18,13 @@ BEGIN
   RETURN QUERY
   SELECT DISTINCT b.gsscode
   FROM built_up_areas b
-  WHERE b.pop BETWEEN p_min_pop AND p_max_pop
+  WHERE (
+    -- If min_pop < 5000, include all BUAs with pop < 5000
+    (p_min_pop < 5000 AND COALESCE(b.pop_final, b.pop) < 5000)
+    OR
+    -- For BUAs with pop >= 5000, apply normal filtering
+    (COALESCE(b.pop_final, b.pop) BETWEEN p_min_pop AND p_max_pop)
+  )
     -- Include filter: BUA must have at least one of these fascias
     AND (
       p_include_fascias IS NULL
@@ -55,6 +61,6 @@ BEGIN
           AND sp.category_id = ANY(p_exclude_categories)
       )
     )
-  ORDER BY b.pop DESC;
+  ORDER BY COALESCE(b.pop_final, b.pop) DESC;
 END;
 $$ LANGUAGE plpgsql STABLE;

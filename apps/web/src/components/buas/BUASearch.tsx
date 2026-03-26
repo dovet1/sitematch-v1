@@ -5,6 +5,7 @@ import { MapPin, Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { BUA } from '@/lib/buas'
+import { formatPopulation } from '@/lib/format-population'
 
 interface BUASearchProps {
   value: string
@@ -202,7 +203,7 @@ export function BUASearch({
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-gray-900 truncate">{bua.name}</div>
                     <div className="text-sm text-gray-600 mt-0.5">
-                      Population: {bua.pop.toLocaleString()}
+                      Population: {formatPopulation(bua.pop_final)}
                     </div>
                   </div>
                 </div>
