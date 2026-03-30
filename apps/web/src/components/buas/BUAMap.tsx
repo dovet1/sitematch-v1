@@ -103,6 +103,21 @@ export function BUAMap({
     const handleMoveEnd = () => {
       if (map.current) {
         const bounds = map.current.getBounds()
+        if (bounds) {
+          onViewportChange({
+            minLat: bounds.getSouth(),
+            minLon: bounds.getWest(),
+            maxLat: bounds.getNorth(),
+            maxLon: bounds.getEast()
+          })
+        }
+      }
+    }
+
+    // Initial viewport
+    if (map.current) {
+      const bounds = map.current.getBounds()
+      if (bounds) {
         onViewportChange({
           minLat: bounds.getSouth(),
           minLon: bounds.getWest(),
@@ -110,17 +125,6 @@ export function BUAMap({
           maxLon: bounds.getEast()
         })
       }
-    }
-
-    // Initial viewport
-    if (map.current) {
-      const bounds = map.current.getBounds()
-      onViewportChange({
-        minLat: bounds.getSouth(),
-        minLon: bounds.getWest(),
-        maxLat: bounds.getNorth(),
-        maxLon: bounds.getEast()
-      })
     }
 
     map.current.on('moveend', handleMoveEnd)
