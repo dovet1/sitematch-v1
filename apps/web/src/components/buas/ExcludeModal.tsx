@@ -17,6 +17,10 @@ interface ExcludeModalProps {
   excludeCategories: string[]  // Category UUIDs
   onExcludeCompaniesChange: (ids: string[]) => void
   onExcludeCategoriesChange: (ids: string[]) => void
+  companiesVisibility: Record<string, boolean>
+  categoriesVisibility: Record<string, boolean>
+  onCompaniesVisibilityChange: (visibility: Record<string, boolean>) => void
+  onCategoriesVisibilityChange: (visibility: Record<string, boolean>) => void
 }
 
 export function ExcludeModal({
@@ -26,6 +30,10 @@ export function ExcludeModal({
   excludeCategories,
   onExcludeCompaniesChange,
   onExcludeCategoriesChange,
+  companiesVisibility,
+  categoriesVisibility,
+  onCompaniesVisibilityChange,
+  onCategoriesVisibilityChange,
 }: ExcludeModalProps) {
   const handleClearAll = () => {
     onExcludeCompaniesChange([])
@@ -49,6 +57,10 @@ export function ExcludeModal({
             selectedCategories={excludeCategories}
             onCompaniesChange={onExcludeCompaniesChange}
             onCategoriesChange={onExcludeCategoriesChange}
+            companiesVisibility={companiesVisibility}
+            categoriesVisibility={categoriesVisibility}
+            onCompaniesVisibilityChange={onCompaniesVisibilityChange}
+            onCategoriesVisibilityChange={onCategoriesVisibilityChange}
             mode="exclude"
           />
         </div>

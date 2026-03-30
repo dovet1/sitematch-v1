@@ -17,6 +17,10 @@ interface IncludeModalProps {
   includeCategories: string[]  // Category UUIDs
   onIncludeCompaniesChange: (ids: string[]) => void
   onIncludeCategoriesChange: (ids: string[]) => void
+  companiesVisibility: Record<string, boolean>
+  categoriesVisibility: Record<string, boolean>
+  onCompaniesVisibilityChange: (visibility: Record<string, boolean>) => void
+  onCategoriesVisibilityChange: (visibility: Record<string, boolean>) => void
 }
 
 export function IncludeModal({
@@ -26,6 +30,10 @@ export function IncludeModal({
   includeCategories,
   onIncludeCompaniesChange,
   onIncludeCategoriesChange,
+  companiesVisibility,
+  categoriesVisibility,
+  onCompaniesVisibilityChange,
+  onCategoriesVisibilityChange,
 }: IncludeModalProps) {
   const handleClearAll = () => {
     onIncludeCompaniesChange([])
@@ -49,6 +57,10 @@ export function IncludeModal({
             selectedCategories={includeCategories}
             onCompaniesChange={onIncludeCompaniesChange}
             onCategoriesChange={onIncludeCategoriesChange}
+            companiesVisibility={companiesVisibility}
+            categoriesVisibility={categoriesVisibility}
+            onCompaniesVisibilityChange={onCompaniesVisibilityChange}
+            onCategoriesVisibilityChange={onCategoriesVisibilityChange}
             mode="include"
           />
         </div>

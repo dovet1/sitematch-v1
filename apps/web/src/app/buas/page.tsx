@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -45,6 +45,22 @@ export default function BUAsPage() {
   const [excludeCategories, setExcludeCategories] = useState<string[]>([])
   const [proximityExclude, setProximityExclude] = useState<ProximityRule[]>([])
 
+  // Visibility state for store pins (Record<filterId, isVisible>)
+  const [includeCompaniesVisibility, setIncludeCompaniesVisibility] = useState<Record<string, boolean>>({})
+  const [includeCategoriesVisibility, setIncludeCategoriesVisibility] = useState<Record<string, boolean>>({})
+  const [excludeCompaniesVisibility, setExcludeCompaniesVisibility] = useState<Record<string, boolean>>({})
+  const [excludeCategoriesVisibility, setExcludeCategoriesVisibility] = useState<Record<string, boolean>>({})
+
+  // Viewport-based store pins for Find Gaps mode
+  const [includedStores, setIncludedStores] = useState<StoreType[]>([])
+  const [excludedStores, setExcludedStores] = useState<StoreType[]>([])
+  const [mapViewport, setMapViewport] = useState<{
+    minLat: number
+    minLon: number
+    maxLat: number
+    maxLon: number
+  } | null>(null)
+
   // Filter modal states (three separate modals)
   const [includeModalOpen, setIncludeModalOpen] = useState(false)
   const [excludeModalOpen, setExcludeModalOpen] = useState(false)
@@ -72,6 +88,15 @@ export default function BUAsPage() {
     setCenter(bua.coordinates)
     setSelectedBUA({ name: bua.name, pop: bua.pop })
   }
+
+  const handleViewportChange = useCallback((bounds: {
+    minLat: number
+    minLon: number
+    maxLat: number
+    maxLon: number
+  }) => {
+    setMapViewport(bounds)
+  }, [])
 
   const handlePopulationRangeChange = (value: number[]) => {
     setPopulationRange([value[0], value[1]])
@@ -185,6 +210,144 @@ export default function BUAsPage() {
 
     return '8,585'
   }
+
+  // Auto-initialize visibility when filters change (default to visible)
+  useEffect(() => {
+    setIncludeCompaniesVisibility(prev => {
+      const updated = { ...prev }
+      includeCompanies.forEach(id => {
+        if (!(id in updated)) updated[id] = true // Default to visible
+      })
+      // Remove visibility for deselected filters
+      Object.keys(updated).forEach(id => {
+        if (!includeCompanies.includes(id)) delete updated[id]
+      })
+      return updated
+    })
+  }, [includeCompanies])
+
+  useEffect(() => {
+    setIncludeCategoriesVisibility(prev => {
+      const updated = { ...prev }
+      includeCategories.forEach(id => {
+        if (!(id in updated)) updated[id] = true
+      })
+      Object.keys(updated).forEach(id => {
+        if (!includeCategories.includes(id)) delete updated[id]
+      })
+      return updated
+    })
+  }, [includeCategories])
+
+  useEffect(() => {
+    setExcludeCompaniesVisibility(prev => {
+      const updated = { ...prev }
+      excludeCompanies.forEach(id => {
+        if (!(id in updated)) updated[id] = true
+      })
+      Object.keys(updated).forEach(id => {
+        if (!excludeCompanies.includes(id)) delete updated[id]
+      })
+      return updated
+    })
+  }, [excludeCompanies])
+
+  useEffect(() => {
+    setExcludeCategoriesVisibility(prev => {
+      const updated = { ...prev }
+      excludeCategories.forEach(id => {
+        if (!(id in updated)) updated[id] = true
+      })
+      Object.keys(updated).forEach(id => {
+        if (!excludeCategories.includes(id)) delete updated[id]
+      })
+      return updated
+    })
+  }, [excludeCategories])
+
+  // Fetch viewport stores when viewport or filters change (with visibility filtering)
+  useEffect(() => {
+    if (!mapViewport) {
+      return
+    }
+
+    // Filter by visibility before sending to API
+    const visibleIncludeCompanies = includeCompanies.filter(
+      id => includeCompaniesVisibility[id] !== false
+    )
+    const visibleIncludeCategories = includeCategories.filter(
+      id => includeCategoriesVisibility[id] !== false
+    )
+    const visibleExcludeCompanies = excludeCompanies.filter(
+      id => excludeCompaniesVisibility[id] !== false
+    )
+    const visibleExcludeCategories = excludeCategories.filter(
+      id => excludeCategoriesVisibility[id] !== false
+    )
+
+    const hasVisibleFilters =
+      visibleIncludeCompanies.length > 0 ||
+      visibleIncludeCategories.length > 0 ||
+      visibleExcludeCompanies.length > 0 ||
+      visibleExcludeCategories.length > 0
+
+    if (!hasVisibleFilters) {
+      setIncludedStores([])
+      setExcludedStores([])
+      return
+    }
+
+    const fetchViewportStores = async () => {
+      try {
+        const params = new URLSearchParams()
+
+        params.append('minLat', mapViewport.minLat.toString())
+        params.append('minLon', mapViewport.minLon.toString())
+        params.append('maxLat', mapViewport.maxLat.toString())
+        params.append('maxLon', mapViewport.maxLon.toString())
+
+        // Only include visible filters
+        if (visibleIncludeCompanies.length > 0) {
+          params.append('includeBrandIds', visibleIncludeCompanies.join(','))
+        }
+        if (visibleIncludeCategories.length > 0) {
+          params.append('includeCategories', visibleIncludeCategories.join(','))
+        }
+        if (visibleExcludeCompanies.length > 0) {
+          params.append('excludeBrandIds', visibleExcludeCompanies.join(','))
+        }
+        if (visibleExcludeCategories.length > 0) {
+          params.append('excludeCategories', visibleExcludeCategories.join(','))
+        }
+
+        params.append('limit', '2000')
+
+        const response = await fetch(`/api/public/stores/in-viewport?${params}`)
+        const data = await response.json()
+
+        setIncludedStores(data.includedStores || [])
+        setExcludedStores(data.excludedStores || [])
+      } catch (error) {
+        console.error('Failed to fetch viewport stores:', error)
+        setIncludedStores([])
+        setExcludedStores([])
+      }
+    }
+
+    // Debounce viewport changes
+    const timeoutId = setTimeout(fetchViewportStores, 500)
+    return () => clearTimeout(timeoutId)
+  }, [
+    mapViewport,
+    includeCompanies,
+    includeCategories,
+    excludeCompanies,
+    excludeCategories,
+    includeCompaniesVisibility,
+    includeCategoriesVisibility,
+    excludeCompaniesVisibility,
+    excludeCategoriesVisibility
+  ])
 
   // Fetch filtered BUAs when filters change
   useEffect(() => {
@@ -676,6 +839,9 @@ export default function BUAsPage() {
                   ? mapGssCodes
                   : undefined
               }
+              includedStores={includedStores}
+              excludedStores={excludedStores}
+              onViewportChange={handleViewportChange}
             />
           </div>
 
@@ -714,6 +880,9 @@ export default function BUAsPage() {
             maxPopulation={maxPop}
             onBUAClick={(gsscode, name, pop) => setSelectedBUA({ name, pop })}
             className="w-full h-full"
+            includedStores={includedStores}
+            excludedStores={excludedStores}
+            onViewportChange={handleViewportChange}
           />
         </div>
 
@@ -855,6 +1024,10 @@ export default function BUAsPage() {
         includeCategories={includeCategories}
         onIncludeCompaniesChange={setIncludeCompanies}
         onIncludeCategoriesChange={setIncludeCategories}
+        companiesVisibility={includeCompaniesVisibility}
+        categoriesVisibility={includeCategoriesVisibility}
+        onCompaniesVisibilityChange={setIncludeCompaniesVisibility}
+        onCategoriesVisibilityChange={setIncludeCategoriesVisibility}
       />
 
       {/* Exclude Modal */}
@@ -865,6 +1038,10 @@ export default function BUAsPage() {
         excludeCategories={excludeCategories}
         onExcludeCompaniesChange={setExcludeCompanies}
         onExcludeCategoriesChange={setExcludeCategories}
+        companiesVisibility={excludeCompaniesVisibility}
+        categoriesVisibility={excludeCategoriesVisibility}
+        onCompaniesVisibilityChange={setExcludeCompaniesVisibility}
+        onCategoriesVisibilityChange={setExcludeCategoriesVisibility}
       />
 
       {/* Proximity Modal */}

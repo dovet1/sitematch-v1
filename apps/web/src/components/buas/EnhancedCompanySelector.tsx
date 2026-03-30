@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Search, X, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Search, X, Loader2, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
 
@@ -35,6 +35,10 @@ interface EnhancedCompanySelectorProps {
   selectedCategories: string[]  // Category IDs (UUIDs)
   onCompaniesChange: (ids: string[]) => void
   onCategoriesChange: (ids: string[]) => void
+  companiesVisibility?: Record<string, boolean>
+  categoriesVisibility?: Record<string, boolean>
+  onCompaniesVisibilityChange?: (visibility: Record<string, boolean>) => void
+  onCategoriesVisibilityChange?: (visibility: Record<string, boolean>) => void
   mode: 'include' | 'exclude' | 'proximity'
 }
 
@@ -43,6 +47,10 @@ export function EnhancedCompanySelector({
   selectedCategories,
   onCompaniesChange,
   onCategoriesChange,
+  companiesVisibility,
+  categoriesVisibility,
+  onCompaniesVisibilityChange,
+  onCategoriesVisibilityChange,
   mode
 }: EnhancedCompanySelectorProps) {
   const [categories, setCategories] = useState<Category[]>([])
@@ -252,21 +260,45 @@ export function EnhancedCompanySelector({
               {categories.map((category) => (
                 <div
                   key={category.id}
-                  className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded-md cursor-pointer"
-                  onClick={() => handleCategoryToggle(category.id)}
+                  className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-md transition-colors"
                 >
-                  <Checkbox
-                    id={`cat-${category.id}`}
-                    checked={selectedCategories.includes(category.id)}
-                    onCheckedChange={() => handleCategoryToggle(category.id)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <Label
-                    htmlFor={`cat-${category.id}`}
-                    className="text-sm cursor-pointer flex-1"
-                  >
-                    {category.name}
-                  </Label>
+                  <div className="flex items-center space-x-2 flex-1 cursor-pointer" onClick={() => handleCategoryToggle(category.id)}>
+                    <Checkbox
+                      id={`cat-${category.id}`}
+                      checked={selectedCategories.includes(category.id)}
+                      onCheckedChange={() => handleCategoryToggle(category.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Label
+                      htmlFor={`cat-${category.id}`}
+                      className="text-sm cursor-pointer flex-1"
+                    >
+                      {category.name}
+                    </Label>
+                  </div>
+
+                  {/* Visibility toggle button */}
+                  {selectedCategories.includes(category.id) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 p-0 hover:bg-gray-100"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const newVisibility = {
+                          ...categoriesVisibility,
+                          [category.id]: !(categoriesVisibility?.[category.id] ?? true)
+                        }
+                        onCategoriesVisibilityChange?.(newVisibility)
+                      }}
+                    >
+                      {(categoriesVisibility?.[category.id] ?? true) ? (
+                        <Eye className="h-4 w-4 text-gray-600" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      )}
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
@@ -347,21 +379,45 @@ export function EnhancedCompanySelector({
                         {brand.fascias!.map((fascia) => (
                           <div
                             key={fascia.id}
-                            className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded-md cursor-pointer"
-                            onClick={() => handleFasciaToggle(fascia.id)}
+                            className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-md transition-colors"
                           >
-                            <Checkbox
-                              id={`fascia-${fascia.id}`}
-                              checked={selectedCompanies.includes(fascia.id)}
-                              onCheckedChange={() => handleFasciaToggle(fascia.id)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <Label
-                              htmlFor={`fascia-${fascia.id}`}
-                              className="text-sm cursor-pointer flex-1"
-                            >
-                              {fascia.name}
-                            </Label>
+                            <div className="flex items-center space-x-2 flex-1 cursor-pointer" onClick={() => handleFasciaToggle(fascia.id)}>
+                              <Checkbox
+                                id={`fascia-${fascia.id}`}
+                                checked={selectedCompanies.includes(fascia.id)}
+                                onCheckedChange={() => handleFasciaToggle(fascia.id)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <Label
+                                htmlFor={`fascia-${fascia.id}`}
+                                className="text-sm cursor-pointer flex-1"
+                              >
+                                {fascia.name}
+                              </Label>
+                            </div>
+
+                            {/* Visibility toggle button */}
+                            {selectedCompanies.includes(fascia.id) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 p-0 hover:bg-gray-100"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  const newVisibility = {
+                                    ...companiesVisibility,
+                                    [fascia.id]: !(companiesVisibility?.[fascia.id] ?? true)
+                                  }
+                                  onCompaniesVisibilityChange?.(newVisibility)
+                                }}
+                              >
+                                {(companiesVisibility?.[fascia.id] ?? true) ? (
+                                  <Eye className="h-4 w-4 text-gray-600" />
+                                ) : (
+                                  <EyeOff className="h-4 w-4 text-gray-400" />
+                                )}
+                              </Button>
+                            )}
                           </div>
                         ))}
                       </CollapsibleContent>

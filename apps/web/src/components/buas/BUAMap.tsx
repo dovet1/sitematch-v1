@@ -35,6 +35,10 @@ interface BUAMapProps {
   radiusMeters?: number
   stores?: Store[]  // Stores to display as markers in Assess Area mode
   filteredGssCodes?: string[]  // List of BUA gsscodes to show (ALL matching gsscodes, no limit)
+  // Find Gaps mode - filter-based store pins
+  includedStores?: Store[]  // Green pins from include filters
+  excludedStores?: Store[]  // Red pins from exclude filters
+  onViewportChange?: (bounds: { minLat: number; minLon: number; maxLat: number; maxLon: number }) => void
 }
 
 export function BUAMap({
@@ -48,7 +52,10 @@ export function BUAMap({
   onPointSelected,
   radiusMeters = 5000,
   stores = [],
-  filteredGssCodes
+  filteredGssCodes,
+  includedStores = [],
+  excludedStores = [],
+  onViewportChange
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -88,6 +95,42 @@ export function BUAMap({
       }
     }
   }, [])
+
+  // Track viewport changes (separate from initialization to avoid re-creating map)
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !onViewportChange) return
+
+    const handleMoveEnd = () => {
+      if (map.current) {
+        const bounds = map.current.getBounds()
+        onViewportChange({
+          minLat: bounds.getSouth(),
+          minLon: bounds.getWest(),
+          maxLat: bounds.getNorth(),
+          maxLon: bounds.getEast()
+        })
+      }
+    }
+
+    // Initial viewport
+    if (map.current) {
+      const bounds = map.current.getBounds()
+      onViewportChange({
+        minLat: bounds.getSouth(),
+        minLon: bounds.getWest(),
+        maxLat: bounds.getNorth(),
+        maxLon: bounds.getEast()
+      })
+    }
+
+    map.current.on('moveend', handleMoveEnd)
+
+    return () => {
+      if (map.current) {
+        map.current.off('moveend', handleMoveEnd)
+      }
+    }
+  }, [mapLoaded, onViewportChange])
 
   // Add BUA layer when map is loaded
   useEffect(() => {
@@ -409,10 +452,48 @@ export function BUAMap({
     }
   }, [selectedPoint, radiusMeters, mode, mapLoaded])
 
-  // Handle store markers in Assess Area mode
+  // Helper function to create store markers with specific color
+  const createStoreMarker = (store: Store, color: 'green' | 'red'): mapboxgl.Marker | null => {
+    if (!map.current) return null
+
+    const el = document.createElement('div')
+    el.className = 'store-marker'
+    el.style.width = '20px'
+    el.style.height = '20px'
+    el.style.borderRadius = '50% 50% 50% 0'
+    el.style.background = color === 'green' ? '#10b981' : '#ef4444' // emerald-500 or red-500
+    el.style.border = '2px solid white'
+    el.style.transform = 'rotate(-45deg)'
+    el.style.cursor = 'pointer'
+    el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)'
+
+    const popup = new mapboxgl.Popup({
+      offset: 25,
+      closeButton: false,
+      className: 'store-popup'
+    }).setHTML(`
+      <div style="padding: 4px;">
+        <div style="font-weight: 600; font-size: 13px; margin-bottom: 2px;">${store.name}</div>
+        ${store.town ? `<div style="font-size: 11px; color: #6b7280;">${store.town}${store.postcode ? ` • ${store.postcode}` : ''}</div>` : ''}
+      </div>
+    `)
+
+    const marker = new mapboxgl.Marker({ element: el })
+      .setLngLat([store.lon, store.lat])
+      .setPopup(popup)
+      .addTo(map.current)
+
+    el.addEventListener('click', (e) => {
+      e.stopPropagation()
+      marker.togglePopup()
+    })
+
+    return marker
+  }
+
+  // Handle store markers for both modes
   useEffect(() => {
-    if (!map.current || !mapLoaded || mode !== 'assess-area') {
-      // Remove all store markers if not in assess-area mode
+    if (!map.current || !mapLoaded) {
       storeMarkers.current.forEach(marker => marker.remove())
       storeMarkers.current = []
       return
@@ -422,53 +503,40 @@ export function BUAMap({
     storeMarkers.current.forEach(marker => marker.remove())
     storeMarkers.current = []
 
-    // Add new store markers
-    if (stores && stores.length > 0) {
-      stores.forEach(store => {
-        // Create custom marker element (smaller pin)
-        const el = document.createElement('div')
-        el.className = 'store-marker'
-        el.style.width = '20px'
-        el.style.height = '20px'
-        el.style.borderRadius = '50% 50% 50% 0'
-        el.style.background = '#10b981' // emerald-500
-        el.style.border = '2px solid white'
-        el.style.transform = 'rotate(-45deg)'
-        el.style.cursor = 'pointer'
-        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)'
+    // Assess-area stores (existing, green) - only in assess-area mode
+    const assessStores = mode === 'assess-area' ? (stores || []) : []
 
-        // Create popup
-        const popup = new mapboxgl.Popup({
-          offset: 25,
-          closeButton: false,
-          className: 'store-popup'
-        }).setHTML(`
-          <div style="padding: 4px;">
-            <div style="font-weight: 600; font-size: 13px; margin-bottom: 2px;">${store.name}</div>
-            ${store.town ? `<div style="font-size: 11px; color: #6b7280;">${store.town}${store.postcode ? ` • ${store.postcode}` : ''}</div>` : ''}
-          </div>
-        `)
+    // Include filter stores (new, green) - only in find-gaps mode
+    const includedFilterStores = mode === 'find-gaps' ? (includedStores || []) : []
 
-        const marker = new mapboxgl.Marker({ element: el })
-          .setLngLat([store.lon, store.lat])
-          .setPopup(popup)
-          .addTo(map.current!)
+    // Exclude filter stores (new, red) - only in find-gaps mode
+    const excludedFilterStores = mode === 'find-gaps' ? (excludedStores || []) : []
 
-        // Prevent map click when clicking on store marker, but allow popup to show
-        el.addEventListener('click', (e) => {
-          e.stopPropagation()
-          marker.togglePopup()
-        })
+    // Create markers for all store types
+    const newMarkers: mapboxgl.Marker[] = []
 
-        storeMarkers.current.push(marker)
-      })
-    }
+    assessStores.forEach(store => {
+      const marker = createStoreMarker(store, 'green')
+      if (marker) newMarkers.push(marker)
+    })
+
+    includedFilterStores.forEach(store => {
+      const marker = createStoreMarker(store, 'green')
+      if (marker) newMarkers.push(marker)
+    })
+
+    excludedFilterStores.forEach(store => {
+      const marker = createStoreMarker(store, 'red')
+      if (marker) newMarkers.push(marker)
+    })
+
+    storeMarkers.current = newMarkers
 
     return () => {
       storeMarkers.current.forEach(marker => marker.remove())
       storeMarkers.current = []
     }
-  }, [stores, mode, mapLoaded])
+  }, [stores, includedStores, excludedStores, mode, mapLoaded])
 
   return (
     <div className={`relative ${className}`}>
