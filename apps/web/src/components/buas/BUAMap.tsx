@@ -173,11 +173,8 @@ export function BUAMap({
             .setHTML(`
               <div style="padding: 8px;">
                 <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1e293b;">${name}</h3>
-                <div style="font-size: 14px; color: #64748b; margin-bottom: 4px;">
+                <div style="font-size: 14px; color: #64748b;">
                   <strong>Population:</strong> ${formatPopulation(pop_final)}
-                </div>
-                <div style="font-size: 12px; color: #94a3b8;">
-                  GSS Code: ${gsscode}
                 </div>
               </div>
             `)
