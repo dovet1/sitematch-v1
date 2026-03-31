@@ -50,10 +50,12 @@ export default function BUAsPage() {
   const [includeCategoriesVisibility, setIncludeCategoriesVisibility] = useState<Record<string, boolean>>({})
   const [excludeCompaniesVisibility, setExcludeCompaniesVisibility] = useState<Record<string, boolean>>({})
   const [excludeCategoriesVisibility, setExcludeCategoriesVisibility] = useState<Record<string, boolean>>({})
+  const [proximityVisibility, setProximityVisibility] = useState<Record<string, boolean>>({})
 
   // Viewport-based store pins for Find Gaps mode
   const [includedStores, setIncludedStores] = useState<StoreType[]>([])
   const [excludedStores, setExcludedStores] = useState<StoreType[]>([])
+  const [proximityStores, setProximityStores] = useState<StoreType[]>([])
   const [mapViewport, setMapViewport] = useState<{
     minLat: number
     minLon: number
@@ -265,6 +267,23 @@ export default function BUAsPage() {
     })
   }, [excludeCategories])
 
+  useEffect(() => {
+    setProximityVisibility(prev => {
+      const updated = { ...prev }
+      // Proximity rules use distance as the key since each rule can have multiple brandIds/categoryIds
+      proximityExclude.forEach((rule, index) => {
+        const key = `rule_${index}` // Use index as key since rules don't have unique IDs
+        if (!(key in updated)) updated[key] = true
+      })
+      // Remove visibility for removed rules (cleanup old keys)
+      const validKeys = new Set(proximityExclude.map((_, index) => `rule_${index}`))
+      Object.keys(updated).forEach(key => {
+        if (!validKeys.has(key)) delete updated[key]
+      })
+      return updated
+    })
+  }, [proximityExclude])
+
   // Fetch viewport stores when viewport or filters change (with visibility filtering)
   useEffect(() => {
     if (!mapViewport) {
@@ -284,16 +303,21 @@ export default function BUAsPage() {
     const visibleExcludeCategories = excludeCategories.filter(
       id => excludeCategoriesVisibility[id] !== false
     )
+    const visibleProximityRules = proximityExclude.filter(
+      (rule, index) => proximityVisibility[`rule_${index}`] !== false
+    )
 
     const hasVisibleFilters =
       visibleIncludeCompanies.length > 0 ||
       visibleIncludeCategories.length > 0 ||
       visibleExcludeCompanies.length > 0 ||
-      visibleExcludeCategories.length > 0
+      visibleExcludeCategories.length > 0 ||
+      visibleProximityRules.length > 0
 
     if (!hasVisibleFilters) {
       setIncludedStores([])
       setExcludedStores([])
+      setProximityStores([])
       return
     }
 
@@ -320,6 +344,14 @@ export default function BUAsPage() {
           params.append('excludeCategories', visibleExcludeCategories.join(','))
         }
 
+        // Add proximity filters (purple pins)
+        const proximityBrandIds = visibleProximityRules
+          .flatMap(rule => rule.brandIds || [])
+          .filter((id, index, self) => self.indexOf(id) === index)
+        if (proximityBrandIds.length > 0) {
+          params.append('proximityBrandIds', proximityBrandIds.join(','))
+        }
+
         params.append('limit', '2000')
 
         const response = await fetch(`/api/public/stores/in-viewport?${params}`)
@@ -327,10 +359,12 @@ export default function BUAsPage() {
 
         setIncludedStores(data.includedStores || [])
         setExcludedStores(data.excludedStores || [])
+        setProximityStores(data.proximityStores || [])
       } catch (error) {
         console.error('Failed to fetch viewport stores:', error)
         setIncludedStores([])
         setExcludedStores([])
+        setProximityStores([])
       }
     }
 
@@ -343,10 +377,12 @@ export default function BUAsPage() {
     includeCategories,
     excludeCompanies,
     excludeCategories,
+    proximityExclude,
     includeCompaniesVisibility,
     includeCategoriesVisibility,
     excludeCompaniesVisibility,
-    excludeCategoriesVisibility
+    excludeCategoriesVisibility,
+    proximityVisibility
   ])
 
   // Fetch filtered BUAs when filters change
@@ -841,6 +877,7 @@ export default function BUAsPage() {
               }
               includedStores={includedStores}
               excludedStores={excludedStores}
+              proximityStores={proximityStores}
               onViewportChange={handleViewportChange}
             />
           </div>
@@ -882,6 +919,7 @@ export default function BUAsPage() {
             className="w-full h-full"
             includedStores={includedStores}
             excludedStores={excludedStores}
+            proximityStores={proximityStores}
             onViewportChange={handleViewportChange}
           />
         </div>
