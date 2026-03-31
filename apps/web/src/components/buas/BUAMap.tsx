@@ -38,6 +38,7 @@ interface BUAMapProps {
   // Find Gaps mode - filter-based store pins
   includedStores?: Store[]  // Green pins from include filters
   excludedStores?: Store[]  // Red pins from exclude filters
+  proximityStores?: Store[]  // Purple pins from proximity filters
   onViewportChange?: (bounds: { minLat: number; minLon: number; maxLat: number; maxLon: number }) => void
 }
 
@@ -55,6 +56,7 @@ export function BUAMap({
   filteredGssCodes,
   includedStores = [],
   excludedStores = [],
+  proximityStores = [],
   onViewportChange
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -457,7 +459,7 @@ export function BUAMap({
   }, [selectedPoint, radiusMeters, mode, mapLoaded])
 
   // Helper function to create store markers with specific color
-  const createStoreMarker = (store: Store, color: 'green' | 'red'): mapboxgl.Marker | null => {
+  const createStoreMarker = (store: Store, color: 'green' | 'red' | 'purple'): mapboxgl.Marker | null => {
     if (!map.current) return null
 
     const el = document.createElement('div')
@@ -465,7 +467,8 @@ export function BUAMap({
     el.style.width = '20px'
     el.style.height = '20px'
     el.style.borderRadius = '50% 50% 50% 0'
-    el.style.background = color === 'green' ? '#10b981' : '#ef4444' // emerald-500 or red-500
+    // emerald-500, red-500, or purple-500
+    el.style.background = color === 'green' ? '#10b981' : color === 'red' ? '#ef4444' : '#a855f7'
     el.style.border = '2px solid white'
     el.style.transform = 'rotate(-45deg)'
     el.style.cursor = 'pointer'
@@ -516,6 +519,9 @@ export function BUAMap({
     // Exclude filter stores (new, red) - only in find-gaps mode
     const excludedFilterStores = mode === 'find-gaps' ? (excludedStores || []) : []
 
+    // Proximity filter stores (new, purple) - only in find-gaps mode
+    const proximityFilterStores = mode === 'find-gaps' ? (proximityStores || []) : []
+
     // Create markers for all store types
     const newMarkers: mapboxgl.Marker[] = []
 
@@ -534,13 +540,18 @@ export function BUAMap({
       if (marker) newMarkers.push(marker)
     })
 
+    proximityFilterStores.forEach(store => {
+      const marker = createStoreMarker(store, 'purple')
+      if (marker) newMarkers.push(marker)
+    })
+
     storeMarkers.current = newMarkers
 
     return () => {
       storeMarkers.current.forEach(marker => marker.remove())
       storeMarkers.current = []
     }
-  }, [stores, includedStores, excludedStores, mode, mapLoaded])
+  }, [stores, includedStores, excludedStores, proximityStores, mode, mapLoaded])
 
   return (
     <div className={`relative ${className}`}>

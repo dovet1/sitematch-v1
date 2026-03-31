@@ -13,14 +13,17 @@ import { createServerClient } from '@/lib/supabase'
  * - includeCategories: Comma-separated category UUIDs for included stores (optional)
  * - excludeBrandIds: Comma-separated fascia UUIDs for excluded stores (optional)
  * - excludeCategories: Comma-separated category UUIDs for excluded stores (optional)
+ * - proximityBrandIds: Comma-separated fascia UUIDs for proximity stores (optional)
  * - limit: Max stores per type (default 2000, max 5000)
  *
  * Returns:
  * {
  *   includedStores: Store[],
  *   excludedStores: Store[],
+ *   proximityStores: Store[],
  *   totalIncluded: number,
- *   totalExcluded: number
+ *   totalExcluded: number,
+ *   totalProximity: number
  * }
  */
 export async function GET(request: NextRequest) {
@@ -39,8 +42,10 @@ export async function GET(request: NextRequest) {
         {
           includedStores: [],
           excludedStores: [],
+          proximityStores: [],
           totalIncluded: 0,
           totalExcluded: 0,
+          totalProximity: 0,
           error: 'Invalid viewport coordinates'
         },
         { status: 400 }
@@ -65,6 +70,11 @@ export async function GET(request: NextRequest) {
 
     const excludeCategories = searchParams
       .get('excludeCategories')
+      ?.split(',')
+      .filter(id => id.trim().length > 0)
+
+    const proximityBrandIds = searchParams
+      .get('proximityBrandIds')
       ?.split(',')
       .filter(id => id.trim().length > 0)
 
@@ -118,11 +128,36 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Fetch proximity stores (if any proximity filters are provided)
+    let proximityStores: any[] = []
+    let totalProximity = 0
+
+    if (proximityBrandIds && proximityBrandIds.length > 0) {
+      const { data, error } = await supabase.rpc('get_included_stores_in_viewport', {
+        p_min_lat: minLat,
+        p_min_lon: minLon,
+        p_max_lat: maxLat,
+        p_max_lon: maxLon,
+        p_brand_ids: proximityBrandIds,
+        p_category_ids: null,
+        p_limit: limit
+      })
+
+      if (error) {
+        console.error('Failed to fetch proximity stores:', error)
+      } else {
+        proximityStores = data || []
+        totalProximity = proximityStores.length
+      }
+    }
+
     return NextResponse.json({
       includedStores,
       excludedStores,
+      proximityStores,
       totalIncluded,
-      totalExcluded
+      totalExcluded,
+      totalProximity
     })
   } catch (error) {
     console.error('Viewport stores API error:', error)
@@ -130,8 +165,10 @@ export async function GET(request: NextRequest) {
       {
         includedStores: [],
         excludedStores: [],
+        proximityStores: [],
         totalIncluded: 0,
         totalExcluded: 0,
+        totalProximity: 0,
         error: error instanceof Error ? error.message : 'Internal server error'
       },
       { status: 500 }
