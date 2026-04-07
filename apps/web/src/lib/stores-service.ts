@@ -160,7 +160,13 @@ export class StoreService {
       brandIds?: string[]
       categoryIds?: string[]
       distance: number
-      matchAll?: boolean  // NEW: AND logic for this proximity rule
+      matchAll?: boolean
+    }>
+    nearbyInclude?: Array<{
+      brandIds?: string[]
+      categoryIds?: string[]
+      distance: number
+      matchAll?: boolean
     }>
     // NEW: Match-all flags for AND logic support
     includeBrandsMatchAll?: boolean
@@ -174,6 +180,12 @@ export class StoreService {
       excludeBrands?: string[]
       excludeCategories?: string[]
       nearbyExclude?: Array<{
+        brandIds?: string[]
+        categoryIds?: string[]
+        distance: number
+        matchAll?: boolean
+      }>
+      nearbyInclude?: Array<{
         brandIds?: string[]
         categoryIds?: string[]
         distance: number
@@ -227,15 +239,16 @@ export class StoreService {
           break
 
         case 'has_within':
-          // Proximity inclusion - NEW! Not supported in legacy format
-          // For now, we'll convert this to a regular "has" filter
-          // TODO: Add RPC support for proximity inclusion
-          console.warn('Proximity inclusion (has_within) is not yet supported in backend. Converting to regular inclusion.')
-          if (isFascia) {
-            legacy.includeBrands = [...(legacy.includeBrands || []), ...rule.targetIds]
-          } else if (isCategory) {
-            legacy.includeCategories = [...(legacy.includeCategories || []), ...rule.targetIds]
+          // Proximity inclusion with AND/OR logic support
+          if (!legacy.nearbyInclude) {
+            legacy.nearbyInclude = []
           }
+          legacy.nearbyInclude.push({
+            brandIds: isFascia ? rule.targetIds : undefined,
+            categoryIds: isCategory ? rule.targetIds : undefined,
+            distance: rule.distance || 5000,
+            matchAll: isMatchAll && rule.targetIds.length > 1,  // Set AND logic flag
+          })
           break
 
         case 'has_not_within':
@@ -359,10 +372,13 @@ export class StoreService {
     // NOTE: Supabase's default max-rows is 1000. To get all results, we need to paginate.
     // Since we can't override the limit for RPC calls easily, we'll paginate through results.
 
-    // Transform proximity exclusion rules into JSONB format for RPC
+    // Transform proximity rules into JSONB format for RPC
     let nearbyExcludeFascias: any[] | null = null
     let nearbyExcludeCategories: any[] | null = null
+    let nearbyIncludeFascias: any[] | null = null
+    let nearbyIncludeCategories: any[] | null = null
 
+    // Proximity exclusion
     if (actualFilters.nearbyExclude && actualFilters.nearbyExclude.length > 0) {
       // Group by fascias vs categories
       const fasciaRules = actualFilters.nearbyExclude
@@ -385,6 +401,29 @@ export class StoreService {
       nearbyExcludeCategories = categoryRules.length > 0 ? categoryRules : null
     }
 
+    // Proximity inclusion
+    if (actualFilters.nearbyInclude && actualFilters.nearbyInclude.length > 0) {
+      // Group by fascias vs categories
+      const fasciaRules = actualFilters.nearbyInclude
+        .filter(rule => rule.brandIds && rule.brandIds.length > 0)
+        .map(rule => ({
+          distance_m: rule.distance,
+          ids: rule.brandIds,
+          match_all: rule.matchAll || false  // Include AND logic flag
+        }))
+
+      const categoryRules = actualFilters.nearbyInclude
+        .filter(rule => rule.categoryIds && rule.categoryIds.length > 0)
+        .map(rule => ({
+          distance_m: rule.distance,
+          ids: rule.categoryIds,
+          match_all: rule.matchAll || false  // Include AND logic flag
+        }))
+
+      nearbyIncludeFascias = fasciaRules.length > 0 ? fasciaRules : null
+      nearbyIncludeCategories = categoryRules.length > 0 ? categoryRules : null
+    }
+
     const allGsscodes: string[] = []
     let offset = 0
     const pageSize = 1000
@@ -401,6 +440,8 @@ export class StoreService {
           p_exclude_categories: actualFilters.excludeCategories && actualFilters.excludeCategories.length > 0 ? actualFilters.excludeCategories : null,
           p_nearby_exclude_fascias: nearbyExcludeFascias,
           p_nearby_exclude_categories: nearbyExcludeCategories,
+          p_nearby_include_fascias: nearbyIncludeFascias,
+          p_nearby_include_categories: nearbyIncludeCategories,
           // NEW: Match-all flags for AND logic
           p_include_fascias_match_all: actualFilters.includeBrandsMatchAll || false,
           p_include_categories_match_all: actualFilters.includeCategoriesMatchAll || false,
