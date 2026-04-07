@@ -12,8 +12,7 @@ import { BUAMap } from '@/components/buas/BUAMap'
 import { BUASearch } from '@/components/buas/BUASearch'
 import { ResultsPanel } from '@/components/buas/ResultsPanel'
 import { CompanySelector } from '@/components/buas/CompanySelector'
-import { IncludeModal } from '@/components/buas/IncludeModal'
-import { ExcludeModal } from '@/components/buas/ExcludeModal'
+import { FilterBuilder } from '@/components/buas/FilterBuilder'
 import { ProximityModal, type ProximityRule } from '@/components/buas/ProximityModal'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
@@ -21,6 +20,8 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { BUA } from '@/lib/buas'
 import type { Store as StoreType } from '@/lib/stores'
+import type { FilterSet } from '@/types/filters'
+import { createEmptyRule } from '@/types/filters'
 
 const MAX_POPULATION = 1500000 // 1.5 million
 const MIN_POPULATION = 0
@@ -38,19 +39,11 @@ export default function BUAsPage() {
   const [isLoadingBUAs, setIsLoadingBUAs] = useState(false)
   const [mapGssCodes, setMapGssCodes] = useState<string[]>([])  // All gsscodes for map filtering
 
-  // Filter state for store inclusion/exclusion (fascia IDs and category IDs are strings/UUIDs)
-  const [includeCompanies, setIncludeCompanies] = useState<string[]>([])
-  const [includeCategories, setIncludeCategories] = useState<string[]>([])
-  const [excludeCompanies, setExcludeCompanies] = useState<string[]>([])
-  const [excludeCategories, setExcludeCategories] = useState<string[]>([])
-  const [proximityExclude, setProximityExclude] = useState<ProximityRule[]>([])
+  // NEW: Advanced filter state using FilterSet
+  const [filterSet, setFilterSet] = useState<FilterSet>({ rules: [] })
 
-  // Visibility state for store pins (Record<filterId, isVisible>)
-  const [includeCompaniesVisibility, setIncludeCompaniesVisibility] = useState<Record<string, boolean>>({})
-  const [includeCategoriesVisibility, setIncludeCategoriesVisibility] = useState<Record<string, boolean>>({})
-  const [excludeCompaniesVisibility, setExcludeCompaniesVisibility] = useState<Record<string, boolean>>({})
-  const [excludeCategoriesVisibility, setExcludeCategoriesVisibility] = useState<Record<string, boolean>>({})
-  const [proximityVisibility, setProximityVisibility] = useState<Record<string, boolean>>({})
+  // Target names mapping (fascia/category ID -> name) for filter display
+  const [targetNames, setTargetNames] = useState<Record<string, string>>({})
 
   // Viewport-based store pins for Find Gaps mode
   const [includedStores, setIncludedStores] = useState<StoreType[]>([])
@@ -62,11 +55,6 @@ export default function BUAsPage() {
     maxLat: number
     maxLon: number
   } | null>(null)
-
-  // Filter modal states (three separate modals)
-  const [includeModalOpen, setIncludeModalOpen] = useState(false)
-  const [excludeModalOpen, setExcludeModalOpen] = useState(false)
-  const [proximityModalOpen, setProximityModalOpen] = useState(false)
 
   // Assess Area mode state
   const [currentMode, setCurrentMode] = useState<'find-gaps' | 'assess-area'>('find-gaps')
@@ -213,211 +201,81 @@ export default function BUAsPage() {
     return '8,585'
   }
 
-  // Auto-initialize visibility when filters change (default to visible)
+  // Fetch categories and fascias to build targetNames mapping for filter display
   useEffect(() => {
-    setIncludeCompaniesVisibility(prev => {
-      const updated = { ...prev }
-      includeCompanies.forEach(id => {
-        if (!(id in updated)) updated[id] = true // Default to visible
-      })
-      // Remove visibility for deselected filters
-      Object.keys(updated).forEach(id => {
-        if (!includeCompanies.includes(id)) delete updated[id]
-      })
-      return updated
-    })
-  }, [includeCompanies])
-
-  useEffect(() => {
-    setIncludeCategoriesVisibility(prev => {
-      const updated = { ...prev }
-      includeCategories.forEach(id => {
-        if (!(id in updated)) updated[id] = true
-      })
-      Object.keys(updated).forEach(id => {
-        if (!includeCategories.includes(id)) delete updated[id]
-      })
-      return updated
-    })
-  }, [includeCategories])
-
-  useEffect(() => {
-    setExcludeCompaniesVisibility(prev => {
-      const updated = { ...prev }
-      excludeCompanies.forEach(id => {
-        if (!(id in updated)) updated[id] = true
-      })
-      Object.keys(updated).forEach(id => {
-        if (!excludeCompanies.includes(id)) delete updated[id]
-      })
-      return updated
-    })
-  }, [excludeCompanies])
-
-  useEffect(() => {
-    setExcludeCategoriesVisibility(prev => {
-      const updated = { ...prev }
-      excludeCategories.forEach(id => {
-        if (!(id in updated)) updated[id] = true
-      })
-      Object.keys(updated).forEach(id => {
-        if (!excludeCategories.includes(id)) delete updated[id]
-      })
-      return updated
-    })
-  }, [excludeCategories])
-
-  useEffect(() => {
-    setProximityVisibility(prev => {
-      const updated = { ...prev }
-      // Proximity rules use distance as the key since each rule can have multiple brandIds/categoryIds
-      proximityExclude.forEach((rule, index) => {
-        const key = `rule_${index}` // Use index as key since rules don't have unique IDs
-        if (!(key in updated)) updated[key] = true
-      })
-      // Remove visibility for removed rules (cleanup old keys)
-      const validKeys = new Set(proximityExclude.map((_, index) => `rule_${index}`))
-      Object.keys(updated).forEach(key => {
-        if (!validKeys.has(key)) delete updated[key]
-      })
-      return updated
-    })
-  }, [proximityExclude])
-
-  // Fetch viewport stores when viewport or filters change (with visibility filtering)
-  useEffect(() => {
-    if (!mapViewport) {
-      return
-    }
-
-    // Filter by visibility before sending to API
-    const visibleIncludeCompanies = includeCompanies.filter(
-      id => includeCompaniesVisibility[id] !== false
-    )
-    const visibleIncludeCategories = includeCategories.filter(
-      id => includeCategoriesVisibility[id] !== false
-    )
-    const visibleExcludeCompanies = excludeCompanies.filter(
-      id => excludeCompaniesVisibility[id] !== false
-    )
-    const visibleExcludeCategories = excludeCategories.filter(
-      id => excludeCategoriesVisibility[id] !== false
-    )
-    const visibleProximityRules = proximityExclude.filter(
-      (rule, index) => proximityVisibility[`rule_${index}`] !== false
-    )
-
-    const hasVisibleFilters =
-      visibleIncludeCompanies.length > 0 ||
-      visibleIncludeCategories.length > 0 ||
-      visibleExcludeCompanies.length > 0 ||
-      visibleExcludeCategories.length > 0 ||
-      visibleProximityRules.length > 0
-
-    if (!hasVisibleFilters) {
-      setIncludedStores([])
-      setExcludedStores([])
-      setProximityStores([])
-      return
-    }
-
-    const fetchViewportStores = async () => {
+    const fetchTargetNames = async () => {
       try {
-        const params = new URLSearchParams()
+        const names: Record<string, string> = {}
 
-        params.append('minLat', mapViewport.minLat.toString())
-        params.append('minLon', mapViewport.minLon.toString())
-        params.append('maxLat', mapViewport.maxLat.toString())
-        params.append('maxLon', mapViewport.maxLon.toString())
-
-        // Only include visible filters
-        if (visibleIncludeCompanies.length > 0) {
-          params.append('includeBrandIds', visibleIncludeCompanies.join(','))
-        }
-        if (visibleIncludeCategories.length > 0) {
-          params.append('includeCategories', visibleIncludeCategories.join(','))
-        }
-        if (visibleExcludeCompanies.length > 0) {
-          params.append('excludeBrandIds', visibleExcludeCompanies.join(','))
-        }
-        if (visibleExcludeCategories.length > 0) {
-          params.append('excludeCategories', visibleExcludeCategories.join(','))
+        // Fetch categories
+        const categoriesResponse = await fetch('/api/public/categories')
+        if (categoriesResponse.ok) {
+          const categoriesData = await categoriesResponse.json()
+          const categories = categoriesData.categories || []
+          categories.forEach((cat: any) => {
+            names[cat.id] = cat.name
+          })
         }
 
-        // Add proximity filters (purple pins)
-        const proximityBrandIds = visibleProximityRules
-          .flatMap(rule => rule.brandIds || [])
-          .filter((id, index, self) => self.indexOf(id) === index)
-        if (proximityBrandIds.length > 0) {
-          params.append('proximityBrandIds', proximityBrandIds.join(','))
+        // Fetch all brands (to get fascias)
+        const brandsResponse = await fetch('/api/public/brands?limit=2000')
+        if (brandsResponse.ok) {
+          const brandsData = await brandsResponse.json()
+          const brands = brandsData.brands || []
+
+          // For each brand, fetch its fascias
+          const fasciaPromises = brands.map(async (brand: any) => {
+            try {
+              const fasciasResponse = await fetch(
+                `/api/public/fascias/search?q=${encodeURIComponent(brand.name)}&limit=100`
+              )
+              const fasciasData = await fasciasResponse.json()
+              const brandFascias = (fasciasData.fascias || []).filter(
+                (f: any) => f.brand_id === brand.id
+              )
+              brandFascias.forEach((fascia: any) => {
+                names[fascia.id] = fascia.name
+              })
+            } catch (error) {
+              console.error(`Failed to fetch fascias for brand ${brand.name}:`, error)
+            }
+          })
+
+          await Promise.all(fasciaPromises)
         }
 
-        params.append('limit', '2000')
-
-        const response = await fetch(`/api/public/stores/in-viewport?${params}`)
-        const data = await response.json()
-
-        setIncludedStores(data.includedStores || [])
-        setExcludedStores(data.excludedStores || [])
-        setProximityStores(data.proximityStores || [])
+        setTargetNames(names)
+        console.log(`✅ Loaded ${Object.keys(names).length} target names for filter display`)
       } catch (error) {
-        console.error('Failed to fetch viewport stores:', error)
-        setIncludedStores([])
-        setExcludedStores([])
-        setProximityStores([])
+        console.error('Failed to fetch target names:', error)
       }
     }
 
-    // Debounce viewport changes
-    const timeoutId = setTimeout(fetchViewportStores, 500)
-    return () => clearTimeout(timeoutId)
-  }, [
-    mapViewport,
-    includeCompanies,
-    includeCategories,
-    excludeCompanies,
-    excludeCategories,
-    proximityExclude,
-    includeCompaniesVisibility,
-    includeCategoriesVisibility,
-    excludeCompaniesVisibility,
-    excludeCategoriesVisibility,
-    proximityVisibility
-  ])
+    fetchTargetNames()
+  }, []) // Only run once on mount
 
-  // Fetch filtered BUAs when filters change
+  // TODO: Re-implement viewport stores with new filterSet format
+  // Temporarily disabled to complete FilterBuilder integration
+  useEffect(() => {
+    // Clear stores for now
+    setIncludedStores([])
+    setExcludedStores([])
+    setProximityStores([])
+  }, [mapViewport, filterSet])
+
+  // Fetch filtered BUAs when filters change (NEW: Using FilterSet)
   useEffect(() => {
     const fetchFilteredBUAs = async () => {
       setIsLoadingBUAs(true)
       try {
-        // Build filter payload
+        // Build filter payload with NEW filterSet format
         const filters: any = {
           minPop,
-          maxPop
+          maxPop,
+          filterSet // NEW: Pass the filterSet directly
         }
 
-        // Add include filters if any
-        if (includeCompanies.length > 0) {
-          filters.includeBrands = includeCompanies
-        }
-        if (includeCategories.length > 0) {
-          filters.includeCategories = includeCategories
-        }
-
-        // Add exclude filters if any
-        if (excludeCompanies.length > 0) {
-          filters.excludeBrands = excludeCompanies
-        }
-        if (excludeCategories.length > 0) {
-          filters.excludeCategories = excludeCategories
-        }
-
-        // Add proximity exclusion filters if any
-        if (proximityExclude.length > 0) {
-          filters.nearbyExclude = proximityExclude
-        }
-
-        console.log('🔍 Gap Analysis Filters:', JSON.stringify(filters, null, 2))
+        console.log('🔍 Gap Analysis Filters (NEW FORMAT):', JSON.stringify(filters, null, 2))
 
         // Call both endpoints in parallel:
         // 1. /api/public/gaps/find - Returns top 1,000 BUAs for the results panel
@@ -466,7 +324,7 @@ export default function BUAsPage() {
     // Debounce the fetch to avoid too many API calls
     const debounceTimer = setTimeout(fetchFilteredBUAs, 500)
     return () => clearTimeout(debounceTimer)
-  }, [minPop, maxPop, includeCompanies, includeCategories, excludeCompanies, excludeCategories, proximityExclude])
+  }, [minPop, maxPop, filterSet])
 
   // Fetch nearby stores when point is selected (Assess Area mode)
   useEffect(() => {
@@ -629,97 +487,12 @@ export default function BUAsPage() {
                   </CollapsibleContent>
                 </Collapsible>
 
-                {/* Include Filters */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Include Stores</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIncludeModalOpen(true)}
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  </div>
-                  {(includeCompanies.length > 0 || includeCategories.length > 0) ? (
-                    <div className="flex flex-wrap gap-1">
-                      {includeCompanies.length > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {includeCompanies.length} fascia{includeCompanies.length !== 1 ? 's' : ''}
-                        </Badge>
-                      )}
-                      {includeCategories.length > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {includeCategories.length} categor{includeCategories.length !== 1 ? 'ies' : 'y'}
-                        </Badge>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500 text-center py-2 border border-dashed border-gray-200 rounded">
-                      No include filters
-                    </div>
-                  )}
-                </div>
-
-                {/* Exclude Filters */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Exclude Stores</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setExcludeModalOpen(true)}
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  </div>
-                  {(excludeCompanies.length > 0 || excludeCategories.length > 0) ? (
-                    <div className="flex flex-wrap gap-1">
-                      {excludeCompanies.length > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {excludeCompanies.length} fascia{excludeCompanies.length !== 1 ? 's' : ''}
-                        </Badge>
-                      )}
-                      {excludeCategories.length > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {excludeCategories.length} categor{excludeCategories.length !== 1 ? 'ies' : 'y'}
-                        </Badge>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500 text-center py-2 border border-dashed border-gray-200 rounded">
-                      No exclude filters
-                    </div>
-                  )}
-                </div>
-
-                {/* Proximity Exclusion */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Proximity Exclusion</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setProximityModalOpen(true)}
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  </div>
-                  {proximityExclude.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {proximityExclude.length} rule{proximityExclude.length !== 1 ? 's' : ''}
-                      </Badge>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500 text-center py-2 border border-dashed border-gray-200 rounded">
-                      No proximity rules
-                    </div>
-                  )}
-                </div>
+                {/* NEW: Advanced Filter Builder */}
+                <FilterBuilder
+                  filterSet={filterSet}
+                  onChange={setFilterSet}
+                  targetNames={targetNames}
+                />
               </TabsContent>
 
               {/* Assess Area Tab Content */}
@@ -870,8 +643,7 @@ export default function BUAsPage() {
               radiusMeters={radiusMeters}
               stores={nearbyStores}
               filteredGssCodes={
-                currentMode === 'find-gaps' &&
-                (includeCompanies.length > 0 || includeCategories.length > 0 || excludeCompanies.length > 0 || excludeCategories.length > 0)
+                currentMode === 'find-gaps' && filterSet.rules.length > 0
                   ? mapGssCodes
                   : undefined
               }
@@ -1054,41 +826,6 @@ export default function BUAsPage() {
         </div>
       </div>
 
-      {/* Include Modal */}
-      <IncludeModal
-        open={includeModalOpen}
-        onOpenChange={setIncludeModalOpen}
-        includeCompanies={includeCompanies}
-        includeCategories={includeCategories}
-        onIncludeCompaniesChange={setIncludeCompanies}
-        onIncludeCategoriesChange={setIncludeCategories}
-        companiesVisibility={includeCompaniesVisibility}
-        categoriesVisibility={includeCategoriesVisibility}
-        onCompaniesVisibilityChange={setIncludeCompaniesVisibility}
-        onCategoriesVisibilityChange={setIncludeCategoriesVisibility}
-      />
-
-      {/* Exclude Modal */}
-      <ExcludeModal
-        open={excludeModalOpen}
-        onOpenChange={setExcludeModalOpen}
-        excludeCompanies={excludeCompanies}
-        excludeCategories={excludeCategories}
-        onExcludeCompaniesChange={setExcludeCompanies}
-        onExcludeCategoriesChange={setExcludeCategories}
-        companiesVisibility={excludeCompaniesVisibility}
-        categoriesVisibility={excludeCategoriesVisibility}
-        onCompaniesVisibilityChange={setExcludeCompaniesVisibility}
-        onCategoriesVisibilityChange={setExcludeCategoriesVisibility}
-      />
-
-      {/* Proximity Modal */}
-      <ProximityModal
-        open={proximityModalOpen}
-        onOpenChange={setProximityModalOpen}
-        proximityExclude={proximityExclude}
-        onProximityExcludeChange={setProximityExclude}
-      />
     </div>
   )
 }

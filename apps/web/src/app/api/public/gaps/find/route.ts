@@ -6,7 +6,9 @@ export const dynamic = 'force-dynamic'
 /**
  * Find gaps - BUAs matching complex filter criteria
  *
- * Request body (JSON):
+ * Request body (JSON) - Supports both legacy and new filter formats:
+ *
+ * LEGACY FORMAT (backward compatible):
  * {
  *   minPop: number,
  *   maxPop: number,
@@ -21,10 +23,28 @@ export const dynamic = 'force-dynamic'
  *   }>
  * }
  *
+ * NEW FORMAT (advanced filtering):
+ * {
+ *   minPop: number,
+ *   maxPop: number,
+ *   filterSet: {
+ *     rules: Array<{
+ *       id: string,
+ *       operator: 'has' | 'has_not' | 'has_within' | 'has_not_within',
+ *       targetType: 'fascia' | 'category',
+ *       targetIds: string[],  // UUIDs
+ *       distance?: number,  // for proximity operators
+ *       matchingLogic: 'any' | 'all',
+ *       connector?: 'and' | 'or'
+ *     }>
+ *   }
+ * }
+ *
  * Returns:
  * {
  *   results: BUA[],
- *   total: number
+ *   total: number,
+ *   showing: number
  * }
  */
 export async function POST(request: NextRequest) {

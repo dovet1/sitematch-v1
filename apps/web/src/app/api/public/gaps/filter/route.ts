@@ -7,7 +7,9 @@ export const dynamic = 'force-dynamic'
  * Get filtered gsscodes for map display
  * Returns only the gsscodes that match the filter criteria (for Mapbox filtering)
  *
- * Request body (JSON):
+ * Request body (JSON) - Supports both legacy and new filter formats:
+ *
+ * LEGACY FORMAT (backward compatible):
  * {
  *   minPop: number,
  *   maxPop: number,
@@ -20,6 +22,23 @@ export const dynamic = 'force-dynamic'
  *     categoryIds?: string[],  // Category UUIDs
  *     distance: number
  *   }>
+ * }
+ *
+ * NEW FORMAT (advanced filtering):
+ * {
+ *   minPop: number,
+ *   maxPop: number,
+ *   filterSet: {
+ *     rules: Array<{
+ *       id: string,
+ *       operator: 'has' | 'has_not' | 'has_within' | 'has_not_within',
+ *       targetType: 'fascia' | 'category',
+ *       targetIds: string[],
+ *       distance?: number,
+ *       matchingLogic: 'any' | 'all',
+ *       connector?: 'and' | 'or'
+ *     }>
+ *   }
  * }
  *
  * Returns:
