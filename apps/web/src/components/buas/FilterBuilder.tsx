@@ -86,7 +86,7 @@ export function FilterBuilder({
   const nearMaxRules = filterSet.rules.length >= MAX_RULES - 1
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -94,7 +94,7 @@ export function FilterBuilder({
             Filter Criteria
           </h3>
           <p className="text-sm text-gray-600 mt-0.5">
-            Show BUAs that match these conditions:
+            Show BUAs that match these conditions
           </p>
         </div>
 
@@ -109,6 +109,11 @@ export function FilterBuilder({
           </Button>
         )}
       </div>
+
+      {/* Natural Language Preview - Moved to top for better visibility */}
+      {filterSet.rules.length > 0 && (
+        <FilterPreview rules={filterSet.rules} targetNames={targetNames} />
+      )}
 
       {/* Rules List */}
       {filterSet.rules.length === 0 ? (
@@ -190,22 +195,6 @@ export function FilterBuilder({
           </AlertDescription>
         </Alert>
       )}
-
-      {/* Natural Language Preview */}
-      {filterSet.rules.length > 0 && (
-        <FilterPreview rules={filterSet.rules} targetNames={targetNames} />
-      )}
-
-      {/* Help Text */}
-      <div className="text-xs text-gray-500 space-y-1">
-        <p>
-          <strong>Tip:</strong> Use HAVE/DON'T HAVE for stores inside BUAs.
-          Use HAVE WITHIN/DON'T HAVE WITHIN for nearby stores.
-        </p>
-        <p>
-          Connect multiple rules with AND (all must match) or OR (any can match).
-        </p>
-      </div>
     </div>
   )
 }

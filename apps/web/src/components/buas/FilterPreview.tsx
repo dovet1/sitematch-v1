@@ -23,12 +23,12 @@ export function FilterPreview({ rules, targetNames = {} }: FilterPreviewProps) {
   const preview = generatePreviewText(rules, targetNames)
 
   return (
-    <div className="p-3 bg-violet-50 border border-violet-200 rounded-lg">
-      <div className="flex items-start gap-2">
-        <FileText className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
-        <div className="text-sm text-violet-900">
-          <strong className="font-semibold">Preview:</strong>{' '}
-          <span className="text-violet-800">{preview}</span>
+    <div className="p-4 bg-violet-50 border border-violet-200 rounded-lg shadow-sm">
+      <div className="flex items-start gap-3">
+        <FileText className="h-5 w-5 text-violet-600 mt-0.5 flex-shrink-0" />
+        <div className="text-sm">
+          <div className="font-semibold text-violet-900 mb-1">Your Filters in Plain English:</div>
+          <div className="text-violet-800 leading-relaxed">{preview}</div>
         </div>
       </div>
     </div>

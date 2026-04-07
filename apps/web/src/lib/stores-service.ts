@@ -138,11 +138,63 @@ export class StoreService {
   }
 
   /**
+   * Get filtered gsscodes using the new expression-based database function
+   * This function properly evaluates AND/OR connectors between rules
+   * @param filterSet FilterSet with rules and connectors
+   * @param minPop Minimum population
+   * @param maxPop Maximum population
+   * @returns Array of matching gsscodes and total count
+   */
+  async getFilteredGssCodesWithExpression(
+    filterSet: FilterSet,
+    minPop: number,
+    maxPop: number
+  ): Promise<{ gsscodes: string[], total: number }> {
+    console.log('✅ [Expression Filter] Using new filter_buas_with_expression function')
+
+    const allGsscodes: string[] = []
+    let offset = 0
+    const pageSize = 1000
+    let hasMore = true
+
+    while (hasMore) {
+      const { data, error } = await this.supabase
+        .rpc('filter_buas_with_expression', {
+          p_filter_expression: filterSet,
+          p_min_pop: minPop,
+          p_max_pop: maxPop
+        })
+        .range(offset, offset + pageSize - 1)
+
+      if (error) {
+        console.error('Failed to get filtered gsscodes with expression:', error)
+        throw new Error(`Failed to get filtered gsscodes: ${error.message}`)
+      }
+
+      const gsscodes = (data || []).map((row: any) => row.gsscode)
+      allGsscodes.push(...gsscodes)
+
+      hasMore = gsscodes.length === pageSize
+      offset += pageSize
+
+      console.log(`✅ [Expression Filter] Page ${Math.floor(offset / pageSize)}: ${gsscodes.length} BUAs (total: ${allGsscodes.length})`)
+    }
+
+    console.log(`✅ [Expression Filter] Total: ${allGsscodes.length} matching BUAs`)
+
+    return {
+      gsscodes: allGsscodes,
+      total: allGsscodes.length
+    }
+  }
+
+  /**
    * Filter BUAs using AND logic for rules with matchingLogic='all'
    * This is a post-filter step because the RPC function only supports OR logic
    * @param gsscodes Array of BUA gsscodes from initial filter
    * @param andLogicRules Rules that require ALL targets to be present
    * @returns Filtered array of gsscodes
+   * @deprecated No longer needed with new expression-based filtering
    */
 
   /**
@@ -150,6 +202,7 @@ export class StoreService {
    * This allows backward compatibility while supporting the new advanced filtering system
    * @param filterSet New FilterSet format
    * @returns Legacy filter format
+   * @deprecated Use getFilteredGssCodesWithExpression instead for proper connector support
    */
   convertFilterSetToLegacy(filterSet: FilterSet): {
     includeBrands?: string[]
@@ -305,18 +358,8 @@ export class StoreService {
     // NEW: Advanced filter format
     filterSet?: FilterSet
   }): Promise<{ results: any[], total: number }> {
-    // If filterSet is provided, convert it to legacy format
-    let actualFilters = filters
-    if (filters.filterSet) {
-      const legacyFilters = this.convertFilterSetToLegacy(filters.filterSet)
-      actualFilters = {
-        minPop: filters.minPop,
-        maxPop: filters.maxPop,
-        ...legacyFilters,
-      }
-    }
-    // Use RPC function for all filtering logic including AND/OR
-    const { gsscodes: allMatchingGsscodes, total } = await this.getFilteredGssCodes(actualFilters)
+    // Pass filters directly to getFilteredGssCodes - it will handle FilterSet vs legacy
+    const { gsscodes: allMatchingGsscodes, total } = await this.getFilteredGssCodes(filters)
 
     console.log(`✅ [findGaps] RPC returned ${total} matching BUAs after all filters`)
 
@@ -358,16 +401,17 @@ export class StoreService {
     // NEW: Advanced filter format
     filterSet?: FilterSet
   }): Promise<{ gsscodes: string[], total: number }> {
-    // If filterSet is provided, convert it to legacy format
-    let actualFilters = filters
+    // NEW: If filterSet is provided, use the new expression-based function
     if (filters.filterSet) {
-      const legacyFilters = this.convertFilterSetToLegacy(filters.filterSet)
-      actualFilters = {
-        minPop: filters.minPop,
-        maxPop: filters.maxPop,
-        ...legacyFilters,
-      }
+      return this.getFilteredGssCodesWithExpression(
+        filters.filterSet,
+        filters.minPop,
+        filters.maxPop
+      )
     }
+
+    // LEGACY: Fall back to old conversion for backward compatibility
+    let actualFilters = filters
     // Call the Supabase RPC function for efficient server-side filtering
     // NOTE: Supabase's default max-rows is 1000. To get all results, we need to paginate.
     // Since we can't override the limit for RPC calls easily, we'll paginate through results.
