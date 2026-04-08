@@ -1,6 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 
+async function addMatchedTargetIds(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  stores: any[],
+  brandIds?: string[],
+  categoryIds?: string[]
+) {
+  if (stores.length === 0) {
+    return stores
+  }
+
+  const categoryIdsToMatch = categoryIds?.filter(Boolean) || []
+  const matchedCategoriesByFascia = new Map<string, string[]>()
+
+  if (categoryIdsToMatch.length > 0) {
+    const fasciaIds = Array.from(new Set(stores.map(store => store.fascia_id).filter(Boolean)))
+
+    if (fasciaIds.length > 0) {
+      const { data } = await supabase
+        .from('fascia_categories')
+        .select('fascia_id, category_id')
+        .in('fascia_id', fasciaIds)
+        .in('category_id', categoryIdsToMatch)
+
+      ;(data || []).forEach((row: { fascia_id: string; category_id: string }) => {
+        const existing = matchedCategoriesByFascia.get(row.fascia_id) || []
+        existing.push(row.category_id)
+        matchedCategoriesByFascia.set(row.fascia_id, existing)
+      })
+    }
+  }
+
+  const brandIdSet = new Set(brandIds?.filter(Boolean) || [])
+
+  return stores.map((store) => {
+    const matchedTargetIds = new Set<string>()
+
+    if (store.fascia_id && brandIdSet.has(store.fascia_id)) {
+      matchedTargetIds.add(store.fascia_id)
+    }
+
+    for (const categoryId of matchedCategoriesByFascia.get(store.fascia_id) || []) {
+      matchedTargetIds.add(categoryId)
+    }
+
+    return {
+      ...store,
+      matchedTargetIds: Array.from(matchedTargetIds)
+    }
+  })
+}
+
 /**
  * Get stores within viewport bounds - used for Find Gaps mode with filters
  *
@@ -120,7 +171,7 @@ export async function GET(request: NextRequest) {
       })
 
       if (!error) {
-        includedStores = data || []
+        includedStores = await addMatchedTargetIds(supabase, data || [], includeBrandIds, includeCategories)
         totalIncluded = includedStores.length
       }
     }
@@ -141,7 +192,7 @@ export async function GET(request: NextRequest) {
       })
 
       if (!error) {
-        excludedStores = data || []
+        excludedStores = await addMatchedTargetIds(supabase, data || [], excludeBrandIds, excludeCategories)
         totalExcluded = excludedStores.length
       }
     }
@@ -163,7 +214,12 @@ export async function GET(request: NextRequest) {
       })
 
       if (!error) {
-        proximityIncludedStores = data || []
+        proximityIncludedStores = await addMatchedTargetIds(
+          supabase,
+          data || [],
+          proximityIncludeBrandIds,
+          proximityIncludeCategories
+        )
         totalProximityIncluded = proximityIncludedStores.length
       }
     }
@@ -185,7 +241,12 @@ export async function GET(request: NextRequest) {
       })
 
       if (!error) {
-        proximityExcludedStores = data || []
+        proximityExcludedStores = await addMatchedTargetIds(
+          supabase,
+          data || [],
+          proximityExcludeBrandIds,
+          proximityExcludeCategories
+        )
         totalProximityExcluded = proximityExcludedStores.length
       }
     }

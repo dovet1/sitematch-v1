@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import type { BUA } from '@/lib/buas'
-import type { Store as StoreType } from '@/lib/stores'
+import type { Store as StoreType, ViewportStore } from '@/lib/stores'
 import type { FilterSet } from '@/types/filters'
 import { convertFilterSetToViewportParams, generateTargetBadgeMapping, hasActiveFilters, type TargetWithMetadata } from '@/lib/filter-utils'
 
@@ -43,10 +43,10 @@ export default function BUAsPage() {
   const [targetNames, setTargetNames] = useState<Record<string, string>>({})
 
   // Viewport-based store pins for Find Gaps mode
-  const [includedStores, setIncludedStores] = useState<StoreType[]>([])
-  const [excludedStores, setExcludedStores] = useState<StoreType[]>([])
-  const [proximityIncludedStores, setProximityIncludedStores] = useState<StoreType[]>([])
-  const [proximityExcludedStores, setProximityExcludedStores] = useState<StoreType[]>([])
+  const [includedStores, setIncludedStores] = useState<ViewportStore[]>([])
+  const [excludedStores, setExcludedStores] = useState<ViewportStore[]>([])
+  const [proximityIncludedStores, setProximityIncludedStores] = useState<ViewportStore[]>([])
+  const [proximityExcludedStores, setProximityExcludedStores] = useState<ViewportStore[]>([])
   const [mapViewport, setMapViewport] = useState<{
     minLat: number
     minLon: number
@@ -257,6 +257,15 @@ export default function BUAsPage() {
 
   // Fetch viewport stores with new filterSet format (Find Gaps mode only)
   useEffect(() => {
+    if (filterSet.rules.length === 0) {
+      setTargetBadgeMapping([])
+      return
+    }
+
+    setTargetBadgeMapping(generateTargetBadgeMapping(filterSet, targetNames))
+  }, [filterSet, targetNames])
+
+  useEffect(() => {
     if (!mapViewport || currentMode !== 'find-gaps' || filterSet.rules.length === 0) {
       viewportFetchAbortRef.current?.abort()
       setIncludedStores([])
@@ -265,8 +274,6 @@ export default function BUAsPage() {
       setProximityExcludedStores([])
       return
     }
-
-    setTargetBadgeMapping(generateTargetBadgeMapping(filterSet, targetNames))
 
     const fetchViewportStores = async () => {
       const params = convertFilterSetToViewportParams(filterSet)
@@ -726,6 +733,7 @@ export default function BUAsPage() {
               excludedStores={excludedStores}
               proximityIncludedStores={proximityIncludedStores}
               proximityExcludedStores={proximityExcludedStores}
+              targetBadgeMapping={targetBadgeMapping}
               onViewportChange={handleViewportChange}
             />
           </div>

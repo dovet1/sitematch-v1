@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { formatPopulation } from '@/lib/format-population'
-import type { Store } from '@/lib/stores'
+import type { Store, ViewportStore } from '@/lib/stores'
+import type { TargetWithMetadata } from '@/lib/filter-utils'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
@@ -27,10 +28,11 @@ interface BUAMapProps {
   radiusMeters?: number
   stores?: Store[]  // Stores to display as markers in Assess Area mode
   filteredGssCodes?: string[]  // List of BUA gsscodes to show (ALL matching gsscodes, no limit)
-  includedStores?: Store[]  // Green pins from has filters
-  excludedStores?: Store[]  // Red pins from has_not filters
-  proximityIncludedStores?: Store[]  // Green pins from has_within filters
-  proximityExcludedStores?: Store[]  // Red pins from has_not_within filters
+  includedStores?: ViewportStore[]  // Green pins from has filters
+  excludedStores?: ViewportStore[]  // Red pins from has_not filters
+  proximityIncludedStores?: ViewportStore[]  // Green pins from has_within filters
+  proximityExcludedStores?: ViewportStore[]  // Red pins from has_not_within filters
+  targetBadgeMapping?: TargetWithMetadata[]
   onViewportChange?: (bounds: { minLat: number; minLon: number; maxLat: number; maxLon: number }) => void
 }
 
@@ -50,6 +52,7 @@ export function BUAMap({
   excludedStores = [],
   proximityIncludedStores = [],
   proximityExcludedStores = [],
+  targetBadgeMapping = [],
   onViewportChange
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -452,22 +455,43 @@ export function BUAMap({
   }, [selectedPoint, radiusMeters, mode, mapLoaded])
 
   const createSimpleStoreMarker = (
-    store: Store,
-    color: 'green' | 'red'
+    store: Store | ViewportStore,
+    color: 'green' | 'red',
+    badgeLabel?: string
   ): mapboxgl.Marker => {
     const el = document.createElement('div')
     el.className = 'simple-store-marker'
-    el.style.width = '12px'
-    el.style.height = '12px'
-    el.style.borderRadius = '50%'
+    const hasBadge = Boolean(badgeLabel)
+    const markerText = badgeLabel || ''
+    const markerWidth = hasBadge
+      ? `${Math.max(24, markerText.length * 8 + 12)}px`
+      : '12px'
+
+    el.style.width = markerWidth
+    el.style.height = hasBadge ? '24px' : '12px'
+    el.style.borderRadius = '9999px'
     el.style.backgroundColor = color === 'green' ? '#10b981' : '#ef4444'
     el.style.border = '2px solid white'
     el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.25)'
     el.style.cursor = 'pointer'
+    if (hasBadge) {
+      el.style.display = 'flex'
+      el.style.alignItems = 'center'
+      el.style.justifyContent = 'center'
+      el.style.color = '#ffffff'
+      el.style.fontSize = '12px'
+      el.style.fontWeight = '700'
+      el.style.lineHeight = '1'
+      el.textContent = markerText
+    }
 
     const address = [store.address_line_1, store.town, store.postcode]
       .filter(Boolean)
       .join(', ')
+
+    const badgeLine = badgeLabel
+      ? `<div style="font-size: 11px; color: #374151; margin-top: 4px;">Marker: ${badgeLabel}</div>`
+      : ''
 
     const popup = new mapboxgl.Popup({
       offset: 15
@@ -475,12 +499,30 @@ export function BUAMap({
       <div style="padding: 4px;">
         <div style="font-weight: 600; font-size: 13px; margin-bottom: 2px;">${store.name || 'Store'}</div>
         ${address ? `<div style="font-size: 11px; color: #6b7280;">${address}</div>` : ''}
+        ${badgeLine}
       </div>
     `)
 
     return new mapboxgl.Marker({ element: el })
       .setLngLat([store.lon, store.lat])
       .setPopup(popup)
+  }
+
+  const getBadgeLabel = (store: ViewportStore): string | undefined => {
+    if (!store.matchedTargetIds || store.matchedTargetIds.length === 0) {
+      return undefined
+    }
+
+    const badgeNumbers = targetBadgeMapping
+      .filter(target => store.matchedTargetIds?.includes(target.targetId))
+      .map(target => target.badgeNumber)
+      .sort((a, b) => a - b)
+
+    if (badgeNumbers.length === 0) {
+      return undefined
+    }
+
+    return badgeNumbers.join(',')
   }
 
   // Handle store markers for both modes
@@ -503,17 +545,25 @@ export function BUAMap({
       ? [...excludedStores, ...proximityExcludedStores]
       : []
 
-    greenStores.forEach(store => {
-      const marker = createSimpleStoreMarker(store, 'green')
-      marker.addTo(map.current!)
-      newMarkers.push(marker)
-    })
+    if (mode === 'assess-area') {
+      greenStores.forEach(store => {
+        const marker = createSimpleStoreMarker(store, 'green')
+        marker.addTo(map.current!)
+        newMarkers.push(marker)
+      })
+    } else {
+      greenStores.forEach(store => {
+        const marker = createSimpleStoreMarker(store, 'green', getBadgeLabel(store))
+        marker.addTo(map.current!)
+        newMarkers.push(marker)
+      })
 
-    redStores.forEach(store => {
-      const marker = createSimpleStoreMarker(store, 'red')
-      marker.addTo(map.current!)
-      newMarkers.push(marker)
-    })
+      redStores.forEach(store => {
+        const marker = createSimpleStoreMarker(store, 'red', getBadgeLabel(store))
+        marker.addTo(map.current!)
+        newMarkers.push(marker)
+      })
+    }
 
     storeMarkers.current = newMarkers
 
@@ -541,7 +591,7 @@ export function BUAMap({
       storeMarkers.current.forEach(marker => marker.remove())
       storeMarkers.current = []
     }
-  }, [stores, includedStores, excludedStores, proximityIncludedStores, proximityExcludedStores, mode, mapLoaded])
+  }, [stores, includedStores, excludedStores, proximityIncludedStores, proximityExcludedStores, mode, mapLoaded, targetBadgeMapping])
 
   return (
     <div className={`relative ${className}`}>

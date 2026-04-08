@@ -52,6 +52,28 @@ export interface Store {
   created_at: string
 }
 
+export interface ViewportStore {
+  id: string
+  store_id: string | number
+  brand_id: string
+  fascia_id: string
+  name: string
+  lat: number
+  lon: number
+  location?: string
+  postcode?: string | null
+  town?: string | null
+  suburb?: string | null
+  county?: string | null
+  address_line_1?: string | null
+  address_line_2?: string | null
+  pqi?: number | null
+  open_date?: string | null
+  size_band?: string | null
+  created_at?: string
+  matchedTargetIds?: string[]
+}
+
 export interface BUAStorePresence {
   bua_gsscode: string
   category_id: string  // UUID in database
