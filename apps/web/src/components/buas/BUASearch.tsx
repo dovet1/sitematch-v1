@@ -47,8 +47,7 @@ export function BUASearch({
           setSuggestions(data.results || [])
           setShowSuggestions(true)
         }
-      } catch (error) {
-        console.error('Error fetching BUA suggestions:', error)
+      } catch {
         setSuggestions([])
         setShowSuggestions(false)
       } finally {

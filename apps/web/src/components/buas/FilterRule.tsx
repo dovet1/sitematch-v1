@@ -13,6 +13,7 @@ import {
   type FilterRule as FilterRuleType,
   isProximityOperator,
 } from '@/types/filters'
+import type { TargetWithMetadata } from '@/lib/filter-utils'
 
 interface FilterRuleProps {
   rule: FilterRuleType
@@ -20,6 +21,7 @@ interface FilterRuleProps {
   onRemove: () => void
   showConnector: boolean
   targetNames?: Record<string, string>
+  targetBadgeMapping: TargetWithMetadata[]
 }
 
 export function FilterRule({
@@ -28,6 +30,7 @@ export function FilterRule({
   onRemove,
   showConnector,
   targetNames = {},
+  targetBadgeMapping,
 }: FilterRuleProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
 
@@ -122,6 +125,7 @@ export function FilterRule({
             onTypeChange={handleTargetTypeChange}
             onSelectionChange={handleTargetIdsChange}
             targetNames={targetNames}
+            targetBadgeMapping={targetBadgeMapping}
           />
 
           {/* Advanced Options (collapsible) */}

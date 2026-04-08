@@ -47,7 +47,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ stores, total: stores.length })
   } catch (error) {
-    console.error('Nearby stores API error:', error)
     return NextResponse.json(
       { stores: [], total: 0, error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }

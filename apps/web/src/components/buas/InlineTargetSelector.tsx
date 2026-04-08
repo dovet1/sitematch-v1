@@ -1,7 +1,9 @@
 'use client'
 
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import { EnhancedCompanySelector } from './EnhancedCompanySelector'
+import type { TargetWithMetadata } from '@/lib/filter-utils'
 
 interface InlineTargetSelectorProps {
   targetType: 'fascia' | 'category'
@@ -9,6 +11,7 @@ interface InlineTargetSelectorProps {
   onTypeChange: (type: 'fascia' | 'category') => void
   onSelectionChange: (ids: string[]) => void
   targetNames: Record<string, string>
+  targetBadgeMapping: TargetWithMetadata[]
 }
 
 export function InlineTargetSelector({
@@ -16,7 +19,8 @@ export function InlineTargetSelector({
   selectedIds,
   onTypeChange,
   onSelectionChange,
-  targetNames
+  targetNames,
+  targetBadgeMapping
 }: InlineTargetSelectorProps) {
   // EnhancedCompanySelector has its own tabs, so we just need to pass the correct selections
   const handleCompaniesChange = (ids: string[]) => {
@@ -45,15 +49,32 @@ export function InlineTargetSelector({
         />
       </div>
 
-      {/* Selection summary */}
+      {/* Selection summary with numbered badges */}
       {selectedIds.length > 0 && (
         <div className="p-2 bg-violet-50 rounded-lg border border-violet-200">
-          <div className="flex items-center gap-2 text-xs text-violet-900">
-            <span className="font-medium">✓ Selected:</span>
-            <span className="font-normal">
-              {selectedIds.slice(0, 3).map(id => targetNames[id] || id).join(', ')}
-              {selectedIds.length > 3 && ` +${selectedIds.length - 3} more`}
-            </span>
+          <div className="flex flex-wrap gap-1.5">
+            {selectedIds.map(id => {
+              const badge = targetBadgeMapping.find(b => b.targetId === id)
+              return (
+                <div
+                  key={id}
+                  className="flex items-center gap-1.5 bg-white rounded-full px-2.5 py-1 shadow-sm"
+                >
+                  <Badge
+                    className={`h-5 w-5 flex items-center justify-center rounded-full text-xs font-bold p-0 ${
+                      badge?.color === 'green'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-red-500 text-white'
+                    }`}
+                  >
+                    {badge?.badgeNumber || '?'}
+                  </Badge>
+                  <span className="text-xs font-medium text-gray-700">
+                    {targetNames[id] || id}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

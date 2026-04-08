@@ -50,8 +50,8 @@ export function CompanySelector({
         const response = await fetch('/api/public/categories')
         const data = await response.json()
         setCategories(data.categories || [])
-      } catch (error) {
-        console.error('Failed to fetch categories:', error)
+      } catch {
+        setCategories([])
       } finally {
         setIsLoadingCategories(false)
       }
@@ -74,8 +74,8 @@ export function CompanySelector({
         )
         const data = await response.json()
         setBrandSearchResults(data.brands || [])
-      } catch (error) {
-        console.error('Failed to search brands:', error)
+      } catch {
+        setBrandSearchResults([])
       } finally {
         setIsSearching(false)
       }

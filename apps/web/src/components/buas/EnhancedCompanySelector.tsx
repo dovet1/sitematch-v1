@@ -68,8 +68,8 @@ export function EnhancedCompanySelector({
         const response = await fetch('/api/public/categories')
         const data = await response.json()
         setCategories(data.categories || [])
-      } catch (error) {
-        console.error('Failed to fetch categories:', error)
+      } catch {
+        setCategories([])
       } finally {
         setIsLoadingCategories(false)
       }
@@ -99,16 +99,15 @@ export function EnhancedCompanySelector({
                 (f: Fascia) => f.brand_id === brand.id
               )
               return { ...brand, fascias: brandFascias }
-            } catch (error) {
-              console.error(`Failed to fetch fascias for brand ${brand.name}:`, error)
+            } catch {
               return { ...brand, fascias: [] }
             }
           })
         )
 
         setAllBrands(brandsWithFascias)
-      } catch (error) {
-        console.error('Failed to fetch brands:', error)
+      } catch {
+        setAllBrands([])
       } finally {
         setIsLoadingStores(false)
       }

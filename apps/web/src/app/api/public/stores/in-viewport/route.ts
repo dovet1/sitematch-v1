@@ -13,17 +13,22 @@ import { createServerClient } from '@/lib/supabase'
  * - includeCategories: Comma-separated category UUIDs for included stores (optional)
  * - excludeBrandIds: Comma-separated fascia UUIDs for excluded stores (optional)
  * - excludeCategories: Comma-separated category UUIDs for excluded stores (optional)
- * - proximityBrandIds: Comma-separated fascia UUIDs for proximity stores (optional)
+ * - proximityIncludeBrandIds: Comma-separated fascia UUIDs for proximity inclusion stores (optional)
+ * - proximityIncludeCategories: Comma-separated category UUIDs for proximity inclusion stores (optional)
+ * - proximityExcludeBrandIds: Comma-separated fascia UUIDs for proximity exclusion stores (optional)
+ * - proximityExcludeCategories: Comma-separated category UUIDs for proximity exclusion stores (optional)
  * - limit: Max stores per type (default 2000, max 5000)
  *
  * Returns:
  * {
  *   includedStores: Store[],
  *   excludedStores: Store[],
- *   proximityStores: Store[],
+ *   proximityIncludedStores: Store[],
+ *   proximityExcludedStores: Store[],
  *   totalIncluded: number,
  *   totalExcluded: number,
- *   totalProximity: number
+ *   totalProximityIncluded: number,
+ *   totalProximityExcluded: number
  * }
  */
 export async function GET(request: NextRequest) {
@@ -42,10 +47,12 @@ export async function GET(request: NextRequest) {
         {
           includedStores: [],
           excludedStores: [],
-          proximityStores: [],
+          proximityIncludedStores: [],
+          proximityExcludedStores: [],
           totalIncluded: 0,
           totalExcluded: 0,
-          totalProximity: 0,
+          totalProximityIncluded: 0,
+          totalProximityExcluded: 0,
           error: 'Invalid viewport coordinates'
         },
         { status: 400 }
@@ -73,8 +80,23 @@ export async function GET(request: NextRequest) {
       ?.split(',')
       .filter(id => id.trim().length > 0)
 
-    const proximityBrandIds = searchParams
-      .get('proximityBrandIds')
+    const proximityIncludeBrandIds = searchParams
+      .get('proximityIncludeBrandIds')
+      ?.split(',')
+      .filter(id => id.trim().length > 0)
+
+    const proximityIncludeCategories = searchParams
+      .get('proximityIncludeCategories')
+      ?.split(',')
+      .filter(id => id.trim().length > 0)
+
+    const proximityExcludeBrandIds = searchParams
+      .get('proximityExcludeBrandIds')
+      ?.split(',')
+      .filter(id => id.trim().length > 0)
+
+    const proximityExcludeCategories = searchParams
+      .get('proximityExcludeCategories')
       ?.split(',')
       .filter(id => id.trim().length > 0)
 
@@ -97,9 +119,7 @@ export async function GET(request: NextRequest) {
         p_limit: limit
       })
 
-      if (error) {
-        console.error('Failed to fetch included stores:', error)
-      } else {
+      if (!error) {
         includedStores = data || []
         totalIncluded = includedStores.length
       }
@@ -120,55 +140,77 @@ export async function GET(request: NextRequest) {
         p_limit: limit
       })
 
-      if (error) {
-        console.error('Failed to fetch excluded stores:', error)
-      } else {
+      if (!error) {
         excludedStores = data || []
         totalExcluded = excludedStores.length
       }
     }
 
-    // Fetch proximity stores (if any proximity filters are provided)
-    let proximityStores: any[] = []
-    let totalProximity = 0
+    // Fetch proximity included stores (has_within operator)
+    let proximityIncludedStores: any[] = []
+    let totalProximityIncluded = 0
 
-    if (proximityBrandIds && proximityBrandIds.length > 0) {
+    if ((proximityIncludeBrandIds && proximityIncludeBrandIds.length > 0) ||
+        (proximityIncludeCategories && proximityIncludeCategories.length > 0)) {
       const { data, error } = await supabase.rpc('get_included_stores_in_viewport', {
         p_min_lat: minLat,
         p_min_lon: minLon,
         p_max_lat: maxLat,
         p_max_lon: maxLon,
-        p_brand_ids: proximityBrandIds,
-        p_category_ids: null,
+        p_brand_ids: proximityIncludeBrandIds || null,
+        p_category_ids: proximityIncludeCategories || null,
         p_limit: limit
       })
 
-      if (error) {
-        console.error('Failed to fetch proximity stores:', error)
-      } else {
-        proximityStores = data || []
-        totalProximity = proximityStores.length
+      if (!error) {
+        proximityIncludedStores = data || []
+        totalProximityIncluded = proximityIncludedStores.length
+      }
+    }
+
+    // Fetch proximity excluded stores (has_not_within operator)
+    let proximityExcludedStores: any[] = []
+    let totalProximityExcluded = 0
+
+    if ((proximityExcludeBrandIds && proximityExcludeBrandIds.length > 0) ||
+        (proximityExcludeCategories && proximityExcludeCategories.length > 0)) {
+      const { data, error } = await supabase.rpc('get_excluded_stores_in_viewport', {
+        p_min_lat: minLat,
+        p_min_lon: minLon,
+        p_max_lat: maxLat,
+        p_max_lon: maxLon,
+        p_brand_ids: proximityExcludeBrandIds || null,
+        p_category_ids: proximityExcludeCategories || null,
+        p_limit: limit
+      })
+
+      if (!error) {
+        proximityExcludedStores = data || []
+        totalProximityExcluded = proximityExcludedStores.length
       }
     }
 
     return NextResponse.json({
       includedStores,
       excludedStores,
-      proximityStores,
+      proximityIncludedStores,
+      proximityExcludedStores,
       totalIncluded,
       totalExcluded,
-      totalProximity
+      totalProximityIncluded,
+      totalProximityExcluded
     })
   } catch (error) {
-    console.error('Viewport stores API error:', error)
     return NextResponse.json(
       {
         includedStores: [],
         excludedStores: [],
-        proximityStores: [],
+        proximityIncludedStores: [],
+        proximityExcludedStores: [],
         totalIncluded: 0,
         totalExcluded: 0,
-        totalProximity: 0,
+        totalProximityIncluded: 0,
+        totalProximityExcluded: 0,
         error: error instanceof Error ? error.message : 'Internal server error'
       },
       { status: 500 }

@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Info, MapPin, ChevronDown, Store, Settings } from 'lucide-react'
+import { ArrowLeft, Info, MapPin, ChevronDown } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
@@ -13,15 +12,13 @@ import { BUASearch } from '@/components/buas/BUASearch'
 import { ResultsPanel } from '@/components/buas/ResultsPanel'
 import { CompanySelector } from '@/components/buas/CompanySelector'
 import { FilterBuilder } from '@/components/buas/FilterBuilder'
-import { ProximityModal, type ProximityRule } from '@/components/buas/ProximityModal'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
 import type { BUA } from '@/lib/buas'
 import type { Store as StoreType } from '@/lib/stores'
 import type { FilterSet } from '@/types/filters'
-import { createEmptyRule } from '@/types/filters'
+import { convertFilterSetToViewportParams, generateTargetBadgeMapping, hasActiveFilters, type TargetWithMetadata } from '@/lib/filter-utils'
 
 const MAX_POPULATION = 1500000 // 1.5 million
 const MIN_POPULATION = 0
@@ -48,13 +45,18 @@ export default function BUAsPage() {
   // Viewport-based store pins for Find Gaps mode
   const [includedStores, setIncludedStores] = useState<StoreType[]>([])
   const [excludedStores, setExcludedStores] = useState<StoreType[]>([])
-  const [proximityStores, setProximityStores] = useState<StoreType[]>([])
+  const [proximityIncludedStores, setProximityIncludedStores] = useState<StoreType[]>([])
+  const [proximityExcludedStores, setProximityExcludedStores] = useState<StoreType[]>([])
   const [mapViewport, setMapViewport] = useState<{
     minLat: number
     minLon: number
     maxLat: number
     maxLon: number
   } | null>(null)
+  const viewportFetchAbortRef = useRef<AbortController | null>(null)
+
+  // Badge mapping for linking sidebar to map pins
+  const [targetBadgeMapping, setTargetBadgeMapping] = useState<TargetWithMetadata[]>([])
 
   // Assess Area mode state
   const [currentMode, setCurrentMode] = useState<'find-gaps' | 'assess-area'>('find-gaps')
@@ -236,8 +238,8 @@ export default function BUAsPage() {
               brandFascias.forEach((fascia: any) => {
                 names[fascia.id] = fascia.name
               })
-            } catch (error) {
-              console.error(`Failed to fetch fascias for brand ${brand.name}:`, error)
+            } catch {
+              return
             }
           })
 
@@ -245,23 +247,112 @@ export default function BUAsPage() {
         }
 
         setTargetNames(names)
-        console.log(`✅ Loaded ${Object.keys(names).length} target names for filter display`)
-      } catch (error) {
-        console.error('Failed to fetch target names:', error)
+      } catch {
+        setTargetNames({})
       }
     }
 
     fetchTargetNames()
   }, []) // Only run once on mount
 
-  // TODO: Re-implement viewport stores with new filterSet format
-  // Temporarily disabled to complete FilterBuilder integration
+  // Fetch viewport stores with new filterSet format (Find Gaps mode only)
   useEffect(() => {
-    // Clear stores for now
-    setIncludedStores([])
-    setExcludedStores([])
-    setProximityStores([])
-  }, [mapViewport, filterSet])
+    if (!mapViewport || currentMode !== 'find-gaps' || filterSet.rules.length === 0) {
+      viewportFetchAbortRef.current?.abort()
+      setIncludedStores([])
+      setExcludedStores([])
+      setProximityIncludedStores([])
+      setProximityExcludedStores([])
+      return
+    }
+
+    setTargetBadgeMapping(generateTargetBadgeMapping(filterSet, targetNames))
+
+    const fetchViewportStores = async () => {
+      const params = convertFilterSetToViewportParams(filterSet)
+
+      // This endpoint groups targets by operator/type, so per-rule distance and
+      // matching logic are approximated in map markers rather than preserved exactly.
+      if (!hasActiveFilters(params)) {
+        setIncludedStores([])
+        setExcludedStores([])
+        setProximityIncludedStores([])
+        setProximityExcludedStores([])
+        return
+      }
+
+      viewportFetchAbortRef.current?.abort()
+      const abortController = new AbortController()
+      viewportFetchAbortRef.current = abortController
+
+      try {
+        // Build query string
+        const queryParams = new URLSearchParams({
+          minLat: mapViewport.minLat.toString(),
+          minLon: mapViewport.minLon.toString(),
+          maxLat: mapViewport.maxLat.toString(),
+          maxLon: mapViewport.maxLon.toString(),
+          limit: '2000'
+        })
+
+        if (params.includeBrandIds.length > 0) {
+          queryParams.append('includeBrandIds', params.includeBrandIds.join(','))
+        }
+        if (params.includeCategories.length > 0) {
+          queryParams.append('includeCategories', params.includeCategories.join(','))
+        }
+        if (params.excludeBrandIds.length > 0) {
+          queryParams.append('excludeBrandIds', params.excludeBrandIds.join(','))
+        }
+        if (params.excludeCategories.length > 0) {
+          queryParams.append('excludeCategories', params.excludeCategories.join(','))
+        }
+        if (params.proximityIncludeBrandIds.length > 0) {
+          queryParams.append('proximityIncludeBrandIds', params.proximityIncludeBrandIds.join(','))
+        }
+        if (params.proximityIncludeCategories.length > 0) {
+          queryParams.append('proximityIncludeCategories', params.proximityIncludeCategories.join(','))
+        }
+        if (params.proximityExcludeBrandIds.length > 0) {
+          queryParams.append('proximityExcludeBrandIds', params.proximityExcludeBrandIds.join(','))
+        }
+        if (params.proximityExcludeCategories.length > 0) {
+          queryParams.append('proximityExcludeCategories', params.proximityExcludeCategories.join(','))
+        }
+
+        const response = await fetch(`/api/public/stores/in-viewport?${queryParams.toString()}`, {
+          signal: abortController.signal
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setIncludedStores(data.includedStores || [])
+          setExcludedStores(data.excludedStores || [])
+          setProximityIncludedStores(data.proximityIncludedStores || [])
+          setProximityExcludedStores(data.proximityExcludedStores || [])
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          return
+        }
+        setIncludedStores([])
+        setExcludedStores([])
+        setProximityIncludedStores([])
+        setProximityExcludedStores([])
+      } finally {
+        if (viewportFetchAbortRef.current === abortController) {
+          viewportFetchAbortRef.current = null
+        }
+      }
+    }
+
+    // Debounce the fetch to avoid excessive API calls during map pan/zoom
+    const debounceTimer = setTimeout(fetchViewportStores, 750)
+    return () => {
+      clearTimeout(debounceTimer)
+      viewportFetchAbortRef.current?.abort()
+    }
+  }, [mapViewport, filterSet, currentMode, targetNames])
 
   // Fetch filtered BUAs when filters change (NEW: Using FilterSet)
   useEffect(() => {
@@ -274,8 +365,6 @@ export default function BUAsPage() {
           maxPop,
           filterSet // NEW: Pass the filterSet directly
         }
-
-        console.log('🔍 Gap Analysis Filters (NEW FORMAT):', JSON.stringify(filters, null, 2))
 
         // Call both endpoints in parallel:
         // 1. /api/public/gaps/find - Returns top 1,000 BUAs for the results panel
@@ -295,25 +384,15 @@ export default function BUAsPage() {
 
         if (findResponse.ok) {
           const data = await findResponse.json()
-          console.log('📊 Results Panel API Response:', {
-            resultsCount: data.results?.length,
-            total: data.total,
-            showing: data.showing
-          })
           setFilteredBUAs(data.results || [])
           setTotalBUAs(data.total || data.results?.length || 0)
         }
 
         if (filterResponse.ok) {
           const data = await filterResponse.json()
-          console.log('🗺️ Map Filter API Response:', {
-            gsscodesCount: data.gsscodes?.length,
-            total: data.total
-          })
           setMapGssCodes(data.gsscodes || [])
         }
-      } catch (error) {
-        console.error('Error fetching filtered BUAs:', error)
+      } catch {
         setFilteredBUAs([])
         setMapGssCodes([])
       } finally {
@@ -355,8 +434,7 @@ export default function BUAsPage() {
           const data = await response.json()
           setNearbyStores(data.stores || [])
         }
-      } catch (error) {
-        console.error('Error fetching nearby stores:', error)
+      } catch {
         setNearbyStores([])
       } finally {
         setIsLoadingStores(false)
@@ -375,9 +453,7 @@ export default function BUAsPage() {
 
   return (
     <div className="h-screen bg-background overflow-hidden">
-      {/* Desktop Layout */}
-      <div className="hidden md:flex md:flex-col md:h-full">
-        {/* Premium Header - Match SiteSketcher */}
+      <div className="flex flex-col h-full">
         <header className="relative z-40 px-8 py-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
           <div className="absolute inset-0 bg-gradient-to-r from-violet-50/30 via-transparent to-purple-50/30 pointer-events-none" />
           <div className="relative flex items-center justify-between gap-6">
@@ -400,9 +476,7 @@ export default function BUAsPage() {
           </div>
         </header>
 
-        {/* Main Content - Three Panel Layout */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Left Sidebar (380px) */}
           <div className="w-[380px] border-r bg-gradient-to-b from-gray-50/50 to-background flex flex-col h-full">
             <Tabs
               defaultValue="find-gaps"
@@ -492,6 +566,7 @@ export default function BUAsPage() {
                   filterSet={filterSet}
                   onChange={setFilterSet}
                   targetNames={targetNames}
+                  targetBadgeMapping={targetBadgeMapping}
                 />
               </TabsContent>
 
@@ -649,7 +724,8 @@ export default function BUAsPage() {
               }
               includedStores={includedStores}
               excludedStores={excludedStores}
-              proximityStores={proximityStores}
+              proximityIncludedStores={proximityIncludedStores}
+              proximityExcludedStores={proximityExcludedStores}
               onViewportChange={handleViewportChange}
             />
           </div>
@@ -665,167 +741,6 @@ export default function BUAsPage() {
           />
         </div>
       </div>
-
-      {/* Mobile Layout */}
-      <div className="md:hidden h-full flex flex-col">
-        {/* Fixed top navigation */}
-        <div className="fixed top-4 left-4 right-4 z-50 flex items-center justify-between">
-          <Link
-            href="/"
-            className="flex items-center justify-center w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200"
-          >
-            <ArrowLeft className="h-5 w-5 text-gray-700" />
-          </Link>
-          <div className="bg-white/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 px-4 py-2">
-            <h1 className="text-sm font-semibold text-gray-900">Gap Analysis</h1>
-          </div>
-        </div>
-
-        {/* Full screen map */}
-        <div className="flex-1">
-          <BUAMap
-            center={center}
-            minPopulation={minPop}
-            maxPopulation={maxPop}
-            onBUAClick={(gsscode, name, pop) => setSelectedBUA({ name, pop })}
-            className="w-full h-full"
-            includedStores={includedStores}
-            excludedStores={excludedStores}
-            proximityStores={proximityStores}
-            onViewportChange={handleViewportChange}
-          />
-        </div>
-
-        {/* Bottom sheet with controls */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-2xl rounded-t-2xl z-40 max-h-[60vh] overflow-y-auto">
-          <div className="p-4 space-y-4">
-            {/* Drag handle */}
-            <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto"></div>
-
-            {/* Search */}
-            <div className="space-y-2">
-              <Label htmlFor="mobile-bua-search" className="text-sm font-medium">
-                Search by BUA Name
-              </Label>
-              <BUASearch
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onBUASelect={handleBUASelect}
-              />
-            </div>
-
-            {/* Population Filter */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Population Range</Label>
-
-              <div className="px-2">
-                <Slider
-                  value={populationRange}
-                  onValueChange={handlePopulationRangeChange}
-                  min={MIN_POPULATION}
-                  max={MAX_POPULATION}
-                  step={1000}
-                  minStepsBetweenThumbs={1}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Numerical Inputs */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label htmlFor="mobile-min-pop-input" className="text-xs text-gray-600 mb-1 block">
-                    Min Population
-                  </Label>
-                  <Input
-                    id="mobile-min-pop-input"
-                    type="number"
-                    min={MIN_POPULATION}
-                    max={maxPop}
-                    value={minPopInput}
-                    onChange={handleMinPopInputChange}
-                    onBlur={handleMinPopInputBlur}
-                    className="h-9 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="mobile-max-pop-input" className="text-xs text-gray-600 mb-1 block">
-                    Max Population
-                  </Label>
-                  <Input
-                    id="mobile-max-pop-input"
-                    type="number"
-                    min={minPop}
-                    max={MAX_POPULATION}
-                    value={maxPopInput}
-                    onChange={handleMaxPopInputChange}
-                    onBlur={handleMaxPopInputBlur}
-                    className="h-9 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Filtered BUAs List (Mobile) */}
-            <div className="space-y-2">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Matching BUAs</Label>
-                  <span className={totalBUAs > 1000 ? "text-xs font-bold text-amber-600" : "text-xs text-gray-500"}>
-                    {(() => {
-                      console.log('🎨 Render check - totalBUAs:', totalBUAs, 'filteredBUAs.length:', filteredBUAs.length)
-                      if (isLoadingBUAs) return 'Loading...'
-                      if (totalBUAs > 1000) return `Showing ${filteredBUAs.length.toLocaleString()} of ${totalBUAs.toLocaleString()}`
-                      return `${filteredBUAs.length} result${filteredBUAs.length !== 1 ? 's' : ''}`
-                    })()}
-                  </span>
-                </div>
-                {!isLoadingBUAs && totalBUAs > 1000 && (
-                  <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
-                    Showing top 1,000 by population. Refine filters to see all {totalBUAs.toLocaleString()} results.
-                  </div>
-                )}
-              </div>
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                {isLoadingBUAs ? (
-                  <div className="p-3 text-center text-sm text-gray-500">
-                    Loading...
-                  </div>
-                ) : filteredBUAs.length === 0 ? (
-                  <div className="p-3 text-center text-sm text-gray-500">
-                    No matches
-                  </div>
-                ) : (
-                  <div className="max-h-48 overflow-y-auto">
-                    {filteredBUAs.slice(0, 50).map((bua) => (
-                      <button
-                        key={bua.gsscode}
-                        onClick={() => handleBUAListItemClick(bua)}
-                        className={cn(
-                          "w-full px-3 py-2 text-left hover:bg-violet-50 transition-colors border-b border-gray-100 last:border-b-0",
-                          selectedBUA?.name === bua.name && "bg-violet-50"
-                        )}
-                      >
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">
-                              {bua.name}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              Pop: {bua.pop.toLocaleString()}
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
   )
 }

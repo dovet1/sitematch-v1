@@ -16,11 +16,13 @@ import {
   MAX_RULES,
 } from '@/types/filters'
 import { cn } from '@/lib/utils'
+import type { TargetWithMetadata } from '@/lib/filter-utils'
 
 interface FilterBuilderProps {
   filterSet: FilterSet
   onChange: (filterSet: FilterSet) => void
   targetNames?: Record<string, string> // Map of targetId -> name for display
+  targetBadgeMapping: TargetWithMetadata[] // Badge mapping for numbered pins
 }
 
 /**
@@ -40,6 +42,7 @@ export function FilterBuilder({
   filterSet,
   onChange,
   targetNames = {},
+  targetBadgeMapping,
 }: FilterBuilderProps) {
   const [showValidation, setShowValidation] = useState(false)
 
@@ -136,6 +139,7 @@ export function FilterBuilder({
               onRemove={() => removeRule(index)}
               showConnector={index < filterSet.rules.length - 1}
               targetNames={targetNames}
+              targetBadgeMapping={targetBadgeMapping.filter(t => t.ruleIndex === index)}
             />
           ))}
         </div>
