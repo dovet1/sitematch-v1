@@ -31,10 +31,12 @@ export default function BUAsPage() {
   const [minPopInput, setMinPopInput] = useState<string>(MIN_POPULATION.toString())
   const [maxPopInput, setMaxPopInput] = useState<string>(MAX_POPULATION.toString())
   const [selectedBUA, setSelectedBUA] = useState<{ name: string; pop: number } | null>(null)
+  const [selectedBUAGsscode, setSelectedBUAGsscode] = useState<string | null>(null)
   const [filteredBUAs, setFilteredBUAs] = useState<BUA[]>([])
   const [totalBUAs, setTotalBUAs] = useState<number>(0)
   const [isLoadingBUAs, setIsLoadingBUAs] = useState(false)
   const [mapGssCodes, setMapGssCodes] = useState<string[]>([])  // All gsscodes for map filtering
+  const [sidebarSelectionNonce, setSidebarSelectionNonce] = useState(0)
 
   // NEW: Advanced filter state using FilterSet
   const [filterSet, setFilterSet] = useState<FilterSet>({ rules: [] })
@@ -78,6 +80,7 @@ export default function BUAsPage() {
     pop: number
   }) => {
     setCenter(bua.coordinates)
+    setSelectedBUAGsscode(bua.gsscode)
     setSelectedBUA({ name: bua.name, pop: bua.pop })
   }
 
@@ -455,7 +458,9 @@ export default function BUAsPage() {
 
   const handleBUAListItemClick = (bua: BUA) => {
     setCenter({ lat: bua.centroid_lat, lng: bua.centroid_lon })
+    setSelectedBUAGsscode(bua.gsscode)
     setSelectedBUA({ name: bua.name, pop: bua.pop })
+    setSidebarSelectionNonce(current => current + 1)
   }
 
   return (
@@ -717,13 +722,18 @@ export default function BUAsPage() {
               center={center}
               minPopulation={minPop}
               maxPopulation={maxPop}
-              onBUAClick={(gsscode, name, pop) => setSelectedBUA({ name, pop })}
+              onBUAClick={(gsscode, name, pop) => {
+                setSelectedBUAGsscode(gsscode)
+                setSelectedBUA({ name, pop })
+              }}
               className="w-full h-full"
               mode={currentMode}
               selectedPoint={selectedPoint}
               onPointSelected={setSelectedPoint}
               radiusMeters={radiusMeters}
               stores={nearbyStores}
+              selectedBUAGsscode={selectedBUAGsscode}
+              sidebarSelectionNonce={sidebarSelectionNonce}
               filteredGssCodes={
                 currentMode === 'find-gaps' && filterSet.rules.length > 0
                   ? mapGssCodes

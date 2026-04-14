@@ -15,6 +15,30 @@ const BUA_LAYER_ID = 'bua-fill'
 const BUA_OUTLINE_LAYER_ID = 'bua-outline'
 const BUA_SOURCE_LAYER = 'bua'
 
+function buildBUAFilterExpression(
+  minPopulation: number,
+  maxPopulation: number,
+  filteredGssCodes?: string[]
+) {
+  const pop = ['coalesce', ['get', 'pop_final'], ['get', 'pop']] as const
+  const filterConditions: any[] = [
+    'all',
+    minPopulation < 5000
+      ? ['any',
+          ['<', pop, 5000],
+          ['>=', pop, minPopulation]
+        ]
+      : ['>=', pop, minPopulation],
+    ['<=', pop, maxPopulation]
+  ]
+
+  if (filteredGssCodes && filteredGssCodes.length > 0) {
+    filterConditions.push(['in', ['get', 'gsscode'], ['literal', filteredGssCodes]])
+  }
+
+  return filterConditions
+}
+
 interface BUAMapProps {
   center?: { lat: number; lng: number }
   minPopulation: number
@@ -27,6 +51,8 @@ interface BUAMapProps {
   onPointSelected?: (point: { lat: number; lng: number }) => void
   radiusMeters?: number
   stores?: Store[]  // Stores to display as markers in Assess Area mode
+  selectedBUAGsscode?: string | null
+  sidebarSelectionNonce?: number
   filteredGssCodes?: string[]  // List of BUA gsscodes to show (ALL matching gsscodes, no limit)
   includedStores?: ViewportStore[]  // Green pins from has filters
   excludedStores?: ViewportStore[]  // Red pins from has_not filters
@@ -47,6 +73,8 @@ export function BUAMap({
   onPointSelected,
   radiusMeters = 5000,
   stores = [],
+  selectedBUAGsscode = null,
+  sidebarSelectionNonce = 0,
   filteredGssCodes,
   includedStores = [],
   excludedStores = [],
@@ -63,6 +91,23 @@ export function BUAMap({
   const radiusCircle = useRef<string | null>(null)
   const storeMarkers = useRef<mapboxgl.Marker[]>([])
   const isAutoFitting = useRef(false)
+  const skipNextCenterFlyTo = useRef(false)
+  const suppressNextViewportUpdate = useRef(false)
+  const suppressNextMarkerAutoFit = useRef(false)
+  const lastHandledSidebarSelection = useRef(0)
+  const buaFilterRef = useRef<any[] | null>(null)
+
+  const applyBUAFilters = () => {
+    if (!map.current || !buaFilterRef.current) return
+    if (!map.current.getLayer(BUA_LAYER_ID) || !map.current.getLayer(BUA_OUTLINE_LAYER_ID)) return
+
+    try {
+      map.current.setFilter(BUA_LAYER_ID, buaFilterRef.current)
+      map.current.setFilter(BUA_OUTLINE_LAYER_ID, buaFilterRef.current)
+    } catch (error) {
+      console.error('Failed to apply BUA filters:', error)
+    }
+  }
 
   // Initialize map
   useEffect(() => {
@@ -100,6 +145,11 @@ export function BUAMap({
     if (!map.current || !mapLoaded || !onViewportChange) return
 
     const handleMoveEnd = () => {
+      if (suppressNextViewportUpdate.current) {
+        suppressNextViewportUpdate.current = false
+        return
+      }
+
       if (map.current && !isAutoFitting.current) {
         const bounds = map.current.getBounds()
         if (bounds) {
@@ -142,7 +192,7 @@ export function BUAMap({
     const addBUALayer = () => {
       if (!map.current?.isStyleLoaded()) return
 
-      // Remove existing layers and source if they exist
+      // Always remove and recreate layers to ensure they're in the correct state
       if (map.current.getLayer(BUA_OUTLINE_LAYER_ID)) {
         map.current.removeLayer(BUA_OUTLINE_LAYER_ID)
       }
@@ -194,63 +244,86 @@ export function BUAMap({
         }
       })
 
-      // Add click handler
-      map.current.on('click', BUA_LAYER_ID, (e) => {
-        if (!e.features || e.features.length === 0) return
+      applyBUAFilters()
 
-        const feature = e.features[0]
-        const gsscode = feature.properties?.gsscode
-        const name = feature.properties?.name
-        const pop = feature.properties?.pop
-        const pop_final = feature.properties?.pop_final
+      // Add click handler (but only once - check if already exists)
+      const existingHandler = (map.current as any)._buaClickHandlerAdded
+      if (!existingHandler) {
+        (map.current as any)._buaClickHandlerAdded = true
 
-        if (gsscode && name && pop !== undefined) {
-          // Show popup
-          if (popup.current) {
-            popup.current.remove()
-          }
+        map.current.on('click', BUA_LAYER_ID, (e) => {
+          if (!e.features || e.features.length === 0) return
 
-          popup.current = new mapboxgl.Popup({
-            closeButton: true,
-            closeOnClick: true,
-            maxWidth: '300px'
-          })
-            .setLngLat(e.lngLat)
-            .setHTML(`
-              <div style="padding: 8px;">
-                <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1e293b;">${name}</h3>
-                <div style="font-size: 14px; color: #64748b;">
-                  <strong>Population:</strong> ${formatPopulation(pop_final)}
+          const feature = e.features[0]
+          const gsscode = feature.properties?.gsscode
+          const name = feature.properties?.name
+          const pop = feature.properties?.pop
+          const pop_final = feature.properties?.pop_final
+
+          if (gsscode && name && pop !== undefined) {
+            // Show popup
+            if (popup.current) {
+              popup.current.remove()
+            }
+
+            popup.current = new mapboxgl.Popup({
+              closeButton: true,
+              closeOnClick: true,
+              maxWidth: '300px'
+            })
+              .setLngLat(e.lngLat)
+              .setHTML(`
+                <div style="padding: 8px;">
+                  <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1e293b;">${name}</h3>
+                  <div style="font-size: 14px; color: #64748b;">
+                    <strong>Population:</strong> ${formatPopulation(pop_final)}
+                  </div>
                 </div>
-              </div>
-            `)
-            .addTo(map.current!)
+              `)
+              .addTo(map.current!)
 
-          // Call optional callback
-          if (onBUAClick) {
-            onBUAClick(gsscode, name, pop)
+            // Call optional callback
+            if (onBUAClick) {
+              onBUAClick(gsscode, name, pop)
+            }
           }
-        }
-      })
+        })
 
-      // Change cursor on hover
-      map.current.on('mouseenter', BUA_LAYER_ID, () => {
-        if (map.current) {
-          map.current.getCanvas().style.cursor = 'pointer'
-        }
-      })
+        // Change cursor on hover
+        map.current.on('mouseenter', BUA_LAYER_ID, () => {
+          if (map.current) {
+            map.current.getCanvas().style.cursor = 'pointer'
+          }
+        })
 
-      map.current.on('mouseleave', BUA_LAYER_ID, () => {
-        if (map.current) {
-          map.current.getCanvas().style.cursor = ''
-        }
-      })
+        map.current.on('mouseleave', BUA_LAYER_ID, () => {
+          if (map.current) {
+            map.current.getCanvas().style.cursor = ''
+          }
+        })
+      }
     }
 
+    // Add layers initially
     if (map.current.isStyleLoaded()) {
       addBUALayer()
-    } else {
-      map.current.once('style.load', addBUALayer)
+    }
+
+    // Recreate layers after any map movement to ensure they're visible
+    const checkAndRestoreLayers = () => {
+      if (map.current) {
+        addBUALayer()
+      }
+    }
+
+    map.current.on('moveend', checkAndRestoreLayers)
+    map.current.on('style.load', addBUALayer)
+
+    return () => {
+      if (map.current) {
+        map.current.off('moveend', checkAndRestoreLayers)
+        map.current.off('style.load', addBUALayer)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapLoaded])
@@ -258,6 +331,8 @@ export function BUAMap({
   // Update filter when population range or filtered gsscodes change
   useEffect(() => {
     if (!map.current || !mapLoaded) return
+
+    buaFilterRef.current = buildBUAFilterExpression(minPopulation, maxPopulation, filteredGssCodes)
 
     const updateFilter = () => {
       if (!map.current?.getLayer(BUA_LAYER_ID)) {
@@ -267,30 +342,7 @@ export function BUAMap({
       }
 
       try {
-        // Build filter conditions
-        const pop = ['coalesce', ['get', 'pop_final'], ['get', 'pop']]
-        const filterConditions: any[] = [
-          'all',
-          // If minPopulation < 5000, include all BUAs with pop < 5000
-          // Otherwise apply normal min population filter
-          minPopulation < 5000
-            ? ['any',
-                ['<', pop, 5000],
-                ['>=', pop, minPopulation]
-              ]
-            : ['>=', pop, minPopulation],
-          ['<=', pop, maxPopulation]
-        ]
-
-        // If we have filtered gsscodes (from company/category filters), add them to the filter
-        // This will show ONLY BUAs with gsscodes in the list (supports all gsscodes, no limit)
-        if (filteredGssCodes && filteredGssCodes.length > 0) {
-          // Use 'in' filter to show only BUAs with gsscodes in the list
-          filterConditions.push(['in', ['get', 'gsscode'], ['literal', filteredGssCodes]])
-        }
-
-        map.current.setFilter(BUA_LAYER_ID, filterConditions)
-        map.current.setFilter(BUA_OUTLINE_LAYER_ID, filterConditions)
+        applyBUAFilters()
       } catch (error) {
         // Filter update failed
       }
@@ -299,9 +351,38 @@ export function BUAMap({
     updateFilter()
   }, [minPopulation, maxPopulation, filteredGssCodes, mapLoaded])
 
+  // Handle explicit sidebar-driven BUA navigation separately so we can suppress
+  // the next viewport/store-marker side effects that would otherwise override it.
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !center || !selectedBUAGsscode) return
+    if (sidebarSelectionNonce === 0 || lastHandledSidebarSelection.current === sidebarSelectionNonce) return
+
+    lastHandledSidebarSelection.current = sidebarSelectionNonce
+    skipNextCenterFlyTo.current = true
+    suppressNextViewportUpdate.current = true
+    suppressNextMarkerAutoFit.current = true
+
+    if (popup.current) {
+      popup.current.remove()
+      popup.current = null
+    }
+
+    map.current.flyTo({
+      center: [center.lng, center.lat],
+      zoom: 12,
+      duration: 1500,
+      essential: true
+    })
+  }, [center, mapLoaded, selectedBUAGsscode, sidebarSelectionNonce])
+
   // Fly to location when center changes
   useEffect(() => {
     if (!map.current || !mapLoaded || !center) return
+
+    if (skipNextCenterFlyTo.current) {
+      skipNextCenterFlyTo.current = false
+      return
+    }
 
     // Close existing popup
     if (popup.current) {
@@ -508,23 +589,6 @@ export function BUAMap({
       .setPopup(popup)
   }
 
-  const getBadgeLabel = (store: ViewportStore): string | undefined => {
-    if (!store.matchedTargetIds || store.matchedTargetIds.length === 0) {
-      return undefined
-    }
-
-    const badgeNumbers = targetBadgeMapping
-      .filter(target => store.matchedTargetIds?.includes(target.targetId))
-      .map(target => target.badgeNumber)
-      .sort((a, b) => a - b)
-
-    if (badgeNumbers.length === 0) {
-      return undefined
-    }
-
-    return badgeNumbers.join(',')
-  }
-
   // Handle store markers for both modes
   useEffect(() => {
     if (!map.current || !mapLoaded) {
@@ -544,6 +608,22 @@ export function BUAMap({
     const redStores = mode === 'find-gaps'
       ? [...excludedStores, ...proximityExcludedStores]
       : []
+    const getBadgeLabel = (store: ViewportStore): string | undefined => {
+      if (!store.matchedTargetIds || store.matchedTargetIds.length === 0) {
+        return undefined
+      }
+
+      const badgeNumbers = targetBadgeMapping
+        .filter(target => store.matchedTargetIds?.includes(target.targetId))
+        .map(target => target.badgeNumber)
+        .sort((a, b) => a - b)
+
+      if (badgeNumbers.length === 0) {
+        return undefined
+      }
+
+      return badgeNumbers.join(',')
+    }
 
     if (mode === 'assess-area') {
       greenStores.forEach(store => {
@@ -569,6 +649,11 @@ export function BUAMap({
 
     // Auto-fit map to show all markers in find-gaps mode
     if (mode === 'find-gaps' && (greenStores.length > 0 || redStores.length > 0)) {
+      if (suppressNextMarkerAutoFit.current) {
+        suppressNextMarkerAutoFit.current = false
+        return
+      }
+
       const markerBounds = new mapboxgl.LngLatBounds()
 
       greenStores.concat(redStores).forEach((store) => {
