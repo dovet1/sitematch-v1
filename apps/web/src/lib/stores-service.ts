@@ -397,7 +397,19 @@ export class StoreService {
       brandIds?: string[]  // Fascia IDs (UUIDs)
       categoryIds?: string[]  // Category IDs (UUIDs)
       distance: number
+      matchAll?: boolean
     }>
+    nearbyInclude?: Array<{
+      brandIds?: string[]  // Fascia IDs (UUIDs)
+      categoryIds?: string[]  // Category IDs (UUIDs)
+      distance: number
+      matchAll?: boolean
+    }>
+    // NEW: Match-all flags for AND logic support
+    includeBrandsMatchAll?: boolean
+    includeCategoriesMatchAll?: boolean
+    excludeBrandsMatchAll?: boolean
+    excludeCategoriesMatchAll?: boolean
     // NEW: Advanced filter format
     filterSet?: FilterSet
   }): Promise<{ gsscodes: string[], total: number }> {
@@ -511,19 +523,20 @@ export class StoreService {
 
     console.log(`✅ [Map Filter RPC] Finished - Total: ${allGsscodes.length} matching BUAs`)
 
-    // POST-FILTER: If filterSet has AND logic, we need to manually filter results
-    if (filters.filterSet) {
-      const andLogicRules = filters.filterSet.rules.filter(
-        rule => rule.matchingLogic === 'all' && rule.targetIds.length > 1 && rule.operator === 'has'
-      )
-
-      if (andLogicRules.length > 0) {
-        console.log(`⚙️ [Map Filter] Applying client-side AND logic for ${andLogicRules.length} rule(s)`)
-        const filteredGsscodes = await this.filterBUAsWithAndLogic(allGsscodes, andLogicRules)
-        console.log(`✅ [Map Filter] After AND logic: ${filteredGsscodes.length} BUAs (was ${allGsscodes.length})`)
-        return { gsscodes: filteredGsscodes, total: filteredGsscodes.length }
-      }
-    }
+    // TODO: POST-FILTER: If filterSet has AND logic, we need to manually filter results
+    // This feature is not yet implemented
+    // if (filters.filterSet && filters.filterSet.rules) {
+    //   const andLogicRules = filters.filterSet.rules.filter(
+    //     (rule: FilterRule) => rule.matchingLogic === 'all' && rule.targetIds.length > 1 && rule.operator === 'has'
+    //   )
+    //
+    //   if (andLogicRules.length > 0) {
+    //     console.log(`⚙️ [Map Filter] Applying client-side AND logic for ${andLogicRules.length} rule(s)`)
+    //     const filteredGsscodes = await this.filterBUAsWithAndLogic(allGsscodes, andLogicRules)
+    //     console.log(`✅ [Map Filter] After AND logic: ${filteredGsscodes.length} BUAs (was ${allGsscodes.length})`)
+    //     return { gsscodes: filteredGsscodes, total: filteredGsscodes.length }
+    //   }
+    // }
 
     return { gsscodes: allGsscodes, total: allGsscodes.length }
   }
