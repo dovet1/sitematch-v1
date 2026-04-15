@@ -15,6 +15,14 @@ const BUA_LAYER_ID = 'bua-fill'
 const BUA_OUTLINE_LAYER_ID = 'bua-outline'
 const BUA_SOURCE_LAYER = 'bua'
 
+// Track the source of store marker updates to control auto-fit behavior
+export enum StoreUpdateSource {
+  USER_PAN = 'user_pan',       // User manually moved map - NO auto-fit
+  FILTER_CHANGE = 'filter',     // Filters changed - DO auto-fit
+  SIDEBAR_CLICK = 'sidebar',    // Clicked BUA from sidebar - NO auto-fit (already flying)
+  INITIAL_LOAD = 'initial'      // First load - DO auto-fit
+}
+
 function buildBUAFilterExpression(
   minPopulation: number,
   maxPopulation: number,
@@ -60,6 +68,7 @@ interface BUAMapProps {
   proximityExcludedStores?: ViewportStore[]  // Red pins from has_not_within filters
   targetBadgeMapping?: TargetWithMetadata[]
   onViewportChange?: (bounds: { minLat: number; minLon: number; maxLat: number; maxLon: number }) => void
+  storeUpdateSource?: StoreUpdateSource  // NEW: Track why stores changed
 }
 
 export function BUAMap({
@@ -81,7 +90,8 @@ export function BUAMap({
   proximityIncludedStores = [],
   proximityExcludedStores = [],
   targetBadgeMapping = [],
-  onViewportChange
+  onViewportChange,
+  storeUpdateSource = StoreUpdateSource.USER_PAN
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -93,9 +103,13 @@ export function BUAMap({
   const isAutoFitting = useRef(false)
   const skipNextCenterFlyTo = useRef(false)
   const suppressNextViewportUpdate = useRef(false)
-  const suppressNextMarkerAutoFit = useRef(false)
+  const suppressNextMarkerAutoFit = useRef(false) // Will be deprecated after refactor
   const lastHandledSidebarSelection = useRef(0)
   const buaFilterRef = useRef<any[] | null>(null)
+
+  // NEW: Track when auto-fit last ran to prevent rapid consecutive auto-fits
+  const lastAutoFitTime = useRef<number>(0)
+  const AUTO_FIT_COOLDOWN_MS = 3000
 
   const applyBUAFilters = () => {
     if (!map.current || !buaFilterRef.current) return
@@ -109,14 +123,16 @@ export function BUAMap({
     }
   }
 
-  // Initialize map
+  // Initialize map ONCE (not dependent on center - center changes should just pan the map)
   useEffect(() => {
     if (!mapContainer.current || map.current) return
+
+    const initialCenter = center || { lng: -3.5, lat: 54.8 }
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/light-v11',
-      center: [center?.lng || -3.5, center?.lat || 54.8],
+      center: [initialCenter.lng, initialCenter.lat],
       zoom: center ? 11 : 6,
       minZoom: 4,
       maxZoom: 18
@@ -138,7 +154,7 @@ export function BUAMap({
         map.current = null
       }
     }
-  }, [center])
+  }, []) // Empty dependency - only run ONCE on mount
 
   // Track viewport changes (separate from initialization to avoid re-creating map)
   useEffect(() => {
@@ -202,6 +218,9 @@ export function BUAMap({
       if (map.current.getSource(BUA_SOURCE_ID)) {
         map.current.removeSource(BUA_SOURCE_ID)
       }
+
+      // Reset click handler flag since we're recreating layers
+      (map.current as any)._buaClickHandlerAdded = false
 
       // Add vector tileset source
       map.current.addSource(BUA_SOURCE_ID, {
@@ -309,20 +328,24 @@ export function BUAMap({
       addBUALayer()
     }
 
-    // Recreate layers after any map movement to ensure they're visible
+    // Check if layers are missing and restore them (defensive approach)
+    // Only recreates if actually missing, avoiding unnecessary flicker
     const checkAndRestoreLayers = () => {
-      if (map.current) {
+      if (map.current && !map.current.getLayer(BUA_LAYER_ID)) {
+        // Layers are missing - restore them
         addBUALayer()
       }
     }
 
-    map.current.on('moveend', checkAndRestoreLayers)
+    // Only recreate layers on style reload (when Mapbox resets the style)
     map.current.on('style.load', addBUALayer)
+    // Check for missing layers after map movements (defensive)
+    map.current.on('moveend', checkAndRestoreLayers)
 
     return () => {
       if (map.current) {
-        map.current.off('moveend', checkAndRestoreLayers)
         map.current.off('style.load', addBUALayer)
+        map.current.off('moveend', checkAndRestoreLayers)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -336,7 +359,6 @@ export function BUAMap({
 
     const updateFilter = () => {
       if (!map.current?.getLayer(BUA_LAYER_ID)) {
-        // Layer not ready yet, try again shortly
         setTimeout(updateFilter, 50)
         return
       }
@@ -344,7 +366,7 @@ export function BUAMap({
       try {
         applyBUAFilters()
       } catch (error) {
-        // Filter update failed
+        console.error('BUA filter failed:', error)
       }
     }
 
@@ -647,13 +669,16 @@ export function BUAMap({
 
     storeMarkers.current = newMarkers
 
-    // Auto-fit map to show all markers in find-gaps mode
-    if (mode === 'find-gaps' && (greenStores.length > 0 || redStores.length > 0)) {
-      if (suppressNextMarkerAutoFit.current) {
-        suppressNextMarkerAutoFit.current = false
-        return
-      }
+    // Conditional auto-fit based on update source
+    // Only auto-fit when: filter changes, initial load, or explicitly requested (NOT on user pans)
+    const shouldAutoFit = mode === 'find-gaps' &&
+      (greenStores.length > 0 || redStores.length > 0) &&
+      (storeUpdateSource === StoreUpdateSource.FILTER_CHANGE ||
+       storeUpdateSource === StoreUpdateSource.INITIAL_LOAD) &&
+      // Cooldown check to prevent rapid consecutive auto-fits
+      (Date.now() - lastAutoFitTime.current) > AUTO_FIT_COOLDOWN_MS
 
+    if (shouldAutoFit) {
       const markerBounds = new mapboxgl.LngLatBounds()
 
       greenStores.concat(redStores).forEach((store) => {
@@ -661,22 +686,25 @@ export function BUAMap({
       })
 
       isAutoFitting.current = true
+      lastAutoFitTime.current = Date.now()
+
       map.current.fitBounds(markerBounds, {
         padding: { top: 50, bottom: 50, left: 450, right: 50 },
         maxZoom: 12,
         duration: 1000
       })
 
+      // Fix: Increase timeout to match animation duration to prevent race conditions
       window.setTimeout(() => {
         isAutoFitting.current = false
-      }, 100)
+      }, 1100) // Was 100ms, now 1100ms to cover full animation
     }
 
     return () => {
       storeMarkers.current.forEach(marker => marker.remove())
       storeMarkers.current = []
     }
-  }, [stores, includedStores, excludedStores, proximityIncludedStores, proximityExcludedStores, mode, mapLoaded, targetBadgeMapping])
+  }, [stores, includedStores, excludedStores, proximityIncludedStores, proximityExcludedStores, mode, mapLoaded, targetBadgeMapping, storeUpdateSource])
 
   return (
     <div className={`relative ${className}`}>

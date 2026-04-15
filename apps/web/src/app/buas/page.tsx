@@ -7,7 +7,7 @@ import { ArrowLeft, Info, MapPin, ChevronDown } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
-import { BUAMap } from '@/components/buas/BUAMap'
+import { BUAMap, StoreUpdateSource } from '@/components/buas/BUAMap'
 import { BUASearch } from '@/components/buas/BUASearch'
 import { ResultsPanel } from '@/components/buas/ResultsPanel'
 import { CompanySelector } from '@/components/buas/CompanySelector'
@@ -60,6 +60,9 @@ export default function BUAsPage() {
   // Badge mapping for linking sidebar to map pins
   const [targetBadgeMapping, setTargetBadgeMapping] = useState<TargetWithMetadata[]>([])
 
+  // NEW: Track why store markers changed (for auto-fit control)
+  const [storeUpdateSource, setStoreUpdateSource] = useState<StoreUpdateSource>(StoreUpdateSource.INITIAL_LOAD)
+
   // Assess Area mode state
   const [currentMode, setCurrentMode] = useState<'find-gaps' | 'assess-area'>('find-gaps')
   const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null)
@@ -90,6 +93,8 @@ export default function BUAsPage() {
     maxLat: number
     maxLon: number
   }) => {
+    // User panned/zoomed the map - next store update should NOT auto-fit
+    setStoreUpdateSource(StoreUpdateSource.USER_PAN)
     setMapViewport(bounds)
   }, [])
 
@@ -368,6 +373,9 @@ export default function BUAsPage() {
   useEffect(() => {
     const fetchFilteredBUAs = async () => {
       setIsLoadingBUAs(true)
+      // Filter changed - next store update SHOULD auto-fit
+      setStoreUpdateSource(StoreUpdateSource.FILTER_CHANGE)
+
       try {
         // Build filter payload with NEW filterSet format
         const filters: any = {
@@ -457,6 +465,8 @@ export default function BUAsPage() {
   }, [selectedPoint, radiusMeters, assessCompanies, assessCategories, currentMode])
 
   const handleBUAListItemClick = (bua: BUA) => {
+    // Sidebar click - map will fly to BUA, next store update should NOT auto-fit
+    setStoreUpdateSource(StoreUpdateSource.SIDEBAR_CLICK)
     setCenter({ lat: bua.centroid_lat, lng: bua.centroid_lon })
     setSelectedBUAGsscode(bua.gsscode)
     setSelectedBUA({ name: bua.name, pop: bua.pop })
@@ -735,7 +745,7 @@ export default function BUAsPage() {
               selectedBUAGsscode={selectedBUAGsscode}
               sidebarSelectionNonce={sidebarSelectionNonce}
               filteredGssCodes={
-                currentMode === 'find-gaps' && filterSet.rules.length > 0
+                currentMode === 'find-gaps' && filterSet.rules.length > 0 && mapGssCodes.length > 0
                   ? mapGssCodes
                   : undefined
               }
@@ -745,6 +755,7 @@ export default function BUAsPage() {
               proximityExcludedStores={proximityExcludedStores}
               targetBadgeMapping={targetBadgeMapping}
               onViewportChange={handleViewportChange}
+              storeUpdateSource={storeUpdateSource}
             />
           </div>
 
