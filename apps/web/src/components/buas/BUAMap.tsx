@@ -107,9 +107,6 @@ export function BUAMap({
   const lastHandledSidebarSelection = useRef(0)
   const buaFilterRef = useRef<any[] | null>(null)
 
-  // NEW: Track when auto-fit last ran to prevent rapid consecutive auto-fits
-  const lastAutoFitTime = useRef<number>(0)
-  const AUTO_FIT_COOLDOWN_MS = 3000
 
   const applyBUAFilters = () => {
     if (!map.current || !buaFilterRef.current) return
@@ -208,19 +205,10 @@ export function BUAMap({
     const addBUALayer = () => {
       if (!map.current?.isStyleLoaded()) return
 
-      // Always remove and recreate layers to ensure they're in the correct state
-      if (map.current.getLayer(BUA_OUTLINE_LAYER_ID)) {
-        map.current.removeLayer(BUA_OUTLINE_LAYER_ID)
-      }
-      if (map.current.getLayer(BUA_LAYER_ID)) {
-        map.current.removeLayer(BUA_LAYER_ID)
-      }
+      // Only add layers if they don't exist (defensive check)
       if (map.current.getSource(BUA_SOURCE_ID)) {
-        map.current.removeSource(BUA_SOURCE_ID)
+        return // Layers already exist
       }
-
-      // Reset click handler flag since we're recreating layers
-      (map.current as any)._buaClickHandlerAdded = false
 
       // Add vector tileset source
       map.current.addSource(BUA_SOURCE_ID, {
@@ -328,24 +316,12 @@ export function BUAMap({
       addBUALayer()
     }
 
-    // Check if layers are missing and restore them (defensive approach)
-    // Only recreates if actually missing, avoiding unnecessary flicker
-    const checkAndRestoreLayers = () => {
-      if (map.current && !map.current.getLayer(BUA_LAYER_ID)) {
-        // Layers are missing - restore them
-        addBUALayer()
-      }
-    }
-
     // Only recreate layers on style reload (when Mapbox resets the style)
     map.current.on('style.load', addBUALayer)
-    // Check for missing layers after map movements (defensive)
-    map.current.on('moveend', checkAndRestoreLayers)
 
     return () => {
       if (map.current) {
         map.current.off('style.load', addBUALayer)
-        map.current.off('moveend', checkAndRestoreLayers)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -670,13 +646,11 @@ export function BUAMap({
     storeMarkers.current = newMarkers
 
     // Conditional auto-fit based on update source
-    // Only auto-fit when: filter changes, initial load, or explicitly requested (NOT on user pans)
+    // Only auto-fit when: filter changes or initial load (NOT on user pans or sidebar clicks)
     const shouldAutoFit = mode === 'find-gaps' &&
       (greenStores.length > 0 || redStores.length > 0) &&
       (storeUpdateSource === StoreUpdateSource.FILTER_CHANGE ||
-       storeUpdateSource === StoreUpdateSource.INITIAL_LOAD) &&
-      // Cooldown check to prevent rapid consecutive auto-fits
-      (Date.now() - lastAutoFitTime.current) > AUTO_FIT_COOLDOWN_MS
+       storeUpdateSource === StoreUpdateSource.INITIAL_LOAD)
 
     if (shouldAutoFit) {
       const markerBounds = new mapboxgl.LngLatBounds()
@@ -686,7 +660,6 @@ export function BUAMap({
       })
 
       isAutoFitting.current = true
-      lastAutoFitTime.current = Date.now()
 
       map.current.fitBounds(markerBounds, {
         padding: { top: 50, bottom: 50, left: 450, right: 50 },
