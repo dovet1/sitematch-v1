@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { formatPopulation } from '@/lib/format-population'
+import { getFasciaMarkerColor } from '@/lib/sitesketcher/colors'
 import type { Store, ViewportStore } from '@/lib/stores'
 import type { TargetWithMetadata } from '@/lib/filter-utils'
 
@@ -556,7 +557,7 @@ export function BUAMap({
 
   const createSimpleStoreMarker = (
     store: Store | ViewportStore,
-    color: 'green' | 'red',
+    color: string,
     badgeLabel?: string
   ): mapboxgl.Marker => {
     const el = document.createElement('div')
@@ -570,7 +571,7 @@ export function BUAMap({
     el.style.width = markerWidth
     el.style.height = hasBadge ? '24px' : '12px'
     el.style.borderRadius = '9999px'
-    el.style.backgroundColor = color === 'green' ? '#10b981' : '#ef4444'
+    el.style.backgroundColor = color
     el.style.border = '2px solid white'
     el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.25)'
     el.style.cursor = 'pointer'
@@ -669,19 +670,19 @@ export function BUAMap({
 
       if (mode === 'assess-area') {
         greenStores.forEach(store => {
-          const marker = createSimpleStoreMarker(store, 'green')
+          const marker = createSimpleStoreMarker(store, getFasciaMarkerColor(store.fascia_id))
           marker.addTo(map.current!)
           newMarkers.push(marker)
         })
       } else {
         greenStores.forEach(store => {
-          const marker = createSimpleStoreMarker(store, 'green', getBadgeLabel(store))
+          const marker = createSimpleStoreMarker(store, getFasciaMarkerColor(store.fascia_id), getBadgeLabel(store))
           marker.addTo(map.current!)
           newMarkers.push(marker)
         })
 
         redStores.forEach(store => {
-          const marker = createSimpleStoreMarker(store, 'red', getBadgeLabel(store))
+          const marker = createSimpleStoreMarker(store, getFasciaMarkerColor(store.fascia_id), getBadgeLabel(store))
           marker.addTo(map.current!)
           newMarkers.push(marker)
         })

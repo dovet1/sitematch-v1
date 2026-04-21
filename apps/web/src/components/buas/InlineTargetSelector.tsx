@@ -3,6 +3,7 @@
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { EnhancedCompanySelector } from './EnhancedCompanySelector'
+import { getFasciaMarkerColor } from '@/lib/sitesketcher/colors'
 import type { TargetWithMetadata } from '@/lib/filter-utils'
 
 interface InlineTargetSelectorProps {
@@ -61,11 +62,8 @@ export function InlineTargetSelector({
                   className="flex items-center gap-1.5 bg-white rounded-full px-2.5 py-1 shadow-sm"
                 >
                   <Badge
-                    className={`h-5 w-5 flex items-center justify-center rounded-full text-xs font-bold p-0 ${
-                      badge?.color === 'green'
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-red-500 text-white'
-                    }`}
+                    className="h-5 w-5 flex items-center justify-center rounded-full text-xs font-bold p-0 text-white"
+                    style={{ backgroundColor: getFasciaMarkerColor(id) }}
                   >
                     {badge?.badgeNumber || '?'}
                   </Badge>
