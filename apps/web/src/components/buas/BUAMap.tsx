@@ -146,24 +146,6 @@ export function BUAMap({
       if (map.current) {
         map.current.resize()
       }
-
-      // DIAGNOSTIC: Add visual debug overlay
-      if (process.env.NODE_ENV === 'development' && mapContainer.current) {
-        const debugOverlay = document.createElement('div')
-        debugOverlay.style.cssText = `
-          position: absolute;
-          top: 0;
-          left: 50%;
-          width: 2px;
-          height: 100%;
-          background: red;
-          z-index: 9999;
-          pointer-events: none;
-        `
-        debugOverlay.setAttribute('data-debug-overlay', 'true')
-        mapContainer.current.appendChild(debugOverlay)
-      }
-
       setMapLoaded(true)
     })
 
@@ -707,61 +689,6 @@ export function BUAMap({
 
       storeMarkers.current = newMarkers
 
-      // Force map resize after adding markers to ensure correct positioning
-      // This recalculates the map container's position in the DOM
-      if (map.current && newMarkers.length > 0) {
-        map.current.resize()
-
-        // CRITICAL FIX: Remove and re-add markers after resize to fix positioning
-        // The markers were positioned with stale container offset, need to refresh
-        const refreshedMarkers: mapboxgl.Marker[] = []
-        storeMarkers.current.forEach((marker) => {
-          const lngLat = marker.getLngLat()
-          marker.remove()
-          marker.setLngLat(lngLat)
-          marker.addTo(map.current!)
-          refreshedMarkers.push(marker)
-        })
-        storeMarkers.current = refreshedMarkers
-      }
-
-      // DIAGNOSTIC: Check for projection accuracy (FIXED coordinate system)
-      if (process.env.NODE_ENV === 'development' && newMarkers.length > 0) {
-        const containerRect = mapContainer.current?.getBoundingClientRect()
-
-        console.group('🔍 Marker Diagnostic (Container-Relative)')
-
-        // Check first 3 markers with CORRECT coordinate comparison
-        console.log('Sample marker projections (first 3):')
-        newMarkers.slice(0, 3).forEach((marker, i) => {
-          const lngLat = marker.getLngLat()
-          const pixel = map.current?.project(lngLat) // Relative to MAP CONTAINER
-          const markerElement = marker.getElement()
-          const markerRect = markerElement?.getBoundingClientRect() // Relative to VIEWPORT
-
-          // Convert markerRect to container-relative coordinates
-          const markerX = markerRect ? markerRect.left - (containerRect?.left || 0) : null
-          const markerY = markerRect ? markerRect.top - (containerRect?.top || 0) : null
-
-          // Get marker element's transform
-          const computedStyle = markerElement ? window.getComputedStyle(markerElement) : null
-
-          console.log(`  Marker ${i + 1}:`, {
-            geographic: [lngLat.lng, lngLat.lat],
-            projectedPixel: [pixel?.x, pixel?.y], // Where Mapbox thinks it should be
-            actualPixel: [markerX, markerY], // Where it actually is (container-relative)
-            offset: pixel && markerX !== null ? {
-              x: markerX - pixel.x,
-              y: markerY !== null ? markerY - pixel.y : null
-            } : 'N/A',
-            markerTransform: computedStyle?.transform || 'none',
-            markerWidth: markerElement?.offsetWidth || 0
-          })
-        })
-
-        console.groupEnd()
-      }
-
       // Conditional auto-fit based on update source
       // Only auto-fit when: filter changes or initial load (NOT on user pans or sidebar clicks)
       const shouldAutoFit = mode === 'find-gaps' &&
@@ -778,17 +705,15 @@ export function BUAMap({
 
         isAutoFitting.current = true
 
-        // TEMPORARY TEST: Reduced left padding to test camera framing hypothesis
         map.current.fitBounds(markerBounds, {
-          padding: { top: 50, bottom: 50, left: 50, right: 50 }, // Was left: 450
+          padding: { top: 50, bottom: 50, left: 50, right: 50 },
           maxZoom: 12,
           duration: 1000
         })
 
-        // Fix: Increase timeout to match animation duration to prevent race conditions
         window.setTimeout(() => {
           isAutoFitting.current = false
-        }, 1100) // Was 100ms, now 1100ms to cover full animation
+        }, 1100)
       }
     }
 
