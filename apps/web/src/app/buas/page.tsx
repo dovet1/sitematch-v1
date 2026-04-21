@@ -19,6 +19,7 @@ import type { BUA } from '@/lib/buas'
 import type { Store as StoreType, ViewportStore } from '@/lib/stores'
 import type { FilterSet } from '@/types/filters'
 import { convertFilterSetToViewportParams, generateTargetBadgeMapping, hasActiveFilters, type TargetWithMetadata } from '@/lib/filter-utils'
+import { exportBUAsToCSV } from '@/lib/buas/export-utils'
 
 const MAX_POPULATION = 1500000 // 1.5 million
 const MIN_POPULATION = 0
@@ -35,6 +36,7 @@ export default function BUAsPage() {
   const [filteredBUAs, setFilteredBUAs] = useState<BUA[]>([])
   const [totalBUAs, setTotalBUAs] = useState<number>(0)
   const [isLoadingBUAs, setIsLoadingBUAs] = useState(false)
+  const [isExportingBUAs, setIsExportingBUAs] = useState(false)
   const [mapGssCodes, setMapGssCodes] = useState<string[]>([])  // All gsscodes for map filtering
   const [sidebarSelectionNonce, setSidebarSelectionNonce] = useState(0)
 
@@ -473,6 +475,26 @@ export default function BUAsPage() {
     setSidebarSelectionNonce(current => current + 1)
   }
 
+  const handleExportBUAs = async () => {
+    setIsExportingBUAs(true)
+    try {
+      const [minPop, maxPop] = populationRange
+      await exportBUAsToCSV(
+        {
+          minPop,
+          maxPop,
+          filterSet
+        },
+        targetNames
+      )
+    } catch (error) {
+      console.error('Export failed:', error)
+      // Error is silent - browser download failure will be obvious to user
+    } finally {
+      setIsExportingBUAs(false)
+    }
+  }
+
   return (
     <div className="h-screen bg-background overflow-hidden">
       <div className="flex flex-col h-full">
@@ -767,6 +789,9 @@ export default function BUAsPage() {
             onItemClick={handleBUAListItemClick}
             mode={currentMode}
             total={currentMode === 'find-gaps' ? totalBUAs : undefined}
+            onExport={currentMode === 'find-gaps' ? handleExportBUAs : undefined}
+            isExporting={currentMode === 'find-gaps' ? isExportingBUAs : false}
+            canExport={currentMode === 'find-gaps' ? filteredBUAs.length > 0 : false}
           />
         </div>
       </div>
