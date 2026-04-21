@@ -15,6 +15,7 @@ import { FilterBuilder } from '@/components/buas/FilterBuilder'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import type { BUA } from '@/lib/buas'
 import type { Store as StoreType, ViewportStore } from '@/lib/stores'
 import type { FilterSet } from '@/types/filters'
@@ -22,7 +23,7 @@ import { convertFilterSetToViewportParams, generateTargetBadgeMapping, hasActive
 import { exportBUAsToCSV } from '@/lib/buas/export-utils'
 
 const MAX_POPULATION = 1500000 // 1.5 million
-const MIN_POPULATION = 0
+const MIN_POPULATION = 5001 // Changed from 0
 
 export default function BUAsPage() {
   const router = useRouter()
@@ -31,6 +32,7 @@ export default function BUAsPage() {
   const [populationRange, setPopulationRange] = useState<[number, number]>([MIN_POPULATION, MAX_POPULATION])
   const [minPopInput, setMinPopInput] = useState<string>(MIN_POPULATION.toString())
   const [maxPopInput, setMaxPopInput] = useState<string>(MAX_POPULATION.toString())
+  const [showSubFiveK, setShowSubFiveK] = useState<boolean>(false)
   const [selectedBUA, setSelectedBUA] = useState<{ name: string; pop: number } | null>(null)
   const [selectedBUAGsscode, setSelectedBUAGsscode] = useState<string | null>(null)
   const [filteredBUAs, setFilteredBUAs] = useState<BUA[]>([])
@@ -125,7 +127,8 @@ export default function BUAsPage() {
 
   const handleMinPopInputBlur = () => {
     if (minPopInput === '' || isNaN(Number(minPopInput))) {
-      setMinPopInput(minPop.toString())
+      setMinPopInput(MIN_POPULATION.toString())
+      setPopulationRange([MIN_POPULATION, maxPop])
     }
   }
 
@@ -379,9 +382,12 @@ export default function BUAsPage() {
       setStoreUpdateSource(StoreUpdateSource.FILTER_CHANGE)
 
       try {
+        // Use effectiveMinPop: if checkbox is checked, use 0, otherwise use slider value
+        const effectiveMinPop = showSubFiveK ? 0 : minPop
+
         // Build filter payload with NEW filterSet format
         const filters: any = {
-          minPop,
+          minPop: effectiveMinPop,
           maxPop,
           filterSet // NEW: Pass the filterSet directly
         }
@@ -423,7 +429,7 @@ export default function BUAsPage() {
     // Debounce the fetch to avoid too many API calls
     const debounceTimer = setTimeout(fetchFilteredBUAs, 500)
     return () => clearTimeout(debounceTimer)
-  }, [minPop, maxPop, filterSet])
+  }, [minPop, maxPop, filterSet, showSubFiveK]) // Add showSubFiveK to dependencies
 
   // Fetch nearby stores when point is selected (Assess Area mode)
   useEffect(() => {
@@ -478,11 +484,11 @@ export default function BUAsPage() {
   const handleExportBUAs = async () => {
     setIsExportingBUAs(true)
     try {
-      const [minPop, maxPop] = populationRange
+      const effectiveMinPop = showSubFiveK ? 0 : populationRange[0]
       await exportBUAsToCSV(
         {
-          minPop,
-          maxPop,
+          minPop: effectiveMinPop,
+          maxPop: populationRange[1],
           filterSet
         },
         targetNames
@@ -554,10 +560,25 @@ export default function BUAsPage() {
                       <span className="font-medium text-gray-900">Population Range</span>
                     </div>
                     <Badge variant="secondary" className="text-xs">
-                      {minPop === MIN_POPULATION && maxPop === MAX_POPULATION ? 'All' : 'Filtered'}
+                      {minPop === MIN_POPULATION && maxPop === MAX_POPULATION && !showSubFiveK ? 'All' : 'Filtered'}
                     </Badge>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
+                    {/* NEW: Checkbox for sub-5k BUAs */}
+                    <div className="flex items-center space-x-2 px-2 pb-2">
+                      <Checkbox
+                        id="show-sub-5k"
+                        checked={showSubFiveK}
+                        onCheckedChange={(checked) => setShowSubFiveK(checked === true)}
+                      />
+                      <Label
+                        htmlFor="show-sub-5k"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        Show BUAs with a population of less than 5k
+                      </Label>
+                    </div>
+
                     <div className="px-2">
                       <Slider
                         value={populationRange}
@@ -752,7 +773,7 @@ export default function BUAsPage() {
           <div className="flex-1 relative min-w-0">
             <BUAMap
               center={center}
-              minPopulation={minPop}
+              minPopulation={showSubFiveK ? 0 : minPop}
               maxPopulation={maxPop}
               onBUAClick={(gsscode, name, pop) => {
                 setSelectedBUAGsscode(gsscode)

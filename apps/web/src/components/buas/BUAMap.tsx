@@ -32,12 +32,7 @@ function buildBUAFilterExpression(
   const pop = ['coalesce', ['get', 'pop_final'], ['get', 'pop']] as const
   const filterConditions: any[] = [
     'all',
-    minPopulation < 5000
-      ? ['any',
-          ['<', pop, 5000],
-          ['>=', pop, minPopulation]
-        ]
-      : ['>=', pop, minPopulation],
+    ['>=', pop, minPopulation],  // Simplified - removed special <5000 handling
     ['<=', pop, maxPopulation]
   ]
 
