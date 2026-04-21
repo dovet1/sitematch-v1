@@ -727,7 +727,7 @@ export default function BUAsPage() {
           </div>
 
           {/* Map (flex-1) */}
-          <div className="flex-1 relative overflow-hidden min-w-[500px]">
+          <div className="flex-1 relative min-w-0">
             <BUAMap
               center={center}
               minPopulation={minPop}
