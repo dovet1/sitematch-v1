@@ -103,8 +103,6 @@ export function BUAMap({
   const storeMarkers = useRef<mapboxgl.Marker[]>([])
   const isAutoFitting = useRef(false)
   const skipNextCenterFlyTo = useRef(false)
-  const suppressNextViewportUpdate = useRef(false)
-  const suppressNextMarkerAutoFit = useRef(false) // Will be deprecated after refactor
   const lastHandledSidebarSelection = useRef(0)
   const buaFilterRef = useRef<any[] | null>(null)
 
@@ -163,11 +161,6 @@ export function BUAMap({
     if (!map.current || !mapLoaded || !onViewportChange) return
 
     const handleMoveEnd = () => {
-      if (suppressNextViewportUpdate.current) {
-        suppressNextViewportUpdate.current = false
-        return
-      }
-
       if (map.current && !isAutoFitting.current) {
         const bounds = map.current.getBounds()
         if (bounds) {
@@ -371,16 +364,13 @@ export function BUAMap({
     updateFilter()
   }, [minPopulation, maxPopulation, filteredGssCodes, mapLoaded])
 
-  // Handle explicit sidebar-driven BUA navigation separately so we can suppress
-  // the next viewport/store-marker side effects that would otherwise override it.
+  // Handle explicit sidebar-driven BUA navigation
   useEffect(() => {
     if (!map.current || !mapLoaded || !center || !selectedBUAGsscode) return
     if (sidebarSelectionNonce === 0 || lastHandledSidebarSelection.current === sidebarSelectionNonce) return
 
     lastHandledSidebarSelection.current = sidebarSelectionNonce
     skipNextCenterFlyTo.current = true
-    suppressNextViewportUpdate.current = true
-    suppressNextMarkerAutoFit.current = true
 
     if (popup.current) {
       popup.current.remove()
