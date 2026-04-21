@@ -515,7 +515,7 @@ export default function BUAsPage() {
                 {/* Search - Always Visible */}
                 <div className="space-y-2">
                   <Label htmlFor="bua-search" className="text-sm font-medium">
-                    Search by BUA Name
+                    Search by Location Name
                   </Label>
                   <BUASearch
                     value={searchQuery}

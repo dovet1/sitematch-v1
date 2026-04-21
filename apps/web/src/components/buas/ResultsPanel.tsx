@@ -33,7 +33,7 @@ export function ResultsPanel({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label className="text-sm font-semibold text-gray-900">
-              {isFindGapsMode ? 'Matching BUAs' : 'Nearby Stores'}
+              {isFindGapsMode ? 'Matching Locations' : 'Nearby Stores'}
             </Label>
             <span className="text-xs text-gray-600 font-medium">
               {isLoading
@@ -59,12 +59,12 @@ export function ResultsPanel({
       <div className="flex-1 overflow-y-auto pt-2 px-1">
         {isLoading ? (
           <div className="p-4 text-center text-sm text-gray-500">
-            {isFindGapsMode ? 'Loading BUAs...' : 'Loading stores...'}
+            {isFindGapsMode ? 'Loading locations...' : 'Loading stores...'}
           </div>
         ) : results.length === 0 ? (
           <div className="p-4 text-center text-sm text-gray-500">
             {isFindGapsMode
-              ? 'No BUAs match the current filters'
+              ? 'No locations match the current filters'
               : 'No stores found in this area'}
           </div>
         ) : isFindGapsMode ? (

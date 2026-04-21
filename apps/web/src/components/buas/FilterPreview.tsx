@@ -53,7 +53,7 @@ function generatePreviewText(rules: FilterRule[], targetNames: Record<string, st
     }
   }
 
-  return `Show BUAs that ${parts.join(' ')}`
+  return `Show locations that ${parts.join(' ')}`
 }
 
 /**

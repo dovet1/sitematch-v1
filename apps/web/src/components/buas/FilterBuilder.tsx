@@ -97,7 +97,7 @@ export function FilterBuilder({
             Filter Criteria
           </h3>
           <p className="text-sm text-gray-600 mt-0.5">
-            Show BUAs that match these conditions
+            Show locations that match these conditions
           </p>
         </div>
 

@@ -27,7 +27,7 @@ export function OperatorSelector({
     <div className="space-y-4">
       <div className="space-y-2">
         <Label className="text-sm font-medium text-gray-700">
-          Each BUA must:
+          Each location must:
         </Label>
 
         <Select value={value} onValueChange={onChange}>

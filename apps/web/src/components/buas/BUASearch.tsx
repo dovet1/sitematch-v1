@@ -19,7 +19,7 @@ export function BUASearch({
   value,
   onChange,
   onBUASelect,
-  placeholder = 'Search for a built-up area...',
+  placeholder = 'Search for a location...',
   className = ''
 }: BUASearchProps) {
   const [suggestions, setSuggestions] = useState<BUA[]>([])
@@ -185,7 +185,7 @@ export function BUASearch({
             </div>
           ) : suggestions.length === 0 ? (
             <div className="px-4 py-3 text-sm text-gray-500 text-center">
-              No built-up areas found
+              No locations found
             </div>
           ) : (
             suggestions.map((bua, index) => (
