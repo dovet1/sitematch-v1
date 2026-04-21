@@ -34,54 +34,75 @@ export function ResultsPanel({
   const actualTotal = total || results.length
 
   return (
-    <div className="w-[360px] border-l bg-background flex flex-col">
+    <div
+      className="w-[360px] border-l bg-background flex flex-col"
+      role="region"
+      aria-label={`${isFindGapsMode ? 'Matching Locations' : 'Nearby Stores'} Panel`}
+    >
       {/* Header */}
-      <div className="bg-gradient-to-r from-violet-50 to-purple-50 px-4 py-4 border-b border-gray-200">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <Label className="text-sm font-semibold text-gray-900">
+      <header className="bg-gradient-to-r from-violet-100 to-purple-100 px-4 py-4 border-b border-violet-200">
+        <div className="space-y-3">
+          {/* Title + Export Button Row */}
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-gray-900" id="results-panel-title">
               {isFindGapsMode ? 'Matching Locations' : 'Nearby Stores'}
-            </Label>
-            <div className="flex items-center gap-2">
-              {isFindGapsMode && onExport && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onExport}
-                  disabled={!canExport || isExporting}
-                  className="h-7 px-2"
-                  title="Export all matching locations to CSV"
-                >
-                  {isExporting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
-              <span className="text-xs text-gray-600 font-medium">
-                {isLoading
-                  ? 'Loading...'
-                  : actualTotal > 1000
-                    ? `${results.length.toLocaleString()} of ${actualTotal.toLocaleString()}`
-                    : `${results.length} result${results.length !== 1 ? 's' : ''}`
-                }
-              </span>
-            </div>
+            </h2>
+            {isFindGapsMode && onExport && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onExport}
+                disabled={!canExport || isExporting}
+                className="h-8 gap-1.5 border-violet-200 hover:bg-violet-50 hover:border-violet-300"
+                aria-label={`Export all ${actualTotal.toLocaleString()} matching locations to CSV`}
+                aria-busy={isExporting}
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span className="text-xs">Exporting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">Export CSV</span>
+                  </>
+                )}
+              </Button>
+            )}
           </div>
-          {!isLoading && actualTotal > 1000 && (
-            <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-md border border-amber-200">
-              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-              <span>Showing top 1,000 by population. Export includes all matches.</span>
-            </div>
-          )}
+
+          {/* Count/Status Row */}
+          <div
+            className="text-sm text-gray-700 font-medium"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-600" />
+                <span className="animate-pulse">Loading locations...</span>
+              </div>
+            ) : actualTotal > 1000 ? (
+              <span>
+                Showing {results.length.toLocaleString()} of {actualTotal.toLocaleString()} locations
+              </span>
+            ) : (
+              <span>
+                {results.length} location{results.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      </header>
 
       {/* Results List */}
-      <div className="flex-1 overflow-y-auto pt-2 px-1">
+      <div
+        className="flex-1 overflow-y-auto pt-2 px-1"
+        role="list"
+        aria-labelledby="results-panel-title"
+        aria-busy={isLoading}
+      >
         {isLoading ? (
           <div className="p-4 text-center text-sm text-gray-500">
             {isFindGapsMode ? 'Loading locations...' : 'Loading stores...'}
