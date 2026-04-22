@@ -16,13 +16,14 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { toast, Toaster } from 'sonner'
 import type { BUA } from '@/lib/buas'
 import type { Store as StoreType, ViewportStore } from '@/lib/stores'
 import type { FilterSet } from '@/types/filters'
 import { convertFilterSetToViewportParams, generateTargetBadgeMapping, hasActiveFilters, type TargetWithMetadata } from '@/lib/filter-utils'
 import { exportBUAsToCSV } from '@/lib/buas/export-utils'
 
-const MAX_POPULATION = 1500000 // 1.5 million
+const MAX_POPULATION = 1200000 // 1.2 million
 const MIN_POPULATION = 5001 // Changed from 0
 
 export default function BUAsPage() {
@@ -33,6 +34,7 @@ export default function BUAsPage() {
   const [minPopInput, setMinPopInput] = useState<string>(MIN_POPULATION.toString())
   const [maxPopInput, setMaxPopInput] = useState<string>(MAX_POPULATION.toString())
   const [showSubFiveK, setShowSubFiveK] = useState<boolean>(false)
+  const [minPopError, setMinPopError] = useState<string>('')
   const [selectedBUA, setSelectedBUA] = useState<{ name: string; pop: number } | null>(null)
   const [selectedBUAGsscode, setSelectedBUAGsscode] = useState<string | null>(null)
   const [filteredBUAs, setFilteredBUAs] = useState<BUA[]>([])
@@ -112,23 +114,39 @@ export default function BUAsPage() {
     const inputValue = e.target.value
     setMinPopInput(inputValue)
 
+    // Clear error as user types
+    setMinPopError('')
+
     // Allow empty string (user is clearing/typing)
     if (inputValue === '') {
       return
     }
 
     const value = Number(inputValue)
-    if (!isNaN(value)) {
-      // Clamp to valid range
+    if (!isNaN(value) && value >= MIN_POPULATION) {
+      // Only update if valid - clamp to valid range
       const clampedValue = Math.max(MIN_POPULATION, Math.min(value, maxPop))
       setPopulationRange([clampedValue, maxPop])
     }
   }
 
   const handleMinPopInputBlur = () => {
-    if (minPopInput === '' || isNaN(Number(minPopInput))) {
+    const value = Number(minPopInput)
+
+    if (minPopInput === '' || isNaN(value)) {
       setMinPopInput(MIN_POPULATION.toString())
       setPopulationRange([MIN_POPULATION, maxPop])
+      setMinPopError('')
+      return
+    }
+
+    // Validate on blur
+    if (value < MIN_POPULATION) {
+      setMinPopError(`Minimum population must be at least ${MIN_POPULATION.toLocaleString()}`)
+      setMinPopInput(MIN_POPULATION.toString())
+      setPopulationRange([MIN_POPULATION, maxPop])
+    } else {
+      setMinPopError('')
     }
   }
 
@@ -564,21 +582,6 @@ export default function BUAsPage() {
                     </Badge>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
-                    {/* NEW: Checkbox for sub-5k BUAs */}
-                    <div className="flex items-center space-x-2 px-2 pb-2">
-                      <Checkbox
-                        id="show-sub-5k"
-                        checked={showSubFiveK}
-                        onCheckedChange={(checked) => setShowSubFiveK(checked === true)}
-                      />
-                      <Label
-                        htmlFor="show-sub-5k"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        Show BUAs with a population of less than 5k
-                      </Label>
-                    </div>
-
                     <div className="px-2">
                       <Slider
                         value={populationRange}
@@ -604,8 +607,15 @@ export default function BUAsPage() {
                           value={minPopInput}
                           onChange={handleMinPopInputChange}
                           onBlur={handleMinPopInputBlur}
-                          className="h-9 text-sm"
+                          className={`h-9 text-sm ${minPopError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                          aria-invalid={!!minPopError}
+                          aria-describedby={minPopError ? 'min-pop-error' : undefined}
                         />
+                        {minPopError && (
+                          <p id="min-pop-error" className="text-xs text-red-600 mt-1" role="alert">
+                            {minPopError}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="max-pop-input" className="text-xs text-gray-600 mb-1 block">
@@ -622,6 +632,21 @@ export default function BUAsPage() {
                           className="h-9 text-sm"
                         />
                       </div>
+                    </div>
+
+                    {/* NEW: Checkbox for sub-5k BUAs - placed AFTER inputs for better UX */}
+                    <div className="flex items-center space-x-2 px-2 pt-1">
+                      <Checkbox
+                        id="show-sub-5k"
+                        checked={showSubFiveK}
+                        onCheckedChange={(checked) => setShowSubFiveK(checked === true)}
+                      />
+                      <Label
+                        htmlFor="show-sub-5k"
+                        className="text-xs text-gray-600 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        Show locations with a population of less than 5k
+                      </Label>
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
@@ -816,6 +841,7 @@ export default function BUAsPage() {
           />
         </div>
       </div>
+      <Toaster position="top-right" />
     </div>
   )
 }
