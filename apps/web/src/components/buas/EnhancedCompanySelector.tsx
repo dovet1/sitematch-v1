@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Search, X, Loader2, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react'
+import { Search, X, Loader2, ChevronDown, ChevronRight, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface Category {
   id: string  // UUID
@@ -59,17 +60,25 @@ export function EnhancedCompanySelector({
   const [isLoadingStores, setIsLoadingStores] = useState(false)
   const [isLoadingCategories, setIsLoadingCategories] = useState(false)
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set())
+  const [categoriesError, setCategoriesError] = useState<string>('')
+  const [storesError, setStoresError] = useState<string>('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
 
   // Fetch categories on mount
   useEffect(() => {
     async function fetchCategories() {
       setIsLoadingCategories(true)
+      setCategoriesError('')
       try {
         const response = await fetch('/api/public/categories')
+        if (!response.ok) {
+          throw new Error('Failed to load categories')
+        }
         const data = await response.json()
         setCategories(data.categories || [])
-      } catch {
+      } catch (error) {
         setCategories([])
+        setCategoriesError(error instanceof Error ? error.message : 'Failed to load categories')
       } finally {
         setIsLoadingCategories(false)
       }
@@ -77,13 +86,25 @@ export function EnhancedCompanySelector({
     fetchCategories()
   }, [])
 
+  // Debounce search query for performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(storeSearchQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [storeSearchQuery])
+
   // Fetch all brands with fascias on mount
   useEffect(() => {
     async function fetchAllBrands() {
       setIsLoadingStores(true)
+      setStoresError('')
       try {
         // Fetch all brands using the new endpoint
         const brandsResponse = await fetch('/api/public/brands?limit=1000')
+        if (!brandsResponse.ok) {
+          throw new Error('Failed to load brands')
+        }
         const brandsData = await brandsResponse.json()
         const brands: Brand[] = brandsData.brands || []
 
@@ -106,8 +127,9 @@ export function EnhancedCompanySelector({
         )
 
         setAllBrands(brandsWithFascias)
-      } catch {
+      } catch (error) {
         setAllBrands([])
+        setStoresError(error instanceof Error ? error.message : 'Failed to load stores')
       } finally {
         setIsLoadingStores(false)
       }
@@ -115,13 +137,13 @@ export function EnhancedCompanySelector({
     fetchAllBrands()
   }, [])
 
-  // Filter brands based on search query (client-side filtering)
+  // Filter brands based on debounced search query (client-side filtering)
   const filteredBrands = useMemo(() => {
-    if (!storeSearchQuery.trim()) {
+    if (!debouncedSearchQuery.trim()) {
       return allBrands
     }
 
-    const query = storeSearchQuery.toLowerCase()
+    const query = debouncedSearchQuery.toLowerCase()
     return allBrands.filter((brand) => {
       // Search in brand name
       if (brand.name.toLowerCase().includes(query)) {
@@ -132,7 +154,7 @@ export function EnhancedCompanySelector({
         fascia.name.toLowerCase().includes(query)
       )
     })
-  }, [allBrands, storeSearchQuery])
+  }, [allBrands, debouncedSearchQuery])
 
   const handleCategoryToggle = useCallback(
     (categoryId: string) => {
@@ -201,6 +223,27 @@ export function EnhancedCompanySelector({
     setStoreSearchQuery('')
   }, [onCategoriesChange, onCompaniesChange])
 
+  const handleSelectAllVisibleStores = useCallback(() => {
+    const allVisibleFasciaIds = filteredBrands.flatMap(brand =>
+      brand.fascias?.map(f => f.id) || []
+    )
+    const newSelection = Array.from(new Set([...selectedCompanies, ...allVisibleFasciaIds]))
+    onCompaniesChange(newSelection)
+  }, [filteredBrands, selectedCompanies, onCompaniesChange])
+
+  const handleClearAllStores = useCallback(() => {
+    onCompaniesChange([])
+  }, [onCompaniesChange])
+
+  const handleSelectAllCategories = useCallback(() => {
+    const allCategoryIds = categories.map(cat => cat.id)
+    onCategoriesChange(allCategoryIds)
+  }, [categories, onCategoriesChange])
+
+  const handleClearAllCategories = useCallback(() => {
+    onCategoriesChange([])
+  }, [onCategoriesChange])
+
   const totalSelected = selectedCategories.length + selectedCompanies.length
 
   return (
@@ -208,7 +251,7 @@ export function EnhancedCompanySelector({
       {/* Header with clear all button */}
       {totalSelected > 0 && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-600">
+          <span className="text-sm text-gray-700 font-medium">
             {totalSelected} selected
           </span>
           <Button
@@ -244,68 +287,114 @@ export function EnhancedCompanySelector({
         </TabsList>
 
         {/* Categories Tab */}
-        <TabsContent value="categories" className="mt-3 space-y-2">
+        <TabsContent value="categories" className="mt-3 space-y-2" role="region" aria-live="polite">
+          {/* Bulk actions for categories */}
+          {!isLoadingCategories && !categoriesError && categories.length > 0 && (
+            <div className="flex items-center justify-end gap-2 pb-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectAllCategories}
+                className="h-7 text-xs text-gray-600 hover:text-gray-900"
+              >
+                Select All
+              </Button>
+              {selectedCategories.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearAllCategories}
+                  className="h-7 text-xs text-gray-600 hover:text-gray-900"
+                >
+                  Clear All
+                </Button>
+              )}
+            </div>
+          )}
+
           {isLoadingCategories ? (
-            <div className="flex items-center justify-center py-8 text-sm text-gray-500">
+            <div className="flex items-center justify-center py-8 text-sm text-gray-600">
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               Loading categories...
             </div>
+          ) : categoriesError ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span className="text-sm">{categoriesError}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.reload()}
+                  className="h-7 text-xs ml-2"
+                >
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
           ) : categories.length === 0 ? (
-            <div className="text-sm text-gray-500 text-center py-8">
+            <div className="text-sm text-gray-600 text-center py-8">
               No categories available
             </div>
           ) : (
-            <div className="space-y-2 overflow-y-auto">
-              {categories.map((category) => (
-                <div
-                  key={category.id}
-                  className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-md transition-colors"
-                >
-                  <div className="flex items-center space-x-2 flex-1 cursor-pointer" onClick={() => handleCategoryToggle(category.id)}>
-                    <Checkbox
-                      id={`cat-${category.id}`}
-                      checked={selectedCategories.includes(category.id)}
-                      onCheckedChange={() => handleCategoryToggle(category.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Label
-                      htmlFor={`cat-${category.id}`}
-                      className="text-sm cursor-pointer flex-1"
-                    >
-                      {category.name}
-                    </Label>
-                  </div>
+            <div className="space-y-2 overflow-y-auto max-h-[400px]">
+              {categories.map((category) => {
+                const isSelected = selectedCategories.includes(category.id)
+                const isVisible = categoriesVisibility?.[category.id] ?? true
+                const categoryName = category.name
 
-                  {/* Visibility toggle button */}
-                  {selectedCategories.includes(category.id) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 p-0 hover:bg-gray-100"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        const newVisibility = {
-                          ...categoriesVisibility,
-                          [category.id]: !(categoriesVisibility?.[category.id] ?? true)
-                        }
-                        onCategoriesVisibilityChange?.(newVisibility)
-                      }}
-                    >
-                      {(categoriesVisibility?.[category.id] ?? true) ? (
-                        <Eye className="h-4 w-4 text-gray-600" />
-                      ) : (
-                        <EyeOff className="h-4 w-4 text-gray-400" />
-                      )}
-                    </Button>
-                  )}
-                </div>
-              ))}
+                return (
+                  <div
+                    key={category.id}
+                    className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-md transition-all duration-150"
+                  >
+                    <div className="flex items-center space-x-2 flex-1 cursor-pointer" onClick={() => handleCategoryToggle(category.id)}>
+                      <Checkbox
+                        id={`cat-${category.id}`}
+                        checked={isSelected}
+                        onCheckedChange={() => handleCategoryToggle(category.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Label
+                        htmlFor={`cat-${category.id}`}
+                        className="text-sm cursor-pointer flex-1"
+                      >
+                        {categoryName}
+                      </Label>
+                    </div>
+
+                    {/* Visibility toggle button */}
+                    {isSelected && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 p-0 hover:bg-gray-100"
+                        aria-label={`${isVisible ? 'Hide' : 'Show'} ${categoryName} on map`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const newVisibility = {
+                            ...categoriesVisibility,
+                            [category.id]: !isVisible
+                          }
+                          onCategoriesVisibilityChange?.(newVisibility)
+                        }}
+                      >
+                        {isVisible ? (
+                          <Eye className="h-4 w-4 text-gray-600" />
+                        ) : (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </TabsContent>
 
         {/* Stores Tab - Hierarchical brand/fascia selection */}
-        <TabsContent value="stores" className="mt-3 space-y-3">
+        <TabsContent value="stores" className="mt-3 space-y-3" role="region" aria-live="polite">
           {/* Search input */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -315,24 +404,76 @@ export function EnhancedCompanySelector({
               value={storeSearchQuery}
               onChange={(e) => setStoreSearchQuery(e.target.value)}
               className="pl-9"
+              aria-label="Search stores"
             />
           </div>
 
+          {/* Bulk actions for stores */}
+          {!isLoadingStores && !storesError && filteredBrands.length > 0 && (
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSelectAllVisibleStores}
+                className="h-7 text-xs text-gray-600 hover:text-gray-900"
+              >
+                Select All {storeSearchQuery ? 'Visible' : ''}
+              </Button>
+              {selectedCompanies.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearAllStores}
+                  className="h-7 text-xs text-gray-600 hover:text-gray-900"
+                >
+                  Clear All
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* Brand list */}
           {isLoadingStores ? (
-            <div className="flex items-center justify-center py-8 text-sm text-gray-500">
+            <div className="flex items-center justify-center py-8 text-sm text-gray-600">
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               Loading stores...
             </div>
+          ) : storesError ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span className="text-sm">{storesError}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.reload()}
+                  className="h-7 text-xs ml-2"
+                >
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
           ) : filteredBrands.length === 0 ? (
-            <div className="text-xs text-gray-500 text-center py-8">
-              {storeSearchQuery ? 'No stores found matching your search' : 'No stores available'}
+            <div className="text-sm text-gray-600 text-center py-8">
+              {storeSearchQuery ? (
+                <>
+                  No stores found for &quot;{storeSearchQuery}&quot;.
+                  <br />
+                  <span className="text-xs text-gray-500 mt-1 inline-block">
+                    Try different keywords.
+                  </span>
+                </>
+              ) : (
+                'No stores available'
+              )}
             </div>
           ) : (
-            <div className="space-y-1 overflow-y-auto">
+            <div className="space-y-1 overflow-y-auto max-h-[400px]">
               {filteredBrands.map((brand) => {
                 const isExpanded = expandedBrands.has(brand.id)
                 const hasFascias = (brand.fascias?.length || 0) > 0
+                const isFullySelected = isBrandFullySelected(brand)
+                const isPartiallySelected = isBrandPartiallySelected(brand)
 
                 return (
                   <Collapsible
@@ -340,85 +481,98 @@ export function EnhancedCompanySelector({
                     open={isExpanded}
                     onOpenChange={() => toggleBrandExpansion(brand.id)}
                   >
-                    <div className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded-md">
+                    <div className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded-md transition-all duration-150">
                       <Checkbox
                         id={`brand-${brand.id}`}
-                        checked={
-                          isBrandPartiallySelected(brand)
-                            ? "indeterminate"
-                            : isBrandFullySelected(brand)
-                        }
+                        checked={isPartiallySelected ? "indeterminate" : isFullySelected}
                         onCheckedChange={() => handleBrandToggle(brand)}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <CollapsibleTrigger className="flex-1 flex items-center justify-between cursor-pointer">
-                        <Label
-                          htmlFor={`brand-${brand.id}`}
-                          className="cursor-pointer flex-1"
-                        >
-                          {brand.name}
+                      <CollapsibleTrigger
+                        className="flex-1 flex items-start justify-between cursor-pointer gap-2 text-left"
+                        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${brand.name}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <Label
+                            htmlFor={`brand-${brand.id}`}
+                            className="cursor-pointer text-sm inline"
+                          >
+                            {brand.name}
+                          </Label>
                           {hasFascias && (
-                            <span className="ml-2 text-xs text-gray-500">
+                            <span className="text-xs text-gray-500 ml-1.5">
                               ({brand.fascias!.length} fascia{brand.fascias!.length !== 1 ? 's' : ''})
                             </span>
                           )}
-                        </Label>
+                          {!isExpanded && isPartiallySelected && (
+                            <span className="inline-block w-1.5 h-1.5 bg-violet-500 rounded-full ml-1.5 align-middle" title="Some fascias selected" />
+                          )}
+                        </div>
                         {hasFascias && (
-                          isExpanded ? (
-                            <ChevronDown className="h-4 w-4 text-gray-500" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-gray-500" />
-                          )
+                          <div className="flex-shrink-0 mt-0.5">
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-150" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-gray-500 transition-transform duration-150" />
+                            )}
+                          </div>
                         )}
                       </CollapsibleTrigger>
                     </div>
 
                     {hasFascias && (
                       <CollapsibleContent className="ml-8 space-y-1 mt-1">
-                        {brand.fascias!.map((fascia) => (
-                          <div
-                            key={fascia.id}
-                            className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-md transition-colors"
-                          >
-                            <div className="flex items-center space-x-2 flex-1 cursor-pointer" onClick={() => handleFasciaToggle(fascia.id)}>
-                              <Checkbox
-                                id={`fascia-${fascia.id}`}
-                                checked={selectedCompanies.includes(fascia.id)}
-                                onCheckedChange={() => handleFasciaToggle(fascia.id)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              <Label
-                                htmlFor={`fascia-${fascia.id}`}
-                                className="text-sm cursor-pointer flex-1"
-                              >
-                                {fascia.name}
-                              </Label>
-                            </div>
+                        {brand.fascias!.map((fascia) => {
+                          const isFasciaSelected = selectedCompanies.includes(fascia.id)
+                          const isFasciaVisible = companiesVisibility?.[fascia.id] ?? true
+                          const fasciaName = fascia.name
 
-                            {/* Visibility toggle button */}
-                            {selectedCompanies.includes(fascia.id) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 p-0 hover:bg-gray-100"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  const newVisibility = {
-                                    ...companiesVisibility,
-                                    [fascia.id]: !(companiesVisibility?.[fascia.id] ?? true)
-                                  }
-                                  onCompaniesVisibilityChange?.(newVisibility)
-                                }}
-                              >
-                                {(companiesVisibility?.[fascia.id] ?? true) ? (
-                                  <Eye className="h-4 w-4 text-gray-600" />
-                                ) : (
-                                  <EyeOff className="h-4 w-4 text-gray-400" />
-                                )}
-                              </Button>
-                            )}
-                          </div>
-                        ))}
+                          return (
+                            <div
+                              key={fascia.id}
+                              className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-md transition-all duration-150"
+                            >
+                              <div className="flex items-center space-x-2 flex-1 cursor-pointer" onClick={() => handleFasciaToggle(fascia.id)}>
+                                <Checkbox
+                                  id={`fascia-${fascia.id}`}
+                                  checked={isFasciaSelected}
+                                  onCheckedChange={() => handleFasciaToggle(fascia.id)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <Label
+                                  htmlFor={`fascia-${fascia.id}`}
+                                  className="text-sm cursor-pointer flex-1"
+                                >
+                                  {fasciaName}
+                                </Label>
+                              </div>
+
+                              {/* Visibility toggle button */}
+                              {isFasciaSelected && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 p-0 hover:bg-gray-100"
+                                  aria-label={`${isFasciaVisible ? 'Hide' : 'Show'} ${fasciaName} on map`}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    const newVisibility = {
+                                      ...companiesVisibility,
+                                      [fascia.id]: !isFasciaVisible
+                                    }
+                                    onCompaniesVisibilityChange?.(newVisibility)
+                                  }}
+                                >
+                                  {isFasciaVisible ? (
+                                    <Eye className="h-4 w-4 text-gray-600" />
+                                  ) : (
+                                    <EyeOff className="h-4 w-4 text-gray-400" />
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                          )
+                        })}
                       </CollapsibleContent>
                     )}
                   </Collapsible>
