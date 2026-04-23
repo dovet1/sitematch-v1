@@ -41,7 +41,7 @@ export function BUASearch({
 
       setIsLoading(true)
       try {
-        const response = await fetch(`/api/public/buas/search?q=${encodeURIComponent(value)}&limit=20`)
+        const response = await fetch(`/api/public/gapfinder/search?q=${encodeURIComponent(value)}&limit=20`)
         if (response.ok) {
           const data = await response.json()
           setSuggestions(data.results || [])

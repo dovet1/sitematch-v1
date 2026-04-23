@@ -74,8 +74,8 @@ export function Header() {
       description: 'Analyse demographics around any site',
     },
     {
-      href: '/buas',
-      label: 'Gap Analysis',
+      href: '/gapfinder',
+      label: 'GapFinder',
       description: 'Find gaps in the market',
     }
   ]

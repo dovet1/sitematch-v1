@@ -7,11 +7,11 @@ import { ArrowLeft, Info, MapPin, ChevronDown } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
-import { BUAMap, StoreUpdateSource } from '@/components/buas/BUAMap'
-import { BUASearch } from '@/components/buas/BUASearch'
-import { ResultsPanel } from '@/components/buas/ResultsPanel'
-import { CompanySelector } from '@/components/buas/CompanySelector'
-import { FilterBuilder } from '@/components/buas/FilterBuilder'
+import { BUAMap, StoreUpdateSource } from '@/components/gapfinder/BUAMap'
+import { BUASearch } from '@/components/gapfinder/BUASearch'
+import { ResultsPanel } from '@/components/gapfinder/ResultsPanel'
+import { CompanySelector } from '@/components/gapfinder/CompanySelector'
+import { FilterBuilder } from '@/components/gapfinder/FilterBuilder'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
@@ -574,7 +574,7 @@ export default function BUAsPage() {
               <div className="flex items-center gap-2">
                 <div className="h-8 w-1 bg-gradient-to-b from-violet-500 to-purple-600 rounded-full" />
                 <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
-                  Gap Analysis
+                  GapFinder
                 </h1>
               </div>
             </div>
