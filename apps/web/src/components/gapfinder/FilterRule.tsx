@@ -76,10 +76,11 @@ export function FilterRule({
     })
   }
 
-  const handleTargetIdsChange = (newIds: string[]) => {
+  const handleTargetIdsChange = (newIds: string[], newType?: 'fascia' | 'category') => {
     onChange({
       ...rule,
       targetIds: newIds,
+      ...(newType && { targetType: newType }),
     })
   }
 
