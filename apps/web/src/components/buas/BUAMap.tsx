@@ -609,9 +609,7 @@ export function BUAMap({
       .filter(Boolean)
       .join(', ')
 
-    const badgeLine = badgeLabel
-      ? `<div style="font-size: 11px; color: #374151; margin-top: 4px;">Marker: ${badgeLabel}</div>`
-      : ''
+    const badgeLine = ''
 
     const popup = new mapboxgl.Popup({
       offset: 15
