@@ -108,17 +108,15 @@ export function EnhancedCompanySelector({
         const brandsData = await brandsResponse.json()
         const brands: Brand[] = brandsData.brands || []
 
-        // For each brand, fetch its fascias
+        // For each brand, fetch its fascias directly by brand ID
         const brandsWithFascias = await Promise.all(
           brands.map(async (brand) => {
             try {
               const fasciasResponse = await fetch(
-                `/api/public/fascias/search?q=${encodeURIComponent(brand.name)}&limit=100`
+                `/api/public/fascias/search?brandId=${encodeURIComponent(brand.id)}&limit=100`
               )
               const fasciasData = await fasciasResponse.json()
-              const brandFascias = (fasciasData.fascias || []).filter(
-                (f: Fascia) => f.brand_id === brand.id
-              )
+              const brandFascias = (fasciasData.fascias || []) as Fascia[]
               return { ...brand, fascias: brandFascias }
             } catch {
               return { ...brand, fascias: [] }
@@ -499,13 +497,13 @@ export function EnhancedCompanySelector({
                           >
                             {brand.name}
                           </Label>
-                          {hasFascias && (
+                          {hasFascias && brand.fascias!.length > 1 && (
                             <span className="text-xs text-gray-500 ml-1.5">
-                              ({brand.fascias!.length} fascia{brand.fascias!.length !== 1 ? 's' : ''})
+                              ({brand.fascias!.length} types)
                             </span>
                           )}
                           {!isExpanded && isPartiallySelected && (
-                            <span className="inline-block w-1.5 h-1.5 bg-violet-500 rounded-full ml-1.5 align-middle" title="Some fascias selected" />
+                            <span className="inline-block w-1.5 h-1.5 bg-violet-500 rounded-full ml-1.5 align-middle" title="Some types selected" />
                           )}
                         </div>
                         {hasFascias && (

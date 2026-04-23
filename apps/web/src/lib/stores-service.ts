@@ -4,8 +4,8 @@
  */
 
 import { createServerClient } from '@/lib/supabase'
-import type { Category, Brand, Store } from '@/lib/stores'
-import type { FilterSet, FilterRule } from '@/types/filters'
+import type { Category, Brand, Fascia, Store } from '@/lib/stores'
+import type { FilterSet } from '@/types/filters'
 
 export class StoreService {
   private supabase: any
@@ -88,6 +88,44 @@ export class StoreService {
   }
 
   /**
+   * Get fascias, optionally scoped to a brand and/or name query
+   * @param options Query options
+   * @returns Array of matching fascias with brand info, ordered by name
+   */
+  async getFascias(options: {
+    query?: string
+    brandId?: string
+    limit?: number
+  } = {}): Promise<Array<Fascia & { brands?: { id: string; name: string } }>> {
+    const { query = '', brandId, limit = 50 } = options
+
+    let dbQuery = this.supabase
+      .from('fascias')
+      .select('id, name, brand_id, definition, created_at, brands(id, name)')
+      .order('name')
+      .limit(Math.min(limit, 100))
+
+    if (brandId) {
+      dbQuery = dbQuery.eq('brand_id', brandId)
+    }
+
+    if (query && query.length >= 2) {
+      dbQuery = dbQuery.ilike('name', `%${query}%`)
+    } else if (!brandId) {
+      return []
+    }
+
+    const { data, error } = await dbQuery
+
+    if (error) {
+      console.error('Failed to get fascias:', error)
+      throw new Error(`Failed to get fascias: ${error.message}`)
+    }
+
+    return data || []
+  }
+
+  /**
    * Get stores within radius of a point (for Assess Area mode)
    * Uses PostGIS ST_DWithin for spatial query
    * @param lat Latitude of center point
@@ -152,6 +190,12 @@ export class StoreService {
   ): Promise<{ gsscodes: string[], total: number }> {
     console.log('✅ [Expression Filter] Using new filter_buas_with_expression function')
 
+    const normalizedFilterSet = this.normalizeFilterSet(filterSet)
+
+    if (normalizedFilterSet.rules.length === 0) {
+      return this.getAllGssCodesInPopulationRange(minPop, maxPop)
+    }
+
     const allGsscodes: string[] = []
     let offset = 0
     const pageSize = 1000
@@ -160,7 +204,7 @@ export class StoreService {
     while (hasMore) {
       const { data, error } = await this.supabase
         .rpc('filter_buas_with_expression', {
-          p_filter_expression: filterSet,
+          p_filter_expression: normalizedFilterSet,
           p_min_pop: minPop,
           p_max_pop: maxPop
         })
@@ -181,6 +225,53 @@ export class StoreService {
     }
 
     console.log(`✅ [Expression Filter] Total: ${allGsscodes.length} matching BUAs`)
+
+    return {
+      gsscodes: allGsscodes,
+      total: allGsscodes.length
+    }
+  }
+
+  private normalizeFilterSet(filterSet: FilterSet): FilterSet {
+    const rules = (filterSet.rules || [])
+      .filter(rule => Array.isArray(rule.targetIds) && rule.targetIds.length > 0)
+      .map((rule, index, validRules) => ({
+        ...rule,
+        connector: index < validRules.length - 1 ? (rule.connector || 'and') : undefined
+      }))
+
+    return { rules }
+  }
+
+  private async getAllGssCodesInPopulationRange(
+    minPop: number,
+    maxPop: number
+  ): Promise<{ gsscodes: string[], total: number }> {
+    const allGsscodes: string[] = []
+    let offset = 0
+    const pageSize = 1000
+    let hasMore = true
+
+    while (hasMore) {
+      const { data, error } = await this.supabase
+        .from('built_up_areas')
+        .select('gsscode, pop_final')
+        .gte('pop_final', minPop)
+        .lte('pop_final', maxPop)
+        .order('pop_final', { ascending: false, nullsLast: true })
+        .range(offset, offset + pageSize - 1)
+
+      if (error) {
+        console.error('Failed to get gsscodes in population range:', error)
+        throw new Error(`Failed to get gsscodes in population range: ${error.message}`)
+      }
+
+      const gsscodes = (data || []).map((row: any) => row.gsscode)
+      allGsscodes.push(...gsscodes)
+
+      hasMore = gsscodes.length === pageSize
+      offset += pageSize
+    }
 
     return {
       gsscodes: allGsscodes,
@@ -423,7 +514,7 @@ export class StoreService {
     }
 
     // LEGACY: Fall back to old conversion for backward compatibility
-    let actualFilters = filters
+    const actualFilters = filters
     // Call the Supabase RPC function for efficient server-side filtering
     // NOTE: Supabase's default max-rows is 1000. To get all results, we need to paginate.
     // Since we can't override the limit for RPC calls easily, we'll paginate through results.

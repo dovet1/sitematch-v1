@@ -99,6 +99,10 @@ BEGIN
   INTO v_target_ids
   FROM jsonb_array_elements_text(p_rule->'targetIds');
 
+  IF v_target_ids IS NULL OR array_length(v_target_ids, 1) IS NULL THEN
+    RAISE EXCEPTION 'Filter rule has no targetIds';
+  END IF;
+
   -- Build SQL based on operator
   CASE v_operator
     WHEN 'has' THEN

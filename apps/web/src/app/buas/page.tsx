@@ -256,16 +256,14 @@ export default function BUAsPage() {
           const brandsData = await brandsResponse.json()
           const brands = brandsData.brands || []
 
-          // For each brand, fetch its fascias
+          // For each brand, fetch its fascias directly by brand ID
           const fasciaPromises = brands.map(async (brand: any) => {
             try {
               const fasciasResponse = await fetch(
-                `/api/public/fascias/search?q=${encodeURIComponent(brand.name)}&limit=100`
+                `/api/public/fascias/search?brandId=${encodeURIComponent(brand.id)}&limit=100`
               )
               const fasciasData = await fasciasResponse.json()
-              const brandFascias = (fasciasData.fascias || []).filter(
-                (f: any) => f.brand_id === brand.id
-              )
+              const brandFascias = fasciasData.fascias || []
               brandFascias.forEach((fascia: any) => {
                 names[fascia.id] = fascia.name
               })
