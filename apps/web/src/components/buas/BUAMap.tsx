@@ -275,6 +275,12 @@ export function BUAMap({
         map.current.on('click', BUA_LAYER_ID, (e) => {
           if (!e.features || e.features.length === 0) return
 
+          // Check if click originated from a marker - if so, ignore this BUA click
+          const target = e.originalEvent.target as HTMLElement
+          if (target && target.closest('.simple-store-marker')) {
+            return
+          }
+
           const feature = e.features[0]
           const gsscode = feature.properties?.gsscode
           const name = feature.properties?.name
