@@ -43,6 +43,100 @@ function buildBUAFilterExpression(
   return filterConditions
 }
 
+// SVG icon constants for popups
+const MAP_PIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`
+
+const STORE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/></svg>`
+
+/**
+ * Generate premium BUA popup HTML with gradient header and icon
+ */
+function generateBUAPopupHTML(name: string, population: string): string {
+  // Escape HTML to prevent XSS
+  const escapedName = name.replace(/[<>&"']/g, (c) => {
+    const escapeMap: Record<string, string> = {
+      '<': '&lt;',
+      '>': '&gt;',
+      '&': '&amp;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }
+    return escapeMap[c] || c
+  })
+
+  const escapedPopulation = population.replace(/[<>&"']/g, (c) => {
+    const escapeMap: Record<string, string> = {
+      '<': '&lt;',
+      '>': '&gt;',
+      '&': '&amp;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }
+    return escapeMap[c] || c
+  })
+
+  return `
+    <div style="display: flex; flex-direction: column; width: 100%;">
+      <div style="background: linear-gradient(135deg, #f3f0ff 0%, #ede9fe 100%); padding: 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #e9d5ff;">
+        <div style="background: linear-gradient(135deg, #6F5AFF 0%, #8b5cf6 100%); border-radius: 8px; padding: 10px; display: flex; box-shadow: 0 4px 12px rgba(111, 90, 255, 0.25);">
+          <div style="color: white; display: flex;">${MAP_PIN_SVG}</div>
+        </div>
+        <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1e293b; line-height: 1.3; letter-spacing: -0.025em; flex: 1;">${escapedName}</h3>
+      </div>
+      <div style="padding: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 14px; font-weight: 600; color: #6b7280;">Population:</span>
+          <span style="font-size: 16px; font-weight: 700; color: #6F5AFF;">${escapedPopulation}</span>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+/**
+ * Generate premium store marker popup HTML with color-coded icon
+ */
+function generateStorePopupHTML(
+  storeName: string,
+  address: string,
+  fasciaColor: string
+): string {
+  // Escape HTML to prevent XSS
+  const escapedName = storeName.replace(/[<>&"']/g, (c) => {
+    const escapeMap: Record<string, string> = {
+      '<': '&lt;',
+      '>': '&gt;',
+      '&': '&amp;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }
+    return escapeMap[c] || c
+  })
+
+  const escapedAddress = address.replace(/[<>&"']/g, (c) => {
+    const escapeMap: Record<string, string> = {
+      '<': '&lt;',
+      '>': '&gt;',
+      '&': '&amp;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }
+    return escapeMap[c] || c
+  })
+
+  return `
+    <div style="display: flex; flex-direction: column; width: 100%;">
+      <div style="background: linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%); padding: 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #e7e5e4;">
+        <div style="background: ${fasciaColor}; border-radius: 6px; padding: 8px; display: flex; box-shadow: 0 2px 8px ${fasciaColor}40;">
+          <div style="color: white; display: flex;">${STORE_SVG}</div>
+        </div>
+        <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1e293b; line-height: 1.3; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapedName}</h3>
+      </div>
+      ${address ? `<div style="padding: 12px;"><div style="font-size: 13px; color: #6b7280; line-height: 1.5;">${escapedAddress}</div></div>` : ''}
+    </div>
+  `
+}
+
 interface BUAMapProps {
   center?: { lat: number; lng: number }
   minPopulation: number
@@ -296,17 +390,11 @@ export function BUAMap({
             popup.current = new mapboxgl.Popup({
               closeButton: true,
               closeOnClick: true,
-              maxWidth: '300px'
+              maxWidth: '320px',
+              className: 'premium-bua-popup'
             })
               .setLngLat(e.lngLat)
-              .setHTML(`
-                <div style="padding: 8px;">
-                  <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1e293b;">${name}</h3>
-                  <div style="font-size: 14px; color: #64748b;">
-                    <strong>Population:</strong> ${formatPopulation(pop_final)}
-                  </div>
-                </div>
-              `)
+              .setHTML(generateBUAPopupHTML(name, formatPopulation(pop_final)))
               .addTo(map.current!)
 
             // Call optional callback
@@ -615,17 +703,10 @@ export function BUAMap({
       .filter(Boolean)
       .join(', ')
 
-    const badgeLine = ''
-
     const popup = new mapboxgl.Popup({
-      offset: 15
-    }).setHTML(`
-      <div style="padding: 4px;">
-        <div style="font-weight: 600; font-size: 13px; margin-bottom: 2px;">${store.name || 'Store'}</div>
-        ${address ? `<div style="font-size: 11px; color: #6b7280;">${address}</div>` : ''}
-        ${badgeLine}
-      </div>
-    `)
+      offset: 15,
+      className: 'premium-store-popup'
+    }).setHTML(generateStorePopupHTML(store.name || 'Store', address, color))
 
     return new mapboxgl.Marker({ element: el })
       .setLngLat([store.lon, store.lat])
