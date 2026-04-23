@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { formatPopulation } from '@/lib/format-population'
@@ -65,6 +65,8 @@ interface BUAMapProps {
   targetBadgeMapping?: TargetWithMetadata[]
   onViewportChange?: (bounds: { minLat: number; minLon: number; maxLat: number; maxLon: number }) => void
   storeUpdateSource?: StoreUpdateSource  // NEW: Track why stores changed
+  companiesVisibility?: Record<string, boolean>
+  categoriesVisibility?: Record<string, boolean>
 }
 
 export function BUAMap({
@@ -87,7 +89,9 @@ export function BUAMap({
   proximityExcludedStores = [],
   targetBadgeMapping = [],
   onViewportChange,
-  storeUpdateSource = StoreUpdateSource.USER_PAN
+  storeUpdateSource = StoreUpdateSource.USER_PAN,
+  companiesVisibility = {},
+  categoriesVisibility = {}
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -540,6 +544,36 @@ export function BUAMap({
     }
   }, [selectedPoint, radiusMeters, mode, mapLoaded])
 
+  // CRITICAL VISIBILITY RULE: A marker is visible if at least one of its matched targets is still visible
+  const isStoreVisible = useCallback((
+    store: Store | ViewportStore,
+    companiesVis: Record<string, boolean>,
+    categoriesVis: Record<string, boolean>
+  ): boolean => {
+    // For viewport stores, use matchedTargetIds to determine visibility
+    if ('matchedTargetIds' in store && store.matchedTargetIds) {
+      // Check if at least ONE matched target is visible
+      const hasVisibleMatch = store.matchedTargetIds.some(targetId => {
+        // Check if this target is hidden in either visibility map
+        const isFasciaHidden = companiesVis[targetId] === false
+        const isCategoryHidden = categoriesVis[targetId] === false
+
+        // Target is visible if NOT explicitly hidden
+        return !isFasciaHidden && !isCategoryHidden
+      })
+
+      return hasVisibleMatch
+    }
+
+    // Fallback for assess-area stores (no matchedTargetIds)
+    // Check fascia visibility only
+    if (store.fascia_id && companiesVis[store.fascia_id] === false) {
+      return false
+    }
+
+    return true  // Default visible
+  }, [])
+
   const createSimpleStoreMarker = (
     store: Store | ViewportStore,
     color: string,
@@ -636,13 +670,35 @@ export function BUAMap({
       const redStores = mode === 'find-gaps'
         ? [...excludedStores, ...proximityExcludedStores]
         : []
+
+      // Apply visibility filtering ONLY in find-gaps mode
+      const visibleGreenStores = mode === 'find-gaps'
+        ? greenStores.filter(store => isStoreVisible(store, companiesVisibility, categoriesVisibility))
+        : greenStores
+
+      const visibleRedStores = mode === 'find-gaps'
+        ? redStores.filter(store => isStoreVisible(store, companiesVisibility, categoriesVisibility))
+        : redStores
+
+      // Update badge label generation to only include visible targets
       const getBadgeLabel = (store: ViewportStore): string | undefined => {
         if (!store.matchedTargetIds || store.matchedTargetIds.length === 0) {
           return undefined
         }
 
+        // Filter matched targets to only include visible ones
+        const visibleMatchedTargets = store.matchedTargetIds.filter(targetId => {
+          const isFasciaHidden = companiesVisibility[targetId] === false
+          const isCategoryHidden = categoriesVisibility[targetId] === false
+          return !isFasciaHidden && !isCategoryHidden
+        })
+
+        if (visibleMatchedTargets.length === 0) {
+          return undefined
+        }
+
         const badgeNumbers = targetBadgeMapping
-          .filter(target => store.matchedTargetIds?.includes(target.targetId))
+          .filter(target => visibleMatchedTargets.includes(target.targetId))
           .map(target => target.badgeNumber)
           .sort((a, b) => a - b)
 
@@ -654,19 +710,19 @@ export function BUAMap({
       }
 
       if (mode === 'assess-area') {
-        greenStores.forEach(store => {
+        visibleGreenStores.forEach(store => {
           const marker = createSimpleStoreMarker(store, getFasciaMarkerColor(store.fascia_id))
           marker.addTo(map.current!)
           newMarkers.push(marker)
         })
       } else {
-        greenStores.forEach(store => {
+        visibleGreenStores.forEach(store => {
           const marker = createSimpleStoreMarker(store, getFasciaMarkerColor(store.fascia_id), getBadgeLabel(store))
           marker.addTo(map.current!)
           newMarkers.push(marker)
         })
 
-        redStores.forEach(store => {
+        visibleRedStores.forEach(store => {
           const marker = createSimpleStoreMarker(store, getFasciaMarkerColor(store.fascia_id), getBadgeLabel(store))
           marker.addTo(map.current!)
           newMarkers.push(marker)
@@ -678,14 +734,14 @@ export function BUAMap({
       // Conditional auto-fit based on update source
       // Only auto-fit when: filter changes or initial load (NOT on user pans or sidebar clicks)
       const shouldAutoFit = mode === 'find-gaps' &&
-        (greenStores.length > 0 || redStores.length > 0) &&
+        (visibleGreenStores.length > 0 || visibleRedStores.length > 0) &&
         (storeUpdateSource === StoreUpdateSource.FILTER_CHANGE ||
          storeUpdateSource === StoreUpdateSource.INITIAL_LOAD)
 
       if (shouldAutoFit) {
         const markerBounds = new mapboxgl.LngLatBounds()
 
-        greenStores.concat(redStores).forEach((store) => {
+        visibleGreenStores.concat(visibleRedStores).forEach((store) => {
           markerBounds.extend([store.lon, store.lat])
         })
 
@@ -710,7 +766,7 @@ export function BUAMap({
       storeMarkers.current.forEach(marker => marker.remove())
       storeMarkers.current = []
     }
-  }, [stores, includedStores, excludedStores, proximityIncludedStores, proximityExcludedStores, mode, mapLoaded, targetBadgeMapping, storeUpdateSource])
+  }, [stores, includedStores, excludedStores, proximityIncludedStores, proximityExcludedStores, mode, mapLoaded, targetBadgeMapping, storeUpdateSource, companiesVisibility, categoriesVisibility, isStoreVisible])
 
   return (
     <div className={`relative ${className}`}>

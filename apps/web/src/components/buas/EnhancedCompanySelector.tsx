@@ -370,9 +370,13 @@ export function EnhancedCompanySelector({
                         aria-label={`${isVisible ? 'Hide' : 'Show'} ${categoryName} on map`}
                         onClick={(e) => {
                           e.stopPropagation()
-                          const newVisibility = {
-                            ...categoriesVisibility,
-                            [category.id]: !isVisible
+                          const newVisibility = { ...categoriesVisibility }
+                          if (isVisible) {
+                            // Toggle to hidden: set false
+                            newVisibility[category.id] = false
+                          } else {
+                            // Toggle to visible: delete key (sparse state pattern)
+                            delete newVisibility[category.id]
                           }
                           onCategoriesVisibilityChange?.(newVisibility)
                         }}
@@ -554,9 +558,13 @@ export function EnhancedCompanySelector({
                                   aria-label={`${isFasciaVisible ? 'Hide' : 'Show'} ${fasciaName} on map`}
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    const newVisibility = {
-                                      ...companiesVisibility,
-                                      [fascia.id]: !isFasciaVisible
+                                    const newVisibility = { ...companiesVisibility }
+                                    if (isFasciaVisible) {
+                                      // Toggle to hidden: set false
+                                      newVisibility[fascia.id] = false
+                                    } else {
+                                      // Toggle to visible: delete key (sparse state pattern)
+                                      delete newVisibility[fascia.id]
                                     }
                                     onCompaniesVisibilityChange?.(newVisibility)
                                   }}

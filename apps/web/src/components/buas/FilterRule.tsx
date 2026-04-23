@@ -22,6 +22,10 @@ interface FilterRuleProps {
   showConnector: boolean
   targetNames?: Record<string, string>
   targetBadgeMapping: TargetWithMetadata[]
+  companiesVisibility?: Record<string, boolean>
+  categoriesVisibility?: Record<string, boolean>
+  onCompaniesVisibilityChange?: (visibility: Record<string, boolean>) => void
+  onCategoriesVisibilityChange?: (visibility: Record<string, boolean>) => void
 }
 
 export function FilterRule({
@@ -31,6 +35,10 @@ export function FilterRule({
   showConnector,
   targetNames = {},
   targetBadgeMapping,
+  companiesVisibility,
+  categoriesVisibility,
+  onCompaniesVisibilityChange,
+  onCategoriesVisibilityChange,
 }: FilterRuleProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
 
@@ -126,6 +134,10 @@ export function FilterRule({
             onSelectionChange={handleTargetIdsChange}
             targetNames={targetNames}
             targetBadgeMapping={targetBadgeMapping}
+            companiesVisibility={companiesVisibility}
+            categoriesVisibility={categoriesVisibility}
+            onCompaniesVisibilityChange={onCompaniesVisibilityChange}
+            onCategoriesVisibilityChange={onCategoriesVisibilityChange}
           />
 
           {/* Advanced Options (collapsible) */}

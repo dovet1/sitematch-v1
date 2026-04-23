@@ -13,6 +13,10 @@ interface InlineTargetSelectorProps {
   onSelectionChange: (ids: string[]) => void
   targetNames: Record<string, string>
   targetBadgeMapping: TargetWithMetadata[]
+  companiesVisibility?: Record<string, boolean>
+  categoriesVisibility?: Record<string, boolean>
+  onCompaniesVisibilityChange?: (visibility: Record<string, boolean>) => void
+  onCategoriesVisibilityChange?: (visibility: Record<string, boolean>) => void
 }
 
 export function InlineTargetSelector({
@@ -21,7 +25,11 @@ export function InlineTargetSelector({
   onTypeChange,
   onSelectionChange,
   targetNames,
-  targetBadgeMapping
+  targetBadgeMapping,
+  companiesVisibility,
+  categoriesVisibility,
+  onCompaniesVisibilityChange,
+  onCategoriesVisibilityChange
 }: InlineTargetSelectorProps) {
   // EnhancedCompanySelector has its own tabs, so we just need to pass the correct selections
   const handleCompaniesChange = (ids: string[]) => {
@@ -47,6 +55,10 @@ export function InlineTargetSelector({
           selectedCategories={targetType === 'category' ? selectedIds : []}
           onCategoriesChange={handleCategoriesChange}
           mode="include"
+          companiesVisibility={companiesVisibility}
+          categoriesVisibility={categoriesVisibility}
+          onCompaniesVisibilityChange={onCompaniesVisibilityChange}
+          onCategoriesVisibilityChange={onCategoriesVisibilityChange}
         />
       </div>
 

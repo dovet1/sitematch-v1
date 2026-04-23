@@ -23,6 +23,10 @@ interface FilterBuilderProps {
   onChange: (filterSet: FilterSet) => void
   targetNames?: Record<string, string> // Map of targetId -> name for display
   targetBadgeMapping: TargetWithMetadata[] // Badge mapping for numbered pins
+  companiesVisibility?: Record<string, boolean>
+  categoriesVisibility?: Record<string, boolean>
+  onCompaniesVisibilityChange?: (visibility: Record<string, boolean>) => void
+  onCategoriesVisibilityChange?: (visibility: Record<string, boolean>) => void
 }
 
 /**
@@ -43,6 +47,10 @@ export function FilterBuilder({
   onChange,
   targetNames = {},
   targetBadgeMapping,
+  companiesVisibility,
+  categoriesVisibility,
+  onCompaniesVisibilityChange,
+  onCategoriesVisibilityChange,
 }: FilterBuilderProps) {
   const [showValidation, setShowValidation] = useState(false)
 
@@ -140,6 +148,10 @@ export function FilterBuilder({
               showConnector={index < filterSet.rules.length - 1}
               targetNames={targetNames}
               targetBadgeMapping={targetBadgeMapping.filter(t => t.ruleIndex === index)}
+              companiesVisibility={companiesVisibility}
+              categoriesVisibility={categoriesVisibility}
+              onCompaniesVisibilityChange={onCompaniesVisibilityChange}
+              onCategoriesVisibilityChange={onCategoriesVisibilityChange}
             />
           ))}
         </div>

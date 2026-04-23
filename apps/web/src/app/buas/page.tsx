@@ -50,6 +50,45 @@ export default function BUAsPage() {
   // Target names mapping (fascia/category ID -> name) for filter display
   const [targetNames, setTargetNames] = useState<Record<string, string>>({})
 
+  // Visibility tracking for fascias and categories (sparse: only store false for hidden)
+  const [companiesVisibility, setCompaniesVisibility] = useState<Record<string, boolean>>({})
+  const [categoriesVisibility, setCategoriesVisibility] = useState<Record<string, boolean>>({})
+
+  // Clean up visibility state when targets are removed from filters
+  useEffect(() => {
+    // Separate sets for fascias and categories to avoid type mixing
+    const selectedFasciaIds = new Set<string>()
+    const selectedCategoryIds = new Set<string>()
+
+    filterSet.rules.forEach(rule => {
+      rule.targetIds.forEach(id => {
+        if (rule.targetType === 'fascia') {
+          selectedFasciaIds.add(id)
+        } else {
+          selectedCategoryIds.add(id)
+        }
+      })
+    })
+
+    // Clean up fascia visibility records
+    setCompaniesVisibility(prev => {
+      const cleaned: Record<string, boolean> = {}
+      Object.keys(prev).forEach(id => {
+        if (selectedFasciaIds.has(id)) cleaned[id] = prev[id]
+      })
+      return Object.keys(cleaned).length !== Object.keys(prev).length ? cleaned : prev
+    })
+
+    // Clean up category visibility records
+    setCategoriesVisibility(prev => {
+      const cleaned: Record<string, boolean> = {}
+      Object.keys(prev).forEach(id => {
+        if (selectedCategoryIds.has(id)) cleaned[id] = prev[id]
+      })
+      return Object.keys(cleaned).length !== Object.keys(prev).length ? cleaned : prev
+    })
+  }, [filterSet])
+
   // Viewport-based store pins for Find Gaps mode
   const [includedStores, setIncludedStores] = useState<ViewportStore[]>([])
   const [excludedStores, setExcludedStores] = useState<ViewportStore[]>([])
@@ -655,6 +694,10 @@ export default function BUAsPage() {
                   onChange={setFilterSet}
                   targetNames={targetNames}
                   targetBadgeMapping={targetBadgeMapping}
+                  companiesVisibility={companiesVisibility}
+                  categoriesVisibility={categoriesVisibility}
+                  onCompaniesVisibilityChange={setCompaniesVisibility}
+                  onCategoriesVisibilityChange={setCategoriesVisibility}
                 />
               </TabsContent>
 
@@ -822,6 +865,8 @@ export default function BUAsPage() {
               targetBadgeMapping={targetBadgeMapping}
               onViewportChange={handleViewportChange}
               storeUpdateSource={storeUpdateSource}
+              companiesVisibility={currentMode === 'find-gaps' ? companiesVisibility : {}}
+              categoriesVisibility={currentMode === 'find-gaps' ? categoriesVisibility : {}}
             />
           </div>
 
