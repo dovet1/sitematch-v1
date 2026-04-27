@@ -35,7 +35,7 @@ export function ResultsPanel({
 
   return (
     <div
-      className="w-[360px] border-l bg-background flex flex-col"
+      className="w-[280px] border-l bg-background flex flex-col"
       role="region"
       aria-label={`${isFindGapsMode ? 'Matching Locations' : 'Nearby Stores'} Panel`}
     >
@@ -53,20 +53,15 @@ export function ResultsPanel({
                 size="sm"
                 onClick={onExport}
                 disabled={!canExport || isExporting}
-                className="h-8 gap-1.5 border-violet-200 hover:bg-violet-50 hover:border-violet-300"
+                className="h-8 w-8 p-0 border-violet-200 hover:bg-violet-50 hover:border-violet-300"
                 aria-label={`Export all ${actualTotal.toLocaleString()} matching locations to CSV`}
                 aria-busy={isExporting}
+                title="Export CSV"
               >
                 {isExporting ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span className="text-xs">Exporting...</span>
-                  </>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <>
-                    <Download className="h-3.5 w-3.5" />
-                    <span className="text-xs font-medium">Export CSV</span>
-                  </>
+                  <Download className="h-3.5 w-3.5" />
                 )}
               </Button>
             )}
