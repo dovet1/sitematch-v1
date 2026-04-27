@@ -220,7 +220,7 @@ export function BUAMap({
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
+      style: 'mapbox://styles/mapbox/satellite-streets-v12',
       center: [initialCenter.lng, initialCenter.lat],
       zoom: center ? 11 : 6,
       minZoom: 4,
