@@ -225,15 +225,20 @@ function extractVisibleFascias(
     if (!store.fascia_id) return
 
     const fasciaId = store.fascia_id
-    const fasciaName = store.name || fasciaId
 
     // Get badge numbers from displayTargetIds
     const badgeNumbers = new Set<number>()
+    let fasciaName = fasciaId // fallback to ID
+
     if (store.displayTargetIds) {
       store.displayTargetIds.forEach(targetId => {
         const badge = targetBadgeMapping.find(t => t.targetId === targetId)
         if (badge) {
           badgeNumbers.add(badge.badgeNumber)
+          // Use the targetName from the badge mapping if it matches the fascia_id
+          if (badge.targetId === fasciaId && badge.targetType === 'fascia') {
+            fasciaName = badge.targetName
+          }
         }
       })
     }
