@@ -453,20 +453,6 @@ export function UnifiedCategorySelector({
         />
       </div>
 
-      {/* Bulk actions */}
-      {!isLoading && !error && categoryTree.length > 0 && totalSelected > 0 && (
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearAll}
-            className="h-7 text-xs text-gray-600 hover:text-gray-900"
-          >
-            Clear All
-          </Button>
-        </div>
-      )}
-
       {/* Category tree */}
       {isLoading ? (
         <div className="flex items-center justify-center py-8 text-sm text-gray-600">

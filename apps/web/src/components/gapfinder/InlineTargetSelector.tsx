@@ -43,7 +43,7 @@ export function InlineTargetSelector({
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium text-gray-700">
-        Select stores or categories:
+        Select brands or categories:
       </Label>
 
       <div className="border rounded-lg p-2 max-h-[280px] overflow-y-auto bg-gray-50">

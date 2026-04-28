@@ -153,7 +153,7 @@ export function FilterRule({
               <CollapsibleContent className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-gray-700">
-                    Returned BUAs should have:
+                    Returned locations should have:
                   </Label>
                   <Select
                     value={rule.matchingLogic}
