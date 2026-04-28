@@ -12,6 +12,7 @@ import { BUASearch } from '@/components/gapfinder/BUASearch'
 import { ResultsPanel } from '@/components/gapfinder/ResultsPanel'
 import { CompanySelector } from '@/components/gapfinder/CompanySelector'
 import { FilterBuilder } from '@/components/gapfinder/FilterBuilder'
+import { RequirementCompanySelector } from '@/components/gapfinder/RequirementCompanySelector'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
@@ -817,32 +818,12 @@ export default function BUAsPage() {
                           </RadioGroup>
                         </div>
 
-                        {/* Company input - only when "selected" is active */}
+                        {/* Company selector - only when "selected" is active */}
                         {requirementBrandScope === 'selected' && (
-                          <div className="px-2">
-                            <Label htmlFor="requirement-companies" className="text-xs text-gray-600 mb-2 block">
-                              Company names (comma-separated)
-                            </Label>
-                            <Input
-                              id="requirement-companies"
-                              type="text"
-                              placeholder="e.g. Tesco, Sainsburys"
-                              value={selectedRequirementCompanies.join(', ')}
-                              onChange={(e) => {
-                                const companies = e.target.value
-                                  .split(',')
-                                  .map(c => c.trim())
-                                  .filter(c => c.length > 0)
-                                setSelectedRequirementCompanies(companies)
-                              }}
-                              className="h-9 text-sm"
-                            />
-                            {selectedRequirementCompanies.length > 0 && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                {selectedRequirementCompanies.length} {selectedRequirementCompanies.length === 1 ? 'company' : 'companies'} selected
-                              </p>
-                            )}
-                          </div>
+                          <RequirementCompanySelector
+                            selectedCompanies={selectedRequirementCompanies}
+                            onSelectionChange={setSelectedRequirementCompanies}
+                          />
                         )}
                       </>
                     )}
