@@ -56,13 +56,14 @@ export function MapLegend({
               {/* Badge marker or color circle */}
               {hasBadge ? (
                 <div
-                  className="rounded-full border-2 border-white shadow-sm flex-shrink-0 flex items-center justify-center text-white text-xs font-bold leading-none"
+                  className="rounded-full border-2 border-white shadow-sm flex-shrink-0 flex items-center justify-center text-white font-bold leading-none"
                   style={{
                     backgroundColor: item.isVisible ? item.color : '#9ca3af',
-                    minWidth: '20px',
-                    height: '20px',
-                    paddingLeft: '6px',
-                    paddingRight: '6px'
+                    minWidth: '24px',
+                    height: '24px',
+                    paddingLeft: '8px',
+                    paddingRight: '8px',
+                    fontSize: '11px'
                   }}
                 >
                   {badgeLabel}
