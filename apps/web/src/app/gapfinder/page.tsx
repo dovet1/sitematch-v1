@@ -775,10 +775,14 @@ export default function BUAsPage() {
                 </Collapsible>
 
                 {/* Collapsible: Requirement Locations */}
-                <Collapsible defaultOpen={false}>
+                <Collapsible open={showRequirementLocations} onOpenChange={setShowRequirementLocations}>
                   <div className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
                     <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left">
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                      <ChevronDown
+                        className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
+                          showRequirementLocations ? 'rotate-0' : '-rotate-90'
+                        }`}
+                      />
                       <span className="font-medium text-gray-900">Requirement Locations</span>
                     </CollapsibleTrigger>
                     <button

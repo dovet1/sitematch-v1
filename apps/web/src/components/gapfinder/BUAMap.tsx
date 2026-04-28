@@ -999,7 +999,7 @@ export function BUAMap({
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-violet-500 rounded-full border border-white shadow-sm"></div>
             <p className="text-xs text-gray-700">
-              Requirements ({requirementLocations.length})
+              Requirements
             </p>
           </div>
         </div>
