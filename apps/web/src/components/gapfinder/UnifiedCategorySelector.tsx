@@ -214,25 +214,6 @@ export function UnifiedCategorySelector({
     setSearchQuery('')
   }, [onCategoriesChange, onCompaniesChange])
 
-  const handleSelectAllVisible = useCallback(() => {
-    // Collect all visible fascia IDs from the filtered tree
-    const allFasciaIds: string[] = []
-    const collectFascias = (nodes: CategoryNode[]) => {
-      nodes.forEach(node => {
-        node.brands.forEach(brandNode => {
-          brandNode.fascias.forEach(fascia => {
-            allFasciaIds.push(fascia.id)
-          })
-        })
-        collectFascias(node.children)
-      })
-    }
-    collectFascias(categoryTree)
-
-    const newSelection = Array.from(new Set([...selectedCompanies, ...allFasciaIds]))
-    onCompaniesChange(newSelection)
-  }, [categoryTree, selectedCompanies, onCompaniesChange])
-
   const totalSelected = selectedCategories.length + selectedCompanies.length
 
   // Recursive component to render category nodes
@@ -473,26 +454,16 @@ export function UnifiedCategorySelector({
       </div>
 
       {/* Bulk actions */}
-      {!isLoading && !error && categoryTree.length > 0 && (
+      {!isLoading && !error && categoryTree.length > 0 && totalSelected > 0 && (
         <div className="flex items-center justify-end gap-2">
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleSelectAllVisible}
+            onClick={handleClearAll}
             className="h-7 text-xs text-gray-600 hover:text-gray-900"
           >
-            Select All {searchQuery ? 'Visible' : ''}
+            Clear All
           </Button>
-          {totalSelected > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearAll}
-              className="h-7 text-xs text-gray-600 hover:text-gray-900"
-            >
-              Clear All
-            </Button>
-          )}
         </div>
       )}
 
