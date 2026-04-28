@@ -797,13 +797,12 @@ export function BUAMap({
     const el = document.createElement('div')
     el.className = 'requirement-location-marker'
 
-    // Diamond/square shape to differentiate from stores
-    el.style.width = '14px'
-    el.style.height = '14px'
+    el.style.width = '16px'
+    el.style.height = '16px'
     el.style.backgroundColor = color
-    el.style.transform = 'rotate(45deg)'
-    el.style.border = '2px solid white'
-    el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.25)'
+    el.style.borderRadius = '9999px'
+    el.style.border = '1px solid white'
+    el.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)'
     el.style.cursor = 'pointer'
 
     const popup = new mapboxgl.Popup({
@@ -967,7 +966,7 @@ export function BUAMap({
       return
     }
 
-    const color = '#f59e0b' // amber-500
+    const color = '#8b5cf6' // violet-500
     const newMarkers: mapboxgl.Marker[] = []
 
     requirementLocations.forEach(location => {
@@ -998,7 +997,7 @@ export function BUAMap({
       {requirementLocations && requirementLocations.length > 0 && (
         <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-3">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-amber-500 transform rotate-45"></div>
+            <div className="w-4 h-4 bg-violet-500 rounded-full border border-white shadow-sm"></div>
             <p className="text-xs text-gray-700">
               Requirements ({requirementLocations.length})
             </p>

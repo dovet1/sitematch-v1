@@ -65,7 +65,7 @@ export function RequirementCompanySelector({
   if (isLoading) {
     return (
       <div className="px-2 py-3">
-        <p className="text-xs text-gray-500">Loading companies...</p>
+        <p className="text-xs text-gray-500">Loading brands...</p>
       </div>
     )
   }
@@ -75,12 +75,12 @@ export function RequirementCompanySelector({
       {/* Search input */}
       <div>
         <Label htmlFor="company-search" className="text-xs text-gray-600 mb-1 block">
-          Search companies
+          Search brands
         </Label>
         <Input
           id="company-search"
           type="text"
-          placeholder="Type to search..."
+          placeholder="Type a brand name..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="h-9 text-sm"
@@ -124,10 +124,10 @@ export function RequirementCompanySelector({
       )}
 
       {/* Company list */}
-      <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-md">
+      <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-md bg-white">
         {filteredCompanies.length === 0 ? (
           <div className="p-3 text-center text-xs text-gray-500">
-            {searchQuery ? 'No companies found' : 'No companies available'}
+            {searchQuery ? 'No brands found' : 'No brands available'}
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -140,6 +140,7 @@ export function RequirementCompanySelector({
                 <Checkbox
                   checked={selectedCompanies.includes(company)}
                   onCheckedChange={() => handleToggleCompany(company)}
+                  onClick={(e) => e.stopPropagation()}
                 />
                 <Label
                   htmlFor={`company-${company}`}

@@ -17,7 +17,6 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { toast, Toaster } from 'sonner'
 import type { BUA } from '@/lib/buas'
 import type { Store as StoreType, ViewportStore } from '@/lib/stores'
@@ -455,7 +454,12 @@ export default function BUAsPage() {
 
   // Fetch requirement locations when overlay is enabled
   useEffect(() => {
-    if (!showRequirementLocations || !mapViewport || currentMode !== 'find-gaps') {
+    if (
+      !showRequirementLocations ||
+      !mapViewport ||
+      currentMode !== 'find-gaps' ||
+      (requirementBrandScope === 'selected' && selectedRequirementCompanies.length === 0)
+    ) {
       requirementFetchAbortRef.current?.abort()
       setRequirementLocations([])
       return
@@ -772,58 +776,70 @@ export default function BUAsPage() {
 
                 {/* Collapsible: Requirement Locations */}
                 <Collapsible defaultOpen={false}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
+                    <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left">
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                       <span className="font-medium text-gray-900">Requirement Locations</span>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
+                    </CollapsibleTrigger>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={showRequirementLocations}
+                      onClick={() => setShowRequirementLocations((enabled) => !enabled)}
+                      className={`h-7 rounded-full px-3 text-xs font-medium transition-colors ${
+                        showRequirementLocations
+                          ? 'bg-violet-600 text-white shadow-sm hover:bg-violet-700'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
                       {showRequirementLocations ? 'On' : 'Off'}
-                    </Badge>
-                  </CollapsibleTrigger>
+                    </button>
+                  </div>
                   <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
-                    {/* Show requirement locations checkbox */}
-                    <div className="flex items-center space-x-2 px-2">
-                      <Checkbox
-                        id="show-requirements"
-                        checked={showRequirementLocations}
-                        onCheckedChange={(checked) => setShowRequirementLocations(checked === true)}
-                      />
-                      <Label
-                        htmlFor="show-requirements"
-                        className="text-xs text-gray-600 leading-none cursor-pointer"
-                      >
-                        Show requirement locations
-                      </Label>
-                    </div>
-
                     {/* Brand scope selector - only visible when overlay is enabled */}
                     {showRequirementLocations && (
                       <>
                         <div className="px-2 space-y-2">
                           <Label className="text-xs text-gray-600">Show</Label>
-                          <RadioGroup value={requirementBrandScope} onValueChange={(value: 'all' | 'selected') => setRequirementBrandScope(value)}>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="all" id="all-brands" />
-                              <Label htmlFor="all-brands" className="text-xs text-gray-700 font-normal cursor-pointer">
-                                All brands
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="selected" id="selected-brands" />
-                              <Label htmlFor="selected-brands" className="text-xs text-gray-700 font-normal cursor-pointer">
-                                Selected brands
-                              </Label>
-                            </div>
-                          </RadioGroup>
+                          <div className="grid grid-cols-2 rounded-lg border border-gray-200 bg-gray-50 p-1">
+                            <button
+                              type="button"
+                              onClick={() => setRequirementBrandScope('all')}
+                              className={`h-8 rounded-md text-xs font-medium transition-colors ${
+                                requirementBrandScope === 'all'
+                                  ? 'bg-white text-violet-700 shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              All brands
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setRequirementBrandScope('selected')}
+                              className={`h-8 rounded-md text-xs font-medium transition-colors ${
+                                requirementBrandScope === 'selected'
+                                  ? 'bg-white text-violet-700 shadow-sm'
+                                  : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                            >
+                              Selected brands
+                            </button>
+                          </div>
                         </div>
 
                         {/* Company selector - only when "selected" is active */}
                         {requirementBrandScope === 'selected' && (
-                          <RequirementCompanySelector
-                            selectedCompanies={selectedRequirementCompanies}
-                            onSelectionChange={setSelectedRequirementCompanies}
-                          />
+                          <>
+                            <RequirementCompanySelector
+                              selectedCompanies={selectedRequirementCompanies}
+                              onSelectionChange={setSelectedRequirementCompanies}
+                            />
+                            {selectedRequirementCompanies.length === 0 && (
+                              <p className="px-2 text-xs text-gray-500">
+                                Choose at least one brand to show requirement locations.
+                              </p>
+                            )}
+                          </>
                         )}
                       </>
                     )}
