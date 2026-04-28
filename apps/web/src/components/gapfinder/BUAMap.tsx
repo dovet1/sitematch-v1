@@ -48,6 +48,8 @@ const MAP_PIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="
 
 const STORE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/></svg>`
 
+const REQUIREMENT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`
+
 /**
  * Generate premium BUA popup HTML with gradient header and icon
  */
@@ -137,6 +139,60 @@ function generateStorePopupHTML(
   `
 }
 
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text: string): string {
+  return text.replace(/[<>&"']/g, (c) => {
+    const escapeMap: Record<string, string> = {
+      '<': '&lt;',
+      '>': '&gt;',
+      '&': '&amp;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }
+    return escapeMap[c] || c
+  })
+}
+
+/**
+ * Generate requirement location popup HTML
+ */
+function generateRequirementPopupHTML(location: {
+  companyName: string
+  title: string
+  listingType: string
+  placeName: string
+}): string {
+  const listingTypeLabel = location.listingType === 'commercial' ? 'Commercial' : 'Residential'
+
+  return `
+    <div style="display: flex; flex-direction: column; width: 100%;">
+      <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #fcd34d;">
+        <div style="background: #f59e0b; border-radius: 6px; padding: 8px; display: flex; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);">
+          <div style="color: white; display: flex;">${REQUIREMENT_SVG}</div>
+        </div>
+        <div style="flex: 1;">
+          <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1e293b; line-height: 1.3;">
+            ${escapeHtml(location.companyName)}
+          </h3>
+          <p style="margin: 0; margin-top: 2px; font-size: 11px; color: #78716c;">
+            ${escapeHtml(listingTypeLabel)}
+          </p>
+        </div>
+      </div>
+      <div style="padding: 12px;">
+        <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 500; color: #1e293b;">
+          ${escapeHtml(location.title)}
+        </p>
+        <p style="margin: 0; font-size: 12px; color: #57534e;">
+          ${escapeHtml(location.placeName)}
+        </p>
+      </div>
+    </div>
+  `
+}
+
 interface BUAMapProps {
   center?: { lat: number; lng: number }
   minPopulation: number
@@ -161,6 +217,16 @@ interface BUAMapProps {
   storeUpdateSource?: StoreUpdateSource  // NEW: Track why stores changed
   companiesVisibility?: Record<string, boolean>
   categoriesVisibility?: Record<string, boolean>
+  requirementLocations?: Array<{
+    id: string
+    listingId: string
+    companyName: string
+    title: string
+    listingType: string
+    placeName: string
+    formattedAddress: string
+    coordinates: { lat: number; lng: number }
+  }>
 }
 
 export function BUAMap({
@@ -185,7 +251,8 @@ export function BUAMap({
   onViewportChange,
   storeUpdateSource = StoreUpdateSource.USER_PAN,
   companiesVisibility = {},
-  categoriesVisibility = {}
+  categoriesVisibility = {},
+  requirementLocations = []
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -194,6 +261,7 @@ export function BUAMap({
   const pointMarker = useRef<mapboxgl.Marker | null>(null)
   const radiusCircle = useRef<string | null>(null)
   const storeMarkers = useRef<mapboxgl.Marker[]>([])
+  const requirementMarkers = useRef<mapboxgl.Marker[]>([])
   const isAutoFitting = useRef(false)
   const skipNextCenterFlyTo = useRef(false)
   const lastHandledSidebarSelection = useRef(0)
@@ -713,6 +781,41 @@ export function BUAMap({
       .setPopup(popup)
   }
 
+  const createRequirementMarker = (
+    location: {
+      id: string
+      listingId: string
+      companyName: string
+      title: string
+      listingType: string
+      placeName: string
+      formattedAddress: string
+      coordinates: { lat: number; lng: number }
+    },
+    color: string
+  ): mapboxgl.Marker => {
+    const el = document.createElement('div')
+    el.className = 'requirement-location-marker'
+
+    // Diamond/square shape to differentiate from stores
+    el.style.width = '14px'
+    el.style.height = '14px'
+    el.style.backgroundColor = color
+    el.style.transform = 'rotate(45deg)'
+    el.style.border = '2px solid white'
+    el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.25)'
+    el.style.cursor = 'pointer'
+
+    const popup = new mapboxgl.Popup({
+      offset: 15,
+      className: 'premium-store-popup'
+    }).setHTML(generateRequirementPopupHTML(location))
+
+    return new mapboxgl.Marker({ element: el })
+      .setLngLat([location.coordinates.lng, location.coordinates.lat])
+      .setPopup(popup)
+  }
+
   // Handle store markers for both modes
   useEffect(() => {
     if (!map.current || !mapLoaded) {
@@ -854,6 +957,33 @@ export function BUAMap({
     }
   }, [stores, includedStores, excludedStores, proximityIncludedStores, proximityExcludedStores, mode, mapLoaded, targetBadgeMapping, storeUpdateSource, companiesVisibility, categoriesVisibility, isStoreVisible])
 
+  // Handle requirement location markers
+  useEffect(() => {
+    // Clean up existing markers
+    requirementMarkers.current.forEach(marker => marker.remove())
+    requirementMarkers.current = []
+
+    if (!map.current || !mapLoaded || !requirementLocations || requirementLocations.length === 0) {
+      return
+    }
+
+    const color = '#f59e0b' // amber-500
+    const newMarkers: mapboxgl.Marker[] = []
+
+    requirementLocations.forEach(location => {
+      const marker = createRequirementMarker(location, color)
+      marker.addTo(map.current!)
+      newMarkers.push(marker)
+    })
+
+    requirementMarkers.current = newMarkers
+
+    return () => {
+      requirementMarkers.current.forEach(marker => marker.remove())
+      requirementMarkers.current = []
+    }
+  }, [requirementLocations, mapLoaded])
+
   return (
     <div className={`relative ${className}`}>
       <div ref={mapContainer} className="w-full h-full" style={{ position: 'relative' }} />
@@ -862,6 +992,16 @@ export function BUAMap({
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading map...</p>
+          </div>
+        </div>
+      )}
+      {requirementLocations && requirementLocations.length > 0 && (
+        <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-amber-500 transform rotate-45"></div>
+            <p className="text-xs text-gray-700">
+              Requirements ({requirementLocations.length})
+            </p>
           </div>
         </div>
       )}

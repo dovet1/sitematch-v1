@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { toast, Toaster } from 'sonner'
 import type { BUA } from '@/lib/buas'
 import type { Store as StoreType, ViewportStore } from '@/lib/stores'
@@ -105,6 +106,22 @@ export default function BUAsPage() {
     maxLon: number
   } | null>(null)
   const viewportFetchAbortRef = useRef<AbortController | null>(null)
+
+  // Requirement locations overlay state
+  const [showRequirementLocations, setShowRequirementLocations] = useState<boolean>(false)
+  const [requirementBrandScope, setRequirementBrandScope] = useState<'all' | 'selected'>('all')
+  const [selectedRequirementCompanies, setSelectedRequirementCompanies] = useState<string[]>([])
+  const [requirementLocations, setRequirementLocations] = useState<Array<{
+    id: string
+    listingId: string
+    companyName: string
+    title: string
+    listingType: string
+    placeName: string
+    formattedAddress: string
+    coordinates: { lat: number; lng: number }
+  }>>([])
+  const requirementFetchAbortRef = useRef<AbortController | null>(null)
 
   // Badge mapping for linking sidebar to map pins
   const [targetBadgeMapping, setTargetBadgeMapping] = useState<TargetWithMetadata[]>([])
@@ -435,6 +452,64 @@ export default function BUAsPage() {
     }
   }, [mapViewport, filterSet, currentMode, targetNames])
 
+  // Fetch requirement locations when overlay is enabled
+  useEffect(() => {
+    if (!showRequirementLocations || !mapViewport || currentMode !== 'find-gaps') {
+      requirementFetchAbortRef.current?.abort()
+      setRequirementLocations([])
+      return
+    }
+
+    const fetchRequirementLocations = async () => {
+      requirementFetchAbortRef.current?.abort()
+      const abortController = new AbortController()
+      requirementFetchAbortRef.current = abortController
+
+      try {
+        const params = new URLSearchParams({
+          minLat: mapViewport.minLat.toString(),
+          minLon: mapViewport.minLon.toString(),
+          maxLat: mapViewport.maxLat.toString(),
+          maxLon: mapViewport.maxLon.toString(),
+          limit: '2000'
+        })
+
+        // Add company filter if in 'selected' mode
+        if (requirementBrandScope === 'selected' && selectedRequirementCompanies.length > 0) {
+          params.set('companyNames', selectedRequirementCompanies.join(','))
+        }
+
+        const response = await fetch(`/api/public/gapfinder/requirement-locations?${params.toString()}`, {
+          signal: abortController.signal
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setRequirementLocations(data.results || [])
+        } else {
+          setRequirementLocations([])
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          return
+        }
+        console.error('Failed to fetch requirement locations:', error)
+        setRequirementLocations([])
+      } finally {
+        if (requirementFetchAbortRef.current === abortController) {
+          requirementFetchAbortRef.current = null
+        }
+      }
+    }
+
+    // Debounce the fetch to avoid excessive API calls during map pan/zoom
+    const debounceTimer = setTimeout(fetchRequirementLocations, 750)
+    return () => {
+      clearTimeout(debounceTimer)
+      requirementFetchAbortRef.current?.abort()
+    }
+  }, [showRequirementLocations, mapViewport, requirementBrandScope, selectedRequirementCompanies, currentMode])
+
   // Fetch filtered BUAs when filters change (NEW: Using FilterSet)
   useEffect(() => {
     const fetchFilteredBUAs = async () => {
@@ -694,6 +769,86 @@ export default function BUAsPage() {
                   </CollapsibleContent>
                 </Collapsible>
 
+                {/* Collapsible: Requirement Locations */}
+                <Collapsible defaultOpen={false}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium text-gray-900">Requirement Locations</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {showRequirementLocations ? 'On' : 'Off'}
+                    </Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
+                    {/* Show requirement locations checkbox */}
+                    <div className="flex items-center space-x-2 px-2">
+                      <Checkbox
+                        id="show-requirements"
+                        checked={showRequirementLocations}
+                        onCheckedChange={(checked) => setShowRequirementLocations(checked === true)}
+                      />
+                      <Label
+                        htmlFor="show-requirements"
+                        className="text-xs text-gray-600 leading-none cursor-pointer"
+                      >
+                        Show requirement locations
+                      </Label>
+                    </div>
+
+                    {/* Brand scope selector - only visible when overlay is enabled */}
+                    {showRequirementLocations && (
+                      <>
+                        <div className="px-2 space-y-2">
+                          <Label className="text-xs text-gray-600">Show</Label>
+                          <RadioGroup value={requirementBrandScope} onValueChange={(value: 'all' | 'selected') => setRequirementBrandScope(value)}>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="all" id="all-brands" />
+                              <Label htmlFor="all-brands" className="text-xs text-gray-700 font-normal cursor-pointer">
+                                All brands
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="selected" id="selected-brands" />
+                              <Label htmlFor="selected-brands" className="text-xs text-gray-700 font-normal cursor-pointer">
+                                Selected brands
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+
+                        {/* Company input - only when "selected" is active */}
+                        {requirementBrandScope === 'selected' && (
+                          <div className="px-2">
+                            <Label htmlFor="requirement-companies" className="text-xs text-gray-600 mb-2 block">
+                              Company names (comma-separated)
+                            </Label>
+                            <Input
+                              id="requirement-companies"
+                              type="text"
+                              placeholder="e.g. Tesco, Sainsburys"
+                              value={selectedRequirementCompanies.join(', ')}
+                              onChange={(e) => {
+                                const companies = e.target.value
+                                  .split(',')
+                                  .map(c => c.trim())
+                                  .filter(c => c.length > 0)
+                                setSelectedRequirementCompanies(companies)
+                              }}
+                              className="h-9 text-sm"
+                            />
+                            {selectedRequirementCompanies.length > 0 && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {selectedRequirementCompanies.length} {selectedRequirementCompanies.length === 1 ? 'company' : 'companies'} selected
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+
                 {/* NEW: Advanced Filter Builder */}
                 <FilterBuilder
                   filterSet={filterSet}
@@ -874,6 +1029,7 @@ export default function BUAsPage() {
               storeUpdateSource={storeUpdateSource}
               companiesVisibility={currentMode === 'find-gaps' ? companiesVisibility : {}}
               categoriesVisibility={currentMode === 'find-gaps' ? categoriesVisibility : {}}
+              requirementLocations={currentMode === 'find-gaps' ? requirementLocations : []}
             />
           </div>
 
