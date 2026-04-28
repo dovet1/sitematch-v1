@@ -126,6 +126,29 @@ export class StoreService {
   }
 
   /**
+   * Get all fascia-category mappings
+   * This is used to build the category → brand → fascia tree structure
+   * @returns Array of fascia-category mappings
+   */
+  async getFasciaCategoryMappings(): Promise<Array<{
+    fascia_id: string
+    category_id: string
+    is_primary: boolean
+  }>> {
+    const { data, error } = await this.supabase
+      .from('fascia_categories')
+      .select('fascia_id, category_id, is_primary')
+      .order('category_id, fascia_id')
+
+    if (error) {
+      console.error('Failed to fetch fascia-category mappings:', error)
+      throw new Error(`Failed to fetch fascia-category mappings: ${error.message}`)
+    }
+
+    return data || []
+  }
+
+  /**
    * Get stores within radius of a point (for Assess Area mode)
    * Uses PostGIS ST_DWithin for spatial query
    * @param lat Latitude of center point

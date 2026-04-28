@@ -2,7 +2,7 @@
 
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { EnhancedCompanySelector } from './EnhancedCompanySelector'
+import { UnifiedCategorySelector } from './UnifiedCategorySelector'
 import { getFasciaMarkerColor } from '@/lib/sitesketcher/colors'
 import type { TargetWithMetadata } from '@/lib/filter-utils'
 
@@ -31,7 +31,7 @@ export function InlineTargetSelector({
   onCompaniesVisibilityChange,
   onCategoriesVisibilityChange
 }: InlineTargetSelectorProps) {
-  // EnhancedCompanySelector has its own tabs, so we just need to pass the correct selections
+  // UnifiedCategorySelector shows both categories and fascias in a single tree
   const handleCompaniesChange = (ids: string[]) => {
     onSelectionChange(ids, 'fascia')
   }
@@ -47,7 +47,7 @@ export function InlineTargetSelector({
       </Label>
 
       <div className="border rounded-lg p-2 max-h-[280px] overflow-y-auto bg-gray-50">
-        <EnhancedCompanySelector
+        <UnifiedCategorySelector
           selectedCompanies={targetType === 'fascia' ? selectedIds : []}
           onCompaniesChange={handleCompaniesChange}
           selectedCategories={targetType === 'category' ? selectedIds : []}
