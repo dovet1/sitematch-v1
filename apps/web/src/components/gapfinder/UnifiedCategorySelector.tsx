@@ -14,6 +14,7 @@ import {
   organizeBrandsByCategory,
   attachBrandsToTree,
   filterTree,
+  getAllFasciaIdsInCategory,
   type CategoryNode,
   type BrandNode,
   type FasciaCategory
@@ -59,6 +60,19 @@ export function UnifiedCategorySelector({
     }, 300)
     return () => clearTimeout(timer)
   }, [searchQuery])
+
+  // Build unfiltered tree for selection operations
+  const unfilteredCategoryTree = useMemo(() => {
+    if (categories.length === 0 || allBrands.length === 0) {
+      return []
+    }
+
+    const tree = buildCategoryTree(categories)
+    const categoryBrandsMap = organizeBrandsByCategory(allBrands, fasciaCategoryMappings)
+    attachBrandsToTree(tree, categoryBrandsMap)
+
+    return tree // NO filterTree() call
+  }, [categories, allBrands, fasciaCategoryMappings])
 
   // Fetch all data on mount
   useEffect(() => {
@@ -134,15 +148,44 @@ export function UnifiedCategorySelector({
     return filterTree(tree, debouncedSearchQuery)
   }, [categories, allBrands, fasciaCategoryMappings, debouncedSearchQuery])
 
+  // Derive effective fascia selection from explicitly selected fascias + fascias under selected categories
+  const effectiveSelectedFasciaIds = useMemo(() => {
+    const fasciaSet = new Set(selectedCompanies)
+
+    // Add all fascias from selected categories
+    selectedCategories.forEach(categoryId => {
+      const fasciaIds = getAllFasciaIdsInCategory(categoryId, unfilteredCategoryTree)
+      fasciaIds.forEach(id => fasciaSet.add(id))
+    })
+
+    return fasciaSet
+  }, [selectedCompanies, selectedCategories, unfilteredCategoryTree])
+
   // Toggle handlers
   const handleCategoryToggle = useCallback(
-    (categoryId: string) => {
-      const newSelection = selectedCategories.includes(categoryId)
-        ? selectedCategories.filter((id) => id !== categoryId)
-        : [...selectedCategories, categoryId]
-      onCategoriesChange(newSelection)
+    (categoryId: string, categoryNode: CategoryNode) => {
+      const fasciaIds = getAllFasciaIdsInCategory(categoryId, unfilteredCategoryTree)
+      const allSelected = fasciaIds.length > 0 && fasciaIds.every(id => effectiveSelectedFasciaIds.has(id))
+
+      if (allSelected) {
+        // Deselect the category
+        const newCategoriesSelection = selectedCategories.filter(id => id !== categoryId)
+        onCategoriesChange(newCategoriesSelection)
+
+        // Also remove any explicitly selected fascias that were in this category
+        const newCompaniesSelection = selectedCompanies.filter(id => !fasciaIds.includes(id))
+        if (newCompaniesSelection.length !== selectedCompanies.length) {
+          onCompaniesChange(newCompaniesSelection)
+        }
+      } else {
+        // Select the category
+        const newCategoriesSelection = selectedCategories.includes(categoryId)
+          ? selectedCategories
+          : [...selectedCategories, categoryId]
+        onCategoriesChange(newCategoriesSelection)
+      }
     },
-    [selectedCategories, onCategoriesChange]
+    [selectedCategories, selectedCompanies, onCategoriesChange, onCompaniesChange, unfilteredCategoryTree, effectiveSelectedFasciaIds]
   )
 
   const handleFasciaToggle = useCallback(
@@ -175,12 +218,23 @@ export function UnifiedCategorySelector({
 
   const isBrandFullySelected = (brandNode: BrandNode): boolean => {
     const fasciaIds = brandNode.fascias.map(f => f.id)
-    return fasciaIds.length > 0 && fasciaIds.every(id => selectedCompanies.includes(id))
+    return fasciaIds.length > 0 && fasciaIds.every(id => effectiveSelectedFasciaIds.has(id))
   }
 
   const isBrandPartiallySelected = (brandNode: BrandNode): boolean => {
     const fasciaIds = brandNode.fascias.map(f => f.id)
-    const selectedCount = fasciaIds.filter(id => selectedCompanies.includes(id)).length
+    const selectedCount = fasciaIds.filter(id => effectiveSelectedFasciaIds.has(id)).length
+    return selectedCount > 0 && selectedCount < fasciaIds.length
+  }
+
+  const isCategoryFullySelected = (categoryNode: CategoryNode): boolean => {
+    const fasciaIds = getAllFasciaIdsInCategory(categoryNode.category.id, unfilteredCategoryTree)
+    return fasciaIds.length > 0 && fasciaIds.every(id => effectiveSelectedFasciaIds.has(id))
+  }
+
+  const isCategoryPartiallySelected = (categoryNode: CategoryNode): boolean => {
+    const fasciaIds = getAllFasciaIdsInCategory(categoryNode.category.id, unfilteredCategoryTree)
+    const selectedCount = fasciaIds.filter(id => effectiveSelectedFasciaIds.has(id)).length
     return selectedCount > 0 && selectedCount < fasciaIds.length
   }
 
@@ -233,8 +287,8 @@ export function UnifiedCategorySelector({
           <div className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded-md transition-all duration-150">
             <Checkbox
               id={`cat-${node.category.id}`}
-              checked={isCategorySelected}
-              onCheckedChange={() => handleCategoryToggle(node.category.id)}
+              checked={isCategoryPartiallySelected(node) ? "indeterminate" : isCategoryFullySelected(node)}
+              onCheckedChange={() => handleCategoryToggle(node.category.id, node)}
               onClick={(e) => e.stopPropagation()}
             />
             <CollapsibleTrigger
@@ -350,7 +404,7 @@ export function UnifiedCategorySelector({
                       {hasFascias && (
                         <CollapsibleContent className="ml-8 space-y-1 mt-1">
                           {brandNode.fascias.map((fascia) => {
-                            const isFasciaSelected = selectedCompanies.includes(fascia.id)
+                            const isFasciaSelected = effectiveSelectedFasciaIds.has(fascia.id)
                             const isFasciaVisible = companiesVisibility?.[fascia.id] ?? true
 
                             return (
