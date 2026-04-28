@@ -164,6 +164,20 @@ export default function BUAsPage() {
     setMapViewport(bounds)
   }, [])
 
+  const handleFasciaVisibilityToggle = useCallback((fasciaId: string) => {
+    setCompaniesVisibility(prev => {
+      const currentVisibility = prev[fasciaId]
+      if (currentVisibility === false) {
+        // Currently hidden, make visible (remove from sparse map)
+        const { [fasciaId]: _, ...rest } = prev
+        return rest
+      } else {
+        // Currently visible, hide it
+        return { ...prev, [fasciaId]: false }
+      }
+    })
+  }, [])
+
   const handlePopulationRangeChange = (value: number[]) => {
     setPopulationRange([value[0], value[1]])
     setMinPopInput(value[0].toString())
@@ -1031,6 +1045,7 @@ export default function BUAsPage() {
               companiesVisibility={currentMode === 'find-gaps' ? companiesVisibility : {}}
               categoriesVisibility={currentMode === 'find-gaps' ? categoriesVisibility : {}}
               requirementLocations={currentMode === 'find-gaps' ? requirementLocations : []}
+              onFasciaVisibilityToggle={handleFasciaVisibilityToggle}
             />
           </div>
 

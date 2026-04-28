@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { formatPopulation } from '@/lib/format-population'
 import { getFasciaMarkerColor } from '@/lib/sitesketcher/colors'
 import type { Store, ViewportStore } from '@/lib/stores'
 import type { TargetWithMetadata } from '@/lib/filter-utils'
+import { MapLegend, type MapLegendItem } from './MapLegend'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
@@ -193,6 +194,85 @@ function generateRequirementPopupHTML(location: {
   `
 }
 
+/**
+ * Extract visible fascias from actual stores on the map for legend display
+ * Uses store data to determine which fascias and badge numbers are actually shown
+ */
+function extractVisibleFascias(
+  targetBadgeMapping: TargetWithMetadata[],
+  companiesVisibility: Record<string, boolean>,
+  includedStores: ViewportStore[],
+  excludedStores: ViewportStore[],
+  proximityIncludedStores: ViewportStore[],
+  proximityExcludedStores: ViewportStore[]
+): MapLegendItem[] {
+  // Collect all unique fascia IDs that actually appear on stores
+  const fasciaMap = new Map<string, {
+    fasciaId: string
+    fasciaName: string
+    badgeNumbers: Set<number>
+  }>()
+
+  const allStores = [
+    ...includedStores,
+    ...excludedStores,
+    ...proximityIncludedStores,
+    ...proximityExcludedStores
+  ]
+
+  // For each store, look at its displayTargetIds and get badge numbers
+  allStores.forEach(store => {
+    if (!store.fascia_id) return
+
+    const fasciaId = store.fascia_id
+    const fasciaName = store.name || fasciaId
+
+    // Get badge numbers from displayTargetIds
+    const badgeNumbers = new Set<number>()
+    if (store.displayTargetIds) {
+      store.displayTargetIds.forEach(targetId => {
+        const badge = targetBadgeMapping.find(t => t.targetId === targetId)
+        if (badge) {
+          badgeNumbers.add(badge.badgeNumber)
+        }
+      })
+    }
+
+    if (!fasciaMap.has(fasciaId)) {
+      fasciaMap.set(fasciaId, {
+        fasciaId,
+        fasciaName,
+        badgeNumbers
+      })
+    } else {
+      // Merge badge numbers for stores with same fascia
+      const existing = fasciaMap.get(fasciaId)!
+      badgeNumbers.forEach(num => existing.badgeNumbers.add(num))
+    }
+  })
+
+  // Convert to legend items
+  const items: MapLegendItem[] = Array.from(fasciaMap.values()).map(item => {
+    // Sparse pattern: missing = visible, false = hidden
+    const isVisible = companiesVisibility[item.fasciaId] !== false
+
+    return {
+      id: item.fasciaId,
+      label: item.fasciaName,
+      color: getFasciaMarkerColor(item.fasciaId),
+      badgeNumbers: Array.from(item.badgeNumbers).sort((a, b) => a - b),
+      isVisible
+    }
+  })
+
+  // Sort by first badge number
+  return items.sort((a, b) => {
+    const aMin = a.badgeNumbers.length > 0 ? Math.min(...a.badgeNumbers) : Infinity
+    const bMin = b.badgeNumbers.length > 0 ? Math.min(...b.badgeNumbers) : Infinity
+    return aMin - bMin
+  })
+}
+
 interface BUAMapProps {
   center?: { lat: number; lng: number }
   minPopulation: number
@@ -227,6 +307,7 @@ interface BUAMapProps {
     formattedAddress: string
     coordinates: { lat: number; lng: number }
   }>
+  onFasciaVisibilityToggle?: (fasciaId: string) => void
 }
 
 export function BUAMap({
@@ -252,7 +333,8 @@ export function BUAMap({
   storeUpdateSource = StoreUpdateSource.USER_PAN,
   companiesVisibility = {},
   categoriesVisibility = {},
-  requirementLocations = []
+  requirementLocations = [],
+  onFasciaVisibilityToggle
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -712,9 +794,14 @@ export function BUAMap({
     companiesVis: Record<string, boolean>,
     categoriesVis: Record<string, boolean>
   ): boolean => {
-    // For viewport stores, use matchedTargetIds to determine visibility
+    // FIRST: Check if the store's direct fascia is hidden
+    // This ensures that hiding a fascia always hides ALL its stores
+    if (store.fascia_id && companiesVis[store.fascia_id] === false) {
+      return false
+    }
+
+    // For viewport stores, check if at least ONE matched target is visible
     if ('matchedTargetIds' in store && store.matchedTargetIds) {
-      // Check if at least ONE matched target is visible
       const hasVisibleMatch = store.matchedTargetIds.some(targetId => {
         // Check if this target is hidden in either visibility map
         const isFasciaHidden = companiesVis[targetId] === false
@@ -725,12 +812,6 @@ export function BUAMap({
       })
 
       return hasVisibleMatch
-    }
-
-    // Fallback for assess-area stores (no matchedTargetIds)
-    // Check fascia visibility only
-    if (store.fascia_id && companiesVis[store.fascia_id] === false) {
-      return false
     }
 
     return true  // Default visible
@@ -983,6 +1064,29 @@ export function BUAMap({
     }
   }, [requirementLocations, mapLoaded])
 
+  // Compute fascia legend items
+  const fasciaLegendItems = useMemo(() => {
+    if (!mapLoaded || targetBadgeMapping.length === 0) {
+      return []
+    }
+    return extractVisibleFascias(
+      targetBadgeMapping,
+      companiesVisibility,
+      includedStores,
+      excludedStores,
+      proximityIncludedStores,
+      proximityExcludedStores
+    )
+  }, [
+    targetBadgeMapping,
+    companiesVisibility,
+    includedStores,
+    excludedStores,
+    proximityIncludedStores,
+    proximityExcludedStores,
+    mapLoaded
+  ])
+
   return (
     <div className={`relative ${className}`}>
       <div ref={mapContainer} className="w-full h-full" style={{ position: 'relative' }} />
@@ -993,6 +1097,13 @@ export function BUAMap({
             <p className="text-gray-600">Loading map...</p>
           </div>
         </div>
+      )}
+      {fasciaLegendItems.length > 0 && (
+        <MapLegend
+          items={fasciaLegendItems}
+          onToggleVisibility={onFasciaVisibilityToggle}
+          position={requirementLocations.length > 0 ? 'stacked' : 'standalone'}
+        />
       )}
       {requirementLocations && requirementLocations.length > 0 && (
         <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-3">
