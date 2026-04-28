@@ -439,7 +439,7 @@ export function BUAMap({
 
           // Check if click originated from a marker - if so, ignore this BUA click
           const target = e.originalEvent.target as HTMLElement
-          if (target && target.closest('.simple-store-marker')) {
+          if (target && (target.closest('.simple-store-marker') || target.closest('.requirement-location-marker'))) {
             return
           }
 
