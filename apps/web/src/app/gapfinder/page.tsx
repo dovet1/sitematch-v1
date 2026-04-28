@@ -111,6 +111,9 @@ export default function BUAsPage() {
   const [showRequirementLocations, setShowRequirementLocations] = useState<boolean>(false)
   const [requirementBrandScope, setRequirementBrandScope] = useState<'all' | 'selected'>('all')
   const [selectedRequirementCompanies, setSelectedRequirementCompanies] = useState<string[]>([])
+
+  // Population filter collapsible state
+  const [isPopulationFilterOpen, setIsPopulationFilterOpen] = useState<boolean>(false)
   const [requirementLocations, setRequirementLocations] = useState<Array<{
     id: string
     listingId: string
@@ -141,6 +144,12 @@ export default function BUAsPage() {
   // Derived values for map filtering
   const minPop = populationRange[0]
   const maxPop = populationRange[1]
+
+  // Auto open/close population filter based on whether it's filtered
+  useEffect(() => {
+    const isFiltered = minPop !== MIN_POPULATION || maxPop !== MAX_POPULATION || showSubFiveK
+    setIsPopulationFilterOpen(isFiltered)
+  }, [minPop, maxPop, showSubFiveK])
 
   const handleBUASelect = (bua: {
     name: string
@@ -708,10 +717,14 @@ export default function BUAsPage() {
                 </div>
 
                 {/* Collapsible: Population Range */}
-                <Collapsible defaultOpen={true}>
+                <Collapsible open={isPopulationFilterOpen} onOpenChange={setIsPopulationFilterOpen}>
                   <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
                     <div className="flex items-center gap-2">
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                      <ChevronDown
+                        className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
+                          isPopulationFilterOpen ? 'rotate-0' : '-rotate-90'
+                        }`}
+                      />
                       <span className="font-medium text-gray-900">Population Range</span>
                     </div>
                     <Badge variant="secondary" className="text-xs">
