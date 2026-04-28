@@ -6,6 +6,7 @@
  */
 
 import type { FilterSet, FilterOperator } from '@/types/filters'
+import { getAllFasciaIdsInCategory, type CategoryNode } from './category-tree-utils'
 
 export interface TargetWithMetadata {
   targetId: string           // UUID of fascia/category
@@ -142,4 +143,51 @@ export function hasActiveFilters(params: ViewportParams): boolean {
     params.proximityExcludeBrandIds.length > 0 ||
     params.proximityExcludeCategories.length > 0
   )
+}
+
+/**
+ * Expands category selections into individual fascia IDs for display
+ * @param filterSet The filter set with rules
+ * @param categoryTree The full category tree with fascias
+ * @returns Expanded filter set with categories converted to fascias (deduplicated per rule)
+ */
+export function expandTargetsToFascias(
+  filterSet: FilterSet,
+  categoryTree: CategoryNode[]
+): FilterSet {
+  const expandedRules = filterSet.rules.map(rule => {
+    if (rule.targetType === 'fascia') {
+      // Already fascia-level, keep as-is
+      return rule
+    }
+
+    // Expand category IDs to fascia IDs
+    const fasciaIds = new Set<string>()
+
+    rule.targetIds.forEach(categoryId => {
+      const fasciasInCategory = getAllFasciaIdsInCategory(categoryId, categoryTree)
+      fasciasInCategory.forEach(fasciaId => fasciaIds.add(fasciaId))
+    })
+
+    // Also include any existing fascia IDs in the rule
+    rule.targetIds.forEach(id => {
+      // If it's already a fascia ID (not a category), include it
+      // This handles the edge case where rules might have mixed types
+      if (rule.targetType === 'fascia') {
+        fasciaIds.add(id)
+      }
+    })
+
+    // Return new rule with expanded fascia IDs
+    return {
+      ...rule,
+      targetType: 'fascia' as const,
+      targetIds: Array.from(fasciaIds)
+    }
+  })
+
+  return {
+    ...filterSet,
+    rules: expandedRules
+  }
 }

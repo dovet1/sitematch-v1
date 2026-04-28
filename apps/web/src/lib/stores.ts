@@ -72,6 +72,7 @@ export interface ViewportStore {
   size_band?: string | null
   created_at?: string
   matchedTargetIds?: string[]
+  displayTargetIds?: string[]
 }
 
 export interface BUAStorePresence {

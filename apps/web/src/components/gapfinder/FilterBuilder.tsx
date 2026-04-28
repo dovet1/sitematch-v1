@@ -17,6 +17,7 @@ import {
 } from '@/types/filters'
 import { cn } from '@/lib/utils'
 import type { TargetWithMetadata } from '@/lib/filter-utils'
+import type { CategoryNode } from '@/lib/category-tree-utils'
 
 interface FilterBuilderProps {
   filterSet: FilterSet
@@ -27,6 +28,7 @@ interface FilterBuilderProps {
   categoriesVisibility?: Record<string, boolean>
   onCompaniesVisibilityChange?: (visibility: Record<string, boolean>) => void
   onCategoriesVisibilityChange?: (visibility: Record<string, boolean>) => void
+  onCategoryTreeLoaded?: (tree: CategoryNode[]) => void
 }
 
 /**
@@ -51,6 +53,7 @@ export function FilterBuilder({
   categoriesVisibility,
   onCompaniesVisibilityChange,
   onCategoriesVisibilityChange,
+  onCategoryTreeLoaded,
 }: FilterBuilderProps) {
   const [showValidation, setShowValidation] = useState(false)
 
@@ -152,6 +155,7 @@ export function FilterBuilder({
               categoriesVisibility={categoriesVisibility}
               onCompaniesVisibilityChange={onCompaniesVisibilityChange}
               onCategoriesVisibilityChange={onCategoriesVisibilityChange}
+              onCategoryTreeLoaded={onCategoryTreeLoaded}
             />
           ))}
         </div>

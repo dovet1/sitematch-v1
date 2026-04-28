@@ -767,23 +767,24 @@ export function BUAMap({
 
       // Update badge label generation to only include visible targets
       const getBadgeLabel = (store: ViewportStore): string | undefined => {
-        if (!store.matchedTargetIds || store.matchedTargetIds.length === 0) {
+        // Use displayTargetIds instead of matchedTargetIds for badge lookup
+        if (!store.displayTargetIds || store.displayTargetIds.length === 0) {
           return undefined
         }
 
-        // Filter matched targets to only include visible ones
-        const visibleMatchedTargets = store.matchedTargetIds.filter(targetId => {
+        // Filter display targets to only include visible ones
+        const visibleDisplayTargets = store.displayTargetIds.filter(targetId => {
           const isFasciaHidden = companiesVisibility[targetId] === false
           const isCategoryHidden = categoriesVisibility[targetId] === false
           return !isFasciaHidden && !isCategoryHidden
         })
 
-        if (visibleMatchedTargets.length === 0) {
+        if (visibleDisplayTargets.length === 0) {
           return undefined
         }
 
         const badgeNumbers = targetBadgeMapping
-          .filter(target => visibleMatchedTargets.includes(target.targetId))
+          .filter(target => visibleDisplayTargets.includes(target.targetId))
           .map(target => target.badgeNumber)
           .sort((a, b) => a - b)
 

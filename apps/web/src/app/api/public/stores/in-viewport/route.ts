@@ -36,18 +36,22 @@ async function addMatchedTargetIds(
 
   return stores.map((store) => {
     const matchedTargetIds = new Set<string>()
+    const displayTargetIds = new Set<string>()
 
     if (store.fascia_id && brandIdSet.has(store.fascia_id)) {
       matchedTargetIds.add(store.fascia_id)
+      displayTargetIds.add(store.fascia_id)
     }
 
     for (const categoryId of matchedCategoriesByFascia.get(store.fascia_id) || []) {
       matchedTargetIds.add(categoryId)
+      displayTargetIds.add(store.fascia_id)
     }
 
     return {
       ...store,
-      matchedTargetIds: Array.from(matchedTargetIds)
+      matchedTargetIds: Array.from(matchedTargetIds),
+      displayTargetIds: Array.from(displayTargetIds)
     }
   })
 }

@@ -30,6 +30,7 @@ interface UnifiedCategorySelectorProps {
   onCompaniesVisibilityChange?: (visibility: Record<string, boolean>) => void
   onCategoriesVisibilityChange?: (visibility: Record<string, boolean>) => void
   mode: 'include' | 'exclude' | 'proximity'
+  onCategoryTreeLoaded?: (tree: CategoryNode[]) => void
 }
 
 export function UnifiedCategorySelector({
@@ -41,7 +42,8 @@ export function UnifiedCategorySelector({
   categoriesVisibility,
   onCompaniesVisibilityChange,
   onCategoriesVisibilityChange,
-  mode
+  mode,
+  onCategoryTreeLoaded
 }: UnifiedCategorySelectorProps) {
   const [categories, setCategories] = useState<Category[]>([])
   const [allBrands, setAllBrands] = useState<Brand[]>([])
@@ -128,6 +130,13 @@ export function UnifiedCategorySelector({
 
     fetchData()
   }, [])
+
+  // Call callback when unfiltered tree is built
+  useEffect(() => {
+    if (unfilteredCategoryTree.length > 0 && onCategoryTreeLoaded) {
+      onCategoryTreeLoaded(unfilteredCategoryTree)
+    }
+  }, [unfilteredCategoryTree, onCategoryTreeLoaded])
 
   // Build and filter the category tree
   const categoryTree = useMemo(() => {

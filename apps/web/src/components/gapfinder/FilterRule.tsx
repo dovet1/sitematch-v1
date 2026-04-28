@@ -14,6 +14,7 @@ import {
   isProximityOperator,
 } from '@/types/filters'
 import type { TargetWithMetadata } from '@/lib/filter-utils'
+import type { CategoryNode } from '@/lib/category-tree-utils'
 
 interface FilterRuleProps {
   rule: FilterRuleType
@@ -26,6 +27,7 @@ interface FilterRuleProps {
   categoriesVisibility?: Record<string, boolean>
   onCompaniesVisibilityChange?: (visibility: Record<string, boolean>) => void
   onCategoriesVisibilityChange?: (visibility: Record<string, boolean>) => void
+  onCategoryTreeLoaded?: (tree: CategoryNode[]) => void
 }
 
 export function FilterRule({
@@ -39,6 +41,7 @@ export function FilterRule({
   categoriesVisibility,
   onCompaniesVisibilityChange,
   onCategoriesVisibilityChange,
+  onCategoryTreeLoaded,
 }: FilterRuleProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
 
@@ -139,6 +142,7 @@ export function FilterRule({
             categoriesVisibility={categoriesVisibility}
             onCompaniesVisibilityChange={onCompaniesVisibilityChange}
             onCategoriesVisibilityChange={onCategoriesVisibilityChange}
+            onCategoryTreeLoaded={onCategoryTreeLoaded}
           />
 
           {/* Advanced Options (collapsible) */}

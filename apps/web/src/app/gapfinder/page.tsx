@@ -20,8 +20,9 @@ import { toast, Toaster } from 'sonner'
 import type { BUA } from '@/lib/buas'
 import type { Store as StoreType, ViewportStore } from '@/lib/stores'
 import type { FilterSet } from '@/types/filters'
-import { convertFilterSetToViewportParams, generateTargetBadgeMapping, hasActiveFilters, type TargetWithMetadata } from '@/lib/filter-utils'
+import { convertFilterSetToViewportParams, generateTargetBadgeMapping, hasActiveFilters, expandTargetsToFascias, type TargetWithMetadata } from '@/lib/filter-utils'
 import { exportBUAsToCSV } from '@/lib/buas/export-utils'
+import { type CategoryNode } from '@/lib/category-tree-utils'
 
 const MAX_POPULATION = 1200000 // 1.2 million
 const MIN_POPULATION = 5001 // Changed from 0
@@ -49,6 +50,9 @@ export default function BUAsPage() {
 
   // Target names mapping (fascia/category ID -> name) for filter display
   const [targetNames, setTargetNames] = useState<Record<string, string>>({})
+
+  // Category tree for expanding categories to fascias
+  const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([])
 
   // Visibility tracking for fascias and categories (sparse: only store false for hidden)
   const [companiesVisibility, setCompaniesVisibility] = useState<Record<string, boolean>>({})
@@ -330,8 +334,10 @@ export default function BUAsPage() {
       return
     }
 
-    setTargetBadgeMapping(generateTargetBadgeMapping(filterSet, targetNames))
-  }, [filterSet, targetNames])
+    // Expand categories to fascias before generating badge mapping
+    const expandedFilterSet = expandTargetsToFascias(filterSet, categoryTree)
+    setTargetBadgeMapping(generateTargetBadgeMapping(expandedFilterSet, targetNames))
+  }, [filterSet, targetNames, categoryTree])
 
   useEffect(() => {
     if (!mapViewport || currentMode !== 'find-gaps' || filterSet.rules.length === 0) {
@@ -698,6 +704,7 @@ export default function BUAsPage() {
                   categoriesVisibility={categoriesVisibility}
                   onCompaniesVisibilityChange={setCompaniesVisibility}
                   onCategoriesVisibilityChange={setCategoriesVisibility}
+                  onCategoryTreeLoaded={setCategoryTree}
                 />
               </TabsContent>
 
