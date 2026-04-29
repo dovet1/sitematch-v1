@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Info, MapPin, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Info, MapPin, ChevronDown, Search } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
@@ -705,10 +705,24 @@ export default function BUAsPage() {
               className="flex-1 flex flex-col overflow-hidden"
               onValueChange={(value) => setCurrentMode(value as 'find-gaps' | 'assess-area')}
             >
-              <TabsList className="grid w-full grid-cols-2 my-3">
-                <TabsTrigger value="find-gaps">Find Gaps</TabsTrigger>
-                <TabsTrigger value="assess-area">Assess Area</TabsTrigger>
-              </TabsList>
+              <div className="px-6 pt-5 pb-4 border-b border-gray-200/80 bg-gradient-to-b from-white to-gray-50/30">
+                <TabsList className="grid h-12 w-full grid-cols-2 rounded-xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/50 p-1.5 shadow-sm ring-1 ring-black/5">
+                  <TabsTrigger
+                    value="find-gaps"
+                    className="h-9 gap-2.5 rounded-lg px-4 text-sm font-semibold text-gray-600 transition-all duration-200 hover:bg-violet-50/80 hover:text-violet-700 data-[state=active]:bg-gradient-to-b data-[state=active]:from-violet-600 data-[state=active]:to-violet-700 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-violet-200/50"
+                  >
+                    <Search className="h-4 w-4" />
+                    Find Gaps
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="assess-area"
+                    className="h-9 gap-2.5 rounded-lg px-4 text-sm font-semibold text-gray-600 transition-all duration-200 hover:bg-violet-50/80 hover:text-violet-700 data-[state=active]:bg-gradient-to-b data-[state=active]:from-violet-600 data-[state=active]:to-violet-700 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-violet-200/50"
+                  >
+                    <MapPin className="h-4 w-4" />
+                    Assess Area
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
               {/* Find Gaps Tab Content */}
               <TabsContent value="find-gaps" className="flex-1 overflow-y-auto p-6 space-y-6 mt-0 pt-1">
@@ -929,63 +943,87 @@ export default function BUAsPage() {
               {/* Assess Area Tab Content */}
               <TabsContent value="assess-area" className="flex-1 overflow-y-auto p-6 space-y-6 mt-0 pt-1">
                 {/* Instructions */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <div className="flex items-start gap-2">
-                    <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-blue-900">
-                      Click anywhere on the map to analyze stores within a radius of that point.
-                    </p>
+                <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-blue-200/60 rounded-xl p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Info className="h-4 w-4 text-blue-600" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-1">How to use</h4>
+                      <p className="text-xs text-blue-700 leading-relaxed">
+                        Click anywhere on the map to analyze stores within a customizable radius of that point.
+                      </p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Point Selection Status */}
                 {selectedPoint ? (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-green-900">Point Selected</p>
-                        <p className="text-xs text-green-700 font-mono">
-                          {selectedPoint.lat.toFixed(4)}, {selectedPoint.lng.toFixed(4)}
-                        </p>
+                  <div className="relative bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-200/60 rounded-xl p-4 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex-shrink-0">
+                          <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                            <MapPin className="h-5 w-5 text-emerald-600" />
+                          </div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-emerald-900 mb-0.5">Point Selected</p>
+                          <p className="text-xs text-emerald-700 font-mono">
+                            {selectedPoint.lat.toFixed(4)}, {selectedPoint.lng.toFixed(4)}
+                          </p>
+                        </div>
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setSelectedPoint(null)}
-                        className="h-8"
+                        className="h-8 flex-shrink-0 text-emerald-700 hover:bg-emerald-100/80 hover:text-emerald-800"
                       >
                         Clear
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-6">
-                    <MapPin className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                    <p className="text-sm text-gray-600 mb-3">
-                      Click on the map to select a location
+                  <div className="relative rounded-xl border-2 border-dashed border-gray-300 bg-gradient-to-br from-gray-50/50 to-white p-8 text-center">
+                    <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center">
+                      <MapPin className="h-8 w-8 text-violet-600" />
+                    </div>
+                    <h4 className="text-base font-semibold text-gray-900 mb-2">
+                      Select a location
+                    </h4>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Click on the map to choose a point
                     </p>
                     <p className="text-xs text-gray-500">
-                      You can analyze stores within a radius of any point
+                      Analyze stores within a custom radius
                     </p>
                   </div>
                 )}
 
                 {/* Radius Settings */}
                 <Collapsible defaultOpen={true}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
-                    <div className="flex items-center gap-2">
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium text-gray-900">Radius Settings</span>
+                  <CollapsibleTrigger className="group flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/60 hover:to-purple-50/40 rounded-xl transition-all duration-200 border border-transparent hover:border-violet-100/50">
+                    <div className="flex items-center gap-2.5">
+                      <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-200 group-data-[state=open]:rotate-0 group-data-[state=closed]:-rotate-90" />
+                      <span className="font-semibold text-gray-900">Radius Settings</span>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs font-medium bg-violet-100 text-violet-700 border-violet-200">
                       {radiusMeters / 1000}km
                     </Badge>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
-                    <div>
-                      <Label htmlFor="radius-slider" className="text-sm font-medium mb-2 block">
-                        Search Radius: {(radiusMeters / 1000).toFixed(1)} km
-                      </Label>
+                  <CollapsibleContent className="px-4 pb-6 pt-4 space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="radius-slider" className="text-sm font-medium text-gray-700">
+                          Search Radius
+                        </Label>
+                        <span className="text-sm font-semibold text-violet-700">
+                          {(radiusMeters / 1000).toFixed(1)} km
+                        </span>
+                      </div>
                       <Slider
                         id="radius-slider"
                         value={[radiusMeters]}
@@ -995,56 +1033,75 @@ export default function BUAsPage() {
                         step={500}
                         className="w-full"
                       />
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <div className="flex justify-between text-xs text-gray-500 px-0.5">
                         <span>0.5 km</span>
                         <span>20 km</span>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
-                      <Button
-                        variant={radiusMeters === 1000 ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setRadiusMeters(1000)}
-                        className="text-xs"
-                      >
-                        1 km
-                      </Button>
-                      <Button
-                        variant={radiusMeters === 5000 ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setRadiusMeters(5000)}
-                        className="text-xs"
-                      >
-                        5 km
-                      </Button>
-                      <Button
-                        variant={radiusMeters === 10000 ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setRadiusMeters(10000)}
-                        className="text-xs"
-                      >
-                        10 km
-                      </Button>
+                    <div className="pt-1">
+                      <Label className="text-xs font-medium text-gray-600 mb-2 block">Quick Select</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          variant={radiusMeters === 1000 ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setRadiusMeters(1000)}
+                          className={`text-xs font-semibold transition-all ${
+                            radiusMeters === 1000
+                              ? 'bg-violet-600 hover:bg-violet-700 shadow-sm'
+                              : 'hover:bg-violet-50 hover:border-violet-300 hover:text-violet-700'
+                          }`}
+                        >
+                          1 km
+                        </Button>
+                        <Button
+                          variant={radiusMeters === 5000 ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setRadiusMeters(5000)}
+                          className={`text-xs font-semibold transition-all ${
+                            radiusMeters === 5000
+                              ? 'bg-violet-600 hover:bg-violet-700 shadow-sm'
+                              : 'hover:bg-violet-50 hover:border-violet-300 hover:text-violet-700'
+                          }`}
+                        >
+                          5 km
+                        </Button>
+                        <Button
+                          variant={radiusMeters === 10000 ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setRadiusMeters(10000)}
+                          className={`text-xs font-semibold transition-all ${
+                            radiusMeters === 10000
+                              ? 'bg-violet-600 hover:bg-violet-700 shadow-sm'
+                              : 'hover:bg-violet-50 hover:border-violet-300 hover:text-violet-700'
+                          }`}
+                        >
+                          10 km
+                        </Button>
+                      </div>
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
 
                 {/* Store Filters */}
                 <Collapsible defaultOpen={true}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
-                    <div className="flex items-center gap-2">
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium text-gray-900">Store Filters</span>
+                  <CollapsibleTrigger className="group flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/60 hover:to-purple-50/40 rounded-xl transition-all duration-200 border border-transparent hover:border-violet-100/50">
+                    <div className="flex items-center gap-2.5">
+                      <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-200 group-data-[state=open]:rotate-0 group-data-[state=closed]:-rotate-90" />
+                      <span className="font-semibold text-gray-900">Store Filters</span>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className={`text-xs font-medium ${
+                      assessCompanies.length + assessCategories.length === 0
+                        ? 'bg-gray-100 text-gray-600 border-gray-200'
+                        : 'bg-violet-100 text-violet-700 border-violet-200'
+                    }`}>
                       {assessCompanies.length + assessCategories.length === 0
                         ? 'All'
                         : `${assessCompanies.length + assessCategories.length} selected`}
                     </Badge>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-6 pt-4">
-                    <div className="text-xs text-gray-600 mb-3">
+                  <CollapsibleContent className="px-4 pb-6 pt-4">
+                    <div className="text-xs text-gray-600 mb-3 font-medium">
                       Filter which stores to show in results
                     </div>
                     <CompanySelector
