@@ -114,6 +114,8 @@ export default function BUAsPage() {
 
   // Population filter collapsible state
   const [isPopulationFilterOpen, setIsPopulationFilterOpen] = useState<boolean>(false)
+  // Brand filters collapsible state
+  const [isBrandFiltersOpen, setIsBrandFiltersOpen] = useState<boolean>(false)
   const [requirementLocations, setRequirementLocations] = useState<Array<{
     id: string
     listingId: string
@@ -150,6 +152,12 @@ export default function BUAsPage() {
     const isFiltered = minPop !== MIN_POPULATION || maxPop !== MAX_POPULATION || showSubFiveK
     setIsPopulationFilterOpen(isFiltered)
   }, [minPop, maxPop, showSubFiveK])
+
+  // Auto open/close brand filters when rules are added/removed
+  useEffect(() => {
+    const isFiltered = filterSet.rules.length > 0
+    setIsBrandFiltersOpen(isFiltered)
+  }, [filterSet.rules.length])
 
   const handleBUASelect = (bua: {
     name: string
@@ -704,7 +712,7 @@ export default function BUAsPage() {
 
               {/* Find Gaps Tab Content */}
               <TabsContent value="find-gaps" className="flex-1 overflow-y-auto p-6 space-y-6 mt-0 pt-1">
-                {/* Search - Always Visible */}
+                {/* 1. Search - Always Visible */}
                 <div className="space-y-2">
                   <Label htmlFor="bua-search" className="text-sm font-medium">
                     Search by Location Name
@@ -716,92 +724,7 @@ export default function BUAsPage() {
                   />
                 </div>
 
-                {/* Collapsible: Population Range */}
-                <Collapsible open={isPopulationFilterOpen} onOpenChange={setIsPopulationFilterOpen}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
-                    <div className="flex items-center gap-2">
-                      <ChevronDown
-                        className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
-                          isPopulationFilterOpen ? 'rotate-0' : '-rotate-90'
-                        }`}
-                      />
-                      <span className="font-medium text-gray-900">Population Range</span>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {minPop === MIN_POPULATION && maxPop === MAX_POPULATION && !showSubFiveK ? 'All' : 'Filtered'}
-                    </Badge>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
-                    <div className="px-2">
-                      <Slider
-                        value={populationRange}
-                        onValueChange={handlePopulationRangeChange}
-                        min={MIN_POPULATION}
-                        max={MAX_POPULATION}
-                        step={1000}
-                        minStepsBetweenThumbs={1}
-                        className="w-full"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="min-pop-input" className="text-xs text-gray-600 mb-1 block">
-                          Min Population
-                        </Label>
-                        <Input
-                          id="min-pop-input"
-                          type="number"
-                          min={MIN_POPULATION}
-                          max={maxPop}
-                          value={minPopInput}
-                          onChange={handleMinPopInputChange}
-                          onBlur={handleMinPopInputBlur}
-                          className={`h-9 text-sm ${minPopError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-                          aria-invalid={!!minPopError}
-                          aria-describedby={minPopError ? 'min-pop-error' : undefined}
-                        />
-                        {minPopError && (
-                          <p id="min-pop-error" className="text-xs text-red-600 mt-1" role="alert">
-                            {minPopError}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <Label htmlFor="max-pop-input" className="text-xs text-gray-600 mb-1 block">
-                          Max Population
-                        </Label>
-                        <Input
-                          id="max-pop-input"
-                          type="number"
-                          min={minPop}
-                          max={MAX_POPULATION}
-                          value={maxPopInput}
-                          onChange={handleMaxPopInputChange}
-                          onBlur={handleMaxPopInputBlur}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* NEW: Checkbox for sub-5k BUAs - placed AFTER inputs for better UX */}
-                    <div className="flex items-center space-x-2 px-2 pt-1">
-                      <Checkbox
-                        id="show-sub-5k"
-                        checked={showSubFiveK}
-                        onCheckedChange={(checked) => setShowSubFiveK(checked === true)}
-                      />
-                      <Label
-                        htmlFor="show-sub-5k"
-                        className="text-xs text-gray-600 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        Show locations with a population of less than 5k
-                      </Label>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-
-                {/* Collapsible: Requirement Locations */}
+                {/* 2. Collapsible: Requirement Locations */}
                 <Collapsible open={showRequirementLocations} onOpenChange={setShowRequirementLocations}>
                   <div className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
                     <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left">
@@ -877,18 +800,130 @@ export default function BUAsPage() {
                   </CollapsibleContent>
                 </Collapsible>
 
-                {/* NEW: Advanced Filter Builder */}
-                <FilterBuilder
-                  filterSet={filterSet}
-                  onChange={setFilterSet}
-                  targetNames={targetNames}
-                  targetBadgeMapping={targetBadgeMapping}
-                  companiesVisibility={companiesVisibility}
-                  categoriesVisibility={categoriesVisibility}
-                  onCompaniesVisibilityChange={setCompaniesVisibility}
-                  onCategoriesVisibilityChange={setCategoriesVisibility}
-                  onCategoryTreeLoaded={setCategoryTree}
-                />
+                {/* 3. "Filters" Header/Divider */}
+                <div className="pt-2 pb-4">
+                  <div className="flex items-center gap-2 px-2">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-violet-200 to-transparent" />
+                    <span className="text-xs font-medium text-violet-700 uppercase tracking-wider">Filters</span>
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-violet-200 to-transparent" />
+                  </div>
+                </div>
+
+                {/* 4. Collapsible: Population Range */}
+                <Collapsible open={isPopulationFilterOpen} onOpenChange={setIsPopulationFilterOpen}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown
+                        className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
+                          isPopulationFilterOpen ? 'rotate-0' : '-rotate-90'
+                        }`}
+                      />
+                      <span className="font-medium text-gray-900">Population</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {minPop === MIN_POPULATION && maxPop === MAX_POPULATION && !showSubFiveK ? 'All' : 'Filtered'}
+                    </Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
+                    <div className="px-2">
+                      <Slider
+                        value={populationRange}
+                        onValueChange={handlePopulationRangeChange}
+                        min={MIN_POPULATION}
+                        max={MAX_POPULATION}
+                        step={1000}
+                        minStepsBetweenThumbs={1}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="min-pop-input" className="text-xs text-gray-600 mb-1 block">
+                          Min Population
+                        </Label>
+                        <Input
+                          id="min-pop-input"
+                          type="number"
+                          min={MIN_POPULATION}
+                          max={maxPop}
+                          value={minPopInput}
+                          onChange={handleMinPopInputChange}
+                          onBlur={handleMinPopInputBlur}
+                          className={`h-9 text-sm ${minPopError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                          aria-invalid={!!minPopError}
+                          aria-describedby={minPopError ? 'min-pop-error' : undefined}
+                        />
+                        {minPopError && (
+                          <p id="min-pop-error" className="text-xs text-red-600 mt-1" role="alert">
+                            {minPopError}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label htmlFor="max-pop-input" className="text-xs text-gray-600 mb-1 block">
+                          Max Population
+                        </Label>
+                        <Input
+                          id="max-pop-input"
+                          type="number"
+                          min={minPop}
+                          max={MAX_POPULATION}
+                          value={maxPopInput}
+                          onChange={handleMaxPopInputChange}
+                          onBlur={handleMaxPopInputBlur}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* NEW: Checkbox for sub-5k BUAs - placed AFTER inputs for better UX */}
+                    <div className="flex items-center space-x-2 px-2 pt-1">
+                      <Checkbox
+                        id="show-sub-5k"
+                        checked={showSubFiveK}
+                        onCheckedChange={(checked) => setShowSubFiveK(checked === true)}
+                      />
+                      <Label
+                        htmlFor="show-sub-5k"
+                        className="text-xs text-gray-600 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        Show locations with a population of less than 5k
+                      </Label>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* 5. Collapsible: Brand Filters */}
+                <Collapsible open={isBrandFiltersOpen} onOpenChange={setIsBrandFiltersOpen}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown
+                        className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
+                          isBrandFiltersOpen ? 'rotate-0' : '-rotate-90'
+                        }`}
+                      />
+                      <span className="font-medium text-gray-900">Brands</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {filterSet.rules.length === 0 ? 'All' : 'Filtered'}
+                    </Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-3 pb-6 pt-4">
+                    <FilterBuilder
+                      hideHeader={true}
+                      filterSet={filterSet}
+                      onChange={setFilterSet}
+                      targetNames={targetNames}
+                      targetBadgeMapping={targetBadgeMapping}
+                      companiesVisibility={companiesVisibility}
+                      categoriesVisibility={categoriesVisibility}
+                      onCompaniesVisibilityChange={setCompaniesVisibility}
+                      onCategoriesVisibilityChange={setCategoriesVisibility}
+                      onCategoryTreeLoaded={setCategoryTree}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
               </TabsContent>
 
               {/* Assess Area Tab Content */}

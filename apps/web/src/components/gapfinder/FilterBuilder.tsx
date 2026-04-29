@@ -29,6 +29,7 @@ interface FilterBuilderProps {
   onCompaniesVisibilityChange?: (visibility: Record<string, boolean>) => void
   onCategoriesVisibilityChange?: (visibility: Record<string, boolean>) => void
   onCategoryTreeLoaded?: (tree: CategoryNode[]) => void
+  hideHeader?: boolean // Hide the internal header when wrapped in external collapsible
 }
 
 /**
@@ -54,6 +55,7 @@ export function FilterBuilder({
   onCompaniesVisibilityChange,
   onCategoriesVisibilityChange,
   onCategoryTreeLoaded,
+  hideHeader = false,
 }: FilterBuilderProps) {
   const [showValidation, setShowValidation] = useState(false)
 
@@ -101,18 +103,34 @@ export function FilterBuilder({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-lg text-violet-900">
-            Filter Criteria
-          </h3>
-          <p className="text-sm text-gray-600 mt-0.5">
-            Show locations that match these conditions
-          </p>
-        </div>
+      {/* Header - Conditionally rendered */}
+      {!hideHeader && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-lg text-violet-900">
+              Filter Criteria
+            </h3>
+            <p className="text-sm text-gray-600 mt-0.5">
+              Show locations that match these conditions
+            </p>
+          </div>
 
-        {filterSet.rules.length > 0 && (
+          {filterSet.rules.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAllRules}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              Clear all
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Keep "Clear all" button accessible when header is hidden */}
+      {hideHeader && filterSet.rules.length > 0 && (
+        <div className="flex justify-end">
           <Button
             variant="ghost"
             size="sm"
@@ -121,8 +139,8 @@ export function FilterBuilder({
           >
             Clear all
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Natural Language Preview - Moved to top for better visibility */}
       {filterSet.rules.length > 0 && (
