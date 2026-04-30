@@ -161,16 +161,43 @@ function escapeHtml(text: string): string {
   })
 }
 
+const LOCATION_SUFFIXES_TO_REMOVE = new Set([
+  'united kingdom',
+  'uk',
+  'england',
+  'scotland',
+  'wales'
+])
+
+export function formatRequirementLocationDisplay(
+  formattedAddress?: string | null,
+  placeName?: string | null
+): string {
+  const source = (formattedAddress || placeName || '').trim()
+  if (!source) {
+    return ''
+  }
+
+  const parts = source
+    .split(',')
+    .map(part => part.trim())
+    .filter(Boolean)
+    .filter(part => !LOCATION_SUFFIXES_TO_REMOVE.has(part.toLowerCase()))
+
+  return parts.slice(0, 2).join(', ')
+}
+
 /**
  * Generate requirement location popup HTML
  */
 function generateRequirementPopupHTML(location: {
   companyName: string
-  title: string
   listingType: string
   placeName: string
+  formattedAddress?: string
 }): string {
   const listingTypeLabel = location.listingType === 'commercial' ? 'Commercial' : 'Residential'
+  const displayLocation = formatRequirementLocationDisplay(location.formattedAddress, location.placeName)
 
   return `
     <div style="display: flex; flex-direction: column; width: 100%;">
@@ -188,12 +215,7 @@ function generateRequirementPopupHTML(location: {
         </div>
       </div>
       <div style="padding: 12px;">
-        <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 500; color: #1e293b;">
-          ${escapeHtml(location.title)}
-        </p>
-        <p style="margin: 0; font-size: 12px; color: #57534e;">
-          ${escapeHtml(location.placeName)}
-        </p>
+        ${displayLocation ? `<p style="margin: 0; font-size: 12px; color: #57534e;">${escapeHtml(displayLocation)}</p>` : ''}
       </div>
     </div>
   `
@@ -547,10 +569,20 @@ export function BUAMap({
         map.current.on('click', BUA_LAYER_ID, (e) => {
           if (!e.features || e.features.length === 0) return
 
-          // Check if click originated from a marker - if so, ignore this BUA click
+          // Check if click originated from a DOM marker - if so, ignore this BUA click
           const target = e.originalEvent.target as HTMLElement
-          if (target && (target.closest('.simple-store-marker') || target.closest('.requirement-location-marker'))) {
+          if (target && target.closest('.simple-store-marker')) {
             return
+          }
+
+          // Check if any requirement features are at this click point
+          // This handles both individual requirement points and clusters
+          const clickedFeatures = map.current!.queryRenderedFeatures(e.point)
+          const hasRequirement = clickedFeatures.some(
+            feature => feature.source === REQUIREMENT_SOURCE_ID
+          )
+          if (hasRequirement) {
+            return // Don't show BUA popup if a requirement was clicked
           }
 
           const feature = e.features[0]
@@ -1185,7 +1217,7 @@ export function BUAMap({
         const popupWidth = 320
         const availableHeight = window.innerHeight - 100
         const maxPopupHeight = Math.min(400, availableHeight)
-        const popupHeight = Math.min(maxPopupHeight, requirements.length * 70 + 80)
+        const popupHeight = Math.min(maxPopupHeight, requirements.length * 56 + 80)
         const margin = 20
 
         // Start with click position relative to viewport
@@ -1233,9 +1265,9 @@ export function BUAMap({
       const properties = feature.properties || {}
       const location = {
         companyName: String(properties.companyName || ''),
-        title: String(properties.title || ''),
         listingType: String(properties.listingType || 'commercial'),
-        placeName: String(properties.placeName || '')
+        placeName: String(properties.placeName || ''),
+        formattedAddress: String(properties.formattedAddress || '')
       }
 
       new mapboxgl.Popup({
@@ -1409,29 +1441,32 @@ export function BUAMap({
 
           {/* Scrollable list */}
           <div className="flex-1 overflow-y-auto min-h-0">
-            {requirementClusterPopup.requirements.map((req, index) => (
-              <div
-                key={req.id || index}
-                className="p-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-semibold text-gray-900 text-sm">
-                      {req.companyName}
-                    </h4>
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded flex-shrink-0">
-                      {req.listingType === 'commercial' ? 'Commercial' : 'Residential'}
-                    </span>
+            {requirementClusterPopup.requirements.map((req, index) => {
+              const displayLocation = formatRequirementLocationDisplay(req.formattedAddress, req.placeName)
+
+              return (
+                <div
+                  key={req.id || index}
+                  className="p-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="font-semibold text-gray-900 text-sm">
+                        {req.companyName}
+                      </h4>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded flex-shrink-0">
+                        {req.listingType === 'commercial' ? 'Commercial' : 'Residential'}
+                      </span>
+                    </div>
+                    {displayLocation && (
+                      <p className="text-xs text-gray-500">
+                        {displayLocation}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-xs font-medium text-gray-700">
-                    {req.title}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {req.placeName}
-                  </p>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
