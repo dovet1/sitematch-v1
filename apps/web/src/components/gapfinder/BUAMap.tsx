@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { X } from 'lucide-react'
 import { formatPopulation } from '@/lib/format-population'
 import { getFasciaMarkerColor } from '@/lib/sitesketcher/colors'
 import type { Store, ViewportStore } from '@/lib/stores'
@@ -356,6 +357,25 @@ export function BUAMap({
   const skipNextCenterFlyTo = useRef(false)
   const lastHandledSidebarSelection = useRef(0)
   const buaFilterRef = useRef<any[] | null>(null)
+  const [requirementClusterPopup, setRequirementClusterPopup] = useState<{
+    isOpen: boolean
+    requirements: Array<{
+      id: string
+      listingId: string
+      companyName: string
+      title: string
+      listingType: string
+      placeName: string
+      formattedAddress: string
+    }>
+    position: { x: number; y: number }
+    maxHeight: number
+  }>({
+    isOpen: false,
+    requirements: [],
+    position: { x: 0, y: 0 },
+    maxHeight: 400
+  })
 
 
   const applyBUAFilters = () => {
@@ -1048,7 +1068,7 @@ export function BUAMap({
       data: requirementGeoJson,
       cluster: true,
       clusterMaxZoom: 22,
-      clusterRadius: 50
+      clusterRadius: 0  // Only cluster at exact same coordinates
     })
 
     map.current.addLayer({
@@ -1113,24 +1133,97 @@ export function BUAMap({
   useEffect(() => {
     if (!map.current || !mapLoaded) return
 
-    const handleRequirementClusterClick = (event: mapboxgl.MapMouseEvent) => {
+    const handleRequirementClusterClick = async (event: mapboxgl.MapMouseEvent) => {
       const feature = event.features?.[0]
       const source = map.current?.getSource(REQUIREMENT_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined
 
       if (!source || !feature || !feature.properties || !feature.geometry || feature.geometry.type !== 'Point') return
 
       const clusterId = feature.properties.cluster_id
-      if (clusterId === undefined) return
+      const pointCount = feature.properties.point_count
+      if (clusterId === undefined || !pointCount) return
 
-      const center = feature.geometry.coordinates as [number, number]
-      source.getClusterExpansionZoom(clusterId, (error, zoom) => {
-        if (error || zoom === undefined || zoom === null || !map.current) return
+      // Stop event propagation to prevent click-outside handler from closing popup immediately
+      event.originalEvent?.stopPropagation()
 
-        map.current.easeTo({
-          center,
-          zoom
+      // Close any existing Mapbox popups
+      popup.current?.remove()
+
+      try {
+        // Get all requirements in this cluster
+        const clusterLeaves = await new Promise<any[]>((resolve) => {
+          source.getClusterLeaves(
+            clusterId,
+            pointCount,
+            0,
+            (error: any, features: any) => {
+              if (error) {
+                console.error('Error getting cluster leaves:', error)
+                resolve([])
+              } else {
+                resolve(features || [])
+              }
+            }
+          )
         })
-      })
+
+        // Extract requirement data
+        const requirements = clusterLeaves.map(leaf => ({
+          id: leaf.properties.id || '',
+          listingId: leaf.properties.listingId || '',
+          companyName: leaf.properties.companyName || '',
+          title: leaf.properties.title || '',
+          listingType: leaf.properties.listingType || 'commercial',
+          placeName: leaf.properties.placeName || '',
+          formattedAddress: leaf.properties.formattedAddress || ''
+        }))
+
+        // Calculate smart popup position
+        const mapRect = mapContainer.current?.getBoundingClientRect()
+        if (!mapRect) return
+
+        const popupWidth = 320
+        const availableHeight = window.innerHeight - 100
+        const maxPopupHeight = Math.min(400, availableHeight)
+        const popupHeight = Math.min(maxPopupHeight, requirements.length * 70 + 80)
+        const margin = 20
+
+        // Start with click position relative to viewport
+        let x = event.point.x + mapRect.left
+        let y = event.point.y + mapRect.top
+
+        // Horizontal positioning - prefer right of click, then left, then force fit
+        if (x + popupWidth + margin > window.innerWidth) {
+          x = x - popupWidth - 20
+          if (x < margin) {
+            x = window.innerWidth - popupWidth - margin
+          }
+        }
+        if (x < margin) {
+          x = margin
+        }
+
+        // Vertical positioning - prefer below click, then above, then clamp
+        const maxY = window.innerHeight - popupHeight - margin
+        if (y + popupHeight > window.innerHeight - margin) {
+          y = y - popupHeight - 20
+        }
+        if (y < margin) {
+          y = margin
+        }
+        if (y > maxY) {
+          y = maxY
+        }
+
+        setRequirementClusterPopup({
+          isOpen: true,
+          requirements,
+          position: { x, y },
+          maxHeight: maxPopupHeight
+        })
+      } catch (error) {
+        console.error('Error handling cluster click:', error)
+      }
     }
 
     const handleRequirementPointClick = (event: mapboxgl.MapMouseEvent) => {
@@ -1178,6 +1271,61 @@ export function BUAMap({
       map.current.off('mouseleave', REQUIREMENT_POINT_LAYER_ID, resetCursor)
     }
   }, [mapLoaded])
+
+  // Handle click-outside, map move/zoom, and window resize for cluster popup
+  useEffect(() => {
+    if (!requirementClusterPopup.isOpen) return
+
+    // Install click-outside handler on next tick to avoid race with opening click
+    const timeoutId = setTimeout(() => {
+      const handleClickOutside = (e: MouseEvent) => {
+        const target = e.target as HTMLElement
+        if (!target.closest('.requirement-cluster-popup')) {
+          setRequirementClusterPopup({
+            isOpen: false,
+            requirements: [],
+            position: { x: 0, y: 0 },
+            maxHeight: 400
+          })
+        }
+      }
+      document.addEventListener('mousedown', handleClickOutside)
+
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
+    }, 0)
+
+    // Map move/zoom handlers
+    const handleMapMove = () => {
+      setRequirementClusterPopup({
+        isOpen: false,
+        requirements: [],
+        position: { x: 0, y: 0 },
+        maxHeight: 400
+      })
+    }
+
+    const handleWindowResize = () => {
+      setRequirementClusterPopup({
+        isOpen: false,
+        requirements: [],
+        position: { x: 0, y: 0 },
+        maxHeight: 400
+      })
+    }
+
+    map.current?.on('move', handleMapMove)
+    map.current?.on('zoom', handleMapMove)
+    window.addEventListener('resize', handleWindowResize)
+
+    return () => {
+      clearTimeout(timeoutId)
+      map.current?.off('move', handleMapMove)
+      map.current?.off('zoom', handleMapMove)
+      window.removeEventListener('resize', handleWindowResize)
+    }
+  }, [requirementClusterPopup.isOpen])
 
   // Compute fascia legend items
   const fasciaLegendItems = useMemo(() => {
@@ -1227,6 +1375,63 @@ export function BUAMap({
             <p className="text-xs text-gray-700">
               Requirements
             </p>
+          </div>
+        </div>
+      )}
+      {requirementClusterPopup.isOpen && (
+        <div
+          className="requirement-cluster-popup fixed bg-white rounded-lg shadow-xl border border-gray-200 z-50 w-80 flex flex-col"
+          style={{
+            left: requirementClusterPopup.position.x,
+            top: requirementClusterPopup.position.y,
+            maxHeight: `${requirementClusterPopup.maxHeight}px`
+          }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-br from-violet-100 to-purple-200">
+            <div className="flex items-center gap-3">
+              <div
+                className="bg-violet-500 rounded-md p-2 shadow-md"
+                dangerouslySetInnerHTML={{ __html: REQUIREMENT_SVG }}
+              />
+              <h3 className="font-semibold text-gray-900 text-sm">
+                {requirementClusterPopup.requirements.length} Requirements
+              </h3>
+            </div>
+            <button
+              onClick={() => setRequirementClusterPopup({ isOpen: false, requirements: [], position: { x: 0, y: 0 }, maxHeight: 400 })}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Close popup"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Scrollable list */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {requirementClusterPopup.requirements.map((req, index) => (
+              <div
+                key={req.id || index}
+                className="p-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-semibold text-gray-900 text-sm">
+                      {req.companyName}
+                    </h4>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded flex-shrink-0">
+                      {req.listingType === 'commercial' ? 'Commercial' : 'Residential'}
+                    </span>
+                  </div>
+                  <p className="text-xs font-medium text-gray-700">
+                    {req.title}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {req.placeName}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
