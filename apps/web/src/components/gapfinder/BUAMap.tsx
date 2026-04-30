@@ -328,6 +328,7 @@ interface BUAMapProps {
   excludedStores?: ViewportStore[]  // Red pins from has_not filters
   proximityIncludedStores?: ViewportStore[]  // Green pins from has_within filters
   proximityExcludedStores?: ViewportStore[]  // Red pins from has_not_within filters
+  centerFlyToZoom?: number
   targetBadgeMapping?: TargetWithMetadata[]
   onViewportChange?: (bounds: { minLat: number; minLon: number; maxLat: number; maxLon: number }) => void
   storeUpdateSource?: StoreUpdateSource  // NEW: Track why stores changed
@@ -364,6 +365,7 @@ export function BUAMap({
   excludedStores = [],
   proximityIncludedStores = [],
   proximityExcludedStores = [],
+  centerFlyToZoom = 12,
   targetBadgeMapping = [],
   onViewportChange,
   storeUpdateSource = StoreUpdateSource.USER_PAN,
@@ -711,11 +713,11 @@ export function BUAMap({
 
     map.current.flyTo({
       center: [center.lng, center.lat],
-      zoom: 12,
+      zoom: centerFlyToZoom,
       duration: 1500,
       essential: true
     })
-  }, [center, mapLoaded])
+  }, [center, centerFlyToZoom, mapLoaded])
 
   // Handle Assess Area mode - map click for point selection
   useEffect(() => {

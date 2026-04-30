@@ -24,12 +24,14 @@ import type { FilterSet } from '@/types/filters'
 import { convertFilterSetToViewportParams, generateTargetBadgeMapping, hasActiveFilters, expandTargetsToFascias, type TargetWithMetadata } from '@/lib/filter-utils'
 import { exportBUAsToCSV } from '@/lib/buas/export-utils'
 import { type CategoryNode } from '@/lib/category-tree-utils'
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess'
 
 const MAX_POPULATION = 1200000 // 1.2 million
 const MIN_POPULATION = 5001 // Changed from 0
 
 export default function BUAsPage() {
   const router = useRouter()
+  const { hasAccess, loading: subscriptionLoading } = useSubscriptionAccess()
   const [searchQuery, setSearchQuery] = useState('')
   const [center, setCenter] = useState<{ lat: number; lng: number } | undefined>()
   const [populationRange, setPopulationRange] = useState<[number, number]>([MIN_POPULATION, MAX_POPULATION])
@@ -45,6 +47,7 @@ export default function BUAsPage() {
   const [isExportingBUAs, setIsExportingBUAs] = useState(false)
   const [mapGssCodes, setMapGssCodes] = useState<string[]>([])  // All gsscodes for map filtering
   const [sidebarSelectionNonce, setSidebarSelectionNonce] = useState(0)
+  const [centerFlyToZoom, setCenterFlyToZoom] = useState(12)
 
   // NEW: Advanced filter state using FilterSet
   const [filterSet, setFilterSet] = useState<FilterSet>({ rules: [] })
@@ -166,6 +169,7 @@ export default function BUAsPage() {
     gsscode: string
     pop: number
   }) => {
+    setCenterFlyToZoom(12)
     setCenter(bua.coordinates)
     setSelectedBUAGsscode(bua.gsscode)
     setSelectedBUA({ name: bua.name, pop: bua.pop })
@@ -177,6 +181,7 @@ export default function BUAsPage() {
     gsscode: string
     pop: number
   }) => {
+    setCenterFlyToZoom(12)
     setCenter(bua.coordinates)
     setSelectedBUAGsscode(bua.gsscode)
     setSelectedBUA({ name: bua.name, pop: bua.pop })
@@ -664,6 +669,7 @@ export default function BUAsPage() {
   const handleBUAListItemClick = (bua: BUA) => {
     // Sidebar click - map will fly to BUA, next store update should NOT auto-fit
     setStoreUpdateSource(StoreUpdateSource.SIDEBAR_CLICK)
+    setCenterFlyToZoom(12)
     setCenter({ lat: bua.centroid_lat, lng: bua.centroid_lon })
     setSelectedBUAGsscode(bua.gsscode)
     setSelectedBUA({ name: bua.name, pop: bua.pop })
@@ -673,6 +679,7 @@ export default function BUAsPage() {
   const handleStoreListItemClick = (store: StoreType) => {
     if (!Number.isFinite(store.lat) || !Number.isFinite(store.lon)) return
 
+    setCenterFlyToZoom(15)
     setCenter({ lat: store.lat, lng: store.lon })
     setSelectedBUAGsscode(null)
     setSelectedBUA(null)
@@ -697,6 +704,8 @@ export default function BUAsPage() {
       setIsExportingBUAs(false)
     }
   }
+
+  const showRequirementLocationsUpgradeNote = !subscriptionLoading && !hasAccess
 
   const renderRequirementLocationsControl = () => (
     <Collapsible open={showRequirementLocations} onOpenChange={setShowRequirementLocations}>
@@ -753,6 +762,22 @@ export default function BUAsPage() {
                 </button>
               </div>
             </div>
+
+            {showRequirementLocationsUpgradeNote && (
+              <div className="mx-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-3">
+                <p className="text-xs leading-5 text-violet-900">
+                  You&apos;re only seeing a small number of the total requirements in our directory.
+                  Upgrade to see the rest.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => router.push('/pricing')}
+                  className="mt-2 text-xs font-semibold text-violet-700 hover:text-violet-900"
+                >
+                  View upgrade options
+                </button>
+              </div>
+            )}
 
             {requirementBrandScope === 'selected' && (
               <>
@@ -984,9 +1009,6 @@ export default function BUAsPage() {
                   />
                 </div>
 
-                {/* 2. Collapsible: Requirement Locations */}
-                {renderRequirementLocationsControl()}
-
                 {/* Point Selection Status */}
                 {selectedPoint ? (
                   <div className="relative bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-200/60 rounded-xl p-4 shadow-sm">
@@ -1141,6 +1163,9 @@ export default function BUAsPage() {
                     />
                   </CollapsibleContent>
                 </Collapsible>
+
+                {/* Requirement Locations */}
+                {renderRequirementLocationsControl()}
               </TabsContent>
             </Tabs>
           </div>
@@ -1172,6 +1197,7 @@ export default function BUAsPage() {
               excludedStores={excludedStores}
               proximityIncludedStores={proximityIncludedStores}
               proximityExcludedStores={proximityExcludedStores}
+              centerFlyToZoom={centerFlyToZoom}
               targetBadgeMapping={targetBadgeMapping}
               onViewportChange={handleViewportChange}
               storeUpdateSource={storeUpdateSource}
