@@ -3,9 +3,11 @@
 import { MapPin, Store as StoreIcon, Download, Loader2 } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { BUA } from '@/lib/buas'
 import { formatPopulation } from '@/lib/format-population'
+import { calculateDistance } from '@/lib/distance-utils'
 
 interface ResultsPanelProps {
   results: BUA[] | any[] // BUA[] for Find Gaps mode, Store[] for Assess Area mode
@@ -17,6 +19,7 @@ interface ResultsPanelProps {
   onExport?: () => void // Callback to trigger export
   isExporting?: boolean // Loading state during export
   canExport?: boolean // Whether export is available
+  selectedPoint?: { lat: number; lng: number } | null // Selected point for distance calculation in assess-area mode
 }
 
 export function ResultsPanel({
@@ -28,7 +31,8 @@ export function ResultsPanel({
   total,
   onExport,
   isExporting = false,
-  canExport = false
+  canExport = false,
+  selectedPoint
 }: ResultsPanelProps) {
   const isFindGapsMode = mode === 'find-gaps'
   const actualTotal = total || results.length
@@ -137,32 +141,53 @@ export function ResultsPanel({
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
-            {results.map((store: any, index) => (
-              <button
-                key={store.id}
-                onClick={() => onItemClick(store)}
-                className={cn(
-                  "w-full px-4 py-4 text-left hover:bg-violet-50 hover:shadow-sm transition-all duration-150",
-                  index === 0 && "pt-2",
-                  index === results.length - 1 && "pb-2"
-                )}
-              >
-                <div className="flex items-start gap-2">
-                  <StoreIcon className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">
-                      {store.name}
-                    </div>
-                    {store.town && (
-                      <div className="text-xs text-gray-600 truncate">
-                        {store.town}
-                        {store.postcode && ` • ${store.postcode}`}
+            {results.map((store: any, index) => {
+              // Calculate distance if selectedPoint is available and store has valid coordinates
+              const hasCoordinates = Number.isFinite(store.lat) && Number.isFinite(store.lon)
+              const distance =
+                selectedPoint && hasCoordinates
+                  ? calculateDistance(selectedPoint.lat, selectedPoint.lng, store.lat, store.lon)
+                  : null
+
+              return (
+                <button
+                  key={store.id}
+                  onClick={() => onItemClick(store)}
+                  className={cn(
+                    "w-full px-4 py-4 text-left hover:bg-violet-50 hover:shadow-sm transition-all duration-150",
+                    index === 0 && "pt-2",
+                    index === results.length - 1 && "pb-2"
+                  )}
+                >
+                  <div className="flex items-start gap-2">
+                    <StoreIcon className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      {/* Store name */}
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {store.name}
                       </div>
-                    )}
+
+                      {/* Location info - can truncate if needed */}
+                      {(store.town || store.postcode) && (
+                        <div className="text-xs text-gray-600 truncate mt-0.5">
+                          {[store.town, store.postcode].filter(Boolean).join(', ')}
+                        </div>
+                      )}
+
+                      {/* Distance badge - never truncates */}
+                      {distance !== null && (
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <Badge variant="secondary" className="px-2 py-0.5 text-xs rounded">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {distance} mi
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              )
+            })}
           </div>
         )}
       </div>

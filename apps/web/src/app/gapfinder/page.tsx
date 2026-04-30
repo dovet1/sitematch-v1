@@ -1193,6 +1193,7 @@ export default function BUAsPage() {
             onExport={currentMode === 'find-gaps' ? handleExportBUAs : undefined}
             isExporting={currentMode === 'find-gaps' ? isExportingBUAs : false}
             canExport={currentMode === 'find-gaps' ? filteredBUAs.length > 0 : false}
+            selectedPoint={currentMode === 'assess-area' ? selectedPoint : null}
           />
         </div>
       </div>
