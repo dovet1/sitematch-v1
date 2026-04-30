@@ -7,58 +7,84 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { X } from 'lucide-react'
 
+interface Brand {
+  brandName: string
+  listingIds: string[]
+  count: number
+}
+
 interface RequirementCompanySelectorProps {
-  selectedCompanies: string[]
-  onSelectionChange: (companies: string[]) => void
+  selectedBrands: string[]  // Brand names (for UI state)
+  onSelectionChange: (listingIds: string[]) => void  // Returns listing IDs for API
 }
 
 export function RequirementCompanySelector({
-  selectedCompanies,
+  selectedBrands,
   onSelectionChange
 }: RequirementCompanySelectorProps) {
-  const [companies, setCompanies] = useState<string[]>([])
+  const [brands, setBrands] = useState<Brand[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedBrandNames, setSelectedBrandNames] = useState<string[]>(selectedBrands)
 
-  // Fetch companies on mount
+  // Fetch brands from API
   useEffect(() => {
-    const fetchCompanies = async () => {
+    const fetchBrands = async () => {
       try {
         const response = await fetch('/api/public/gapfinder/requirement-companies')
         if (response.ok) {
           const data = await response.json()
-          setCompanies(data.companies || [])
+          setBrands(data.brands || [])
         }
       } catch (error) {
-        console.error('Failed to fetch companies:', error)
+        console.error('Failed to fetch brands:', error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchCompanies()
+    fetchBrands()
   }, [])
 
-  // Filter companies based on search query
-  const filteredCompanies = useMemo(() => {
-    if (!searchQuery.trim()) return companies
-    const query = searchQuery.toLowerCase()
-    return companies.filter(company => company.toLowerCase().includes(query))
-  }, [companies, searchQuery])
+  // Sync selectedBrands prop with internal state
+  useEffect(() => {
+    setSelectedBrandNames(selectedBrands)
+  }, [selectedBrands])
 
-  const handleToggleCompany = (company: string) => {
-    if (selectedCompanies.includes(company)) {
-      onSelectionChange(selectedCompanies.filter(c => c !== company))
+  // Filter brands based on search query
+  const filteredBrands = useMemo(() => {
+    if (!searchQuery.trim()) return brands
+    const query = searchQuery.toLowerCase()
+    return brands.filter(brand => brand.brandName.toLowerCase().includes(query))
+  }, [brands, searchQuery])
+
+  // Toggle brand (sends all listing IDs for that brand)
+  const handleToggleBrand = (brandName: string) => {
+    let newSelectedBrands: string[]
+
+    if (selectedBrandNames.includes(brandName)) {
+      newSelectedBrands = selectedBrandNames.filter(b => b !== brandName)
     } else {
-      onSelectionChange([...selectedCompanies, company])
+      newSelectedBrands = [...selectedBrandNames, brandName]
     }
+
+    setSelectedBrandNames(newSelectedBrands)
+
+    // Convert brand names to listing IDs
+    const allListingIds = newSelectedBrands.flatMap(name => {
+      const brand = brands.find(b => b.brandName === name)
+      return brand ? brand.listingIds : []
+    })
+
+    onSelectionChange(allListingIds)
   }
 
-  const handleRemoveCompany = (company: string) => {
-    onSelectionChange(selectedCompanies.filter(c => c !== company))
+  const handleRemoveBrand = (brandName: string) => {
+    handleToggleBrand(brandName)
   }
 
   const handleClearAll = () => {
+    setSelectedBrandNames([])
     onSelectionChange([])
   }
 
@@ -87,12 +113,12 @@ export function RequirementCompanySelector({
         />
       </div>
 
-      {/* Selected companies as badges */}
-      {selectedCompanies.length > 0 && (
+      {/* Selected brands as badges */}
+      {selectedBrandNames.length > 0 && (
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <Label className="text-xs text-gray-600">
-              Selected ({selectedCompanies.length})
+              Selected ({selectedBrandNames.length})
             </Label>
             <button
               type="button"
@@ -103,16 +129,16 @@ export function RequirementCompanySelector({
             </button>
           </div>
           <div className="flex flex-wrap gap-1">
-            {selectedCompanies.map(company => (
+            {selectedBrandNames.map(brandName => (
               <Badge
-                key={company}
+                key={brandName}
                 variant="secondary"
                 className="text-xs gap-1 pr-1"
               >
-                {company}
+                {brandName}
                 <button
                   type="button"
-                  onClick={() => handleRemoveCompany(company)}
+                  onClick={() => handleRemoveBrand(brandName)}
                   className="hover:bg-gray-300 rounded-full p-0.5"
                 >
                   <X className="h-3 w-3" />
@@ -123,30 +149,33 @@ export function RequirementCompanySelector({
         </div>
       )}
 
-      {/* Company list */}
+      {/* Brand list */}
       <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-md bg-white">
-        {filteredCompanies.length === 0 ? (
+        {filteredBrands.length === 0 ? (
           <div className="p-3 text-center text-xs text-gray-500">
             {searchQuery ? 'No brands found' : 'No brands available'}
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {filteredCompanies.map(company => (
+            {filteredBrands.map(brand => (
               <div
-                key={company}
+                key={brand.brandName}
                 className="flex items-center space-x-2 p-2 hover:bg-gray-50 cursor-pointer"
-                onClick={() => handleToggleCompany(company)}
+                onClick={() => handleToggleBrand(brand.brandName)}
               >
                 <Checkbox
-                  checked={selectedCompanies.includes(company)}
-                  onCheckedChange={() => handleToggleCompany(company)}
+                  checked={selectedBrandNames.includes(brand.brandName)}
+                  onCheckedChange={() => handleToggleBrand(brand.brandName)}
                   onClick={(e) => e.stopPropagation()}
                 />
                 <Label
-                  htmlFor={`company-${company}`}
+                  htmlFor={`brand-${brand.brandName}`}
                   className="text-xs text-gray-700 flex-1 cursor-pointer"
                 >
-                  {company}
+                  {brand.brandName}
+                  {brand.count > 1 && (
+                    <span className="text-gray-500"> ({brand.count})</span>
+                  )}
                 </Label>
               </div>
             ))}

@@ -1,20 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { checkSubscriptionAccess } from '@/lib/subscription'
+import { getRequirementMapFeatures } from '@/lib/requirement-map-data'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Get requirement locations (listing_locations from approved listings) within viewport bounds
+ * Get requirement locations using the same listing/location eligibility rules
+ * as the requirement directory map.
  *
  * Query parameters:
- * - minLat, minLon, maxLat, maxLon: Viewport bounds (required)
- * - companyNames: Comma-separated company names for filtering (optional)
- * - limit: Maximum number of results (default 500, max 2000)
+ * - minLat, minLon, maxLat, maxLon: Viewport bounds (required for API compatibility; not used for filtering)
+ * - listingIds: Comma-separated listing IDs for filtering (optional)
  *
  * Returns:
  * {
  *   results: RequirementLocation[],
  *   total: number,
+ *   debug: { totalBeforeFilter, totalAfterFilter, ... },
  *   error?: string
  * }
  */
@@ -22,13 +25,13 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
 
-    // Parse viewport bounds
+    // Parse viewport bounds for backwards-compatible validation. The directory map
+    // does not filter by bounds, so this endpoint intentionally does not either.
     const minLatParam = searchParams.get('minLat')
     const minLonParam = searchParams.get('minLon')
     const maxLatParam = searchParams.get('maxLat')
     const maxLonParam = searchParams.get('maxLon')
-    const companyNamesParam = searchParams.get('companyNames')
-    const limitParam = searchParams.get('limit')
+    const listingIdsParam = searchParams.get('listingIds')
 
     // Validate required parameters
     if (!minLatParam || !minLonParam || !maxLatParam || !maxLonParam) {
@@ -43,7 +46,6 @@ export async function GET(request: NextRequest) {
     const minLon = Number(minLonParam)
     const maxLat = Number(maxLatParam)
     const maxLon = Number(maxLonParam)
-    const limit = limitParam ? Math.min(Number(limitParam), 2000) : 500
 
     // Validate coordinates are numbers
     if (isNaN(minLat) || isNaN(minLon) || isNaN(maxLat) || isNaN(maxLon)) {
@@ -54,129 +56,72 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Parse company names filter
-    const companyNames = companyNamesParam
-      ? companyNamesParam.split(',').map(name => name.trim()).filter(name => name.length > 0)
+    // Parse listing IDs filter
+    const listingIds = listingIdsParam
+      ? listingIdsParam.split(',').map(id => id.trim()).filter(id => id.length > 0)
       : null
 
     // Create Supabase client
     const supabase = await createServerClient()
 
-    // Build query
-    let query = supabase
-      .from('listing_locations')
-      .select(`
-        id,
-        listing_id,
-        place_name,
-        formatted_address,
-        coordinates,
-        listings!inner (
-          company_name,
-          title,
-          listing_type,
-          status
-        )
-      `)
-      .eq('listings.status', 'approved')
-      .not('coordinates', 'is', null)
-      .limit(limit)
+    const { data: { user } } = await supabase.auth.getUser()
+    const hasAccess = user ? await checkSubscriptionAccess(user.id) : false
+    const features = await getRequirementMapFeatures(supabase, {
+      isFreeTier: !hasAccess
+    })
 
-    // Execute query
-    const { data, error } = await query
+    // Filter by listing ID (robust, exact matching)
+    const filteredResults = features
+      .filter(feature =>
+        !listingIds ||
+        listingIds.length === 0 ||
+        listingIds.includes(feature.properties.id)
+      )
+      .map(feature => ({
+        id: feature.properties.location_id,
+        listingId: feature.properties.id,
+        companyName: feature.properties.company_name,
+        title: feature.properties.title,
+        listingType: feature.properties.listing_type,
+        placeName: feature.properties.place_name,
+        formattedAddress: feature.properties.formatted_address,
+        coordinates: {
+          lng: feature.geometry.coordinates[0],
+          lat: feature.geometry.coordinates[1]
+        }
+      }))
 
-    if (error) {
-      console.error('Requirement locations query error:', error)
-      return NextResponse.json({
-        results: [],
-        total: 0,
-        error: error.message || 'Failed to fetch requirement locations'
-      }, { status: 500 })
+    // Development-mode debug logging for listing ID filtering
+    if (listingIds && listingIds.length > 0 && process.env.NODE_ENV === 'development') {
+      const matchedListings = [...new Set(
+        filteredResults.map(r => ({ id: r.listingId, name: r.companyName }))
+      )]
+
+      console.log('[Gapfinder] Listing ID filtering:', {
+        requested: listingIds,
+        matched: matchedListings,
+        beforeFilter: features.length,
+        afterFilter: filteredResults.length
+      })
     }
 
-    // Filter by viewport bounds and company names in application code
-    // (Supabase doesn't support JSONB field filtering in query builder easily)
-
-    const filteredResults = (data || [])
-      .filter(location => {
-        // Check coordinates exist and are valid
-        if (!location.coordinates) {
-          return false
-        }
-
-        // Coordinates can be either [lng, lat] array or { lat, lng } object
-        let lat: number
-        let lng: number
-
-        if (Array.isArray(location.coordinates)) {
-          // Array format: [lng, lat]
-          if (location.coordinates.length !== 2 ||
-              typeof location.coordinates[0] !== 'number' ||
-              typeof location.coordinates[1] !== 'number') {
-            return false
-          }
-          lng = location.coordinates[0]
-          lat = location.coordinates[1]
-        } else if (typeof location.coordinates === 'object') {
-          // Object format: { lat, lng }
-          const coords = location.coordinates as { lat: number; lng: number }
-          if (typeof coords.lat !== 'number' || typeof coords.lng !== 'number') {
-            return false
-          }
-          lat = coords.lat
-          lng = coords.lng
-        } else {
-          return false
-        }
-
-        // Check viewport bounds
-        if (lat < minLat || lat > maxLat) {
-          return false
-        }
-        if (lng < minLon || lng > maxLon) {
-          return false
-        }
-
-        // Check company name filter
-        if (companyNames && companyNames.length > 0) {
-          const listing = Array.isArray(location.listings) ? location.listings[0] : location.listings
-          if (!listing || !companyNames.includes(listing.company_name)) {
-            return false
-          }
-        }
-
-        return true
+    // Build debug metadata with optional listing ID filtering info
+    const debugMetadata = {
+      totalBeforeFilter: features.length,
+      totalAfterFilter: filteredResults.length,
+      sampleLocationIds: filteredResults.slice(0, 20).map(result => result.id),
+      isFreeTier: !hasAccess,
+      // Add matched listing IDs when filtering is active
+      ...(listingIds && listingIds.length > 0 && {
+        requestedListingIds: listingIds,
+        matchedListingIds: [...new Set(filteredResults.map(r => r.listingId))]
       })
-      .slice(0, limit)
-      .map(location => {
-        const listing = Array.isArray(location.listings) ? location.listings[0] : location.listings
-
-        // Normalize coordinates to { lat, lng } object format
-        let coordinates: { lat: number; lng: number }
-        if (Array.isArray(location.coordinates)) {
-          coordinates = {
-            lng: location.coordinates[0],
-            lat: location.coordinates[1]
-          }
-        } else {
-          coordinates = location.coordinates as { lat: number; lng: number }
-        }
-
-        return {
-          id: location.id,
-          listingId: location.listing_id,
-          companyName: listing.company_name,
-          title: listing.title,
-          listingType: listing.listing_type,
-          placeName: location.place_name,
-          formattedAddress: location.formatted_address,
-          coordinates
-        }
-      })
+    }
 
     return NextResponse.json({
       results: filteredResults,
-      total: filteredResults.length
+      total: filteredResults.length,
+      debug: debugMetadata
     })
   } catch (error) {
     console.error('Requirement locations API error:', error)

@@ -1,57 +1,66 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { checkSubscriptionAccess } from '@/lib/subscription'
+import { getRequirementMapFeatures } from '@/lib/requirement-map-data'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Get unique company names from approved listings with listing locations
+ * Get brands (company names) with their associated listing IDs from the same
+ * data source used for the map pins. This ensures the selector always shows
+ * exactly what's visible on the map.
  *
  * Returns:
  * {
- *   companies: string[]
+ *   brands: Array<{ brandName: string, listingIds: string[], count: number }>,
+ *   total: number
  * }
  */
 export async function GET() {
   try {
     const supabase = await createServerClient()
 
-    const { data, error } = await supabase
-      .from('listing_locations')
-      .select(`
-        listings!inner (
-          company_name,
-          status
-        )
-      `)
-      .eq('listings.status', 'approved')
+    // Auth check (identical to requirement-locations)
+    const { data: { user } } = await supabase.auth.getUser()
+    const hasAccess = user ? await checkSubscriptionAccess(user.id) : false
 
-    if (error) {
-      console.error('Requirement companies query error:', error)
-      return NextResponse.json({
-        companies: [],
-        error: error.message || 'Failed to fetch companies'
-      }, { status: 500 })
-    }
+    // Fetch the SAME features that appear on the map
+    const features = await getRequirementMapFeatures(supabase, {
+      isFreeTier: !hasAccess
+    })
 
-    // Get unique company names
-    const uniqueCompanies = Array.from(new Set(
-      data.map(item => {
-        const listing = Array.isArray(item.listings) ? item.listings[0] : item.listings
-        return listing?.company_name
-      })
-    ))
-      .filter(name => name && name.trim().length > 0)
-      .sort()
+    // Group features by company name, collecting listing IDs
+    const brandMap = new Map<string, Set<string>>()
+
+    features.forEach(feature => {
+      const companyName = feature.properties.company_name
+      const listingId = feature.properties.id
+
+      if (!brandMap.has(companyName)) {
+        brandMap.set(companyName, new Set())
+      }
+      brandMap.get(companyName)!.add(listingId)
+    })
+
+    // Convert to array format for selector
+    const brands = Array.from(brandMap.entries())
+      .map(([brandName, listingIds]) => ({
+        brandName,
+        listingIds: Array.from(listingIds),
+        count: listingIds.size
+      }))
+      .sort((a, b) => a.brandName.localeCompare(b.brandName))
 
     return NextResponse.json({
-      companies: uniqueCompanies,
-      total: uniqueCompanies.length
+      brands,
+      total: brands.length
     })
   } catch (error) {
     console.error('Requirement companies API error:', error)
     return NextResponse.json(
       {
-        companies: [],
+        brands: [],
+        total: 0,
         error: error instanceof Error ? error.message : 'Internal server error'
       },
       { status: 500 }

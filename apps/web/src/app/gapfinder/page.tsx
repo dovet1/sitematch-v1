@@ -110,7 +110,8 @@ export default function BUAsPage() {
   // Requirement locations overlay state
   const [showRequirementLocations, setShowRequirementLocations] = useState<boolean>(false)
   const [requirementBrandScope, setRequirementBrandScope] = useState<'all' | 'selected'>('all')
-  const [selectedRequirementCompanies, setSelectedRequirementCompanies] = useState<string[]>([])
+  const [selectedRequirementBrands, setSelectedRequirementBrands] = useState<string[]>([])  // Brand names for UI
+  const [selectedRequirementListingIds, setSelectedRequirementListingIds] = useState<string[]>([])  // Listing IDs for API
 
   // Population filter collapsible state
   const [isPopulationFilterOpen, setIsPopulationFilterOpen] = useState<boolean>(false)
@@ -489,7 +490,7 @@ export default function BUAsPage() {
       !showRequirementLocations ||
       !mapViewport ||
       currentMode !== 'find-gaps' ||
-      (requirementBrandScope === 'selected' && selectedRequirementCompanies.length === 0)
+      (requirementBrandScope === 'selected' && selectedRequirementListingIds.length === 0)
     ) {
       requirementFetchAbortRef.current?.abort()
       setRequirementLocations([])
@@ -506,13 +507,12 @@ export default function BUAsPage() {
           minLat: mapViewport.minLat.toString(),
           minLon: mapViewport.minLon.toString(),
           maxLat: mapViewport.maxLat.toString(),
-          maxLon: mapViewport.maxLon.toString(),
-          limit: '2000'
+          maxLon: mapViewport.maxLon.toString()
         })
 
-        // Add company filter if in 'selected' mode
-        if (requirementBrandScope === 'selected' && selectedRequirementCompanies.length > 0) {
-          params.set('companyNames', selectedRequirementCompanies.join(','))
+        // Add listing IDs filter if in 'selected' mode
+        if (requirementBrandScope === 'selected' && selectedRequirementListingIds.length > 0) {
+          params.set('listingIds', selectedRequirementListingIds.join(','))
         }
 
         const response = await fetch(`/api/public/gapfinder/requirement-locations?${params.toString()}`, {
@@ -522,6 +522,13 @@ export default function BUAsPage() {
         if (response.ok) {
           const data = await response.json()
           setRequirementLocations(data.results || [])
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[DEBUG] Gapfinder requirement location count', {
+              total: data.total,
+              results: data.results?.length || 0,
+              apiDebug: data.debug
+            })
+          }
         } else {
           setRequirementLocations([])
         }
@@ -544,7 +551,7 @@ export default function BUAsPage() {
       clearTimeout(debounceTimer)
       requirementFetchAbortRef.current?.abort()
     }
-  }, [showRequirementLocations, mapViewport, requirementBrandScope, selectedRequirementCompanies, currentMode])
+  }, [showRequirementLocations, mapViewport, requirementBrandScope, selectedRequirementListingIds, currentMode])
 
   // Fetch filtered BUAs when filters change (NEW: Using FilterSet)
   useEffect(() => {
@@ -799,10 +806,13 @@ export default function BUAsPage() {
                         {requirementBrandScope === 'selected' && (
                           <>
                             <RequirementCompanySelector
-                              selectedCompanies={selectedRequirementCompanies}
-                              onSelectionChange={setSelectedRequirementCompanies}
+                              selectedBrands={selectedRequirementBrands}
+                              onSelectionChange={(listingIds) => {
+                                setSelectedRequirementListingIds(listingIds)
+                                // Update brands for UI state tracking (not strictly necessary but helpful for debugging)
+                              }}
                             />
-                            {selectedRequirementCompanies.length === 0 && (
+                            {selectedRequirementListingIds.length === 0 && (
                               <p className="px-2 text-xs text-gray-500">
                                 Choose at least one brand to show requirement locations.
                               </p>

@@ -16,6 +16,10 @@ const BUA_SOURCE_ID = 'bua-source'
 const BUA_LAYER_ID = 'bua-fill'
 const BUA_OUTLINE_LAYER_ID = 'bua-outline'
 const BUA_SOURCE_LAYER = 'bua'
+const REQUIREMENT_SOURCE_ID = 'requirement-locations-source'
+const REQUIREMENT_CLUSTER_LAYER_ID = 'requirement-locations-clusters'
+const REQUIREMENT_CLUSTER_COUNT_LAYER_ID = 'requirement-locations-cluster-count'
+const REQUIREMENT_POINT_LAYER_ID = 'requirement-locations-point'
 
 // Track the source of store marker updates to control auto-fit behavior
 export enum StoreUpdateSource {
@@ -348,7 +352,6 @@ export function BUAMap({
   const pointMarker = useRef<mapboxgl.Marker | null>(null)
   const radiusCircle = useRef<string | null>(null)
   const storeMarkers = useRef<mapboxgl.Marker[]>([])
-  const requirementMarkers = useRef<mapboxgl.Marker[]>([])
   const isAutoFitting = useRef(false)
   const skipNextCenterFlyTo = useRef(false)
   const lastHandledSidebarSelection = useRef(0)
@@ -867,40 +870,6 @@ export function BUAMap({
       .setPopup(popup)
   }
 
-  const createRequirementMarker = (
-    location: {
-      id: string
-      listingId: string
-      companyName: string
-      title: string
-      listingType: string
-      placeName: string
-      formattedAddress: string
-      coordinates: { lat: number; lng: number }
-    },
-    color: string
-  ): mapboxgl.Marker => {
-    const el = document.createElement('div')
-    el.className = 'requirement-location-marker'
-
-    el.style.width = '16px'
-    el.style.height = '16px'
-    el.style.backgroundColor = color
-    el.style.borderRadius = '9999px'
-    el.style.border = '1px solid white'
-    el.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)'
-    el.style.cursor = 'pointer'
-
-    const popup = new mapboxgl.Popup({
-      offset: 15,
-      className: 'premium-store-popup'
-    }).setHTML(generateRequirementPopupHTML(location))
-
-    return new mapboxgl.Marker({ element: el })
-      .setLngLat([location.coordinates.lng, location.coordinates.lat])
-      .setPopup(popup)
-  }
-
   // Handle store markers for both modes
   useEffect(() => {
     if (!map.current || !mapLoaded) {
@@ -1042,32 +1011,173 @@ export function BUAMap({
     }
   }, [stores, includedStores, excludedStores, proximityIncludedStores, proximityExcludedStores, mode, mapLoaded, targetBadgeMapping, storeUpdateSource, companiesVisibility, categoriesVisibility, isStoreVisible])
 
-  // Handle requirement location markers
-  useEffect(() => {
-    // Clean up existing markers
-    requirementMarkers.current.forEach(marker => marker.remove())
-    requirementMarkers.current = []
+  const requirementGeoJson = useMemo(() => ({
+    type: 'FeatureCollection' as const,
+    features: requirementLocations.map(location => ({
+      type: 'Feature' as const,
+      geometry: {
+        type: 'Point' as const,
+        coordinates: [location.coordinates.lng, location.coordinates.lat]
+      },
+      properties: {
+        id: location.id,
+        listingId: location.listingId,
+        companyName: location.companyName,
+        title: location.title,
+        listingType: location.listingType,
+        placeName: location.placeName,
+        formattedAddress: location.formattedAddress
+      }
+    }))
+  }), [requirementLocations])
 
-    if (!map.current || !mapLoaded || !requirementLocations || requirementLocations.length === 0) {
+  // Render requirement locations as clustered GeoJSON so overlapping points are counted visibly.
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+
+    const requirementSource = map.current.getSource(REQUIREMENT_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined
+    if (requirementSource) {
+      requirementSource.setData(requirementGeoJson)
       return
     }
 
-    const color = '#8b5cf6' // violet-500
-    const newMarkers: mapboxgl.Marker[] = []
+    if (!map.current.isStyleLoaded()) return
 
-    requirementLocations.forEach(location => {
-      const marker = createRequirementMarker(location, color)
-      marker.addTo(map.current!)
-      newMarkers.push(marker)
+    map.current.addSource(REQUIREMENT_SOURCE_ID, {
+      type: 'geojson',
+      data: requirementGeoJson,
+      cluster: true,
+      clusterMaxZoom: 22,
+      clusterRadius: 50
     })
 
-    requirementMarkers.current = newMarkers
+    map.current.addLayer({
+      id: REQUIREMENT_CLUSTER_LAYER_ID,
+      type: 'circle',
+      source: REQUIREMENT_SOURCE_ID,
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': [
+          'step',
+          ['get', 'point_count'],
+          '#a78bfa',
+          100,
+          '#8b5cf6',
+          750,
+          '#7c3aed'
+        ],
+        'circle-radius': [
+          'step',
+          ['get', 'point_count'],
+          20,
+          100,
+          30,
+          750,
+          40
+        ],
+        'circle-stroke-width': 1,
+        'circle-stroke-color': '#ffffff'
+      }
+    })
+
+    map.current.addLayer({
+      id: REQUIREMENT_CLUSTER_COUNT_LAYER_ID,
+      type: 'symbol',
+      source: REQUIREMENT_SOURCE_ID,
+      filter: ['has', 'point_count'],
+      layout: {
+        'text-field': '{point_count_abbreviated}',
+        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+        'text-size': 14,
+        'text-allow-overlap': true
+      },
+      paint: {
+        'text-color': '#ffffff'
+      }
+    })
+
+    map.current.addLayer({
+      id: REQUIREMENT_POINT_LAYER_ID,
+      type: 'circle',
+      source: REQUIREMENT_SOURCE_ID,
+      filter: ['!', ['has', 'point_count']],
+      paint: {
+        'circle-color': '#8b5cf6',
+        'circle-radius': 8,
+        'circle-stroke-width': 1,
+        'circle-stroke-color': '#ffffff'
+      }
+    })
+  }, [requirementGeoJson, mapLoaded])
+
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+
+    const handleRequirementClusterClick = (event: mapboxgl.MapMouseEvent) => {
+      const feature = event.features?.[0]
+      const source = map.current?.getSource(REQUIREMENT_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined
+
+      if (!source || !feature || !feature.properties || !feature.geometry || feature.geometry.type !== 'Point') return
+
+      const clusterId = feature.properties.cluster_id
+      if (clusterId === undefined) return
+
+      const center = feature.geometry.coordinates as [number, number]
+      source.getClusterExpansionZoom(clusterId, (error, zoom) => {
+        if (error || zoom === undefined || zoom === null || !map.current) return
+
+        map.current.easeTo({
+          center,
+          zoom
+        })
+      })
+    }
+
+    const handleRequirementPointClick = (event: mapboxgl.MapMouseEvent) => {
+      const feature = event.features?.[0]
+      if (!feature || !feature.geometry || feature.geometry.type !== 'Point') return
+
+      const properties = feature.properties || {}
+      const location = {
+        companyName: String(properties.companyName || ''),
+        title: String(properties.title || ''),
+        listingType: String(properties.listingType || 'commercial'),
+        placeName: String(properties.placeName || '')
+      }
+
+      new mapboxgl.Popup({
+        offset: 15,
+        className: 'premium-store-popup'
+      })
+        .setLngLat(feature.geometry.coordinates as [number, number])
+        .setHTML(generateRequirementPopupHTML(location))
+        .addTo(map.current!)
+    }
+
+    const setPointerCursor = () => {
+      if (map.current) map.current.getCanvas().style.cursor = 'pointer'
+    }
+    const resetCursor = () => {
+      if (map.current) map.current.getCanvas().style.cursor = ''
+    }
+
+    map.current.on('click', REQUIREMENT_CLUSTER_LAYER_ID, handleRequirementClusterClick)
+    map.current.on('click', REQUIREMENT_POINT_LAYER_ID, handleRequirementPointClick)
+    map.current.on('mouseenter', REQUIREMENT_CLUSTER_LAYER_ID, setPointerCursor)
+    map.current.on('mouseenter', REQUIREMENT_POINT_LAYER_ID, setPointerCursor)
+    map.current.on('mouseleave', REQUIREMENT_CLUSTER_LAYER_ID, resetCursor)
+    map.current.on('mouseleave', REQUIREMENT_POINT_LAYER_ID, resetCursor)
 
     return () => {
-      requirementMarkers.current.forEach(marker => marker.remove())
-      requirementMarkers.current = []
+      if (!map.current) return
+      map.current.off('click', REQUIREMENT_CLUSTER_LAYER_ID, handleRequirementClusterClick)
+      map.current.off('click', REQUIREMENT_POINT_LAYER_ID, handleRequirementPointClick)
+      map.current.off('mouseenter', REQUIREMENT_CLUSTER_LAYER_ID, setPointerCursor)
+      map.current.off('mouseenter', REQUIREMENT_POINT_LAYER_ID, setPointerCursor)
+      map.current.off('mouseleave', REQUIREMENT_CLUSTER_LAYER_ID, resetCursor)
+      map.current.off('mouseleave', REQUIREMENT_POINT_LAYER_ID, resetCursor)
     }
-  }, [requirementLocations, mapLoaded])
+  }, [mapLoaded])
 
   // Compute fascia legend items
   const fasciaLegendItems = useMemo(() => {
