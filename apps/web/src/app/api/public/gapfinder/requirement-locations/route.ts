@@ -93,9 +93,13 @@ export async function GET(request: NextRequest) {
 
     // Development-mode debug logging for listing ID filtering
     if (listingIds && listingIds.length > 0 && process.env.NODE_ENV === 'development') {
-      const matchedListings = [...new Set(
-        filteredResults.map(r => ({ id: r.listingId, name: r.companyName }))
-      )]
+      const matchedListings = filteredResults.reduce<Array<{ id: string; name: string }>>((acc, result) => {
+        if (!acc.some(listing => listing.id === result.listingId)) {
+          acc.push({ id: result.listingId, name: result.companyName })
+        }
+
+        return acc
+      }, [])
 
       console.log('[Gapfinder] Listing ID filtering:', {
         requested: listingIds,
@@ -114,7 +118,13 @@ export async function GET(request: NextRequest) {
       // Add matched listing IDs when filtering is active
       ...(listingIds && listingIds.length > 0 && {
         requestedListingIds: listingIds,
-        matchedListingIds: [...new Set(filteredResults.map(r => r.listingId))]
+        matchedListingIds: filteredResults.reduce<string[]>((acc, result) => {
+          if (!acc.includes(result.listingId)) {
+            acc.push(result.listingId)
+          }
+
+          return acc
+        }, [])
       })
     }
 
