@@ -3,21 +3,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Info, MapPin, ChevronDown, Search } from 'lucide-react'
+import { ArrowLeft, MapPin, ChevronDown, Search } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
 import { BUAMap, StoreUpdateSource } from '@/components/gapfinder/BUAMap'
 import { BUASearch } from '@/components/gapfinder/BUASearch'
 import { ResultsPanel } from '@/components/gapfinder/ResultsPanel'
-import { CompanySelector } from '@/components/gapfinder/CompanySelector'
 import { FilterBuilder } from '@/components/gapfinder/FilterBuilder'
 import { RequirementCompanySelector } from '@/components/gapfinder/RequirementCompanySelector'
+import { UnifiedCategorySelector } from '@/components/gapfinder/UnifiedCategorySelector'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import { toast, Toaster } from 'sonner'
+import { Toaster } from 'sonner'
 import type { BUA } from '@/lib/buas'
 import type { Store as StoreType, ViewportStore } from '@/lib/stores'
 import type { FilterSet } from '@/types/filters'
@@ -139,7 +139,7 @@ export default function BUAsPage() {
   const [currentMode, setCurrentMode] = useState<'find-gaps' | 'assess-area'>('find-gaps')
   const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null)
   const [radiusMeters, setRadiusMeters] = useState(5000) // 5km default
-  const [assessCompanies, setAssessCompanies] = useState<string[]>([])
+  const [assessFascias, setAssessFascias] = useState<string[]>([])
   const [assessCategories, setAssessCategories] = useState<string[]>([])
   const [nearbyStores, setNearbyStores] = useState<StoreType[]>([])
   const [isLoadingStores, setIsLoadingStores] = useState(false)
@@ -626,8 +626,8 @@ export default function BUAsPage() {
           radius: radiusMeters.toString()
         })
 
-        if (assessCompanies.length > 0) {
-          params.append('brandIds', assessCompanies.join(','))
+        if (assessFascias.length > 0) {
+          params.append('fasciaIds', assessFascias.join(','))
         }
         if (assessCategories.length > 0) {
           params.append('categoryIds', assessCategories.join(','))
@@ -649,7 +649,7 @@ export default function BUAsPage() {
     // Debounce the fetch
     const debounceTimer = setTimeout(fetchNearbyStores, 500)
     return () => clearTimeout(debounceTimer)
-  }, [selectedPoint, radiusMeters, assessCompanies, assessCategories, currentMode])
+  }, [selectedPoint, radiusMeters, assessFascias, assessCategories, currentMode])
 
   const handleBUAListItemClick = (bua: BUA) => {
     // Sidebar click - map will fly to BUA, next store update should NOT auto-fit
@@ -658,6 +658,14 @@ export default function BUAsPage() {
     setSelectedBUAGsscode(bua.gsscode)
     setSelectedBUA({ name: bua.name, pop: bua.pop })
     setSidebarSelectionNonce(current => current + 1)
+  }
+
+  const handleStoreListItemClick = (store: StoreType) => {
+    if (!Number.isFinite(store.lat) || !Number.isFinite(store.lon)) return
+
+    setCenter({ lat: store.lat, lng: store.lon })
+    setSelectedBUAGsscode(null)
+    setSelectedBUA(null)
   }
 
   const handleExportBUAs = async () => {
@@ -952,23 +960,6 @@ export default function BUAsPage() {
 
               {/* Assess Area Tab Content */}
               <TabsContent value="assess-area" className="flex-1 overflow-y-auto p-6 space-y-6 mt-0 pt-1">
-                {/* Instructions */}
-                <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50/50 border border-blue-200/60 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 mt-0.5">
-                      <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <Info className="h-4 w-4 text-blue-600" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-semibold text-blue-900 mb-1">How to use</h4>
-                      <p className="text-xs text-blue-700 leading-relaxed">
-                        Click anywhere on the map to analyze stores within a customizable radius of that point.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Point Selection Status */}
                 {selectedPoint ? (
                   <div className="relative bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-200/60 rounded-xl p-4 shadow-sm">
@@ -1101,23 +1092,23 @@ export default function BUAsPage() {
                       <span className="font-semibold text-gray-900">Store Filters</span>
                     </div>
                     <Badge variant="secondary" className={`text-xs font-medium ${
-                      assessCompanies.length + assessCategories.length === 0
+                      assessFascias.length + assessCategories.length === 0
                         ? 'bg-gray-100 text-gray-600 border-gray-200'
                         : 'bg-violet-100 text-violet-700 border-violet-200'
                     }`}>
-                      {assessCompanies.length + assessCategories.length === 0
+                      {assessFascias.length + assessCategories.length === 0
                         ? 'All'
-                        : `${assessCompanies.length + assessCategories.length} selected`}
+                        : `${assessFascias.length + assessCategories.length} selected`}
                     </Badge>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="px-4 pb-6 pt-4">
                     <div className="text-xs text-gray-600 mb-3 font-medium">
                       Filter which stores to show in results
                     </div>
-                    <CompanySelector
-                      selectedCompanies={assessCompanies}
+                    <UnifiedCategorySelector
+                      selectedCompanies={assessFascias}
                       selectedCategories={assessCategories}
-                      onCompaniesChange={setAssessCompanies}
+                      onCompaniesChange={setAssessFascias}
                       onCategoriesChange={setAssessCategories}
                       mode="include"
                     />
@@ -1169,7 +1160,7 @@ export default function BUAsPage() {
             results={currentMode === 'find-gaps' ? filteredBUAs : nearbyStores}
             isLoading={currentMode === 'find-gaps' ? isLoadingBUAs : isLoadingStores}
             selectedBUA={selectedBUA}
-            onItemClick={handleBUAListItemClick}
+            onItemClick={currentMode === 'find-gaps' ? handleBUAListItemClick : handleStoreListItemClick}
             mode={currentMode}
             total={currentMode === 'find-gaps' ? totalBUAs : undefined}
             onExport={currentMode === 'find-gaps' ? handleExportBUAs : undefined}

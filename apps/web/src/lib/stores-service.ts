@@ -154,16 +154,18 @@ export class StoreService {
    * @param lat Latitude of center point
    * @param lon Longitude of center point
    * @param radiusMeters Radius in meters
-   * @param brandIds Optional brand ID filters
+   * @param fasciaIds Optional fascia ID filters
    * @param categoryIds Optional category ID filters
+   * @param legacyBrandIds Optional brand ID filters kept for older callers
    * @returns Array of stores within radius
    */
   async getStoresNearPoint(
     lat: number,
     lon: number,
     radiusMeters: number,
-    brandIds?: string[],
-    categoryIds?: string[]  // Category IDs (UUIDs)
+    fasciaIds?: string[],
+    categoryIds?: string[],  // Category IDs (UUIDs)
+    legacyBrandIds?: string[]
   ): Promise<Store[]> {
     // Use PostGIS RPC function for spatial query
     let query = this.supabase.rpc('get_stores_near_point', {
@@ -172,20 +174,24 @@ export class StoreService {
       p_radius_m: radiusMeters
     })
 
-    if (brandIds && brandIds.length > 0) {
-      query = query.in('brand_id', brandIds)
-    }
+    const selectedFasciaIds = new Set(fasciaIds || [])
 
     if (categoryIds && categoryIds.length > 0) {
       // Join with fascia_categories for category filtering
-      const { data: fasciaIds } = await this.supabase
+      const { data: categoryFascias } = await this.supabase
         .from('fascia_categories')
         .select('fascia_id')
         .in('category_id', categoryIds)
 
-      if (fasciaIds && fasciaIds.length > 0) {
-        query = query.in('fascia_id', fasciaIds.map((f: any) => f.fascia_id))
-      }
+      categoryFascias?.forEach((f: any) => selectedFasciaIds.add(f.fascia_id))
+    }
+
+    if (selectedFasciaIds.size > 0) {
+      query = query.in('fascia_id', Array.from(selectedFasciaIds))
+    } else if (categoryIds && categoryIds.length > 0) {
+      query = query.eq('fascia_id', '00000000-0000-0000-0000-000000000000')
+    } else if (legacyBrandIds && legacyBrandIds.length > 0) {
+      query = query.in('brand_id', legacyBrandIds)
     }
 
     const { data, error } = await query.limit(1000)

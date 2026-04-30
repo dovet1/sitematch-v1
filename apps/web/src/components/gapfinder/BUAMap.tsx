@@ -22,6 +22,10 @@ const REQUIREMENT_CLUSTER_LAYER_ID = 'requirement-locations-clusters'
 const REQUIREMENT_CLUSTER_COUNT_LAYER_ID = 'requirement-locations-cluster-count'
 const REQUIREMENT_POINT_LAYER_ID = 'requirement-locations-point'
 
+function isValidCoordinate(point?: { lat: number; lng: number } | null): point is { lat: number; lng: number } {
+  return !!point && Number.isFinite(point.lat) && Number.isFinite(point.lng)
+}
+
 // Track the source of store marker updates to control auto-fit behavior
 export enum StoreUpdateSource {
   USER_PAN = 'user_pan',       // User manually moved map - NO auto-fit
@@ -671,6 +675,7 @@ export function BUAMap({
   useEffect(() => {
     if (!map.current || !mapLoaded || !center || !selectedBUAGsscode) return
     if (sidebarSelectionNonce === 0 || lastHandledSidebarSelection.current === sidebarSelectionNonce) return
+    if (!isValidCoordinate(center)) return
 
     lastHandledSidebarSelection.current = sidebarSelectionNonce
     skipNextCenterFlyTo.current = true
@@ -691,6 +696,7 @@ export function BUAMap({
   // Fly to location when center changes
   useEffect(() => {
     if (!map.current || !mapLoaded || !center) return
+    if (!isValidCoordinate(center)) return
 
     if (skipNextCenterFlyTo.current) {
       skipNextCenterFlyTo.current = false
