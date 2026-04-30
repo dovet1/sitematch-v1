@@ -1268,6 +1268,9 @@ export function BUAMap({
       const feature = event.features?.[0]
       if (!feature || !feature.geometry || feature.geometry.type !== 'Point') return
 
+      // Requirement marker clicks should not also place/move an Assess Area point.
+      event.originalEvent?.stopPropagation()
+
       const properties = feature.properties || {}
       const location = {
         companyName: String(properties.companyName || ''),
@@ -1289,7 +1292,7 @@ export function BUAMap({
       if (map.current) map.current.getCanvas().style.cursor = 'pointer'
     }
     const resetCursor = () => {
-      if (map.current) map.current.getCanvas().style.cursor = ''
+      if (map.current) map.current.getCanvas().style.cursor = mode === 'assess-area' ? 'crosshair' : ''
     }
 
     map.current.on('click', REQUIREMENT_CLUSTER_LAYER_ID, handleRequirementClusterClick)
@@ -1308,7 +1311,7 @@ export function BUAMap({
       map.current.off('mouseleave', REQUIREMENT_CLUSTER_LAYER_ID, resetCursor)
       map.current.off('mouseleave', REQUIREMENT_POINT_LAYER_ID, resetCursor)
     }
-  }, [mapLoaded])
+  }, [mapLoaded, mode])
 
   // Handle click-outside, map move/zoom, and window resize for cluster popup
   useEffect(() => {

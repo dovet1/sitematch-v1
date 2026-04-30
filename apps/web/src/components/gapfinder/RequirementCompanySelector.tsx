@@ -15,7 +15,7 @@ interface Brand {
 
 interface RequirementCompanySelectorProps {
   selectedBrands: string[]  // Brand names (for UI state)
-  onSelectionChange: (listingIds: string[]) => void  // Returns listing IDs for API
+  onSelectionChange: (listingIds: string[], brandNames: string[]) => void  // Returns listing IDs for API and brand names for UI
 }
 
 export function RequirementCompanySelector({
@@ -76,7 +76,7 @@ export function RequirementCompanySelector({
       return brand ? brand.listingIds : []
     })
 
-    onSelectionChange(allListingIds)
+    onSelectionChange(allListingIds, newSelectedBrands)
   }
 
   const handleRemoveBrand = (brandName: string) => {
@@ -85,7 +85,7 @@ export function RequirementCompanySelector({
 
   const handleClearAll = () => {
     setSelectedBrandNames([])
-    onSelectionChange([])
+    onSelectionChange([], [])
   }
 
   if (isLoading) {

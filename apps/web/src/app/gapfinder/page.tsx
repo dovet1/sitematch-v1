@@ -171,6 +171,17 @@ export default function BUAsPage() {
     setSelectedBUA({ name: bua.name, pop: bua.pop })
   }
 
+  const handleAssessAreaBUASelect = (bua: {
+    name: string
+    coordinates: { lat: number; lng: number }
+    gsscode: string
+    pop: number
+  }) => {
+    setCenter(bua.coordinates)
+    setSelectedBUAGsscode(bua.gsscode)
+    setSelectedBUA({ name: bua.name, pop: bua.pop })
+  }
+
   const handleViewportChange = useCallback((bounds: {
     minLat: number
     minLon: number
@@ -489,7 +500,6 @@ export default function BUAsPage() {
     if (
       !showRequirementLocations ||
       !mapViewport ||
-      currentMode !== 'find-gaps' ||
       (requirementBrandScope === 'selected' && selectedRequirementListingIds.length === 0)
     ) {
       requirementFetchAbortRef.current?.abort()
@@ -551,7 +561,7 @@ export default function BUAsPage() {
       clearTimeout(debounceTimer)
       requirementFetchAbortRef.current?.abort()
     }
-  }, [showRequirementLocations, mapViewport, requirementBrandScope, selectedRequirementListingIds, currentMode])
+  }, [showRequirementLocations, mapViewport, requirementBrandScope, selectedRequirementListingIds])
 
   // Fetch filtered BUAs when filters change (NEW: Using FilterSet)
   useEffect(() => {
@@ -688,6 +698,84 @@ export default function BUAsPage() {
     }
   }
 
+  const renderRequirementLocationsControl = () => (
+    <Collapsible open={showRequirementLocations} onOpenChange={setShowRequirementLocations}>
+      <div className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
+        <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left">
+          <ChevronDown
+            className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
+              showRequirementLocations ? 'rotate-0' : '-rotate-90'
+            }`}
+          />
+          <span className="font-medium text-gray-900">Requirement Locations</span>
+        </CollapsibleTrigger>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={showRequirementLocations}
+          onClick={() => setShowRequirementLocations((enabled) => !enabled)}
+          className={`h-7 rounded-full px-3 text-xs font-medium transition-colors ${
+            showRequirementLocations
+              ? 'bg-violet-600 text-white shadow-sm hover:bg-violet-700'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          {showRequirementLocations ? 'On' : 'Off'}
+        </button>
+      </div>
+      <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
+        {showRequirementLocations && (
+          <>
+            <div className="px-2 space-y-2">
+              <Label className="text-xs text-gray-600">Show</Label>
+              <div className="grid grid-cols-2 rounded-lg border border-gray-200 bg-gray-50 p-1">
+                <button
+                  type="button"
+                  onClick={() => setRequirementBrandScope('all')}
+                  className={`h-8 rounded-md text-xs font-medium transition-colors ${
+                    requirementBrandScope === 'all'
+                      ? 'bg-white text-violet-700 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  All brands
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRequirementBrandScope('selected')}
+                  className={`h-8 rounded-md text-xs font-medium transition-colors ${
+                    requirementBrandScope === 'selected'
+                      ? 'bg-white text-violet-700 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Selected brands
+                </button>
+              </div>
+            </div>
+
+            {requirementBrandScope === 'selected' && (
+              <>
+                <RequirementCompanySelector
+                  selectedBrands={selectedRequirementBrands}
+                  onSelectionChange={(listingIds, brandNames) => {
+                    setSelectedRequirementListingIds(listingIds)
+                    setSelectedRequirementBrands(brandNames)
+                  }}
+                />
+                {selectedRequirementListingIds.length === 0 && (
+                  <p className="px-2 text-xs text-gray-500">
+                    Choose at least one brand to show requirement locations.
+                  </p>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
+  )
+
   return (
     <div className="h-screen bg-background overflow-hidden">
       <div className="flex flex-col h-full">
@@ -754,83 +842,7 @@ export default function BUAsPage() {
                 </div>
 
                 {/* 2. Collapsible: Requirement Locations */}
-                <Collapsible open={showRequirementLocations} onOpenChange={setShowRequirementLocations}>
-                  <div className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
-                    <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left">
-                      <ChevronDown
-                        className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
-                          showRequirementLocations ? 'rotate-0' : '-rotate-90'
-                        }`}
-                      />
-                      <span className="font-medium text-gray-900">Requirement Locations</span>
-                    </CollapsibleTrigger>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={showRequirementLocations}
-                      onClick={() => setShowRequirementLocations((enabled) => !enabled)}
-                      className={`h-7 rounded-full px-3 text-xs font-medium transition-colors ${
-                        showRequirementLocations
-                          ? 'bg-violet-600 text-white shadow-sm hover:bg-violet-700'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {showRequirementLocations ? 'On' : 'Off'}
-                    </button>
-                  </div>
-                  <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
-                    {/* Brand scope selector - only visible when overlay is enabled */}
-                    {showRequirementLocations && (
-                      <>
-                        <div className="px-2 space-y-2">
-                          <Label className="text-xs text-gray-600">Show</Label>
-                          <div className="grid grid-cols-2 rounded-lg border border-gray-200 bg-gray-50 p-1">
-                            <button
-                              type="button"
-                              onClick={() => setRequirementBrandScope('all')}
-                              className={`h-8 rounded-md text-xs font-medium transition-colors ${
-                                requirementBrandScope === 'all'
-                                  ? 'bg-white text-violet-700 shadow-sm'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
-                            >
-                              All brands
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setRequirementBrandScope('selected')}
-                              className={`h-8 rounded-md text-xs font-medium transition-colors ${
-                                requirementBrandScope === 'selected'
-                                  ? 'bg-white text-violet-700 shadow-sm'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
-                            >
-                              Selected brands
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Company selector - only when "selected" is active */}
-                        {requirementBrandScope === 'selected' && (
-                          <>
-                            <RequirementCompanySelector
-                              selectedBrands={selectedRequirementBrands}
-                              onSelectionChange={(listingIds) => {
-                                setSelectedRequirementListingIds(listingIds)
-                                // Update brands for UI state tracking (not strictly necessary but helpful for debugging)
-                              }}
-                            />
-                            {selectedRequirementListingIds.length === 0 && (
-                              <p className="px-2 text-xs text-gray-500">
-                                Choose at least one brand to show requirement locations.
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </>
-                    )}
-                  </CollapsibleContent>
-                </Collapsible>
+                {renderRequirementLocationsControl()}
 
                 {/* 3. "Filters" Header/Divider */}
                 <div className="pt-2 pb-4">
@@ -960,6 +972,21 @@ export default function BUAsPage() {
 
               {/* Assess Area Tab Content */}
               <TabsContent value="assess-area" className="flex-1 overflow-y-auto p-6 space-y-6 mt-0 pt-1">
+                {/* 1. Search - Always Visible */}
+                <div className="space-y-2">
+                  <Label htmlFor="assess-area-bua-search" className="text-sm font-medium">
+                    Search by Location Name
+                  </Label>
+                  <BUASearch
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    onBUASelect={handleAssessAreaBUASelect}
+                  />
+                </div>
+
+                {/* 2. Collapsible: Requirement Locations */}
+                {renderRequirementLocationsControl()}
+
                 {/* Point Selection Status */}
                 {selectedPoint ? (
                   <div className="relative bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-200/60 rounded-xl p-4 shadow-sm">
@@ -1005,11 +1032,11 @@ export default function BUAsPage() {
                 )}
 
                 {/* Radius Settings */}
-                <Collapsible defaultOpen={true}>
+                <Collapsible defaultOpen={false}>
                   <CollapsibleTrigger className="group flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/60 hover:to-purple-50/40 rounded-xl transition-all duration-200 border border-transparent hover:border-violet-100/50">
                     <div className="flex items-center gap-2.5">
                       <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-200 group-data-[state=open]:rotate-0 group-data-[state=closed]:-rotate-90" />
-                      <span className="font-semibold text-gray-900">Radius Settings</span>
+                      <span className="font-semibold text-gray-900">Radius</span>
                     </div>
                     <Badge variant="secondary" className="text-xs font-medium bg-violet-100 text-violet-700 border-violet-200">
                       {radiusMeters / 1000}km
@@ -1085,11 +1112,11 @@ export default function BUAsPage() {
                 </Collapsible>
 
                 {/* Store Filters */}
-                <Collapsible defaultOpen={true}>
+                <Collapsible defaultOpen={false}>
                   <CollapsibleTrigger className="group flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/60 hover:to-purple-50/40 rounded-xl transition-all duration-200 border border-transparent hover:border-violet-100/50">
                     <div className="flex items-center gap-2.5">
                       <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-200 group-data-[state=open]:rotate-0 group-data-[state=closed]:-rotate-90" />
-                      <span className="font-semibold text-gray-900">Store Filters</span>
+                      <span className="font-semibold text-gray-900">Brands</span>
                     </div>
                     <Badge variant="secondary" className={`text-xs font-medium ${
                       assessFascias.length + assessCategories.length === 0
@@ -1150,7 +1177,7 @@ export default function BUAsPage() {
               storeUpdateSource={storeUpdateSource}
               companiesVisibility={currentMode === 'find-gaps' ? companiesVisibility : {}}
               categoriesVisibility={currentMode === 'find-gaps' ? categoriesVisibility : {}}
-              requirementLocations={currentMode === 'find-gaps' ? requirementLocations : []}
+              requirementLocations={requirementLocations}
               onFasciaVisibilityToggle={handleFasciaVisibilityToggle}
             />
           </div>
