@@ -23,6 +23,7 @@ import type { Store as StoreType, ViewportStore } from '@/lib/stores'
 import type { FilterSet } from '@/types/filters'
 import { convertFilterSetToViewportParams, generateTargetBadgeMapping, hasActiveFilters, expandTargetsToFascias, type TargetWithMetadata } from '@/lib/filter-utils'
 import { exportBUAsToCSV } from '@/lib/buas/export-utils'
+import { exportNearbyStoresToCSV } from '@/lib/export-utils'
 import { type CategoryNode } from '@/lib/category-tree-utils'
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess'
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier'
@@ -48,6 +49,7 @@ export default function BUAsPage() {
   const [totalBUAs, setTotalBUAs] = useState<number>(0)
   const [isLoadingBUAs, setIsLoadingBUAs] = useState(false)
   const [isExportingBUAs, setIsExportingBUAs] = useState(false)
+  const [isExportingNearbyStores, setIsExportingNearbyStores] = useState(false)
   const [mapGssCodes, setMapGssCodes] = useState<string[]>([])  // All gsscodes for map filtering
   const [sidebarSelectionNonce, setSidebarSelectionNonce] = useState(0)
   const [centerFlyToZoom, setCenterFlyToZoom] = useState(12)
@@ -826,6 +828,50 @@ export default function BUAsPage() {
     }
   }
 
+  const handleExportNearbyStores = useCallback(() => {
+    if (!selectedPoint || nearbyStores.length === 0 || isExportingNearbyStores) return
+
+    setIsExportingNearbyStores(true)
+    try {
+      const brandNames = assessFascias
+        .map(id => targetNames[id] || id)
+        .join(', ')
+      const categoryNames = assessCategories
+        .map(id => targetNames[id] || id)
+        .join(', ')
+
+      let filterSummary = 'None'
+      if (brandNames && categoryNames) {
+        filterSummary = `Brands: ${brandNames} AND Categories: ${categoryNames}`
+      } else if (brandNames) {
+        filterSummary = `Brands: ${brandNames}`
+      } else if (categoryNames) {
+        filterSummary = `Categories: ${categoryNames}`
+      }
+
+      exportNearbyStoresToCSV({
+        stores: nearbyStores,
+        selectedPoint,
+        radiusMeters,
+        filterSummary,
+        travelTimes
+      })
+    } catch (error) {
+      console.error('Export failed:', error)
+    } finally {
+      setIsExportingNearbyStores(false)
+    }
+  }, [
+    assessCategories,
+    assessFascias,
+    isExportingNearbyStores,
+    nearbyStores,
+    radiusMeters,
+    selectedPoint,
+    targetNames,
+    travelTimes
+  ])
+
   const showRequirementLocationsUpgradeNote = !subscriptionLoading && !hasAccess
 
   const renderRequirementLocationsControl = () => (
@@ -1337,14 +1383,22 @@ export default function BUAsPage() {
             onItemClick={currentMode === 'find-gaps' ? handleBUAListItemClick : handleStoreListItemClick}
             mode={currentMode}
             total={currentMode === 'find-gaps' ? totalBUAs : undefined}
-            onExport={currentMode === 'find-gaps' ? handleExportBUAs : undefined}
-            isExporting={currentMode === 'find-gaps' ? isExportingBUAs : false}
-            canExport={currentMode === 'find-gaps' ? filteredBUAs.length > 0 : false}
+            onExport={currentMode === 'find-gaps' ? handleExportBUAs : handleExportNearbyStores}
+            isExporting={currentMode === 'find-gaps' ? isExportingBUAs : isExportingNearbyStores}
+            canExport={
+              currentMode === 'find-gaps'
+                ? filteredBUAs.length > 0
+                : selectedPoint !== null &&
+                  nearbyStores.length > 0 &&
+                  !isLoadingStores &&
+                  !isExportingNearbyStores
+            }
             selectedPoint={currentMode === 'assess-area' ? selectedPoint : null}
             travelTimes={travelTimes}
             travelTimeLoading={travelTimeLoading}
             travelTimeErrors={travelTimeErrors}
             onGetTravelTime={handleGetTravelTime}
+            canUseTravelTimes={hasAccess}
           />
         </div>
       </div>

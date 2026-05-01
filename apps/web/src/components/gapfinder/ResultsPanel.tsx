@@ -1,6 +1,6 @@
 'use client'
 
-import { MapPin, Store as StoreIcon, Download, Loader2, Footprints, Car } from 'lucide-react'
+import { MapPin, Store as StoreIcon, Download, Loader2, Footprints, Car, Lock } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -25,7 +25,11 @@ interface ResultsPanelProps {
   travelTimeLoading?: Record<string, boolean>
   travelTimeErrors?: Record<string, string>
   onGetTravelTime?: (store: any) => void
+  canUseTravelTimes?: boolean
 }
+
+const TRAVEL_TIMES_UPGRADE_MESSAGE =
+  'Instantly get walk and drive times from your selected point to all stores. Upgrade to unlock.'
 
 export function ResultsPanel({
   results,
@@ -41,7 +45,8 @@ export function ResultsPanel({
   travelTimes = {},
   travelTimeLoading = {},
   travelTimeErrors = {},
-  onGetTravelTime
+  onGetTravelTime,
+  canUseTravelTimes = true
 }: ResultsPanelProps) {
   const isFindGapsMode = mode === 'find-gaps'
   const actualTotal = total || results.length
@@ -60,14 +65,18 @@ export function ResultsPanel({
             <h2 className="text-base font-semibold text-gray-900" id="results-panel-title">
               {isFindGapsMode ? 'Matching Locations' : 'Nearby Stores'}
             </h2>
-            {isFindGapsMode && onExport && (
+            {onExport && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={onExport}
                 disabled={!canExport || isExporting}
                 className="h-8 w-8 p-0 border-violet-200 hover:bg-violet-50 hover:border-violet-300"
-                aria-label={`Export all ${actualTotal.toLocaleString()} matching locations to CSV`}
+                aria-label={
+                  isFindGapsMode
+                    ? `Export all ${actualTotal.toLocaleString()} matching locations to CSV`
+                    : `Export ${results.length.toLocaleString()} nearby stores to CSV`
+                }
                 aria-busy={isExporting}
                 title="Export CSV"
               >
@@ -208,22 +217,47 @@ export function ResultsPanel({
                   {/* Travel time section - OUTSIDE the clickable button */}
                   <div className="mt-3 pl-6">
                     {!hasTravelTime && !error && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onGetTravelTime?.(store)}
-                        disabled={isLoading || !onGetTravelTime}
-                        className="h-7 text-xs"
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                            Calculating...
-                          </>
-                        ) : (
-                          'Get Travel Times'
-                        )}
-                      </Button>
+                      canUseTravelTimes ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onGetTravelTime?.(store)}
+                          disabled={isLoading || !onGetTravelTime}
+                          className="h-7 text-xs"
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                              Calculating...
+                            </>
+                          ) : (
+                            'Get Travel Times'
+                          )}
+                        </Button>
+                      ) : (
+                        <div className="group relative inline-flex">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            aria-disabled="true"
+                            aria-describedby={`travel-times-upgrade-${store.id}`}
+                            title={TRAVEL_TIMES_UPGRADE_MESSAGE}
+                            onClick={(event) => event.preventDefault()}
+                            className="h-7 cursor-not-allowed border-gray-200 bg-gray-50 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-500 focus-visible:ring-violet-500"
+                          >
+                            <Lock className="h-3 w-3 mr-1.5" />
+                            Get Travel Times
+                          </Button>
+                          <div
+                            id={`travel-times-upgrade-${store.id}`}
+                            role="tooltip"
+                            className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 hidden w-56 rounded-md bg-gray-900 px-3 py-2 text-left text-xs leading-4 text-white shadow-lg group-hover:block group-focus-within:block"
+                          >
+                            {TRAVEL_TIMES_UPGRADE_MESSAGE}
+                          </div>
+                        </div>
+                      )
                     )}
 
                     {error && (
