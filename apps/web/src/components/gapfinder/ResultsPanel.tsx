@@ -10,6 +10,7 @@ import { formatPopulation } from '@/lib/format-population'
 import { calculateDistance } from '@/lib/distance-utils'
 import type { TravelTimeData } from '@/types/travel-time'
 import { getFasciaMarkerColor } from '@/lib/sitesketcher/colors'
+import { MissingFasciasSection } from './MissingFasciasSection'
 
 interface ResultsPanelProps {
   results: BUA[] | any[] // BUA[] for Find Gaps mode, Store[] for Assess Area mode
@@ -28,6 +29,9 @@ interface ResultsPanelProps {
   onGetTravelTime?: (store: any) => void
   canUseTravelTimes?: boolean
   assessBadgeByStoreId?: Record<string, number> // Badge lookup for Assess Area mode
+  missingFascias?: import('@/lib/stores').MissingFasciaInfo[]
+  isLoadingMissingFascias?: boolean
+  missingFasciasError?: string | null
 }
 
 const TRAVEL_TIMES_UPGRADE_MESSAGE =
@@ -49,7 +53,10 @@ export function ResultsPanel({
   travelTimeErrors = {},
   onGetTravelTime,
   canUseTravelTimes = true,
-  assessBadgeByStoreId = {}
+  assessBadgeByStoreId = {},
+  missingFascias = [],
+  isLoadingMissingFascias = false,
+  missingFasciasError = null
 }: ResultsPanelProps) {
   const isFindGapsMode = mode === 'find-gaps'
   const actualTotal = total || results.length
@@ -318,6 +325,17 @@ export function ResultsPanel({
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {/* Missing Fascias Section - only shown in Assess Area mode */}
+        {!isFindGapsMode && (
+          <div className="mt-2 px-3">
+            <MissingFasciasSection
+              missingFascias={missingFascias}
+              isLoading={isLoadingMissingFascias}
+              error={missingFasciasError}
+            />
           </div>
         )}
       </div>

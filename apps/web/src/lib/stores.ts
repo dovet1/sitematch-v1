@@ -93,3 +93,21 @@ export interface BUAStoreNearby {
   store_count: number
   created_at: string
 }
+
+export interface MissingFasciaInfo {
+  fasciaId: string
+  fasciaName: string
+  brandId: string
+  brandName: string
+  categoryId: string | null
+  categoryName: string | null
+  nearestStoreDistance?: number  // meters
+  nearestStoreName?: string
+  nearestStoreTown?: string
+}
+
+export interface ComparisonData {
+  missingInAOnly: MissingFasciaInfo[]
+  missingInBOnly: MissingFasciaInfo[]
+  missingInBoth: MissingFasciaInfo[]
+}

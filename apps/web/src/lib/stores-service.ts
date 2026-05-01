@@ -149,6 +149,60 @@ export class StoreService {
   }
 
   /**
+   * Get fascias that are NOT present within radius of a point
+   * Filters by active category/fascia selections with category hierarchy expansion
+   * @param lat Latitude of center point
+   * @param lon Longitude of center point
+   * @param radiusMeters Radius in meters
+   * @param fasciaIds Optional fascia ID filters
+   * @param categoryIds Optional category ID filters (will be expanded via get_category_descendants)
+   * @returns Array of missing fascias with brand/category info and nearest store distance
+   */
+  async getMissingFascias(
+    lat: number,
+    lon: number,
+    radiusMeters: number,
+    fasciaIds?: string[],
+    categoryIds?: string[]
+  ): Promise<Array<{
+    fasciaId: string
+    fasciaName: string
+    brandId: string
+    brandName: string
+    categoryId: string | null
+    categoryName: string | null
+    nearestStoreDistance?: number
+    nearestStoreName?: string
+    nearestStoreTown?: string
+  }>> {
+    const { data, error } = await this.supabase.rpc('get_missing_fascias_near_point', {
+      p_lat: lat,
+      p_lon: lon,
+      p_radius_m: radiusMeters,
+      p_fascia_ids: fasciaIds || null,
+      p_category_ids: categoryIds || null
+    })
+
+    if (error) {
+      console.error('Failed to fetch missing fascias:', error)
+      throw new Error(`Failed to fetch missing fascias: ${error.message}`)
+    }
+
+    // Map snake_case to camelCase
+    return (data || []).map((row: any) => ({
+      fasciaId: row.fascia_id,
+      fasciaName: row.fascia_name,
+      brandId: row.brand_id,
+      brandName: row.brand_name,
+      categoryId: row.category_id,
+      categoryName: row.category_name,
+      nearestStoreDistance: row.nearest_store_distance,
+      nearestStoreName: row.nearest_store_name,
+      nearestStoreTown: row.nearest_store_town
+    }))
+  }
+
+  /**
    * Get stores within radius of a point (for Assess Area mode)
    * Uses PostGIS ST_DWithin for spatial query
    * @param lat Latitude of center point

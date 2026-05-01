@@ -152,6 +152,11 @@ export default function BUAsPage() {
   const [nearbyStores, setNearbyStores] = useState<StoreType[]>([])
   const [isLoadingStores, setIsLoadingStores] = useState(false)
 
+  // Missing fascias state (assess area mode)
+  const [missingFascias, setMissingFascias] = useState<import('@/lib/stores').MissingFasciaInfo[]>([])
+  const [isLoadingMissingFascias, setIsLoadingMissingFascias] = useState(false)
+  const [missingFasciasError, setMissingFasciasError] = useState<string | null>(null)
+
   // Travel time state (assess area mode)
   const [travelTimes, setTravelTimes] = useState<Record<string, TravelTimeData>>({})
   const [travelTimeLoading, setTravelTimeLoading] = useState<Record<string, boolean>>({})
@@ -159,6 +164,7 @@ export default function BUAsPage() {
 
   // Ref for stale response checking (updated via useEffect)
   const selectedPointRef = useRef<{ lat: number; lng: number; mode: string } | null>(null)
+  const fetchMissingFasciasAbortRef = useRef<AbortController | null>(null)
 
   // Derived values for map filtering
   const minPop = populationRange[0]
@@ -710,6 +716,67 @@ export default function BUAsPage() {
     // Debounce the fetch
     const debounceTimer = setTimeout(fetchNearbyStores, 500)
     return () => clearTimeout(debounceTimer)
+  }, [selectedPoint, radiusMeters, assessFascias, assessCategories, currentMode])
+
+  // Fetch missing fascias when point is selected (Assess Area mode)
+  useEffect(() => {
+    if (!selectedPoint || currentMode !== 'assess-area') {
+      setMissingFascias([])
+      setMissingFasciasError(null)
+      return
+    }
+
+    const fetchMissingFascias = async () => {
+      // Cancel previous request
+      fetchMissingFasciasAbortRef.current?.abort()
+      const controller = new AbortController()
+      fetchMissingFasciasAbortRef.current = controller
+
+      setIsLoadingMissingFascias(true)
+      setMissingFasciasError(null)
+
+      try {
+        const params = new URLSearchParams({
+          lat: selectedPoint.lat.toString(),
+          lon: selectedPoint.lng.toString(),
+          radius: radiusMeters.toString()
+        })
+
+        if (assessFascias.length > 0) {
+          params.append('fasciaIds', assessFascias.join(','))
+        }
+        if (assessCategories.length > 0) {
+          params.append('categoryIds', assessCategories.join(','))
+        }
+
+        const response = await fetch(`/api/public/stores/missing-fascias?${params.toString()}`, {
+          signal: controller.signal
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch missing fascias')
+        }
+
+        const data = await response.json()
+        setMissingFascias(data.missingFascias || [])
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          setMissingFasciasError('Unable to load missing fascias')
+          setMissingFascias([])
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoadingMissingFascias(false)
+        }
+      }
+    }
+
+    // Debounce the fetch
+    const debounceTimer = setTimeout(fetchMissingFascias, 500)
+    return () => {
+      clearTimeout(debounceTimer)
+      fetchMissingFasciasAbortRef.current?.abort()
+    }
   }, [selectedPoint, radiusMeters, assessFascias, assessCategories, currentMode])
 
   const handleBUAListItemClick = (bua: BUA) => {
@@ -1413,6 +1480,9 @@ export default function BUAsPage() {
             onGetTravelTime={handleGetTravelTime}
             canUseTravelTimes={hasAccess}
             assessBadgeByStoreId={assessBadgeByStoreId}
+            missingFascias={missingFascias}
+            isLoadingMissingFascias={isLoadingMissingFascias}
+            missingFasciasError={missingFasciasError}
           />
         </div>
       </div>
