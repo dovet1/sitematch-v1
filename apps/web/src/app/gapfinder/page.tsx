@@ -25,6 +25,8 @@ import { convertFilterSetToViewportParams, generateTargetBadgeMapping, hasActive
 import { exportBUAsToCSV } from '@/lib/buas/export-utils'
 import { type CategoryNode } from '@/lib/category-tree-utils'
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess'
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier'
+import type { TravelTimeData } from '@/types/travel-time'
 
 const MAX_POPULATION = 1200000 // 1.2 million
 const MIN_POPULATION = 5001 // Changed from 0
@@ -32,6 +34,7 @@ const MIN_POPULATION = 5001 // Changed from 0
 export default function BUAsPage() {
   const router = useRouter()
   const { hasAccess, loading: subscriptionLoading } = useSubscriptionAccess()
+  const { isPro } = useSubscriptionTier()
   const [searchQuery, setSearchQuery] = useState('')
   const [center, setCenter] = useState<{ lat: number; lng: number } | undefined>()
   const [populationRange, setPopulationRange] = useState<[number, number]>([MIN_POPULATION, MAX_POPULATION])
@@ -147,6 +150,14 @@ export default function BUAsPage() {
   const [nearbyStores, setNearbyStores] = useState<StoreType[]>([])
   const [isLoadingStores, setIsLoadingStores] = useState(false)
 
+  // Travel time state (assess area mode)
+  const [travelTimes, setTravelTimes] = useState<Record<string, TravelTimeData>>({})
+  const [travelTimeLoading, setTravelTimeLoading] = useState<Record<string, boolean>>({})
+  const [travelTimeErrors, setTravelTimeErrors] = useState<Record<string, string>>({})
+
+  // Ref for stale response checking (updated via useEffect)
+  const selectedPointRef = useRef<{ lat: number; lng: number; mode: string } | null>(null)
+
   // Derived values for map filtering
   const minPop = populationRange[0]
   const maxPop = populationRange[1]
@@ -162,6 +173,19 @@ export default function BUAsPage() {
     const isFiltered = filterSet.rules.length > 0
     setIsBrandFiltersOpen(isFiltered)
   }, [filterSet.rules.length])
+
+  // Keep ref in sync with selectedPoint and currentMode for stale response checking
+  useEffect(() => {
+    if (selectedPoint && currentMode === 'assess-area') {
+      selectedPointRef.current = {
+        lat: selectedPoint.lat,
+        lng: selectedPoint.lng,
+        mode: currentMode
+      }
+    } else {
+      selectedPointRef.current = null
+    }
+  }, [selectedPoint, currentMode])
 
   const handleBUASelect = (bua: {
     name: string
@@ -629,8 +653,16 @@ export default function BUAsPage() {
   useEffect(() => {
     if (!selectedPoint || currentMode !== 'assess-area') {
       setNearbyStores([])
+      setTravelTimes({})        // Clear when mode changes
+      setTravelTimeLoading({})
+      setTravelTimeErrors({})
       return
     }
+
+    // ALSO clear travel times when selectedPoint changes (new origin)
+    setTravelTimes({})          // Clear when point changes
+    setTravelTimeLoading({})
+    setTravelTimeErrors({})
 
     const fetchNearbyStores = async () => {
       setIsLoadingStores(true)
@@ -683,6 +715,95 @@ export default function BUAsPage() {
     setCenter({ lat: store.lat, lng: store.lon })
     setSelectedBUAGsscode(null)
     setSelectedBUA(null)
+  }
+
+  const handleGetTravelTime = async (store: StoreType) => {
+    if (!selectedPoint || !store.id) return
+
+    if (!isPro) {
+      setTravelTimeErrors(prev => ({ ...prev, [store.id]: 'Subscription required' }))
+      return
+    }
+
+    if (travelTimeLoading[store.id]) return
+
+    // Capture current context for stale response checking
+    const requestContext = {
+      lat: selectedPoint.lat,
+      lng: selectedPoint.lng,
+      mode: currentMode
+    }
+
+    setTravelTimeLoading(prev => ({ ...prev, [store.id]: true }))
+    setTravelTimeErrors(prev => {
+      const { [store.id]: _, ...rest } = prev
+      return rest
+    })
+
+    try {
+      const params = new URLSearchParams({
+        originLat: selectedPoint.lat.toString(),
+        originLng: selectedPoint.lng.toString(),
+        destLat: store.lat.toString(),
+        destLng: store.lon.toString(),
+        storeId: store.id
+      })
+
+      const response = await fetch(`/api/public/stores/travel-time?${params}`)
+      const data = await response.json()
+
+      // Check if context changed while request was in flight
+      const currentContext = selectedPointRef.current
+      const isStale = !currentContext ||
+        currentContext.lat !== requestContext.lat ||
+        currentContext.lng !== requestContext.lng ||
+        currentContext.mode !== requestContext.mode
+
+      if (isStale) {
+        console.log('Ignoring stale travel time response')
+        return
+      }
+
+      if (!response.ok) {
+        setTravelTimeErrors(prev => ({
+          ...prev,
+          [store.id]: data.error || 'Unable to calculate'
+        }))
+        return
+      }
+
+      if (data.success) {
+        setTravelTimes(prev => ({
+          ...prev,
+          [store.id]: { walking: data.walking, driving: data.driving }
+        }))
+      }
+    } catch (error) {
+      // Only set error if request is still relevant
+      const currentContext = selectedPointRef.current
+      const isStale = !currentContext ||
+        currentContext.lat !== requestContext.lat ||
+        currentContext.lng !== requestContext.lng ||
+        currentContext.mode !== requestContext.mode
+
+      if (!isStale) {
+        setTravelTimeErrors(prev => ({
+          ...prev,
+          [store.id]: 'Network error'
+        }))
+      }
+    } finally {
+      // Only clear loading if request is still relevant
+      const currentContext = selectedPointRef.current
+      const isStale = !currentContext ||
+        currentContext.lat !== requestContext.lat ||
+        currentContext.lng !== requestContext.lng ||
+        currentContext.mode !== requestContext.mode
+
+      if (!isStale) {
+        setTravelTimeLoading(prev => ({ ...prev, [store.id]: false }))
+      }
+    }
   }
 
   const handleExportBUAs = async () => {
@@ -1220,6 +1341,10 @@ export default function BUAsPage() {
             isExporting={currentMode === 'find-gaps' ? isExportingBUAs : false}
             canExport={currentMode === 'find-gaps' ? filteredBUAs.length > 0 : false}
             selectedPoint={currentMode === 'assess-area' ? selectedPoint : null}
+            travelTimes={travelTimes}
+            travelTimeLoading={travelTimeLoading}
+            travelTimeErrors={travelTimeErrors}
+            onGetTravelTime={handleGetTravelTime}
           />
         </div>
       </div>
