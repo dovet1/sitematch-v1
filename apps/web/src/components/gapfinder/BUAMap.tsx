@@ -575,6 +575,9 @@ export function BUAMap({
             1000000, '#1d4ed8' // 1M+
           ],
           'fill-opacity': 0.7
+        },
+        layout: {
+          visibility: mode === 'assess-area' ? 'none' : 'visible'
         }
       })
 
@@ -587,6 +590,9 @@ export function BUAMap({
         paint: {
           'line-color': '#1e293b',
           'line-width': 0.5
+        },
+        layout: {
+          visibility: mode === 'assess-area' ? 'none' : 'visible'
         }
       })
 
@@ -673,8 +679,22 @@ export function BUAMap({
         map.current.off('style.load', addBUALayer)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapLoaded])
+  }, [mapLoaded, mode])
+
+  // Hide the BUA overlay while Assess Area mode is active, but keep layers registered.
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    if (!map.current.getLayer(BUA_LAYER_ID) || !map.current.getLayer(BUA_OUTLINE_LAYER_ID)) return
+
+    const visibility = mode === 'assess-area' ? 'none' : 'visible'
+
+    try {
+      map.current.setLayoutProperty(BUA_LAYER_ID, 'visibility', visibility)
+      map.current.setLayoutProperty(BUA_OUTLINE_LAYER_ID, 'visibility', visibility)
+    } catch (error) {
+      console.error('Failed to update BUA layer visibility:', error)
+    }
+  }, [mapLoaded, mode])
 
   // Update filter when population range or filtered gsscodes change
   useEffect(() => {
