@@ -138,11 +138,11 @@ function generateStorePopupHTML(
 
   return `
     <div style="display: flex; flex-direction: column; width: 100%;">
-      <div style="background: linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%); padding: 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #e7e5e4;">
+      <div style="background: linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%); padding: 12px 46px 12px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #e7e5e4;">
         <div style="background: ${fasciaColor}; border-radius: 6px; padding: 8px; display: flex; box-shadow: 0 2px 8px ${fasciaColor}40;">
           <div style="color: white; display: flex;">${STORE_SVG}</div>
         </div>
-        <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1e293b; line-height: 1.3; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapedName}</h3>
+        <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1e293b; line-height: 1.3; flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapedName}</h3>
       </div>
       ${address ? `<div style="padding: 12px;"><div style="font-size: 13px; color: #6b7280; line-height: 1.5;">${escapedAddress}</div></div>` : ''}
     </div>

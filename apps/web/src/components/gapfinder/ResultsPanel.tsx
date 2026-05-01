@@ -58,7 +58,7 @@ export function ResultsPanel({
     <div
       className="w-[280px] border-l bg-background flex flex-col"
       role="region"
-      aria-label={`${isFindGapsMode ? 'Matching Locations' : 'Nearby Stores'} Panel`}
+      aria-label={`${isFindGapsMode ? 'Matching Locations' : 'Nearby Brands'} Panel`}
     >
       {/* Header */}
       <header className="bg-gradient-to-r from-violet-100 to-purple-100 px-4 py-4 border-b border-violet-200">
@@ -66,7 +66,7 @@ export function ResultsPanel({
           {/* Title + Export Button Row */}
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-gray-900" id="results-panel-title">
-              {isFindGapsMode ? 'Matching Locations' : 'Nearby Stores'}
+              {isFindGapsMode ? 'Matching Locations' : 'Nearby Brands'}
             </h2>
             {onExport && (
               <Button
