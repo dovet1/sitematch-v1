@@ -349,6 +349,7 @@ interface BUAMapProps {
     coordinates: { lat: number; lng: number }
   }>
   onFasciaVisibilityToggle?: (fasciaId: string) => void
+  assessBadgeByStoreId?: Record<string, number>  // Badge lookup for Assess Area mode
 }
 
 export function BUAMap({
@@ -376,7 +377,8 @@ export function BUAMap({
   companiesVisibility = {},
   categoriesVisibility = {},
   requirementLocations = [],
-  onFasciaVisibilityToggle
+  onFasciaVisibilityToggle,
+  assessBadgeByStoreId = {}
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -1103,7 +1105,9 @@ export function BUAMap({
 
       if (mode === 'assess-area') {
         visibleGreenStores.forEach(store => {
-          const marker = createSimpleStoreMarker(store, getFasciaMarkerColor(store.fascia_id))
+          const badgeNumber = assessBadgeByStoreId[store.id]
+          const badgeLabel = badgeNumber ? String(badgeNumber) : undefined
+          const marker = createSimpleStoreMarker(store, getFasciaMarkerColor(store.fascia_id), badgeLabel)
           marker.addTo(map.current!)
           newMarkers.push(marker)
         })
@@ -1158,7 +1162,7 @@ export function BUAMap({
       storeMarkers.current.forEach(marker => marker.remove())
       storeMarkers.current = []
     }
-  }, [stores, includedStores, excludedStores, proximityIncludedStores, proximityExcludedStores, mode, mapLoaded, targetBadgeMapping, storeUpdateSource, companiesVisibility, categoriesVisibility, isStoreVisible])
+  }, [stores, includedStores, excludedStores, proximityIncludedStores, proximityExcludedStores, mode, mapLoaded, targetBadgeMapping, storeUpdateSource, companiesVisibility, categoriesVisibility, isStoreVisible, assessBadgeByStoreId])
 
   const requirementGeoJson = useMemo(() => ({
     type: 'FeatureCollection' as const,

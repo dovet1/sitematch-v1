@@ -9,6 +9,7 @@ import type { BUA } from '@/lib/buas'
 import { formatPopulation } from '@/lib/format-population'
 import { calculateDistance } from '@/lib/distance-utils'
 import type { TravelTimeData } from '@/types/travel-time'
+import { getFasciaMarkerColor } from '@/lib/sitesketcher/colors'
 
 interface ResultsPanelProps {
   results: BUA[] | any[] // BUA[] for Find Gaps mode, Store[] for Assess Area mode
@@ -26,6 +27,7 @@ interface ResultsPanelProps {
   travelTimeErrors?: Record<string, string>
   onGetTravelTime?: (store: any) => void
   canUseTravelTimes?: boolean
+  assessBadgeByStoreId?: Record<string, number> // Badge lookup for Assess Area mode
 }
 
 const TRAVEL_TIMES_UPGRADE_MESSAGE =
@@ -46,7 +48,8 @@ export function ResultsPanel({
   travelTimeLoading = {},
   travelTimeErrors = {},
   onGetTravelTime,
-  canUseTravelTimes = true
+  canUseTravelTimes = true,
+  assessBadgeByStoreId = {}
 }: ResultsPanelProps) {
   const isFindGapsMode = mode === 'find-gaps'
   const actualTotal = total || results.length
@@ -171,6 +174,7 @@ export function ResultsPanel({
               const isLoading = travelTimeLoading[store.id]
               const error = travelTimeErrors[store.id]
               const hasTravelTime = travelTime && (travelTime.walking || travelTime.driving)
+              const badgeNumber = assessBadgeByStoreId[store.id]
 
               return (
                 <div
@@ -187,7 +191,31 @@ export function ResultsPanel({
                     className="w-full text-left hover:bg-violet-50 hover:shadow-sm transition-all duration-150 rounded-lg p-2 -m-2"
                   >
                     <div className="flex items-start gap-2">
-                      <StoreIcon className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                      {/* Badge circle - REPLACES StoreIcon for Assess Area */}
+                      {badgeNumber ? (
+                        <div
+                          style={{
+                            width: '24px',
+                            height: '24px',
+                            minWidth: '24px',
+                            borderRadius: '9999px',
+                            backgroundColor: getFasciaMarkerColor(store.fascia_id),
+                            border: '2px solid white',
+                            color: 'white',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                            flexShrink: 0
+                          }}
+                        >
+                          {badgeNumber}
+                        </div>
+                      ) : (
+                        <StoreIcon className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                      )}
                       <div className="flex-1 min-w-0">
                         {/* Store name */}
                         <div className="text-sm font-medium text-gray-900 truncate">
@@ -215,7 +243,7 @@ export function ResultsPanel({
                   </button>
 
                   {/* Travel time section - OUTSIDE the clickable button */}
-                  <div className="mt-3 pl-6">
+                  <div className="mt-3 pl-8">
                     {!hasTravelTime && !error && (
                       canUseTravelTimes ? (
                         <Button

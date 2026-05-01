@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, MapPin, ChevronDown, Search } from 'lucide-react'
@@ -163,6 +163,18 @@ export default function BUAsPage() {
   // Derived values for map filtering
   const minPop = populationRange[0]
   const maxPop = populationRange[1]
+
+  // Badge lookup for Assess Area mode (distance-based sequential numbering)
+  const assessBadgeByStoreId = useMemo<Record<string, number>>(() => {
+    if (currentMode !== 'assess-area' || nearbyStores.length === 0) {
+      return {}
+    }
+    const lookup: Record<string, number> = {}
+    nearbyStores.forEach((store, index) => {
+      lookup[store.id] = index + 1  // Sequential from 1 (nearbyStores already sorted by distance)
+    })
+    return lookup
+  }, [currentMode, nearbyStores])
 
   // Auto open/close population filter based on whether it's filtered
   useEffect(() => {
@@ -1372,6 +1384,7 @@ export default function BUAsPage() {
               categoriesVisibility={currentMode === 'find-gaps' ? categoriesVisibility : {}}
               requirementLocations={requirementLocations}
               onFasciaVisibilityToggle={handleFasciaVisibilityToggle}
+              assessBadgeByStoreId={assessBadgeByStoreId}
             />
           </div>
 
@@ -1399,6 +1412,7 @@ export default function BUAsPage() {
             travelTimeErrors={travelTimeErrors}
             onGetTravelTime={handleGetTravelTime}
             canUseTravelTimes={hasAccess}
+            assessBadgeByStoreId={assessBadgeByStoreId}
           />
         </div>
       </div>
