@@ -191,6 +191,10 @@ export function formatRequirementLocationDisplay(
   return parts.slice(0, 2).join(', ')
 }
 
+export function isStoreMarkerEventTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest('.simple-store-marker'))
+}
+
 /**
  * Generate requirement location popup HTML
  */
@@ -383,6 +387,7 @@ export function BUAMap({
   const storeMarkers = useRef<mapboxgl.Marker[]>([])
   const isAutoFitting = useRef(false)
   const skipNextCenterFlyTo = useRef(false)
+  const suppressNextPointSelection = useRef(false)
   const lastHandledSidebarSelection = useRef(0)
   const buaFilterRef = useRef<any[] | null>(null)
   const [requirementClusterPopup, setRequirementClusterPopup] = useState<{
@@ -417,6 +422,26 @@ export function BUAMap({
       console.error('Failed to apply BUA filters:', error)
     }
   }
+
+  const openStorePopup = useCallback((store: Store | ViewportStore, color: string) => {
+    if (!map.current) return
+
+    const address = [store.address_line_1, store.town, store.postcode]
+      .filter(Boolean)
+      .join(', ')
+
+    if (popup.current) {
+      popup.current.remove()
+    }
+
+    popup.current = new mapboxgl.Popup({
+      offset: 15,
+      className: 'premium-store-popup'
+    })
+      .setLngLat([store.lon, store.lat])
+      .setHTML(generateStorePopupHTML(store.name || 'Store', address, color))
+      .addTo(map.current)
+  }, [])
 
   // Initialize map ONCE (not dependent on center - center changes should just pan the map)
   useEffect(() => {
@@ -725,6 +750,42 @@ export function BUAMap({
 
     const handleMapClick = (e: mapboxgl.MapMouseEvent) => {
       if (mode === 'assess-area' && onPointSelected) {
+        if (suppressNextPointSelection.current) {
+          suppressNextPointSelection.current = false
+          return
+        }
+
+        if (isStoreMarkerEventTarget(e.originalEvent.target)) {
+          return
+        }
+
+        const clickedStore = stores.reduce<{
+          store: Store
+          distance: number
+        } | null>((closest, store) => {
+          if (!Number.isFinite(store.lat) || !Number.isFinite(store.lon)) {
+            return closest
+          }
+
+          const storePoint = map.current!.project([store.lon, store.lat])
+          const distance = Math.hypot(storePoint.x - e.point.x, storePoint.y - e.point.y)
+
+          if (distance > 16) {
+            return closest
+          }
+
+          if (!closest || distance < closest.distance) {
+            return { store, distance }
+          }
+
+          return closest
+        }, null)
+
+        if (clickedStore) {
+          openStorePopup(clickedStore.store, getFasciaMarkerColor(clickedStore.store.fascia_id))
+          return
+        }
+
         onPointSelected({ lat: e.lngLat.lat, lng: e.lngLat.lng })
       }
     }
@@ -746,7 +807,7 @@ export function BUAMap({
         map.current.off('click', handleMapClick)
       }
     }
-  }, [mode, mapLoaded, onPointSelected])
+  }, [mode, mapLoaded, onPointSelected, openStorePopup, stores])
 
   // Handle selected point marker and radius circle
   useEffect(() => {
@@ -920,14 +981,22 @@ export function BUAMap({
       .filter(Boolean)
       .join(', ')
 
-    const popup = new mapboxgl.Popup({
+    const storePopup = new mapboxgl.Popup({
       offset: 15,
       className: 'premium-store-popup'
     }).setHTML(generateStorePopupHTML(store.name || 'Store', address, color))
 
+    el.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      suppressNextPointSelection.current = true
+
+      openStorePopup(store, color)
+    })
+
     return new mapboxgl.Marker({ element: el })
       .setLngLat([store.lon, store.lat])
-      .setPopup(popup)
+      .setPopup(storePopup)
   }
 
   // Handle store markers for both modes
