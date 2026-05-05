@@ -2,9 +2,10 @@
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
-import { ChevronDown, CircleSlash, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+import { ChevronDown, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import type { MissingFasciaInfo } from '@/lib/stores'
 import { useState } from 'react'
+import { MissingFasciaTree } from './MissingFasciaTree'
 
 interface MissingFasciasSectionProps {
   missingFascias: MissingFasciaInfo[]
@@ -59,37 +60,7 @@ export function MissingFasciasSection({
             </p>
           </div>
         ) : (
-          <div className="space-y-2 divide-y divide-gray-50">
-            {missingFascias.map((fascia) => (
-              <div
-                key={fascia.fasciaId}
-                className="pt-2 first:pt-0 pb-2 hover:bg-gray-50/50 rounded-lg px-2 -mx-2 transition-colors"
-              >
-                <div className="flex items-start gap-2">
-                  <CircleSlash className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm text-gray-900 truncate">
-                      {fascia.fasciaName}
-                    </div>
-                    <div className="text-xs text-gray-600 mt-0.5">
-                      Brand: {fascia.brandName}
-                    </div>
-                    {fascia.categoryName && (
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        Category: {fascia.categoryName}
-                      </div>
-                    )}
-                    {fascia.nearestStoreDistance && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        Nearest: {(fascia.nearestStoreDistance / 1000).toFixed(1)}km away
-                        {fascia.nearestStoreTown && ` in ${fascia.nearestStoreTown}`}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <MissingFasciaTree missingFascias={missingFascias} />
         )}
       </CollapsibleContent>
     </Collapsible>
