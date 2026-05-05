@@ -32,6 +32,7 @@ interface ResultsPanelProps {
   missingFascias?: import('@/lib/stores').MissingFasciaInfo[]
   isLoadingMissingFascias?: boolean
   missingFasciasError?: string | null
+  activeAssessArea?: 'area-a' | 'area-b' | null
 }
 
 const TRAVEL_TIMES_UPGRADE_MESSAGE =
@@ -56,10 +57,20 @@ export function ResultsPanel({
   assessBadgeByStoreId = {},
   missingFascias = [],
   isLoadingMissingFascias = false,
-  missingFasciasError = null
+  missingFasciasError = null,
+  activeAssessArea = null
 }: ResultsPanelProps) {
   const isFindGapsMode = mode === 'find-gaps'
   const actualTotal = total || results.length
+  const activeAreaIndicator = !isFindGapsMode && activeAssessArea
+    ? {
+        label: activeAssessArea === 'area-b' ? 'Showing Area B stores' : 'Showing Area A stores',
+        dotClassName: activeAssessArea === 'area-b' ? 'bg-teal-500' : 'bg-violet-500',
+        className: activeAssessArea === 'area-b'
+          ? 'bg-teal-50 text-teal-700 border-teal-200'
+          : 'bg-violet-50 text-violet-700 border-violet-200'
+      }
+    : null
 
   return (
     <div
@@ -98,6 +109,22 @@ export function ResultsPanel({
               </Button>
             )}
           </div>
+
+          {activeAreaIndicator && (
+            <div
+              className={cn(
+                "inline-flex w-fit items-center gap-2 rounded-md border px-2 py-1 text-xs font-medium",
+                activeAreaIndicator.className
+              )}
+              aria-label={activeAreaIndicator.label}
+            >
+              <span
+                className={cn("h-2 w-2 rounded-full", activeAreaIndicator.dotClassName)}
+                aria-hidden="true"
+              />
+              <span>{activeAreaIndicator.label}</span>
+            </div>
+          )}
 
           {/* Count/Status Row */}
           <div

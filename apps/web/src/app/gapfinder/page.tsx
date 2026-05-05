@@ -1598,7 +1598,7 @@ export default function BUAsPage() {
                       Click on the map to choose a point
                     </p>
                     <p className="text-xs text-gray-500">
-                      Analyze stores within a custom radius
+                      Analyse stores within a custom radius
                     </p>
                   </div>
                 )}
@@ -1837,6 +1837,11 @@ export default function BUAsPage() {
                 missingFascias={contextAwareMissingFascias}
                 isLoadingMissingFascias={contextAwareMissingFasciasLoading}
                 missingFasciasError={contextAwareMissingFasciasError}
+                activeAssessArea={
+                  currentMode === 'assess-area' && comparisonMode === 'comparing'
+                    ? activeArea
+                    : null
+                }
               />
             )
           }, [currentMode, comparisonMode, activeArea, nearbyStores, nearbyStoresB, selectedPoint, selectedPointB,
