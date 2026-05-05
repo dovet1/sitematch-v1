@@ -219,16 +219,27 @@ export default function BUAsPage() {
       return { missingInAOnly: [], missingInBOnly: [], missingInBoth: [] }
     }
 
-    // All based on fascia IDs, deduplicated on fasciaId
+    // Sets of fascia IDs that ARE present as stores in each area
     const fasciaIdsInA = new Set(nearbyStores.map(s => s.fascia_id))
     const fasciaIdsInB = new Set(nearbyStoresB.map(s => s.fascia_id))
 
+    // Missing in A: Fascias present in B but NOT in A
+    // Filter missingFascias to only include those that ARE in B
+    const missingInAOnly = missingFascias.filter(f => fasciaIdsInB.has(f.fasciaId))
+
+    // Missing in B: Fascias present in A but NOT in B
+    // Filter missingFasciasB to only include those that ARE in A
+    const missingInBOnly = missingFasciasB.filter(f => fasciaIdsInA.has(f.fasciaId))
+
+    // Missing in Both: Fascias NOT present in either area
+    const missingInBoth = missingFascias.filter(f =>
+      missingFasciasB.some(fb => fb.fasciaId === f.fasciaId)
+    )
+
     return {
-      missingInAOnly: missingFascias.filter(f => !fasciaIdsInB.has(f.fasciaId)),
-      missingInBOnly: missingFasciasB.filter(f => !fasciaIdsInA.has(f.fasciaId)),
-      missingInBoth: missingFascias.filter(f =>
-        missingFasciasB.some(fb => fb.fasciaId === f.fasciaId)
-      )
+      missingInAOnly,
+      missingInBOnly,
+      missingInBoth
     }
   }, [comparisonMode, nearbyStores, nearbyStoresB, missingFascias, missingFasciasB])
 
