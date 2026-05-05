@@ -59,3 +59,48 @@ describe('ResultsPanel area indicator', () => {
     expect(screen.queryByText('Showing Area B stores')).not.toBeInTheDocument()
   })
 })
+
+describe('ResultsPanel travel times', () => {
+  const store = {
+    id: 'store-1',
+    name: 'Test Store',
+    lat: 51.5,
+    lon: -0.12,
+    town: 'London',
+    postcode: 'SW1A 1AA'
+  }
+
+  it('shows travel times stored with the Area A cache key', () => {
+    renderResultsPanel({
+      mode: 'assess-area',
+      results: [store],
+      selectedPoint: { lat: 51.51, lng: -0.13 },
+      activeAssessArea: null,
+      travelTimes: {
+        'store-1:area-a': {
+          walking: { duration: 900, distance: 1100 },
+          driving: { duration: 300, distance: 1600 }
+        }
+      }
+    })
+
+    expect(screen.queryByRole('button', { name: 'Get Travel Times' })).not.toBeInTheDocument()
+    expect(screen.getByText('15 min')).toBeInTheDocument()
+    expect(screen.getByText('5 min')).toBeInTheDocument()
+  })
+
+  it('shows loading state stored with the Area B cache key', () => {
+    renderResultsPanel({
+      mode: 'assess-area',
+      results: [store],
+      selectedPoint: { lat: 51.51, lng: -0.13 },
+      activeAssessArea: 'area-b',
+      travelTimeLoading: {
+        'store-1:area-b': true
+      },
+      onGetTravelTime: jest.fn()
+    })
+
+    expect(screen.getByRole('button', { name: /Calculating/i })).toBeDisabled()
+  })
+})

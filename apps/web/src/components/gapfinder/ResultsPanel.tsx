@@ -206,9 +206,17 @@ export function ResultsPanel({
                   ? calculateDistance(selectedPoint.lat, selectedPoint.lng, store.lat, store.lon)
                   : null
 
-              const travelTime = travelTimes[store.id]
-              const isLoading = travelTimeLoading[store.id]
-              const error = travelTimeErrors[store.id]
+              const travelTimeKeys = [
+                `${store.id}:${activeAssessArea || 'area-a'}`,
+                `${store.id}:${activeAssessArea || 'a'}`,
+                store.id
+              ]
+              const travelTimeKey = travelTimeKeys.find((key) => travelTimes[key])
+              const loadingKey = travelTimeKeys.find((key) => travelTimeLoading[key])
+              const errorKey = travelTimeKeys.find((key) => travelTimeErrors[key])
+              const travelTime = travelTimeKey ? travelTimes[travelTimeKey] : undefined
+              const isLoading = loadingKey ? travelTimeLoading[loadingKey] : false
+              const error = errorKey ? travelTimeErrors[errorKey] : undefined
               const hasTravelTime = travelTime && (travelTime.walking || travelTime.driving)
               const badgeNumber = assessBadgeByStoreId[store.id]
 

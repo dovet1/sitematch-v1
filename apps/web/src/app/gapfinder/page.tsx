@@ -1076,7 +1076,6 @@ export default function BUAsPage() {
           travelTimeContextRef.current.lng !== originPoint.lng ||
           travelTimeContextRef.current.mode !== currentMode ||
           travelTimeContextRef.current.activeArea !== activeArea) {
-        console.log('Ignoring stale travel time response')
         return
       }
 
