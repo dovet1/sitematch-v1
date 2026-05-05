@@ -9,7 +9,11 @@ jest.mock('mapbox-gl', () => ({
   }
 }))
 
-import { formatRequirementLocationDisplay, isStoreMarkerEventTarget } from '../BUAMap'
+import {
+  formatRequirementLocationDisplay,
+  isRequirementLayerClick,
+  isStoreMarkerEventTarget
+} from '../BUAMap'
 
 describe('formatRequirementLocationDisplay', () => {
   it('shortens London locality addresses', () => {
@@ -65,5 +69,30 @@ describe('isStoreMarkerEventTarget', () => {
 
     expect(isStoreMarkerEventTarget(canvas)).toBe(false)
     expect(isStoreMarkerEventTarget(null)).toBe(false)
+  })
+})
+
+describe('isRequirementLayerClick', () => {
+  it('returns true when a click intersects a requirement layer feature', () => {
+    const map = {
+      getLayer: jest.fn((layerId: string) => layerId === 'requirement-locations-point'),
+      queryRenderedFeatures: jest.fn(() => [{ source: 'requirement-locations-source' }])
+    }
+
+    expect(isRequirementLayerClick(map as any, { x: 10, y: 20 } as any)).toBe(true)
+    expect(map.queryRenderedFeatures).toHaveBeenCalledWith(
+      { x: 10, y: 20 },
+      { layers: ['requirement-locations-point'] }
+    )
+  })
+
+  it('returns false when requirement layers are not present', () => {
+    const map = {
+      getLayer: jest.fn(() => undefined),
+      queryRenderedFeatures: jest.fn()
+    }
+
+    expect(isRequirementLayerClick(map as any, { x: 10, y: 20 } as any)).toBe(false)
+    expect(map.queryRenderedFeatures).not.toHaveBeenCalled()
   })
 })

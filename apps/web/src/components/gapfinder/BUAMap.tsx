@@ -195,6 +195,30 @@ export function isStoreMarkerEventTarget(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(target.closest('.simple-store-marker'))
 }
 
+export function isRequirementLayerClick(
+  mapInstance: Pick<mapboxgl.Map, 'getLayer' | 'queryRenderedFeatures'>,
+  point: mapboxgl.PointLike
+): boolean {
+  const requirementLayers = [
+    REQUIREMENT_CLUSTER_LAYER_ID,
+    REQUIREMENT_CLUSTER_COUNT_LAYER_ID,
+    REQUIREMENT_POINT_LAYER_ID
+  ].filter(layerId => Boolean(mapInstance.getLayer(layerId)))
+
+  if (requirementLayers.length === 0) {
+    return false
+  }
+
+  try {
+    return mapInstance
+      .queryRenderedFeatures(point, { layers: requirementLayers })
+      .some(feature => feature.source === REQUIREMENT_SOURCE_ID)
+  } catch (error) {
+    console.error('Failed to query requirement marker click:', error)
+    return false
+  }
+}
+
 /**
  * Generate requirement location popup HTML
  */
@@ -785,6 +809,10 @@ export function BUAMap({
         }
 
         if (isStoreMarkerEventTarget(e.originalEvent.target)) {
+          return
+        }
+
+        if (isRequirementLayerClick(map.current!, e.point)) {
           return
         }
 
