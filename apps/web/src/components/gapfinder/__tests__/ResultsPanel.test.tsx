@@ -103,4 +103,23 @@ describe('ResultsPanel travel times', () => {
 
     expect(screen.getByRole('button', { name: /Calculating/i })).toBeDisabled()
   })
+
+  it('shows travel times stored with the Area B cache key', () => {
+    renderResultsPanel({
+      mode: 'assess-area',
+      results: [store],
+      selectedPoint: { lat: 51.51, lng: -0.13 },
+      activeAssessArea: 'area-b',
+      travelTimes: {
+        'store-1:area-b': {
+          walking: { duration: 1200, distance: 1400 },
+          driving: { duration: 420, distance: 2100 }
+        }
+      }
+    })
+
+    expect(screen.queryByRole('button', { name: 'Get Travel Times' })).not.toBeInTheDocument()
+    expect(screen.getByText('20 min')).toBeInTheDocument()
+    expect(screen.getByText('7 min')).toBeInTheDocument()
+  })
 })

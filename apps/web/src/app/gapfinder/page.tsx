@@ -33,6 +33,50 @@ import type { TravelTimeData } from '@/types/travel-time'
 
 const MAX_POPULATION = 1200000 // 1.2 million
 const MIN_POPULATION = 5001 // Changed from 0
+type AssessArea = 'area-a' | 'area-b'
+
+const getTravelTimeCacheKey = (storeId: string, area: AssessArea) => {
+  return `${storeId}:${area}`
+}
+
+const removeTravelTimeAreaEntries = <T,>(entries: Record<string, T>, area: AssessArea) => {
+  const next: Record<string, T> = {}
+  const areaSuffix = `:${area}`
+  const legacyAreaSuffix = area === 'area-a' ? ':a' : ':b'
+
+  for (const [key, value] of Object.entries(entries)) {
+    const isAreaEntry =
+      key.endsWith(areaSuffix) ||
+      key.endsWith(legacyAreaSuffix) ||
+      (area === 'area-a' && !key.includes(':'))
+
+    if (!isAreaEntry) {
+      next[key] = value
+    }
+  }
+
+  return next
+}
+
+const moveTravelTimeAreaEntries = <T,>(
+  entries: Record<string, T>,
+  fromArea: AssessArea,
+  toArea: AssessArea
+) => {
+  const next: Record<string, T> = {}
+  const fromSuffix = `:${fromArea}`
+  const toSuffix = `:${toArea}`
+
+  for (const [key, value] of Object.entries(entries)) {
+    if (key.endsWith(fromSuffix)) {
+      next[`${key.slice(0, -fromSuffix.length)}${toSuffix}`] = value
+    } else if (!key.endsWith(toSuffix)) {
+      next[key] = value
+    }
+  }
+
+  return next
+}
 
 export default function BUAsPage() {
   const router = useRouter()
@@ -176,13 +220,8 @@ export default function BUAsPage() {
   const [travelTimeLoading, setTravelTimeLoading] = useState<Record<string, boolean>>({})
   const [travelTimeErrors, setTravelTimeErrors] = useState<Record<string, string>>({})
 
-  // Context ref for travel time stale request detection
-  const travelTimeContextRef = useRef<{
-    lat: number
-    lng: number
-    mode: string
-    activeArea: 'area-a' | 'area-b' | null
-  } | null>(null)
+  const selectedPointRef = useRef(selectedPoint)
+  const selectedPointBRef = useRef(selectedPointB)
   const fetchMissingFasciasAbortRef = useRef<AbortController | null>(null)
 
   // Derived values for map filtering
@@ -255,45 +294,27 @@ export default function BUAsPage() {
     setIsBrandFiltersOpen(isFiltered)
   }, [filterSet.rules.length])
 
-  // Keep travel time context ref in sync
   useEffect(() => {
-    if (currentMode === 'assess-area') {
-      let point = null
-      if (comparisonMode === 'comparing') {
-        point = activeArea === 'area-b' ? selectedPointB :
-                activeArea === 'area-a' ? selectedPoint : null
-      } else {
-        point = selectedPoint
-      }
+    selectedPointRef.current = selectedPoint
+  }, [selectedPoint])
 
-      if (point) {
-        travelTimeContextRef.current = {
-          lat: point.lat,
-          lng: point.lng,
-          mode: currentMode,
-          activeArea: activeArea
-        }
-      } else {
-        travelTimeContextRef.current = null
-      }
-    } else {
-      travelTimeContextRef.current = null
-    }
-  }, [selectedPoint, selectedPointB, currentMode, activeArea, comparisonMode])
-
-  // Helper to generate area-aware cache key
-  const getTravelTimeCacheKey = (storeId: string, area: 'area-a' | 'area-b' | null) => {
-    return `${storeId}:${area || 'a'}`
-  }
-
-  // Clear travel times when switching areas
   useEffect(() => {
-    if (comparisonMode === 'comparing' && activeArea) {
-      setTravelTimes({})
-      setTravelTimeLoading({})
-      setTravelTimeErrors({})
-    }
-  }, [activeArea, comparisonMode])
+    selectedPointBRef.current = selectedPointB
+  }, [selectedPointB])
+
+  const clearTravelTimesForArea = useCallback((area: AssessArea) => {
+    setTravelTimes(prev => removeTravelTimeAreaEntries(prev, area))
+    setTravelTimeLoading(prev => removeTravelTimeAreaEntries(prev, area))
+    setTravelTimeErrors(prev => removeTravelTimeAreaEntries(prev, area))
+  }, [])
+
+  const moveTravelTimesBetweenAreas = useCallback((fromArea: AssessArea, toArea: AssessArea) => {
+    setTravelTimes(prev => moveTravelTimeAreaEntries(prev, fromArea, toArea))
+    setTravelTimeLoading(prev =>
+      removeTravelTimeAreaEntries(removeTravelTimeAreaEntries(prev, fromArea), toArea)
+    )
+    setTravelTimeErrors(prev => moveTravelTimeAreaEntries(prev, fromArea, toArea))
+  }, [])
 
   // Auto-open Area A when entering comparison mode
   useEffect(() => {
@@ -363,6 +384,7 @@ export default function BUAsPage() {
       setRadiusMeters(radiusMetersB)
       setNearbyStores(nearbyStoresB)
       setMissingFascias(missingFasciasB)
+      moveTravelTimesBetweenAreas('area-b', 'area-a')
 
       // Clear B
       setSelectedPointB(null)
@@ -374,6 +396,7 @@ export default function BUAsPage() {
       setActiveArea('area-a')
     } else {
       // Simple clear
+      clearTravelTimesForArea('area-a')
       setSelectedPoint(null)
       setNearbyStores([])
       setMissingFascias([])
@@ -382,6 +405,7 @@ export default function BUAsPage() {
   }
 
   const handleClearPointB = () => {
+    clearTravelTimesForArea('area-b')
     setSelectedPointB(null)
     setRadiusMetersB(5000)
     setNearbyStoresB([])
@@ -392,9 +416,11 @@ export default function BUAsPage() {
 
   const handlePointSelected = (point: { lat: number; lng: number }) => {
     if (comparisonMode === 'selecting-second') {
+      clearTravelTimesForArea('area-b')
       setSelectedPointB(point)
       setComparisonMode('comparing')
     } else {
+      clearTravelTimesForArea('area-a')
       setSelectedPoint(point)
     }
   }
@@ -816,16 +842,8 @@ export default function BUAsPage() {
   useEffect(() => {
     if (!selectedPoint || currentMode !== 'assess-area') {
       setNearbyStores([])
-      setTravelTimes({})        // Clear when mode changes
-      setTravelTimeLoading({})
-      setTravelTimeErrors({})
       return
     }
-
-    // ALSO clear travel times when selectedPoint changes (new origin)
-    setTravelTimes({})          // Clear when point changes
-    setTravelTimeLoading({})
-    setTravelTimeErrors({})
 
     const fetchNearbyStores = async () => {
       setIsLoadingStores(true)
@@ -1030,25 +1048,19 @@ export default function BUAsPage() {
   }
 
   const handleGetTravelTime = async (store: StoreType) => {
-    // Determine origin point based on active area
-    let originPoint: { lat: number; lng: number } | null = null
-
-    if (comparisonMode === 'comparing') {
-      originPoint = activeArea === 'area-b' ? selectedPointB :
-                    activeArea === 'area-a' ? selectedPoint : null
-    } else {
-      originPoint = selectedPoint
-    }
+    const requestArea: AssessArea =
+      comparisonMode === 'comparing' && activeArea === 'area-b' ? 'area-b' : 'area-a'
+    const originPoint = requestArea === 'area-b' ? selectedPointB : selectedPoint
 
     if (!originPoint || !store.id) return
 
     if (!isPro) {
-      const cacheKey = getTravelTimeCacheKey(store.id, activeArea)
+      const cacheKey = getTravelTimeCacheKey(store.id, requestArea)
       setTravelTimeErrors(prev => ({ ...prev, [cacheKey]: 'Subscription required' }))
       return
     }
 
-    const cacheKey = getTravelTimeCacheKey(store.id, activeArea)
+    const cacheKey = getTravelTimeCacheKey(store.id, requestArea)
 
     if (travelTimeLoading[cacheKey]) return
 
@@ -1070,12 +1082,12 @@ export default function BUAsPage() {
       const response = await fetch(`/api/public/stores/travel-time?${params}`)
       const data = await response.json()
 
-      // Check stale using ref (includes activeArea)
-      if (!travelTimeContextRef.current ||
-          travelTimeContextRef.current.lat !== originPoint.lat ||
-          travelTimeContextRef.current.lng !== originPoint.lng ||
-          travelTimeContextRef.current.mode !== currentMode ||
-          travelTimeContextRef.current.activeArea !== activeArea) {
+      const currentOriginPoint =
+        requestArea === 'area-b' ? selectedPointBRef.current : selectedPointRef.current
+
+      if (!currentOriginPoint ||
+          currentOriginPoint.lat !== originPoint.lat ||
+          currentOriginPoint.lng !== originPoint.lng) {
         return
       }
 
@@ -1094,26 +1106,19 @@ export default function BUAsPage() {
         }))
       }
     } catch (error) {
-      // Only set error if context still matches
-      if (travelTimeContextRef.current &&
-          travelTimeContextRef.current.lat === originPoint.lat &&
-          travelTimeContextRef.current.lng === originPoint.lng &&
-          travelTimeContextRef.current.mode === currentMode &&
-          travelTimeContextRef.current.activeArea === activeArea) {
+      const currentOriginPoint =
+        requestArea === 'area-b' ? selectedPointBRef.current : selectedPointRef.current
+
+      if (currentOriginPoint &&
+          currentOriginPoint.lat === originPoint.lat &&
+          currentOriginPoint.lng === originPoint.lng) {
         setTravelTimeErrors(prev => ({
           ...prev,
           [cacheKey]: 'Network error'
         }))
       }
     } finally {
-      // Only clear loading if context still matches
-      if (travelTimeContextRef.current &&
-          travelTimeContextRef.current.lat === originPoint.lat &&
-          travelTimeContextRef.current.lng === originPoint.lng &&
-          travelTimeContextRef.current.mode === currentMode &&
-          travelTimeContextRef.current.activeArea === activeArea) {
-        setTravelTimeLoading(prev => ({ ...prev, [cacheKey]: false }))
-      }
+      setTravelTimeLoading(prev => ({ ...prev, [cacheKey]: false }))
     }
   }
 
