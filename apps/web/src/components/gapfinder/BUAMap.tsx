@@ -350,6 +350,9 @@ interface BUAMapProps {
   }>
   onFasciaVisibilityToggle?: (fasciaId: string) => void
   assessBadgeByStoreId?: Record<string, number>  // Badge lookup for Assess Area mode
+  selectedPointB?: { lat: number; lng: number } | null
+  radiusMetersB?: number
+  comparisonMode?: 'single' | 'selecting-second' | 'comparing'
 }
 
 export function BUAMap({
@@ -378,13 +381,17 @@ export function BUAMap({
   categoriesVisibility = {},
   requirementLocations = [],
   onFasciaVisibilityToggle,
-  assessBadgeByStoreId = {}
+  assessBadgeByStoreId = {},
+  selectedPointB = null,
+  radiusMetersB = 5000,
+  comparisonMode = 'single'
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const popup = useRef<mapboxgl.Popup | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const pointMarker = useRef<mapboxgl.Marker | null>(null)
+  const pointMarkerB = useRef<mapboxgl.Marker | null>(null)
   const radiusCircle = useRef<string | null>(null)
   const storeMarkers = useRef<mapboxgl.Marker[]>([])
   const isAutoFitting = useRef(false)
@@ -835,37 +842,13 @@ export function BUAMap({
   useEffect(() => {
     if (!map.current || !mapLoaded) return
 
-    // Remove existing marker and circle
-    if (pointMarker.current) {
-      pointMarker.current.remove()
-      pointMarker.current = null
-    }
-    if (radiusCircle.current && map.current.getLayer(radiusCircle.current)) {
-      map.current.removeLayer(radiusCircle.current)
-      map.current.removeSource(radiusCircle.current)
-      radiusCircle.current = null
-    }
-
-    // Add new marker and circle if point is selected
-    if (selectedPoint && mode === 'assess-area') {
-      // Add marker
-      pointMarker.current = new mapboxgl.Marker({
-        color: '#8b5cf6' // violet-500
-      })
-        .setLngLat([selectedPoint.lng, selectedPoint.lat])
-        .addTo(map.current)
-
-      // Add radius circle
-      const radiusLayerId = 'radius-circle'
-      radiusCircle.current = radiusLayerId
-
-      // Create circle GeoJSON
-      const center = [selectedPoint.lng, selectedPoint.lat]
-      const radiusInKm = radiusMeters / 1000
+    // Helper to create radius circle GeoJSON
+    const createRadiusCircle = (point: { lat: number; lng: number }, radius: number) => {
+      const radiusInKm = radius / 1000
       const points = 64
       const coords = {
-        latitude: selectedPoint.lat,
-        longitude: selectedPoint.lng
+        latitude: point.lat,
+        longitude: point.lng
       }
 
       const ret = []
@@ -880,40 +863,111 @@ export function BUAMap({
       }
       ret.push(ret[0]) // Close the circle
 
-      map.current.addSource(radiusLayerId, {
+      return {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [ret]
+        },
+        properties: {}
+      }
+    }
+
+    // Helper to add radius circle layers
+    const addRadiusCircle = (layerId: string, point: { lat: number; lng: number }, radius: number, color: string) => {
+      if (!map.current) return
+
+      const circleData = createRadiusCircle(point, radius)
+
+      map.current.addSource(layerId, {
         type: 'geojson',
-        data: {
-          type: 'Feature',
-          geometry: {
-            type: 'Polygon',
-            coordinates: [ret]
-          },
-          properties: {}
-        }
+        data: circleData as any
       })
 
       map.current.addLayer({
-        id: radiusLayerId,
+        id: layerId,
         type: 'fill',
-        source: radiusLayerId,
+        source: layerId,
         paint: {
-          'fill-color': '#8b5cf6',
+          'fill-color': color,
           'fill-opacity': 0.1
         }
       })
 
       map.current.addLayer({
-        id: `${radiusLayerId}-outline`,
+        id: `${layerId}-outline`,
         type: 'line',
-        source: radiusLayerId,
+        source: layerId,
         paint: {
-          'line-color': '#8b5cf6',
+          'line-color': color,
           'line-width': 2,
           'line-opacity': 0.6
         }
       })
+    }
 
-      // Fly to the selected point
+    // Cleanup existing markers and circles
+    if (pointMarker.current) {
+      pointMarker.current.remove()
+      pointMarker.current = null
+    }
+    if (pointMarkerB.current) {
+      pointMarkerB.current.remove()
+      pointMarkerB.current = null
+    }
+
+    // Remove radius circle layers for Area A
+    if (map.current.getLayer('radius-circle-a-outline')) {
+      map.current.removeLayer('radius-circle-a-outline')
+    }
+    if (map.current.getLayer('radius-circle-a')) {
+      map.current.removeLayer('radius-circle-a')
+    }
+    if (map.current.getSource('radius-circle-a')) {
+      map.current.removeSource('radius-circle-a')
+    }
+
+    // Remove radius circle layers for Area B
+    if (map.current.getLayer('radius-circle-b-outline')) {
+      map.current.removeLayer('radius-circle-b-outline')
+    }
+    if (map.current.getLayer('radius-circle-b')) {
+      map.current.removeLayer('radius-circle-b')
+    }
+    if (map.current.getSource('radius-circle-b')) {
+      map.current.removeSource('radius-circle-b')
+    }
+
+    // Render Point A (purple/violet)
+    if (selectedPoint && mode === 'assess-area') {
+      pointMarker.current = new mapboxgl.Marker({
+        color: '#8b5cf6' // violet-500
+      })
+        .setLngLat([selectedPoint.lng, selectedPoint.lat])
+        .addTo(map.current)
+
+      addRadiusCircle('radius-circle-a', selectedPoint, radiusMeters, '#8b5cf6')
+    }
+
+    // Render Point B (teal) - only in comparing mode
+    if (selectedPointB && mode === 'assess-area' && comparisonMode === 'comparing') {
+      pointMarkerB.current = new mapboxgl.Marker({
+        color: '#8b5cf6' // reuse same marker color
+      })
+        .setLngLat([selectedPointB.lng, selectedPointB.lat])
+        .addTo(map.current)
+
+      addRadiusCircle('radius-circle-b', selectedPointB, radiusMetersB, '#14b8a6') // teal-500
+    }
+
+    // Fit bounds when both points exist, otherwise fly to single point
+    if (selectedPoint && selectedPointB && comparisonMode === 'comparing') {
+      const bounds = new mapboxgl.LngLatBounds()
+      bounds.extend([selectedPoint.lng, selectedPoint.lat])
+      bounds.extend([selectedPointB.lng, selectedPointB.lat])
+      map.current.fitBounds(bounds, { padding: 100, duration: 1000 })
+    } else if (selectedPoint && mode === 'assess-area') {
+      // Fly to single point
       map.current.flyTo({
         center: [selectedPoint.lng, selectedPoint.lat],
         zoom: radiusMeters > 15000 ? 10 : radiusMeters > 8000 ? 11 : 12,
@@ -925,19 +979,44 @@ export function BUAMap({
       if (pointMarker.current) {
         pointMarker.current.remove()
       }
-      if (radiusCircle.current && map.current) {
-        if (map.current.getLayer(radiusCircle.current)) {
-          map.current.removeLayer(radiusCircle.current)
+      if (pointMarkerB.current) {
+        pointMarkerB.current.remove()
+      }
+      if (map.current) {
+        // Cleanup Area A
+        if (map.current.getLayer('radius-circle-a-outline')) {
+          map.current.removeLayer('radius-circle-a-outline')
         }
-        if (map.current.getLayer(`${radiusCircle.current}-outline`)) {
-          map.current.removeLayer(`${radiusCircle.current}-outline`)
+        if (map.current.getLayer('radius-circle-a')) {
+          map.current.removeLayer('radius-circle-a')
         }
-        if (map.current.getSource(radiusCircle.current)) {
-          map.current.removeSource(radiusCircle.current)
+        if (map.current.getSource('radius-circle-a')) {
+          map.current.removeSource('radius-circle-a')
+        }
+
+        // Cleanup Area B
+        if (map.current.getLayer('radius-circle-b-outline')) {
+          map.current.removeLayer('radius-circle-b-outline')
+        }
+        if (map.current.getLayer('radius-circle-b')) {
+          map.current.removeLayer('radius-circle-b')
+        }
+        if (map.current.getSource('radius-circle-b')) {
+          map.current.removeSource('radius-circle-b')
         }
       }
     }
-  }, [selectedPoint, radiusMeters, mode, mapLoaded])
+  }, [selectedPoint, selectedPointB, radiusMeters, radiusMetersB, comparisonMode, mode, mapLoaded])
+
+  // Update cursor for second point selection mode
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+
+    map.current.getCanvas().style.cursor =
+      mode === 'assess-area' && comparisonMode === 'selecting-second'
+        ? 'crosshair'
+        : ''
+  }, [mode, comparisonMode, mapLoaded])
 
   // CRITICAL VISIBILITY RULE: A marker is visible if at least one of its matched targets is still visible
   const isStoreVisible = useCallback((

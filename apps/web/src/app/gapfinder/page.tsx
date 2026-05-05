@@ -13,6 +13,8 @@ import { ResultsPanel } from '@/components/gapfinder/ResultsPanel'
 import { FilterBuilder } from '@/components/gapfinder/FilterBuilder'
 import { RequirementCompanySelector } from '@/components/gapfinder/RequirementCompanySelector'
 import { UnifiedCategorySelector } from '@/components/gapfinder/UnifiedCategorySelector'
+import { AreaAccordion } from '@/components/gapfinder/AreaAccordion'
+import { ComparisonModal } from '@/components/gapfinder/ComparisonModal'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
@@ -157,6 +159,17 @@ export default function BUAsPage() {
   const [isLoadingMissingFascias, setIsLoadingMissingFascias] = useState(false)
   const [missingFasciasError, setMissingFasciasError] = useState<string | null>(null)
 
+  // Comparison mode state
+  const [comparisonMode, setComparisonMode] = useState<'single' | 'selecting-second' | 'comparing'>('single')
+  const [selectedPointB, setSelectedPointB] = useState<{ lat: number; lng: number } | null>(null)
+  const [radiusMetersB, setRadiusMetersB] = useState(5000)
+  const [nearbyStoresB, setNearbyStoresB] = useState<StoreType[]>([])
+  const [isLoadingStoresB, setIsLoadingStoresB] = useState(false)
+  const [missingFasciasB, setMissingFasciasB] = useState<import('@/lib/stores').MissingFasciaInfo[]>([])
+  const [isLoadingMissingFasciasB, setIsLoadingMissingFasciasB] = useState(false)
+  const [missingFasciasBError, setMissingFasciasBError] = useState<string | null>(null)
+  const [comparisonModalOpen, setComparisonModalOpen] = useState(false)
+
   // Travel time state (assess area mode)
   const [travelTimes, setTravelTimes] = useState<Record<string, TravelTimeData>>({})
   const [travelTimeLoading, setTravelTimeLoading] = useState<Record<string, boolean>>({})
@@ -181,6 +194,25 @@ export default function BUAsPage() {
     })
     return lookup
   }, [currentMode, nearbyStores])
+
+  // Comparison data (when comparing two areas)
+  const comparisonData = useMemo<import('@/lib/stores').ComparisonData>(() => {
+    if (comparisonMode !== 'comparing') {
+      return { missingInAOnly: [], missingInBOnly: [], missingInBoth: [] }
+    }
+
+    // All based on fascia IDs, deduplicated on fasciaId
+    const fasciaIdsInA = new Set(nearbyStores.map(s => s.fascia_id))
+    const fasciaIdsInB = new Set(nearbyStoresB.map(s => s.fascia_id))
+
+    return {
+      missingInAOnly: missingFascias.filter(f => !fasciaIdsInB.has(f.fasciaId)),
+      missingInBOnly: missingFasciasB.filter(f => !fasciaIdsInA.has(f.fasciaId)),
+      missingInBoth: missingFascias.filter(f =>
+        missingFasciasB.some(fb => fb.fasciaId === f.fasciaId)
+      )
+    }
+  }, [comparisonMode, nearbyStores, nearbyStoresB, missingFascias, missingFasciasB])
 
   // Auto open/close population filter based on whether it's filtered
   useEffect(() => {
@@ -255,6 +287,51 @@ export default function BUAsPage() {
       }
     })
   }, [])
+
+  // Comparison mode handlers
+  const handleAddSecondArea = () => {
+    setComparisonMode('selecting-second')
+  }
+
+  const handleClearPointA = () => {
+    if (comparisonMode === 'comparing') {
+      // Promote B to A
+      setSelectedPoint(selectedPointB)
+      setRadiusMeters(radiusMetersB)
+      setNearbyStores(nearbyStoresB)
+      setMissingFascias(missingFasciasB)
+
+      // Clear B
+      setSelectedPointB(null)
+      setRadiusMetersB(5000)
+      setNearbyStoresB([])
+      setMissingFasciasB([])
+
+      setComparisonMode('single')
+    } else {
+      // Simple clear
+      setSelectedPoint(null)
+      setNearbyStores([])
+      setMissingFascias([])
+    }
+  }
+
+  const handleClearPointB = () => {
+    setSelectedPointB(null)
+    setRadiusMetersB(5000)
+    setNearbyStoresB([])
+    setMissingFasciasB([])
+    setComparisonMode('single')
+  }
+
+  const handlePointSelected = (point: { lat: number; lng: number }) => {
+    if (comparisonMode === 'selecting-second') {
+      setSelectedPointB(point)
+      setComparisonMode('comparing')
+    } else {
+      setSelectedPoint(point)
+    }
+  }
 
   const handlePopulationRangeChange = (value: number[]) => {
     setPopulationRange([value[0], value[1]])
@@ -779,6 +856,94 @@ export default function BUAsPage() {
     }
   }, [selectedPoint, radiusMeters, assessFascias, assessCategories, currentMode])
 
+  // Fetch nearby stores for Area B
+  useEffect(() => {
+    if (!selectedPointB || currentMode !== 'assess-area' || comparisonMode !== 'comparing') {
+      setNearbyStoresB([])
+      return
+    }
+
+    const fetchNearbyStoresB = async () => {
+      setIsLoadingStoresB(true)
+      try {
+        const params = new URLSearchParams({
+          lat: selectedPointB.lat.toString(),
+          lon: selectedPointB.lng.toString(),
+          radius: radiusMetersB.toString()
+        })
+
+        if (assessFascias.length > 0) {
+          params.append('fasciaIds', assessFascias.join(','))
+        }
+        if (assessCategories.length > 0) {
+          params.append('categoryIds', assessCategories.join(','))
+        }
+
+        const response = await fetch(`/api/public/stores/nearby?${params.toString()}`)
+
+        if (response.ok) {
+          const data = await response.json()
+          setNearbyStoresB(data.stores || [])
+        }
+      } catch {
+        setNearbyStoresB([])
+      } finally {
+        setIsLoadingStoresB(false)
+      }
+    }
+
+    // Debounce the fetch
+    const debounceTimer = setTimeout(fetchNearbyStoresB, 500)
+    return () => clearTimeout(debounceTimer)
+  }, [selectedPointB, radiusMetersB, assessFascias, assessCategories, currentMode, comparisonMode])
+
+  // Fetch missing fascias for Area B
+  useEffect(() => {
+    if (!selectedPointB || currentMode !== 'assess-area' || comparisonMode !== 'comparing') {
+      setMissingFasciasB([])
+      setMissingFasciasBError(null)
+      return
+    }
+
+    const fetchMissingFasciasB = async () => {
+      setIsLoadingMissingFasciasB(true)
+      setMissingFasciasBError(null)
+
+      try {
+        const params = new URLSearchParams({
+          lat: selectedPointB.lat.toString(),
+          lon: selectedPointB.lng.toString(),
+          radius: radiusMetersB.toString()
+        })
+
+        if (assessFascias.length > 0) {
+          params.append('fasciaIds', assessFascias.join(','))
+        }
+        if (assessCategories.length > 0) {
+          params.append('categoryIds', assessCategories.join(','))
+        }
+
+        const response = await fetch(`/api/public/stores/missing-fascias?${params.toString()}`)
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch missing fascias')
+        }
+
+        const data = await response.json()
+        setMissingFasciasB(data.missingFascias || [])
+      } catch (error: any) {
+        setMissingFasciasBError('Unable to load missing fascias')
+        setMissingFasciasB([])
+      } finally {
+        setIsLoadingMissingFasciasB(false)
+      }
+    }
+
+    // Debounce the fetch
+    const debounceTimer = setTimeout(fetchMissingFasciasB, 500)
+    return () => clearTimeout(debounceTimer)
+  }, [selectedPointB, radiusMetersB, assessFascias, assessCategories, currentMode, comparisonMode])
+
   const handleBUAListItemClick = (bua: BUA) => {
     // Sidebar click - map will fly to BUA, next store update should NOT auto-fit
     setStoreUpdateSource(StoreUpdateSource.SIDEBAR_CLICK)
@@ -1256,32 +1421,81 @@ export default function BUAsPage() {
                 </div>
 
                 {/* Point Selection Status */}
-                {selectedPoint ? (
-                  <div className="relative bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-200/60 rounded-xl p-4 shadow-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="flex-shrink-0">
-                          <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                            <MapPin className="h-5 w-5 text-emerald-600" />
+                {comparisonMode === 'comparing' && selectedPoint && selectedPointB ? (
+                  <>
+                    <AreaAccordion
+                      pointA={selectedPoint}
+                      pointB={selectedPointB}
+                      radiusA={radiusMeters}
+                      radiusB={radiusMetersB}
+                      onRadiusAChange={setRadiusMeters}
+                      onRadiusBChange={setRadiusMetersB}
+                      onClearA={handleClearPointA}
+                      onClearB={handleClearPointB}
+                      storeCountA={nearbyStores.length}
+                      storeCountB={nearbyStoresB.length}
+                    />
+                    <Button
+                      onClick={() => setComparisonModalOpen(true)}
+                      className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-sm"
+                    >
+                      Compare Areas
+                    </Button>
+                  </>
+                ) : comparisonMode === 'selecting-second' ? (
+                  <div className="relative rounded-xl border-2 border-dashed border-violet-300 bg-gradient-to-br from-violet-50/50 to-purple-50/30 p-8 text-center">
+                    <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center">
+                      <MapPin className="h-8 w-8 text-violet-600" />
+                    </div>
+                    <h4 className="text-base font-semibold text-gray-900 mb-2">
+                      Select Area B
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Click on the map to choose the second point
+                    </p>
+                  </div>
+                ) : selectedPoint ? (
+                  <>
+                    <div className="relative bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-200/60 rounded-xl p-4 shadow-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="flex-shrink-0">
+                            <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                              <MapPin className="h-5 w-5 text-emerald-600" />
+                            </div>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-emerald-900 mb-0.5">Point Selected</p>
+                            <p className="text-xs text-emerald-700 font-mono">
+                              {selectedPoint.lat.toFixed(4)}, {selectedPoint.lng.toFixed(4)}
+                            </p>
                           </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-emerald-900 mb-0.5">Point Selected</p>
-                          <p className="text-xs text-emerald-700 font-mono">
-                            {selectedPoint.lat.toFixed(4)}, {selectedPoint.lng.toFixed(4)}
-                          </p>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleClearPointA}
+                          className="h-8 flex-shrink-0 text-emerald-700 hover:bg-emerald-100/80 hover:text-emerald-800"
+                        >
+                          Clear
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedPoint(null)}
-                        className="h-8 flex-shrink-0 text-emerald-700 hover:bg-emerald-100/80 hover:text-emerald-800"
-                      >
-                        Clear
-                      </Button>
                     </div>
-                  </div>
+                    <button
+                      onClick={handleAddSecondArea}
+                      className="relative rounded-xl border-2 border-dashed border-gray-300 bg-gradient-to-br from-gray-50/50 to-white p-6 text-center hover:border-violet-300 hover:from-violet-50/30 hover:to-purple-50/20 transition-all w-full"
+                    >
+                      <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
+                        <MapPin className="h-6 w-6 text-gray-400" />
+                      </div>
+                      <p className="text-sm font-medium text-gray-700">
+                        Add another area to compare
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Compare stores between two locations
+                      </p>
+                    </button>
+                  </>
                 ) : (
                   <div className="relative rounded-xl border-2 border-dashed border-gray-300 bg-gradient-to-br from-gray-50/50 to-white p-8 text-center">
                     <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center">
@@ -1299,7 +1513,8 @@ export default function BUAsPage() {
                   </div>
                 )}
 
-                {/* Radius Settings */}
+                {/* Radius Settings - Hidden in comparison mode */}
+                {comparisonMode !== 'comparing' && (
                 <Collapsible defaultOpen={false}>
                   <CollapsibleTrigger className="group flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/60 hover:to-purple-50/40 rounded-xl transition-all duration-200 border border-transparent hover:border-violet-100/50">
                     <div className="flex items-center gap-2.5">
@@ -1378,6 +1593,7 @@ export default function BUAsPage() {
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
+                )}
 
                 {/* Store Filters */}
                 <Collapsible defaultOpen={false}>
@@ -1429,9 +1645,12 @@ export default function BUAsPage() {
               className="w-full h-full"
               mode={currentMode}
               selectedPoint={selectedPoint}
-              onPointSelected={setSelectedPoint}
+              onPointSelected={handlePointSelected}
               radiusMeters={radiusMeters}
               stores={nearbyStores}
+              selectedPointB={selectedPointB}
+              radiusMetersB={radiusMetersB}
+              comparisonMode={comparisonMode}
               selectedBUAGsscode={selectedBUAGsscode}
               sidebarSelectionNonce={sidebarSelectionNonce}
               filteredGssCodes={
@@ -1487,6 +1706,13 @@ export default function BUAsPage() {
         </div>
       </div>
       <Toaster position="top-right" />
+
+      {/* Comparison Modal */}
+      <ComparisonModal
+        open={comparisonModalOpen}
+        onOpenChange={setComparisonModalOpen}
+        comparisonData={comparisonData}
+      />
     </div>
   )
 }
