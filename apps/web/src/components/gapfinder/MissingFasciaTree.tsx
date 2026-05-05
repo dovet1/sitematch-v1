@@ -1,22 +1,71 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ChevronDown, ChevronRight, CircleSlash } from 'lucide-react'
 import type { MissingFasciaInfo } from '@/lib/stores'
 import { buildMissingFasciasTree, type MissingFasciaCategoryNode, type MissingFasciaBrandNode } from '@/lib/missing-fascia-tree-utils'
+import { cn } from '@/lib/utils'
 
 interface MissingFasciaTreeProps {
   missingFascias: MissingFasciaInfo[]
+  density?: 'sidebar' | 'modal'
+  defaultExpanded?: 'none' | 'categories' | 'all'
+  showControls?: boolean
 }
 
-export function MissingFasciaTree({ missingFascias }: MissingFasciaTreeProps) {
-  // Expansion state - categories keyed by categoryId, brands by composite key
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
-  const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set())
-
+export function MissingFasciaTree({
+  missingFascias,
+  density = 'sidebar',
+  defaultExpanded = 'none',
+  showControls = false,
+}: MissingFasciaTreeProps) {
   // Build tree from flat data
   const tree = useMemo(() => buildMissingFasciasTree(missingFascias), [missingFascias])
+
+  const allCategoryIds = useMemo(
+    () => tree.map((node) => node.categoryId),
+    [tree]
+  )
+
+  const allBrandKeys = useMemo(
+    () => tree.flatMap((categoryNode) =>
+      categoryNode.brands.map((brandNode) => `${categoryNode.categoryId}:${brandNode.brandId}`)
+    ),
+    [tree]
+  )
+
+  // Expansion state - categories keyed by categoryId, brands by composite key
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    () => defaultExpanded === 'none' ? new Set() : new Set(allCategoryIds)
+  )
+  const [expandedBrands, setExpandedBrands] = useState<Set<string>>(
+    () => defaultExpanded === 'all' ? new Set(allBrandKeys) : new Set()
+  )
+
+  useEffect(() => {
+    setExpandedCategories(defaultExpanded === 'none' ? new Set() : new Set(allCategoryIds))
+    setExpandedBrands(defaultExpanded === 'all' ? new Set(allBrandKeys) : new Set())
+  }, [allBrandKeys, allCategoryIds, defaultExpanded])
+
+  const rowClassName = cn(
+    'flex items-center rounded-md transition-all duration-150',
+    density === 'modal'
+      ? 'p-2.5 hover:bg-violet-50/50'
+      : 'p-2 hover:bg-gray-50'
+  )
+
+  const childIndentClassName = density === 'modal' ? 'ml-7' : 'ml-8'
+
+  const expandAll = () => {
+    setExpandedCategories(new Set(allCategoryIds))
+    setExpandedBrands(new Set(allBrandKeys))
+  }
+
+  const collapseAll = () => {
+    setExpandedCategories(new Set())
+    setExpandedBrands(new Set())
+  }
 
   const toggleCategoryExpansion = (categoryId: string) => {
     setExpandedCategories(prev => {
@@ -52,7 +101,7 @@ export function MissingFasciaTree({ missingFascias }: MissingFasciaTreeProps) {
           open={isCategoryExpanded}
           onOpenChange={() => toggleCategoryExpansion(node.categoryId)}
         >
-          <div className="flex items-center hover:bg-gray-50 p-2 rounded-md transition-all duration-150">
+          <div className={rowClassName}>
             <CollapsibleTrigger className="flex-1 flex items-start justify-between cursor-pointer gap-2 text-left">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 {hasBrands && (
@@ -69,7 +118,7 @@ export function MissingFasciaTree({ missingFascias }: MissingFasciaTreeProps) {
                     {node.categoryName}
                   </span>
                   <span className="text-xs text-gray-500 ml-1.5">
-                    ({node.brands.length} {node.brands.length === 1 ? 'brand' : 'brands'})
+                    {node.brands.length} {node.brands.length === 1 ? 'brand' : 'brands'}
                   </span>
                 </div>
               </div>
@@ -78,7 +127,7 @@ export function MissingFasciaTree({ missingFascias }: MissingFasciaTreeProps) {
 
           <CollapsibleContent>
             {hasBrands && (
-              <div className="ml-8 space-y-1 mt-1">
+              <div className={cn(childIndentClassName, 'space-y-1 mt-1')}>
                 {node.brands.map((brandNode) => renderBrandNode(node, brandNode))}
               </div>
             )}
@@ -100,7 +149,7 @@ export function MissingFasciaTree({ missingFascias }: MissingFasciaTreeProps) {
         open={isBrandExpanded}
         onOpenChange={() => toggleBrandExpansion(compositeKey)}
       >
-        <div className="flex items-center hover:bg-gray-50 p-2 rounded-md transition-all duration-150">
+        <div className={rowClassName}>
           <CollapsibleTrigger className="flex-1 flex items-start justify-between cursor-pointer gap-2 text-left">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {hasFascias && (
@@ -117,7 +166,7 @@ export function MissingFasciaTree({ missingFascias }: MissingFasciaTreeProps) {
                   {brandNode.brandName}
                 </span>
                 <span className="text-xs text-gray-500 ml-1.5">
-                  ({brandNode.fascias.length} {brandNode.fascias.length === 1 ? 'type' : 'types'})
+                  {brandNode.fascias.length} {brandNode.fascias.length === 1 ? 'type' : 'types'}
                 </span>
               </div>
             </div>
@@ -126,11 +175,14 @@ export function MissingFasciaTree({ missingFascias }: MissingFasciaTreeProps) {
 
         <CollapsibleContent>
           {hasFascias && (
-            <div className="ml-8 space-y-1 mt-1">
+            <div className={cn(childIndentClassName, 'space-y-1 mt-1')}>
               {brandNode.fascias.map((fascia) => (
                 <div
                   key={fascia.fasciaId}
-                  className="py-2 hover:bg-gray-50/50 rounded-lg px-2 -mx-2 transition-colors"
+                  className={cn(
+                    'py-2 rounded-lg px-2 -mx-2 transition-colors',
+                    density === 'modal' ? 'hover:bg-violet-50/40' : 'hover:bg-gray-50/50'
+                  )}
                 >
                   <div className="flex items-start gap-2">
                     <CircleSlash className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
@@ -157,6 +209,25 @@ export function MissingFasciaTree({ missingFascias }: MissingFasciaTreeProps) {
 
   return (
     <div className="space-y-2">
+      {showControls && tree.length > 0 && (
+        <div className="flex items-center justify-end gap-2 pb-1">
+          <button
+            type="button"
+            onClick={expandAll}
+            className="text-xs font-medium text-violet-700 hover:text-violet-900"
+          >
+            Expand all
+          </button>
+          <span className="text-xs text-gray-300">|</span>
+          <button
+            type="button"
+            onClick={collapseAll}
+            className="text-xs font-medium text-gray-600 hover:text-gray-900"
+          >
+            Collapse all
+          </button>
+        </div>
+      )}
       {tree.map((node) => renderCategoryNode(node))}
     </div>
   )

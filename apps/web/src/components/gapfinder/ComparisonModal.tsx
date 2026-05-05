@@ -1,11 +1,12 @@
 'use client'
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { CircleSlash, Download } from 'lucide-react'
-import type { ComparisonData } from '@/lib/stores'
+import { CheckCircle, Download } from 'lucide-react'
+import type { ComparisonData, MissingFasciaInfo } from '@/lib/stores'
+import { MissingFasciaTree } from './MissingFasciaTree'
 
 interface ComparisonModalProps {
   open: boolean
@@ -18,7 +19,7 @@ export function ComparisonModal({
   onOpenChange,
   comparisonData
 }: ComparisonModalProps) {
-  const handleExportCSV = (data: typeof comparisonData.missingInAOnly, filename: string) => {
+  const handleExportCSV = (data: MissingFasciaInfo[], filename: string) => {
     if (data.length === 0) return
 
     const headers = ['Fascia Name', 'Brand Name', 'Category', 'Nearest Store Distance (km)', 'Nearest Store Name', 'Nearest Store Town']
@@ -33,7 +34,7 @@ export function ComparisonModal({
 
     const csv = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
     ].join('\n')
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -44,99 +45,109 @@ export function ComparisonModal({
     URL.revokeObjectURL(link.href)
   }
 
-  const renderFasciaList = (fascias: typeof comparisonData.missingInAOnly) => {
+  const renderComparisonContent = (
+    fascias: MissingFasciaInfo[],
+    emptyTitle: string,
+    emptyDescription: string,
+  ) => {
     if (fascias.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 px-4 text-gray-500">
-          <CircleSlash className="h-12 w-12 mb-3 opacity-30" />
-          <p className="text-sm font-medium">No missing fascias in this category</p>
+        <div className="flex flex-col items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-10 text-center">
+          <CheckCircle className="h-9 w-9 text-emerald-600 mb-3" />
+          <p className="text-sm font-semibold text-emerald-950">{emptyTitle}</p>
+          <p className="text-xs text-emerald-700 mt-1 max-w-sm">{emptyDescription}</p>
         </div>
       )
     }
 
     return (
-      <div className="space-y-2 divide-y divide-gray-50">
-        {fascias.map((fascia) => (
-          <div
-            key={fascia.fasciaId}
-            className="pt-2 first:pt-0 pb-2 hover:bg-gray-50/50 rounded-lg px-2 -mx-2 transition-colors"
-          >
-            <div className="flex items-start gap-2">
-              <CircleSlash className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm text-gray-900 truncate">
-                  {fascia.fasciaName}
-                </div>
-                <div className="text-xs text-gray-600 mt-0.5">
-                  Brand: {fascia.brandName}
-                </div>
-                {fascia.categoryName && (
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    Category: {fascia.categoryName}
-                  </div>
-                )}
-                {fascia.nearestStoreDistance && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    Nearest: {(fascia.nearestStoreDistance / 1000).toFixed(1)}km away
-                    {fascia.nearestStoreTown && ` in ${fascia.nearestStoreTown}`}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <MissingFasciaTree
+        missingFascias={fascias}
+        density="modal"
+        defaultExpanded="categories"
+        showControls
+      />
     )
   }
 
+  const summaryItems = [
+    {
+      label: 'Only missing from Area A',
+      count: comparisonData.missingInAOnly.length,
+      accent: 'border-violet-200 bg-violet-50 text-violet-800',
+    },
+    {
+      label: 'Only missing from Area B',
+      count: comparisonData.missingInBOnly.length,
+      accent: 'border-teal-200 bg-teal-50 text-teal-800',
+    },
+    {
+      label: 'Missing from both',
+      count: comparisonData.missingInBoth.length,
+      accent: 'border-gray-200 bg-gray-50 text-gray-800',
+    },
+  ]
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <span className="bg-gradient-to-r from-violet-100 to-purple-100 bg-clip-text text-transparent">
-              Area Comparison
-            </span>
+      <DialogContent className="max-w-3xl max-h-[84vh] flex flex-col gap-5 border-violet-100 p-0 overflow-hidden">
+        <DialogHeader className="border-b border-violet-100 bg-gradient-to-r from-violet-50/80 to-purple-50/50 px-6 pb-5 pt-6 pr-12">
+          <DialogTitle className="flex flex-wrap items-center gap-3 text-gray-950">
+            Area Comparison
             <div className="flex items-center gap-2 text-sm font-normal">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-violet-500"></span>
-                <span className="text-gray-600">Area A</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-white/80 px-2.5 py-1 text-xs font-medium text-violet-800">
+                <span className="h-2 w-2 rounded-full bg-violet-500" />
+                Area A
               </span>
-              <span className="text-gray-400">vs</span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-teal-500"></span>
-                <span className="text-gray-600">Area B</span>
+              <span className="text-xs text-gray-400">vs</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-white/80 px-2.5 py-1 text-xs font-medium text-teal-800">
+                <span className="h-2 w-2 rounded-full bg-teal-500" />
+                Area B
               </span>
             </div>
           </DialogTitle>
+          <DialogDescription>
+            Compare selected brands by category, brand, and type to see which opportunities are unique to each area.
+          </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="missing-a" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="missing-a" className="text-xs sm:text-sm">
-              Missing in A
-              <Badge variant="secondary" className="ml-2 text-xs">
+        <div className="px-6">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {summaryItems.map((item) => (
+              <div key={item.label} className={`rounded-lg border px-4 py-3 ${item.accent}`}>
+                <div className="text-2xl font-semibold leading-none">{item.count}</div>
+                <div className="mt-1 text-xs font-medium">{item.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Tabs defaultValue="missing-a" className="flex-1 flex flex-col min-h-0 px-6 pb-6">
+          <TabsList className="grid h-auto w-full grid-cols-3 bg-gray-100 p-1">
+            <TabsTrigger value="missing-a" className="flex-col gap-1 whitespace-normal px-2 py-2 text-xs leading-tight sm:flex-row sm:text-sm">
+              Only missing from A
+              <Badge variant="secondary" className="text-xs">
                 {comparisonData.missingInAOnly.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="missing-b" className="text-xs sm:text-sm">
-              Missing in B
-              <Badge variant="secondary" className="ml-2 text-xs">
+            <TabsTrigger value="missing-b" className="flex-col gap-1 whitespace-normal px-2 py-2 text-xs leading-tight sm:flex-row sm:text-sm">
+              Only missing from B
+              <Badge variant="secondary" className="text-xs">
                 {comparisonData.missingInBOnly.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="missing-both" className="text-xs sm:text-sm">
-              Missing in Both
-              <Badge variant="secondary" className="ml-2 text-xs">
+            <TabsTrigger value="missing-both" className="flex-col gap-1 whitespace-normal px-2 py-2 text-xs leading-tight sm:flex-row sm:text-sm">
+              Missing from both
+              <Badge variant="secondary" className="text-xs">
                 {comparisonData.missingInBoth.length}
               </Badge>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="missing-a" className="flex-1 overflow-y-auto px-4 py-6 min-h-0">
-            <div className="flex items-center justify-between mb-4">
+          <TabsContent value="missing-a" className="flex-1 overflow-y-auto py-5 min-h-0">
+            <div className="mb-4 flex items-start justify-between gap-4">
               <p className="text-sm text-gray-600">
-                Fascias present in Area B but missing in Area A
+                Brands available in Area B but absent from Area A.
               </p>
               {comparisonData.missingInAOnly.length > 0 && (
                 <Button
@@ -149,13 +160,17 @@ export function ComparisonModal({
                 </Button>
               )}
             </div>
-            {renderFasciaList(comparisonData.missingInAOnly)}
+            {renderComparisonContent(
+              comparisonData.missingInAOnly,
+              'Area A is not missing any brands Area B has',
+              'For the selected filter set, Area A matches the brands present in Area B.'
+            )}
           </TabsContent>
 
-          <TabsContent value="missing-b" className="flex-1 overflow-y-auto px-4 py-6 min-h-0">
-            <div className="flex items-center justify-between mb-4">
+          <TabsContent value="missing-b" className="flex-1 overflow-y-auto py-5 min-h-0">
+            <div className="mb-4 flex items-start justify-between gap-4">
               <p className="text-sm text-gray-600">
-                Fascias present in Area A but missing in Area B
+                Brands available in Area A but absent from Area B.
               </p>
               {comparisonData.missingInBOnly.length > 0 && (
                 <Button
@@ -168,13 +183,17 @@ export function ComparisonModal({
                 </Button>
               )}
             </div>
-            {renderFasciaList(comparisonData.missingInBOnly)}
+            {renderComparisonContent(
+              comparisonData.missingInBOnly,
+              'Area B is not missing any brands Area A has',
+              'For the selected filter set, Area B matches the brands present in Area A.'
+            )}
           </TabsContent>
 
-          <TabsContent value="missing-both" className="flex-1 overflow-y-auto px-4 py-6 min-h-0">
-            <div className="flex items-center justify-between mb-4">
+          <TabsContent value="missing-both" className="flex-1 overflow-y-auto py-5 min-h-0">
+            <div className="mb-4 flex items-start justify-between gap-4">
               <p className="text-sm text-gray-600">
-                Fascias missing in both areas
+                Selected brands that are absent from both areas.
               </p>
               {comparisonData.missingInBoth.length > 0 && (
                 <Button
@@ -187,7 +206,11 @@ export function ComparisonModal({
                 </Button>
               )}
             </div>
-            {renderFasciaList(comparisonData.missingInBoth)}
+            {renderComparisonContent(
+              comparisonData.missingInBoth,
+              'Both areas contain all selected brands',
+              'There are no shared gaps for the current comparison.'
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>
