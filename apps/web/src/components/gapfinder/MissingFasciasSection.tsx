@@ -29,7 +29,7 @@ export function MissingFasciasSection({
                 isOpen ? '' : '-rotate-90'
               }`}
             />
-            <span className="font-medium text-sm">Missing Fascias</span>
+            <span className="font-medium text-sm">Missing Brands</span>
             <Badge variant="secondary" className="text-xs">
               {isLoading ? '...' : missingFascias.length}
             </Badge>

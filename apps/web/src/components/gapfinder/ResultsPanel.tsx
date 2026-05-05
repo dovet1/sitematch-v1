@@ -138,7 +138,9 @@ export function ResultsPanel({
           <div className="p-4 text-center text-sm text-gray-500">
             {isFindGapsMode
               ? 'No locations match the current filters'
-              : 'No stores found in this area'}
+              : selectedPoint === null
+                ? 'Click on Area A or Area B section in the left sidebar to see relevant stores'
+                : 'No stores found in this area'}
           </div>
         ) : isFindGapsMode ? (
           <div className="divide-y divide-gray-50">

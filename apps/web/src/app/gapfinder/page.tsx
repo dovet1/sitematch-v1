@@ -169,14 +169,20 @@ export default function BUAsPage() {
   const [isLoadingMissingFasciasB, setIsLoadingMissingFasciasB] = useState(false)
   const [missingFasciasBError, setMissingFasciasBError] = useState<string | null>(null)
   const [comparisonModalOpen, setComparisonModalOpen] = useState(false)
+  const [activeArea, setActiveArea] = useState<'area-a' | 'area-b' | null>('area-a')
 
   // Travel time state (assess area mode)
   const [travelTimes, setTravelTimes] = useState<Record<string, TravelTimeData>>({})
   const [travelTimeLoading, setTravelTimeLoading] = useState<Record<string, boolean>>({})
   const [travelTimeErrors, setTravelTimeErrors] = useState<Record<string, string>>({})
 
-  // Ref for stale response checking (updated via useEffect)
-  const selectedPointRef = useRef<{ lat: number; lng: number; mode: string } | null>(null)
+  // Context ref for travel time stale request detection
+  const travelTimeContextRef = useRef<{
+    lat: number
+    lng: number
+    mode: string
+    activeArea: 'area-a' | 'area-b' | null
+  } | null>(null)
   const fetchMissingFasciasAbortRef = useRef<AbortController | null>(null)
 
   // Derived values for map filtering
@@ -194,6 +200,18 @@ export default function BUAsPage() {
     })
     return lookup
   }, [currentMode, nearbyStores])
+
+  // Badge lookup for Area B
+  const assessBadgeByStoreIdB = useMemo<Record<string, number>>(() => {
+    if (currentMode !== 'assess-area' || nearbyStoresB.length === 0) {
+      return {}
+    }
+    const lookup: Record<string, number> = {}
+    nearbyStoresB.forEach((store, index) => {
+      lookup[store.id] = index + 1
+    })
+    return lookup
+  }, [currentMode, nearbyStoresB])
 
   // Comparison data (when comparing two areas)
   const comparisonData = useMemo<import('@/lib/stores').ComparisonData>(() => {
@@ -226,18 +244,52 @@ export default function BUAsPage() {
     setIsBrandFiltersOpen(isFiltered)
   }, [filterSet.rules.length])
 
-  // Keep ref in sync with selectedPoint and currentMode for stale response checking
+  // Keep travel time context ref in sync
   useEffect(() => {
-    if (selectedPoint && currentMode === 'assess-area') {
-      selectedPointRef.current = {
-        lat: selectedPoint.lat,
-        lng: selectedPoint.lng,
-        mode: currentMode
+    if (currentMode === 'assess-area') {
+      let point = null
+      if (comparisonMode === 'comparing') {
+        point = activeArea === 'area-b' ? selectedPointB :
+                activeArea === 'area-a' ? selectedPoint : null
+      } else {
+        point = selectedPoint
+      }
+
+      if (point) {
+        travelTimeContextRef.current = {
+          lat: point.lat,
+          lng: point.lng,
+          mode: currentMode,
+          activeArea: activeArea
+        }
+      } else {
+        travelTimeContextRef.current = null
       }
     } else {
-      selectedPointRef.current = null
+      travelTimeContextRef.current = null
     }
-  }, [selectedPoint, currentMode])
+  }, [selectedPoint, selectedPointB, currentMode, activeArea, comparisonMode])
+
+  // Helper to generate area-aware cache key
+  const getTravelTimeCacheKey = (storeId: string, area: 'area-a' | 'area-b' | null) => {
+    return `${storeId}:${area || 'a'}`
+  }
+
+  // Clear travel times when switching areas
+  useEffect(() => {
+    if (comparisonMode === 'comparing' && activeArea) {
+      setTravelTimes({})
+      setTravelTimeLoading({})
+      setTravelTimeErrors({})
+    }
+  }, [activeArea, comparisonMode])
+
+  // Auto-open Area A when entering comparison mode
+  useEffect(() => {
+    if (comparisonMode === 'comparing' && activeArea === null) {
+      setActiveArea('area-a')
+    }
+  }, [comparisonMode, activeArea])
 
   const handleBUASelect = (bua: {
     name: string
@@ -308,11 +360,13 @@ export default function BUAsPage() {
       setMissingFasciasB([])
 
       setComparisonMode('single')
+      setActiveArea('area-a')
     } else {
       // Simple clear
       setSelectedPoint(null)
       setNearbyStores([])
       setMissingFascias([])
+      setActiveArea('area-a')
     }
   }
 
@@ -322,6 +376,7 @@ export default function BUAsPage() {
     setNearbyStoresB([])
     setMissingFasciasB([])
     setComparisonMode('single')
+    setActiveArea('area-a')
   }
 
   const handlePointSelected = (point: { lat: number; lng: number }) => {
@@ -964,32 +1019,38 @@ export default function BUAsPage() {
   }
 
   const handleGetTravelTime = async (store: StoreType) => {
-    if (!selectedPoint || !store.id) return
+    // Determine origin point based on active area
+    let originPoint: { lat: number; lng: number } | null = null
+
+    if (comparisonMode === 'comparing') {
+      originPoint = activeArea === 'area-b' ? selectedPointB :
+                    activeArea === 'area-a' ? selectedPoint : null
+    } else {
+      originPoint = selectedPoint
+    }
+
+    if (!originPoint || !store.id) return
 
     if (!isPro) {
-      setTravelTimeErrors(prev => ({ ...prev, [store.id]: 'Subscription required' }))
+      const cacheKey = getTravelTimeCacheKey(store.id, activeArea)
+      setTravelTimeErrors(prev => ({ ...prev, [cacheKey]: 'Subscription required' }))
       return
     }
 
-    if (travelTimeLoading[store.id]) return
+    const cacheKey = getTravelTimeCacheKey(store.id, activeArea)
 
-    // Capture current context for stale response checking
-    const requestContext = {
-      lat: selectedPoint.lat,
-      lng: selectedPoint.lng,
-      mode: currentMode
-    }
+    if (travelTimeLoading[cacheKey]) return
 
-    setTravelTimeLoading(prev => ({ ...prev, [store.id]: true }))
+    setTravelTimeLoading(prev => ({ ...prev, [cacheKey]: true }))
     setTravelTimeErrors(prev => {
-      const { [store.id]: _, ...rest } = prev
+      const { [cacheKey]: _, ...rest } = prev
       return rest
     })
 
     try {
       const params = new URLSearchParams({
-        originLat: selectedPoint.lat.toString(),
-        originLng: selectedPoint.lng.toString(),
+        originLat: originPoint.lat.toString(),
+        originLng: originPoint.lng.toString(),
         destLat: store.lat.toString(),
         destLng: store.lon.toString(),
         storeId: store.id
@@ -998,14 +1059,12 @@ export default function BUAsPage() {
       const response = await fetch(`/api/public/stores/travel-time?${params}`)
       const data = await response.json()
 
-      // Check if context changed while request was in flight
-      const currentContext = selectedPointRef.current
-      const isStale = !currentContext ||
-        currentContext.lat !== requestContext.lat ||
-        currentContext.lng !== requestContext.lng ||
-        currentContext.mode !== requestContext.mode
-
-      if (isStale) {
+      // Check stale using ref (includes activeArea)
+      if (!travelTimeContextRef.current ||
+          travelTimeContextRef.current.lat !== originPoint.lat ||
+          travelTimeContextRef.current.lng !== originPoint.lng ||
+          travelTimeContextRef.current.mode !== currentMode ||
+          travelTimeContextRef.current.activeArea !== activeArea) {
         console.log('Ignoring stale travel time response')
         return
       }
@@ -1013,7 +1072,7 @@ export default function BUAsPage() {
       if (!response.ok) {
         setTravelTimeErrors(prev => ({
           ...prev,
-          [store.id]: data.error || 'Unable to calculate'
+          [cacheKey]: data.error || 'Unable to calculate'
         }))
         return
       }
@@ -1021,33 +1080,29 @@ export default function BUAsPage() {
       if (data.success) {
         setTravelTimes(prev => ({
           ...prev,
-          [store.id]: { walking: data.walking, driving: data.driving }
+          [cacheKey]: { walking: data.walking, driving: data.driving }
         }))
       }
     } catch (error) {
-      // Only set error if request is still relevant
-      const currentContext = selectedPointRef.current
-      const isStale = !currentContext ||
-        currentContext.lat !== requestContext.lat ||
-        currentContext.lng !== requestContext.lng ||
-        currentContext.mode !== requestContext.mode
-
-      if (!isStale) {
+      // Only set error if context still matches
+      if (travelTimeContextRef.current &&
+          travelTimeContextRef.current.lat === originPoint.lat &&
+          travelTimeContextRef.current.lng === originPoint.lng &&
+          travelTimeContextRef.current.mode === currentMode &&
+          travelTimeContextRef.current.activeArea === activeArea) {
         setTravelTimeErrors(prev => ({
           ...prev,
-          [store.id]: 'Network error'
+          [cacheKey]: 'Network error'
         }))
       }
     } finally {
-      // Only clear loading if request is still relevant
-      const currentContext = selectedPointRef.current
-      const isStale = !currentContext ||
-        currentContext.lat !== requestContext.lat ||
-        currentContext.lng !== requestContext.lng ||
-        currentContext.mode !== requestContext.mode
-
-      if (!isStale) {
-        setTravelTimeLoading(prev => ({ ...prev, [store.id]: false }))
+      // Only clear loading if context still matches
+      if (travelTimeContextRef.current &&
+          travelTimeContextRef.current.lat === originPoint.lat &&
+          travelTimeContextRef.current.lng === originPoint.lng &&
+          travelTimeContextRef.current.mode === currentMode &&
+          travelTimeContextRef.current.activeArea === activeArea) {
+        setTravelTimeLoading(prev => ({ ...prev, [cacheKey]: false }))
       }
     }
   }
@@ -1073,7 +1128,22 @@ export default function BUAsPage() {
   }
 
   const handleExportNearbyStores = useCallback(() => {
-    if (!selectedPoint || nearbyStores.length === 0 || isExportingNearbyStores) return
+    // Determine which area's data to export
+    const pointToExport = comparisonMode === 'comparing'
+      ? (activeArea === 'area-b' ? selectedPointB :
+         activeArea === 'area-a' ? selectedPoint : null)
+      : selectedPoint
+
+    const storesToExport = comparisonMode === 'comparing'
+      ? (activeArea === 'area-b' ? nearbyStoresB :
+         activeArea === 'area-a' ? nearbyStores : [])
+      : nearbyStores
+
+    const radiusToExport = comparisonMode === 'comparing'
+      ? (activeArea === 'area-b' ? radiusMetersB : radiusMeters)
+      : radiusMeters
+
+    if (!pointToExport || storesToExport.length === 0 || isExportingNearbyStores) return
 
     setIsExportingNearbyStores(true)
     try {
@@ -1094,9 +1164,9 @@ export default function BUAsPage() {
       }
 
       exportNearbyStoresToCSV({
-        stores: nearbyStores,
-        selectedPoint,
-        radiusMeters,
+        stores: storesToExport,
+        selectedPoint: pointToExport,
+        radiusMeters: radiusToExport,
         filterSummary,
         travelTimes
       })
@@ -1110,8 +1180,13 @@ export default function BUAsPage() {
     assessFascias,
     isExportingNearbyStores,
     nearbyStores,
+    nearbyStoresB,
     radiusMeters,
+    radiusMetersB,
     selectedPoint,
+    selectedPointB,
+    activeArea,
+    comparisonMode,
     targetNames,
     travelTimes
   ])
@@ -1434,6 +1509,10 @@ export default function BUAsPage() {
                       onClearB={handleClearPointB}
                       storeCountA={nearbyStores.length}
                       storeCountB={nearbyStoresB.length}
+                      value={activeArea}
+                      onValueChange={(next) =>
+                        setActiveArea(next === 'area-a' || next === 'area-b' ? next : null)
+                      }
                     />
                     <Button
                       onClick={() => setComparisonModalOpen(true)}
@@ -1647,7 +1726,10 @@ export default function BUAsPage() {
               selectedPoint={selectedPoint}
               onPointSelected={handlePointSelected}
               radiusMeters={radiusMeters}
-              stores={nearbyStores}
+              stores={currentMode === 'assess-area' && comparisonMode === 'comparing'
+                ? (activeArea === 'area-b' ? nearbyStoresB : nearbyStores)
+                : nearbyStores
+              }
               selectedPointB={selectedPointB}
               radiusMetersB={radiusMetersB}
               comparisonMode={comparisonMode}
@@ -1670,39 +1752,87 @@ export default function BUAsPage() {
               categoriesVisibility={currentMode === 'find-gaps' ? categoriesVisibility : {}}
               requirementLocations={requirementLocations}
               onFasciaVisibilityToggle={handleFasciaVisibilityToggle}
-              assessBadgeByStoreId={assessBadgeByStoreId}
+              assessBadgeByStoreId={
+                currentMode === 'assess-area' && comparisonMode === 'comparing'
+                  ? (activeArea === 'area-b' ? assessBadgeByStoreIdB : assessBadgeByStoreId)
+                  : assessBadgeByStoreId
+              }
             />
           </div>
 
           {/* Right Results Panel (360px) */}
-          <ResultsPanel
-            results={currentMode === 'find-gaps' ? filteredBUAs : nearbyStores}
-            isLoading={currentMode === 'find-gaps' ? isLoadingBUAs : isLoadingStores}
-            selectedBUA={selectedBUA}
-            onItemClick={currentMode === 'find-gaps' ? handleBUAListItemClick : handleStoreListItemClick}
-            mode={currentMode}
-            total={currentMode === 'find-gaps' ? totalBUAs : undefined}
-            onExport={currentMode === 'find-gaps' ? handleExportBUAs : handleExportNearbyStores}
-            isExporting={currentMode === 'find-gaps' ? isExportingBUAs : isExportingNearbyStores}
-            canExport={
-              currentMode === 'find-gaps'
-                ? filteredBUAs.length > 0
-                : selectedPoint !== null &&
-                  nearbyStores.length > 0 &&
-                  !isLoadingStores &&
-                  !isExportingNearbyStores
-            }
-            selectedPoint={currentMode === 'assess-area' ? selectedPoint : null}
-            travelTimes={travelTimes}
-            travelTimeLoading={travelTimeLoading}
-            travelTimeErrors={travelTimeErrors}
-            onGetTravelTime={handleGetTravelTime}
-            canUseTravelTimes={hasAccess}
-            assessBadgeByStoreId={assessBadgeByStoreId}
-            missingFascias={missingFascias}
-            isLoadingMissingFascias={isLoadingMissingFascias}
-            missingFasciasError={missingFasciasError}
-          />
+          {/* Context-aware props based on active accordion section */}
+          {useMemo(() => {
+            const contextAwareStores = currentMode !== 'assess-area' || comparisonMode !== 'comparing'
+              ? nearbyStores
+              : activeArea === 'area-b' ? nearbyStoresB :
+                activeArea === 'area-a' ? nearbyStores : []
+
+            const contextAwareSelectedPoint = currentMode !== 'assess-area' || comparisonMode !== 'comparing'
+              ? selectedPoint
+              : activeArea === 'area-b' ? selectedPointB :
+                activeArea === 'area-a' ? selectedPoint : null
+
+            const contextAwareBadgeMapping = currentMode !== 'assess-area' || comparisonMode !== 'comparing'
+              ? assessBadgeByStoreId
+              : activeArea === 'area-b' ? assessBadgeByStoreIdB :
+                activeArea === 'area-a' ? assessBadgeByStoreId : {}
+
+            const contextAwareMissingFascias = currentMode !== 'assess-area' || comparisonMode !== 'comparing'
+              ? missingFascias
+              : activeArea === 'area-b' ? missingFasciasB :
+                activeArea === 'area-a' ? missingFascias : []
+
+            const contextAwareMissingFasciasLoading = currentMode !== 'assess-area' || comparisonMode !== 'comparing'
+              ? isLoadingMissingFascias
+              : activeArea === 'area-b' ? isLoadingMissingFasciasB :
+                activeArea === 'area-a' ? isLoadingMissingFascias : false
+
+            const contextAwareMissingFasciasError = currentMode !== 'assess-area' || comparisonMode !== 'comparing'
+              ? missingFasciasError
+              : activeArea === 'area-b' ? missingFasciasBError :
+                activeArea === 'area-a' ? missingFasciasError : null
+
+            const contextAwareIsLoadingStores = currentMode !== 'assess-area' || comparisonMode !== 'comparing'
+              ? isLoadingStores
+              : activeArea === 'area-b' ? isLoadingStoresB :
+                activeArea === 'area-a' ? isLoadingStores : false
+
+            return (
+              <ResultsPanel
+                results={currentMode === 'find-gaps' ? filteredBUAs : contextAwareStores}
+                isLoading={currentMode === 'find-gaps' ? isLoadingBUAs : contextAwareIsLoadingStores}
+                selectedBUA={selectedBUA}
+                onItemClick={currentMode === 'find-gaps' ? handleBUAListItemClick : handleStoreListItemClick}
+                mode={currentMode}
+                total={currentMode === 'find-gaps' ? totalBUAs : undefined}
+                onExport={currentMode === 'find-gaps' ? handleExportBUAs : handleExportNearbyStores}
+                isExporting={currentMode === 'find-gaps' ? isExportingBUAs : isExportingNearbyStores}
+                canExport={
+                  currentMode === 'find-gaps'
+                    ? filteredBUAs.length > 0
+                    : contextAwareSelectedPoint !== null &&
+                      contextAwareStores.length > 0 &&
+                      !contextAwareIsLoadingStores &&
+                      !isExportingNearbyStores
+                }
+                selectedPoint={currentMode === 'assess-area' ? contextAwareSelectedPoint : null}
+                travelTimes={travelTimes}
+                travelTimeLoading={travelTimeLoading}
+                travelTimeErrors={travelTimeErrors}
+                onGetTravelTime={handleGetTravelTime}
+                canUseTravelTimes={hasAccess}
+                assessBadgeByStoreId={contextAwareBadgeMapping}
+                missingFascias={contextAwareMissingFascias}
+                isLoadingMissingFascias={contextAwareMissingFasciasLoading}
+                missingFasciasError={contextAwareMissingFasciasError}
+              />
+            )
+          }, [currentMode, comparisonMode, activeArea, nearbyStores, nearbyStoresB, selectedPoint, selectedPointB,
+              assessBadgeByStoreId, assessBadgeByStoreIdB, missingFascias, missingFasciasB,
+              isLoadingMissingFascias, isLoadingMissingFasciasB, missingFasciasError, missingFasciasBError,
+              isLoadingStores, isLoadingStoresB, filteredBUAs, isLoadingBUAs, selectedBUA, totalBUAs,
+              isExportingBUAs, isExportingNearbyStores, travelTimes, travelTimeLoading, travelTimeErrors, hasAccess])}
         </div>
       </div>
       <Toaster position="top-right" />

@@ -23,6 +23,8 @@ interface AreaAccordionProps {
   onClearB: () => void
   storeCountA?: number
   storeCountB?: number
+  value?: 'area-a' | 'area-b' | null
+  onValueChange?: (value: string) => void
 }
 
 const MIN_RADIUS = 1000
@@ -38,9 +40,10 @@ export function AreaAccordion({
   onClearA,
   onClearB,
   storeCountA = 0,
-  storeCountB = 0
+  storeCountB = 0,
+  value,
+  onValueChange
 }: AreaAccordionProps) {
-  const [openItem, setOpenItem] = useState<string>('area-a')
 
   const formatRadius = (meters: number) => {
     if (meters >= 1000) {
@@ -57,7 +60,7 @@ export function AreaAccordion({
   ]
 
   return (
-    <Accordion type="single" value={openItem} onValueChange={setOpenItem} collapsible className="space-y-2">
+    <Accordion type="single" value={value ?? undefined} onValueChange={onValueChange} collapsible className="space-y-2">
       {/* Area A */}
       <AccordionItem value="area-a" className="border rounded-xl overflow-hidden bg-gradient-to-br from-violet-50 to-purple-50/50 border-violet-200/60">
         <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-violet-100/30 transition-colors">
