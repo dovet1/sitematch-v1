@@ -3,12 +3,25 @@
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, ArrowRight, MapPin, FileText, Ruler } from 'lucide-react';
+import { Users, ArrowRight, MapPin, Search, Ruler, type LucideIcon } from 'lucide-react';
+
+type ToolCard = {
+  id: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  stats: string;
+  gradient: string;
+  iconBg: string;
+  iconColor: string;
+  onClick: () => void;
+  comingSoon?: boolean;
+};
 
 export function ToolsTab() {
   const router = useRouter();
 
-  const tools = [
+  const tools: ToolCard[] = [
     {
       id: 'site-sketcher',
       title: 'SiteSketcher',
@@ -39,16 +52,15 @@ export function ToolsTab() {
       onClick: () => router.push('/new-dashboard/tools/site-demographer'),
     },
     {
-      id: 'brochure-generator',
-      title: 'SiteBrochure',
-      description: 'Generate professional requirement brochures',
-      icon: FileText,
-      stats: 'Create branded PDF brochures in minutes',
-      gradient: 'from-orange-500 to-red-600',
-      iconBg: 'bg-orange-100',
-      iconColor: 'text-orange-600',
-      onClick: () => router.push('/new-dashboard/brochures'),
-      comingSoon: true,
+      id: 'gapfinder',
+      title: 'GapFinder',
+      description: 'Find gaps in the market and compare retail locations',
+      icon: Search,
+      stats: 'Market filtering, operator coverage & location comparison',
+      gradient: 'from-emerald-500 to-teal-600',
+      iconBg: 'bg-emerald-100',
+      iconColor: 'text-emerald-600',
+      onClick: () => router.push('/gapfinder'),
     },
   ];
 
@@ -143,7 +155,7 @@ export function ToolsTab() {
         {/* Coming Soon Message */}
         <div className="mt-8 sm:mt-12 p-6 sm:p-8 bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl sm:rounded-3xl border-3 border-violet-200 shadow-lg">
           <p className="text-sm sm:text-base text-gray-700 text-center font-medium">
-            More tools coming soon! We're constantly building new features to help you make better property decisions.
+            More tools coming soon! We&apos;re constantly building new features to help you make better property decisions.
           </p>
         </div>
       </div>
