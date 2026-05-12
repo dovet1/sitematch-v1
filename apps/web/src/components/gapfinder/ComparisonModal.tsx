@@ -90,8 +90,8 @@ export function ComparisonModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[84vh] flex flex-col gap-5 border-violet-100 p-0 overflow-hidden">
-        <DialogHeader className="border-b border-violet-100 bg-gradient-to-r from-violet-50/80 to-purple-50/50 px-6 pb-5 pt-6 pr-12">
+      <DialogContent className="max-w-4xl max-h-[84vh] flex flex-col gap-7 border-violet-100 p-0 overflow-hidden">
+        <DialogHeader className="border-b border-violet-100 bg-gradient-to-r from-violet-50/80 to-purple-50/50 px-8 pb-6 pt-7 pr-12">
           <DialogTitle className="flex flex-wrap items-center gap-3 text-gray-950">
             Area Comparison
             <div className="flex items-center gap-2 text-sm font-normal">
@@ -111,32 +111,32 @@ export function ComparisonModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="px-8">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {summaryItems.map((item) => (
-              <div key={item.label} className={`rounded-lg border px-4 py-3 ${item.accent}`}>
+              <div key={item.label} className={`rounded-lg border px-5 py-4 ${item.accent}`}>
                 <div className="text-2xl font-semibold leading-none">{item.count}</div>
-                <div className="mt-1 text-xs font-medium">{item.label}</div>
+                <div className="mt-2 text-sm font-medium leading-relaxed">{item.label}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <Tabs defaultValue="missing-a" className="flex-1 flex flex-col min-h-0 px-6 pb-6">
-          <TabsList className="grid h-auto w-full grid-cols-3 bg-gray-100 p-1">
-            <TabsTrigger value="missing-a" className="flex-col gap-1 whitespace-normal px-2 py-2 text-xs leading-tight sm:flex-row sm:text-sm">
+        <Tabs defaultValue="missing-a" className="flex-1 flex flex-col min-h-0 px-8 pb-8">
+          <TabsList className="grid h-auto w-full grid-cols-3 bg-gray-100 p-1.5">
+            <TabsTrigger value="missing-a" className="flex-col gap-1.5 whitespace-normal px-3 py-3 text-xs leading-snug sm:flex-row sm:text-sm">
               Brands available in B, missing in A
               <Badge variant="secondary" className="text-xs">
                 {comparisonData.missingInAOnly.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="missing-b" className="flex-col gap-1 whitespace-normal px-2 py-2 text-xs leading-tight sm:flex-row sm:text-sm">
+            <TabsTrigger value="missing-b" className="flex-col gap-1.5 whitespace-normal px-3 py-3 text-xs leading-snug sm:flex-row sm:text-sm">
               Brands available in A, missing in B
               <Badge variant="secondary" className="text-xs">
                 {comparisonData.missingInBOnly.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="missing-both" className="flex-col gap-1 whitespace-normal px-2 py-2 text-xs leading-tight sm:flex-row sm:text-sm">
+            <TabsTrigger value="missing-both" className="flex-col gap-1.5 whitespace-normal px-3 py-3 text-xs leading-snug sm:flex-row sm:text-sm">
               Brands missing in both areas
               <Badge variant="secondary" className="text-xs">
                 {comparisonData.missingInBoth.length}
@@ -144,8 +144,8 @@ export function ComparisonModal({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="missing-a" className="flex-1 overflow-y-auto py-5 min-h-0">
-            <div className="mb-4 flex items-start justify-between gap-4">
+          <TabsContent value="missing-a" className="flex-1 overflow-y-auto py-6 min-h-0">
+            <div className="mb-5 flex items-start justify-between gap-4">
               <p className="text-sm text-gray-600">
                 Brands available in B, missing in A.
               </p>
@@ -167,8 +167,8 @@ export function ComparisonModal({
             )}
           </TabsContent>
 
-          <TabsContent value="missing-b" className="flex-1 overflow-y-auto py-5 min-h-0">
-            <div className="mb-4 flex items-start justify-between gap-4">
+          <TabsContent value="missing-b" className="flex-1 overflow-y-auto py-6 min-h-0">
+            <div className="mb-5 flex items-start justify-between gap-4">
               <p className="text-sm text-gray-600">
                 Brands available in A, missing in B.
               </p>
@@ -190,8 +190,8 @@ export function ComparisonModal({
             )}
           </TabsContent>
 
-          <TabsContent value="missing-both" className="flex-1 overflow-y-auto py-5 min-h-0">
-            <div className="mb-4 flex items-start justify-between gap-4">
+          <TabsContent value="missing-both" className="flex-1 overflow-y-auto py-6 min-h-0">
+            <div className="mb-5 flex items-start justify-between gap-4">
               <p className="text-sm text-gray-600">
                 Brands missing in both areas.
               </p>
