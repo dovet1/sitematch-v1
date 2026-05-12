@@ -10,7 +10,7 @@ All core components have been implemented and are ready for testing.
 
 ## What Was Built
 
-### 1. Database Migrations (5 files)
+### 1. Database Migrations (6 files)
 
 #### Migration 039: BUA Summary Rebuild Functions
 **File**: `supabase/migrations/039_create_bua_summary_rebuild_functions.sql`
@@ -40,6 +40,14 @@ All core components have been implemented and are ready for testing.
 **File**: `supabase/migrations/043_enable_pg_trgm_extension.sql`
 - Enables fuzzy string matching extension
 - Creates GIN index on brands.name for fast similarity searches
+
+#### Migration 051: Google Places Validation Columns
+**File**: `supabase/migrations/051_add_google_place_id_column.sql`
+- Adds `google_place_id` column for storing Google Places API reference (validation only)
+- Adds `geocode_needs_review` boolean flag for flagging stores where Mapbox/Google coordinates differ >10m
+- Creates partial indexes for performance (only on non-NULL/TRUE values)
+- **Compliance**: Coordinates always from Mapbox Permanent Geocoding, Google used only for validation
+- **ToS compliant**: place_id storage allowed, no Google-derived distance metrics cached
 
 ### 2. TypeScript Types
 
@@ -71,8 +79,19 @@ Comprehensive type definitions:
 **File**: `apps/web/src/app/api/admin/stores/import/execute/route.ts`
 - Supports dry run mode via `?dryRun=true` query parameter
 - Enforces 500-row geocoding limit (prevents timeout)
-- Batch geocoding with Mapbox (50 per batch, 5s delays)
-- Improved geocoding query: `${address}, ${town}, ${postcode}, UK`
+- **Mapbox Permanent Geocoding** (compliant with ToS):
+  - Uses `permanent=true` parameter for database storage
+  - Batch geocoding (50 per batch, 5s delays)
+  - Improved query: `${address}, ${town}, ${postcode}, UK`
+  - Rate limit: 600 requests/minute
+  - Cost: $5 per 1,000 after 100,000 free requests/month
+- **Google Places Validation** (dry-run mode only):
+  - Validates Mapbox coordinates by comparing with Google Places Text Search
+  - Only runs if `GOOGLE_PLACES_API_KEY` configured
+  - Stops validation gracefully if quota exceeded (continues import)
+  - Flags stores for review if distance >10m between Mapbox/Google
+  - Stores only `place_id` and boolean flag (no Google coordinates cached)
+  - Free tier: 5,000 validations/month
 - Entity resolution (brands, fascias, categories) with find-or-create pattern
 - Category conflict detection (blocks if fascia has different primary category)
 - Smart duplicate detection (50m proximity + same brand/fascia)
@@ -144,15 +163,11 @@ Features:
 
 ## Validation Rules Implemented
 
-### Rule 1: Duplicates → AUTO-SKIP
-- Detection: Store within 50m of existing store AND same brand/fascia
-- Action: Skip row, add to error report
-
-### Rule 2: Category Conflicts → AUTO-BLOCK
+### Rule 1: Category Conflicts → AUTO-BLOCK
 - Detection: Fascia already mapped to different primary category
 - Action: Block row, show in error report
 
-### Rule 3: Geocoding Failure → AUTO-BLOCK
+### Rule 2: Geocoding Failure → AUTO-BLOCK
 - Detection: Mapbox returns no results for address+postcode
 - Action: Block row, show in error report
 - Fallback: If lat/lon provided in CSV, use those (skip geocoding)
@@ -173,9 +188,10 @@ Features:
 - Detection: Coordinates outside UK bounds (lat 49-61, lon -8 to 2)
 - Action: Block row, show error
 
-### Rule 8: Duplicate Detection in Preview
-- Detection: If CSV includes lat/lon, check for duplicates in preview
-- Action: Mark as "will be skipped" in preview
+### Rule 8: Google Places Validation → WARNING (Dry-run only)
+- Detection: Distance between Mapbox and Google coordinates >10m
+- Action: Flag store with `geocode_needs_review = true`, show warning
+- Note: Store still imported with Mapbox coordinates (Google used for validation only)
 
 ## Technical Details
 
@@ -193,17 +209,21 @@ Optional: fascia, postcode, town, suburb, county, lat, lon
 - Fascias: Match within brand → create if not found (defaults to brand name if empty)
 - Categories: Case-insensitive exact match → create if not found
 
-### Geocoding
-- Uses Mapbox Geocoding API
-- Improved query: `${address}, ${town}, ${postcode}, UK`
-- Batch processing: 50 addresses per batch, 5-second delays
-- Rate limit: 600 requests/minute
-- Maximum: 500 rows requiring geocoding per import
-
-### Duplicate Detection
-- Uses existing `get_stores_near_point()` RPC
-- 50m proximity threshold
-- Must match brand OR fascia (prevents false positives in shopping centers)
+### Geocoding and Validation
+- **Primary Source**: Mapbox Permanent Geocoding API (`permanent=true`)
+  - Improved query: `${address}, ${town}, ${postcode}, UK`
+  - Batch processing: 50 addresses per batch, 5-second delays
+  - Rate limit: 600 requests/minute
+  - Maximum: 500 rows requiring geocoding per import
+  - Cost: $5 per 1,000 (after 100,000 free requests/month)
+  - Compliance: Coordinates stored permanently in database, no restrictions
+- **Optional Validation**: Google Places Text Search (dry-run mode only)
+  - Validates Mapbox results by comparing coordinates
+  - Distance threshold: 10 meters (triggers review flag)
+  - Graceful degradation: Import continues if quota exceeded or validation fails
+  - Stores only `place_id` and boolean flag (ToS compliant)
+  - Cost: Free for up to 5,000 validations/month, $32 per 1,000 after
+  - No Google coordinates cached (Mapbox coordinates always used)
 
 ### Performance
 - Preview: <5 seconds for 100 rows
@@ -212,7 +232,18 @@ Optional: fascia, postcode, town, suburb, county, lat, lon
 
 ## Environment Variables
 
-Uses existing: `NEXT_PUBLIC_MAPBOX_TOKEN`
+### Required
+- `NEXT_PUBLIC_MAPBOX_TOKEN` - Mapbox API token for geocoding (permanent geocoding)
+
+### Optional
+- `GOOGLE_PLACES_API_KEY` - Google Places API key for coordinate validation during dry-run imports
+  - **Purpose**: Validates Mapbox geocoding results by comparing with Google Places coordinates
+  - **When used**: Only during dry-run mode (not during real imports)
+  - **Free tier**: 5,000 Text Search Pro requests/month
+  - **Cost after free tier**: $32 per 1,000 requests
+  - **Quota management**: Set quota limit to 5,000/month in Google Cloud Console to prevent exceeding free tier
+  - **Graceful degradation**: Import continues normally if API key not provided, quota exceeded, or validation fails
+  - **Compliance**: Only `place_id` and boolean flag stored (no Google-derived coordinates cached)
 
 ## Security
 
@@ -265,27 +296,29 @@ Uses existing: `NEXT_PUBLIC_MAPBOX_TOKEN`
 
 ## Files Modified/Created
 
-### New Files (18):
+### New Files (19):
 1. `supabase/migrations/039_create_bua_summary_rebuild_functions.sql`
 2. `supabase/migrations/040_remove_store_id_unique_constraint.sql`
 3. `supabase/migrations/041_create_store_import_logs.sql`
 4. `supabase/migrations/042_create_rebuild_lock_table.sql`
 5. `supabase/migrations/043_enable_pg_trgm_extension.sql`
-6. `apps/web/src/types/store-import.ts`
-7. `apps/web/src/app/api/admin/stores/import/preview/route.ts`
-8. `apps/web/src/app/api/admin/stores/import/execute/route.ts`
-9. `apps/web/src/app/api/admin/stores/rebuild-summaries/route.ts`
-10. `apps/web/src/app/admin/stores/import/page.tsx`
-11. `apps/web/src/app/admin/stores/import/components/FileUploadSection.tsx`
-12. `apps/web/src/app/admin/stores/import/components/PreviewSection.tsx`
-13. `apps/web/src/app/admin/stores/import/components/ValidationSummary.tsx`
-14. `apps/web/src/app/admin/stores/import/components/PreviewTable.tsx`
-15. `apps/web/src/app/admin/stores/import/components/ProgressSection.tsx`
-16. `apps/web/src/app/admin/stores/import/components/CompleteSection.tsx`
-17. `STORE_IMPORT_IMPLEMENTATION.md` (this file)
+6. `supabase/migrations/051_add_google_place_id_column.sql`
+7. `apps/web/src/types/store-import.ts`
+8. `apps/web/src/app/api/admin/stores/import/preview/route.ts`
+9. `apps/web/src/app/api/admin/stores/import/execute/route.ts`
+10. `apps/web/src/app/api/admin/stores/rebuild-summaries/route.ts`
+11. `apps/web/src/app/admin/stores/import/page.tsx`
+12. `apps/web/src/app/admin/stores/import/components/FileUploadSection.tsx`
+13. `apps/web/src/app/admin/stores/import/components/PreviewSection.tsx`
+14. `apps/web/src/app/admin/stores/import/components/ValidationSummary.tsx`
+15. `apps/web/src/app/admin/stores/import/components/PreviewTable.tsx`
+16. `apps/web/src/app/admin/stores/import/components/ProgressSection.tsx`
+17. `apps/web/src/app/admin/stores/import/components/CompleteSection.tsx`
+18. `STORE_IMPORT_IMPLEMENTATION.md` (this file)
 
-### Modified Files (1):
+### Modified Files (2):
 1. `apps/web/src/app/admin/page.tsx` - Added "Import Stores" button to Quick Actions
+2. `apps/web/.env.example` - Added optional `GOOGLE_PLACES_API_KEY` configuration
 
 ## Known Limitations
 
@@ -317,6 +350,118 @@ Uses existing: `NEXT_PUBLIC_MAPBOX_TOKEN`
 ✅ Admin-only access with authentication
 ✅ Comprehensive audit logging
 
+## Coordinate Accuracy and Compliance
+
+### Mapbox Permanent Geocoding (Primary Source)
+
+**Implementation**:
+- All store coordinates sourced from Mapbox Permanent Geocoding API
+- Uses `permanent=true` parameter (compliance requirement for database storage)
+- Coordinates stored permanently in `stores.lat` and `stores.lon` columns
+
+**Compliance**:
+- ✅ Allowed to cache coordinates indefinitely in database
+- ✅ Allowed to display on Mapbox maps (no licensing conflicts)
+- ✅ No restrictions on coordinate usage
+
+**Cost**:
+- Free tier: 100,000 requests/month
+- After free tier: $5 per 1,000 requests
+- Significantly cheaper than Google Places ($5/1k vs $32/1k)
+
+### Google Places Validation (Optional Layer)
+
+**Purpose**: Validate Mapbox geocoding accuracy by comparing with Google Places coordinates
+
+**When used**:
+- Only during dry-run imports (`?dryRun=true`)
+- Never during real imports (keeps production fast)
+- Optional - works fine without API key
+
+**What's stored**:
+- `google_place_id` - Google Places reference ID (ToS compliant)
+- `geocode_needs_review` - Boolean flag (true if distance >200m)
+- **NOT stored**: Google coordinates, distance metrics, or any Google-derived data
+
+**Compliance**:
+- ✅ Place ID storage allowed by Google ToS
+- ✅ No Google coordinates cached (Mapbox coordinates always used)
+- ✅ No 30-day cache restriction violated (only storing place_id, not coordinates)
+- ✅ No map display restriction violated (displaying Mapbox coordinates on Mapbox maps)
+
+**How validation works**:
+1. Import runs with `?dryRun=true` parameter
+2. Each address geocoded with Mapbox (as normal)
+3. If `GOOGLE_PLACES_API_KEY` configured: Also query Google Places Text Search
+4. Calculate distance between Mapbox and Google results using Haversine formula
+5. If distance >10m: Set `geocode_needs_review = true` and show warning
+6. Store is imported with Mapbox coordinates (Google used only for validation)
+
+**Error handling**:
+- **Quota exceeded**: Stop attempting validation for remaining rows, continue import
+- **API error**: Log warning, continue with Mapbox coordinates
+- **No results**: Add info message, continue with Mapbox coordinates
+- **Network error**: Catch exception, continue with Mapbox coordinates
+
+**Cost**:
+- Free tier: 5,000 Text Search Pro requests/month
+- After free tier: $32 per 1,000 requests
+- Recommended: Set quota limit to 5,000/month in Google Cloud Console
+
+**Response fields** (dry-run mode only):
+```typescript
+{
+  validationWarnings: RowIssue[]  // Stores flagged for review
+  googleValidationsAttempted: number
+  googleValidationsSucceeded: number
+}
+```
+
+### Manual Review Workflow
+
+For stores flagged with `geocode_needs_review = true`:
+
+1. Query flagged stores:
+```sql
+SELECT id, name, address, town, postcode, lat, lon, google_place_id
+FROM stores
+WHERE geocode_needs_review = true;
+```
+
+2. Review in Google Maps:
+   - Use stored `google_place_id` to look up the store on Google Maps
+   - Compare with Mapbox coordinates visually
+   - Determine which is more accurate
+
+3. Update if needed:
+```sql
+UPDATE stores
+SET lat = correct_lat, lon = correct_lon, geocode_needs_review = false
+WHERE id = 'store-id';
+```
+
+4. Trigger rebuild:
+```bash
+curl -X POST https://your-domain.com/api/admin/stores/rebuild-summaries \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Cost Comparison Example
+
+For 10,000 store import:
+
+**Without Google validation**:
+- Mapbox: $0 (within 100k free tier)
+- Google: $0
+- **Total: $0**
+
+**With Google validation (dry-run)**:
+- Mapbox: $0 (within 100k free tier)
+- Google: $160 (10k - 5k free tier = 5k × $32/1k)
+- **Total: $160**
+
+**Value**: For $160, you get confidence that 10,000 store coordinates are accurate and can identify the few that need manual review. This is a one-time validation cost during import preparation.
+
 ## Support
 
 For issues or questions:
@@ -324,3 +469,4 @@ For issues or questions:
 2. Download error report CSV for detailed validation issues
 3. Use manual rebuild endpoint if summary tables are stale
 4. Review migration files for database schema changes
+5. Query stores flagged for review: `SELECT * FROM stores WHERE geocode_needs_review = true`

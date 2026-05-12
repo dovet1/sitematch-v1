@@ -1,25 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import type {
-  ImportPreviewResponse,
-  ImportExecuteResponse
-} from '@/types/store-import'
+import type { UploadResponse } from '@/types/store-import'
 import { FileUploadSection } from './components/FileUploadSection'
-import { PreviewSection } from './components/PreviewSection'
 import { ProgressSection } from './components/ProgressSection'
 import { CompleteSection } from './components/CompleteSection'
 
-type ImportStage = 'upload' | 'preview' | 'executing' | 'complete'
+type ImportStage = 'upload' | 'processing' | 'complete'
 
 export default function StoreImportPage() {
   const [stage, setStage] = useState<ImportStage>('upload')
   const [file, setFile] = useState<File | null>(null)
-  const [previewData, setPreviewData] = useState<ImportPreviewResponse | null>(null)
-  const [executeData, setExecuteData] = useState<ImportExecuteResponse | null>(null)
+  const [uploadData, setUploadData] = useState<UploadResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [dryRun, setDryRun] = useState(false)
 
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile)
@@ -31,63 +25,28 @@ export default function StoreImportPage() {
 
     setIsLoading(true)
     setError(null)
+    setStage('processing')
 
     try {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await fetch('/api/admin/stores/import/preview', {
+      const response = await fetch('/api/admin/stores/import/upload', {
         method: 'POST',
         body: formData
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to preview import')
+        throw new Error(errorData.error || 'Failed to process import')
       }
 
-      const data: ImportPreviewResponse = await response.json()
-      setPreviewData(data)
-      setStage('preview')
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleExecute = async (isDryRun: boolean) => {
-    if (!file) return
-
-    setIsLoading(true)
-    setError(null)
-    setDryRun(isDryRun)
-    setStage('executing')
-
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const url = isDryRun
-        ? '/api/admin/stores/import/execute?dryRun=true'
-        : '/api/admin/stores/import/execute'
-
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to execute import')
-      }
-
-      const data: ImportExecuteResponse = await response.json()
-      setExecuteData(data)
+      const data: UploadResponse = await response.json()
+      setUploadData(data)
       setStage('complete')
     } catch (err: any) {
       setError(err.message)
-      setStage('preview') // Go back to preview on error
+      setStage('upload') // Go back to upload on error
     } finally {
       setIsLoading(false)
     }
@@ -96,10 +55,8 @@ export default function StoreImportPage() {
   const handleReset = () => {
     setStage('upload')
     setFile(null)
-    setPreviewData(null)
-    setExecuteData(null)
+    setUploadData(null)
     setError(null)
-    setDryRun(false)
   }
 
   return (
@@ -107,8 +64,8 @@ export default function StoreImportPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Import Stores</h1>
         <p className="text-gray-600">
-          Upload a CSV file to bulk import store data. The system will validate,
-          geocode (if needed), and automatically update summary tables.
+          Upload a CSV file to bulk import store data. The system will geocode with Mapbox,
+          validate with Google Places (10m threshold), and auto-import valid stores.
         </p>
       </div>
 
@@ -143,24 +100,14 @@ export default function StoreImportPage() {
         />
       )}
 
-      {stage === 'preview' && previewData && (
-        <PreviewSection
-          data={previewData}
-          onExecute={handleExecute}
-          onCancel={handleReset}
-          isLoading={isLoading}
-        />
+      {stage === 'processing' && (
+        <ProgressSection />
       )}
 
-      {stage === 'executing' && (
-        <ProgressSection isDryRun={dryRun} />
-      )}
-
-      {stage === 'complete' && executeData && (
+      {stage === 'complete' && uploadData && (
         <CompleteSection
-          data={executeData}
+          data={uploadData}
           onReset={handleReset}
-          onRunRealImport={() => handleExecute(false)}
         />
       )}
     </div>

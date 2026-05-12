@@ -1,39 +1,22 @@
 'use client'
 
-import type { ImportExecuteResponse } from '@/types/store-import'
+import type { UploadResponse } from '@/types/store-import'
 
 interface CompleteSectionProps {
-  data: ImportExecuteResponse
+  data: UploadResponse
   onReset: () => void
-  onRunRealImport: () => void
 }
 
-export function CompleteSection({
-  data,
-  onReset,
-  onRunRealImport
-}: CompleteSectionProps) {
-  const handleDownloadErrorReport = () => {
-    const allIssues = [...data.skippedRows, ...data.blockedRows]
-    const csvContent = [
-      'Row Number,Severity,Type,Message,Field,Suggestion',
-      ...allIssues.map(issue =>
-        [
-          issue.rowNumber,
-          issue.severity,
-          issue.type,
-          `"${issue.message}"`,
-          issue.field || '',
-          issue.suggestion ? `"${issue.suggestion}"` : ''
-        ].join(',')
-      )
-    ].join('\n')
+export function CompleteSection({ data, onReset }: CompleteSectionProps) {
+  const handleDownloadFailedStores = () => {
+    if (!data.failedStoresCSV || data.failedStoresCSV.length === 0) return
 
-    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const blob = new Blob([data.failedStoresCSV], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'import-error-report.csv'
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+    a.download = `failed-stores-${timestamp}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -41,19 +24,11 @@ export function CompleteSection({
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Success Header */}
-      <div className={`border rounded-lg p-8 ${
-        data.isDryRun
-          ? 'bg-blue-50 border-blue-200'
-          : 'bg-green-50 border-green-200'
-      }`}>
+      <div className="border rounded-lg p-8 bg-green-50 border-green-200">
         <div className="flex items-start gap-4">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-            data.isDryRun ? 'bg-blue-100' : 'bg-green-100'
-          }`}>
+          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
             <svg
-              className={`w-7 h-7 ${
-                data.isDryRun ? 'text-blue-600' : 'text-green-600'
-              }`}
+              className="w-7 h-7 text-green-600"
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -61,27 +36,18 @@ export function CompleteSection({
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
-              {data.isDryRun ? (
-                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              ) : (
-                <path d="M5 13l4 4L19 7" />
-              )}
+              <path d="M5 13l4 4L19 7" />
             </svg>
           </div>
           <div className="flex-1">
-            <h2 className={`text-2xl font-bold ${
-              data.isDryRun ? 'text-blue-900' : 'text-green-900'
-            }`}>
-              {data.isDryRun
-                ? 'Dry Run Complete - No Data Inserted'
-                : 'Import Complete!'}
+            <h2 className="text-2xl font-bold text-green-900">
+              Import Complete!
             </h2>
-            <p className={`mt-2 ${
-              data.isDryRun ? 'text-blue-700' : 'text-green-700'
-            }`}>
-              {data.isDryRun
-                ? 'This shows EXACTLY what will happen in a real import'
-                : 'Stores have been imported successfully.'}
+            <p className="mt-2 text-green-700">
+              {data.insertedCount > 0
+                ? `Successfully imported ${data.insertedCount} store${data.insertedCount !== 1 ? 's' : ''}.`
+                : 'No stores were imported.'}
+              {data.failedCount > 0 && ` ${data.failedCount} store${data.failedCount !== 1 ? 's' : ''} failed validation.`}
             </p>
           </div>
         </div>
@@ -107,39 +73,12 @@ export function CompleteSection({
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">{data.insertedCount}</p>
-              <p className="text-sm text-gray-600">
-                {data.isDryRun ? 'Would import' : 'Stores imported'}
-              </p>
+              <p className="text-sm text-gray-600">Stores imported</p>
             </div>
           </div>
         </div>
 
-        {/* Skipped Count */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-yellow-600"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{data.skippedCount}</p>
-              <p className="text-sm text-gray-600">
-                {data.isDryRun ? 'Would skip' : 'Rows skipped'} (duplicates)
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Blocked Count */}
+        {/* Failed Count */}
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -156,31 +95,15 @@ export function CompleteSection({
               </svg>
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{data.blockedCount}</p>
-              <p className="text-sm text-gray-600">
-                {data.isDryRun ? 'Would block' : 'Rows blocked'} (errors)
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Entity Changes */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-700">
-              {data.isDryRun ? 'Would create:' : 'Created:'}
-            </p>
-            <div className="space-y-1 text-sm text-gray-600">
-              <p>{data.brandsCreated} brand{data.brandsCreated !== 1 ? 's' : ''}</p>
-              <p>{data.fasciasCreated} fascia{data.fasciasCreated !== 1 ? 's' : ''}</p>
-              <p>{data.categoriesCreated} categor{data.categoriesCreated !== 1 ? 'ies' : 'y'}</p>
+              <p className="text-2xl font-bold text-gray-900">{data.failedCount}</p>
+              <p className="text-sm text-gray-600">Stores failed validation</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Rebuild Status */}
-      {!data.isDryRun && data.rebuildTriggered && (
+      {data.rebuildTriggered && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <svg
@@ -206,36 +129,64 @@ export function CompleteSection({
             <div>
               <p className="font-semibold text-blue-900">Data Rebuild in Progress</p>
               <p className="text-sm text-blue-700 mt-1">
-                {data.rebuildMessage || 'BUA summary tables are being rebuilt. Data will be available in the Gap Analysis tool in 5-10 minutes.'}
+                BUA summary tables are being rebuilt. Data will be available in the Gap Analysis tool in 5-10 minutes.
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Error Report */}
-      {(data.skippedCount > 0 || data.blockedCount > 0) && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Issues Summary</h3>
+      {/* Successful Stores List */}
+      {data.successfulStores.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h3 className="font-semibold text-gray-900 mb-4">Successfully Imported Stores</h3>
+          <div className="max-h-60 overflow-y-auto">
+            <div className="space-y-2">
+              {data.successfulStores.slice(0, 50).map((store, index) => (
+                <div key={index} className="text-sm py-2 px-3 bg-gray-50 rounded border border-gray-100">
+                  <div className="font-medium text-gray-900">{store.name}</div>
+                  <div className="text-gray-600 text-xs mt-0.5">
+                    {store.address} • {store.brand} ({store.fascia}) • {store.category}
+                  </div>
+                </div>
+              ))}
+              {data.successfulStores.length > 50 && (
+                <p className="text-sm text-gray-500 italic py-2">
+                  ... and {data.successfulStores.length - 50} more stores
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Failed Stores Section */}
+      {data.failedCount > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h3 className="font-semibold text-red-900 mb-4">Failed Stores</h3>
           <div className="space-y-3 text-sm">
-            {data.skippedCount > 0 && (
-              <p className="text-yellow-700">
-                {data.skippedCount} row{data.skippedCount !== 1 ? 's were' : ' was'} skipped
-                due to duplicates (within 50m of existing store with same brand/fascia)
+            <p className="text-red-800">
+              {data.failedCount} store{data.failedCount !== 1 ? 's' : ''} could not be imported due to validation issues:
+            </p>
+            <ul className="list-disc list-inside text-red-700 space-y-1 text-xs">
+              <li>Missing required fields</li>
+              <li>Invalid coordinates (outside UK bounds)</li>
+              <li>Geocoding failed</li>
+              <li>Distance validation failed (≥10 meters between Mapbox and Google)</li>
+              <li>Category conflicts</li>
+              <li>Google Places validation errors</li>
+            </ul>
+            <div className="pt-3">
+              <button
+                onClick={handleDownloadFailedStores}
+                className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Download Failed Stores CSV
+              </button>
+              <p className="text-xs text-red-700 mt-2">
+                The CSV includes all original columns plus: failure_reason, mapbox_lat, mapbox_lon, google_lat, google_lon
               </p>
-            )}
-            {data.blockedCount > 0 && (
-              <p className="text-red-700">
-                {data.blockedCount} row{data.blockedCount !== 1 ? 's were' : ' was'} blocked
-                due to validation errors (see error report for details)
-              </p>
-            )}
-            <button
-              onClick={handleDownloadErrorReport}
-              className="text-blue-600 hover:text-blue-700 underline"
-            >
-              Download Full Error Report (CSV)
-            </button>
+            </div>
           </div>
         </div>
       )}
@@ -256,15 +207,6 @@ export function CompleteSection({
             Return to Admin Dashboard
           </a>
         </div>
-
-        {data.isDryRun && (
-          <button
-            onClick={onRunRealImport}
-            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Run Real Import
-          </button>
-        )}
       </div>
     </div>
   )

@@ -1,5 +1,5 @@
 // Store Import Types
-// Purpose: Type definitions for the store import pipeline
+// Purpose: Type definitions for the simplified store import pipeline
 
 // CSV Row as parsed from file
 export interface CSVRow {
@@ -19,6 +19,8 @@ export interface CSVRow {
   pqi?: string
   open_date?: string
   size_band?: string
+  // Allow arbitrary additional columns
+  [key: string]: any
 }
 
 // Validated and enriched row ready for import
@@ -52,17 +54,23 @@ export interface ValidatedStoreRow {
 
   // Metadata
   rowNumber: number
+
+  // Google validation (NEW - compliance-safe approach)
+  googlePlaceId?: string
+  geocodeNeedsReview?: boolean
 }
 
 // Issue types
 export type IssueType =
   | 'missing_required_field'
   | 'invalid_coordinates'
-  | 'duplicate'
   | 'category_conflict'
   | 'geocode_failed'
   | 'fuzzy_brand_match'
   | 'fascia_duplication'
+  | 'google_validation_warning'   // NEW: Large distance between Mapbox and Google
+  | 'google_validation_failed'    // NEW: Google API failed
+  | 'google_quota_exceeded'       // NEW: Google quota exceeded
 
 export type IssueSeverity = 'error' | 'warning' | 'info'
 
@@ -77,7 +85,27 @@ export interface RowIssue {
   data?: Record<string, any>
 }
 
-// Preview response from API
+// Successful store in response
+export interface SuccessfulStore {
+  name: string
+  address: string
+  brand: string
+  fascia: string
+  category: string
+}
+
+// Upload/Import response from new simplified API
+export interface UploadResponse {
+  success: boolean
+  successfulStores: SuccessfulStore[]
+  failedStoresCSV: string  // CSV string with all failed rows + failure reasons
+  insertedCount: number
+  failedCount: number
+  rebuildTriggered: boolean
+  error?: string
+}
+
+// LEGACY: Preview response from old API (will be removed)
 export interface ImportPreviewResponse {
   // Summary counts
   totalRows: number
@@ -111,7 +139,7 @@ export interface ImportPreviewResponse {
   canProceed: boolean
 }
 
-// Execute response from API
+// LEGACY: Execute response from old API (will be removed)
 export interface ImportExecuteResponse {
   success: boolean
   isDryRun: boolean
@@ -129,6 +157,15 @@ export interface ImportExecuteResponse {
   // Detailed results
   skippedRows: RowIssue[]
   blockedRows: RowIssue[]
+
+  // NEW: Validation warnings (for dry-run mode)
+  validationWarnings?: RowIssue[]
+  googleValidationsAttempted?: number
+  googleValidationsSucceeded?: number
+
+  // Cache statistics (for live import)
+  cacheHits?: number
+  cacheMisses?: number
 
   // Rebuild status
   rebuildTriggered: boolean
@@ -174,15 +211,6 @@ export interface FuzzyBrandMatch {
   similarity: number
 }
 
-// Duplicate store match
-export interface DuplicateStoreMatch {
-  existingStoreId: string
-  existingStoreName: string
-  existingBrandId: string
-  existingFasciaId: string
-  distance: number
-}
-
 // Category conflict
 export interface CategoryConflict {
   fasciaName: string
@@ -191,4 +219,15 @@ export interface CategoryConflict {
   existingCategoryId: string
   csvCategoryName: string
   csvCategoryId: string
+}
+
+// Google validation result (NEW)
+export interface GoogleValidationResult {
+  success: boolean
+  placeId?: string
+  location?: { lat: number; lon: number }
+  formattedAddress?: string
+  distanceMeters?: number
+  error?: string
+  quotaExceeded?: boolean
 }

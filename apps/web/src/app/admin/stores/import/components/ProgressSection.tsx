@@ -1,10 +1,6 @@
 'use client'
 
-interface ProgressSectionProps {
-  isDryRun: boolean
-}
-
-export function ProgressSection({ isDryRun }: ProgressSectionProps) {
+export function ProgressSection() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="bg-white border border-gray-200 rounded-lg p-8">
@@ -36,12 +32,10 @@ export function ProgressSection({ isDryRun }: ProgressSectionProps) {
           {/* Title */}
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
-              {isDryRun ? 'Running Dry Run...' : 'Processing Import...'}
+              Processing Import...
             </h2>
             <p className="text-gray-600 mt-2">
-              {isDryRun
-                ? 'Testing the import without inserting data. This may take a few minutes.'
-                : 'Importing stores and updating summary tables. This may take a few minutes.'}
+              Geocoding, validating, and importing stores. This may take a few minutes.
             </p>
           </div>
 
@@ -49,28 +43,28 @@ export function ProgressSection({ isDryRun }: ProgressSectionProps) {
           <div className="bg-gray-50 rounded-lg p-6 text-left space-y-3">
             <div className="flex items-center gap-3 text-gray-700">
               <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-              <span>Validating rows...</span>
+              <span>Parsing and validating CSV...</span>
             </div>
             <div className="flex items-center gap-3 text-gray-700">
               <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-              <span>Geocoding addresses (if needed)...</span>
+              <span>Geocoding with Mapbox...</span>
             </div>
             <div className="flex items-center gap-3 text-gray-700">
               <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-              <span>Checking for duplicates...</span>
+              <span>Validating with Google Places...</span>
             </div>
-            {!isDryRun && (
-              <>
-                <div className="flex items-center gap-3 text-gray-700">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-                  <span>Inserting stores...</span>
-                </div>
-                <div className="flex items-center gap-3 text-gray-700">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-                  <span>Triggering data rebuild...</span>
-                </div>
-              </>
-            )}
+            <div className="flex items-center gap-3 text-gray-700">
+              <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+              <span>Checking category conflicts...</span>
+            </div>
+            <div className="flex items-center gap-3 text-gray-700">
+              <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+              <span>Inserting valid stores...</span>
+            </div>
+            <div className="flex items-center gap-3 text-gray-700">
+              <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+              <span>Triggering BUA summary rebuild...</span>
+            </div>
           </div>
 
           {/* Warning */}
