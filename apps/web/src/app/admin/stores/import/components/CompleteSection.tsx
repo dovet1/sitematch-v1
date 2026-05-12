@@ -8,6 +8,45 @@ interface CompleteSectionProps {
 }
 
 export function CompleteSection({ data, onReset }: CompleteSectionProps) {
+  const hasImportedStores = data.insertedCount > 0
+  const hasFailedStores = data.failedCount > 0
+  const isFullSuccess = hasImportedStores && !hasFailedStores
+  const isPartialSuccess = hasImportedStores && hasFailedStores
+  const statusIconPath = hasImportedStores
+    ? 'M5 13l4 4L19 7'
+    : 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'
+  const statusStyles = isFullSuccess
+    ? {
+        panel: 'bg-green-50 border-green-200',
+        iconBg: 'bg-green-100',
+        iconText: 'text-green-600',
+        title: 'text-green-900',
+        body: 'text-green-700',
+        heading: 'Import Complete',
+        message: `All rows passed validation and ${data.insertedCount} store${data.insertedCount !== 1 ? 's were' : ' was'} imported.`
+      }
+    : isPartialSuccess
+      ? {
+          panel: 'bg-amber-50 border-amber-200',
+          iconBg: 'bg-amber-100',
+          iconText: 'text-amber-600',
+          title: 'text-amber-950',
+          body: 'text-amber-800',
+          heading: 'Import Partially Complete',
+          message: `${data.insertedCount} store${data.insertedCount !== 1 ? 's were' : ' was'} imported. ${data.failedCount} row${data.failedCount !== 1 ? 's were' : ' was'} skipped and can be downloaded for correction.`
+        }
+      : {
+          panel: 'bg-red-50 border-red-200',
+          iconBg: 'bg-red-100',
+          iconText: 'text-red-600',
+          title: 'text-red-900',
+          body: 'text-red-700',
+          heading: 'No Stores Imported',
+          message: hasFailedStores
+            ? `All ${data.failedCount} row${data.failedCount !== 1 ? 's failed' : ' failed'} validation. Download the failed stores CSV, correct the issues, and import again.`
+            : 'No stores were imported.'
+        }
+
   const handleDownloadFailedStores = () => {
     if (!data.failedStoresCSV || data.failedStoresCSV.length === 0) return
 
@@ -23,12 +62,12 @@ export function CompleteSection({ data, onReset }: CompleteSectionProps) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Success Header */}
-      <div className="border rounded-lg p-8 bg-green-50 border-green-200">
+      {/* Status Header */}
+      <div className={`border rounded-lg p-8 ${statusStyles.panel}`}>
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${statusStyles.iconBg}`}>
             <svg
-              className="w-7 h-7 text-green-600"
+              className={`w-7 h-7 ${statusStyles.iconText}`}
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -36,18 +75,15 @@ export function CompleteSection({ data, onReset }: CompleteSectionProps) {
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
-              <path d="M5 13l4 4L19 7" />
+              <path d={statusIconPath} />
             </svg>
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-bold text-green-900">
-              Import Complete!
+            <h2 className={`text-2xl font-bold ${statusStyles.title}`}>
+              {statusStyles.heading}
             </h2>
-            <p className="mt-2 text-green-700">
-              {data.insertedCount > 0
-                ? `Successfully imported ${data.insertedCount} store${data.insertedCount !== 1 ? 's' : ''}.`
-                : 'No stores were imported.'}
-              {data.failedCount > 0 && ` ${data.failedCount} store${data.failedCount !== 1 ? 's' : ''} failed validation.`}
+            <p className={`mt-2 ${statusStyles.body}`}>
+              {statusStyles.message}
             </p>
           </div>
         </div>
@@ -96,14 +132,14 @@ export function CompleteSection({ data, onReset }: CompleteSectionProps) {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">{data.failedCount}</p>
-              <p className="text-sm text-gray-600">Stores failed validation</p>
+              <p className="text-sm text-gray-600">Rows skipped</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Rebuild Status */}
-      {data.rebuildTriggered && (
+      {data.rebuildTriggered ? (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <svg
@@ -130,6 +166,30 @@ export function CompleteSection({ data, onReset }: CompleteSectionProps) {
               <p className="font-semibold text-blue-900">Data Rebuild in Progress</p>
               <p className="text-sm text-blue-700 mt-1">
                 BUA summary tables are being rebuilt. Data will be available in the Gap Analysis tool in 5-10 minutes.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <svg
+              className="w-5 h-5 text-gray-500 mt-0.5 flex-shrink-0"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="font-semibold text-gray-900">No Rebuild Confirmed</p>
+              <p className="text-sm text-gray-700 mt-1">
+                {hasImportedStores
+                  ? 'Stores were inserted, but the BUA summary rebuild could not be confirmed. Gapfinder data may need a manual rebuild.'
+                  : 'No BUA summary rebuild was started because no stores were inserted.'}
               </p>
             </div>
           </div>
@@ -161,12 +221,12 @@ export function CompleteSection({ data, onReset }: CompleteSectionProps) {
       )}
 
       {/* Failed Stores Section */}
-      {data.failedCount > 0 && (
+      {hasFailedStores && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <h3 className="font-semibold text-red-900 mb-4">Failed Stores</h3>
           <div className="space-y-3 text-sm">
             <p className="text-red-800">
-              {data.failedCount} store{data.failedCount !== 1 ? 's' : ''} could not be imported due to validation issues:
+              {data.failedCount} row{data.failedCount !== 1 ? 's' : ''} could not be imported due to one of these import checks:
             </p>
             <ul className="list-disc list-inside text-red-700 space-y-1 text-xs">
               <li>Missing required fields</li>
@@ -174,7 +234,8 @@ export function CompleteSection({ data, onReset }: CompleteSectionProps) {
               <li>Geocoding failed</li>
               <li>Distance validation failed (≥10 meters between Mapbox and Google)</li>
               <li>Category conflicts</li>
-              <li>Google Places validation errors</li>
+              <li>Google Places validation errors, timeouts, or quota limits</li>
+              <li>Brand, fascia, or category creation errors</li>
             </ul>
             <div className="pt-3">
               <button

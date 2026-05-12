@@ -64,8 +64,8 @@ export default function StoreImportPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Import Stores</h1>
         <p className="text-gray-600">
-          Upload a CSV file to bulk import store data. The system will geocode with Mapbox,
-          validate with Google Places (10m threshold), and auto-import valid stores.
+          Upload a CSV file to validate and import store data in one step. Valid rows are
+          inserted immediately; failed rows are skipped and returned in a downloadable CSV.
         </p>
       </div>
 

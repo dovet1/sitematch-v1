@@ -609,11 +609,11 @@ export async function POST(request: NextRequest) {
     // Step 4: Category Conflict Check
     await checkCategoryConflicts(processedRows, supabase)
 
-    // Step 5: Classify rows
+    // Step 5: Classify rows before any writes
     const successfulRows = processedRows.filter(r => !r.failed)
-    const failedRows = processedRows.filter(r => r.failed)
+    const preWriteFailedRows = processedRows.filter(r => r.failed)
 
-    console.log(`Phase 1 complete: ${successfulRows.length} successful, ${failedRows.length} failed`)
+    console.log(`Phase 1 complete: ${successfulRows.length} successful, ${preWriteFailedRows.length} failed`)
 
     // ==================================================================
     // PHASE 2: MUTATE (Database Writes for Validated Rows Only)
@@ -668,6 +668,7 @@ export async function POST(request: NextRequest) {
 
       // Re-filter successful rows after entity creation
       const rowsToInsert = successfulRows.filter(r => !r.failed)
+      const postEntityFailedRows = processedRows.filter(r => r.failed)
 
       if (rowsToInsert.length > 0) {
         // Prepare store inserts
@@ -712,10 +713,10 @@ export async function POST(request: NextRequest) {
           total_rows: csvRows.length,
           inserted_rows: insertedCount,
           skipped_rows: 0,
-          blocked_rows: failedRows.length,
+          blocked_rows: postEntityFailedRows.length,
           error_report: {
             skipped: [],
-            blocked: failedRows.map(r => ({
+            blocked: postEntityFailedRows.map(r => ({
               rowNumber: r.rowNumber,
               type: 'validation_failed',
               severity: 'error',
@@ -754,12 +755,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const finalFailedRows = processedRows.filter(r => r.failed)
+    const finalSuccessfulRows = processedRows.filter(r => !r.failed)
+
     // Generate failed CSV
     const failedCSV = generateFailedCSV(processedRows)
 
     // Build successful stores list
-    const successfulStores: SuccessfulStore[] = successfulRows
-      .filter(r => !r.failed)
+    const successfulStores: SuccessfulStore[] = finalSuccessfulRows
       .map(r => ({
         name: r.name,
         address: r.address,
@@ -773,7 +776,7 @@ export async function POST(request: NextRequest) {
       successfulStores,
       failedStoresCSV: failedCSV,
       insertedCount,
-      failedCount: failedRows.length,
+      failedCount: finalFailedRows.length,
       rebuildTriggered
     }
 

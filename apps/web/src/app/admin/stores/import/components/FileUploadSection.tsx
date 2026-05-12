@@ -56,6 +56,9 @@ export function FileUploadSection({
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
         <h2 className="text-lg font-semibold mb-3 text-blue-900">CSV Format Requirements</h2>
         <div className="space-y-3 text-sm text-blue-800">
+          <p>
+            CSV files must be 10MB or smaller and contain no more than 500 rows.
+          </p>
           <div>
             <p className="font-medium mb-1">Required columns:</p>
             <code className="bg-white px-2 py-1 rounded text-xs">
@@ -65,7 +68,7 @@ export function FileUploadSection({
           <div>
             <p className="font-medium mb-1">Optional columns:</p>
             <code className="bg-white px-2 py-1 rounded text-xs">
-              fascia, postcode, town, suburb, county, lat, lon
+              fascia, postcode, town, lat, lon
             </code>
           </div>
           <div>
@@ -90,9 +93,45 @@ Shell Reading,456 Bath Rd,Shell,Petrol,RG1 2BB,Reading,51.454,-0.972`}
             </svg>
             <div className="text-xs space-y-1">
               <p>If <strong>fascia</strong> is empty, brand name will be used as fascia</p>
-              <p>If <strong>lat/lon</strong> are missing, addresses will be geocoded (max 500 rows)</p>
+              <p>If <strong>lat/lon</strong> are missing, addresses will be geocoded with Mapbox</p>
+              <p>If <strong>lat/lon</strong> are provided, they will still be checked with Google Places</p>
               <p>Coordinates must be within UK bounds (lat: 49-61, lon: -8 to 2)</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Import Behaviour Guide */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+        <h2 className="text-lg font-semibold mb-3 text-amber-950">What happens when you click import</h2>
+        <div className="grid gap-3 text-sm text-amber-900 md:grid-cols-2">
+          <div className="bg-white/70 rounded-md p-3">
+            <p className="font-medium mb-1">Rows that pass checks</p>
+            <p>
+              Valid rows are imported immediately. Missing brands, fascias, and categories
+              are created automatically before the store is inserted.
+            </p>
+          </div>
+          <div className="bg-white/70 rounded-md p-3">
+            <p className="font-medium mb-1">Rows that fail checks</p>
+            <p>
+              Failed rows are skipped. Valid rows from the same file will still be imported,
+              and failed rows can be downloaded afterwards as a CSV.
+            </p>
+          </div>
+          <div className="bg-white/70 rounded-md p-3">
+            <p className="font-medium mb-1">Location validation</p>
+            <p>
+              Each row must match a Google Places result within 10m after using either
+              the CSV coordinates or Mapbox geocoding.
+            </p>
+          </div>
+          <div className="bg-white/70 rounded-md p-3">
+            <p className="font-medium mb-1">After stores are inserted</p>
+            <p>
+              BUA summary tables are rebuilt in the background so Gapfinder can use the
+              newly imported store data.
+            </p>
           </div>
         </div>
       </div>
@@ -192,10 +231,10 @@ Shell Reading,456 Bath Rd,Shell,Petrol,RG1 2BB,Reading,51.454,-0.972`}
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                Analyzing...
+                Validating and importing...
               </span>
             ) : (
-              'Run Import'
+              'Validate and Import Stores'
             )}
           </button>
         </div>
