@@ -72,17 +72,17 @@ export function ComparisonModal({
 
   const summaryItems = [
     {
-      label: 'Only missing from Area A',
+      label: 'Brands available in B, missing in A',
       count: comparisonData.missingInAOnly.length,
       accent: 'border-violet-200 bg-violet-50 text-violet-800',
     },
     {
-      label: 'Only missing from Area B',
+      label: 'Brands available in A, missing in B',
       count: comparisonData.missingInBOnly.length,
       accent: 'border-teal-200 bg-teal-50 text-teal-800',
     },
     {
-      label: 'Missing from both',
+      label: 'Brands missing in both areas',
       count: comparisonData.missingInBoth.length,
       accent: 'border-gray-200 bg-gray-50 text-gray-800',
     },
@@ -125,19 +125,19 @@ export function ComparisonModal({
         <Tabs defaultValue="missing-a" className="flex-1 flex flex-col min-h-0 px-6 pb-6">
           <TabsList className="grid h-auto w-full grid-cols-3 bg-gray-100 p-1">
             <TabsTrigger value="missing-a" className="flex-col gap-1 whitespace-normal px-2 py-2 text-xs leading-tight sm:flex-row sm:text-sm">
-              Only missing from A
+              Brands available in B, missing in A
               <Badge variant="secondary" className="text-xs">
                 {comparisonData.missingInAOnly.length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="missing-b" className="flex-col gap-1 whitespace-normal px-2 py-2 text-xs leading-tight sm:flex-row sm:text-sm">
-              Only missing from B
+              Brands available in A, missing in B
               <Badge variant="secondary" className="text-xs">
                 {comparisonData.missingInBOnly.length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="missing-both" className="flex-col gap-1 whitespace-normal px-2 py-2 text-xs leading-tight sm:flex-row sm:text-sm">
-              Missing from both
+              Brands missing in both areas
               <Badge variant="secondary" className="text-xs">
                 {comparisonData.missingInBoth.length}
               </Badge>
@@ -147,7 +147,7 @@ export function ComparisonModal({
           <TabsContent value="missing-a" className="flex-1 overflow-y-auto py-5 min-h-0">
             <div className="mb-4 flex items-start justify-between gap-4">
               <p className="text-sm text-gray-600">
-                Brands available in Area B but absent from Area A.
+                Brands available in B, missing in A.
               </p>
               {comparisonData.missingInAOnly.length > 0 && (
                 <Button
@@ -162,15 +162,15 @@ export function ComparisonModal({
             </div>
             {renderComparisonContent(
               comparisonData.missingInAOnly,
-              'Area A is not missing any brands Area B has',
-              'For the selected filter set, Area A matches the brands present in Area B.'
+              'No brands available in B are missing in A',
+              'For the selected filter set, Area A already has the brands found in Area B.'
             )}
           </TabsContent>
 
           <TabsContent value="missing-b" className="flex-1 overflow-y-auto py-5 min-h-0">
             <div className="mb-4 flex items-start justify-between gap-4">
               <p className="text-sm text-gray-600">
-                Brands available in Area A but absent from Area B.
+                Brands available in A, missing in B.
               </p>
               {comparisonData.missingInBOnly.length > 0 && (
                 <Button
@@ -185,15 +185,15 @@ export function ComparisonModal({
             </div>
             {renderComparisonContent(
               comparisonData.missingInBOnly,
-              'Area B is not missing any brands Area A has',
-              'For the selected filter set, Area B matches the brands present in Area A.'
+              'No brands available in A are missing in B',
+              'For the selected filter set, Area B already has the brands found in Area A.'
             )}
           </TabsContent>
 
           <TabsContent value="missing-both" className="flex-1 overflow-y-auto py-5 min-h-0">
             <div className="mb-4 flex items-start justify-between gap-4">
               <p className="text-sm text-gray-600">
-                Selected brands that are absent from both areas.
+                Brands missing in both areas.
               </p>
               {comparisonData.missingInBoth.length > 0 && (
                 <Button
