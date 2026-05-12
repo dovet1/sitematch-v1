@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase'
-import { checkSubscriptionAccess } from '@/lib/subscription'
+import { requireGapFinderAccess } from '@/lib/gapfinder-access'
 import { getRequirementMapFeatures } from '@/lib/requirement-map-data'
 
 export const dynamic = 'force-dynamic'
@@ -18,15 +17,12 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET() {
   try {
-    const supabase = await createServerClient()
-
-    // Auth check (identical to requirement-locations)
-    const { data: { user } } = await supabase.auth.getUser()
-    const hasAccess = user ? await checkSubscriptionAccess(user.id) : false
+    const access = await requireGapFinderAccess()
+    if (!access.authorized) return access.response
 
     // Fetch the SAME features that appear on the map
-    const features = await getRequirementMapFeatures(supabase, {
-      isFreeTier: !hasAccess
+    const features = await getRequirementMapFeatures(access.supabase, {
+      isFreeTier: false
     })
 
     // Group features by company name, collecting listing IDs

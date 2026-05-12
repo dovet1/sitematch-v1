@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createBUAService } from '@/lib/buas'
+import { requireGapFinderAccess } from '@/lib/gapfinder-access'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,6 +20,9 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
+    const access = await requireGapFinderAccess()
+    if (!access.authorized) return access.response
+
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('q') || ''
     const limitParam = searchParams.get('limit')

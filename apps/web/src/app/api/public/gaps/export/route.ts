@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createStoreService } from '@/lib/stores-service'
-import { createServerClient } from '@/lib/supabase'
+import { requireGapFinderAccess } from '@/lib/gapfinder-access'
 import { generateFilterSummary } from '@/lib/buas/generate-filter-summary'
 import type { FilterSet } from '@/types/filters'
 
@@ -24,6 +24,9 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
+    const access = await requireGapFinderAccess()
+    if (!access.authorized) return access.response
+
     const body = await request.json()
     const { minPop, maxPop, filterSet, targetNames = {} } = body
 
@@ -45,9 +48,6 @@ export async function POST(request: NextRequest) {
 
     console.log(`[CSV Export] Fetching ${gsscodes.length} matching BUAs`)
 
-    // Fetch full BUA details for all matching gsscodes
-    const supabase = await createServerClient()
-
     let buas: Array<{ name: string; pop_final: number | null }> = []
 
     // Only query if we have gsscodes (avoid empty .in() which causes error)
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
       // Fetch all batches in parallel
       const batchPromises = batches.map(batch =>
-        supabase
+        access.supabase
           .from('built_up_areas')
           .select('name, pop_final')
           .in('gsscode', batch)

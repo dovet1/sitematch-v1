@@ -116,6 +116,11 @@ export async function POST(request: NextRequest) {
             description: 'Visualize and plan your property projects',
             custom_text: 'Start your 30-day free trial and access SiteSketcher visualization tools'
           }
+        case 'gapfinder':
+          return {
+            description: 'Find retail white space and analyse operator coverage',
+            custom_text: 'Start your 30-day free trial and use GapFinder to spot better market opportunities'
+          }
         case 'searcher':
         default:
           return {

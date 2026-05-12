@@ -59,7 +59,7 @@ export function ToolsTab() {
         <div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900">Tools</h1>
           <p className="text-gray-600 mt-2 text-base sm:text-lg font-medium">
-            Powerful tools to help you analyse sites
+            Powerful tools to help you find and analyse sites
           </p>
         </div>
 

@@ -105,15 +105,59 @@ describe('/api/public/gapfinder/requirement-locations', () => {
     })
   })
 
-  it('applies free-tier filtering through the shared source for unauthenticated users', async () => {
+  it('rejects unauthenticated users', async () => {
     mockSupabase.auth.getUser.mockResolvedValue({ data: { user: null } })
 
     const request = { url: 'http://localhost/api/public/gapfinder/requirement-locations?minLat=49&minLon=-8&maxLat=59&maxLon=2' } as any
-    await GET(request)
+    const response = await GET(request)
+    const data = await response.json()
 
+    expect(response.status).toBe(401)
+    expect(data.error).toBe('Authentication required')
     expect(checkSubscriptionAccess).not.toHaveBeenCalled()
+    expect(getRequirementMapFeatures).not.toHaveBeenCalled()
+  })
+
+  it('rejects authenticated users without subscription access', async () => {
+    ;(checkSubscriptionAccess as jest.Mock).mockResolvedValue(false)
+
+    const request = { url: 'http://localhost/api/public/gapfinder/requirement-locations?minLat=49&minLon=-8&maxLat=59&maxLon=2' } as any
+    const response = await GET(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(data.error).toBe('Subscription required')
+    expect(checkSubscriptionAccess).toHaveBeenCalledWith('user-1')
+    expect(getRequirementMapFeatures).not.toHaveBeenCalled()
+  })
+
+  it('allows trialing users with subscription access', async () => {
+    ;(checkSubscriptionAccess as jest.Mock).mockResolvedValue(true)
+
+    const request = { url: 'http://localhost/api/public/gapfinder/requirement-locations?minLat=49&minLon=-8&maxLat=59&maxLon=2' } as any
+    const response = await GET(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.total).toBe(2)
+    expect(checkSubscriptionAccess).toHaveBeenCalledWith('user-1')
     expect(getRequirementMapFeatures).toHaveBeenCalledWith(mockSupabase, {
-      isFreeTier: true
+      isFreeTier: false
+    })
+  })
+
+  it('allows active paid users with subscription access', async () => {
+    ;(checkSubscriptionAccess as jest.Mock).mockResolvedValue(true)
+
+    const request = { url: 'http://localhost/api/public/gapfinder/requirement-locations?minLat=49&minLon=-8&maxLat=59&maxLon=2' } as any
+    const response = await GET(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.total).toBe(2)
+    expect(checkSubscriptionAccess).toHaveBeenCalledWith('user-1')
+    expect(getRequirementMapFeatures).toHaveBeenCalledWith(mockSupabase, {
+      isFreeTier: false
     })
   })
 

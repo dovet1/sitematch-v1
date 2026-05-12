@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createStoreService } from '@/lib/stores-service'
+import { requireGapFinderAccess } from '@/lib/gapfinder-access'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +50,9 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
+    const access = await requireGapFinderAccess()
+    if (!access.authorized) return access.response
+
     const filters = await request.json()
 
     // Validate required fields

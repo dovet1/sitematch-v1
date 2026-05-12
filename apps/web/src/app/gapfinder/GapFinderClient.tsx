@@ -27,8 +27,6 @@ import { convertFilterSetToViewportParams, generateTargetBadgeMapping, hasActive
 import { exportBUAsToCSV } from '@/lib/buas/export-utils'
 import { exportNearbyStoresToCSV } from '@/lib/export-utils'
 import { type CategoryNode } from '@/lib/category-tree-utils'
-import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess'
-import { useSubscriptionTier } from '@/hooks/useSubscriptionTier'
 import type { TravelTimeData } from '@/types/travel-time'
 
 const MAX_POPULATION = 1200000 // 1.2 million
@@ -80,8 +78,6 @@ const moveTravelTimeAreaEntries = <T,>(
 
 export default function GapFinderClient() {
   const router = useRouter()
-  const { hasAccess, loading: subscriptionLoading } = useSubscriptionAccess()
-  const { isPro } = useSubscriptionTier()
   const [searchQuery, setSearchQuery] = useState('')
   const [center, setCenter] = useState<{ lat: number; lng: number } | undefined>()
   const [populationRange, setPopulationRange] = useState<[number, number]>([MIN_POPULATION, MAX_POPULATION])
@@ -1054,12 +1050,6 @@ export default function GapFinderClient() {
 
     if (!originPoint || !store.id) return
 
-    if (!isPro) {
-      const cacheKey = getTravelTimeCacheKey(store.id, requestArea)
-      setTravelTimeErrors(prev => ({ ...prev, [cacheKey]: 'Subscription required' }))
-      return
-    }
-
     const cacheKey = getTravelTimeCacheKey(store.id, requestArea)
 
     if (travelTimeLoading[cacheKey]) return
@@ -1207,8 +1197,6 @@ export default function GapFinderClient() {
     travelTimes
   ])
 
-  const showRequirementLocationsUpgradeNote = !subscriptionLoading && !hasAccess
-
   const renderRequirementLocationsControl = () => (
     <Collapsible open={showRequirementLocations} onOpenChange={setShowRequirementLocations}>
       <div className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
@@ -1264,22 +1252,6 @@ export default function GapFinderClient() {
                 </button>
               </div>
             </div>
-
-            {showRequirementLocationsUpgradeNote && (
-              <div className="mx-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-3">
-                <p className="text-xs leading-5 text-violet-900">
-                  You&apos;re only seeing a small number of the total requirements in our directory.
-                  Upgrade to see the rest.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => router.push('/pricing')}
-                  className="mt-2 text-xs font-semibold text-violet-700 hover:text-violet-900"
-                >
-                  View upgrade options
-                </button>
-              </div>
-            )}
 
             {requirementBrandScope === 'selected' && (
               <>
@@ -1837,7 +1809,7 @@ export default function GapFinderClient() {
                 travelTimeLoading={travelTimeLoading}
                 travelTimeErrors={travelTimeErrors}
                 onGetTravelTime={handleGetTravelTime}
-                canUseTravelTimes={hasAccess}
+                canUseTravelTimes
                 assessBadgeByStoreId={contextAwareBadgeMapping}
                 missingFascias={contextAwareMissingFascias}
                 isLoadingMissingFascias={contextAwareMissingFasciasLoading}
@@ -1853,7 +1825,7 @@ export default function GapFinderClient() {
               assessBadgeByStoreId, assessBadgeByStoreIdB, missingFascias, missingFasciasB,
               isLoadingMissingFascias, isLoadingMissingFasciasB, missingFasciasError, missingFasciasBError,
               isLoadingStores, isLoadingStoresB, filteredBUAs, isLoadingBUAs, selectedBUA, totalBUAs,
-              isExportingBUAs, isExportingNearbyStores, travelTimes, travelTimeLoading, travelTimeErrors, hasAccess])}
+              isExportingBUAs, isExportingNearbyStores, travelTimes, travelTimeLoading, travelTimeErrors])}
         </div>
       </div>
       <Toaster position="top-right" />

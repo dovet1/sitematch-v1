@@ -32,7 +32,7 @@ interface TrialSignupFormData {
 
 interface TrialSignupModalProps {
   children: React.ReactNode
-  context: 'search' | 'sitesketcher' | 'agency' | 'general'
+  context: 'search' | 'sitesketcher' | 'agency' | 'gapfinder' | 'general'
   redirectPath?: string
   billingInterval?: 'month' | 'year'
   testimonial?: {
@@ -81,6 +81,16 @@ const contextConfig = {
     cta: 'Start Free Trial - Create Agency Profile',
     testimonial: {
       quote: "With SiteMatcher I can see the market in seconds. It\’s easily the fastest way I\’ve found to spot real opportunities.",
+      author: 'Kerry Northfold, Director, Vedra Property',
+      rating: 5
+    }
+  },
+  gapfinder: {
+    headline: 'Unlock GapFinder',
+    subtext: 'Find retail white space, compare markets and analyse operator coverage across the UK',
+    cta: 'Start Free Trial - Use GapFinder',
+    testimonial: {
+      quote: 'With SiteMatcher I can see the market in seconds. It is easily the fastest way I have found to spot real opportunities.',
       author: 'Kerry Northfold, Director, Vedra Property',
       rating: 5
     }
