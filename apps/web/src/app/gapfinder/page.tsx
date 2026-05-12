@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { MonitorUp } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { isGapFinderViewportSupported } from './viewport'
 
 const GapFinderClient = dynamic(() => import('./GapFinderClient'), {
@@ -56,9 +55,12 @@ function GapFinderMobileUnavailable() {
         <p className="mt-3 text-base text-gray-600">
           Please try again on desktop or tablet.
         </p>
-        <Button asChild className="mt-8 bg-violet-600 hover:bg-violet-700">
-          <Link href="/">Back to homepage</Link>
-        </Button>
+        <Link
+          href="/"
+          className="mt-8 inline-flex h-10 items-center justify-center rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
+        >
+          Back to homepage
+        </Link>
       </section>
     </main>
   )
