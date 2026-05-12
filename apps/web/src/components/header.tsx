@@ -77,6 +77,7 @@ export function Header() {
       href: '/gapfinder',
       label: 'GapFinder',
       description: 'Find gaps in the market',
+      showOnMobile: false,
     }
   ]
 
@@ -305,7 +306,7 @@ export function Header() {
                 <div className="px-5 py-2 text-sm font-black text-violet-600 uppercase tracking-wide">
                   Free Tools
                 </div>
-                {freeToolsItems.map((tool) => (
+                {freeToolsItems.filter((tool) => tool.showOnMobile !== false).map((tool) => (
                   <Link
                     key={tool.href}
                     href={tool.href}
