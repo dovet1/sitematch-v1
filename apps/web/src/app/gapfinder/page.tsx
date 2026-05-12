@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { ArrowRight, BarChart3, Download, Layers3, Map, MapPinned, MonitorUp, Search, Sparkles } from 'lucide-react'
+import { ArrowRight, MonitorUp, Sparkles } from 'lucide-react'
 import { isGapFinderViewportSupported } from './viewport'
 import { Button } from '@/components/ui/button'
 import { PaywallModal } from '@/components/PaywallModal'
@@ -12,8 +12,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess'
 import { SummerSaleBanner } from '@/components/gapfinder/SummerSaleBanner'
 import { GapFinderHero } from '@/components/gapfinder/GapFinderHero'
-import { GapFinderProductShowcase } from '@/components/gapfinder/GapFinderProductShowcase'
-import { GapFinderVideoSection } from '@/components/gapfinder/GapFinderVideoSection'
+import { GapFinderCapabilitiesShowcase } from '@/components/gapfinder/GapFinderCapabilitiesShowcase'
 import { GapFinderPricing } from '@/components/gapfinder/GapFinderPricing'
 
 const GapFinderClient = dynamic(() => import('./GapFinderClient'), {
@@ -76,39 +75,6 @@ function GapFinderMobileUnavailable() {
   )
 }
 
-const features = [
-  {
-    icon: BarChart3,
-    title: 'Filter markets by population',
-    description: 'Build a focused list of built-up areas that match your target catchment size.'
-  },
-  {
-    icon: Layers3,
-    title: 'Analyse brand and category gaps',
-    description: 'See where operators are present, absent, nearby or missing across comparable places.'
-  },
-  {
-    icon: MapPinned,
-    title: 'Check neighbouring operators',
-    description: 'Drop a point, review nearby fascias and understand the competitive context around a site.'
-  },
-  {
-    icon: Search,
-    title: 'Compare requirement locations',
-    description: 'Overlay occupier requirements, switch between brands and compare areas side by side.'
-  },
-  {
-    icon: Download,
-    title: 'Export evidence for reports',
-    description: 'Take CSV outputs into client decks, acquisition packs or internal opportunity reviews.'
-  },
-  {
-    icon: Map,
-    title: 'Map-based visualization',
-    description: 'See all locations at a glance with an interactive map showing retail coverage and gaps.'
-  }
-]
-
 function GapFinderLandingPage({ isLoggedIn }: { isLoggedIn: boolean }) {
   const renderPrimaryCta = () => {
     const primaryButton = (
@@ -134,40 +100,7 @@ function GapFinderLandingPage({ isLoggedIn }: { isLoggedIn: boolean }) {
     <main className="min-h-screen bg-white text-gray-950">
       <SummerSaleBanner />
       <GapFinderHero isLoggedIn={isLoggedIn} />
-      <GapFinderProductShowcase />
-      <GapFinderVideoSection />
-
-      {/* Enhanced Features Grid */}
-      <section className="relative py-16 md:py-24 bg-white overflow-hidden">
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4">
-              Everything you need to spot opportunities
-            </h2>
-            <p className="text-xl md:text-2xl text-gray-700 font-medium max-w-3xl mx-auto">
-              GapFinder brings market filtering, operator coverage and location comparison into a single map-led tool
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => (
-              <article
-                key={feature.title}
-                className="group relative rounded-3xl border-3 border-gray-200 bg-white p-6 md:p-8 shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
-              >
-                <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-violet-500 to-purple-600 rounded-l-3xl" />
-
-                <div className="relative mb-5 flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                  <feature.icon className="h-8 w-8 md:h-10 md:w-10 text-white" aria-hidden="true" />
-                </div>
-
-                <h3 className="text-xl md:text-2xl font-black text-gray-950 mb-3">{feature.title}</h3>
-                <p className="text-base md:text-lg leading-relaxed text-gray-600 font-medium">{feature.description}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+      <GapFinderCapabilitiesShowcase />
 
       <GapFinderPricing isLoggedIn={isLoggedIn} />
 

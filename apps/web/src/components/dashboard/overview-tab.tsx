@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, Plus, Wrench } from 'lucide-react';
+import { Search, Plus, Wrench, MapPinned } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface OverviewTabProps {
@@ -18,11 +18,11 @@ export function OverviewTab({ userId }: OverviewTabProps) {
             What would you like to do today?
           </h2>
           <p className="text-xl text-gray-600">
-            Choose how you'd like to get started with SiteMatcher
+            Choose how you&apos;d like to get started with SiteMatcher
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
           {/* Option 1: Browse Directory */}
           <Link href="/new-dashboard/get-started/browse">
             <div className="border-3 border-violet-200 rounded-2xl p-8 hover:border-violet-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer bg-white h-full">
@@ -52,7 +52,7 @@ export function OverviewTab({ userId }: OverviewTabProps) {
                 </h3>
                 <Badge className="bg-green-100 text-green-700 mb-3 text-sm">Free, forever!</Badge>
                 <p className="text-base text-gray-600">
-                  Share what you're looking for with our community
+                  Share what you&apos;re looking for with our community
                 </p>
               </div>
             </div>
@@ -70,6 +70,23 @@ export function OverviewTab({ userId }: OverviewTabProps) {
                 </h3>
                 <p className="text-base text-gray-600">
                   Quickly assess sites with our tools
+                </p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Option 4: GapFinder */}
+          <Link href="/gapfinder">
+            <div className="border-3 border-violet-200 rounded-2xl p-8 hover:border-violet-400 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer bg-white h-full">
+              <div className="flex flex-col items-center text-center">
+                <div className="p-4 bg-violet-100 rounded-xl mb-6">
+                  <MapPinned className="h-10 w-10 text-violet-600" />
+                </div>
+                <h3 className="text-2xl font-black text-gray-900 mb-3">
+                  Find Suitable Areas
+                </h3>
+                <p className="text-base text-gray-600">
+                  Rapidly find locations for a new site that meet your criteria
                 </p>
               </div>
             </div>
