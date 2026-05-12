@@ -8,6 +8,7 @@ interface NearbyStoresCSVParams {
   radiusMeters: number
   filterSummary: string
   travelTimes: Record<string, TravelTimeData>
+  activeAssessArea?: 'area-a' | 'area-b' | null
 }
 
 export function exportNearbyStoresToCSV(params: NearbyStoresCSVParams): void {
@@ -21,7 +22,8 @@ export function generateNearbyStoresCSV({
   selectedPoint,
   radiusMeters,
   filterSummary,
-  travelTimes
+  travelTimes,
+  activeAssessArea = 'area-a'
 }: NearbyStoresCSVParams): string {
   const lines: string[] = []
 
@@ -32,7 +34,7 @@ export function generateNearbyStoresCSV({
   lines.push('Store Name,Distance (mi),Walking Time (min),Driving Time (min)')
 
   for (const store of stores) {
-    const travelTime = travelTimes[store.id]
+    const travelTime = getTravelTimeForStore(travelTimes, store.id, activeAssessArea)
     const distance =
       Number.isFinite(store.lat) && Number.isFinite(store.lon)
         ? calculateDistance(selectedPoint.lat, selectedPoint.lng, store.lat, store.lon).toString()
@@ -53,6 +55,22 @@ export function generateNearbyStoresCSV({
   }
 
   return lines.join('\n')
+}
+
+function getTravelTimeForStore(
+  travelTimes: Record<string, TravelTimeData>,
+  storeId: string,
+  activeAssessArea: 'area-a' | 'area-b' | null
+): TravelTimeData | undefined {
+  const area = activeAssessArea || 'area-a'
+  const legacyArea = area === 'area-a' ? 'a' : 'b'
+  const keys = [
+    `${storeId}:${area}`,
+    `${storeId}:${legacyArea}`,
+    storeId
+  ]
+
+  return keys.map(key => travelTimes[key]).find(Boolean)
 }
 
 function formatRadius(radiusMeters: number): string {

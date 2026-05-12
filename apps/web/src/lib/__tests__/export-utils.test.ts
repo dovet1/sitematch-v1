@@ -129,4 +129,50 @@ describe('generateNearbyStoresCSV', () => {
     expect(csv).toContain('"6",""')
     expect(csv).toContain('"No Times",')
   })
+
+  it('writes rounded travel time minutes stored with the Area A cache key', () => {
+    const travelTimes: Record<string, TravelTimeData> = {
+      'store-1:area-a': {
+        walking: { duration: 745, distance: 1000 },
+        driving: { duration: 295, distance: 1200 }
+      }
+    }
+
+    const csv = generateNearbyStoresCSV({
+      stores: [createStore({ id: 'store-1', name: 'Area A Times' })],
+      selectedPoint,
+      radiusMeters: 5000,
+      filterSummary: 'None',
+      travelTimes
+    })
+
+    expect(csv).toContain('"Area A Times",')
+    expect(csv).toContain('"12","5"')
+  })
+
+  it('writes rounded travel time minutes for the active Area B cache key', () => {
+    const travelTimes: Record<string, TravelTimeData> = {
+      'store-1:area-a': {
+        walking: { duration: 120, distance: 250 },
+        driving: { duration: 60, distance: 300 }
+      },
+      'store-1:area-b': {
+        walking: { duration: 1260, distance: 1800 },
+        driving: { duration: 540, distance: 2600 }
+      }
+    }
+
+    const csv = generateNearbyStoresCSV({
+      stores: [createStore({ id: 'store-1', name: 'Area B Times' })],
+      selectedPoint,
+      radiusMeters: 5000,
+      filterSummary: 'None',
+      travelTimes,
+      activeAssessArea: 'area-b'
+    })
+
+    expect(csv).toContain('"Area B Times",')
+    expect(csv).toContain('"21","9"')
+    expect(csv).not.toContain('"2","1"')
+  })
 })

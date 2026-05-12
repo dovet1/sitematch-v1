@@ -1183,7 +1183,8 @@ export default function BUAsPage() {
         selectedPoint: pointToExport,
         radiusMeters: radiusToExport,
         filterSummary,
-        travelTimes
+        travelTimes,
+        activeAssessArea: comparisonMode === 'comparing' ? activeArea : 'area-a'
       })
     } catch (error) {
       console.error('Export failed:', error)
