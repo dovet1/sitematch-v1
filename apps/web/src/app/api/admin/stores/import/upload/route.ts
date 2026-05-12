@@ -732,9 +732,13 @@ export async function POST(request: NextRequest) {
           p_user_id: user.id
         }).then(({ error }) => {
           if (error) {
-            console.log('Rebuild RPC response (timeout expected):', error.message)
+            if (error.message?.includes('timeout')) {
+              console.log('Rebuild RPC timeout (expected - rebuild continues on server):', error.message)
+            } else {
+              console.error('Rebuild RPC error:', error.message)
+            }
           } else {
-            console.log('Rebuild completed')
+            console.log('Rebuild completed successfully')
           }
         })
 

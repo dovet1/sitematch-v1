@@ -195,7 +195,7 @@ Shell Reading,456 Bath Rd,Shell,Petrol,RG1 2BB,Reading,51.454,-0.972`}
                 Analyzing...
               </span>
             ) : (
-              'Preview Import'
+              'Run Import'
             )}
           </button>
         </div>
