@@ -74,7 +74,7 @@ export function ResultsPanel({
 
   return (
     <div
-      className="w-[280px] border-l bg-background flex flex-col"
+      className="flex h-full min-h-0 w-[280px] flex-col border-l bg-background"
       role="region"
       aria-label={`${isFindGapsMode ? 'Matching Locations' : 'Nearby Brands'} Panel`}
     >
@@ -152,10 +152,11 @@ export function ResultsPanel({
 
       {/* Results List */}
       <div
-        className="flex-1 overflow-y-auto pt-2 px-1"
+        className="min-h-0 flex-1 overflow-y-auto px-1 pt-2"
         role="list"
         aria-labelledby="results-panel-title"
         aria-busy={isLoading}
+        data-testid="results-scroll-container"
       >
         {isLoading ? (
           <div className="p-4 text-center text-sm text-gray-500">
@@ -365,17 +366,21 @@ export function ResultsPanel({
           </div>
         )}
 
-        {/* Missing Fascias Section - only shown in Assess Area mode */}
-        {!isFindGapsMode && (
-          <div className="mt-2 px-3">
-            <MissingFasciasSection
-              missingFascias={missingFascias}
-              isLoading={isLoadingMissingFascias}
-              error={missingFasciasError}
-            />
-          </div>
-        )}
       </div>
+
+      {/* Missing Fascias Section - only shown in Assess Area mode */}
+      {!isFindGapsMode && (
+        <div
+          className="relative z-10 flex-shrink-0 border-t border-gray-200 bg-background px-3 py-2 shadow-[0_-8px_18px_rgba(15,23,42,0.08)]"
+          data-testid="missing-fascias-sticky-footer"
+        >
+          <MissingFasciasSection
+            missingFascias={missingFascias}
+            isLoading={isLoadingMissingFascias}
+            error={missingFasciasError}
+          />
+        </div>
+      )}
     </div>
   )
 }

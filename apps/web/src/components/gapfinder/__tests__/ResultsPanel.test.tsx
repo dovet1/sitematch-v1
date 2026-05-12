@@ -19,6 +19,28 @@ const renderResultsPanel = (props: Partial<ComponentProps<typeof ResultsPanel>> 
 }
 
 describe('ResultsPanel area indicator', () => {
+  it('keeps Missing Brands outside the scrollable results list in Assess Area mode', () => {
+    renderResultsPanel({
+      mode: 'assess-area'
+    })
+
+    const scrollContainer = screen.getByTestId('results-scroll-container')
+    const stickyFooter = screen.getByTestId('missing-fascias-sticky-footer')
+    const missingFasciasSection = screen.getByTestId('missing-fascias-section')
+
+    expect(stickyFooter).toContainElement(missingFasciasSection)
+    expect(scrollContainer).not.toContainElement(missingFasciasSection)
+  })
+
+  it('does not show Missing Brands in Find Gaps mode', () => {
+    renderResultsPanel({
+      mode: 'find-gaps'
+    })
+
+    expect(screen.queryByTestId('missing-fascias-sticky-footer')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('missing-fascias-section')).not.toBeInTheDocument()
+  })
+
   it('shows Area A as the active source in Assess Area mode', () => {
     renderResultsPanel({
       mode: 'assess-area',

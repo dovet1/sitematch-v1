@@ -6,22 +6,27 @@ import { ChevronDown, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import type { MissingFasciaInfo } from '@/lib/stores'
 import { useState } from 'react'
 import { MissingFasciaTree } from './MissingFasciaTree'
+import { cn } from '@/lib/utils'
 
 interface MissingFasciasSectionProps {
   missingFascias: MissingFasciaInfo[]
   isLoading: boolean
   error: string | null
+  className?: string
+  contentClassName?: string
 }
 
 export function MissingFasciasSection({
   missingFascias,
   isLoading,
-  error
+  error,
+  className,
+  contentClassName
 }: MissingFasciasSectionProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className={className}>
       <CollapsibleTrigger className="w-full group">
         <div className="flex items-center justify-between px-4 py-3 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 transition-colors rounded-lg">
           <div className="flex items-center gap-2">
@@ -38,7 +43,7 @@ export function MissingFasciasSection({
         </div>
       </CollapsibleTrigger>
 
-      <CollapsibleContent className="px-4 pb-4 pt-2">
+      <CollapsibleContent className={cn("max-h-80 overflow-y-auto px-4 pb-4 pt-2", contentClassName)}>
         {isLoading ? (
           <div className="flex items-center justify-center py-8 text-gray-500">
             <Loader2 className="h-5 w-5 animate-spin mr-2" />
