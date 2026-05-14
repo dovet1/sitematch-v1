@@ -361,7 +361,9 @@ export function UnifiedCategorySelector({
               <div className="ml-8 space-y-1 mt-1">
                 {node.brands.map((brandNode) => {
                   const isBrandExpanded = expandedBrands.has(brandNode.brand.id)
-                  const hasFascias = brandNode.fascias.length > 0
+                  const fasciaCount = brandNode.fascias.length
+                  const hasSingleFascia = fasciaCount === 1
+                  const hasMultipleFascias = fasciaCount > 1
                   const isFullySelected = isBrandFullySelected(brandNode)
                   const isPartiallySelected = isBrandPartiallySelected(brandNode)
 
@@ -378,27 +380,25 @@ export function UnifiedCategorySelector({
                           onCheckedChange={() => handleBrandToggle(brandNode)}
                           onClick={(e) => e.stopPropagation()}
                         />
-                        <CollapsibleTrigger
-                          className="flex-1 flex items-start justify-between cursor-pointer gap-2 text-left"
-                          aria-label={`${isBrandExpanded ? 'Collapse' : 'Expand'} ${brandNode.brand.name}`}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <Label
-                              htmlFor={`brand-${node.category.id}-${brandNode.brand.id}`}
-                              className="cursor-pointer text-sm inline"
-                            >
-                              {brandNode.brand.name}
-                            </Label>
-                            {hasFascias && brandNode.fascias.length > 1 && (
+                        {hasMultipleFascias ? (
+                          <CollapsibleTrigger
+                            className="flex-1 flex items-start justify-between cursor-pointer gap-2 text-left"
+                            aria-label={`${isBrandExpanded ? 'Collapse' : 'Expand'} ${brandNode.brand.name}`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <Label
+                                htmlFor={`brand-${node.category.id}-${brandNode.brand.id}`}
+                                className="cursor-pointer text-sm inline"
+                              >
+                                {brandNode.brand.name}
+                              </Label>
                               <span className="text-xs text-gray-500 ml-1.5">
-                                ({brandNode.fascias.length} types)
+                                ({fasciaCount} types)
                               </span>
-                            )}
-                            {!isBrandExpanded && isPartiallySelected && (
-                              <span className="inline-block w-1.5 h-1.5 bg-violet-500 rounded-full ml-1.5 align-middle" title="Some types selected" />
-                            )}
-                          </div>
-                          {hasFascias && (
+                              {!isBrandExpanded && isPartiallySelected && (
+                                <span className="inline-block w-1.5 h-1.5 bg-violet-500 rounded-full ml-1.5 align-middle" title="Some types selected" />
+                              )}
+                            </div>
                             <div className="flex-shrink-0 mt-0.5">
                               {isBrandExpanded ? (
                                 <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-150" />
@@ -406,11 +406,20 @@ export function UnifiedCategorySelector({
                                 <ChevronRight className="h-4 w-4 text-gray-500 transition-transform duration-150" />
                               )}
                             </div>
-                          )}
-                        </CollapsibleTrigger>
+                          </CollapsibleTrigger>
+                        ) : (
+                          <div className="flex-1 min-w-0">
+                            <Label
+                              htmlFor={`brand-${node.category.id}-${brandNode.brand.id}`}
+                              className={`cursor-pointer text-sm ${hasSingleFascia ? 'inline' : ''}`}
+                            >
+                              {brandNode.brand.name}
+                            </Label>
+                          </div>
+                        )}
                       </div>
 
-                      {hasFascias && (
+                      {hasMultipleFascias && (
                         <CollapsibleContent className="ml-8 space-y-1 mt-1">
                           {brandNode.fascias.map((fascia) => {
                             const isFasciaSelected = effectiveSelectedFasciaIds.has(fascia.id)

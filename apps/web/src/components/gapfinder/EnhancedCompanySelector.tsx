@@ -473,7 +473,9 @@ export function EnhancedCompanySelector({
             <div className="space-y-1 overflow-y-auto max-h-[400px]">
               {filteredBrands.map((brand) => {
                 const isExpanded = expandedBrands.has(brand.id)
-                const hasFascias = (brand.fascias?.length || 0) > 0
+                const fasciaCount = brand.fascias?.length || 0
+                const hasSingleFascia = fasciaCount === 1
+                const hasMultipleFascias = fasciaCount > 1
                 const isFullySelected = isBrandFullySelected(brand)
                 const isPartiallySelected = isBrandPartiallySelected(brand)
 
@@ -490,27 +492,25 @@ export function EnhancedCompanySelector({
                         onCheckedChange={() => handleBrandToggle(brand)}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <CollapsibleTrigger
-                        className="flex-1 flex items-start justify-between cursor-pointer gap-2 text-left"
-                        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${brand.name}`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <Label
-                            htmlFor={`brand-${brand.id}`}
-                            className="cursor-pointer text-sm inline"
-                          >
-                            {brand.name}
-                          </Label>
-                          {hasFascias && brand.fascias!.length > 1 && (
+                      {hasMultipleFascias ? (
+                        <CollapsibleTrigger
+                          className="flex-1 flex items-start justify-between cursor-pointer gap-2 text-left"
+                          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${brand.name}`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <Label
+                              htmlFor={`brand-${brand.id}`}
+                              className="cursor-pointer text-sm inline"
+                            >
+                              {brand.name}
+                            </Label>
                             <span className="text-xs text-gray-500 ml-1.5">
-                              ({brand.fascias!.length} types)
+                              ({fasciaCount} types)
                             </span>
-                          )}
-                          {!isExpanded && isPartiallySelected && (
-                            <span className="inline-block w-1.5 h-1.5 bg-violet-500 rounded-full ml-1.5 align-middle" title="Some types selected" />
-                          )}
-                        </div>
-                        {hasFascias && (
+                            {!isExpanded && isPartiallySelected && (
+                              <span className="inline-block w-1.5 h-1.5 bg-violet-500 rounded-full ml-1.5 align-middle" title="Some types selected" />
+                            )}
+                          </div>
                           <div className="flex-shrink-0 mt-0.5">
                             {isExpanded ? (
                               <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-150" />
@@ -518,11 +518,20 @@ export function EnhancedCompanySelector({
                               <ChevronRight className="h-4 w-4 text-gray-500 transition-transform duration-150" />
                             )}
                           </div>
-                        )}
-                      </CollapsibleTrigger>
+                        </CollapsibleTrigger>
+                      ) : (
+                        <div className="flex-1 min-w-0">
+                          <Label
+                            htmlFor={`brand-${brand.id}`}
+                            className={cn('cursor-pointer text-sm', hasSingleFascia && 'inline')}
+                          >
+                            {brand.name}
+                          </Label>
+                        </div>
+                      )}
                     </div>
 
-                    {hasFascias && (
+                    {hasMultipleFascias && (
                       <CollapsibleContent className="ml-8 space-y-1 mt-1">
                         {brand.fascias!.map((fascia) => {
                           const isFasciaSelected = selectedCompanies.includes(fascia.id)
