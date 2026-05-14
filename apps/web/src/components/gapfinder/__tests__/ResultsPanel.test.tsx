@@ -145,3 +145,48 @@ describe('ResultsPanel travel times', () => {
     expect(screen.getByText('7 min')).toBeInTheDocument()
   })
 })
+
+describe('ResultsPanel Assess Area store addresses', () => {
+  it('uses the fascia name as the store row title when available', () => {
+    renderResultsPanel({
+      mode: 'assess-area',
+      results: [{
+        id: 'store-1',
+        name: 'Internal Store Name',
+        fascia_name: 'Tesco Express',
+        fascia_id: 'fascia-1',
+        lat: 51.28,
+        lon: 1.08,
+        town: 'Canterbury',
+        postcode: 'CT1 2SG'
+      }],
+      selectedPoint: { lat: 51.27, lng: 1.07 }
+    })
+
+    expect(screen.getByText('Tesco Express')).toBeInTheDocument()
+    expect(screen.queryByText('Internal Store Name')).not.toBeInTheDocument()
+  })
+
+  it('does not repeat town and postcode when address line 1 already contains the full address', () => {
+    renderResultsPanel({
+      mode: 'assess-area',
+      results: [{
+        id: 'store-1',
+        name: 'Test Store',
+        fascia_id: 'fascia-1',
+        lat: 51.28,
+        lon: 1.08,
+        address_line_1: 'Unit 7, Parade, Canterbury, CT1 2SG',
+        address_line_2: null,
+        suburb: null,
+        town: 'Canterbury',
+        county: null,
+        postcode: 'CT1 2SG'
+      }],
+      selectedPoint: { lat: 51.27, lng: 1.07 }
+    })
+
+    expect(screen.getByText('Unit 7, Parade, Canterbury, CT1 2SG')).toBeInTheDocument()
+    expect(screen.queryByText('Canterbury, CT1 2SG')).not.toBeInTheDocument()
+  })
+})

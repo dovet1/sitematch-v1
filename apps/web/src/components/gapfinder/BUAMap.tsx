@@ -9,6 +9,9 @@ import { getFasciaMarkerColor } from '@/lib/sitesketcher/colors'
 import type { Store, ViewportStore } from '@/lib/stores'
 import type { TargetWithMetadata } from '@/lib/filter-utils'
 import { MapLegend, type MapLegendItem } from './MapLegend'
+import { formatStorePopupAddress, getStorePopupTitle } from './store-display'
+
+export { formatStorePopupAddress, getStorePopupTitle } from './store-display'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
@@ -108,33 +111,16 @@ function generateBUAPopupHTML(name: string, population: string): string {
 /**
  * Generate premium store marker popup HTML with color-coded icon
  */
-function generateStorePopupHTML(
-  storeName: string,
+export function generateStorePopupHTML(
+  storeTitle: string,
   address: string,
   fasciaColor: string
 ): string {
-  // Escape HTML to prevent XSS
-  const escapedName = storeName.replace(/[<>&"']/g, (c) => {
-    const escapeMap: Record<string, string> = {
-      '<': '&lt;',
-      '>': '&gt;',
-      '&': '&amp;',
-      '"': '&quot;',
-      "'": '&#39;'
-    }
-    return escapeMap[c] || c
-  })
-
-  const escapedAddress = address.replace(/[<>&"']/g, (c) => {
-    const escapeMap: Record<string, string> = {
-      '<': '&lt;',
-      '>': '&gt;',
-      '&': '&amp;',
-      '"': '&quot;',
-      "'": '&#39;'
-    }
-    return escapeMap[c] || c
-  })
+  const escapedTitle = escapeHtml(storeTitle)
+  const escapedAddress = address
+    .split('\n')
+    .map(line => escapeHtml(line))
+    .join('<br />')
 
   return `
     <div style="display: flex; flex-direction: column; width: 100%;">
@@ -142,7 +128,7 @@ function generateStorePopupHTML(
         <div style="background: ${fasciaColor}; border-radius: 6px; padding: 8px; display: flex; box-shadow: 0 2px 8px ${fasciaColor}40;">
           <div style="color: white; display: flex;">${STORE_SVG}</div>
         </div>
-        <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1e293b; line-height: 1.3; flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapedName}</h3>
+        <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1e293b; line-height: 1.3; flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${escapedTitle}</h3>
       </div>
       ${address ? `<div style="padding: 12px;"><div style="font-size: 13px; color: #6b7280; line-height: 1.5;">${escapedAddress}</div></div>` : ''}
     </div>
@@ -459,9 +445,8 @@ export function BUAMap({
   const openStorePopup = useCallback((store: Store | ViewportStore, color: string) => {
     if (!map.current) return
 
-    const address = [store.address_line_1, store.town, store.postcode]
-      .filter(Boolean)
-      .join(', ')
+    const address = formatStorePopupAddress(store)
+    const title = getStorePopupTitle(store)
 
     if (popup.current) {
       popup.current.remove()
@@ -472,7 +457,7 @@ export function BUAMap({
       className: 'premium-store-popup'
     })
       .setLngLat([store.lon, store.lat])
-      .setHTML(generateStorePopupHTML(store.name || 'Store', address, color))
+      .setHTML(generateStorePopupHTML(title, address, color))
       .addTo(map.current)
   }, [])
 
@@ -1106,14 +1091,13 @@ export function BUAMap({
       el.textContent = markerText
     }
 
-    const address = [store.address_line_1, store.town, store.postcode]
-      .filter(Boolean)
-      .join(', ')
+    const address = formatStorePopupAddress(store)
+    const title = getStorePopupTitle(store)
 
     const storePopup = new mapboxgl.Popup({
       offset: 15,
       className: 'premium-store-popup'
-    }).setHTML(generateStorePopupHTML(store.name || 'Store', address, color))
+    }).setHTML(generateStorePopupHTML(title, address, color))
 
     el.addEventListener('click', (event) => {
       event.preventDefault()

@@ -11,6 +11,7 @@ import { calculateDistance } from '@/lib/distance-utils'
 import type { TravelTimeData } from '@/types/travel-time'
 import { getFasciaMarkerColor } from '@/lib/sitesketcher/colors'
 import { MissingFasciasSection } from './MissingFasciasSection'
+import { formatStorePopupAddress, getStorePopupTitle } from './store-display'
 
 interface ResultsPanelProps {
   results: BUA[] | any[] // BUA[] for Find Gaps mode, Store[] for Assess Area mode
@@ -220,6 +221,8 @@ export function ResultsPanel({
               const error = errorKey ? travelTimeErrors[errorKey] : undefined
               const hasTravelTime = travelTime && (travelTime.walking || travelTime.driving)
               const badgeNumber = assessBadgeByStoreId[store.id]
+              const storeAddress = formatStorePopupAddress(store)
+              const storeTitle = getStorePopupTitle(store)
 
               return (
                 <div
@@ -264,13 +267,13 @@ export function ResultsPanel({
                       <div className="flex-1 min-w-0">
                         {/* Store name */}
                         <div className="text-sm font-medium text-gray-900 truncate">
-                          {store.name}
+                          {storeTitle}
                         </div>
 
                         {/* Location info */}
-                        {(store.town || store.postcode) && (
-                          <div className="text-xs text-gray-600 truncate mt-0.5">
-                            {[store.town, store.postcode].filter(Boolean).join(', ')}
+                        {storeAddress && (
+                          <div className="text-xs text-gray-600 mt-0.5 whitespace-pre-line leading-4">
+                            {storeAddress}
                           </div>
                         )}
 

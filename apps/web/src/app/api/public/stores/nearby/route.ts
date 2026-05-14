@@ -1,7 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createStoreService } from '@/lib/stores-service'
+import { createServerClient } from '@/lib/supabase'
+import type { Store } from '@/lib/stores'
 
 export const dynamic = 'force-dynamic'
+
+async function addFasciaNames(stores: Store[]): Promise<Store[]> {
+  if (stores.length === 0) {
+    return stores
+  }
+
+  const fasciaIds = Array.from(new Set(stores.map(store => store.fascia_id).filter(Boolean)))
+  if (fasciaIds.length === 0) {
+    return stores
+  }
+
+  const supabase = await createServerClient()
+  const { data } = await supabase
+    .from('fascias')
+    .select('id, name')
+    .in('id', fasciaIds)
+
+  const fasciaNameById = new Map((data || []).map((fascia: any) => [fascia.id, fascia.name]))
+
+  return stores.map(store => ({
+    ...store,
+    fascia_name: fasciaNameById.get(store.fascia_id) ?? store.fascia_name ?? null
+  }))
+}
 
 /**
  * Get stores near a point - used for Assess Area mode
@@ -52,8 +78,9 @@ export async function GET(request: NextRequest) {
 
     const service = await createStoreService()
     const stores = await service.getStoresNearPoint(lat, lon, radius, fasciaIds, categoryIds, brandIds)
+    const enrichedStores = await addFasciaNames(stores)
 
-    return NextResponse.json({ stores, total: stores.length })
+    return NextResponse.json({ stores: enrichedStores, total: enrichedStores.length })
   } catch (error) {
     return NextResponse.json(
       { stores: [], total: 0, error: error instanceof Error ? error.message : 'Internal server error' },

@@ -36,6 +36,7 @@ export interface Store {
   store_id: string
   brand_id: string  // UUID in database
   fascia_id: string  // UUID in database
+  fascia_name?: string | null
   name: string
   lon: number
   lat: number
@@ -57,6 +58,7 @@ export interface ViewportStore {
   store_id: string | number
   brand_id: string
   fascia_id: string
+  fascia_name?: string | null
   name: string
   lat: number
   lon: number

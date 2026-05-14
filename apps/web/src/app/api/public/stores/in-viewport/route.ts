@@ -56,6 +56,55 @@ async function addMatchedTargetIds(
   })
 }
 
+async function enrichStoresForDisplay(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  stores: any[]
+) {
+  if (stores.length === 0) {
+    return stores
+  }
+
+  const storeIds = Array.from(new Set(stores.map(store => store.id).filter(Boolean)))
+  const fasciaIds = Array.from(new Set(stores.map(store => store.fascia_id).filter(Boolean)))
+
+  const [storeDetailsResult, fasciasResult] = await Promise.all([
+    storeIds.length > 0
+      ? supabase
+          .from('stores')
+          .select('id, address_line_1, address_line_2, suburb, town, county, postcode')
+          .in('id', storeIds)
+      : Promise.resolve({ data: [] }),
+    fasciaIds.length > 0
+      ? supabase
+          .from('fascias')
+          .select('id, name')
+          .in('id', fasciaIds)
+      : Promise.resolve({ data: [] })
+  ])
+
+  const storeDetailsById = new Map(
+    (storeDetailsResult.data || []).map((store: any) => [store.id, store])
+  )
+  const fasciaNameById = new Map(
+    (fasciasResult.data || []).map((fascia: any) => [fascia.id, fascia.name])
+  )
+
+  return stores.map(store => {
+    const details = storeDetailsById.get(store.id) || {}
+
+    return {
+      ...store,
+      address_line_1: details.address_line_1 ?? store.address_line_1 ?? null,
+      address_line_2: details.address_line_2 ?? store.address_line_2 ?? null,
+      suburb: details.suburb ?? store.suburb ?? null,
+      town: details.town ?? store.town ?? null,
+      county: details.county ?? store.county ?? null,
+      postcode: details.postcode ?? store.postcode ?? null,
+      fascia_name: fasciaNameById.get(store.fascia_id) ?? store.fascia_name ?? null
+    }
+  })
+}
+
 /**
  * Get stores within viewport bounds - used for Find Gaps mode with filters
  *
@@ -176,6 +225,7 @@ export async function GET(request: NextRequest) {
 
       if (!error) {
         includedStores = await addMatchedTargetIds(supabase, data || [], includeBrandIds, includeCategories)
+        includedStores = await enrichStoresForDisplay(supabase, includedStores)
         totalIncluded = includedStores.length
       }
     }
@@ -197,6 +247,7 @@ export async function GET(request: NextRequest) {
 
       if (!error) {
         excludedStores = await addMatchedTargetIds(supabase, data || [], excludeBrandIds, excludeCategories)
+        excludedStores = await enrichStoresForDisplay(supabase, excludedStores)
         totalExcluded = excludedStores.length
       }
     }
@@ -224,6 +275,7 @@ export async function GET(request: NextRequest) {
           proximityIncludeBrandIds,
           proximityIncludeCategories
         )
+        proximityIncludedStores = await enrichStoresForDisplay(supabase, proximityIncludedStores)
         totalProximityIncluded = proximityIncludedStores.length
       }
     }
@@ -251,6 +303,7 @@ export async function GET(request: NextRequest) {
           proximityExcludeBrandIds,
           proximityExcludeCategories
         )
+        proximityExcludedStores = await enrichStoresForDisplay(supabase, proximityExcludedStores)
         totalProximityExcluded = proximityExcludedStores.length
       }
     }
