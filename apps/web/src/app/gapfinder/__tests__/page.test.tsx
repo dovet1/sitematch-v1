@@ -18,6 +18,18 @@ jest.mock('next/link', () => {
   )
 })
 
+jest.mock('next/image', () => {
+  return function MockImage({ alt, priority: _priority, ...props }: { alt: string; priority?: boolean }) {
+    return <img alt={alt} {...props} />
+  }
+})
+
+jest.mock('@/components/ui/button', () => ({
+  Button: ({ children, asChild: _asChild, ...props }: { children: ReactNode; asChild?: boolean }) => (
+    <button {...props}>{children}</button>
+  ),
+}))
+
 jest.mock('@/contexts/auth-context', () => ({
   useAuth: jest.fn(),
 }))
@@ -80,8 +92,9 @@ describe('GapFinder page viewport gate', () => {
 
     render(<GapFinderPage />)
 
-    expect(await screen.findByText('Unlock GapFinder')).toBeInTheDocument()
-    expect(screen.getAllByText('Start free trial')).toHaveLength(2)
+    expect(await screen.findByText('Find retail opportunities')).toBeInTheDocument()
+    expect(screen.getByText('in minutes, not weeks')).toBeInTheDocument()
+    expect(screen.getAllByText(/Start Free Trial/i).length).toBeGreaterThan(0)
     expect(screen.queryByText('GapFinder works best on a larger screen')).not.toBeInTheDocument()
     expect(screen.queryByText('GapFinder tool mounted')).not.toBeInTheDocument()
   })
@@ -95,8 +108,9 @@ describe('GapFinder page viewport gate', () => {
 
     render(<GapFinderPage />)
 
-    expect(await screen.findByText('Unlock GapFinder')).toBeInTheDocument()
-    expect(screen.getByText('Find retail white space, compare locations and understand which operators are missing from the markets that matter. GapFinder helps you analyse built-up areas, neighbouring fascias and occupier requirements in one focused workflow.')).toBeInTheDocument()
+    expect(await screen.findByText('Find retail opportunities')).toBeInTheDocument()
+    expect(screen.getByText('in minutes, not weeks')).toBeInTheDocument()
+    expect(screen.getByText('Trusted by 1,400+ property professionals')).toBeInTheDocument()
     expect(screen.queryByText('GapFinder tool mounted')).not.toBeInTheDocument()
   })
 

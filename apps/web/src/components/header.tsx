@@ -27,20 +27,49 @@ import { AuthChoiceModal } from '@/components/auth/auth-choice-modal'
 import { UserMenu } from '@/components/auth/user-menu'
 import { UserStatusHeader } from '@/components/auth/user-status-header'
 import { useAuth } from '@/contexts/auth-context'
+import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess'
 import { Menu, X, Sparkles, LogOut, User, Shield, LayoutDashboard, CreditCard, Loader2, LogOutIcon, ChevronDown } from 'lucide-react'
 import { useEffect } from 'react'
 
 export function Header() {
-  const { user, loading, isAdmin } = useAuth()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
-  const router = useRouter()
-  
+
   // Hide header on specific pages that need full-screen experience
   // Only hide on the actual SiteSketcher app, not the landing page
   if (pathname === '/search' || pathname === '/sitesketcher' || pathname?.startsWith('/new-dashboard')) {
     return null
   }
+
+  if (pathname === '/gapfinder') {
+    return <GapFinderHeaderGate />
+  }
+
+  return <HeaderContent />
+}
+
+function GapFinderHeaderGate() {
+  const { user } = useAuth()
+  const { hasAccess, loading } = useSubscriptionAccess()
+
+  if (!user) {
+    return <HeaderContent />
+  }
+
+  if (loading) {
+    return null
+  }
+
+  if (hasAccess) {
+    return null
+  }
+
+  return <HeaderContent />
+}
+
+function HeaderContent() {
+  const { user, loading, isAdmin } = useAuth()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const router = useRouter()
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
