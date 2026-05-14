@@ -288,12 +288,12 @@ export function UnifiedCategorySelector({
     const hasBrands = node.brands.length > 0
 
     return (
-      <div key={node.category.id} style={{ marginLeft: depth > 0 ? '1.5rem' : '0' }}>
+      <div key={node.category.id} style={{ marginLeft: depth > 0 ? '1.25rem' : '0' }}>
         <Collapsible
           open={isExpanded}
           onOpenChange={() => toggleCategoryExpansion(node.category.id)}
         >
-          <div className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded-md transition-all duration-150">
+          <div className="group flex items-center space-x-1.5 hover:bg-gray-50 p-1.5 rounded-md transition-all duration-150">
             <Checkbox
               id={`cat-${node.category.id}`}
               checked={isCategoryPartiallySelected(node) ? "indeterminate" : isCategoryFullySelected(node)}
@@ -333,7 +333,7 @@ export function UnifiedCategorySelector({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 p-0 hover:bg-gray-100"
+                className="h-6 w-6 p-0 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
                 aria-label={`${isCategoryVisible ? 'Hide' : 'Show'} ${node.category.name} on map`}
                 onClick={(e) => {
                   e.stopPropagation()
@@ -347,9 +347,9 @@ export function UnifiedCategorySelector({
                 }}
               >
                 {isCategoryVisible ? (
-                  <Eye className="h-4 w-4 text-gray-600" />
+                  <Eye className="h-3.5 w-3.5 text-gray-600" />
                 ) : (
-                  <EyeOff className="h-4 w-4 text-gray-400" />
+                  <EyeOff className="h-3.5 w-3.5 text-gray-400" />
                 )}
               </Button>
             )}
@@ -358,7 +358,7 @@ export function UnifiedCategorySelector({
           <CollapsibleContent>
             {/* Render brands under this category */}
             {hasBrands && (
-              <div className="ml-8 space-y-1 mt-1">
+              <div className="ml-5 space-y-1 mt-1">
                 {node.brands.map((brandNode) => {
                   const isBrandExpanded = expandedBrands.has(brandNode.brand.id)
                   const fasciaCount = brandNode.fascias.length
@@ -373,7 +373,7 @@ export function UnifiedCategorySelector({
                       open={isBrandExpanded}
                       onOpenChange={() => toggleBrandExpansion(brandNode.brand.id)}
                     >
-                      <div className="flex items-center space-x-2 hover:bg-gray-50 p-2 rounded-md transition-all duration-150">
+                      <div className="flex items-center space-x-1.5 hover:bg-gray-50 p-1.5 rounded-md transition-all duration-150">
                         <Checkbox
                           id={`brand-${node.category.id}-${brandNode.brand.id}`}
                           checked={isPartiallySelected ? "indeterminate" : isFullySelected}
@@ -420,7 +420,7 @@ export function UnifiedCategorySelector({
                       </div>
 
                       {hasMultipleFascias && (
-                        <CollapsibleContent className="ml-8 space-y-1 mt-1">
+                        <CollapsibleContent className="ml-5 space-y-1 mt-1">
                           {brandNode.fascias.map((fascia) => {
                             const isFasciaSelected = effectiveSelectedFasciaIds.has(fascia.id)
                             const isFasciaVisible = companiesVisibility?.[fascia.id] ?? true
@@ -428,9 +428,9 @@ export function UnifiedCategorySelector({
                             return (
                               <div
                                 key={fascia.id}
-                                className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-md transition-all duration-150"
+                                className="group flex items-center justify-between hover:bg-gray-50 p-1.5 rounded-md transition-all duration-150"
                               >
-                                <div className="flex items-center space-x-2 flex-1 cursor-pointer" onClick={() => handleFasciaToggle(fascia.id)}>
+                                <div className="flex items-center space-x-1.5 flex-1 cursor-pointer" onClick={() => handleFasciaToggle(fascia.id)}>
                                   <Checkbox
                                     id={`fascia-${fascia.id}`}
                                     checked={isFasciaSelected}
@@ -450,7 +450,7 @@ export function UnifiedCategorySelector({
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 p-0 hover:bg-gray-100"
+                                    className="h-6 w-6 p-0 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
                                     aria-label={`${isFasciaVisible ? 'Hide' : 'Show'} ${fascia.name} on map`}
                                     onClick={(e) => {
                                       e.stopPropagation()
@@ -464,9 +464,9 @@ export function UnifiedCategorySelector({
                                     }}
                                   >
                                     {isFasciaVisible ? (
-                                      <Eye className="h-4 w-4 text-gray-600" />
+                                      <Eye className="h-3.5 w-3.5 text-gray-600" />
                                     ) : (
-                                      <EyeOff className="h-4 w-4 text-gray-400" />
+                                      <EyeOff className="h-3.5 w-3.5 text-gray-400" />
                                     )}
                                   </Button>
                                 )}
