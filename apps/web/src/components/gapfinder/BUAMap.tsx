@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { X } from 'lucide-react'
+import { Box, Map as MapIcon, X } from 'lucide-react'
 import { formatPopulation } from '@/lib/format-population'
 import { getFasciaMarkerColor } from '@/lib/sitesketcher/colors'
 import type { Store, ViewportStore } from '@/lib/stores'
@@ -24,6 +24,8 @@ const REQUIREMENT_SOURCE_ID = 'requirement-locations-source'
 const REQUIREMENT_CLUSTER_LAYER_ID = 'requirement-locations-clusters'
 const REQUIREMENT_CLUSTER_COUNT_LAYER_ID = 'requirement-locations-cluster-count'
 const REQUIREMENT_POINT_LAYER_ID = 'requirement-locations-point'
+const TERRAIN_SOURCE_ID = 'mapbox-dem'
+const THREE_D_BUILDINGS_LAYER_ID = 'gapfinder-3d-buildings'
 
 function isValidCoordinate(point?: { lat: number; lng: number } | null): point is { lat: number; lng: number } {
   return !!point && Number.isFinite(point.lat) && Number.isFinite(point.lng)
@@ -202,6 +204,78 @@ export function isRequirementLayerClick(
   } catch (error) {
     console.error('Failed to query requirement marker click:', error)
     return false
+  }
+}
+
+function getFirstSymbolLayerId(mapInstance: mapboxgl.Map): string | undefined {
+  const layers = mapInstance.getStyle().layers || []
+  const firstSymbolLayer = layers.find(layer =>
+    layer.type === 'symbol' && Boolean(layer.layout?.['text-field'])
+  )
+
+  return firstSymbolLayer?.id
+}
+
+export function enableGapFinder3DMode(mapInstance: mapboxgl.Map) {
+  if (!mapInstance.getSource(TERRAIN_SOURCE_ID)) {
+    mapInstance.addSource(TERRAIN_SOURCE_ID, {
+      type: 'raster-dem',
+      url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+      tileSize: 512,
+      maxzoom: 14
+    })
+  }
+
+  mapInstance.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: 1.2 })
+  mapInstance.setFog({
+    color: 'rgb(236, 242, 255)',
+    'high-color': 'rgb(181, 201, 255)',
+    'horizon-blend': 0.2
+  })
+
+  if (mapInstance.getLayer(THREE_D_BUILDINGS_LAYER_ID)) {
+    mapInstance.setLayoutProperty(THREE_D_BUILDINGS_LAYER_ID, 'visibility', 'visible')
+    return
+  }
+
+  mapInstance.addLayer({
+    id: THREE_D_BUILDINGS_LAYER_ID,
+    source: 'composite',
+    'source-layer': 'building',
+    filter: ['==', 'extrude', 'true'],
+    type: 'fill-extrusion',
+    minzoom: 15,
+    paint: {
+      'fill-extrusion-color': '#d1d5db',
+      'fill-extrusion-height': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        15,
+        0,
+        15.05,
+        ['get', 'height']
+      ],
+      'fill-extrusion-base': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        15,
+        0,
+        15.05,
+        ['get', 'min_height']
+      ],
+      'fill-extrusion-opacity': 0.68
+    }
+  }, getFirstSymbolLayerId(mapInstance))
+}
+
+export function disableGapFinder3DMode(mapInstance: mapboxgl.Map) {
+  mapInstance.setTerrain(null)
+  mapInstance.setFog(null)
+
+  if (mapInstance.getLayer(THREE_D_BUILDINGS_LAYER_ID)) {
+    mapInstance.setLayoutProperty(THREE_D_BUILDINGS_LAYER_ID, 'visibility', 'none')
   }
 }
 
@@ -400,11 +474,13 @@ export function BUAMap({
   const map = useRef<mapboxgl.Map | null>(null)
   const popup = useRef<mapboxgl.Popup | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [is3DMode, setIs3DMode] = useState(false)
   const pointMarker = useRef<mapboxgl.Marker | null>(null)
   const pointMarkerB = useRef<mapboxgl.Marker | null>(null)
   const radiusCircle = useRef<string | null>(null)
   const storeMarkers = useRef<mapboxgl.Marker[]>([])
   const isAutoFitting = useRef(false)
+  const hasApplied3DMode = useRef(false)
   const skipNextCenterFlyTo = useRef(false)
   const suppressNextPointSelection = useRef(false)
   const lastHandledSidebarSelection = useRef(0)
@@ -698,6 +774,47 @@ export function BUAMap({
       }
     }
   }, [mapLoaded, mode])
+
+  // Toggle Mapbox terrain and building extrusions without recreating the map.
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !map.current.isStyleLoaded()) return
+
+    const apply3DMode = () => {
+      if (!map.current) return
+
+      try {
+        if (is3DMode) {
+          hasApplied3DMode.current = true
+          enableGapFinder3DMode(map.current)
+          map.current.easeTo({
+            pitch: 60,
+            duration: 800,
+            essential: true
+          })
+        } else {
+          if (!hasApplied3DMode.current) return
+
+          disableGapFinder3DMode(map.current)
+          map.current.easeTo({
+            pitch: 0,
+            bearing: 0,
+            duration: 800,
+            essential: true
+          })
+        }
+      } catch (error) {
+        console.error('Failed to toggle GapFinder 3D mode:', error)
+      }
+    }
+
+    apply3DMode()
+
+    map.current.on('style.load', apply3DMode)
+
+    return () => {
+      map.current?.off('style.load', apply3DMode)
+    }
+  }, [is3DMode, mapLoaded])
 
   // Hide the BUA overlay while Assess Area mode is active, but keep layers registered.
   useEffect(() => {
@@ -1580,6 +1697,38 @@ export function BUAMap({
   return (
     <div className={`relative ${className}`}>
       <div ref={mapContainer} className="w-full h-full" style={{ position: 'relative' }} />
+      {mapLoaded && (
+        <div className="absolute top-4 right-16 z-10 flex overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
+          <button
+            type="button"
+            onClick={() => setIs3DMode(false)}
+            className={`flex h-9 items-center gap-1.5 px-3 text-xs font-semibold transition-colors ${
+              !is3DMode
+                ? 'bg-violet-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+            aria-label="Switch GapFinder map to 2D mode"
+            aria-pressed={!is3DMode}
+          >
+            <MapIcon className="h-3.5 w-3.5" aria-hidden="true" />
+            2D
+          </button>
+          <button
+            type="button"
+            onClick={() => setIs3DMode(true)}
+            className={`flex h-9 items-center gap-1.5 border-l border-gray-200 px-3 text-xs font-semibold transition-colors ${
+              is3DMode
+                ? 'bg-violet-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+            aria-label="Switch GapFinder map to 3D mode"
+            aria-pressed={is3DMode}
+          >
+            <Box className="h-3.5 w-3.5" aria-hidden="true" />
+            3D
+          </button>
+        </div>
+      )}
       {!mapLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
           <div className="text-center">

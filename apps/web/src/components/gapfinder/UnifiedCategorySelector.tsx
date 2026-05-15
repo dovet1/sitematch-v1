@@ -311,11 +311,6 @@ export function UnifiedCategorySelector({
                 >
                   {node.category.name}
                 </Label>
-                {hasBrands && (
-                  <span className="text-xs text-gray-500 ml-1.5">
-                    ({node.brands.length} {node.brands.length === 1 ? 'brand' : 'brands'})
-                  </span>
-                )}
               </div>
               {(hasChildren || hasBrands) && (
                 <div className="flex-shrink-0 mt-0.5">
