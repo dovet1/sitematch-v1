@@ -245,7 +245,7 @@ export function CompleteSection({ data, onReset }: CompleteSectionProps) {
                 Download Failed Stores CSV
               </button>
               <p className="text-xs text-red-700 mt-2">
-                The CSV includes all original columns plus: failure_reason, mapbox_lat, mapbox_lon, google_lat, google_lon
+                The CSV includes all original columns plus: failure_reason, mapbox_lat, mapbox_lon, google_lat, google_lon, google_place_id
               </p>
             </div>
           </div>

@@ -14,6 +14,7 @@ export interface CSVRow {
   county?: string
   lat?: number | string
   lon?: number | string
+  google_place_id?: string  // For retry imports with manually corrected coordinates
   address_line_1?: string
   address_line_2?: string
   pqi?: string

@@ -50,6 +50,9 @@ interface ProcessedRow {
   googleLon?: number
   googlePlaceId?: string
   distance?: number
+  // Retry flow tracking
+  isRetryRow?: boolean  // True if google_place_id provided in CSV
+  skipGoogleValidation?: boolean  // True if retry row should skip Google validation
   // Entity IDs (Phase 2)
   brandId?: string
   fasciaId?: string
@@ -125,7 +128,7 @@ async function geocodeAddress(
 }
 
 async function batchGeocodeMapbox(rows: ProcessedRow[]): Promise<void> {
-  const rowsNeedingGeocode = rows.filter(r => !r.failed && !r.lat && !r.lon)
+  const rowsNeedingGeocode = rows.filter(r => !r.failed && r.lat == null && r.lon == null)
 
   console.log(`Geocoding ${rowsNeedingGeocode.length} rows with Mapbox...`)
 
@@ -251,9 +254,20 @@ async function validateWithGooglePlaces(
 }
 
 async function batchValidateGoogle(rows: ProcessedRow[], startTime: number): Promise<void> {
-  const rowsNeedingValidation = rows.filter(r => !r.failed && (r.mapboxLat || r.lat) && (r.mapboxLon || r.lon))
+  const rowsNeedingValidation = rows.filter(r =>
+    !r.failed &&
+    !r.skipGoogleValidation &&
+    (r.mapboxLat != null || r.lat != null) &&
+    (r.mapboxLon != null || r.lon != null)
+  )
 
   console.log(`Validating ${rowsNeedingValidation.length} rows with Google Places...`)
+
+  // Log skipped retry rows for visibility
+  const skippedRetryCount = rows.filter(r => !r.failed && r.skipGoogleValidation).length
+  if (skippedRetryCount > 0) {
+    console.log(`Skipping Google validation for ${skippedRetryCount} retry rows (google_place_id provided)`)
+  }
 
   for (let i = 0; i < rowsNeedingValidation.length; i += GOOGLE_CONCURRENCY) {
     // Check timeout
@@ -273,8 +287,8 @@ async function batchValidateGoogle(rows: ProcessedRow[], startTime: number): Pro
 
     const results = await Promise.allSettled(
       batch.map(async row => {
-        const lat = row.mapboxLat || row.lat!
-        const lon = row.mapboxLon || row.lon!
+        const lat = row.mapboxLat ?? row.lat!
+        const lon = row.mapboxLon ?? row.lon!
         const result = await validateWithGooglePlaces(
           row.name,
           row.address,
@@ -453,26 +467,38 @@ function generateFailedCSV(rows: ProcessedRow[]): string {
   const firstOriginal = failedRows[0].original
   const originalColumns = Object.keys(firstOriginal)
 
-  // Build CSV data
-  const csvData = failedRows.map(row => ({
-    ...row.original,
-    failure_reason: row.failureReason || 'Unknown error',
-    mapbox_lat: row.mapboxLat?.toString() || '',
-    mapbox_lon: row.mapboxLon?.toString() || '',
-    google_lat: row.googleLat?.toString() || '',
-    google_lon: row.googleLon?.toString() || ''
-  }))
+  // Diagnostic columns to append
+  const diagnosticColumns = [
+    'failure_reason',
+    'mapbox_lat',
+    'mapbox_lon',
+    'google_lat',
+    'google_lon',
+    'google_place_id'
+  ]
+
+  // De-duplicate columns - remove diagnostics that already exist in original
+  const columnsToAppend = diagnosticColumns.filter(col => !originalColumns.includes(col))
+  const allColumns = [...originalColumns, ...columnsToAppend]
+
+  // Build CSV data - prefer processed values over originals for diagnostic columns
+  const csvData = failedRows.map(row => {
+    const output: Record<string, string> = { ...row.original }
+
+    // Overwrite/add diagnostic columns with processed values
+    output.failure_reason = row.failureReason || 'Unknown error'
+    output.mapbox_lat = row.mapboxLat?.toString() || ''
+    output.mapbox_lon = row.mapboxLon?.toString() || ''
+    output.google_lat = row.googleLat?.toString() || ''
+    output.google_lon = row.googleLon?.toString() || ''
+    output.google_place_id = row.googlePlaceId || ''
+
+    return output
+  })
 
   return stringify(csvData, {
     header: true,
-    columns: [
-      ...originalColumns,
-      'failure_reason',
-      'mapbox_lat',
-      'mapbox_lon',
-      'google_lat',
-      'google_lon'
-    ]
+    columns: allColumns
   })
 }
 
@@ -527,8 +553,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // PREFLIGHT CHECK 2: Google API key (REQUIRED)
-    if (!GOOGLE_PLACES_API_KEY) {
+    // PREFLIGHT CHECK 2: Check if any rows will need Google validation
+    const rowsNeedingGoogleValidation = csvRows.filter(row => {
+      const hasLat = row.lat !== undefined && row.lat !== null && String(row.lat).trim() !== ''
+      const hasLon = row.lon !== undefined && row.lon !== null && String(row.lon).trim() !== ''
+      const hasGooglePlaceId = row.google_place_id && String(row.google_place_id).trim() !== ''
+
+      // Need Google validation if:
+      // 1. Missing coordinates (will be geocoded, then validated), OR
+      // 2. Has coordinates but no google_place_id (treat as new)
+      return (!hasLat || !hasLon) || (hasLat && hasLon && !hasGooglePlaceId)
+    })
+
+    // PREFLIGHT CHECK 2a: Google API key (CONDITIONAL - only if needed)
+    if (rowsNeedingGoogleValidation.length > 0 && !GOOGLE_PLACES_API_KEY) {
       return NextResponse.json(
         { error: 'Google Places API key not configured on server' },
         { status: 503 }
@@ -567,7 +605,9 @@ export async function POST(request: NextRequest) {
         category: row.category?.trim() || '',
         postcode: row.postcode?.trim(),
         town: row.town?.trim(),
-        failed: false
+        failed: false,
+        isRetryRow: false,
+        skipGoogleValidation: false
       }
 
       // Validate required fields
@@ -577,9 +617,23 @@ export async function POST(request: NextRequest) {
         return processedRow
       }
 
+      // Check for google_place_id in CSV (retry row detection)
+      const csvGooglePlaceId = row.google_place_id?.trim()
+      if (csvGooglePlaceId && csvGooglePlaceId.length > 0) {
+        processedRow.isRetryRow = true
+        processedRow.googlePlaceId = csvGooglePlaceId
+      }
+
       // Check for existing coordinates
       const hasLat = row.lat !== undefined && row.lat !== null && String(row.lat).trim() !== ''
       const hasLon = row.lon !== undefined && row.lon !== null && String(row.lon).trim() !== ''
+
+      // Validate retry row format: if google_place_id is present, lat/lon must also be present
+      if (processedRow.isRetryRow && (!hasLat || !hasLon)) {
+        processedRow.failed = true
+        processedRow.failureReason = 'Retry row must have both lat and lon (google_place_id was provided)'
+        return processedRow
+      }
 
       if (hasLat && hasLon) {
         const lat = typeof row.lat === 'number' ? row.lat : parseFloat(String(row.lat))
@@ -595,6 +649,11 @@ export async function POST(request: NextRequest) {
         processedRow.lon = lon
         processedRow.mapboxLat = lat  // Use CSV coords as "Mapbox" coords for validation
         processedRow.mapboxLon = lon
+
+        // If retry row with google_place_id and valid coordinates, skip Google validation
+        if (processedRow.isRetryRow) {
+          processedRow.skipGoogleValidation = true
+        }
       }
 
       return processedRow
@@ -612,8 +671,13 @@ export async function POST(request: NextRequest) {
     // Step 5: Classify rows before any writes
     const successfulRows = processedRows.filter(r => !r.failed)
     const preWriteFailedRows = processedRows.filter(r => r.failed)
+    const retryRowCount = processedRows.filter(r => r.isRetryRow).length
+    const skippedValidationCount = processedRows.filter(r => r.skipGoogleValidation).length
 
     console.log(`Phase 1 complete: ${successfulRows.length} successful, ${preWriteFailedRows.length} failed`)
+    if (retryRowCount > 0) {
+      console.log(`Retry rows detected: ${retryRowCount} (skipped Google validation: ${skippedValidationCount})`)
+    }
 
     // ==================================================================
     // PHASE 2: MUTATE (Database Writes for Validated Rows Only)
@@ -677,8 +741,8 @@ export async function POST(request: NextRequest) {
           brand_id: row.brandId!,
           fascia_id: row.fasciaId!,
           name: row.name,
-          lat: row.mapboxLat || row.lat!,
-          lon: row.mapboxLon || row.lon!,
+          lat: row.mapboxLat ?? row.lat!,
+          lon: row.mapboxLon ?? row.lon!,
           postcode: row.postcode || null,
           town: row.town || null,
           suburb: null,
