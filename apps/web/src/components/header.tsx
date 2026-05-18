@@ -136,7 +136,7 @@ function HeaderContent() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white border-b-2 border-violet-200 shadow-md">
+    <header className="sticky top-0 z-50 w-full bg-sm-bg border-b border-sm-border-soft backdrop-saturate-[140%] backdrop-blur-[8px]">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -181,7 +181,7 @@ function HeaderContent() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch text-gray-700 hover:text-violet-700 hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
+                    className="inline-flex items-center px-5 py-2.5 rounded-full font-medium text-[15px] transition-all duration-300 violet-bloom-touch text-sm-ink hover:text-sm-violet hover:bg-sm-violet-tint-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-sm-violet focus-visible:outline-offset-2"
                   >
                     {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
                   </Link>
@@ -194,22 +194,22 @@ function HeaderContent() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch cursor-pointer text-gray-700 hover:text-violet-700 hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full font-medium text-[15px] transition-all duration-300 violet-bloom-touch cursor-pointer text-sm-ink hover:text-sm-violet hover:bg-sm-violet-tint-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-sm-violet focus-visible:outline-offset-2"
                 >
                   Free Tools
                   <ChevronDown className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-64 border-2 border-violet-200 shadow-lg">
+              <DropdownMenuContent align="start" className="w-80 border border-sm-border rounded-sm-menu shadow-[0_18px_40px_-16px_rgba(20,10,40,0.15)] bg-sm-surface">
                 {freeToolsItems.map((tool) => (
                   <DropdownMenuItem key={tool.href} asChild className="!items-start">
                     <Link
                       href={tool.href}
                       onClick={tool.onClick}
-                      className="cursor-pointer hover:bg-violet-50 flex flex-col items-start py-3 w-full"
+                      className="cursor-pointer hover:bg-sm-violet-tint-soft flex flex-col items-start p-3.5 w-full rounded-[10px] transition-colors duration-[120ms]"
                     >
-                      <span className="font-semibold">{tool.label}</span>
-                      <span className="text-xs text-gray-600 font-normal mt-0.5">{tool.description}</span>
+                      <span className="font-semibold text-sm text-sm-ink tracking-[-0.1px]">{tool.label}</span>
+                      <span className="text-[13px] text-sm-ink3 font-normal mt-0.5 leading-[1.4]">{tool.description}</span>
                     </Link>
                   </DropdownMenuItem>
                 ))}
@@ -219,7 +219,7 @@ function HeaderContent() {
             {/* Articles Link */}
             <Link
               href="/articles"
-              className="inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch text-gray-700 hover:text-violet-700 hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
+              className="inline-flex items-center px-5 py-2.5 rounded-full font-medium text-[15px] transition-all duration-300 violet-bloom-touch text-sm-ink hover:text-sm-violet hover:bg-sm-violet-tint-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-sm-violet focus-visible:outline-offset-2"
             >
               Articles
             </Link>
@@ -246,9 +246,9 @@ function HeaderContent() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch bg-violet-100 text-violet-700 hover:bg-violet-200 hover:text-violet-800 shadow-sm hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full font-semibold text-sm transition-all duration-150 violet-bloom-touch bg-sm-violet-tint text-sm-violet hover:bg-[#E4DBFF] border border-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-sm-violet focus-visible:outline-offset-2"
                   >
-                    {item.label}{('badge' in item) && <span className="text-orange-600 font-black ml-1">{item.badge}</span>}
+                    {item.label}{('badge' in item) && <span className="text-sm-orange font-black">{item.badge}</span>}
                   </Link>
                 );
               }
@@ -268,13 +268,13 @@ function HeaderContent() {
             ) : (
               <div className="flex items-center space-x-2">
                 <LoginModal>
-                  <Button variant="ghost" size="sm" className="font-bold rounded-full px-5 py-2 hover:bg-violet-50 hover:text-violet-700">
-                    Sign In
+                  <Button variant="ghost" size="sm" className="font-medium text-[15px] rounded-full px-5 py-2 hover:bg-sm-violet-tint-soft hover:text-sm-ink">
+                    Sign in
                   </Button>
                 </LoginModal>
                 <SignUpModalEnhanced>
-                  <Button size="sm" className="font-bold shadow-lg hover:shadow-xl rounded-full px-5 py-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 transition-all duration-300">
-                    Sign Up
+                  <Button size="sm" className="font-medium text-sm rounded-sm-compact px-4 py-2 bg-sm-violet text-white border border-sm-violet hover:bg-sm-violet-deep transition-colors">
+                    Create account
                   </Button>
                 </SignUpModalEnhanced>
               </div>
@@ -311,7 +311,7 @@ function HeaderContent() {
       {isMobileMenuOpen && (
         <div
           id="mobile-menu"
-          className="md:hidden bg-white border-t-2 border-violet-200 shadow-xl"
+          className="md:hidden bg-sm-bg border-t border-sm-border-soft shadow-[0_24px_40px_-20px_rgba(20,10,40,0.15)]"
           role="navigation"
           aria-label="Mobile navigation"
         >
@@ -324,7 +324,7 @@ function HeaderContent() {
                   key={item.href}
                   href={item.href}
                   onClick={closeMobileMenu}
-                  className="block px-5 py-3.5 rounded-2xl text-base font-bold text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition-all duration-300 violet-bloom-touch active:scale-[0.98]"
+                  className="block px-5 py-[18px] rounded-2xl text-xl font-medium text-sm-ink tracking-[-0.3px] border-b border-sm-border-soft hover:bg-sm-violet-tint-soft transition-all duration-300 violet-bloom-touch active:scale-[0.98]"
                 >
                   {item.label}
                 </Link>
@@ -332,7 +332,7 @@ function HeaderContent() {
 
               {/* Free Tools Section */}
               <div className="space-y-2">
-                <div className="px-5 py-2 text-sm font-black text-violet-600 uppercase tracking-wide">
+                <div className="px-5 pt-[22px] pb-1.5 font-mono text-[11px] tracking-[1.4px] text-sm-violet-deep uppercase">
                   Free Tools
                 </div>
                 {freeToolsItems.filter((tool) => tool.showOnMobile !== false).map((tool) => (
@@ -340,10 +340,10 @@ function HeaderContent() {
                     key={tool.href}
                     href={tool.href}
                     onClick={tool.onClick || closeMobileMenu}
-                    className="block px-5 py-3.5 rounded-2xl hover:bg-violet-50 hover:text-violet-700 transition-all duration-300 violet-bloom-touch active:scale-[0.98]"
+                    className="block px-5 py-3 rounded-2xl hover:bg-sm-violet-tint-soft transition-all duration-300 violet-bloom-touch active:scale-[0.98] border-b border-sm-border-soft"
                   >
-                    <div className="text-base font-bold text-gray-700">{tool.label}</div>
-                    <div className="text-xs text-gray-600 mt-0.5">{tool.description}</div>
+                    <div className="text-base font-semibold text-sm-ink">{tool.label}</div>
+                    <div className="text-[13px] text-sm-ink3 mt-0.5">{tool.description}</div>
                   </Link>
                 ))}
               </div>
@@ -352,7 +352,7 @@ function HeaderContent() {
               <Link
                 href="/articles"
                 onClick={closeMobileMenu}
-                className="block px-5 py-3.5 rounded-2xl text-base font-bold text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition-all duration-300 violet-bloom-touch active:scale-[0.98]"
+                className="block px-5 py-[18px] rounded-2xl text-xl font-medium text-sm-ink tracking-[-0.3px] border-b border-sm-border-soft hover:bg-sm-violet-tint-soft transition-all duration-300 violet-bloom-touch active:scale-[0.98]"
               >
                 Articles
               </Link>
@@ -379,16 +379,16 @@ function HeaderContent() {
                   key={item.href}
                   href={item.href}
                   onClick={closeMobileMenu}
-                  className="block w-full px-6 py-4 rounded-2xl font-black text-base text-center bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-xl hover:shadow-2xl active:scale-[0.98] hover:from-violet-700 hover:to-purple-700 transition-all duration-300 violet-bloom-touch"
+                  className="block w-full justify-center flex items-center gap-1.5 px-[18px] py-3.5 rounded-xl font-semibold text-[15px] text-center bg-sm-violet-tint text-sm-violet border border-transparent hover:bg-[#E4DBFF] transition-all duration-150 violet-bloom-touch"
                 >
-                  {item.label}{('badge' in item) && <span className="text-orange-300 font-black ml-1">{item.badge}</span>}
+                  {item.label}{('badge' in item) && <span className="text-sm-orange font-black">{item.badge}</span>}
                 </Link>
               )
             ))}
           </div>
 
           {/* Mobile Auth Section */}
-          <div className="px-4 py-4 border-t-2 border-violet-100">
+          <div className="px-4 py-4 border-t border-sm-border-soft">
             {loading && !user ? (
               <div className="space-y-3">
                 <div className="h-12 bg-violet-100 animate-pulse rounded-2xl violet-bloom-loading" />
@@ -397,15 +397,15 @@ function HeaderContent() {
             ) : user ? (
               <MobileUserSection onClose={closeMobileMenu} />
             ) : (
-              <div className="space-y-3">
+              <div className="flex gap-2.5">
                 <LoginModal>
-                  <Button variant="ghost" className="w-full h-12 justify-center text-base font-bold violet-bloom-touch rounded-2xl hover:bg-violet-50 hover:text-violet-700">
-                    Sign In
+                  <Button variant="ghost" className="flex-1 h-12 justify-center text-[15px] font-medium violet-bloom-touch rounded-xl border border-sm-border hover:bg-sm-border-soft text-sm-ink">
+                    Sign in
                   </Button>
                 </LoginModal>
                 <SignUpModalEnhanced>
-                  <Button className="w-full h-12 text-base font-black shadow-xl hover:shadow-2xl violet-bloom-touch rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 transition-all duration-300">
-                    Sign Up
+                  <Button className="flex-1 h-12 text-[15px] font-medium violet-bloom-touch rounded-xl bg-sm-violet text-white border border-sm-violet hover:bg-sm-violet-deep transition-colors">
+                    Create account
                   </Button>
                 </SignUpModalEnhanced>
               </div>
