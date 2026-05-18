@@ -1,3 +1,7 @@
+'use client';
+
+import { useEffect, useRef } from 'react';
+
 interface VideoSlotProps {
   label: string;
   ratio?: string;
@@ -5,6 +9,9 @@ interface VideoSlotProps {
   theme?: 'light' | 'dark';
   className?: string;
   style?: React.CSSProperties;
+  videoSrc?: string;
+  posterSrc?: string;
+  alt?: string;
 }
 
 export function VideoSlot({
@@ -14,6 +21,9 @@ export function VideoSlot({
   theme = "light",
   className = "",
   style = {},
+  videoSrc,
+  posterSrc,
+  alt,
 }: VideoSlotProps) {
   const isDark = theme === "dark";
   const stripeA = isDark ? "#2A2433" : "#F3F0FA";
@@ -22,6 +32,82 @@ export function VideoSlot({
   const labelColor = isDark ? "#E6E2EF" : "#3A2E55";
   const borderColor = isDark ? "rgba(255,255,255,0.06)" : "rgba(60,40,100,0.08)";
 
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (!videoSrc || !videoRef.current) return;
+
+    const video = videoRef.current;
+
+    // Check for reduced motion preference
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      video.pause();
+      return;
+    }
+
+    // Intersection Observer for autoplay/pause on scroll
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            // Video is 50%+ visible, play it
+            video.play().catch(() => {
+              // Autoplay failed, that's okay
+            });
+          } else {
+            // Video is out of view, pause to save resources
+            video.pause();
+          }
+        });
+      },
+      {
+        threshold: [0.5],
+        rootMargin: '0px',
+      }
+    );
+
+    observer.observe(video);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [videoSrc]);
+
+  // If video source is provided, render video instead of placeholder
+  if (videoSrc) {
+    return (
+      <div
+        className={`video-slot ${className}`}
+        style={{
+          aspectRatio: ratio,
+          position: "relative",
+          width: "100%",
+          borderRadius: 14,
+          overflow: "hidden",
+          border: `1px solid ${borderColor}`,
+          ...style,
+        }}
+      >
+        <video
+          ref={videoRef}
+          className="w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+          poster={posterSrc}
+          preload="auto"
+          aria-label={alt || label}
+        >
+          <source src={videoSrc} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    );
+  }
+
+  // Otherwise, render the placeholder
   return (
     <div
       className={`video-slot ${className}`}

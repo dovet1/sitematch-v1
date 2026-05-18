@@ -39,6 +39,8 @@ export function Hero() {
             label="Full product overview"
             note="60-second walkthrough showing the dashboard, map and key flows"
             ratio="16/9"
+            videoSrc="/gapfinder/homepage_gifs/gf_gif.mp4"
+            alt="GapFinder product overview demonstration"
           />
         </div>
       </section>
