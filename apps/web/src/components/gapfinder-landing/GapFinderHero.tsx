@@ -8,13 +8,6 @@ import { PaywallModal } from '@/components/PaywallModal';
 export function GapFinderHero() {
   const { user } = useAuth();
 
-  const handleSeeInAction = () => {
-    window.scrollBy({
-      top: window.innerHeight * 0.8,
-      behavior: 'smooth'
-    });
-  };
-
   const trialButton = (
     <button className="px-5 py-[13px] rounded-sm-btn bg-sm-violet text-white font-medium text-[15px] border border-sm-violet tracking-[-0.1px] hover:bg-sm-violet-deep transition-colors">
       Try GapFinder Now
@@ -51,12 +44,6 @@ export function GapFinderHero() {
               {trialButton}
             </TrialSignupModal>
           )}
-          <button
-            onClick={handleSeeInAction}
-            className="px-5 py-[13px] rounded-sm-btn bg-transparent text-sm-ink font-medium text-[15px] border border-sm-border tracking-[-0.1px] hover:bg-sm-border-soft transition-colors"
-          >
-            See it in action ↓
-          </button>
         </div>
       </section>
     </RevealWrapper>
