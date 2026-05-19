@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
       // REPAIR stale customer ID instead of failing
       if (!userData.stripe_customer_id || userData.stripe_customer_id !== subscriptionCustomer) {
         console.log('Repairing customer ID during upgrade:', subscriptionCustomer)
-        await adminSupabase
-          .from('users')
+        await (adminSupabase
+          .from('users') as any)
           .update({ stripe_customer_id: subscriptionCustomer })
           .eq('id', user.id)
       }
@@ -159,8 +159,8 @@ export async function POST(request: NextRequest) {
     console.log('Subscription updated in Stripe:', updatedSubscription.id)
 
     // Update database tier immediately - subscription price change is effective now
-    const { error: updateError } = await adminSupabase
-      .from('users')
+    const { error: updateError } = await (adminSupabase
+      .from('users') as any)
       .update({ subscription_tier: targetTier })
       .eq('id', user.id)
 

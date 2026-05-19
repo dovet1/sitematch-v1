@@ -87,8 +87,8 @@ export async function POST(request: NextRequest) {
           subscription_customer_id: subscriptionCustomerId
         })
         // Clear both subscription and customer IDs - both are suspect
-        await adminSupabase
-          .from('users')
+        await (adminSupabase
+          .from('users') as any)
           .update({
             stripe_subscription_id: null,
             stripe_customer_id: null,
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
       if (!customerId || customerId !== subscriptionCustomerId) {
         console.log('Repairing customer ID from verified subscription:', subscriptionCustomerId)
         customerId = subscriptionCustomerId
-        await adminSupabase
-          .from('users')
+        await (adminSupabase
+          .from('users') as any)
           .update({ stripe_customer_id: subscriptionCustomerId })
           .eq('id', user.id)
       }
@@ -120,8 +120,8 @@ export async function POST(request: NextRequest) {
       if (error.code === 'resource_missing') {
         // Subscription doesn't exist in Stripe - clear IDs and redirect
         console.error('Subscription not found in Stripe, clearing IDs')
-        await adminSupabase
-          .from('users')
+        await (adminSupabase
+          .from('users') as any)
           .update({
             stripe_customer_id: null,
             stripe_subscription_id: null,
