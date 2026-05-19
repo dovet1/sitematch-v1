@@ -138,8 +138,8 @@ export async function POST(request: NextRequest) {
       customerId = customer.id
 
       // Save customer ID to user record using admin client
-      await adminSupabase
-        .from('users')
+      await (adminSupabase
+        .from('users') as any)
         .update({ stripe_customer_id: customerId })
         .eq('id', userId)
     }
