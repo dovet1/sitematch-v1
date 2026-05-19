@@ -115,8 +115,8 @@ export async function POST(request: NextRequest) {
       } catch (error: any) {
         if (error.code === 'resource_missing') {
           console.log('Stale customer ID, clearing:', customerId)
-          await adminSupabase
-            .from('users')
+          await (adminSupabase
+            .from('users') as any)
             .update({ stripe_customer_id: null })
             .eq('id', userId)
           customerId = null
