@@ -20,8 +20,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LoginModal } from '@/components/auth/login-modal';
-import { SignUpModalEnhanced } from '@/components/auth/signup-modal-enhanced';
 import { UserMenu } from '@/components/auth/user-menu';
 import { UserStatusHeader } from '@/components/auth/user-status-header';
 import { useAuth } from '@/contexts/auth-context';
@@ -438,16 +436,16 @@ export function UnifiedHeader({
                 <UserMenu />
               ) : (
                 <div className="flex items-center space-x-2">
-                  <LoginModal>
+                  <Link href="/auth?mode=signin">
                     <Button variant="ghost" size="sm" className="font-bold rounded-full px-5 py-2 hover:bg-violet-50 hover:text-violet-700">
                       Sign In
                     </Button>
-                  </LoginModal>
-                  <SignUpModalEnhanced>
+                  </Link>
+                  <Link href="/auth?mode=signup">
                     <Button size="sm" className="font-bold shadow-lg hover:shadow-xl rounded-full px-5 py-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 transition-all duration-300">
                       Sign Up
                     </Button>
-                  </SignUpModalEnhanced>
+                  </Link>
                 </div>
               )}
             </div>
@@ -544,16 +542,16 @@ export function UnifiedHeader({
                 <MobileUserSection onClose={closeMobileMenu} />
               ) : (
                 <div className="space-y-3">
-                  <LoginModal>
+                  <Link href="/auth?mode=signin" className="block">
                     <Button variant="ghost" className="w-full h-12 justify-center text-base font-bold violet-bloom-touch rounded-2xl hover:bg-violet-50 hover:text-violet-700">
                       Sign In
                     </Button>
-                  </LoginModal>
-                  <SignUpModalEnhanced>
+                  </Link>
+                  <Link href="/auth?mode=signup" className="block">
                     <Button className="w-full h-12 text-base font-black shadow-xl hover:shadow-2xl violet-bloom-touch rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 transition-all duration-300">
                       Sign Up
                     </Button>
-                  </SignUpModalEnhanced>
+                  </Link>
                 </div>
               )}
             </div>

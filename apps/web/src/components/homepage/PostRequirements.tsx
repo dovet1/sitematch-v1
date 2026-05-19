@@ -3,7 +3,6 @@
 import { FileText, Shield, CheckCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { useAuth } from '@/contexts/auth-context';
 
 export function PostRequirements() {
@@ -96,26 +95,14 @@ export function PostRequirements() {
 
         {/* CTA */}
         <div className="text-center">
-          {!user ? (
-            <AuthChoiceModal
-              redirectTo="/occupier/create-listing-quick"
-              title="Sign in to post requirements"
-              description="Access your account to create and manage property listings"
-            >
-              <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-10 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-                Post Your Requirement - Free
-              </Button>
-            </AuthChoiceModal>
-          ) : (
-            <Button
-              asChild
-              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-10 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
-            >
-              <Link href="/occupier/create-listing-quick">
-                Post Your Requirement - Free
-              </Link>
-            </Button>
-          )}
+          <Button
+            asChild
+            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-10 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+          >
+            <Link href={user ? "/occupier/create-listing-quick" : `/auth?mode=signin&returnUrl=${encodeURIComponent('/occupier/create-listing-quick')}`}>
+              Post Your Requirement - Free
+            </Link>
+          </Button>
         </div>
       </div>
     </section>

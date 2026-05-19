@@ -106,12 +106,13 @@ export interface Database {
           id: string
           email: string
           role: 'occupier' | 'admin'
-          user_type: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
+          user_type: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Consultant' | 'Government' | 'Other' | null
           user_company_name: string | null
           org_id: string | null
           subscription_status: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          newsletter_opt_in: boolean | null
           hide_sitesketcher_tutorial: boolean | null
           created_at: string
           updated_at: string
@@ -120,12 +121,13 @@ export interface Database {
           id: string
           email: string
           role?: 'occupier' | 'admin'
-          user_type: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
+          user_type?: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Consultant' | 'Government' | 'Other' | null
           user_company_name?: string | null
           org_id?: string | null
           subscription_status?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          newsletter_opt_in?: boolean | null
           hide_sitesketcher_tutorial?: boolean | null
           created_at?: string
           updated_at?: string
@@ -134,12 +136,13 @@ export interface Database {
           id?: string
           email?: string
           role?: 'occupier' | 'admin'
-          user_type?: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
+          user_type?: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Consultant' | 'Government' | 'Other' | null
           user_company_name?: string | null
           org_id?: string | null
           subscription_status?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          newsletter_opt_in?: boolean | null
           hide_sitesketcher_tutorial?: boolean | null
           updated_at?: string
         }

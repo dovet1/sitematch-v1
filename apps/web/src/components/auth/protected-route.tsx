@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { Loader2, Lock } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { UserRole } from '@/types/auth'
-import { LoginModal } from './login-modal'
 import { Button } from '@/components/ui/button'
 
 interface ProtectedRouteProps {
@@ -60,6 +60,8 @@ export function ProtectedRoute({
 }
 
 function DefaultAuthFallback() {
+  const pathname = usePathname()
+
   return (
     <div className="flex items-center justify-center min-h-[400px]">
       <div className="text-center max-w-md mx-auto p-6">
@@ -68,9 +70,9 @@ function DefaultAuthFallback() {
         <p className="text-muted-foreground mb-6">
           You need to sign in to access this page.
         </p>
-        <LoginModal>
+        <Link href={`/auth?mode=signin&returnUrl=${encodeURIComponent(pathname || '/')}`}>
           <Button>Sign In</Button>
-        </LoginModal>
+        </Link>
       </div>
     </div>
   )

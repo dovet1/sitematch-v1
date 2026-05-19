@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: authUser.id,
               email: authUser.email || '',
               role: 'occupier',
-              user_type: 'Other',
+              user_type: null,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             })
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             id: authUser.id,
             email: authUser.email || '',
             role: 'occupier',
-            user_type: 'Other',
+            user_type: null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -377,21 +377,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, companyName?: string, redirectTo?: string, newsletterOptIn?: boolean, userType?: string) => {
+  const signUp = async (email: string, password: string, redirectTo?: string, newsletterOptIn?: boolean) => {
     console.log('signUp called with:', {
       email,
-      companyName,
-      userType,
       newsletterOptIn,
       newsletterOptInType: typeof newsletterOptIn
     })
 
-    // First, sign up the user
+    // First, sign up the user (no user metadata - user_type will be NULL from trigger)
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: userType ? { user_type: userType } : undefined
+        data: {} // No metadata - trigger will create profile with NULL values
       }
     })
 
@@ -400,14 +398,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error
     }
 
-    // If signup was successful and we have a user, create their profile
+    // If signup was successful and we have a user, update their profile with newsletter opt-in
     if (data.user) {
       const profileData = {
         id: data.user.id,
         email: data.user.email!,
         role: 'occupier' as UserRole,
-        user_company_name: companyName || null,
-        user_type: userType as UserType || 'Other',
+        user_company_name: null,
+        user_type: null,
         newsletter_opt_in: newsletterOptIn || false,
       }
 
@@ -455,6 +453,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Auto sign in after successful signup (which will also update the session)
     await signIn(email, password, redirectTo)
+  }
+
+  const signUpWithOAuth = async (provider: 'google' | 'microsoft', redirectTo?: string) => {
+    console.log('signUpWithOAuth called with:', { provider, redirectTo })
+
+    // Validate and sanitize returnUrl
+    function isValidReturnUrl(url: string): boolean {
+      // Must be relative path starting with /
+      if (!url || !url.startsWith('/')) return false
+      // Reject protocol-relative URLs (//evil.com)
+      if (url.startsWith('//')) return false
+      // Reject data URLs or javascript:
+      if (url.includes(':')) return false
+      return true
+    }
+
+    const safeRedirectTo = redirectTo && isValidReturnUrl(redirectTo) ? redirectTo : '/new-dashboard'
+
+    // Map UI provider names to Supabase provider IDs
+    const supabaseProvider = provider === 'microsoft' ? 'azure' : provider
+
+    // Get the base URL for OAuth callback
+    const baseUrl = typeof window !== 'undefined'
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+
+    // Construct callback URL with encoded redirect parameter
+    const callbackUrl = `${baseUrl}/auth/callback?redirect=${encodeURIComponent(safeRedirectTo)}`
+
+    console.log('OAuth flow:', { supabaseProvider, callbackUrl })
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: supabaseProvider as 'google' | 'azure',
+      options: {
+        redirectTo: callbackUrl,
+        scopes: provider === 'google' ? 'email profile' : 'email openid profile'
+      }
+    })
+
+    if (error) {
+      console.error('OAuth signup error:', error)
+      throw error
+    }
+
+    // OAuth flow will redirect, so no need to handle response here
   }
 
   const resetPassword = async (email: string) => {
@@ -532,6 +575,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signIn,
     signUp,
+    signUpWithOAuth,
     signOut,
     resetPassword,
     updatePassword,

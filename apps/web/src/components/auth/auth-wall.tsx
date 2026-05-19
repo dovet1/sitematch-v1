@@ -1,11 +1,9 @@
 'use client'
 
-import { useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { SignUpModalEnhanced } from './signup-modal-enhanced'
-import { LoginModal } from './login-modal'
 
 interface AuthWallProps {
   resultCount?: number
@@ -45,21 +43,21 @@ export function AuthWall({ resultCount, searchQuery }: AuthWallProps) {
         </div>
         
         <div className="space-y-3">
-          <SignUpModalEnhanced redirectTo={currentUrl}>
+          <Link href={`/auth?mode=signup&returnUrl=${encodeURIComponent(currentUrl)}`}>
             <Button size="lg" className="w-full">
               Sign Up
             </Button>
-          </SignUpModalEnhanced>
-          
-          <LoginModal redirectTo={currentUrl}>
-            <Button 
-              variant="outline" 
-              size="lg" 
+          </Link>
+
+          <Link href={`/auth?mode=signin&returnUrl=${encodeURIComponent(currentUrl)}`}>
+            <Button
+              variant="outline"
+              size="lg"
               className="w-full"
             >
               Already have an account? Sign In
             </Button>
-          </LoginModal>
+          </Link>
         </div>
       </div>
     </div>

@@ -3,27 +3,36 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Database } from '@/lib/supabase'
 import { UserType } from '@/types/auth'
 
+// Security: Validate return URLs to prevent open redirect vulnerabilities
+function isValidReturnUrl(url: string): boolean {
+  // Must be relative path starting with /
+  if (!url || !url.startsWith('/')) return false
+  // Reject protocol-relative URLs (//evil.com)
+  if (url.startsWith('//')) return false
+  // Reject data URLs or javascript:
+  if (url.includes(':')) return false
+  return true
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const token = searchParams.get('token')
   const type = searchParams.get('type')
-  const next = searchParams.get('next') ?? '/'
-  const redirect = searchParams.get('redirect')
-  const redirectTo = searchParams.get('redirect_to')
+  const redirect = searchParams.get('redirect') // OAuth redirects use 'redirect'
+  const redirectTo = searchParams.get('redirect_to') // Password recovery uses 'redirect_to'
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
 
-  console.log('Auth callback hit:', { 
-    hasCode: !!code, 
+  console.log('Auth callback hit:', {
+    hasCode: !!code,
     hasToken: !!token,
     type,
-    next, 
     redirect,
     redirectTo,
     origin,
     error,
-    errorDescription 
+    errorDescription
   })
 
   // Handle auth errors
@@ -74,8 +83,19 @@ export async function GET(request: NextRequest) {
   }
 
   if (code) {
-    // Use redirect if provided, otherwise fall back to next
-    const finalRedirect = redirect ? decodeURIComponent(redirect) : next
+    // Validate and sanitize OAuth redirect URL
+    let finalRedirect = '/new-dashboard' // Safe default
+
+    if (redirect) {
+      const decodedRedirect = decodeURIComponent(redirect)
+      if (isValidReturnUrl(decodedRedirect)) {
+        finalRedirect = decodedRedirect
+        console.log('Using validated OAuth redirect:', finalRedirect)
+      } else {
+        console.warn('Invalid redirect URL rejected:', decodedRedirect, '- using default')
+      }
+    }
+
     const response = NextResponse.redirect(`${origin}${finalRedirect}`)
     
     const supabase = createSSRServerClient<Database>(
@@ -117,41 +137,35 @@ export async function GET(request: NextRequest) {
         .eq('id', user.id)
         .single()
 
-      // Get user_type from metadata if available
-      const userTypeFromMetadata = user.user_metadata?.user_type
-      console.log('User metadata:', user.user_metadata)
-      console.log('User type from metadata:', userTypeFromMetadata)
+      // Log OAuth provider info
+      const provider = user.app_metadata?.provider
+      console.log('OAuth provider:', provider)
 
-      // If no profile exists, create one with user_type from metadata or default
+      // Profile should already exist from handle_new_user() trigger
+      // Trigger creates profile with NULL user_type for OAuth users
       if (!profile) {
-        console.log('No user profile found, creating default profile')
+        console.log('No user profile found (unexpected - trigger should have created it), creating fallback profile')
         const { error: insertError } = await supabase
           .from('users')
           .insert({
             id: user.id,
             email: user.email!,
             role: 'occupier',
-            user_type: userTypeFromMetadata || 'Commercial Occupier' // Use metadata first, fallback to default
+            user_type: null, // OAuth users get NULL user_type
+            user_company_name: null,
+            newsletter_opt_in: false
           })
-        
+
         if (insertError) {
-          console.error('Error creating user profile:', insertError)
+          console.error('Error creating fallback user profile:', insertError)
         } else {
-          console.log('User profile created successfully with user_type:', userTypeFromMetadata || 'Commercial Occupier')
+          console.log('Fallback user profile created successfully for OAuth user')
         }
-      } else if (userTypeFromMetadata && profile.user_type !== userTypeFromMetadata) {
-        // If profile exists but user_type from metadata is different, update it
-        console.log('Updating user_type from metadata:', userTypeFromMetadata)
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ user_type: userTypeFromMetadata })
-          .eq('id', user.id)
-        
-        if (updateError) {
-          console.error('Error updating user_type:', updateError)
-        } else {
-          console.log('User type updated successfully to:', userTypeFromMetadata)
-        }
+      } else {
+        console.log('User profile exists (created by trigger):', {
+          id: profile.id,
+          user_type: profile.user_type
+        })
       }
 
       // If redirecting to search, mark as just authenticated for toast

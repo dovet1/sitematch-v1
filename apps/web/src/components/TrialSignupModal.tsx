@@ -153,7 +153,8 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
       setLoadingStage('creating_account')
       if (mode === 'signup') {
         // Pass 'SKIP_REDIRECT' to prevent automatic dashboard redirect
-        await signUp(data.email, data.password, data.companyName, 'SKIP_REDIRECT', data.newsletterOptIn, data.userType)
+        // Note: companyName and userType removed from signUp signature (now nullable)
+        await signUp(data.email, data.password, 'SKIP_REDIRECT', data.newsletterOptIn)
       } else {
         // Pass 'SKIP_REDIRECT' to prevent automatic dashboard redirect
         await signIn(data.email, data.password, 'SKIP_REDIRECT')

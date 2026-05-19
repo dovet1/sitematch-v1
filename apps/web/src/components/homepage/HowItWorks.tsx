@@ -3,7 +3,6 @@
 import { FileText, Shield, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { useAuth } from '@/contexts/auth-context';
 
 export function HowItWorks() {
@@ -67,26 +66,14 @@ export function HowItWorks() {
         </div>
 
         <div className="text-center">
-          {!user ? (
-            <AuthChoiceModal 
-              redirectTo="/occupier/create-listing-quick"
-              title="Sign in to post requirements"
-              description="Access your account to create and manage property listings"
-            >
-              <Button className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-3 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">
-                Post Your Requirement
-              </Button>
-            </AuthChoiceModal>
-          ) : (
-            <Button 
-              asChild 
-              className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-3 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
-            >
-              <Link href="/occupier/create-listing-quick">
-                Post Your Requirement
-              </Link>
-            </Button>
-          )}
+          <Button
+            asChild
+            className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-3 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            <Link href={user ? "/occupier/create-listing-quick" : `/auth?mode=signin&returnUrl=${encodeURIComponent('/occupier/create-listing-quick')}`}>
+              Post Your Requirement
+            </Link>
+          </Button>
         </div>
       </div>
 

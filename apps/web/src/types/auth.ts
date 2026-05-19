@@ -14,14 +14,14 @@ export interface AuthUser extends User {
   }
 }
 
-export type UserType = 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
+export type UserType = 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Consultant' | 'Government' | 'Other'
 
 export interface UserProfile {
   id: string
   email: string
   role: UserRole
   user_company_name?: string | null
-  user_type: UserType
+  user_type?: UserType | null
   subscription_status?: string | null
   newsletter_opt_in?: boolean
   hide_sitesketcher_tutorial?: boolean
@@ -34,7 +34,8 @@ export interface AuthContextType {
   profile: UserProfile | null
   loading: boolean
   signIn: (email: string, password: string, redirectTo?: string) => Promise<void>
-  signUp: (email: string, password: string, companyName?: string, redirectTo?: string, newsletterOptIn?: boolean, userType?: string) => Promise<void>
+  signUp: (email: string, password: string, redirectTo?: string, newsletterOptIn?: boolean) => Promise<void>
+  signUpWithOAuth: (provider: 'google' | 'microsoft', redirectTo?: string) => Promise<void>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
   updatePassword: (newPassword: string) => Promise<void>

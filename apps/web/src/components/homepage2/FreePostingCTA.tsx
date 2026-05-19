@@ -3,7 +3,6 @@
 import { Button } from '@/components/ui/button';
 import { PenTool, Mail, Star, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { useAuth } from '@/contexts/auth-context';
 import { motion } from 'framer-motion';
 
@@ -95,30 +94,15 @@ export function FreePostingCTA() {
                   Add your requirement in under 2 minutes with our simple form
                 </p>
 
-                {user ? (
-                  <Button
-                    asChild
-                    size="lg"
-                    className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-black rounded-xl py-6 text-base md:text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
-                  >
-                    <Link href="/occupier/create-listing-quick">
-                      Post your requirement
-                    </Link>
-                  </Button>
-                ) : (
-                  <AuthChoiceModal
-                    redirectTo="/occupier/create-listing-quick"
-                    title="Sign in to post requirements"
-                    description="Access your account to create and manage property listings"
-                  >
-                    <Button
-                      size="lg"
-                      className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-black rounded-xl py-6 text-base md:text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
-                    >
-                      Post your requirement
-                    </Button>
-                  </AuthChoiceModal>
-                )}
+                <Button
+                  asChild
+                  size="lg"
+                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-black rounded-xl py-6 text-base md:text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                >
+                  <Link href={user ? "/occupier/create-listing-quick" : `/auth?mode=signin&returnUrl=${encodeURIComponent('/occupier/create-listing-quick')}`}>
+                    Post your requirement
+                  </Link>
+                </Button>
               </div>
             </motion.div>
 

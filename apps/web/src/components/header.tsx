@@ -21,9 +21,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { LoginModal } from '@/components/auth/login-modal'
-import { SignUpModalEnhanced } from '@/components/auth/signup-modal-enhanced'
-import { AuthChoiceModal } from '@/components/auth/auth-choice-modal'
 import { UserMenu } from '@/components/auth/user-menu'
 import { UserStatusHeader } from '@/components/auth/user-status-header'
 import { useAuth } from '@/contexts/auth-context'
@@ -165,18 +162,13 @@ function HeaderContent() {
               // Render Browse Requirements first
               if (!item.primary) {
                 return item.requiresAuth && !user ? (
-                  <AuthChoiceModal
+                  <Link
                     key={item.href}
-                    redirectTo={item.href}
-                    title="Sign in to post requirements"
-                    description="Access your account to create and manage property listings"
+                    href={`/auth?mode=signin&returnUrl=${encodeURIComponent(item.href)}`}
+                    className="inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch text-gray-700 hover:text-violet-700 hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
                   >
-                    <button
-                      className="inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch text-gray-700 hover:text-violet-700 hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
-                    >
-                      {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
-                    </button>
-                  </AuthChoiceModal>
+                    {item.label}{('badge' in item) && <span style={{ color: 'var(--warning)' }}> {item.badge}</span>}
+                  </Link>
                 ) : (
                   <Link
                     key={item.href}
@@ -230,18 +222,13 @@ function HeaderContent() {
 
               if (item.primary) {
                 return item.requiresAuth && !user ? (
-                  <AuthChoiceModal
+                  <Link
                     key={item.href}
-                    redirectTo={item.href}
-                    title="Sign in to post requirements"
-                    description="Access your account to create and manage property listings"
+                    href={`/auth?mode=signin&returnUrl=${encodeURIComponent(item.href)}`}
+                    className="inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch bg-violet-100 text-violet-700 hover:bg-violet-200 hover:text-violet-800 shadow-sm hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
                   >
-                    <button
-                      className="inline-flex items-center px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch bg-violet-100 text-violet-700 hover:bg-violet-200 hover:text-violet-800 shadow-sm hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
-                    >
-                      {item.label}{('badge' in item) && <span className="text-orange-600 font-black ml-1">{item.badge}</span>}
-                    </button>
-                  </AuthChoiceModal>
+                    {item.label}{('badge' in item) && <span className="text-orange-600 font-black ml-1">{item.badge}</span>}
+                  </Link>
                 ) : (
                   <Link
                     key={item.href}
@@ -267,16 +254,16 @@ function HeaderContent() {
               <UserMenu />
             ) : (
               <div className="flex items-center space-x-2">
-                <LoginModal>
+                <Link href="/auth?mode=signin">
                   <Button variant="ghost" size="sm" className="font-medium text-[15px] rounded-full px-5 py-2 hover:bg-sm-violet-tint-soft hover:text-sm-ink">
                     Sign in
                   </Button>
-                </LoginModal>
-                <SignUpModalEnhanced>
+                </Link>
+                <Link href="/auth?mode=signup">
                   <Button size="sm" className="font-medium text-sm rounded-sm-compact px-4 py-2 bg-sm-violet text-white border border-sm-violet hover:bg-sm-violet-deep transition-colors">
                     Create account
                   </Button>
-                </SignUpModalEnhanced>
+                </Link>
               </div>
             )}
           </div>
@@ -361,19 +348,14 @@ function HeaderContent() {
             {/* Primary CTA - Prominent */}
             {navigationItems.filter(item => item.primary && shouldShowNavItem(item)).map((item) => (
               item.requiresAuth && !user ? (
-                <AuthChoiceModal
+                <Link
                   key={item.href}
-                  redirectTo={item.href}
-                  title="Sign in to post requirements"
-                  description="Access your account to create and manage property listings"
+                  href={`/auth?mode=signin&returnUrl=${encodeURIComponent(item.href)}`}
+                  onClick={closeMobileMenu}
+                  className="w-full block px-6 py-4 rounded-2xl font-black text-base text-center bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-xl hover:shadow-2xl active:scale-[0.98] hover:from-violet-700 hover:to-purple-700 transition-all duration-300 violet-bloom-touch"
                 >
-                  <button
-                    onClick={closeMobileMenu}
-                    className="w-full px-6 py-4 rounded-2xl font-black text-base bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-xl hover:shadow-2xl active:scale-[0.98] hover:from-violet-700 hover:to-purple-700 transition-all duration-300 violet-bloom-touch"
-                  >
-                    {item.label}{('badge' in item) && <span className="text-orange-300 font-black ml-1">{item.badge}</span>}
-                  </button>
-                </AuthChoiceModal>
+                  {item.label}{('badge' in item) && <span className="text-orange-300 font-black ml-1">{item.badge}</span>}
+                </Link>
               ) : (
                 <Link
                   key={item.href}
@@ -398,16 +380,16 @@ function HeaderContent() {
               <MobileUserSection onClose={closeMobileMenu} />
             ) : (
               <div className="flex gap-2.5">
-                <LoginModal>
-                  <Button variant="ghost" className="flex-1 h-12 justify-center text-[15px] font-medium violet-bloom-touch rounded-xl border border-sm-border hover:bg-sm-border-soft text-sm-ink">
+                <Link href="/auth?mode=signin" className="flex-1">
+                  <Button variant="ghost" className="w-full h-12 justify-center text-[15px] font-medium violet-bloom-touch rounded-xl border border-sm-border hover:bg-sm-border-soft text-sm-ink">
                     Sign in
                   </Button>
-                </LoginModal>
-                <SignUpModalEnhanced>
-                  <Button className="flex-1 h-12 text-[15px] font-medium violet-bloom-touch rounded-xl bg-sm-violet text-white border border-sm-violet hover:bg-sm-violet-deep transition-colors">
+                </Link>
+                <Link href="/auth?mode=signup" className="flex-1">
+                  <Button className="w-full h-12 text-[15px] font-medium violet-bloom-touch rounded-xl bg-sm-violet text-white border border-sm-violet hover:bg-sm-violet-deep transition-colors">
                     Create account
                   </Button>
-                </SignUpModalEnhanced>
+                </Link>
               </div>
             )}
           </div>

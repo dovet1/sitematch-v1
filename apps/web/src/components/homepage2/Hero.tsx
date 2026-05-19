@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
-import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
@@ -135,18 +134,15 @@ export function Hero() {
                     </svg>
                   </Link>
                 ) : (
-                  <AuthChoiceModal
-                    redirectTo="/occupier/create-listing-quick"
-                    title="Sign in to post requirements"
-                    description="Access your account to create and manage property listings"
+                  <Link
+                    href="/auth?mode=signin&returnUrl=%2Foccupier%2Fcreate-listing-quick"
+                    className="text-sm md:text-base font-black text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1"
                   >
-                    <button className="text-sm md:text-base font-black text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1">
-                      Post for free
-                      <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </AuthChoiceModal>
+                    Post for free
+                    <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
                 )}
               </div>
             </div>
@@ -194,18 +190,15 @@ export function Hero() {
                           </svg>
                         </Link>
                       ) : (
-                        <AuthChoiceModal
-                          redirectTo="/occupier/create-listing-quick"
-                          title="Sign in to post requirements"
-                          description="Access your account to create and manage property listings"
+                        <Link
+                          href="/auth?mode=signin&returnUrl=%2Foccupier%2Fcreate-listing-quick"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-violet-600 hover:text-violet-700"
                         >
-                          <button className="inline-flex items-center gap-1 text-xs font-bold text-violet-600 hover:text-violet-700">
-                            Get started
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </button>
-                        </AuthChoiceModal>
+                          Get started
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Link>
                       )}
                     </div>
                   </div>

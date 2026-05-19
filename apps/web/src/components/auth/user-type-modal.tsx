@@ -80,26 +80,30 @@ export function UserTypeModal() {
   const selectedUserType = watch('userType')
   const selectedUserTypeData = userTypes.find(type => type.value === selectedUserType)
 
+  // TODO: User type collection removed per design requirements
+  // Modal disabled - user_type is now optional for OAuth and email signups
+  // Can be re-enabled later if requirements change
+
   // Check if user needs to select type
-  useEffect(() => {
-    const checkUserType = async () => {
-      if (user && profile && !profile.user_type) {
-        setOpen(true)
-      }
-      
-      // Also check for pending user type from signup
-      if (user && typeof window !== 'undefined') {
-        const pendingUserType = sessionStorage.getItem('pendingUserType') as UserType
-        if (pendingUserType) {
-          // Auto-submit the user type
-          await updateUserType(pendingUserType)
-          sessionStorage.removeItem('pendingUserType')
-        }
-      }
-    }
-    
-    checkUserType()
-  }, [user, profile])
+  // useEffect(() => {
+  //   const checkUserType = async () => {
+  //     if (user && profile && !profile.user_type) {
+  //       setOpen(true)
+  //     }
+  //
+  //     // Also check for pending user type from signup
+  //     if (user && typeof window !== 'undefined') {
+  //       const pendingUserType = sessionStorage.getItem('pendingUserType') as UserType
+  //       if (pendingUserType) {
+  //         // Auto-submit the user type
+  //         await updateUserType(pendingUserType)
+  //         sessionStorage.removeItem('pendingUserType')
+  //       }
+  //     }
+  //   }
+  //
+  //   checkUserType()
+  // }, [user, profile])
 
   const updateUserType = async (userType: UserType) => {
     if (!user) return

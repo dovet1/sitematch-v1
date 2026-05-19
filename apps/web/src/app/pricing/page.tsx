@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { PricingCard } from '@/components/homepage-new/PricingCard';
 import { RevealWrapper } from '@/components/homepage-new/RevealWrapper';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
-import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import UpgradeModal from '@/components/UpgradeModal';
 import { useAuth } from '@/contexts/auth-context';
@@ -176,23 +175,14 @@ export default function PricingPage() {
                 tier="free"
                 period={period}
                 ctaElement={
-                  user ? (
-                    <Link href="/occupier/create-listing-quick" className="block">
-                      <button className="w-full mt-5 px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] transition-colors bg-transparent text-sm-ink border-sm-border hover:bg-sm-border-soft">
-                        Get started
-                      </button>
-                    </Link>
-                  ) : (
-                    <AuthChoiceModal
-                      redirectTo="/occupier/create-listing-quick"
-                      title="Sign in to post requirements"
-                      description="Access your account to create and manage property listings"
-                    >
-                      <button className="w-full mt-5 px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] transition-colors bg-transparent text-sm-ink border-sm-border hover:bg-sm-border-soft">
-                        Get started
-                      </button>
-                    </AuthChoiceModal>
-                  )
+                  <Link
+                    href={user ? "/occupier/create-listing-quick" : `/auth?mode=signin&returnUrl=${encodeURIComponent('/occupier/create-listing-quick')}`}
+                    className="block"
+                  >
+                    <button className="w-full mt-5 px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] transition-colors bg-transparent text-sm-ink border-sm-border hover:bg-sm-border-soft">
+                      Get started
+                    </button>
+                  </Link>
                 }
               />
             </RevealWrapper>
