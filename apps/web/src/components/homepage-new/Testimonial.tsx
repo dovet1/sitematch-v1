@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { RevealWrapper } from './RevealWrapper';
 
 export function Testimonial() {
@@ -25,10 +26,18 @@ export function Testimonial() {
 
           {/* Author */}
           <div className="mt-7 flex items-center gap-3 justify-center font-normal text-sm">
-            <div className="w-10 h-10 rounded-full bg-[#D9D2E4]" />
+            <div className="w-10 h-10 rounded-full overflow-hidden relative">
+              <Image
+                src="/testimonials/kerry-northfold.jpg"
+                alt="Kerry Northfold"
+                width={40}
+                height={40}
+                className="object-cover"
+              />
+            </div>
             <div className="text-left">
-              <div className="font-semibold text-sm-ink">Karry Northfield</div>
-              <div className="text-sm-ink3">Director Advisor · Voicemagic Shopworthy</div>
+              <div className="font-semibold text-sm-ink">Kerry Northfold</div>
+              <div className="text-sm-ink3">Vedra Property Group & PMA</div>
             </div>
           </div>
         </div>

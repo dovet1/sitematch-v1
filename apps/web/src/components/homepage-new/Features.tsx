@@ -21,15 +21,16 @@ export function Features() {
           name="GapFinder"
           kicker="Map brand presence"
           headline="see where every brand isn't yet."
-          body="GapFinder maps brand presence across the UK so you can find the gaps before anyone else. Spot off-market opportunities your competitors miss."
+          body="GapFinder maps brand presence across the UK so you can find the gaps before anyone else. Spot opportunities your competitors miss."
           bullets={[
             "Every major UK retail brand, mapped",
-            "Filter by sector, fascia or catchment",
-            "Export shortlists to PDF",
+            "Filter by sector, fascia or population",
+            "Assess an area's store presence and compare to another area",
+            "Export shortlists to Excel",
           ]}
           videoLabel="GapFinder demo"
           videoNote="Map view zooming into a region; gaps highlighting"
-          ctas={[{ label: "Find Gaps Now", style: "violet" }]}
+          ctas={[{ label: "Find Gaps Now", style: "violet", requiresAuth: true }]}
         />
 
         {/* Feature 2: Requirement Directory */}
@@ -42,14 +43,15 @@ export function Features() {
           bullets={[
             "Hand-verified before going live",
             "Re-checked on a rolling basis",
-            "Direct contact details on Pro+",
+            "Easily searchable and filterable",
           ]}
           videoLabel="Requirement Directory"
           videoNote="Scrolling the list, filtering, opening a detail card"
+          videoSrc="/gapfinder/homepage_gifs/browse_listings_gif.mp4"
           reverse
           ctas={[
-            { label: "Browse Requirements Now", style: "violet" },
-            { label: "Post For Free (Forever!)", style: "ghost" },
+            { label: "Browse Requirements Now", style: "violet", href: "/search" },
+            { label: "Post For Free (Forever!)", style: "ghost", href: "/occupier/create-listing-quick" },
           ]}
         />
 
@@ -59,15 +61,16 @@ export function Features() {
           name="SiteAnalyser"
           kicker="Catchment & demographics"
           headline="instant demographics for any UK postcode."
-          body="SiteAnalyser pulls population, affluence and household data for any catchment in seconds — no consultant report required."
+          body="SiteAnalyser pulls population, affluence and household data for any catchment in seconds - no consultant report required."
           bullets={[
             "Drive-time and walk-time catchments",
-            "Affluence, age, household composition",
-            "Branded PDF reports on Plus",
+            "Affluence, age, household composition and more",
+            "Save analyses for later",
           ]}
           videoLabel="SiteAnalyser"
           videoNote="Dropping a pin, isochrone forming, stats panel populating"
-          ctas={[{ label: "Try For Free", style: "violet" }]}
+          videoSrc="/gapfinder/homepage_gifs/siteanalyser_gif.mp4"
+          ctas={[{ label: "Try For Free", style: "violet", href: "/new-dashboard/tools/site-demographer" }]}
         />
 
         {/* Feature 4: SiteSketcher */}
@@ -76,16 +79,17 @@ export function Features() {
           name="SiteSketcher"
           kicker="2D & 3D site mock-ups"
           headline="sketch a feasibility in a coffee break."
-          body="Mock up site layouts in 2D and 3D. Draw, measure and visualise on any plot — without opening CAD."
+          body="Mock up site layouts in 2D and 3D. Draw, measure and visualise on any plot - without opening CAD."
           bullets={[
             "Drag, draw and measure on any plot",
             "Toggle between 2D and 3D views",
-            "Share live links with clients",
+            "Add parking spaces to the map",
           ]}
           videoLabel="SiteSketcher"
           videoNote="Drawing a footprint on a plot, extruding to 3D"
+          videoSrc="/gapfinder/homepage_gifs/sitesketcher_gif.mp4"
           reverse
-          ctas={[{ label: "Try For Free", style: "violet" }]}
+          ctas={[{ label: "Try For Free", style: "violet", href: "/sitesketcher" }]}
         />
       </div>
     </section>

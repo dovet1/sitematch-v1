@@ -179,8 +179,8 @@ Mobile: rows collapse to 1 column, **video stacks on top of copy** for every row
 ### 5. Testimonial (`A_Testimonial`)
 - Full-width band with `#FFFFFF` bg and hairline top/bottom borders.
 - Centered, max-width 980px. Quote-mark SVG (32×24, ink at 25% opacity) on top.
-- Quote text (see `direction-a.jsx` — long-form quote from Karry Northfield).
-- Below: 40×40 flat grey avatar circle (`#D9D2E4`) + name "Karry Northfield" (600) + role "Director Advisor · Voicemagic Shopworthy" (ink3) — left-aligned within the centered group.
+- Quote text (see `direction-a.jsx` — long-form quote from Kerry Northfield).
+- Below: 40×40 flat grey avatar circle (`#D9D2E4`) + name "Kerry Northfield" (600) + role "Director Advisor · Voicemagic Shopworthy" (ink3) — left-aligned within the centered group.
 
 ### 6. Pricing (`A_Pricing` → `A_PricingCard` × 3)
 - Centered. Eyebrow `PRICING`. H2 `Simple, transparent pricing.` Subtitle about the free trial.

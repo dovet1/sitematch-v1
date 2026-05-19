@@ -1,12 +1,12 @@
 'use client';
 
-import { VideoSlot } from './VideoSlot';
-import { RevealWrapper } from './RevealWrapper';
+import { VideoSlot } from '../homepage-new/VideoSlot';
+import { RevealWrapper } from '../homepage-new/RevealWrapper';
 import { useAuth } from '@/contexts/auth-context';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { PaywallModal } from '@/components/PaywallModal';
 
-export function Hero() {
+export function GapFinderHero() {
   const { user } = useAuth();
 
   const handleSeeInAction = () => {
@@ -18,7 +18,7 @@ export function Hero() {
 
   const trialButton = (
     <button className="px-5 py-[13px] rounded-sm-btn bg-sm-violet text-white font-medium text-[15px] border border-sm-violet tracking-[-0.1px] hover:bg-sm-violet-deep transition-colors">
-      Start 30-day free trial
+      Try GapFinder Now
     </button>
   );
 
@@ -28,17 +28,17 @@ export function Hero() {
         {/* Eyebrow */}
         <div className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[1.4px] text-sm-ink3 uppercase">
           <span className="w-1.5 h-1.5 rounded-full bg-sm-violet" />
-          For commercial property professionals
+          GapFinder
         </div>
 
         {/* H1 */}
         <h1 className="mx-auto mt-[18px] max-w-[1080px] font-semibold text-sm-ink text-hero-h1 leading-[0.98] tracking-[-0.04em] balance">
-          Connecting UK commercial property professionals
+          GapFinder - see where every brand isn't yet.
         </h1>
 
         {/* Subtitle */}
         <p className="mx-auto mt-6 max-w-[620px] text-sm-ink2 leading-[1.45] balance" style={{ fontSize: 'clamp(16px, 1.6vw, 20px)' }}>
-           Identify expansion opportunities with GapFinder, browse a continually verified directory of live requirements, and connect directly with the people ready to act on them.
+          GapFinder maps brand presence across the UK so you can find the gaps before anyone else. Spot opportunities your competitors miss.
         </p>
 
         {/* CTAs */}
@@ -63,10 +63,9 @@ export function Hero() {
         {/* Video Placeholder */}
         <div className="mx-auto mt-16 max-w-[1180px] max-md:mt-10">
           <VideoSlot
-            label="Full product overview"
-            note="60-second walkthrough showing the dashboard, map and key flows"
+            label="GapFinder overview"
+            note="Map interface showing brand presence and gap analysis"
             ratio="16/9"
-            videoSrc="/gapfinder/homepage_gifs/gf_gif.mp4"
             alt="GapFinder product overview demonstration"
           />
         </div>
