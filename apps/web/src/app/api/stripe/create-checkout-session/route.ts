@@ -1,47 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase'
 import { createServerClient } from '@supabase/ssr'
-import { stripe, SUBSCRIPTION_CONFIG } from '@/lib/stripe'
+import { stripe, SUBSCRIPTION_CONFIG, type SubscriptionTier, type BillingInterval } from '@/lib/stripe'
 import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId: providedUserId, userType, redirectPath, billingInterval = 'year' } = await request.json()
-    console.log('API called with userId:', providedUserId)
+    const {
+      userId: providedUserId,
+      userType,
+      redirectPath,
+      billingInterval = 'year',
+      tier: providedTier
+    } = await request.json()
+
+    console.log('API called with userId:', providedUserId, 'tier:', providedTier)
     console.log('Billing interval:', billingInterval)
 
-    let userId = providedUserId
-
-    // If no userId provided, try to get it from the session
-    if (!userId) {
-      const cookieStore = await cookies()
-      const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            get(name: string) {
-              return cookieStore.get(name)?.value
-            },
+    // ===== SECURITY: Always authenticate from session first =====
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
           },
-        }
-      )
-
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-      if (authError || !user) {
-        return NextResponse.json({ error: 'User authentication required' }, { status: 401 })
+        },
       }
+    )
 
-      userId = user.id
-      console.log('Got userId from session:', userId)
+    const { data: { user: sessionUser }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !sessionUser) {
+      return NextResponse.json({ error: 'User authentication required' }, { status: 401 })
     }
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 })
+    // SECURITY: Verify provided userId matches session user (if provided)
+    if (providedUserId && providedUserId !== sessionUser.id) {
+      console.warn('User ID mismatch - provided:', providedUserId, 'session:', sessionUser.id)
+      return NextResponse.json({ error: 'Invalid user ID' }, { status: 403 })
     }
+
+    const userId = sessionUser.id
+    console.log('Authenticated user from session:', userId)
 
     // Create admin client with service role key for database operations
     const adminSupabase = createAdminClient()
@@ -49,9 +54,18 @@ export async function POST(request: NextRequest) {
     // Get user details using admin client to bypass RLS
     const { data: user, error: userError } = await adminSupabase
       .from('users')
-      .select('email, stripe_customer_id, subscription_status')
+      .select('email, stripe_customer_id, subscription_status, subscription_tier, stripe_subscription_id')
       .eq('id', userId)
-      .single() as { data: { email: string; stripe_customer_id: string | null; subscription_status: string | null } | null; error: any }
+      .single() as {
+        data: {
+          email: string
+          stripe_customer_id: string | null
+          subscription_status: string | null
+          subscription_tier: string | null
+          stripe_subscription_id: string | null
+        } | null
+        error: any
+      }
 
     console.log('Database query result:', { user, userError })
 
@@ -60,21 +74,57 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Check if user already has an active subscription or trial
-    if (user.subscription_status === 'active' || user.subscription_status === 'trialing') {
-      console.log(`User ${userId} already has ${user.subscription_status} subscription`)
-      return NextResponse.json(
-        {
-          error: 'Already subscribed',
-          subscriptionStatus: user.subscription_status,
-          message: 'You already have an active subscription'
-        },
-        { status: 400 }
-      )
+    // Legacy users: status='active' but no Stripe IDs
+    // Decision: Keep legacy access during migration, let them create Stripe subscription
+    if (
+      user.subscription_status === 'active' &&
+      !user.stripe_subscription_id
+    ) {
+      console.log(`Legacy user ${userId} creating first Stripe subscription - will replace legacy access`)
+      // Allow through - their legacy access will be replaced by real Stripe subscription
     }
 
-    // Create or get Stripe customer
+    // ===== TIER RESOLUTION =====
+    // Resolve tier with fallback: explicit tier → userType mapping → default 'pro'
+    const tier: SubscriptionTier = providedTier || (userType === 'gapfinder' ? 'plus' : 'pro')
+    console.log('Resolved tier:', tier, '(from providedTier:', providedTier, ', userType:', userType, ')')
+
+    // Block users with real Stripe subscriptions from creating duplicates
+    // Include past_due to prevent users in dunning from creating second subscription
+    const activeStatuses = ['active', 'trialing', 'past_due']
+    if (
+      activeStatuses.includes(user.subscription_status || '') &&
+      user.stripe_subscription_id
+    ) {
+      const currentTier = user.subscription_tier || 'free'
+      return NextResponse.json({
+        error: 'Already subscribed',
+        message: currentTier === 'pro' && tier === 'plus'
+          ? 'To upgrade to Plus, use the upgrade button on the pricing page.'
+          : 'You already have an active subscription',
+        redirectUrl: currentTier === 'pro' && tier === 'plus' ? '/pricing' : undefined
+      }, { status: 400 })
+    }
+
+    // Validate and repair stale customer ID
     let customerId = user.stripe_customer_id
+
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId)
+      } catch (error: any) {
+        if (error.code === 'resource_missing') {
+          console.log('Stale customer ID, clearing:', customerId)
+          await adminSupabase
+            .from('users')
+            .update({ stripe_customer_id: null })
+            .eq('id', userId)
+          customerId = null
+        } else {
+          throw error
+        }
+      }
+    }
 
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -88,8 +138,8 @@ export async function POST(request: NextRequest) {
       customerId = customer.id
 
       // Save customer ID to user record using admin client
-      await (adminSupabase
-        .from('users') as any)
+      await adminSupabase
+        .from('users')
         .update({ stripe_customer_id: customerId })
         .eq('id', userId)
     }
@@ -97,14 +147,32 @@ export async function POST(request: NextRequest) {
     // Get base URL for redirects
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
 
-    // Determine success redirect based on user journey
-    let successUrl = `${baseUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`
-    if (redirectPath) {
-      successUrl += `&redirect=${encodeURIComponent(redirectPath)}`
-    }
+    // ===== BILLING INTERVAL NORMALIZATION =====
+    // Accept both 'monthly'/'annual' and 'month'/'year', normalize to 'month'/'year'
+    let normalizedInterval: BillingInterval = billingInterval
+    if (billingInterval === 'monthly') normalizedInterval = 'month'
+    if (billingInterval === 'annual') normalizedInterval = 'year'
+    console.log('Normalized billing interval:', normalizedInterval)
 
-    // Customize messaging based on user type
-    const getCustomText = (userType?: string) => {
+    // ===== REDIRECT PATH DETERMINATION =====
+    // Determine success redirect based on tier
+    const defaultRedirect = tier === 'plus' ? '/gapfinder' : '/search'
+    const finalRedirectPath = redirectPath || defaultRedirect
+
+    // Build success URL with redirect path
+    let successUrl = `${baseUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`
+    successUrl += `&redirect=${encodeURIComponent(finalRedirectPath)}`
+
+    // Customize messaging based on tier and user type
+    const getCustomText = (tier: SubscriptionTier, userType?: string) => {
+      if (tier === 'plus') {
+        return {
+          description: 'Find retail white space and analyse operator coverage',
+          custom_text: 'Start your 30-day free trial and use GapFinder to spot better market opportunities'
+        }
+      }
+
+      // Pro tier messaging based on userType
       switch (userType) {
         case 'agency':
           return {
@@ -117,9 +185,10 @@ export async function POST(request: NextRequest) {
             custom_text: 'Start your 30-day free trial and access SiteSketcher visualization tools'
           }
         case 'gapfinder':
+          // Note: gapfinder userType with pro tier shouldn't normally happen, but handle gracefully
           return {
-            description: 'Find retail white space and analyse operator coverage',
-            custom_text: 'Start your 30-day free trial and use GapFinder to spot better market opportunities'
+            description: 'Access property search tools',
+            custom_text: 'Start your 30-day free trial and search thousands of properties'
           }
         case 'searcher':
         default:
@@ -130,11 +199,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const customText = getCustomText(userType)
+    const customText = getCustomText(tier, userType)
 
-    // Select price ID and coupon based on billing interval
-    const priceId = SUBSCRIPTION_CONFIG.getPriceId(billingInterval as 'month' | 'year')
-    const couponId = SUBSCRIPTION_CONFIG.getCouponId(billingInterval as 'month' | 'year')
+    // ===== PRICE AND COUPON SELECTION =====
+    // Select price ID and coupon based on tier and interval
+    const priceId = SUBSCRIPTION_CONFIG.getPriceIdForTier(tier, normalizedInterval)
+    const couponId = SUBSCRIPTION_CONFIG.getCouponIdForTier(tier, normalizedInterval)
 
     console.log('Creating checkout session for user:', userId)
     console.log('Billing interval:', billingInterval)
@@ -168,7 +238,8 @@ export async function POST(request: NextRequest) {
         metadata: {
           user_id: userId,
           user_type: userType || 'unknown',
-          billing_interval: billingInterval
+          billing_interval: normalizedInterval,
+          tier: tier  // ← CRITICAL: Include tier in subscription metadata
         }
       },
       success_url: successUrl,
@@ -191,7 +262,8 @@ export async function POST(request: NextRequest) {
       metadata: {
         user_id: userId,
         user_type: userType || 'unknown',
-        billing_interval: billingInterval
+        billing_interval: normalizedInterval,
+        tier: tier  // ← Also include tier in session metadata
       }
     }
 

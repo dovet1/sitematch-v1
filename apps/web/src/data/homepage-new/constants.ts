@@ -11,9 +11,9 @@ export const PRICING = {
     ctaStyle: "ghost" as const,
     features: [
       { text: "Post unlimited requirements", on: true },
-      { text: "Get matched with sites", on: true },
-      { text: "Browse the database", on: true },
-      { text: "Standard map view", on: true },
+      { text: "SiteSketcher (Free Version)", on: true },
+      { text: "SiteAnalyser (Free Version)", on: true },
+      { text: "SiteMatcher's weekly market snapshot direct to your inbox", on: true },
     ],
   },
   pro: {

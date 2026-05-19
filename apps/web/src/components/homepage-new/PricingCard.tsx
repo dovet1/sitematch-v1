@@ -9,9 +9,11 @@ interface PricingCardProps {
   tier: Tier;
   period: Period;
   featured?: boolean;
+  onCtaClick?: () => void;
+  ctaElement?: React.ReactNode;
 }
 
-export function PricingCard({ tier, period, featured = false }: PricingCardProps) {
+export function PricingCard({ tier, period, featured = false, onCtaClick, ctaElement }: PricingCardProps) {
   const p = PRICING[tier] as any; // Type assertion needed for optional properties
   const pr = p[period];
 
@@ -63,17 +65,20 @@ export function PricingCard({ tier, period, featured = false }: PricingCardProps
       </div>
 
       {/* CTA */}
-      <button
-        className={`mt-5 px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] transition-colors ${
-          featured
-            ? 'bg-sm-violet text-white border-sm-violet hover:bg-sm-violet-deep'
-            : p.ctaStyle === 'outline'
-            ? 'bg-transparent text-sm-ink border-sm-border hover:bg-sm-border-soft'
-            : 'bg-sm-ink text-white border-sm-ink hover:bg-opacity-90'
-        }`}
-      >
-        {p.cta}
-      </button>
+      {ctaElement ? ctaElement : (
+        <button
+          onClick={onCtaClick}
+          className={`mt-5 px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] transition-colors ${
+            featured
+              ? 'bg-sm-violet text-white border-sm-violet hover:bg-sm-violet-deep'
+              : p.ctaStyle === 'outline'
+              ? 'bg-transparent text-sm-ink border-sm-border hover:bg-sm-border-soft'
+              : 'bg-sm-ink text-white border-sm-ink hover:bg-opacity-90'
+          }`}
+        >
+          {p.cta}
+        </button>
+      )}
 
       {/* Intro */}
       {p.intro && (

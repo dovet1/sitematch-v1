@@ -26,11 +26,13 @@ export async function GET() {
       return NextResponse.json({ subscriptionStatus: null })
     }
 
-    // Get subscription status from database
+    // Get subscription status and tier from database
     const subscription = await getUserSubscriptionStatus(user.id)
 
     return NextResponse.json({
-      subscriptionStatus: subscription?.subscription_status || null
+      subscriptionStatus: subscription?.subscription_status || null,
+      subscription_tier: subscription?.subscription_tier || 'free',  // Default to free if not set
+      hasStripeSubscription: !!subscription?.stripe_subscription_id  // NEW
     })
 
   } catch (error) {

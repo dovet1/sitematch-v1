@@ -77,6 +77,34 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// ===== TIER EXTRACTION HELPER =====
+// Deterministic tier derivation from Stripe subscription with fallback priority
+function getTierFromSubscription(subscription: Stripe.Subscription): 'pro' | 'plus' | null {
+  // Priority 1: Price ID (source of truth - reflects actual Stripe subscription state)
+  const knownPriceIds = {
+    plus: [process.env.STRIPE_PLUS_MONTHLY_PRICE_ID, process.env.STRIPE_PLUS_ANNUAL_PRICE_ID],
+    pro: [process.env.STRIPE_PRO_MONTHLY_PRICE_ID, process.env.STRIPE_PRO_ANNUAL_PRICE_ID],
+  }
+
+  const plusItem = subscription.items.data.find(item =>
+    knownPriceIds.plus.filter(Boolean).includes(item.price.id)
+  )
+  if (plusItem) return 'plus'
+
+  const proItem = subscription.items.data.find(item =>
+    knownPriceIds.pro.filter(Boolean).includes(item.price.id)
+  )
+  if (proItem) return 'pro'
+
+  // Priority 2: Check metadata (fallback for edge cases)
+  if (subscription.metadata?.tier === 'plus') return 'plus'
+  if (subscription.metadata?.tier === 'pro') return 'pro'
+
+  // Priority 3: No match found - log error and skip tier update
+  console.error(`Cannot determine tier for subscription ${subscription.id} - no recognized price IDs found`)
+  return null // Caller should skip tier update
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.user_id
 
@@ -93,18 +121,24 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
     console.log(`Retrieved subscription ${subscription.id} for user ${userId}`)
 
-    // Start trial with payment method collected
+    // ===== TIER EXTRACTION WITH FALLBACK PRIORITY =====
+    // Priority 1: session metadata, Priority 2: subscription metadata, Priority 3: derive from subscription
+    const tier = (session.metadata?.tier || subscription.metadata?.tier || getTierFromSubscription(subscription)) as 'pro' | 'plus'
+    console.log(`Resolved tier: ${tier} (from session.metadata: ${session.metadata?.tier}, subscription.metadata: ${subscription.metadata?.tier})`)
+
+    // Start trial with payment method collected AND tier
     const success = await startUserTrial(
       userId,
       session.customer as string,
-      subscription.id
+      subscription.id,
+      tier  // ← Pass tier to ensure correct attribution
     )
 
     if (success) {
-      console.log(`Started trial for user ${userId}`)
+      console.log(`Started ${tier} tier trial for user ${userId}`)
 
       // TODO: Send trial started email
-      // await sendTrialStartedEmail(userId, subscription.trial_end)
+      // await sendTrialStartedEmail(userId, subscription.trial_end, tier)
     } else {
       console.error(`Failed to start trial for user ${userId}`)
     }
@@ -136,6 +170,16 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   // Fetch full subscription details to get current period info
   const fullSubscription = await stripe.subscriptions.retrieve(subscription.id)
 
+  // ===== TIER EXTRACTION =====
+  // Extract tier from subscription (handles upgrades/downgrades from Stripe portal)
+  const tier = getTierFromSubscription(fullSubscription)
+  if (tier) {
+    updates.subscription_tier = tier
+    console.log(`Updating subscription for user ${userId} to tier: ${tier}`)
+  } else {
+    console.error(`Skipping tier update for user ${userId} - tier could not be determined`)
+  }
+
   switch (fullSubscription.status) {
     case 'trialing':
       status = 'trialing'
@@ -164,7 +208,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   if (status) {
     const success = await updateUserSubscriptionStatus(userId, status, updates)
     if (success) {
-      console.log(`Updated subscription status for user ${userId}: ${status}`)
+      console.log(`Updated subscription status for user ${userId}: ${status}, tier: ${tier}`)
     }
   }
 }
@@ -177,9 +221,12 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     return
   }
 
-  const success = await updateUserSubscriptionStatus(userId, 'canceled')
+  // When subscription is deleted, set tier back to 'free' and status to 'canceled'
+  const success = await updateUserSubscriptionStatus(userId, 'canceled', {
+    subscription_tier: 'free'  // ← Reset to free tier
+  })
   if (success) {
-    console.log(`Canceled subscription for user ${userId}`)
+    console.log(`Canceled subscription for user ${userId}, reset to free tier`)
 
     // TODO: Send cancellation email
     // await sendSubscriptionCanceledEmail(userId)
@@ -228,9 +275,12 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     return
   }
 
+  // Update status to past_due
   const success = await updateUserSubscriptionStatus(userId, 'past_due')
   if (success) {
-    console.log(`Payment failed for user ${userId}`)
+    console.log(`Payment failed for user ${userId}, marked as past_due`)
+    // Note: We keep the tier as-is (Plus stays Plus) during dunning
+    // Only downgrade if subscription is ultimately canceled
 
     // TODO: Send payment failed email
     // await sendPaymentFailedEmail(userId, invoice)
