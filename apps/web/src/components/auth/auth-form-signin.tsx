@@ -42,9 +42,6 @@ export function AuthFormSignIn({ returnUrl, onSwitchMode }: AuthFormSignInProps)
         <h2 className="text-[26px] font-[600] text-[#171419] font-inter mb-1.5">
           Sign in
         </h2>
-        <p className="text-[14px] text-[#7C7588] font-inter">
-          Enter your details to access your account.
-        </p>
       </div>
 
       {/* Form */}

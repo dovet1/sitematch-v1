@@ -63,9 +63,6 @@ export function AuthFormSignUp({ returnUrl, onSwitchMode }: AuthFormSignUpProps)
         <h2 className="text-[26px] font-[600] text-[#171419] font-inter mb-1.5">
           Create your account
         </h2>
-        <p className="text-[14px] text-[#7C7588] font-inter">
-          Free forever. Upgrade when you're ready.
-        </p>
       </div>
 
       {/* Form */}

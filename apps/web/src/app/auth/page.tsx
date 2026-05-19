@@ -47,7 +47,7 @@ export default function AuthPage() {
   // Show loading state while checking authentication
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FBFAF7]">
+      <div className="h-[calc(100dvh-4rem)] overflow-hidden flex items-center justify-center bg-[#FBFAF7]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-4 border-[#7033FF] border-t-transparent rounded-full animate-spin" />
           <p className="text-[14px] text-[#7C7588] font-inter">Loading...</p>
@@ -57,13 +57,13 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="grid lg:grid-cols-2 min-h-screen">
+    <div className="h-[calc(100dvh-4rem)] bg-white overflow-hidden">
+      <div className="grid lg:grid-cols-2 h-full min-h-0">
         {/* Left Rail - Editorial Content */}
         <AuthLeftRail mode={mode} />
 
         {/* Right Column - Form */}
-        <div className="flex flex-col p-6 lg:py-8 lg:px-12 bg-white overflow-y-auto">
+        <div className="flex flex-col justify-center p-6 lg:py-8 lg:px-12 bg-white min-h-0">
           {/* Form Content */}
           {mode === 'signin' ? (
             <AuthFormSignIn
