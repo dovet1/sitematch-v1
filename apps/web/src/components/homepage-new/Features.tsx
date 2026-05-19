@@ -30,7 +30,10 @@ export function Features() {
           ]}
           videoLabel="GapFinder demo"
           videoNote="Map view zooming into a region; gaps highlighting"
-          ctas={[{ label: "Find Gaps Now", style: "violet", requiresAuth: true }]}
+          ctas={[
+            { label: "Find Gaps Now", style: "violet", requiresAuth: true },
+            { label: "Learn More", style: "ghost", href: "/gapfinder-landing" }
+          ]}
         />
 
         {/* Feature 2: Requirement Directory */}

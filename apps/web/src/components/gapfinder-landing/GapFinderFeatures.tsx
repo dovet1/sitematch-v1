@@ -4,17 +4,6 @@ export function GapFinderFeatures() {
   return (
     <section className="px-5 md:px-20 pt-[60px] pb-10">
       <div className="max-w-[1280px] mx-auto">
-        {/* Section Header */}
-        <div className="max-w-[720px] mb-9">
-          <div className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[1.4px] text-sm-ink3 uppercase">
-            <span className="w-1.5 h-1.5 rounded-full bg-sm-violet" />
-            Core Features
-          </div>
-          <h2 className="font-semibold text-section-h2 leading-[1.02] tracking-[-0.035em] mt-4 mb-0 text-sm-ink balance">
-            Find gaps. Assess areas. Compare markets. Layer demand.
-          </h2>
-        </div>
-
         {/* Feature 1: Smart Filtering */}
         <FeatureRow
           idx={1}

@@ -1,6 +1,5 @@
 'use client';
 
-import { VideoSlot } from '../homepage-new/VideoSlot';
 import { RevealWrapper } from '../homepage-new/RevealWrapper';
 import { useAuth } from '@/contexts/auth-context';
 import { TrialSignupModal } from '@/components/TrialSignupModal';
@@ -58,16 +57,6 @@ export function GapFinderHero() {
           >
             See it in action ↓
           </button>
-        </div>
-
-        {/* Video Placeholder */}
-        <div className="mx-auto mt-16 max-w-[1180px] max-md:mt-10">
-          <VideoSlot
-            label="GapFinder overview"
-            note="Map interface showing brand presence and gap analysis"
-            ratio="16/9"
-            alt="GapFinder product overview demonstration"
-          />
         </div>
       </section>
     </RevealWrapper>
