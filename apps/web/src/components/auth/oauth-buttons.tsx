@@ -17,6 +17,14 @@ export function OAuthButtons({ redirectTo, mode = 'signup' }: OAuthButtonsProps)
     try {
       setError(null)
       setLoadingProvider(provider)
+
+      // Debug logging
+      console.log('=== OAuth Debug Info ===')
+      console.log('Provider:', provider)
+      console.log('window.location.origin:', window.location.origin)
+      console.log('NEXT_PUBLIC_SITE_URL:', process.env.NEXT_PUBLIC_SITE_URL)
+      console.log('redirectTo param:', redirectTo)
+
       await signUpWithOAuth(provider, redirectTo)
     } catch (err) {
       setLoadingProvider(null)
