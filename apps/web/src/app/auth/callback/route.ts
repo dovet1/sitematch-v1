@@ -2,6 +2,7 @@ import { createServerClient as createSSRServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import { Database } from '@/lib/supabase'
 import { UserType } from '@/types/auth'
+import { randomUUID } from 'crypto'
 
 // Security: Validate return URLs to prevent open redirect vulnerabilities
 function isValidReturnUrl(url: string): boolean {
@@ -167,6 +168,36 @@ export async function GET(request: NextRequest) {
           user_type: profile.user_type
         })
       }
+
+      // Generate session ID for OAuth users (same as password login)
+      const sessionId = randomUUID()
+
+      // Update user's session ID in database (row guaranteed to exist now)
+      const { error: sessionUpdateError } = await supabase
+        .from('users')
+        .update({
+          current_session_id: sessionId,
+          last_session_change: new Date().toISOString()
+        })
+        .eq('id', user.id)
+
+      if (sessionUpdateError) {
+        console.error('Error updating OAuth session:', sessionUpdateError)
+        // Don't fail the auth flow, but log it
+      } else {
+        console.log('[OAUTH CALLBACK] Session ID updated in DB:', sessionId.substring(0, 8) + '...')
+      }
+
+      // Set session_id cookie (same as password login)
+      response.cookies.set('session_id', sessionId, {
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+        sameSite: 'lax',
+        httpOnly: false, // Allow client-side access for validation
+        secure: process.env.NODE_ENV === 'production'
+      })
+
+      console.log('[OAUTH CALLBACK] Session ID cookie set')
 
       // If redirecting to search, mark as just authenticated for toast
       if (finalRedirect.startsWith('/search')) {

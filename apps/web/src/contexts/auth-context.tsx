@@ -173,6 +173,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setLoading(false)
               return
             }
+
+            // Sync session_id from cookie to localStorage for OAuth users
+            const sessionIdCookie = document.cookie
+              .split('; ')
+              .find(row => row.startsWith('session_id='))
+              ?.split('=')[1]
+
+            if (sessionIdCookie && !localStorage.getItem('session_id')) {
+              console.log('[AUTH-CONTEXT] Syncing session_id to localStorage for OAuth user')
+              localStorage.setItem('session_id', sessionIdCookie)
+            }
           }
 
           // Skip if user is already set and same user
