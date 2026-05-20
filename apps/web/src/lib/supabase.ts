@@ -48,7 +48,7 @@ export const createServerClient = async () => {
   try {
     const { cookies } = require('next/headers')
     const cookieStore = await cookies()
-    
+
     return createSSRServerClient(
       supabaseUrl,
       supabaseAnonKey,
@@ -58,7 +58,7 @@ export const createServerClient = async () => {
             try {
               return cookieStore.get(name)?.value
             } catch (error) {
-              console.warn('Error getting cookie:', name, error)
+              // Silently fail during build/static generation
               return undefined
             }
           },
@@ -66,22 +66,22 @@ export const createServerClient = async () => {
             try {
               cookieStore.set({ name, value, ...options })
             } catch (error) {
-              console.warn('Error setting cookie:', name, error)
+              // Silently fail during build/static generation
             }
           },
           remove(name: string, options: any) {
             try {
               cookieStore.set({ name, value: '', ...options })
             } catch (error) {
-              console.warn('Error removing cookie:', name, error)
+              // Silently fail during build/static generation
             }
           },
         },
       }
     )
   } catch (error) {
-    console.error('Error creating server client:', error)
-    // Fallback to regular client if server client fails
+    // Silently fall back to browser client during build/static generation
+    // This is expected when cookies() is called during static page generation
     return createBrowserClient(supabaseUrl, supabaseAnonKey)
   }
 }

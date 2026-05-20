@@ -1,19 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
 import { AuthLeftRail } from '@/components/auth/auth-left-rail'
 import { AuthFormSignIn } from '@/components/auth/auth-form-signin'
 import { AuthFormSignUp } from '@/components/auth/auth-form-signup'
 
-export default function AuthPage() {
+function AuthPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading } = useAuth()
 
-  const modeParam = searchParams.get('mode')
-  const returnUrl = searchParams.get('returnUrl')
+  const modeParam = searchParams?.get('mode')
+  const returnUrl = searchParams?.get('returnUrl')
 
   const [mode, setMode] = useState<'signin' | 'signup'>(
     modeParam === 'signup' ? 'signup' : 'signin'
@@ -79,5 +79,20 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-[calc(100dvh-4rem)] overflow-hidden flex items-center justify-center bg-[#FBFAF7]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-[#7033FF] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[14px] text-[#7C7588] font-inter">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AuthPageContent />
+    </Suspense>
   )
 }
