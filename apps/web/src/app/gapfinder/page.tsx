@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MonitorUp } from 'lucide-react'
 import { isGapFinderViewportSupported } from './viewport'
 import { PaywallModal } from '@/components/PaywallModal'
 import { TrialSignupModal } from '@/components/TrialSignupModal'
 import { useAuth } from '@/contexts/auth-context'
-import { useSubscriptionAccess } from '@/hooks/useSubscriptionAccess'
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier'
 
 const GapFinderClient = dynamic(() => import('./GapFinderClient'), {
   ssr: false,
@@ -70,60 +71,80 @@ function GapFinderMobileUnavailable() {
   )
 }
 
-function GapFinderAccessDenied({ isLoggedIn }: { isLoggedIn: boolean }) {
-  const [showModal, setShowModal] = useState(true)
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white to-violet-50">
-      {isLoggedIn ? (
-        <PaywallModal
-          context="gapfinder"
-          redirectTo="/gapfinder"
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-        />
-      ) : (
-        <TrialSignupModal
-          context="gapfinder"
-          redirectPath="/gapfinder"
-          forceOpen={showModal}
-          onClose={() => setShowModal(false)}
-        >
-          <div />
-        </TrialSignupModal>
-      )}
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold text-gray-900">
-          GapFinder
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Premium feature - Subscription required
-        </p>
-      </div>
-    </div>
-  )
-}
-
 export default function GapFinderPage() {
-  const { user, loading: authLoading } = useAuth()
-  const { hasAccess, loading: subscriptionLoading } = useSubscriptionAccess()
+  const { user } = useAuth()
+  const router = useRouter()
+  const { subscriptionTier, hasProAccess, hasPlusAccess, loading: tierLoading } = useSubscriptionTier()
   const viewportState = useGapFinderViewportState()
 
-  if (authLoading || subscriptionLoading) {
+  // Loading state (viewport + tier)
+  if (tierLoading || viewportState === 'unknown') {
     return <GapFinderLoading />
   }
 
-  if (!user || !hasAccess) {
-    return <GapFinderAccessDenied isLoggedIn={Boolean(user)} />
+  // Plus users: check viewport, then grant access
+  if (hasPlusAccess) {
+    if (viewportState === 'supported') {
+      return <GapFinderClient />
+    } else if (viewportState === 'unsupported') {
+      return <GapFinderMobileUnavailable />
+    }
   }
 
-  if (viewportState === 'unknown') {
-    return <GapFinderLoading />
+  // Pro users: show upgrade modal (no duplicate gate component)
+  if (user && hasProAccess && subscriptionTier === 'pro') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="max-w-lg">
+          <PaywallModal
+            context="gapfinder"
+            tier="plus"
+            isOpen={true}
+            onClose={() => router.push('/new-dashboard')}
+            redirectTo="/gapfinder"
+          />
+        </div>
+      </div>
+    )
   }
 
-  if (viewportState === 'unsupported') {
-    return <GapFinderMobileUnavailable />
+  // Logged-in users without Plus access (Free, canceled, expired, trial_canceled)
+  // CRITICAL: This catches canceled/expired Pro/Plus users who have stale tier but no access
+  if (user && !hasPlusAccess) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="max-w-lg">
+          <PaywallModal
+            context="gapfinder"
+            tier="plus"
+            isOpen={true}
+            onClose={() => router.push('/new-dashboard')}
+            redirectTo="/gapfinder"
+          />
+        </div>
+      </div>
+    )
   }
 
-  return <GapFinderClient />
+  // Anonymous users: show trial signup (no duplicate gate component)
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="max-w-lg">
+          <TrialSignupModal
+            context="gapfinder"
+            tier="plus"
+            forceOpen={true}
+            onClose={() => router.push('/')}
+            redirectPath="/gapfinder"
+          >
+            <div />
+          </TrialSignupModal>
+        </div>
+      </div>
+    )
+  }
+
+  // Fallback (shouldn't reach here)
+  return <GapFinderLoading />
 }

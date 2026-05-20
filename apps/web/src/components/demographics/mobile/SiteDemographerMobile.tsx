@@ -34,7 +34,7 @@ function convertToRadiusMiles(mode: 'distance' | 'drive_time' | 'walk_time', val
 export function SiteDemographerMobile() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isFreeTier, isPro } = useSubscriptionTier();
+  const { hasProAccess } = useSubscriptionTier();
 
   // Get site context from URL params
   const linkedSiteId = searchParams?.get('site_id');
@@ -339,7 +339,7 @@ export function SiteDemographerMobile() {
             measurementValue={measurementValue}
             rawData={rawDemographicsData}
             selectedLsoaCodes={selectedLsoaCodes}
-            isFreeTier={isFreeTier}
+            isFreeTier={!hasProAccess}
           />
         </MobileBottomSheet>
       </div>

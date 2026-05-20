@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
+import { useRouter } from 'next/navigation'
 import { Mail, Loader2, UserPlus, X, Lock, Zap, Star, LogIn } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -35,6 +36,8 @@ interface TrialSignupModalProps {
   context: 'search' | 'sitesketcher' | 'agency' | 'gapfinder' | 'general'
   redirectPath?: string
   billingInterval?: 'month' | 'year'
+  tier?: 'pro' | 'plus'  // NEW: defaults to 'pro'
+  secondaryCTA?: { label: string; href: string }  // NEW
   testimonial?: {
     quote: string
     author: string
@@ -107,7 +110,7 @@ const contextConfig = {
   }
 }
 
-export function TrialSignupModal({ children, context, redirectPath, billingInterval = 'year', testimonial, forceOpen, onClose, onLoadingChange }: TrialSignupModalProps) {
+export function TrialSignupModal({ children, context, redirectPath, billingInterval = 'year', tier = 'pro', secondaryCTA, testimonial, forceOpen, onClose, onLoadingChange }: TrialSignupModalProps) {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -116,6 +119,7 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
   const [selectedInterval, setSelectedInterval] = useState<'month' | 'year'>(billingInterval || 'year')
 
   const { signUp, signIn, user } = useAuth()
+  const router = useRouter()
   const config = contextConfig[context]
   const displayTestimonial = testimonial || config.testimonial
 
@@ -172,9 +176,10 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          tier: tier,  // Pass tier
+          billingInterval: selectedInterval,
           userType: context,
-          redirectPath: redirectPath || '/search',
-          billingInterval: selectedInterval
+          redirectPath: redirectPath || '/search'
         }),
       })
 
@@ -332,11 +337,17 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
             <div className="text-center mt-3 p-2 bg-white/10 backdrop-blur-sm rounded-lg">
               <div className="text-base font-semibold">
                 <span className="line-through text-white/70">
-                  {selectedInterval === 'year' ? '£975' : '£99'}
+                  {tier === 'plus'
+                    ? (selectedInterval === 'year' ? '£990' : '£99')
+                    : (selectedInterval === 'year' ? '£790' : '£79')
+                  }
                 </span>{' '}
                 <span className="text-white">
-                  {selectedInterval === 'year' ? '£487.50/year' : '£49/month'}
-                </span> - 30 days free
+                  {tier === 'plus'
+                    ? (selectedInterval === 'year' ? '£495/year' : '£49.50/month')
+                    : (selectedInterval === 'year' ? '£395/year' : '£39.50/month')
+                  } - 30 days free
+                </span>
               </div>
               <div className="text-xs text-violet-100">Add payment method, cancel anytime</div>
             </div>
@@ -535,6 +546,20 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
                 )}
               </Button>
             </form>
+
+            {/* Secondary CTA (NEW) */}
+            {secondaryCTA && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  handleOpenChange(false)
+                  router.push(secondaryCTA.href)
+                }}
+                className="w-full h-10 mt-3"
+              >
+                {secondaryCTA.label}
+              </Button>
+            )}
 
             {/* Testimonial */}
             {displayTestimonial && (

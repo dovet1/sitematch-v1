@@ -7,6 +7,7 @@ import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import UpgradeModal from '@/components/UpgradeModal';
 import { useAuth } from '@/contexts/auth-context';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 import Link from 'next/link';
 import { Footer } from '@/components/homepage2/Footer';
 import { Button } from '@/components/ui/button';
@@ -17,37 +18,20 @@ type Tier = 'free' | 'pro' | 'plus';
 
 export default function PricingPage() {
   const { user } = useAuth();
+
+  // Use hook as single source of truth for subscription state
+  const {
+    subscriptionStatus,
+    subscriptionTier,
+    hasStripeSubscription,
+    billingInterval,
+    loading: tierLoading
+  } = useSubscriptionTier();
+
   const [isLoadingCheckout, setIsLoadingCheckout] = useState<Tier | null>(null);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<'active' | 'trialing' | 'past_due' | null>(null);
-  const [currentTier, setCurrentTier] = useState<Tier>('free');
-  const [hasStripeSubscription, setHasStripeSubscription] = useState(false);
   const [showAlreadySubscribed, setShowAlreadySubscribed] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [period, setPeriod] = useState<Period>('annual');
-
-  // Fetch subscription status when component mounts and user is logged in
-  useEffect(() => {
-    const fetchSubscriptionStatus = async () => {
-      if (!user?.id) {
-        setSubscriptionStatus(null);
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/user/subscription-status');
-        if (response.ok) {
-          const data = await response.json();
-          setSubscriptionStatus(data.subscriptionStatus);
-          setCurrentTier(data.subscription_tier || 'free');
-          setHasStripeSubscription(data.hasStripeSubscription || false);
-        }
-      } catch (error) {
-        console.error('Error fetching subscription status:', error);
-      }
-    };
-
-    fetchSubscriptionStatus();
-  }, [user?.id]);
 
   const handleCheckout = async (tier: 'pro' | 'plus') => {
     if (!user) return;
@@ -55,7 +39,7 @@ export default function PricingPage() {
     // Only block if user has REAL Stripe subscription (including past_due during dunning)
     const activeStatuses = ['active', 'trialing', 'past_due'];
     if (activeStatuses.includes(subscriptionStatus || '') && hasStripeSubscription) {
-      if (currentTier === 'pro' && tier === 'plus') {
+      if (subscriptionTier === 'pro' && tier === 'plus') {
         setShowUpgradeModal(true); // Show upgrade modal
         return;
       }
@@ -90,7 +74,6 @@ export default function PricingPage() {
       if (!response.ok) {
         // Check if user is already subscribed
         if (data.subscriptionStatus === 'active' || data.subscriptionStatus === 'trialing') {
-          setSubscriptionStatus(data.subscriptionStatus);
           setShowAlreadySubscribed(true);
           setIsLoadingCheckout(null);
           return;
@@ -239,13 +222,24 @@ export default function PricingPage() {
                 featured={true}
                 ctaElement={
                   user ? (
-                    subscriptionStatus === 'active' || subscriptionStatus === 'trialing' ? (
+                    // Check if Pro user first for upgrade detection - WAIT for hook to load
+                    subscriptionTier === 'pro' && hasStripeSubscription && (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') ? (
+                      <button
+                        onClick={() => setShowUpgradeModal(true)}
+                        disabled={tierLoading}
+                        className="w-full mt-5 px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] transition-colors bg-sm-violet text-white border-sm-violet hover:bg-sm-violet-deep disabled:opacity-50"
+                      >
+                        {tierLoading ? 'Loading...' : 'Upgrade to Plus'}
+                      </button>
+                    ) : subscriptionStatus === 'active' || subscriptionStatus === 'trialing' ? (
+                      // Plus users or other active subs
                       <Link href="/gapfinder" className="block">
                         <button className="w-full mt-5 px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] transition-colors bg-sm-violet text-white border-sm-violet hover:bg-sm-violet-deep">
                           Explore GapFinder
                         </button>
                       </Link>
                     ) : (
+                      // Free/canceled/expired users
                       <button
                         onClick={() => handleCheckout('plus')}
                         disabled={isLoadingCheckout === 'plus'}
@@ -262,6 +256,7 @@ export default function PricingPage() {
                       </button>
                     )
                   ) : (
+                    // Anonymous users
                     <TrialSignupModal
                       context="gapfinder"
                       redirectPath="/gapfinder"
@@ -311,7 +306,7 @@ export default function PricingPage() {
           onClose={() => setShowUpgradeModal(false)}
           currentTier="pro"
           targetTier="plus"
-          billingInterval={period === 'monthly' ? 'month' : 'year'}
+          billingInterval={billingInterval}
         />
       </section>
       <Footer />

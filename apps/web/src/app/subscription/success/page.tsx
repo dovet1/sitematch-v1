@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { CheckCircle, ArrowRight, Calendar, CreditCard } from 'lucide-react'
 
 // Whitelist of allowed redirect paths for security
-const ALLOWED_REDIRECTS = ['/search', '/agencies/create', '/sitesketcher']
+const ALLOWED_REDIRECTS = ['/search', '/agencies/create', '/sitesketcher', '/gapfinder']
 
 // Get button configuration based on redirect destination
 const getButtonConfig = (redirectPath: string | null) => {
@@ -28,6 +28,11 @@ const getButtonConfig = (redirectPath: string | null) => {
       return {
         text: 'Start using SiteSketcher',
         path: '/sitesketcher'
+      }
+    case '/gapfinder':
+      return {
+        text: 'Start using GapFinder',
+        path: '/gapfinder'
       }
     case '/search':
     default:

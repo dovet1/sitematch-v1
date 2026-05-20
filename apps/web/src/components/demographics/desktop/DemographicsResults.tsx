@@ -8,10 +8,11 @@ import { useState, useMemo } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { AffluenceMethodologyModal } from '../AffluenceMethodologyModal';
 import { BlurOverlay } from '../BlurOverlay';
-import { UpgradeBanner } from '@/components/UpgradeBanner';
 import { SaveAnalysisModal } from '../SaveAnalysisModal';
 import { Button } from '@/components/ui/button';
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import type { CoverageStatus } from '@/lib/types/demographics';
 import { getCoverageMessages } from '@/lib/coverage-utils';
 
@@ -74,7 +75,14 @@ export function DemographicsResults({
   isochroneGeometry,
   linkedSiteId,
 }: DemographicsResultsProps) {
-  const { isPro } = useSubscriptionTier();
+  const { user } = useAuth();
+  const { hasProAccess } = useSubscriptionTier();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Preserve full path including query params
+  const currentPath = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '');
 
   // Default to first 3 categories expanded
   const [expandedCategories, setExpandedCategories] = useState<Set<CategoryType>>(
@@ -83,9 +91,6 @@ export function DemographicsResults({
 
   // State for methodology modal
   const [methodologyModalOpen, setMethodologyModalOpen] = useState(false);
-
-  // State for upgrade banner
-  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
 
   // State for save analysis modal
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -292,7 +297,11 @@ export function DemographicsResults({
   };
 
   const handleUpgradeClick = () => {
-    setShowUpgradeBanner(true);
+    if (!user) {
+      router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+    } else {
+      router.push('/pricing');
+    }
   };
 
   // Empty State
@@ -476,7 +485,7 @@ export function DemographicsResults({
             size="sm"
           >
             <Save className="h-4 w-4 mr-2" />
-            {isPro ? 'Save Analysis' : 'Save Analysis (Pro)'}
+            {hasProAccess ? 'Save Analysis' : 'Save Analysis (Pro)'}
           </Button>
         </div>
       </div>
@@ -857,30 +866,6 @@ export function DemographicsResults({
           );
         })}
       </div>
-
-      {/* Upgrade Banner Modal */}
-      {showUpgradeBanner && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowUpgradeBanner(false)}
-        >
-          <div className="max-w-2xl w-full relative" onClick={(e) => e.stopPropagation()}>
-            <UpgradeBanner
-              title="Unlock Full Demographics"
-              features={[
-                'Age profile and demographic breakdowns',
-                'Employment and occupation data',
-                'Education qualification levels',
-                'Travel to work and mobility patterns',
-                'Health and disability statistics',
-                'Export comprehensive reports',
-              ]}
-              context="sitesketcher"
-              onDismiss={() => setShowUpgradeBanner(false)}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Save Analysis Modal */}
       <SaveAnalysisModal

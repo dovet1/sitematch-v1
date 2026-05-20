@@ -9,7 +9,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, Save, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
-import { UpgradeBanner } from '@/components/UpgradeBanner';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 interface Site {
   id: string;
@@ -41,7 +42,11 @@ export function SaveAnalysisModal({
   analysisData,
   linkedSiteId,
 }: SaveAnalysisModalProps) {
-  const { isPro, isFreeTier } = useSubscriptionTier();
+  const { user } = useAuth();
+  const { hasProAccess } = useSubscriptionTier();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [loading, setLoading] = useState(false);
   const [sites, setSites] = useState<Site[]>([]);
@@ -49,14 +54,23 @@ export function SaveAnalysisModal({
   const [name, setName] = useState('');
   const [saveOption, setSaveOption] = useState<'standalone' | 'existing' | 'new'>('standalone');
   const [selectedSiteId, setSelectedSiteId] = useState<string>('');
-  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
+
+  // Preserve full path including query params
+  const currentPath = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '');
 
   useEffect(() => {
-    if (open && !isPro) {
-      setShowUpgradeBanner(true);
+    // Redirect users without Pro access
+    if (open && !hasProAccess) {
+      onClose(); // Close the modal first
+      if (!user) {
+        router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+      } else {
+        router.push('/pricing');
+      }
+      return;
     }
 
-    if (open && isPro) {
+    if (open && hasProAccess) {
       fetchSites();
       // Auto-generate name based on location and measurement
       if (analysisData) {
@@ -78,7 +92,7 @@ export function SaveAnalysisModal({
         setSelectedSiteId(linkedSiteId);
       }
     }
-  }, [open, isPro, analysisData, linkedSiteId]);
+  }, [open, hasProAccess, analysisData, linkedSiteId, user, router, currentPath, onClose]);
 
   const fetchSites = async () => {
     setLoadingSites(true);
@@ -154,29 +168,6 @@ export function SaveAnalysisModal({
       setLoading(false);
     }
   };
-
-  // Show upgrade banner for free users
-  if (showUpgradeBanner && isFreeTier) {
-    return (
-      <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl">
-          <UpgradeBanner
-            title="Save Your Location Analyses"
-            features={[
-              'Save unlimited location analyses',
-              'Attach analyses to sites',
-              'Access historical demographic data',
-              'Export analysis reports',
-              'Access all requirement listings',
-              'Pro access to all tools',
-            ]}
-            context="general"
-            onDismiss={onClose}
-          />
-        </DialogContent>
-      </Dialog>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

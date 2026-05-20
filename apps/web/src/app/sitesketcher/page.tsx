@@ -14,6 +14,7 @@ import { SaveSketchModal } from './components/SaveSketchModal';
 import { SketchesList } from './components/SketchesList';
 import { DocumentBar } from './components/DocumentBar';
 import { UnsavedChangesDialog } from './components/UnsavedChangesDialog';
+import { UpgradeLimitModal } from '@/components/UpgradeLimitModal';
 import { AlertTriangle, Pencil, MousePointer, ArrowLeft, Menu, Building2, HelpCircle } from 'lucide-react';
 import { VideoLightbox } from '@/components/VideoLightbox';
 import type {
@@ -35,21 +36,24 @@ import '@/styles/sitesketcher-mobile.css';
 import '@/styles/sitesketcher-toggle.css';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { Toaster } from 'sonner';
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
-import { UpgradeBanner } from '@/components/UpgradeBanner';
 
 const STORAGE_KEY = 'sitesketcher-state';
 const RECENT_SEARCHES_KEY = 'sitesketcher-recent-searches';
 
 function SiteSketcherContent() {
   const { user, loading, profile } = useAuth();
-  const { isFreeTier, isPro, loading: tierLoading } = useSubscriptionTier();
+  const { hasProAccess } = useSubscriptionTier();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const showWelcome = searchParams?.get('welcome') === 'true';
+
+  // Preserve full path including query params
+  const currentPath = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '');
 
   // Check if we should center on a specific location from URL params (e.g., from "Create Sketch" on a site)
   const initialAddress = searchParams?.get('address');
@@ -99,9 +103,9 @@ function SiteSketcherContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSelectingExportArea, setIsSelectingExportArea] = useState(false);
   const [showMobileFileMenu, setShowMobileFileMenu] = useState(false);
-  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
-  const [upgradeBannerType, setUpgradeBannerType] = useState<'polygon' | 'parking'>('polygon');
   const [showTutorialVideo, setShowTutorialVideo] = useState(false);
+  const [showUpgradeLimitModal, setShowUpgradeLimitModal] = useState(false);
+  const [upgradeLimitType, setUpgradeLimitType] = useState<'polygon' | 'parking'>('polygon');
   const mapRef = useRef<MapboxMapRef>(null);
   const originalMeasurementsRef = useRef<AreaMeasurement | null>(null);
   const hasLoadedFromUrlRef = useRef(false);
@@ -332,18 +336,31 @@ function SiteSketcherContent() {
     }
   }, [state.polygons, state.selectedPolygonId]);
 
+  // Upgrade limit modal handlers
+  const handleUpgradeLimitModalClose = () => {
+    setShowUpgradeLimitModal(false);
+  };
+
+  const handleUpgradeClick = () => {
+    setShowUpgradeLimitModal(false);
+    if (!user) {
+      router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+    } else {
+      router.push('/pricing');
+    }
+  };
+
   // Remove mode handling - tool is always in draw mode
 
   const handlePolygonCreate = useCallback((polygon: MapboxDrawPolygon) => {
-    // Check free tier limit before adding polygon
+    // Check Pro access limit before adding polygon
     setState(prev => {
-      if (isFreeTier && prev.polygons.length >= 2) {
-        // Show upgrade banner and prevent polygon creation
-        setShowUpgradeBanner(true);
-        setUpgradeBannerType('polygon');
+      if (!hasProAccess && prev.polygons.length >= 2) {
+        // Show modal instead of immediate redirect
+        setUpgradeLimitType('polygon');
+        setShowUpgradeLimitModal(true);
         // Delete the polygon from the map
         mapRef.current?.deletePolygon(String(polygon.id || polygon.properties?.id || ''));
-        toast.error('Free tier limit reached: 2 polygons maximum');
         return prev;
       }
 
@@ -367,7 +384,7 @@ function SiteSketcherContent() {
 
       return newState;
     });
-  }, [isFreeTier]);
+  }, [hasProAccess]);
 
   const handlePolygonUpdate = useCallback((polygon: MapboxDrawPolygon) => {
     setState(prev => {
@@ -453,11 +470,11 @@ function SiteSketcherContent() {
 
   const handleAddParkingOverlay = useCallback((overlay: ParkingOverlay) => {
     setState(prev => {
-      // Check free tier limit before adding parking overlay
-      if (isFreeTier && prev.parkingOverlays.length >= 2) {
-        setShowUpgradeBanner(true);
-        setUpgradeBannerType('parking');
-        toast.error('Free tier limit reached: 2 parking blocks maximum');
+      // Check Pro access limit before adding parking overlay
+      if (!hasProAccess && prev.parkingOverlays.length >= 2) {
+        // Show modal instead of immediate redirect
+        setUpgradeLimitType('parking');
+        setShowUpgradeLimitModal(true);
         return prev;
       }
 
@@ -466,7 +483,7 @@ function SiteSketcherContent() {
         parkingOverlays: [...prev.parkingOverlays, overlay]
       };
     });
-  }, [isFreeTier]);
+  }, [hasProAccess]);
 
   const handleRemoveParkingOverlay = useCallback((overlayId: string) => {
     setState(prev => ({
@@ -716,6 +733,16 @@ function SiteSketcherContent() {
   // Save/Load/Export handlers
   // Handle Save - updates existing or prompts for name if new
   const handleSave = useCallback(async () => {
+    // Gate check FIRST
+    if (!hasProAccess) {
+      if (!user) {
+        router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+      } else {
+        router.push('/pricing');
+      }
+      return;
+    }
+
     if (!currentSketchId || currentSketchName === 'Untitled Sketch') {
       // No existing sketch or unnamed, trigger Save As
       setShowSaveModal(true);
@@ -754,8 +781,18 @@ function SiteSketcherContent() {
 
   // Handle Save As - always creates new sketch or renames
   const handleSaveAs = useCallback(() => {
+    // Gate check FIRST
+    if (!hasProAccess) {
+      if (!user) {
+        router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+      } else {
+        router.push('/pricing');
+      }
+      return;
+    }
+
     setShowSaveModal(true);
-  }, []);
+  }, [hasProAccess, user, router, currentPath]);
 
   const handleSaveSketch = useCallback(async (name: string, description: string) => {
     setIsSaving(true);
@@ -888,6 +925,16 @@ function SiteSketcherContent() {
   }, []);
 
   const handleLoad = useCallback(() => {
+    // Gate check FIRST
+    if (!hasProAccess) {
+      if (!user) {
+        router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+      } else {
+        router.push('/pricing');
+      }
+      return;
+    }
+
     if (hasUnsavedChanges) {
       setPendingAction(() => () => {
         setShowLoadModal(true);
@@ -896,7 +943,7 @@ function SiteSketcherContent() {
     } else {
       setShowLoadModal(true);
     }
-  }, [hasUnsavedChanges]);
+  }, [hasUnsavedChanges, hasProAccess, user, router, currentPath]);
 
   const handleLoadSketch = useCallback((sketch: SavedSketch) => {
     console.log('Loading sketch:', sketch.name);
@@ -1008,8 +1055,8 @@ function SiteSketcherContent() {
     }
   }, [handleSave, pendingAction]);
 
-  // Show loading while checking authentication and subscription tier
-  if (loading || tierLoading) {
+  // Show loading while checking authentication
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -1082,7 +1129,7 @@ function SiteSketcherContent() {
                 <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
                   SiteSketcher
                 </h1>
-                {isFreeTier && (
+                {!hasProAccess && (
                   <span className="ml-2 px-2.5 py-0.5 bg-violet-100 border-2 border-violet-300 rounded-full text-xs font-bold text-violet-700">
                     FREE
                   </span>
@@ -1139,7 +1186,7 @@ function SiteSketcherContent() {
           sketchName={currentSketchName}
           hasUnsavedChanges={hasUnsavedChanges}
           isSaving={isSaving}
-          isFreeTier={isFreeTier}
+          isFreeTier={!hasProAccess}
           onRenameSketch={handleRenameSketch}
           onNewSketch={handleNewSketch}
           onOpenSketch={handleLoad}
@@ -1167,10 +1214,13 @@ function SiteSketcherContent() {
                 onViewModeToggle={handleViewModeToggle}
                 show3DBuildings={state.show3DBuildings}
                 onToggle3DBuildings={handleToggle3DBuildings}
-                isFreeTier={isFreeTier}
+                isFreeTier={!hasProAccess}
                 onUpgradeClick={() => {
-                  setUpgradeBannerType('polygon');
-                  setShowUpgradeBanner(true);
+                  if (!user) {
+                    router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+                  } else {
+                    router.push('/pricing');
+                  }
                 }}
                 polygons={state.polygons}
                 onPolygonDelete={handlePolygonDelete}
@@ -1387,10 +1437,13 @@ function SiteSketcherContent() {
             onViewModeToggle={handleViewModeToggle}
             show3DBuildings={state.show3DBuildings}
             onToggle3DBuildings={handleToggle3DBuildings}
-            isFreeTier={isFreeTier}
+            isFreeTier={!hasProAccess}
             onUpgradeClick={() => {
-              setUpgradeBannerType('polygon');
-              setShowUpgradeBanner(true);
+              if (!user) {
+                router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+              } else {
+                router.push('/pricing');
+              }
             }}
             polygons={state.polygons}
             onPolygonDelete={handlePolygonDelete}
@@ -1456,44 +1509,13 @@ function SiteSketcherContent() {
         onSelect={handleCuboidStorySelect}
       />
 
-      {/* Upgrade Banner Modal */}
-      {showUpgradeBanner && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowUpgradeBanner(false)}
-        >
-          <div className="max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
-            <UpgradeBanner
-              title={
-                upgradeBannerType === 'polygon'
-                  ? 'Unlock Unlimited Polygons'
-                  : 'Unlock Unlimited Parking Blocks'
-              }
-              features={
-                upgradeBannerType === 'polygon'
-                  ? [
-                      'Draw unlimited polygons',
-                      'Draw unlimited parking blocks',
-                      'Save sketches',
-                      '3D visualization for all shapes',
-                      'Access all requirement listings',
-                      'Pro access to SiteAnalyser',
-                    ]
-                  : [
-                      'Draw unlimited polygons',
-                      'Draw unlimited parking blocks',
-                      'Save sketches',
-                      '3D visualization for all shapes',
-                      'Access all requirement listings',
-                      'Pro access to SiteAnalyser',
-                    ]
-              }
-              context="sitesketcher"
-              onDismiss={() => setShowUpgradeBanner(false)}
-            />
-          </div>
-        </div>
-      )}
+      {/* Upgrade Limit Modal */}
+      <UpgradeLimitModal
+        isOpen={showUpgradeLimitModal}
+        onClose={handleUpgradeLimitModalClose}
+        limitType={upgradeLimitType}
+        onUpgrade={handleUpgradeClick}
+      />
 
       {/* Tutorial Video Lightbox */}
       <VideoLightbox
