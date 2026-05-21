@@ -37,7 +37,7 @@ export function FAQ() {
           </div>
 
           {/* Contact Card */}
-          <div className="mt-8 p-6 bg-sm-surface rounded-sm-menu border border-sm-border flex items-center justify-between gap-5 flex-wrap">
+          <div className="mt-8 p-6 max-md:p-5 bg-sm-surface rounded-sm-menu border border-sm-border flex items-center justify-between gap-5 flex-wrap max-md:flex-col max-md:items-start">
             <div>
               <div className="font-semibold text-[17px] text-sm-ink">Still have questions?</div>
               <div className="font-normal text-sm text-sm-ink2 mt-0.5">
@@ -46,7 +46,7 @@ export function FAQ() {
             </div>
             <a
               href="mailto:hello@sitematcher.co.uk"
-              className="flex-shrink-0 px-5 py-[13px] rounded-sm-btn bg-sm-violet text-white font-medium text-[15px] border border-sm-violet tracking-[-0.1px] hover:bg-sm-violet-deep transition-colors no-underline"
+              className="flex-shrink-0 px-5 py-[13px] rounded-sm-btn bg-sm-violet text-white font-medium text-[15px] border border-sm-violet tracking-[-0.1px] hover:bg-sm-violet-deep transition-colors no-underline max-md:w-full max-md:text-center"
             >
               hello@sitematcher.co.uk
             </a>

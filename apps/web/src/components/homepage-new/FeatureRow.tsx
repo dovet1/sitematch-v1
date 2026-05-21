@@ -92,9 +92,7 @@ export function FeatureRow({
   return (
     <RevealWrapper>
       <div
-        className={`grid grid-cols-2 gap-20 items-center py-[72px] border-t border-sm-border-soft first:border-t-0 max-md:grid-cols-1 max-md:gap-7 max-md:py-[52px] ${
-          reverse ? 'max-md:[&>*:first-child]:order-1 max-md:[&>*:last-child]:order-2' : ''
-        }`}
+        className="grid grid-cols-2 gap-20 items-center py-[72px] border-t border-sm-border-soft first:border-t-0 max-md:grid-cols-1 max-md:gap-7 max-md:py-[52px]"
       >
         <div className={reverse ? 'order-2 max-md:order-2' : 'order-1 max-md:order-2'}>
           {/* Kicker */}
