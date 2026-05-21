@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe'
+import { stripe, getTierFromPriceId } from '@/lib/stripe'
 
 export const dynamic = 'force-dynamic';
 
@@ -53,12 +53,17 @@ export async function GET(request: NextRequest) {
       ? new Date(subscription.trial_end * 1000)
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
+    // Extract tier from subscription (price ID first, metadata fallback)
+    const priceId = subscription?.items?.data?.[0]?.price?.id
+    const tier = (priceId ? getTierFromPriceId(priceId) : null) || subscription?.metadata?.tier
+
     return NextResponse.json({
       amount: finalAmount,
       trialEndDate: trialEnd.toISOString(),
       hasDiscount: !!discount,
       originalAmount: baseAmount,
-      userId: session.client_reference_id // Include user ID for session restoration
+      userId: session.client_reference_id, // Include user ID for session restoration
+      tier: tier // Include tier for fallback sync
     })
 
   } catch (error) {

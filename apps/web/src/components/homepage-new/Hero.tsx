@@ -48,7 +48,7 @@ export function Hero() {
               {trialButton}
             </PaywallModal>
           ) : (
-            <TrialSignupModal context="gapfinder" redirectPath="/gapfinder">
+            <TrialSignupModal context="gapfinder" redirectPath="/gapfinder" tier="plus">
               {trialButton}
             </TrialSignupModal>
           )}

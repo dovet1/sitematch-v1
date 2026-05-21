@@ -80,7 +80,7 @@ export function FeatureRow({
           {button}
         </PaywallModal>
       ) : (
-        <TrialSignupModal key={i} context="gapfinder" redirectPath="/gapfinder">
+        <TrialSignupModal key={i} context="gapfinder" redirectPath="/gapfinder" tier="plus">
           {button}
         </TrialSignupModal>
       );

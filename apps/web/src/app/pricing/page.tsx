@@ -36,6 +36,8 @@ export default function PricingPage() {
   const handleCheckout = async (tier: 'pro' | 'plus') => {
     if (!user) return;
 
+    console.log('[PRICING] Checkout requested for tier:', tier);
+
     // Only block if user has REAL Stripe subscription (including past_due during dunning)
     const activeStatuses = ['active', 'trialing', 'past_due'];
     if (activeStatuses.includes(subscriptionStatus || '') && hasStripeSubscription) {
@@ -261,6 +263,7 @@ export default function PricingPage() {
                       context="gapfinder"
                       redirectPath="/gapfinder"
                       billingInterval={period === 'monthly' ? 'month' : 'year'}
+                      tier="plus"
                     >
                       <button className="w-full mt-5 px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] transition-colors bg-sm-violet text-white border-sm-violet hover:bg-sm-violet-deep">
                         Start 30-day free trial

@@ -96,6 +96,7 @@ function SubscriptionSuccessContent() {
           // Restore session if user is not currently logged in
           if (data.userId) {
             console.log('[SUCCESS] Got userId from Stripe:', data.userId)
+
             const { createClientClient } = await import('@/lib/supabase')
             const supabase = createClientClient()
             const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
@@ -140,6 +141,9 @@ function SubscriptionSuccessContent() {
                     const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:'
                     document.cookie = `session_id=${sessionData.sessionId}; path=/; max-age=${30 * 24 * 60 * 60}; samesite=lax${isSecure ? '; secure' : ''}`
                     console.log('[SUCCESS] Session fully restored!')
+
+                    // NOW sync tier after session is restored
+                    await syncTierFallback(data.tier, sessionId)
                   }
                 }
               } else {
@@ -148,6 +152,35 @@ function SubscriptionSuccessContent() {
               }
             } else {
               console.log('[SUCCESS] Session already exists, no need to restore')
+
+              // Sync tier for users who already had a session
+              await syncTierFallback(data.tier, sessionId)
+            }
+
+            // Helper function to sync tier
+            async function syncTierFallback(tier: string | null, sessionId: string) {
+              if (tier && sessionId) {
+                console.log('[SUCCESS] Tier from session API:', tier)
+                console.log('[SUCCESS] Calling sync-tier endpoint as fallback...')
+
+                try {
+                  const syncResponse = await fetch('/api/stripe/sync-tier', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId: sessionId })
+                  })
+
+                  if (syncResponse.ok) {
+                    const syncData = await syncResponse.json()
+                    console.log('[SUCCESS] Tier synced successfully:', syncData.tier)
+                  } else {
+                    const errorData = await syncResponse.json().catch(() => ({}))
+                    console.error('[SUCCESS] Failed to sync tier:', errorData)
+                  }
+                } catch (syncError) {
+                  console.error('[SUCCESS] Error syncing tier:', syncError)
+                }
+              }
             }
           } else {
             console.log('[SUCCESS] No userId in Stripe session data')

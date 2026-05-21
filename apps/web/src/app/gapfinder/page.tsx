@@ -220,7 +220,7 @@ export default function GapFinderPage() {
         {/* Paywall Overlay */}
         <GapFinderPaywallOverlay
           userType="anonymous"
-          onNavigateAuth={() => router.push('/auth?mode=signup&returnUrl=/pricing')}
+          onNavigateAuth={() => router.push('/auth?mode=signup&returnUrl=/pricing&tier=plus')}
           onNavigateLearnMore={() => router.push('/gapfinder-landing')}
         />
       </div>

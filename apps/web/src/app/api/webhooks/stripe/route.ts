@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import { stripe, WEBHOOK_CONFIG } from '@/lib/stripe'
+import { stripe, WEBHOOK_CONFIG, getTierFromPriceId } from '@/lib/stripe'
 import {
   updateUserSubscriptionStatus,
   startUserTrial,
@@ -81,27 +81,24 @@ export async function POST(request: NextRequest) {
 // Deterministic tier derivation from Stripe subscription with fallback priority
 function getTierFromSubscription(subscription: Stripe.Subscription): 'pro' | 'plus' | null {
   // Priority 1: Price ID (source of truth - reflects actual Stripe subscription state)
-  const knownPriceIds = {
-    plus: [process.env.STRIPE_PLUS_MONTHLY_PRICE_ID, process.env.STRIPE_PLUS_ANNUAL_PRICE_ID],
-    pro: [process.env.STRIPE_PRO_MONTHLY_PRICE_ID, process.env.STRIPE_PRO_ANNUAL_PRICE_ID],
+  const priceId = subscription.items.data[0]?.price?.id
+  console.log(`[WEBHOOK] Checking tier for price ID: ${priceId}`)
+
+  const tierFromPrice = priceId ? getTierFromPriceId(priceId) : null
+  if (tierFromPrice) {
+    console.log(`[WEBHOOK] Tier resolved from price ID: ${tierFromPrice}`)
+    return tierFromPrice
   }
 
-  const plusItem = subscription.items.data.find(item =>
-    knownPriceIds.plus.filter(Boolean).includes(item.price.id)
-  )
-  if (plusItem) return 'plus'
-
-  const proItem = subscription.items.data.find(item =>
-    knownPriceIds.pro.filter(Boolean).includes(item.price.id)
-  )
-  if (proItem) return 'pro'
-
   // Priority 2: Check metadata (fallback for edge cases)
-  if (subscription.metadata?.tier === 'plus') return 'plus'
-  if (subscription.metadata?.tier === 'pro') return 'pro'
+  const tierFromMeta = subscription.metadata?.tier as 'pro' | 'plus' | null
+  if (tierFromMeta === 'plus' || tierFromMeta === 'pro') {
+    console.log(`[WEBHOOK] Tier resolved from metadata: ${tierFromMeta}`)
+    return tierFromMeta
+  }
 
   // Priority 3: No match found - log error and skip tier update
-  console.error(`Cannot determine tier for subscription ${subscription.id} - no recognized price IDs found`)
+  console.error(`[WEBHOOK] Cannot determine tier for subscription ${subscription.id} - no recognized price IDs or metadata`)
   return null // Caller should skip tier update
 }
 
@@ -122,9 +119,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     console.log(`Retrieved subscription ${subscription.id} for user ${userId}`)
 
     // ===== TIER EXTRACTION WITH FALLBACK PRIORITY =====
-    // Priority 1: session metadata, Priority 2: subscription metadata, Priority 3: derive from subscription
-    const tier = (session.metadata?.tier || subscription.metadata?.tier || getTierFromSubscription(subscription)) as 'pro' | 'plus'
-    console.log(`Resolved tier: ${tier} (from session.metadata: ${session.metadata?.tier}, subscription.metadata: ${subscription.metadata?.tier})`)
+    // Priority 1: Price ID (source of truth), Priority 2: subscription metadata, Priority 3: session metadata
+    const tierFromPrice = getTierFromSubscription(subscription)
+    const tierFromSubMeta = subscription.metadata?.tier
+    const tierFromSession = session.metadata?.tier
+    const tier = (tierFromPrice || tierFromSubMeta || tierFromSession) as 'pro' | 'plus'
+
+    console.log(`[WEBHOOK] Tier resolution for user ${userId}:`)
+    console.log(`[WEBHOOK]   - getTierFromSubscription() [PRIORITY]: ${tierFromPrice}`)
+    console.log(`[WEBHOOK]   - subscription.metadata.tier: ${tierFromSubMeta}`)
+    console.log(`[WEBHOOK]   - session.metadata.tier: ${tierFromSession}`)
+    console.log(`[WEBHOOK]   - Final tier: ${tier}`)
 
     // Start trial with payment method collected AND tier
     const success = await startUserTrial(

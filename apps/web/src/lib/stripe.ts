@@ -119,3 +119,24 @@ export const SUBSCRIPTION_CONFIG = {
 export const WEBHOOK_CONFIG = {
   SECRET: process.env.STRIPE_WEBHOOK_SECRET || '',
 } as const
+
+/**
+ * Maps a Stripe price ID to a subscription tier
+ * @param priceId - The Stripe price ID to check
+ * @returns The tier ('pro' | 'plus') or null if not recognized
+ */
+export function getTierFromPriceId(priceId: string): 'pro' | 'plus' | null {
+  const plusPriceIds = [
+    process.env.STRIPE_PLUS_MONTHLY_PRICE_ID,
+    process.env.STRIPE_PLUS_ANNUAL_PRICE_ID
+  ].filter(Boolean)
+
+  const proPriceIds = [
+    process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
+    process.env.STRIPE_PRO_ANNUAL_PRICE_ID
+  ].filter(Boolean)
+
+  if (plusPriceIds.includes(priceId)) return 'plus'
+  if (proPriceIds.includes(priceId)) return 'pro'
+  return null
+}

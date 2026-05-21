@@ -85,9 +85,21 @@ export async function POST(request: NextRequest) {
     }
 
     // ===== TIER RESOLUTION =====
-    // Resolve tier with fallback: explicit tier → userType mapping → default 'pro'
-    const tier: SubscriptionTier = providedTier || (userType === 'gapfinder' ? 'plus' : 'pro')
-    console.log('Resolved tier:', tier, '(from providedTier:', providedTier, ', userType:', userType, ')')
+    // Force Plus tier for GapFinder context, otherwise use provided tier or default to Pro
+    let tier: SubscriptionTier
+    if (userType === 'gapfinder') {
+      tier = 'plus'  // Always force Plus for GapFinder
+      if (providedTier && providedTier !== 'plus') {
+        console.warn('[CHECKOUT] WARNING: GapFinder user requested', providedTier, 'but forcing Plus')
+      }
+    } else {
+      tier = providedTier || 'pro'
+    }
+
+    console.log('[CHECKOUT] Tier resolution for user', userId)
+    console.log('[CHECKOUT]   - providedTier:', providedTier)
+    console.log('[CHECKOUT]   - userType:', userType)
+    console.log('[CHECKOUT]   - Final tier:', tier)
 
     // Block users with real Stripe subscriptions from creating duplicates
     // Include past_due to prevent users in dunning from creating second subscription
