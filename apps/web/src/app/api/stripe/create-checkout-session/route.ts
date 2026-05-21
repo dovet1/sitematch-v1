@@ -157,7 +157,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Get base URL for redirects
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+    // Use request origin to keep checkout/success on same domain (preserves session cookies)
+    // This prevents cross-domain issues between preview/production deployments
+    const origin = request.headers.get('origin')
+    const baseUrl =
+      origin && /^https?:\/\/[^/]+$/.test(origin)
+        ? origin
+        : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+
+    console.log('[CHECKOUT] Base URL for redirects:', baseUrl)
 
     // ===== BILLING INTERVAL NORMALIZATION =====
     // Accept both 'monthly'/'annual' and 'month'/'year', normalize to 'month'/'year'
