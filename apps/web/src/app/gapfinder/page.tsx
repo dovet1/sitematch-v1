@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { MonitorUp } from 'lucide-react'
 import { isGapFinderViewportSupported } from './viewport'
 import { GapFinderPaywallOverlay } from '@/components/GapFinderPaywallOverlay'
@@ -125,9 +126,21 @@ export default function GapFinderPage() {
   if (user && hasProAccess && subscriptionTier === 'pro') {
     return (
       <div className="relative h-screen overflow-hidden">
-        {/* Blurred GapFinder */}
-        <div className="absolute inset-0 pointer-events-none" style={{ filter: 'blur(8px)' }}>
-          <GapFinderClient />
+        {/* Blurred GapFinder Preview */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ filter: 'blur(8px)' }}
+          aria-hidden="true"
+        >
+          <Image
+            src="/gapfinder/paywall-preview.png"
+            alt=""
+            fill
+            className="object-cover object-center"
+            priority
+            quality={75}
+            sizes="100vw"
+          />
         </div>
 
         {/* Backdrop */}
@@ -150,9 +163,21 @@ export default function GapFinderPage() {
   if (user && !hasPlusAccess) {
     return (
       <div className="relative h-screen overflow-hidden">
-        {/* Blurred GapFinder */}
-        <div className="absolute inset-0 pointer-events-none" style={{ filter: 'blur(8px)' }}>
-          <GapFinderClient />
+        {/* Blurred GapFinder Preview */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ filter: 'blur(8px)' }}
+          aria-hidden="true"
+        >
+          <Image
+            src="/gapfinder/paywall-preview.png"
+            alt=""
+            fill
+            className="object-cover object-center"
+            priority
+            quality={75}
+            sizes="100vw"
+          />
         </div>
 
         {/* Backdrop */}
@@ -172,9 +197,21 @@ export default function GapFinderPage() {
   if (!user) {
     return (
       <div className="relative h-screen overflow-hidden">
-        {/* Blurred GapFinder */}
-        <div className="absolute inset-0 pointer-events-none" style={{ filter: 'blur(8px)' }}>
-          <GapFinderClient />
+        {/* Blurred GapFinder Preview */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ filter: 'blur(8px)' }}
+          aria-hidden="true"
+        >
+          <Image
+            src="/gapfinder/paywall-preview.png"
+            alt=""
+            fill
+            className="object-cover object-center"
+            priority
+            quality={75}
+            sizes="100vw"
+          />
         </div>
 
         {/* Backdrop */}

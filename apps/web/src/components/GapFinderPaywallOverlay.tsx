@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { X, Loader2 } from 'lucide-react'
 import { Check } from '@/components/homepage-new/icons/Check'
-import { getUpgradePricing, PRICING_VALUES } from '@/data/homepage-new/constants'
+import { getUpgradePricing, PRICING_VALUES, ACTIVE_PROMOTION } from '@/data/homepage-new/constants'
 
 interface GapFinderPaywallOverlayProps {
   userType: 'pro' | 'non-plus' | 'anonymous'
@@ -205,13 +205,34 @@ export function GapFinderPaywallOverlay({
 
               {/* Pricing Display */}
               <div className="bg-[#F5F1FF] rounded-[10px] p-5 text-center">
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <span className="text-[15px] text-[#7C7588] font-inter">From</span>
-                  <span className="text-[32px] font-[600] text-[#171419] font-inter tracking-[-0.02em]">
-                    {PRICING_VALUES.plus.annual.formatted}
-                  </span>
-                  <span className="text-[15px] text-[#7C7588] font-inter">/year</span>
+                {/* Summer Sale Badge */}
+                {ACTIVE_PROMOTION.isActive && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF6B35] rounded-full mb-3">
+                    <span className="text-[12px] font-[600] text-white font-inter">
+                      {ACTIVE_PROMOTION.message}
+                    </span>
+                  </div>
+                )}
+
+                {/* Annual Price Breakdown */}
+                <div className="mb-3">
+                  <div className="flex items-baseline justify-center gap-2">
+                    <span className="text-[15px] text-[#7C7588] font-inter">From</span>
+                    <span className="text-[32px] font-[600] text-[#171419] font-inter tracking-[-0.02em]">
+                      £41
+                    </span>
+                    <span className="text-[15px] text-[#7C7588] font-inter">/month</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 mt-1">
+                    <span className="text-[14px] text-[#7C7588] line-through font-inter">£99/month</span>
+                    <span className="text-[13px] font-[600] text-[#7033FF] font-inter">Save 50%</span>
+                  </div>
+                  <p className="text-[13px] text-[#7C7588] font-inter mt-2">
+                    £495 billed annually
+                  </p>
                 </div>
+
+                {/* Free Trial Badge */}
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#EEE9FF] rounded-full">
                   <span className="text-[12px] font-[600] text-[#5421CC] font-inter">
                     30-day free trial
