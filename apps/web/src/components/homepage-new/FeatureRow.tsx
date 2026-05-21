@@ -45,7 +45,7 @@ export function FeatureRow({
   const { user } = useAuth();
 
   const renderCTA = (cta: CTA, i: number) => {
-    const baseClasses = "px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] cursor-pointer transition-colors max-md:flex-1 max-md:min-w-0 max-md:text-center";
+    const baseClasses = "px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] cursor-pointer transition-colors max-md:w-full max-md:text-center";
     const styleClasses =
       cta.style === 'violet'
         ? 'bg-sm-violet text-white border-sm-violet hover:bg-sm-violet-deep'
@@ -121,7 +121,7 @@ export function FeatureRow({
           </ul>
 
           {/* CTAs */}
-          <div className="mt-7 flex gap-2.5 flex-wrap max-md:w-full">
+          <div className="mt-7 flex gap-2.5 flex-wrap max-md:w-full max-md:flex-col">
             {ctas.map((cta, i) => renderCTA(cta, i))}
           </div>
         </div>
