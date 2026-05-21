@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { UserType } from '@/types/auth'
+import { getModalPricing, getAnnualSavingsMessage } from '@/data/homepage-new/constants'
 
 interface TrialSignupFormData {
   companyName: string
@@ -327,7 +328,7 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
                     Annual
                   </button>
                   <span className="absolute -top-3 -right-2 bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium">
-                    Save 17%
+                    {getAnnualSavingsMessage(tier)}
                   </span>
                 </div>
               </div>
@@ -337,16 +338,10 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
             <div className="text-center mt-3 p-2 bg-white/10 backdrop-blur-sm rounded-lg">
               <div className="text-base font-semibold">
                 <span className="line-through text-white/70">
-                  {tier === 'plus'
-                    ? (selectedInterval === 'year' ? '£990' : '£99')
-                    : (selectedInterval === 'year' ? '£790' : '£79')
-                  }
+                  {getModalPricing(tier, selectedInterval).originalFormatted}
                 </span>{' '}
                 <span className="text-white">
-                  {tier === 'plus'
-                    ? (selectedInterval === 'year' ? '£495/year' : '£49.50/month')
-                    : (selectedInterval === 'year' ? '£395/year' : '£39.50/month')
-                  } - 30 days free
+                  {getModalPricing(tier, selectedInterval).display} - 30 days free
                 </span>
               </div>
               <div className="text-xs text-violet-100">Add payment method, cancel anytime</div>

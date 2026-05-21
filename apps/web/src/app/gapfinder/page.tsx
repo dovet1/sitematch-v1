@@ -6,8 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MonitorUp } from 'lucide-react'
 import { isGapFinderViewportSupported } from './viewport'
-import { PaywallModal } from '@/components/PaywallModal'
-import { TrialSignupModal } from '@/components/TrialSignupModal'
+import { GapFinderPaywallOverlay } from '@/components/GapFinderPaywallOverlay'
 import { useAuth } from '@/contexts/auth-context'
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier'
 
@@ -74,8 +73,39 @@ function GapFinderMobileUnavailable() {
 export default function GapFinderPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const { subscriptionTier, hasProAccess, hasPlusAccess, loading: tierLoading } = useSubscriptionTier()
+  const { subscriptionTier, hasProAccess, hasPlusAccess, billingInterval, loading: tierLoading } = useSubscriptionTier()
   const viewportState = useGapFinderViewportState()
+
+  const [isUpgrading, setIsUpgrading] = useState(false)
+  const [upgradeError, setUpgradeError] = useState<string | null>(null)
+
+  const handleProUpgrade = async () => {
+    setIsUpgrading(true)
+    setUpgradeError(null)
+
+    try {
+      const response = await fetch('/api/stripe/upgrade-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetTier: 'plus',
+          billingInterval: billingInterval || 'year'
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Upgrade failed')
+      }
+
+      router.push('/gapfinder?upgraded=true')
+      router.refresh()
+    } catch (error) {
+      setUpgradeError(error instanceof Error ? error.message : 'Upgrade failed')
+    } finally {
+      setIsUpgrading(false)
+    }
+  }
 
   // Loading state (viewport + tier)
   if (tierLoading || viewportState === 'unknown') {
@@ -91,19 +121,26 @@ export default function GapFinderPage() {
     }
   }
 
-  // Pro users: show upgrade modal (no duplicate gate component)
+  // Pro users: show blurred GapFinder with upgrade overlay
   if (user && hasProAccess && subscriptionTier === 'pro') {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="max-w-lg">
-          <PaywallModal
-            context="gapfinder"
-            tier="plus"
-            isOpen={true}
-            onClose={() => router.push('/new-dashboard')}
-            redirectTo="/gapfinder"
-          />
+      <div className="relative h-screen overflow-hidden">
+        {/* Blurred GapFinder */}
+        <div className="absolute inset-0 pointer-events-none" style={{ filter: 'blur(8px)' }}>
+          <GapFinderClient />
         </div>
+
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-white/5 backdrop-blur-sm" />
+
+        {/* Paywall Overlay */}
+        <GapFinderPaywallOverlay
+          userType="pro"
+          onUpgrade={handleProUpgrade}
+          isUpgrading={isUpgrading}
+          upgradeError={upgradeError}
+          billingInterval={billingInterval}
+        />
       </div>
     )
   }
@@ -112,35 +149,43 @@ export default function GapFinderPage() {
   // CRITICAL: This catches canceled/expired Pro/Plus users who have stale tier but no access
   if (user && !hasPlusAccess) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="max-w-lg">
-          <PaywallModal
-            context="gapfinder"
-            tier="plus"
-            isOpen={true}
-            onClose={() => router.push('/new-dashboard')}
-            redirectTo="/gapfinder"
-          />
+      <div className="relative h-screen overflow-hidden">
+        {/* Blurred GapFinder */}
+        <div className="absolute inset-0 pointer-events-none" style={{ filter: 'blur(8px)' }}>
+          <GapFinderClient />
         </div>
+
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-white/5 backdrop-blur-sm" />
+
+        {/* Paywall Overlay */}
+        <GapFinderPaywallOverlay
+          userType="non-plus"
+          onNavigateAuth={() => router.push('/pricing')}
+          onNavigateLearnMore={() => router.push('/gapfinder-landing')}
+        />
       </div>
     )
   }
 
-  // Anonymous users: show trial signup (no duplicate gate component)
+  // Anonymous users: show blurred GapFinder with signup prompt
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="max-w-lg">
-          <TrialSignupModal
-            context="gapfinder"
-            tier="plus"
-            forceOpen={true}
-            onClose={() => router.push('/')}
-            redirectPath="/gapfinder"
-          >
-            <div />
-          </TrialSignupModal>
+      <div className="relative h-screen overflow-hidden">
+        {/* Blurred GapFinder */}
+        <div className="absolute inset-0 pointer-events-none" style={{ filter: 'blur(8px)' }}>
+          <GapFinderClient />
         </div>
+
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-white/5 backdrop-blur-sm" />
+
+        {/* Paywall Overlay */}
+        <GapFinderPaywallOverlay
+          userType="anonymous"
+          onNavigateAuth={() => router.push('/auth?mode=signup&returnUrl=/pricing')}
+          onNavigateLearnMore={() => router.push('/gapfinder-landing')}
+        />
       </div>
     )
   }

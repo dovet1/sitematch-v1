@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useAuth } from '@/contexts/auth-context'
-import { UserStatusHeader } from './user-status-header'
+import { UserStatusHeader, type SubscriptionTier } from './user-status-header'
 import Link from 'next/link'
 
 function UserAvatar({ email }: { email: string }) {
@@ -45,6 +45,7 @@ export function UserMenu() {
   const { user, profile, signOut, isAdmin } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [subscriptionStatus, setSubscriptionStatus] = useState<'trialing' | 'active' | 'past_due' | 'canceled' | null>(null)
+  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>('free')
   const [isLoadingPortal, setIsLoadingPortal] = useState(false)
   const [showSignoutAllDialog, setShowSignoutAllDialog] = useState(false)
   const [isSigningOutAll, setIsSigningOutAll] = useState(false)
@@ -54,6 +55,7 @@ export function UserMenu() {
     const fetchSubscriptionStatus = async () => {
       if (!user?.id) {
         setSubscriptionStatus(null)
+        setSubscriptionTier('free')
         return
       }
 
@@ -62,6 +64,7 @@ export function UserMenu() {
         if (response.ok) {
           const data = await response.json()
           setSubscriptionStatus(data.subscriptionStatus)
+          setSubscriptionTier(data.subscription_tier || 'free')
         }
       } catch (error) {
         console.error('Error fetching subscription status:', error)
@@ -164,6 +167,7 @@ export function UserMenu() {
           <UserStatusHeader
             email={profile.email}
             subscriptionStatus={subscriptionStatus}
+            subscriptionTier={subscriptionTier}
             onUpgradeClick={handleUpgrade}
           />
 

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { PricingCard } from './PricingCard';
 import { RevealWrapper } from './RevealWrapper';
+import { getPromotionMessage } from '@/data/homepage-new/constants';
 
 export function Pricing() {
   const [period, setPeriod] = useState<'monthly' | 'annual'>('annual');
@@ -42,10 +43,12 @@ export function Pricing() {
         </div>
 
         {/* Sale Chip */}
-        <div className="inline-flex items-center gap-2 mt-[18px] px-3 py-1.5 rounded-full bg-[rgba(112,51,255,0.06)] border border-[rgba(112,51,255,0.18)] font-normal text-xs text-sm-violet-deep">
-          <span className="w-1.5 h-1.5 rounded-full bg-sm-violet" />
-          Summer Sale — 50% off, ends 31 August
-        </div>
+        {getPromotionMessage() && (
+          <div className="inline-flex items-center gap-2 mt-[18px] px-3 py-1.5 rounded-full bg-[rgba(112,51,255,0.06)] border border-[rgba(112,51,255,0.18)] font-normal text-xs text-sm-violet-deep">
+            <span className="w-1.5 h-1.5 rounded-full bg-sm-violet" />
+            {getPromotionMessage()}
+          </div>
+        )}
 
         {/* Cards */}
         <div className="mt-[50px] grid grid-cols-3 gap-[18px] max-w-[1180px] mx-auto text-left max-md:grid-cols-1 max-md:gap-3.5">

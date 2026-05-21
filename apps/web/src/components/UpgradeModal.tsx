@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { BillingInterval, SubscriptionTier } from '@/lib/stripe'
+import { getUpgradePricing } from '@/data/homepage-new/constants'
 
 interface UpgradeModalProps {
   open: boolean
@@ -67,23 +68,8 @@ export default function UpgradeModal({
     }
   }
 
-  const getPricing = () => {
-    if (billingInterval === 'month') {
-      return {
-        current: '£39.50/month',
-        new: '£49.50/month',
-        difference: '£10/month'
-      }
-    } else {
-      return {
-        current: '£395/year',
-        new: '£495/year',
-        difference: '£100/year'
-      }
-    }
-  }
-
-  const pricing = getPricing()
+  // Get tier-specific pricing from centralized constants
+  const pricing = getUpgradePricing(billingInterval)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={onClose}>
@@ -115,16 +101,16 @@ export default function UpgradeModal({
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-600">Current Plan (Pro)</span>
-                  <span className="font-semibold">{pricing.current}</span>
+                  <span className="font-semibold">{pricing.current.display}</span>
                 </div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-600">New Plan (Plus)</span>
-                  <span className="font-semibold text-blue-600">{pricing.new}</span>
+                  <span className="font-semibold text-blue-600">{pricing.new.display}</span>
                 </div>
                 <div className="border-t border-gray-300 pt-2 mt-2">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Additional cost</span>
-                    <span className="font-bold text-blue-600">{pricing.difference}</span>
+                    <span className="font-bold text-blue-600">{pricing.difference.display}</span>
                   </div>
                 </div>
               </div>

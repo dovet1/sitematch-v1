@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { UserMenu } from '@/components/auth/user-menu';
-import { UserStatusHeader } from '@/components/auth/user-status-header';
+import { UserStatusHeader, type SubscriptionTier } from '@/components/auth/user-status-header';
 import { useAuth } from '@/contexts/auth-context';
 import { SearchHeaderBar } from './SearchHeaderBar';
 import { Menu, X, Sparkles, LogOut, Shield, LayoutDashboard, CreditCard, Loader2, LogOutIcon, ChevronDown } from 'lucide-react';
@@ -48,6 +48,7 @@ function MobileUserSection({ onClose }: { onClose: () => void }) {
   const { user, profile, signOut, isAdmin } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [subscriptionStatus, setSubscriptionStatus] = useState<'trialing' | 'active' | 'past_due' | 'canceled' | null>(null)
+  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>('free')
   const [isLoadingPortal, setIsLoadingPortal] = useState(false)
   const [showSignoutAllDialog, setShowSignoutAllDialog] = useState(false)
   const [isSigningOutAll, setIsSigningOutAll] = useState(false)
@@ -57,6 +58,7 @@ function MobileUserSection({ onClose }: { onClose: () => void }) {
     const fetchSubscriptionStatus = async () => {
       if (!user?.id) {
         setSubscriptionStatus(null)
+        setSubscriptionTier('free')
         return
       }
 
@@ -65,6 +67,7 @@ function MobileUserSection({ onClose }: { onClose: () => void }) {
         if (response.ok) {
           const data = await response.json()
           setSubscriptionStatus(data.subscriptionStatus)
+          setSubscriptionTier(data.subscription_tier || 'free')
         }
       } catch (error) {
         console.error('Error fetching subscription status:', error)
@@ -148,6 +151,7 @@ function MobileUserSection({ onClose }: { onClose: () => void }) {
         <UserStatusHeader
           email={profile.email}
           subscriptionStatus={subscriptionStatus}
+          subscriptionTier={subscriptionTier}
           onUpgradeClick={handleUpgrade}
         />
 

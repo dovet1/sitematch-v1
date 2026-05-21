@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/auth-context'
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier'
+import { getModalPricing } from '@/data/homepage-new/constants'
 
 interface PaywallModalProps {
   children?: React.ReactNode
@@ -202,9 +203,14 @@ export function PaywallModal({
   }
 
   // Get tier-specific pricing
-  const pricing = tier === 'plus'
-    ? { monthly: '£49.50', annual: '£495', original: '£990' }
-    : { monthly: '£39.50', annual: '£395', original: '£790' }
+  // Get pricing from centralized constants
+  const monthlyPricing = getModalPricing(tier, 'month')
+  const annualPricing = getModalPricing(tier, 'year')
+  const pricing = {
+    monthly: monthlyPricing.formatted,
+    annual: annualPricing.formatted,
+    original: annualPricing.originalFormatted,
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
