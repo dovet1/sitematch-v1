@@ -292,11 +292,11 @@ export default function PricingPage() {
         </div>
 
         {/* Already Subscribed Modal */}
-        {subscriptionStatus && (
+        {subscriptionStatus && ['active', 'trialing', 'past_due'].includes(subscriptionStatus) && (
           <AlreadySubscribedModal
             open={showAlreadySubscribed}
             onClose={() => setShowAlreadySubscribed(false)}
-            subscriptionStatus={subscriptionStatus}
+            subscriptionStatus={subscriptionStatus as 'trialing' | 'active' | 'past_due'}
           />
         )}
 
