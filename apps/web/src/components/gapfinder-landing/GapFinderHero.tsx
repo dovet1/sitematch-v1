@@ -2,11 +2,13 @@
 
 import { RevealWrapper } from '../homepage-new/RevealWrapper';
 import { useAuth } from '@/contexts/auth-context';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
-import { PaywallModal } from '@/components/PaywallModal';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import { useRouter } from 'next/navigation';
 
 export function GapFinderHero() {
   const { user } = useAuth();
+  const { hasPlusAccess } = useSubscriptionTier();
+  const router = useRouter();
 
   const trialButton = (
     <button className="px-5 py-[13px] rounded-sm-btn bg-sm-violet text-white font-medium text-[15px] border border-sm-violet tracking-[-0.1px] hover:bg-sm-violet-deep transition-colors">
@@ -35,15 +37,20 @@ export function GapFinderHero() {
 
         {/* CTAs */}
         <div className="flex justify-center gap-2.5 mt-8 flex-wrap">
-          {user ? (
-            <PaywallModal context="gapfinder" redirectTo="/gapfinder">
-              {trialButton}
-            </PaywallModal>
-          ) : (
-            <TrialSignupModal context="gapfinder" redirectPath="/gapfinder" tier="plus">
-              {trialButton}
-            </TrialSignupModal>
-          )}
+          <button
+            onClick={() => {
+              if (!user) {
+                router.push('/auth?mode=signup&returnUrl=/pricing&tier=plus');
+              } else if (!hasPlusAccess) {
+                router.push('/pricing');
+              } else {
+                router.push('/gapfinder');
+              }
+            }}
+            className="px-5 py-[13px] rounded-sm-btn bg-sm-violet text-white font-medium text-[15px] border border-sm-violet tracking-[-0.1px] hover:bg-sm-violet-deep transition-colors"
+          >
+            Try GapFinder Now
+          </button>
         </div>
       </section>
     </RevealWrapper>

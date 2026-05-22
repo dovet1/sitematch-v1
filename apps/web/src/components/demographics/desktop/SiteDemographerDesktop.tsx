@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { LocationInputPanel } from './LocationInputPanel';
 import { DemographicsResults } from './DemographicsResults';
 import { DemographicsMap } from '../DemographicsMap';
+import { SiteAnalyserUpgradeModal } from '../SiteAnalyserUpgradeModal';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useDemographicsData } from '../shared/hooks/useDemographicsData';
@@ -83,6 +84,8 @@ export function SiteDemographerDesktop() {
   const [showTraffic, setShowTraffic] = useState(false);
   const [showCountPoints, setShowCountPoints] = useState(false);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState<'save' | 'traffic' | 'count' | 'demographics'>('demographics');
 
   // Track the location that has been analyzed (map only moves when this changes)
   const [analyzedLocation, setAnalyzedLocation] = useState<LocationResult | null>(null);
@@ -216,12 +219,9 @@ export function SiteDemographerDesktop() {
 
   const handleTrafficToggle = () => {
     if (!hasProAccess && !showTraffic) {
-      // Redirect to auth or pricing based on user status
-      if (!user) {
-        router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
-      } else {
-        router.push('/pricing');
-      }
+      // Show upgrade modal instead of direct redirect
+      setUpgradeFeature('traffic');
+      setShowUpgradeModal(true);
       return;
     }
     setShowTraffic(!showTraffic);
@@ -229,15 +229,21 @@ export function SiteDemographerDesktop() {
 
   const handleCountPointsToggle = () => {
     if (!hasProAccess && !showCountPoints) {
-      // Redirect to auth or pricing based on user status
-      if (!user) {
-        router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
-      } else {
-        router.push('/pricing');
-      }
+      // Show upgrade modal instead of direct redirect
+      setUpgradeFeature('count');
+      setShowUpgradeModal(true);
       return;
     }
     setShowCountPoints(!showCountPoints);
+  };
+
+  const handleUpgradeModalAction = () => {
+    setShowUpgradeModal(false);
+    if (!user) {
+      router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+    } else {
+      router.push('/pricing');
+    }
   };
 
   return (
@@ -338,6 +344,10 @@ export function SiteDemographerDesktop() {
               isFreeTier={!hasProAccess}
               isochroneGeometry={isochroneGeometry}
               linkedSiteId={linkedSiteId}
+              onUpgradeClick={(feature) => {
+                setUpgradeFeature(feature || 'demographics');
+                setShowUpgradeModal(true);
+              }}
             />
           </div>
         </div>
@@ -410,6 +420,13 @@ export function SiteDemographerDesktop() {
         </div>
       </div>
 
+      {/* Upgrade Modal */}
+      <SiteAnalyserUpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature={upgradeFeature}
+        onUpgrade={handleUpgradeModalAction}
+      />
     </div>
   );
 }

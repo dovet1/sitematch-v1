@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { MapPin, Building2, ArrowRight, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
 import { ListingModal } from '@/components/listings/ListingModal';
 import { motion } from 'framer-motion';
 import { getRelativeVerificationTime } from '@/lib/utils/date-formatting';
@@ -30,6 +30,7 @@ interface Listing {
 
 export function FeaturedListings() {
   const { user } = useAuth();
+  const router = useRouter();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
@@ -292,16 +293,15 @@ export function FeaturedListings() {
               </Link>
             </Button>
           ) : (
-            <TrialSignupModal context="search" redirectPath="/search">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-6 sm:px-10 py-7 text-base sm:text-lg md:text-xl font-black rounded-2xl shadow-2xl hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
-              >
-                <span className="hidden sm:inline">View All Requirements - Start Free Trial</span>
-                <span className="sm:hidden">View All Requirements</span>
-                <ArrowRight className="ml-2 h-5 w-5 md:h-6 md:w-6" />
-              </Button>
-            </TrialSignupModal>
+            <Button
+              onClick={() => router.push('/auth?mode=signup&returnUrl=/pricing')}
+              size="lg"
+              className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-6 sm:px-10 py-7 text-base sm:text-lg md:text-xl font-black rounded-2xl shadow-2xl hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
+            >
+              <span className="hidden sm:inline">View All Requirements - Start Free Trial</span>
+              <span className="sm:hidden">View All Requirements</span>
+              <ArrowRight className="ml-2 h-5 w-5 md:h-6 md:w-6" />
+            </Button>
           )}
           <p className="text-base md:text-lg text-gray-600 font-semibold mt-5">
             {user ? 'Access our full directory' : '30-day free trial • Cancel anytime'}

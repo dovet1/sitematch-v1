@@ -38,14 +38,6 @@ jest.mock('@/hooks/useSubscriptionAccess', () => ({
   useSubscriptionAccess: jest.fn(),
 }))
 
-jest.mock('@/components/TrialSignupModal', () => ({
-  TrialSignupModal: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-}))
-
-jest.mock('@/components/PaywallModal', () => ({
-  PaywallModal: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-}))
-
 const { useAuth } = require('@/contexts/auth-context')
 const { useSubscriptionAccess } = require('@/hooks/useSubscriptionAccess')
 

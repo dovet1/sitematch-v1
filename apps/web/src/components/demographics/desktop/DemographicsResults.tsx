@@ -31,6 +31,7 @@ interface DemographicsResultsProps {
   isFreeTier?: boolean;
   isochroneGeometry?: any;
   linkedSiteId?: string | null;
+  onUpgradeClick?: (feature?: 'save' | 'traffic' | 'count' | 'demographics') => void;
 }
 
 type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health' | 'affluence';
@@ -74,6 +75,7 @@ export function DemographicsResults({
   isFreeTier = false,
   isochroneGeometry,
   linkedSiteId,
+  onUpgradeClick,
 }: DemographicsResultsProps) {
   const { user } = useAuth();
   const { hasProAccess } = useSubscriptionTier();
@@ -296,11 +298,16 @@ export function DemographicsResults({
     return shouldBlurCategory(category);
   };
 
-  const handleUpgradeClick = () => {
-    if (!user) {
-      router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+  const handleUpgradeClick = (feature?: 'save' | 'traffic' | 'count' | 'demographics') => {
+    // Use parent's handler if provided, otherwise redirect directly
+    if (onUpgradeClick) {
+      onUpgradeClick(feature);
     } else {
-      router.push('/pricing');
+      if (!user) {
+        router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+      } else {
+        router.push('/pricing');
+      }
     }
   };
 
@@ -480,7 +487,14 @@ export function DemographicsResults({
 
           {/* Save Analysis Button */}
           <Button
-            onClick={() => setShowSaveModal(true)}
+            onClick={() => {
+              if (!hasProAccess && onUpgradeClick) {
+                // Show upgrade modal for non-Pro users with 'save' feature
+                onUpgradeClick('save');
+              } else {
+                setShowSaveModal(true);
+              }
+            }}
             className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl text-sm"
             size="sm"
           >

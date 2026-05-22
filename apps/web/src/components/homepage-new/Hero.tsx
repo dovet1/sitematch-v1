@@ -3,11 +3,13 @@
 import { VideoSlot } from './VideoSlot';
 import { RevealWrapper } from './RevealWrapper';
 import { useAuth } from '@/contexts/auth-context';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
-import { PaywallModal } from '@/components/PaywallModal';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import { useRouter } from 'next/navigation';
 
 export function Hero() {
   const { user } = useAuth();
+  const { hasPlusAccess } = useSubscriptionTier();
+  const router = useRouter();
 
   const handleSeeInAction = () => {
     window.scrollBy({
@@ -43,15 +45,22 @@ export function Hero() {
 
         {/* CTAs */}
         <div className="flex justify-center gap-2.5 mt-8 flex-wrap">
-          {user ? (
-            <PaywallModal context="gapfinder" redirectTo="/gapfinder">
-              {trialButton}
-            </PaywallModal>
-          ) : (
-            <TrialSignupModal context="gapfinder" redirectPath="/gapfinder" tier="plus">
-              {trialButton}
-            </TrialSignupModal>
-          )}
+          <button
+            onClick={() => {
+              if (!user) {
+                // GapFinder is Plus - preserve tier context
+                router.push('/auth?mode=signup&returnUrl=/pricing&tier=plus');
+              } else if (!hasPlusAccess) {
+                // CRITICAL: Use hasPlusAccess for GapFinder
+                router.push('/pricing');
+              } else {
+                router.push('/gapfinder');
+              }
+            }}
+            className="px-5 py-[13px] rounded-sm-btn bg-sm-violet text-white font-medium text-[15px] border border-sm-violet tracking-[-0.1px] hover:bg-sm-violet-deep transition-colors"
+          >
+            Start 30-day free trial
+          </button>
           <button
             onClick={handleSeeInAction}
             className="px-5 py-[13px] rounded-sm-btn bg-transparent text-sm-ink font-medium text-[15px] border border-sm-border tracking-[-0.1px] hover:bg-sm-border-soft transition-colors"

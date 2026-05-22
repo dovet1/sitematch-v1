@@ -3,9 +3,15 @@
 import { Search, Eye, Mail, Sparkles, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 
 export function BrowseRequirements() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { hasProAccess } = useSubscriptionTier();
+
   const steps = [
     {
       icon: Search,
@@ -97,11 +103,20 @@ export function BrowseRequirements() {
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <TrialSignupModal context="search" redirectPath="/search">
-            <Button className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-10 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-              Start free trial
-            </Button>
-          </TrialSignupModal>
+          <Button
+            onClick={() => {
+              if (!user) {
+                router.push('/auth?mode=signup&returnUrl=/pricing');
+              } else if (!hasProAccess) {
+                router.push('/pricing');
+              } else {
+                router.push('/search');
+              }
+            }}
+            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-10 py-6 text-lg font-semibold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+          >
+            Start free trial
+          </Button>
 
           <Button
             asChild

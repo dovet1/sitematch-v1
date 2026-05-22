@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { PricingCard } from '@/components/homepage-new/PricingCard';
 import { RevealWrapper } from '@/components/homepage-new/RevealWrapper';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import UpgradeModal from '@/components/UpgradeModal';
 import { useAuth } from '@/contexts/auth-context';
@@ -17,6 +17,7 @@ type Period = 'monthly' | 'annual';
 type Tier = 'free' | 'pro' | 'plus';
 
 export default function PricingPage() {
+  const router = useRouter();
   const { user } = useAuth();
 
   // Use hook as single source of truth for subscription state
@@ -202,15 +203,12 @@ export default function PricingPage() {
                       </button>
                     )
                   ) : (
-                    <TrialSignupModal
-                      context="search"
-                      redirectPath="/search"
-                      billingInterval={period === 'monthly' ? 'month' : 'year'}
+                    <button
+                      onClick={() => router.push('/auth?mode=signup&returnUrl=/pricing')}
+                      className="w-full mt-5 px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] transition-colors bg-transparent text-sm-ink border-sm-border hover:bg-sm-border-soft"
                     >
-                      <button className="w-full mt-5 px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] transition-colors bg-transparent text-sm-ink border-sm-border hover:bg-sm-border-soft">
-                        Start 30-day free trial
-                      </button>
-                    </TrialSignupModal>
+                      Start 30-day free trial
+                    </button>
                   )
                 }
               />
@@ -259,16 +257,12 @@ export default function PricingPage() {
                     )
                   ) : (
                     // Anonymous users
-                    <TrialSignupModal
-                      context="gapfinder"
-                      redirectPath="/gapfinder"
-                      billingInterval={period === 'monthly' ? 'month' : 'year'}
-                      tier="plus"
+                    <button
+                      onClick={() => router.push('/auth?mode=signup&returnUrl=/pricing&tier=plus')}
+                      className="w-full mt-5 px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] transition-colors bg-sm-violet text-white border-sm-violet hover:bg-sm-violet-deep"
                     >
-                      <button className="w-full mt-5 px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] transition-colors bg-sm-violet text-white border-sm-violet hover:bg-sm-violet-deep">
-                        Start 30-day free trial
-                      </button>
-                    </TrialSignupModal>
+                      Start 30-day free trial
+                    </button>
                   )
                 }
               />

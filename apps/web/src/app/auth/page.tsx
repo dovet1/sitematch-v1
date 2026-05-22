@@ -14,6 +14,9 @@ function AuthPageContent() {
 
   const modeParam = searchParams?.get('mode')
   const returnUrl = searchParams?.get('returnUrl')
+  const tier = searchParams?.get('tier')
+  const billingInterval = searchParams?.get('billingInterval')
+  const redirectPath = searchParams?.get('redirectPath')
 
   const [mode, setMode] = useState<'signin' | 'signup'>(
     modeParam === 'signup' ? 'signup' : 'signin'
@@ -29,10 +32,20 @@ function AuthPageContent() {
   // Redirect authenticated users
   useEffect(() => {
     if (!loading && user) {
-      const destination = returnUrl && returnUrl.startsWith('/') ? returnUrl : '/new-dashboard'
+      let destination = returnUrl && returnUrl.startsWith('/') ? returnUrl : '/new-dashboard'
+
+      // Preserve tier, billingInterval, and redirectPath params
+      if (tier || billingInterval || redirectPath) {
+        const url = new URL(destination, window.location.origin)
+        if (tier) url.searchParams.set('tier', tier)
+        if (billingInterval) url.searchParams.set('billingInterval', billingInterval)
+        if (redirectPath) url.searchParams.set('redirectPath', redirectPath)
+        destination = url.pathname + url.search
+      }
+
       router.push(destination)
     }
-  }, [user, loading, returnUrl, router])
+  }, [user, loading, returnUrl, tier, billingInterval, redirectPath, router])
 
   const handleModeSwitch = (newMode: 'signin' | 'signup') => {
     setMode(newMode)
@@ -40,6 +53,15 @@ function AuthPageContent() {
     params.set('mode', newMode)
     if (returnUrl) {
       params.set('returnUrl', returnUrl)
+    }
+    if (tier) {
+      params.set('tier', tier)
+    }
+    if (billingInterval) {
+      params.set('billingInterval', billingInterval)
+    }
+    if (redirectPath) {
+      params.set('redirectPath', redirectPath)
     }
     router.push(`/auth?${params.toString()}`, { scroll: false })
   }

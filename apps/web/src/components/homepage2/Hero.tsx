@@ -2,14 +2,15 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, PenTool, Mail } from 'lucide-react';
 
 export function Hero() {
   const { user, profile } = useAuth();
+  const router = useRouter();
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [showAlreadySubscribed, setShowAlreadySubscribed] = useState(false);
 
@@ -108,11 +109,13 @@ export function Hero() {
                   </Button>
                 )
               ) : (
-                <TrialSignupModal context="search" redirectPath="/search">
-                  <Button size="lg" className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-5 text-base md:text-lg font-black rounded-2xl shadow-2xl hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300">
-                    Ready to find your next opportunity?
-                  </Button>
-                </TrialSignupModal>
+                <Button
+                  onClick={() => router.push('/auth?mode=signup&returnUrl=/pricing')}
+                  size="lg"
+                  className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-5 text-base md:text-lg font-black rounded-2xl shadow-2xl hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
+                >
+                  Ready to find your next opportunity?
+                </Button>
               )}
             </div>
 

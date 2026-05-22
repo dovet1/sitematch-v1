@@ -3,8 +3,8 @@
 import { VideoSlot } from './VideoSlot';
 import { RevealWrapper } from './RevealWrapper';
 import { useAuth } from '@/contexts/auth-context';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
-import { PaywallModal } from '@/components/PaywallModal';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import { useRouter } from 'next/navigation';
 
 interface CTA {
   label: string;
@@ -43,6 +43,8 @@ export function FeatureRow({
   ctas,
 }: FeatureRowProps) {
   const { user } = useAuth();
+  const { hasPlusAccess, hasProAccess } = useSubscriptionTier();
+  const router = useRouter();
 
   const renderCTA = (cta: CTA, i: number) => {
     const baseClasses = "px-5 py-[13px] rounded-sm-btn font-medium text-[15px] border tracking-[-0.1px] cursor-pointer transition-colors max-md:w-full max-md:text-center";
@@ -66,27 +68,40 @@ export function FeatureRow({
       );
     }
 
-    // Otherwise, render as button (for auth modals)
-    const button = (
+    // For auth-required CTAs, render as button with onClick
+    if (cta.requiresAuth) {
+      return (
+        <button
+          key={i}
+          onClick={() => {
+            // Determine if this is GapFinder based on context
+            const isGapFinder = true; // All homepage CTAs go to GapFinder
+            const hasTierAccess = isGapFinder ? hasPlusAccess : hasProAccess;
+
+            if (!user) {
+              const authUrl = isGapFinder
+                ? '/auth?mode=signup&returnUrl=/pricing&tier=plus'
+                : '/auth?mode=signup&returnUrl=/pricing';
+              router.push(authUrl);
+            } else if (!hasTierAccess) {
+              router.push('/pricing');
+            } else {
+              router.push('/gapfinder');
+            }
+          }}
+          className={`${baseClasses} ${styleClasses}`}
+        >
+          {cta.label}
+        </button>
+      );
+    }
+
+    // Otherwise, render as button without auth logic
+    return (
       <button key={i} className={`${baseClasses} ${styleClasses}`}>
         {cta.label}
       </button>
     );
-
-    // If the CTA requires authentication, wrap it in the appropriate modal
-    if (cta.requiresAuth) {
-      return user ? (
-        <PaywallModal key={i} context="gapfinder" redirectTo="/gapfinder">
-          {button}
-        </PaywallModal>
-      ) : (
-        <TrialSignupModal key={i} context="gapfinder" redirectPath="/gapfinder" tier="plus">
-          {button}
-        </TrialSignupModal>
-      );
-    }
-
-    return button;
   };
 
   return (

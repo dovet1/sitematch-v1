@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { X, Sparkles, Zap } from 'lucide-react';
-import { TrialSignupModal } from './TrialSignupModal';
 import { Button } from './ui/button';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 
 interface UpgradeBannerProps {
   title: string;
@@ -18,6 +19,10 @@ export function UpgradeBanner({
   context = 'sitesketcher',
   onDismiss
 }: UpgradeBannerProps) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { hasProAccess } = useSubscriptionTier();
+
   const handleDismiss = () => {
     if (onDismiss) {
       onDismiss();
@@ -76,14 +81,19 @@ export function UpgradeBanner({
         </div>
 
         {/* CTA Button */}
-        <TrialSignupModal context={context}>
-          <Button
-            className="w-full md:w-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-black rounded-xl py-6 px-8 text-base md:text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
-          >
-            <Zap className="mr-2 h-5 w-5" />
-            Start Free Trial - Upgrade Now
-          </Button>
-        </TrialSignupModal>
+        <Button
+          onClick={() => {
+            if (!user) {
+              router.push('/auth?mode=signup&returnUrl=/pricing');
+            } else if (!hasProAccess) {
+              router.push('/pricing');
+            }
+          }}
+          className="w-full md:w-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-black rounded-xl py-6 px-8 text-base md:text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+        >
+          <Zap className="mr-2 h-5 w-5" />
+          Start Free Trial - Upgrade Now
+        </Button>
 
         <p className="text-center md:text-left text-sm text-gray-600 font-semibold mt-4">
           30 days free trial • No charge • Cancel anytime
