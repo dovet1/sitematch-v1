@@ -1,11 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { X, Settings, ChevronDown, ChevronUp } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { OperatorSelector } from './OperatorSelector'
 import { InlineTargetSelector } from './InlineTargetSelector'
@@ -43,8 +40,6 @@ export function FilterRule({
   onCategoriesVisibilityChange,
   onCategoryTreeLoaded,
 }: FilterRuleProps) {
-  const [showAdvanced, setShowAdvanced] = useState(false)
-
   const handleOperatorChange = (newOperator: string) => {
     const updated: FilterRuleType = {
       ...rule,
@@ -87,13 +82,6 @@ export function FilterRule({
     })
   }
 
-  const handleMatchingLogicChange = (newLogic: string) => {
-    onChange({
-      ...rule,
-      matchingLogic: newLogic as 'any' | 'all',
-    })
-  }
-
   const handleConnectorChange = (newConnector: string) => {
     onChange({
       ...rule,
@@ -128,6 +116,14 @@ export function FilterRule({
             onChange={handleOperatorChange}
             distance={rule.distance}
             onDistanceChange={handleDistanceChange}
+            matchingLogic={rule.matchingLogic}
+            onMatchingLogicChange={(newLogic) => {
+              onChange({
+                ...rule,
+                matchingLogic: newLogic,
+              })
+            }}
+            targetCount={rule.targetIds.length}
           />
 
           {/* Target Selector */}
@@ -144,37 +140,6 @@ export function FilterRule({
             onCategoriesVisibilityChange={onCategoriesVisibilityChange}
             onCategoryTreeLoaded={onCategoryTreeLoaded}
           />
-
-          {/* Advanced Options (collapsible) */}
-          {rule.targetIds.length > 1 && (
-            <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
-              <CollapsibleTrigger className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                <Settings className="h-4 w-4" />
-                <span>Advanced options</span>
-                {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </CollapsibleTrigger>
-
-              <CollapsibleContent className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">
-                    Returned locations should have:
-                  </Label>
-                  <Select
-                    value={rule.matchingLogic}
-                    onValueChange={handleMatchingLogicChange}
-                  >
-                    <SelectTrigger className="w-full bg-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any">At least one selected store/category</SelectItem>
-                      <SelectItem value="all">Every selected store/category</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
         </CardContent>
       </Card>
 
