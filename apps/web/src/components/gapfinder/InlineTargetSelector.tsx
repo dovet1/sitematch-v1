@@ -49,7 +49,7 @@ export function InlineTargetSelector({
         Select brands or categories:
       </Label>
 
-      <div className="border rounded-lg p-2 max-h-[280px] overflow-y-auto bg-gray-50">
+      <div className="border rounded-lg p-2 bg-gray-50">
         <UnifiedCategorySelector
           selectedCompanies={targetType === 'fascia' ? selectedIds : []}
           onCompaniesChange={handleCompaniesChange}

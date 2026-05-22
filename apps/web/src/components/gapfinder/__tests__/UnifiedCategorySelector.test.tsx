@@ -63,6 +63,64 @@ jest.mock('@/components/ui/label', () => ({
 }))
 
 const mockFetch = (url: string) => {
+  if (url === '/api/public/gapfinder-reference-data') {
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({
+        categories: [
+          {
+            id: 'coffee-category',
+            name: 'Coffee',
+            parent_category_id: null,
+            created_at: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        brands: [
+          {
+            id: 'pret-brand',
+            name: 'Pret A Manger',
+            created_at: '2026-01-01T00:00:00.000Z',
+            fascias: [
+              {
+                id: 'pret-fascia-id',
+                brand_id: 'pret-brand',
+                name: 'Pret A Manger',
+                definition: null,
+                created_at: '2026-01-01T00:00:00.000Z',
+              },
+            ],
+          },
+          {
+            id: 'multi-brand',
+            name: 'Multi Coffee',
+            created_at: '2026-01-01T00:00:00.000Z',
+            fascias: [
+              {
+                id: 'multi-fascia-1',
+                brand_id: 'multi-brand',
+                name: 'Multi Coffee Standard',
+                definition: null,
+                created_at: '2026-01-01T00:00:00.000Z',
+              },
+              {
+                id: 'multi-fascia-2',
+                brand_id: 'multi-brand',
+                name: 'Multi Coffee Express',
+                definition: null,
+                created_at: '2026-01-01T00:00:00.000Z',
+              },
+            ],
+          },
+        ],
+        fasciaCategoryMappings: [
+          { fascia_id: 'pret-fascia-id', category_id: 'coffee-category', is_primary: true },
+          { fascia_id: 'multi-fascia-1', category_id: 'coffee-category', is_primary: true },
+          { fascia_id: 'multi-fascia-2', category_id: 'coffee-category', is_primary: true },
+        ],
+      }),
+    } as Response)
+  }
+
   if (url === '/api/public/categories') {
     return Promise.resolve({
       ok: true,

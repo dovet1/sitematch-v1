@@ -463,7 +463,7 @@ export function UnifiedCategorySelector({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="max-h-[400px] space-y-3 overflow-y-auto">
       {/* Header with clear all button */}
       {totalSelected > 0 && (
         <div className="flex items-center justify-between">
@@ -520,7 +520,7 @@ export function UnifiedCategorySelector({
           {searchQuery ? 'No results found' : 'No categories available'}
         </div>
       ) : (
-        <div className="space-y-1 overflow-y-auto max-h-[400px]">
+        <div className="space-y-1">
           {categoryTree.map(node => renderCategoryNode(node))}
         </div>
       )}
