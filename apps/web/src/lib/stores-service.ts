@@ -149,6 +149,72 @@ export class StoreService {
   }
 
   /**
+   * Get all reference data for GapFinder in a single optimized call
+   * Returns categories, brands with nested fascias, and fascia-category mappings
+   * @param limit Maximum number of brands to return (default 1000)
+   * @returns Object containing all reference data
+   */
+  async getReferenceData(limit = 1000): Promise<{
+    categories: Category[]
+    brands: Array<Brand & { fascias: Fascia[] }>
+    fasciaCategoryMappings: Array<{
+      fascia_id: string
+      category_id: string
+      is_primary: boolean
+    }>
+  }> {
+    // Fetch all data in parallel
+    const [categoriesResult, brandsResult, mappingsResult] = await Promise.all([
+      // Fetch categories
+      this.supabase
+        .from('categories')
+        .select('*')
+        .order('name'),
+
+      // Fetch brands with nested fascias using Supabase JOIN
+      this.supabase
+        .from('brands')
+        .select('id, name, fascias(id, name, brand_id, definition, created_at)')
+        .order('name')
+        .limit(Math.min(limit, 2000)),
+
+      // Fetch fascia-category mappings
+      this.supabase
+        .from('fascia_categories')
+        .select('fascia_id, category_id, is_primary')
+        .order('category_id, fascia_id')
+    ])
+
+    // Check for errors
+    if (categoriesResult.error) {
+      console.error('Failed to fetch categories:', categoriesResult.error)
+      throw new Error(`Failed to fetch categories: ${categoriesResult.error.message}`)
+    }
+    if (brandsResult.error) {
+      console.error('Failed to fetch brands:', brandsResult.error)
+      throw new Error(`Failed to fetch brands: ${brandsResult.error.message}`)
+    }
+    if (mappingsResult.error) {
+      console.error('Failed to fetch mappings:', mappingsResult.error)
+      throw new Error(`Failed to fetch mappings: ${mappingsResult.error.message}`)
+    }
+
+    // Sort fascias within each brand by name (Supabase doesn't support ordering nested relations easily)
+    const brands = (brandsResult.data || []).map((brand: any) => ({
+      ...brand,
+      fascias: (brand.fascias || []).sort((a: Fascia, b: Fascia) =>
+        a.name.localeCompare(b.name)
+      )
+    }))
+
+    return {
+      categories: categoriesResult.data || [],
+      brands,
+      fasciaCategoryMappings: mappingsResult.data || []
+    }
+  }
+
+  /**
    * Get fascias that are NOT present within radius of a point
    * Filters by active category/fascia selections with category hierarchy expansion
    * @param lat Latitude of center point

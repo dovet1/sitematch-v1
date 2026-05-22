@@ -555,42 +555,31 @@ export default function GapFinderClient() {
   useEffect(() => {
     const fetchTargetNames = async () => {
       try {
+        // Fetch all reference data in a single optimized request
+        // This replaces ~101 individual requests with 1 request
+        const response = await fetch('/api/public/gapfinder-reference-data')
+        if (!response.ok) {
+          setTargetNames({})
+          return
+        }
+
+        const data = await response.json()
         const names: Record<string, string> = {}
 
-        // Fetch categories
-        const categoriesResponse = await fetch('/api/public/categories')
-        if (categoriesResponse.ok) {
-          const categoriesData = await categoriesResponse.json()
-          const categories = categoriesData.categories || []
-          categories.forEach((cat: any) => {
-            names[cat.id] = cat.name
+        // Map category IDs to names
+        const categories = data.categories || []
+        categories.forEach((cat: any) => {
+          names[cat.id] = cat.name
+        })
+
+        // Map fascia IDs to names (brands already include nested fascias)
+        const brands = data.brands || []
+        brands.forEach((brand: any) => {
+          const fascias = brand.fascias || []
+          fascias.forEach((fascia: any) => {
+            names[fascia.id] = fascia.name
           })
-        }
-
-        // Fetch all brands (to get fascias)
-        const brandsResponse = await fetch('/api/public/brands?limit=2000')
-        if (brandsResponse.ok) {
-          const brandsData = await brandsResponse.json()
-          const brands = brandsData.brands || []
-
-          // For each brand, fetch its fascias directly by brand ID
-          const fasciaPromises = brands.map(async (brand: any) => {
-            try {
-              const fasciasResponse = await fetch(
-                `/api/public/fascias/search?brandId=${encodeURIComponent(brand.id)}&limit=100`
-              )
-              const fasciasData = await fasciasResponse.json()
-              const brandFascias = fasciasData.fascias || []
-              brandFascias.forEach((fascia: any) => {
-                names[fascia.id] = fascia.name
-              })
-            } catch {
-              return
-            }
-          })
-
-          await Promise.all(fasciaPromises)
-        }
+        })
 
         setTargetNames(names)
       } catch {

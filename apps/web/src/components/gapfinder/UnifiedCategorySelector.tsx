@@ -76,49 +76,23 @@ export function UnifiedCategorySelector({
     return tree // NO filterTree() call
   }, [categories, allBrands, fasciaCategoryMappings])
 
-  // Fetch all data on mount
+  // Fetch all data on mount using optimized single endpoint
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true)
       setError('')
 
       try {
-        // Fetch categories
-        const categoriesResponse = await fetch('/api/public/categories')
-        if (!categoriesResponse.ok) throw new Error('Failed to load categories')
-        const categoriesData = await categoriesResponse.json()
-        setCategories(categoriesData.categories || [])
+        // Fetch all reference data in a single optimized request
+        // This replaces ~102 individual requests with 1 request
+        const response = await fetch('/api/public/gapfinder-reference-data')
+        if (!response.ok) throw new Error('Failed to load reference data')
 
-        // Fetch brands
-        const brandsResponse = await fetch('/api/public/brands?limit=1000')
-        if (!brandsResponse.ok) throw new Error('Failed to load brands')
-        const brandsData = await brandsResponse.json()
-        const brands = brandsData.brands || []
+        const data = await response.json()
 
-        // Fetch fascias for each brand
-        const brandsWithFascias = await Promise.all(
-          brands.map(async (brand: Brand) => {
-            try {
-              const fasciasResponse = await fetch(`/api/public/fascias/search?brandId=${brand.id}&limit=100`)
-              if (!fasciasResponse.ok) {
-                console.error(`Failed to fetch fascias for brand ${brand.name}`)
-                return { ...brand, fascias: [] }
-              }
-              const fasciasData = await fasciasResponse.json()
-              return { ...brand, fascias: fasciasData.fascias || [] }
-            } catch (err) {
-              console.error(`Error fetching fascias for brand ${brand.name}:`, err)
-              return { ...brand, fascias: [] }
-            }
-          })
-        )
-        setAllBrands(brandsWithFascias)
-
-        // Fetch fascia-category mappings
-        const mappingsResponse = await fetch('/api/public/fascia-categories')
-        if (!mappingsResponse.ok) throw new Error('Failed to load category mappings')
-        const mappingsData = await mappingsResponse.json()
-        setFasciaCategoryMappings(mappingsData.mappings || [])
+        setCategories(data.categories || [])
+        setAllBrands(data.brands || [])
+        setFasciaCategoryMappings(data.fasciaCategoryMappings || [])
 
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data')
