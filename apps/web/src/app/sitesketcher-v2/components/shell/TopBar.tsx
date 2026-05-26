@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { Button } from '../primitives';
 import {
@@ -10,9 +10,12 @@ import {
   Search,
   ChevronRight,
   Home,
-  Loader2
+  Loader2,
+  MapPin
 } from 'lucide-react';
 import Link from 'next/link';
+import { createDebouncedLocationSearch, formatLocationDisplay } from '@/lib/mapbox';
+import type { LocationResult } from '@/lib/mapbox';
 
 export function TopBar() {
   const {
@@ -29,9 +32,19 @@ export function TopBar() {
     setSketchId,
     setLastSaved,
     markClean,
+    setViewport,
   } = useSketchStore();
 
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<LocationResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const debouncedSearch = useRef(createDebouncedLocationSearch(300));
 
   const handleSave = async () => {
     setSaving(true);
@@ -111,6 +124,100 @@ export function TopBar() {
     if (canRedo()) redo();
   };
 
+  // Location search functionality
+  const performLocationSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+
+    try {
+      const results = await debouncedSearch.current(query, {
+        limit: 5,
+        country: ['GB', 'IE'],
+        types: ['place', 'locality', 'neighborhood', 'address']
+      });
+
+      setSearchResults(results);
+      setShowResults(results.length > 0);
+      setFocusedIndex(-1);
+    } catch (error) {
+      console.error('Location search error:', error);
+      setSearchResults([]);
+      setShowResults(false);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    performLocationSearch(searchQuery);
+  }, [searchQuery, performLocationSearch]);
+
+  const handleLocationSelect = (location: LocationResult) => {
+    // Fly to the selected location
+    setViewport({
+      center: location.center as [number, number],
+      zoom: 16,
+    });
+
+    // Clear search
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowResults(false);
+    searchInputRef.current?.blur();
+  };
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent) => {
+    if (!showResults || searchResults.length === 0) return;
+
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        setFocusedIndex(prev =>
+          prev < searchResults.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        setFocusedIndex(prev =>
+          prev > 0 ? prev - 1 : searchResults.length - 1
+        );
+        break;
+      case 'Enter':
+        event.preventDefault();
+        if (focusedIndex >= 0 && searchResults[focusedIndex]) {
+          handleLocationSelect(searchResults[focusedIndex]);
+        }
+        break;
+      case 'Escape':
+        setShowResults(false);
+        setFocusedIndex(-1);
+        searchInputRef.current?.blur();
+        break;
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        resultsRef.current &&
+        !resultsRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Auto-save effect
   useEffect(() => {
     // Only auto-save if sketch already exists (has ID)
@@ -172,15 +279,57 @@ export function TopBar() {
         )}
       </div>
 
-      {/* Center: Search (placeholder for now) */}
+      {/* Center: Search */}
       <div className="flex-1 max-w-md mx-8">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-sm-ink/40" />
           <input
+            ref={searchInputRef}
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            onFocus={() => setShowResults(searchResults.length > 0)}
             placeholder="Search location..."
             className="w-full pl-9 pr-3 py-2 text-sm bg-sm-bg border border-sm-border rounded-lg focus:outline-none focus:border-sm-violet transition-colors"
           />
+          {isSearching && (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-sm-ink/40 animate-spin" />
+          )}
+
+          {/* Search Results Dropdown */}
+          {showResults && searchResults.length > 0 && (
+            <div
+              ref={resultsRef}
+              className="absolute top-full left-0 right-0 mt-2 bg-white border border-sm-border rounded-lg shadow-lg max-h-80 overflow-y-auto z-50"
+            >
+              {searchResults.map((location, index) => (
+                <div
+                  key={location.id}
+                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                    index === focusedIndex
+                      ? 'bg-sm-violet/10'
+                      : 'hover:bg-sm-bg'
+                  } ${
+                    index !== searchResults.length - 1
+                      ? 'border-b border-sm-border'
+                      : ''
+                  }`}
+                  onClick={() => handleLocationSelect(location)}
+                >
+                  <MapPin className="w-4 h-4 text-sm-ink/40 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-sm-ink truncate">
+                      {location.text}
+                    </p>
+                    <p className="text-xs text-sm-ink/50 truncate">
+                      {formatLocationDisplay(location)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

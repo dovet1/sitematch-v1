@@ -56,6 +56,7 @@ export function MapCanvas() {
   const drawRef = useRef<MapboxDraw | null>(null);
   const parkingDragRef = useRef<{ id: string; moved: boolean } | null>(null);
   const suppressNextMapClickRef = useRef(false);
+  const isUserInteractionRef = useRef(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
@@ -312,13 +313,16 @@ export function MapCanvas() {
 
         // Track viewport changes
         map.on('moveend', () => {
-          const center = map.getCenter();
-          setViewport({
-            center: [center.lng, center.lat],
-            zoom: map.getZoom(),
-            pitch: map.getPitch(),
-            bearing: map.getBearing(),
-          });
+          if (isUserInteractionRef.current) {
+            const center = map.getCenter();
+            setViewport({
+              center: [center.lng, center.lat],
+              zoom: map.getZoom(),
+              pitch: map.getPitch(),
+              bearing: map.getBearing(),
+            });
+          }
+          isUserInteractionRef.current = true;
         });
 
         setIsLoaded(true);
@@ -405,6 +409,35 @@ export function MapCanvas() {
       syncParkingToMap(mapRef.current, parkingBlocks, selectedId);
     }
   }, [parkingBlocks, selectedId, isLoaded]);
+
+  // Handle programmatic viewport changes (e.g., from location search)
+  useEffect(() => {
+    if (!mapRef.current || !isLoaded) return;
+
+    const map = mapRef.current;
+    const currentCenter = map.getCenter();
+    const currentZoom = map.getZoom();
+
+    // Check if viewport has changed significantly (more than just rounding differences)
+    const centerChanged =
+      Math.abs(currentCenter.lng - viewport.center[0]) > 0.0001 ||
+      Math.abs(currentCenter.lat - viewport.center[1]) > 0.0001;
+    const zoomChanged = Math.abs(currentZoom - viewport.zoom) > 0.01;
+
+    if (centerChanged || zoomChanged) {
+      // This is a programmatic change, not user interaction
+      isUserInteractionRef.current = false;
+
+      map.flyTo({
+        center: viewport.center,
+        zoom: viewport.zoom,
+        pitch: viewport.pitch,
+        bearing: viewport.bearing,
+        duration: 1000,
+        essential: true
+      });
+    }
+  }, [viewport.center, viewport.zoom, viewport.pitch, viewport.bearing, isLoaded]);
 
   return (
     <div className="relative h-full w-full min-h-0 bg-sm-bg">
