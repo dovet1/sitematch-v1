@@ -177,6 +177,9 @@ export default function GapFinderClient() {
   // Traffic heatmap overlay state
   const [showTrafficHeatmap, setShowTrafficHeatmap] = useState<boolean>(false)
   const [trafficRange, setTrafficRange] = useState<[number, number]>([0, 250000])
+  const [minTrafficInput, setMinTrafficInput] = useState<string>('0')
+  const [maxTrafficInput, setMaxTrafficInput] = useState<string>('250000')
+  const [minTrafficError, setMinTrafficError] = useState<string>('')
 
   // Population filter collapsible state
   const [isPopulationFilterOpen, setIsPopulationFilterOpen] = useState<boolean>(false)
@@ -292,6 +295,12 @@ export default function GapFinderClient() {
       missingInBoth
     }
   }, [comparisonMode, nearbyStores, nearbyStoresB, missingFascias, missingFasciasB])
+
+  // Initialize traffic input fields on mount
+  useEffect(() => {
+    setMinTrafficInput(trafficRange[0].toString())
+    setMaxTrafficInput(trafficRange[1].toString())
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto open/close population filter based on whether it's filtered
   useEffect(() => {
@@ -503,6 +512,83 @@ export default function GapFinderClient() {
     if (maxPopInput === '' || isNaN(Number(maxPopInput))) {
       setMaxPopInput(maxPop.toString())
     }
+  }
+
+  // Traffic slider change - updates both slider and inputs
+  const handleTrafficRangeChange = (value: number[]) => {
+    setTrafficRange([value[0], value[1]])
+    setMinTrafficInput(value[0].toString())
+    setMaxTrafficInput(value[1].toString())
+  }
+
+  // Min traffic input change
+  const handleMinTrafficInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value
+    setMinTrafficInput(inputValue)
+    setMinTrafficError('') // Clear error while typing
+
+    if (inputValue === '') return
+
+    const value = parseInt(inputValue, 10)
+    if (!isNaN(value)) {
+      const clampedValue = Math.max(0, Math.min(value, trafficRange[1]))
+      setTrafficRange([clampedValue, trafficRange[1]])
+    }
+  }
+
+  // Min traffic input blur - validate
+  const handleMinTrafficInputBlur = () => {
+    const value = parseInt(minTrafficInput, 10)
+    const maxTraffic = trafficRange[1]
+
+    if (isNaN(value) || minTrafficInput === '') {
+      setMinTrafficInput(trafficRange[0].toString())
+      return
+    }
+
+    if (value < 0) {
+      setMinTrafficError('Minimum traffic must be at least 0')
+      setMinTrafficInput('0')
+      setTrafficRange([0, maxTraffic])
+      return
+    }
+
+    if (value > maxTraffic) {
+      setMinTrafficInput(maxTraffic.toString())
+      setTrafficRange([maxTraffic, maxTraffic])
+      return
+    }
+
+    setMinTrafficInput(value.toString())
+    setTrafficRange([value, maxTraffic])
+  }
+
+  // Max traffic input change
+  const handleMaxTrafficInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value
+    setMaxTrafficInput(inputValue)
+
+    if (inputValue === '') return
+
+    const value = parseInt(inputValue, 10)
+    if (!isNaN(value)) {
+      const clampedValue = Math.max(trafficRange[0], Math.min(value, 250000))
+      setTrafficRange([trafficRange[0], clampedValue])
+    }
+  }
+
+  // Max traffic input blur - validate
+  const handleMaxTrafficInputBlur = () => {
+    const value = parseInt(maxTrafficInput, 10)
+
+    if (isNaN(value) || maxTrafficInput === '') {
+      setMaxTrafficInput(trafficRange[1].toString())
+      return
+    }
+
+    const clampedValue = Math.max(trafficRange[0], Math.min(value, 250000))
+    setMaxTrafficInput(clampedValue.toString())
+    setTrafficRange([trafficRange[0], clampedValue])
   }
 
   const formatPopulation = (value: number): string => {
@@ -1280,40 +1366,27 @@ export default function GapFinderClient() {
   )
 
   const renderTrafficHeatmapControl = () => {
-    const minTraffic = trafficRange[0]
-    const maxTraffic = trafficRange[1]
-
     return (
       <Collapsible open={showTrafficHeatmap} onOpenChange={setShowTrafficHeatmap}>
-        <div className="flex items-center justify-between w-full p-4 hover:bg-sm-violet-tint-soft rounded-sm-btn transition-all duration-200">
-          <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left">
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-sm-violet-tint-soft rounded-sm-btn transition-all duration-200">
+          <div className="flex items-center gap-2">
             <ChevronDown
               className={`h-4 w-4 text-sm-ink3 transition-transform duration-200 ${
                 showTrafficHeatmap ? 'rotate-0' : '-rotate-90'
               }`}
             />
             <span className="font-semibold text-sm-ink">Traffic</span>
-          </CollapsibleTrigger>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={showTrafficHeatmap}
-            onClick={() => setShowTrafficHeatmap((enabled) => !enabled)}
-            className={`h-7 rounded-full px-3 text-xs font-semibold tracking-tight transition-colors ${
-              showTrafficHeatmap
-                ? 'bg-sm-violet text-white shadow-sm hover:bg-sm-violet-deep'
-                : 'bg-sm-border text-sm-ink2 hover:bg-sm-border-soft'
-            }`}
-          >
-            {showTrafficHeatmap ? 'On' : 'Off'}
-          </button>
-        </div>
+          </div>
+          <Badge variant="secondary" className="text-xs">
+            {trafficRange[0] === 0 && trafficRange[1] === 250000 ? 'All' : 'Filtered'}
+          </Badge>
+        </CollapsibleTrigger>
 
         <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
           <div className="px-2">
             <Slider
               value={trafficRange}
-              onValueChange={(value) => setTrafficRange(value as [number, number])}
+              onValueChange={handleTrafficRangeChange}
               min={0}
               max={250000}
               step={1000}
@@ -1324,16 +1397,41 @@ export default function GapFinderClient() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-xs text-gray-600 mb-1 block">Min (vehicles/day)</Label>
-              <div className="text-sm font-semibold text-sm-violet">
-                {formatTrafficValue(minTraffic)}
-              </div>
+              <Label htmlFor="min-traffic-input" className="text-xs text-gray-600 mb-1 block">
+                Min (vehicles/day)
+              </Label>
+              <Input
+                id="min-traffic-input"
+                type="number"
+                min={0}
+                max={trafficRange[1]}
+                value={minTrafficInput}
+                onChange={handleMinTrafficInputChange}
+                onBlur={handleMinTrafficInputBlur}
+                className={`h-9 text-sm ${minTrafficError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                aria-invalid={!!minTrafficError}
+                aria-describedby={minTrafficError ? 'min-traffic-error' : undefined}
+              />
+              {minTrafficError && (
+                <p id="min-traffic-error" className="text-xs text-red-600 mt-1" role="alert">
+                  {minTrafficError}
+                </p>
+              )}
             </div>
             <div>
-              <Label className="text-xs text-gray-600 mb-1 block">Max (vehicles/day)</Label>
-              <div className="text-sm font-semibold text-sm-violet">
-                {formatTrafficValue(maxTraffic)}
-              </div>
+              <Label htmlFor="max-traffic-input" className="text-xs text-gray-600 mb-1 block">
+                Max (vehicles/day)
+              </Label>
+              <Input
+                id="max-traffic-input"
+                type="number"
+                min={trafficRange[0]}
+                max={250000}
+                value={maxTrafficInput}
+                onChange={handleMaxTrafficInputChange}
+                onBlur={handleMaxTrafficInputBlur}
+                className="h-9 text-sm"
+              />
             </div>
           </div>
         </CollapsibleContent>
