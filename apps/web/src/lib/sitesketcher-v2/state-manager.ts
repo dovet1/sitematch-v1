@@ -11,7 +11,7 @@ import {
   PolygonInProgress,
   MeasurementChain,
 } from '@/types/sitesketcher-v2';
-import { DEFAULT_VIEWPORT, MAX_HISTORY_SIZE } from './constants';
+import { DEFAULT_BUILDING_HEIGHT_METERS, DEFAULT_VIEWPORT, MAX_HISTORY_SIZE } from './constants';
 
 interface SketchState {
   // Data
@@ -29,6 +29,7 @@ interface SketchState {
   mapStyle: MapStyle;
   view: ViewMode;
   sideLabelsOn: boolean;
+  parkingPlacement: Pick<ParkingBlock, 'spaces' | 'layout' | 'stallSize'>;
 
   // Drawing state
   drawingInProgress: PolygonInProgress | null;
@@ -56,6 +57,7 @@ interface SketchState {
   // Actions - Parking Blocks
   addParkingBlock: (parkingBlock: ParkingBlock) => void;
   updateParkingBlock: (id: string, updates: Partial<ParkingBlock>) => void;
+  moveParkingBlock: (id: string, anchor: [number, number]) => void;
   deleteParkingBlock: (id: string) => void;
   setParkingBlocks: (parkingBlocks: ParkingBlock[]) => void;
 
@@ -74,6 +76,7 @@ interface SketchState {
   setMapStyle: (mapStyle: MapStyle) => void;
   setView: (view: ViewMode) => void;
   setSideLabelsOn: (on: boolean) => void;
+  setParkingPlacement: (settings: Partial<SketchState['parkingPlacement']>) => void;
 
   // Actions - Drawing
   startPolygonDrawing: (colorIndex: number) => void;
@@ -134,6 +137,11 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   mapStyle: 'hybrid',
   view: '2d',
   sideLabelsOn: true,
+  parkingPlacement: {
+    spaces: 10,
+    layout: 'single',
+    stallSize: 'standard',
+  },
 
   drawingInProgress: null,
   measurementInProgress: null,
@@ -193,6 +201,15 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     set((state) => ({
       parkingBlocks: state.parkingBlocks.map((pb) =>
         pb.id === id ? { ...pb, ...updates, updatedAt: Date.now() } : pb
+      ),
+      isDirty: true,
+    }));
+  },
+
+  moveParkingBlock: (id, anchor) => {
+    set((state) => ({
+      parkingBlocks: state.parkingBlocks.map((pb) =>
+        pb.id === id ? { ...pb, anchor, updatedAt: Date.now() } : pb
       ),
       isDirty: true,
     }));
@@ -268,6 +285,10 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   setMapStyle: (mapStyle) => set({ mapStyle }),
   setView: (view) => set({ view }),
   setSideLabelsOn: (on) => set({ sideLabelsOn: on, isDirty: true }),
+  setParkingPlacement: (settings) =>
+    set((state) => ({
+      parkingPlacement: { ...state.parkingPlacement, ...settings },
+    })),
 
   // Drawing actions
   startPolygonDrawing: (colorIndex) =>
@@ -316,7 +337,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       colorIndex: state.drawingInProgress.colorIndex,
       points: state.drawingInProgress.points,
       rotation: 0,
-      height: 0,
+      height: DEFAULT_BUILDING_HEIGHT_METERS,
       showDistances: true,
       showArea: true,
       createdAt: Date.now(),

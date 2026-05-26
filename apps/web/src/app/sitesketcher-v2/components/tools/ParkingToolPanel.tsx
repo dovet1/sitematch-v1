@@ -1,14 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { Stepper } from '../primitives/Stepper';
 import { Segmented, SegmentedOption } from '../primitives/Segmented';
 import { PARKING_DIMENSIONS } from '@/lib/sitesketcher-v2/constants';
 
 export function ParkingToolPanel() {
-  const [spaces, setSpaces] = useState(10);
-  const [layout, setLayout] = useState<'single' | 'double'>('single');
-  const [stallSize, setStallSize] = useState<'standard' | 'larger'>('standard');
+  const { parkingPlacement, setParkingPlacement } = useSketchStore();
+  const { spaces, layout, stallSize } = parkingPlacement;
 
   const layoutOptions: SegmentedOption<'single' | 'double'>[] = [
     { value: 'single', label: 'Single Row' },
@@ -22,8 +21,8 @@ export function ParkingToolPanel() {
 
   // Calculate dimensions
   const dimensions = PARKING_DIMENSIONS[stallSize];
-  const totalLength = dimensions.length * spaces;
-  const totalWidth = layout === 'double' ? dimensions.width * 2 : dimensions.width;
+  const totalLength = dimensions.width * spaces;
+  const totalWidth = layout === 'double' ? dimensions.length * 2 : dimensions.length;
 
   return (
     <div className="p-4 space-y-4">
@@ -38,7 +37,12 @@ export function ParkingToolPanel() {
         <label className="text-xs font-medium text-sm-ink block mb-2">
           Number of Spaces
         </label>
-        <Stepper value={spaces} onChange={setSpaces} min={1} max={100} />
+        <Stepper
+          value={spaces}
+          onChange={(value) => setParkingPlacement({ spaces: value })}
+          min={1}
+          max={100}
+        />
       </div>
 
       <div>
@@ -48,7 +52,7 @@ export function ParkingToolPanel() {
         <Segmented
           options={layoutOptions}
           value={layout}
-          onChange={setLayout}
+          onChange={(value) => setParkingPlacement({ layout: value })}
           fullWidth
         />
       </div>
@@ -60,7 +64,7 @@ export function ParkingToolPanel() {
         <Segmented
           options={stallSizeOptions}
           value={stallSize}
-          onChange={setStallSize}
+          onChange={(value) => setParkingPlacement({ stallSize: value })}
           fullWidth
         />
         <p className="text-[10px] text-sm-ink/50 mt-1">

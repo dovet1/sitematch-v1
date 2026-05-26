@@ -50,8 +50,8 @@ export function ParkingInspector({ parkingBlockId }: ParkingInspectorProps) {
 
   // Calculate dimensions
   const dimensions = PARKING_DIMENSIONS[parking.stallSize];
-  const totalLength = dimensions.length * parking.spaces;
-  const totalWidth = parking.layout === 'double' ? dimensions.width * 2 : dimensions.width;
+  const totalLength = dimensions.width * parking.spaces;
+  const totalWidth = parking.layout === 'double' ? dimensions.length * 2 : dimensions.length;
 
   return (
     <div className="p-4 space-y-4">

@@ -7,8 +7,11 @@ import {
   initializeMap,
   setupMapboxDraw,
   setup3DLayer,
+  setupParkingLayer,
   toggle3DLayer,
   syncDrawTo3D,
+  syncParkingToMap,
+  syncPolygonsTo3D,
   loadPolygonsIntoDraw,
   enterPolygonDrawMode,
   drawFeatureToPolygon,
@@ -18,10 +21,41 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
+function isPointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
+  const [lng, lat] = point;
+  let inside = false;
+
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [lngI, latI] = polygon[i];
+    const [lngJ, latJ] = polygon[j];
+    const intersects =
+      latI > lat !== latJ > lat &&
+      lng < ((lngJ - lngI) * (lat - latI)) / (latJ - latI) + lngI;
+
+    if (intersects) inside = !inside;
+  }
+
+  return inside;
+}
+
+function getProjectedPolygonArea(map: mapboxgl.Map, polygon: [number, number][]): number {
+  let area = 0;
+
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const current = map.project(polygon[i]);
+    const previous = map.project(polygon[j]);
+    area += (previous.x + current.x) * (previous.y - current.y);
+  }
+
+  return Math.abs(area / 2);
+}
+
 export function MapCanvas() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
+  const parkingDragRef = useRef<{ id: string; moved: boolean } | null>(null);
+  const suppressNextMapClickRef = useRef(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
@@ -30,10 +64,13 @@ export function MapCanvas() {
     mapStyle,
     viewport,
     polygons,
+    parkingBlocks,
+    selectedId,
     activeTool,
     selectedPolygonColorIndex,
     setViewport,
     addPolygon,
+    addParkingBlock,
     updatePolygon,
     deletePolygon,
     setSelectedId,
@@ -74,12 +111,18 @@ export function MapCanvas() {
 
         // Setup 3D layer
         setup3DLayer(map);
+        setupParkingLayer(map);
 
         // Load existing polygons
         if (polygons.length > 0) {
           loadPolygonsIntoDraw(draw, polygons);
-          syncDrawTo3D(map, draw);
+          syncPolygonsTo3D(map, polygons);
         }
+        syncParkingToMap(
+          map,
+          useSketchStore.getState().parkingBlocks,
+          useSketchStore.getState().selectedId
+        );
 
         // Setup Draw event listeners
         map.on('draw.create', (e: any) => {
@@ -141,6 +184,132 @@ export function MapCanvas() {
           setSelectedId(selectedId, selectedId ? 'polygon' : null);
         });
 
+        map.on('mouseenter', 'parking-block-fill', () => {
+          const activeTool = useSketchStore.getState().activeTool;
+          if (activeTool === 'select' || activeTool === 'parking') {
+            map.getCanvas().style.cursor = 'move';
+          }
+        });
+
+        map.on('mouseleave', 'parking-block-fill', () => {
+          if (!parkingDragRef.current) {
+            map.getCanvas().style.cursor = '';
+          }
+        });
+
+        map.on('mousedown', 'parking-block-fill', (event: any) => {
+          const state = useSketchStore.getState();
+          if (state.activeTool !== 'select' && state.activeTool !== 'parking') return;
+
+          const parkingId = event.features?.[0]?.properties?.id;
+          if (!parkingId) return;
+
+          event.preventDefault();
+          parkingDragRef.current = { id: parkingId, moved: false };
+          state.pushHistory();
+          state.setSelectedId(parkingId, 'parking');
+          map.dragPan.disable();
+          map.getCanvas().style.cursor = 'grabbing';
+        });
+
+        map.on('mousemove', (event) => {
+          const dragState = parkingDragRef.current;
+          if (!dragState) return;
+
+          dragState.moved = true;
+          useSketchStore.getState().moveParkingBlock(dragState.id, [
+            event.lngLat.lng,
+            event.lngLat.lat,
+          ]);
+        });
+
+        map.on('mouseup', () => {
+          const dragState = parkingDragRef.current;
+          if (!dragState) return;
+
+          suppressNextMapClickRef.current = true;
+          parkingDragRef.current = null;
+          map.dragPan.enable();
+          map.getCanvas().style.cursor = '';
+        });
+
+        map.on('click', (event) => {
+          if (suppressNextMapClickRef.current) {
+            suppressNextMapClickRef.current = false;
+            return;
+          }
+
+          const state = useSketchStore.getState();
+
+          if (state.activeTool === 'parking') {
+            const existingNames = state.parkingBlocks.map((parking) => parking.name);
+            let nameIndex = 1;
+            let name = `Parking ${nameIndex}`;
+            while (existingNames.includes(name)) {
+              nameIndex++;
+              name = `Parking ${nameIndex}`;
+            }
+
+            const id = `parking-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+            addParkingBlock({
+              id,
+              name,
+              spaces: state.parkingPlacement.spaces,
+              layout: state.parkingPlacement.layout,
+              stallSize: state.parkingPlacement.stallSize,
+              anchor: [event.lngLat.lng, event.lngLat.lat],
+              rotation: 0,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            });
+            setSelectedId(id, 'parking');
+            return;
+          }
+
+          if (state.activeTool === 'select') {
+            const point = event.point;
+            const lngLat: [number, number] = [event.lngLat.lng, event.lngLat.lat];
+
+            window.setTimeout(() => {
+              const latestState = useSketchStore.getState();
+
+              if (map.getLayer('parking-block-fill')) {
+                const parkingFeatures = map.queryRenderedFeatures(
+                  [
+                    [point.x - 4, point.y - 4],
+                    [point.x + 4, point.y + 4],
+                  ],
+                  { layers: ['parking-block-fill'] }
+                );
+                const parkingId = parkingFeatures[0]?.properties?.id;
+
+                if (parkingId) {
+                  draw.changeMode('simple_select', { featureIds: [] });
+                  latestState.setSelectedId(parkingId, 'parking');
+                  return;
+                }
+              }
+
+              const hitPolygon = latestState.polygons
+                .filter((polygon) => isPointInPolygon(lngLat, polygon.points))
+                .map((polygon) => ({
+                  polygon,
+                  area: getProjectedPolygonArea(map, polygon.points),
+                }))
+                .sort((a, b) => a.area - b.area)[0]?.polygon;
+
+              if (hitPolygon) {
+                draw.changeMode('simple_select', { featureIds: [hitPolygon.id] });
+                latestState.setSelectedId(hitPolygon.id, 'polygon');
+                return;
+              }
+
+              draw.changeMode('simple_select', { featureIds: [] });
+              latestState.setSelectedId(null, null);
+            }, 0);
+          }
+        });
+
         // Track viewport changes
         map.on('moveend', () => {
           const center = map.getCenter();
@@ -169,8 +338,24 @@ export function MapCanvas() {
 
   // Handle map style changes
   useEffect(() => {
-    if (mapRef.current && isLoaded) {
-      mapRef.current.setStyle(MAP_STYLES[mapStyle]);
+    if (mapRef.current && drawRef.current && isLoaded) {
+      const map = mapRef.current;
+      const draw = drawRef.current;
+
+      map.once('style.load', () => {
+        const is3D = useSketchStore.getState().view === '3d';
+        setup3DLayer(map);
+        setupParkingLayer(map);
+        syncPolygonsTo3D(map, useSketchStore.getState().polygons);
+        syncParkingToMap(
+          map,
+          useSketchStore.getState().parkingBlocks,
+          useSketchStore.getState().selectedId
+        );
+        toggle3DLayer(map, is3D);
+      });
+
+      map.setStyle(MAP_STYLES[mapStyle]);
     }
   }, [mapStyle, isLoaded]);
 
@@ -190,7 +375,7 @@ export function MapCanvas() {
 
       // Sync if entering 3D
       if (is3D) {
-        syncDrawTo3D(mapRef.current, drawRef.current);
+        syncPolygonsTo3D(mapRef.current, useSketchStore.getState().polygons);
       }
     }
   }, [view, isLoaded]);
@@ -210,9 +395,16 @@ export function MapCanvas() {
   useEffect(() => {
     if (mapRef.current && drawRef.current && isLoaded) {
       loadPolygonsIntoDraw(drawRef.current, polygons);
-      syncDrawTo3D(mapRef.current, drawRef.current);
+      syncPolygonsTo3D(mapRef.current, polygons);
     }
   }, [polygons, isLoaded]);
+
+  // Sync parking changes from store back to map layers
+  useEffect(() => {
+    if (mapRef.current && isLoaded) {
+      syncParkingToMap(mapRef.current, parkingBlocks, selectedId);
+    }
+  }, [parkingBlocks, selectedId, isLoaded]);
 
   return (
     <div className="relative h-full w-full min-h-0 bg-sm-bg">

@@ -129,3 +129,6 @@ export const MIN_POINT_DISTANCE = 0.5;
 
 // Minimum polygon area (square meters)
 export const MIN_POLYGON_AREA = 1;
+
+// Default visible height for new building polygons in 3D mode
+export const DEFAULT_BUILDING_HEIGHT_METERS = 8;

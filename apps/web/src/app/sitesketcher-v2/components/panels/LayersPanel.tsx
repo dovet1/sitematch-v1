@@ -5,7 +5,15 @@ import { POLYGON_COLORS } from '@/lib/sitesketcher-v2/constants';
 import { Eye, EyeOff, Trash2 } from 'lucide-react';
 
 export function LayersPanel() {
-  const { polygons, parkingBlocks, cadImages, selectedId, setSelectedId, deletePolygon } = useSketchStore();
+  const {
+    polygons,
+    parkingBlocks,
+    cadImages,
+    selectedId,
+    setSelectedId,
+    deletePolygon,
+    deleteParkingBlock,
+  } = useSketchStore();
 
   const totalObjects = polygons.length + parkingBlocks.length + cadImages.length;
 
@@ -37,11 +45,19 @@ export function LayersPanel() {
               const isSelected = selectedId === polygon.id;
 
               return (
-                <button
+                <div
                   key={polygon.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedId(polygon.id, 'polygon')}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedId(polygon.id, 'polygon');
+                    }
+                  }}
                   className={`
-                    w-full flex items-center gap-2 p-2 rounded transition-all text-left
+                    group w-full flex items-center gap-2 p-2 rounded transition-all text-left cursor-pointer
                     ${
                       isSelected
                         ? 'bg-sm-violet/10 border border-sm-violet'
@@ -60,6 +76,7 @@ export function LayersPanel() {
                     {polygon.name}
                   </span>
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (confirm(`Delete ${polygon.name}?`)) {
@@ -71,7 +88,7 @@ export function LayersPanel() {
                   >
                     <Trash2 className="w-3 h-3 text-red-600" />
                   </button>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -84,9 +101,50 @@ export function LayersPanel() {
             Parking ({parkingBlocks.length})
           </h4>
           <div className="space-y-1">
-            <div className="text-sm text-sm-ink/50 text-center py-4">
-              Coming soon
-            </div>
+            {parkingBlocks.map((parking) => {
+              const isSelected = selectedId === parking.id;
+
+              return (
+                <div
+                  key={parking.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedId(parking.id, 'parking')}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedId(parking.id, 'parking');
+                    }
+                  }}
+                  className={`
+                    group w-full flex items-center gap-2 p-2 rounded transition-all text-left cursor-pointer
+                    ${
+                      isSelected
+                        ? 'bg-sm-violet/10 border border-sm-violet'
+                        : 'hover:bg-sm-bg border border-transparent'
+                    }
+                  `}
+                >
+                  <div className="w-4 h-4 rounded border-2 flex-shrink-0 bg-teal-500/20 border-teal-600" />
+                  <span className="text-sm text-sm-ink flex-1 truncate">
+                    {parking.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete ${parking.name}?`)) {
+                        deleteParkingBlock(parking.id);
+                      }
+                    }}
+                    className="p-1 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3 h-3 text-red-600" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
