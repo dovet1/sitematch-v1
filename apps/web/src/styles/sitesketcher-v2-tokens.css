@@ -1,0 +1,67 @@
+/* SiteSketcher v2 Design Tokens */
+
+:root {
+  /* Polygon color palette */
+  --poly-violet-stroke: #7033FF;
+  --poly-violet-fill: rgba(112, 51, 255, 0.18);
+
+  --poly-coral-stroke: #F26B1F;
+  --poly-coral-fill: rgba(242, 107, 31, 0.20);
+
+  --poly-teal-stroke: #0F9488;
+  --poly-teal-fill: rgba(15, 148, 136, 0.20);
+
+  --poly-amber-stroke: #D97706;
+  --poly-amber-fill: rgba(217, 119, 6, 0.20);
+
+  --poly-rose-stroke: #E11D74;
+  --poly-rose-fill: rgba(225, 29, 116, 0.18);
+
+  --poly-lime-stroke: #65A30D;
+  --poly-lime-fill: rgba(101, 163, 13, 0.20);
+
+  /* Shadows */
+  --ss-shadow-modal: 0 40px 80px -20px rgba(20,10,40,0.4), 0 0 0 1px rgba(0,0,0,0.04);
+  --ss-shadow-popover: 0 20px 50px -10px rgba(20,10,40,0.35), 0 0 0 1px rgba(0,0,0,0.04);
+  --ss-shadow-floating: 0 14px 30px -10px rgba(20,10,40,0.2);
+
+  /* Typography */
+  --ss-font-body: 13.5px;
+  --ss-font-meta: 11px;
+
+  /* Animation */
+  --ss-transition-fast: 150ms ease;
+  --ss-transition-normal: 250ms ease;
+  --ss-transition-slow: 350ms ease;
+}
+
+/* Utility classes for polygon colors */
+.poly-color-0 {
+  --poly-stroke: var(--poly-violet-stroke);
+  --poly-fill: var(--poly-violet-fill);
+}
+
+.poly-color-1 {
+  --poly-stroke: var(--poly-coral-stroke);
+  --poly-fill: var(--poly-coral-fill);
+}
+
+.poly-color-2 {
+  --poly-stroke: var(--poly-teal-stroke);
+  --poly-fill: var(--poly-teal-fill);
+}
+
+.poly-color-3 {
+  --poly-stroke: var(--poly-amber-stroke);
+  --poly-fill: var(--poly-amber-fill);
+}
+
+.poly-color-4 {
+  --poly-stroke: var(--poly-rose-stroke);
+  --poly-fill: var(--poly-rose-fill);
+}
+
+.poly-color-5 {
+  --poly-stroke: var(--poly-lime-stroke);
+  --poly-fill: var(--poly-lime-fill);
+}

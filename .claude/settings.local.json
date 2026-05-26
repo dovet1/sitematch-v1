@@ -65,7 +65,8 @@
       "Bash(do echo \"=== $file ===\")",
       "Bash(head:*)",
       "Bash(done)",
-      "Read(//Users/tomdove/.claude/plugins/**)"
+      "Read(//Users/tomdove/.claude/plugins/**)",
+      "Bash(/opt/homebrew/bin/node /opt/homebrew/bin/npm install zustand --workspace=apps/web)"
     ],
     "deny": []
   }

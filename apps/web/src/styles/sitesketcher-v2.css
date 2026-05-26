@@ -1,0 +1,267 @@
+/* SiteSketcher v2 Styles */
+
+/* Base layout */
+.sitesketcher-v2-container {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: theme('colors.sm-bg');
+  font-size: var(--ss-font-body);
+}
+
+/* Disable text selection during drawing */
+.sitesketcher-v2-container.drawing {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Mapbox overrides */
+.mapboxgl-ctrl-group button {
+  width: 32px;
+  height: 32px;
+}
+
+.mapboxgl-ctrl-attrib {
+  font-size: 10px;
+}
+
+/* Hide Mapbox Draw default controls */
+.mapboxgl-ctrl-group.mapboxgl-ctrl-group-draw {
+  display: none !important;
+}
+
+/* Custom Draw styles */
+.mapbox-gl-draw_polygon,
+.mapbox-gl-draw_line {
+  cursor: crosshair !important;
+}
+
+/* Edge distance labels */
+.edge-distance-label {
+  pointer-events: none;
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 11px;
+  font-weight: 500;
+  fill: theme('colors.sm-ink');
+  paint-order: stroke fill;
+  stroke: white;
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Area labels */
+.area-label {
+  pointer-events: none;
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 12px;
+  font-weight: 600;
+  fill: theme('colors.sm-ink');
+  paint-order: stroke fill;
+  stroke: white;
+  stroke-width: 4px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Selection handles */
+.selection-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid theme('colors.sm-violet');
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: var(--ss-transition-fast);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.selection-handle:hover {
+  transform: scale(1.2);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+}
+
+.selection-handle.rotation-handle {
+  background: theme('colors.sm-violet');
+  cursor: grab;
+}
+
+.selection-handle.rotation-handle:active {
+  cursor: grabbing;
+}
+
+/* Measurement overlay */
+.measurement-line {
+  stroke: theme('colors.sm-violet');
+  stroke-width: 2;
+  stroke-dasharray: 5, 5;
+  fill: none;
+  pointer-events: none;
+}
+
+.measurement-point {
+  fill: theme('colors.sm-violet');
+  stroke: white;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.measurement-label {
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 11px;
+  font-weight: 600;
+  fill: theme('colors.sm-violet');
+  paint-order: stroke fill;
+  stroke: white;
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+/* 3D vignette overlay */
+.view-3d-vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 0%,
+    transparent 40%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
+  opacity: 0;
+  transition: opacity var(--ss-transition-normal);
+}
+
+.view-3d .view-3d-vignette {
+  opacity: 1;
+}
+
+/* Loading states */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    theme('colors.sm-border') 25%,
+    rgba(232, 228, 220, 0.5) 50%,
+    theme('colors.sm-border') 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Scrollbar styling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: theme('colors.sm-border');
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #d8d4cc;
+}
+
+/* Focus rings */
+.focus-ring:focus-visible {
+  outline: 2px solid theme('colors.sm-violet');
+  outline-offset: 2px;
+}
+
+/* Transitions */
+.transition-panel {
+  transition: transform var(--ss-transition-normal), opacity var(--ss-transition-normal);
+}
+
+/* Tooltip */
+.tooltip {
+  @apply px-2 py-1 text-xs rounded bg-sm-ink text-white;
+  box-shadow: var(--ss-shadow-floating);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Drag overlay */
+.drag-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(112, 51, 255, 0.05);
+  border: 2px dashed theme('colors.sm-violet');
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Color picker swatches */
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  transition: var(--ss-transition-fast);
+  cursor: pointer;
+  position: relative;
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.color-swatch.selected {
+  border-color: theme('colors.sm-ink');
+  box-shadow: 0 0 0 2px white, 0 0 0 4px theme('colors.sm-ink');
+}
+
+.color-swatch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background: currentColor;
+}
+
+/* Range slider thumb styles */
+.slider-v2::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border: 2px solid #7033FF;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.slider-v2::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: white;
+  border: 2px solid #7033FF;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

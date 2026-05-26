@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
+import { hasProAccess } from '@/lib/subscription-utils';
 
 export const dynamic = 'force-dynamic';
 
-// GET /api/sitesketcher/sketches/[id] - Get single sketch
+// GET /api/sitesketcher-v2/sketches/[id] - Get single v2 sketch
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,6 +20,15 @@ export async function GET(
       );
     }
 
+    // Check Pro access
+    const isPro = await hasProAccess(user.id);
+    if (!isPro) {
+      return NextResponse.json(
+        { error: 'Pro subscription required to access saved sketches' },
+        { status: 403 }
+      );
+    }
+
     const supabase = await createServerClient();
 
     const { data: sketch, error } = await supabase
@@ -26,11 +36,11 @@ export async function GET(
       .select('*')
       .eq('id', (await params).id)
       .eq('user_id', user.id)
-      .is('data->>version', null) // Prevent fetching v2 sketches in v1
+      .eq('data->>version', '2') // Only fetch v2 sketches
       .single();
 
     if (error) {
-      console.error('Error fetching sketch:', error);
+      console.error('Error fetching v2 sketch:', error);
       return NextResponse.json(
         { error: 'Sketch not found' },
         { status: 404 }
@@ -47,7 +57,7 @@ export async function GET(
   }
 }
 
-// PUT /api/sitesketcher/sketches/[id] - Update sketch
+// PUT /api/sitesketcher-v2/sketches/[id] - Update v2 sketch
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -62,22 +72,48 @@ export async function PUT(
       );
     }
 
+    // Check Pro access
+    const isPro = await hasProAccess(user.id);
+    if (!isPro) {
+      return NextResponse.json(
+        { error: 'Pro subscription required to save sketches' },
+        { status: 403 }
+      );
+    }
+
     const supabase = await createServerClient();
 
     const body = await request.json();
     const { name, description, data, thumbnail_url, location } = body;
 
-    // Strip any client-provided version field to prevent v1 → v2 conversion
-    const safeData = data ? (() => {
-      const { version, ...rest } = data;
-      return rest;
-    })() : undefined;
+    // Ensure version is set to 2
+    const v2Data = data ? {
+      ...data,
+      version: 2,
+    } : undefined;
+
+    // Tier enforcement if data is being updated
+    if (v2Data && !isPro) {
+      const polygonCount = v2Data.polygons?.length || 0;
+      const parkingCount = v2Data.parkingBlocks?.length || 0;
+
+      if (polygonCount > 1 || parkingCount > 1) {
+        return NextResponse.json(
+          {
+            error: 'Free tier limited to 1 polygon and 1 parking block. Upgrade to Pro for unlimited objects.',
+            tier: 'free',
+            limit: { polygons: 1, parkingBlocks: 1 }
+          },
+          { status: 403 }
+        );
+      }
+    }
 
     // Build update object with only provided fields
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
-    if (safeData !== undefined) updateData.data = safeData;
+    if (v2Data !== undefined) updateData.data = v2Data;
     if (thumbnail_url !== undefined) updateData.thumbnail_url = thumbnail_url;
     if (location !== undefined) updateData.location = location;
 
@@ -86,12 +122,12 @@ export async function PUT(
       .update(updateData)
       .eq('id', (await params).id)
       .eq('user_id', user.id)
-      .is('data->>version', null) // Only update v1 sketches
+      .eq('data->>version', '2') // Only update v2 sketches
       .select()
       .single();
 
     if (error) {
-      console.error('Error updating sketch:', error);
+      console.error('Error updating v2 sketch:', error);
       return NextResponse.json(
         { error: 'Failed to update sketch' },
         { status: 500 }
@@ -108,7 +144,7 @@ export async function PUT(
   }
 }
 
-// DELETE /api/sitesketcher/sketches/[id] - Delete sketch
+// DELETE /api/sitesketcher-v2/sketches/[id] - Delete v2 sketch
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -123,20 +159,52 @@ export async function DELETE(
       );
     }
 
+    // Check Pro access
+    const isPro = await hasProAccess(user.id);
+    if (!isPro) {
+      return NextResponse.json(
+        { error: 'Pro subscription required to manage saved sketches' },
+        { status: 403 }
+      );
+    }
+
     const supabase = await createServerClient();
 
-    // Use .select() to verify row was deleted (prevents false success)
+    // First fetch the sketch to check for CAD images
+    const { data: sketch } = await supabase
+      .from('site_sketches')
+      .select('data')
+      .eq('id', (await params).id)
+      .eq('user_id', user.id)
+      .eq('data->>version', '2')
+      .single();
+
+    // If sketch has CAD images, delete them from storage
+    if (sketch?.data?.cadImages) {
+      const cadImages = sketch.data.cadImages as any[];
+      const filePaths = cadImages
+        .map((img: any) => img.storagePath)
+        .filter(Boolean);
+
+      if (filePaths.length > 0) {
+        await supabase.storage
+          .from('cad-images')
+          .remove(filePaths);
+      }
+    }
+
+    // Delete the sketch
     const { data, error } = await supabase
       .from('site_sketches')
       .delete()
       .eq('id', (await params).id)
       .eq('user_id', user.id)
-      .is('data->>version', null) // Only delete v1 sketches
+      .eq('data->>version', '2') // Only delete v2 sketches
       .select('id')
       .single();
 
     if (error || !data) {
-      console.error('Error deleting sketch:', error);
+      console.error('Error deleting v2 sketch:', error);
       return NextResponse.json(
         { error: 'Sketch not found or delete failed' },
         { status: 404 }

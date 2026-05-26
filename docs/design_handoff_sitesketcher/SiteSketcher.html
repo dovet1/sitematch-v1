@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteSketcher — redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #1A1422; font-family: Inter, sans-serif; }
+  * { box-sizing: border-box; }
+  @keyframes ss-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.4); }
+  }
+  /* small helpers used inside artboards */
+  kbd { font-family: 'JetBrains Mono', monospace; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="sitesketcher-core.jsx"></script>
+<script type="text/babel" src="sitesketcher-chrome.jsx"></script>
+<script type="text/babel" src="sitesketcher-panels.jsx"></script>
+<script type="text/babel" src="sitesketcher-states.jsx"></script>
+<script type="text/babel" src="sitesketcher-flows.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+// Default tweaks
+const DEFAULTS = /*EDITMODE-BEGIN*/{
+  "polygonPalette": "muted",
+  "defaultUnits": "metric",
+  "defaultView": "2d",
+  "mapStyle": "hybrid"
+}/*EDITMODE-END*/;
+
+// Override POLY by palette
+const PALETTES = {
+  muted: [
+    { id: "violet",  stroke: "#7033FF", fill: "rgba(112, 51, 255, 0.18)", label: "Plot A" },
+    { id: "coral",   stroke: "#F26B1F", fill: "rgba(242, 107, 31, 0.20)", label: "Plot B" },
+    { id: "teal",    stroke: "#0F9488", fill: "rgba(15, 148, 136, 0.20)", label: "Plot C" },
+    { id: "amber",   stroke: "#D97706", fill: "rgba(217, 119, 6, 0.20)",  label: "Plot D" },
+    { id: "rose",    stroke: "#E11D74", fill: "rgba(225, 29, 116, 0.18)", label: "Plot E" },
+    { id: "lime",    stroke: "#65A30D", fill: "rgba(101, 163, 13, 0.20)", label: "Plot F" },
+  ],
+  bright: [
+    { id: "violet",  stroke: "#7033FF", fill: "rgba(112, 51, 255, 0.22)" },
+    { id: "cyan",    stroke: "#06B6D4", fill: "rgba(6, 182, 212, 0.30)" },
+    { id: "magenta", stroke: "#EC4899", fill: "rgba(236, 72, 153, 0.28)" },
+    { id: "lime",    stroke: "#84CC16", fill: "rgba(132, 204, 22, 0.30)" },
+    { id: "amber",   stroke: "#F59E0B", fill: "rgba(245, 158, 11, 0.28)" },
+    { id: "sky",     stroke: "#3B82F6", fill: "rgba(59, 130, 246, 0.26)" },
+  ],
+  mono: [
+    { id: "violet",  stroke: "#7033FF", fill: "rgba(112, 51, 255, 0.22)" },
+    { id: "violet2", stroke: "#7033FF", fill: "rgba(112, 51, 255, 0.16)" },
+    { id: "violet3", stroke: "#7033FF", fill: "rgba(112, 51, 255, 0.10)" },
+    { id: "violet4", stroke: "#5421CC", fill: "rgba(84, 33, 204, 0.16)" },
+    { id: "violet5", stroke: "#5421CC", fill: "rgba(84, 33, 204, 0.10)" },
+    { id: "violet6", stroke: "#3D1380", fill: "rgba(61, 19, 128, 0.12)" },
+  ],
+};
+
+const App = () => {
+  const t = useTweaks(DEFAULTS);
+  // Override POLY (mutate the global array in place so all components see it).
+  React.useEffect(() => {
+    const pal = PALETTES[t.polygonPalette] || PALETTES.muted;
+    // Replace POLY array contents in place
+    window.POLY.splice(0, window.POLY.length, ...pal.map((p, i) => ({
+      ...p, label: ["Plot A", "Plot B", "Plot C", "Plot D", "Plot E", "Plot F"][i],
+    })));
+  }, [t.polygonPalette]);
+
+  const units = t.defaultUnits;
+  const mode3d = t.defaultView === "3d";
+
+  // Re-render key to force redraws when palette/units change
+  const k = `${t.polygonPalette}-${t.defaultUnits}-${t.defaultView}-${t.mapStyle}`;
+
+  // Two artboard sizes — desktop 1440×900, tablet landscape 1180×820
+  return (
+    <React.Fragment>
+      <DesignCanvas title="SiteSketcher — redesign">
+        <DCSection id="desktop" title="Desktop · 1440 × 900">
+          <DCArtboard id="empty" label="01 · Empty / fresh map" width={1440} height={900}>
+            <StateEmpty key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="drawing" label="02 · Mid-drawing (90° mode + distances)" width={1440} height={900}>
+            <StateDrawing key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="selected" label="03 · Polygon selected (rotate, area, handles)" width={1440} height={900}>
+            <StateSelected key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="parking" label="04 · Add parking spaces" width={1440} height={900}>
+            <StateParking key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="cad" label="05 · CAD image placed (raster overlay)" width={1440} height={900}>
+            <StateCAD key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="saved" label="06 · Saved sketches (opening)" width={1440} height={900}>
+            <StateSaved key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="3d" label="07 · 3D mode" width={1440} height={900}>
+            <State3D key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+        </DCSection>
+        <DCSection id="tablet" title="Tablet landscape · 1180 × 820">
+          <DCArtboard id="t-drawing" label="Drawing — tablet" width={1180} height={820}>
+            <StateDrawing key={k} width={1180} height={820} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="t-selected" label="Selected — tablet" width={1180} height={820}>
+            <StateSelected key={k} width={1180} height={820} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="t-3d" label="3D — tablet" width={1180} height={820}>
+            <State3D key={k} width={1180} height={820} units={units}/>
+          </DCArtboard>
+        </DCSection>
+        <DCSection id="flows" title="Flows &amp; modals · 1440 × 900">
+          <DCArtboard id="search" label="Search active — postcode lookup with results" width={1440} height={900}>
+            <StateSearch key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="measure" label="Measure tool active" width={1440} height={900}>
+            <StateMeasure key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="context" label="Right-click context menu on polygon" width={1440} height={900}>
+            <StateContextMenu key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="save" label="Save sketch (modal)" width={1440} height={900}>
+            <StateSaveFlow key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="share" label="Share sketch (modal)" width={1440} height={900}>
+            <StateShareFlow key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="delete" label="Delete confirmation (modal)" width={1440} height={900}>
+            <StateDeleteFlow key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="cad-upload" label="CAD — image uploaded, ready to calibrate" width={1440} height={900}>
+            <StateCADUpload key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="cad-verify" label="CAD — two-point calibration" width={1440} height={900}>
+            <StateCADCalibrate key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+          <DCArtboard id="saved-empty" label="Saved sketches — empty (first-time user)" width={1440} height={900}>
+            <StateSavedEmpty key={k} width={1440} height={900} units={units}/>
+          </DCArtboard>
+        </DCSection>
+        <DCSection id="unsupported" title="Unsupported viewport">
+          <DCArtboard id="phone" label="Phone portrait — too small for the tool" width={414} height={780}>
+            <StateUnsupported key={k} width={414} height={780}/>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Polygon palette">
+          <TweakRadio
+            value={t.polygonPalette}
+            onChange={(v) => t.setTweak("polygonPalette", v)}
+            options={[
+              { value: "muted",  label: "Muted" },
+              { value: "bright", label: "Bright" },
+              { value: "mono",   label: "Mono" },
+            ]}
+          />
+        </TweakSection>
+        <TweakSection title="Default units">
+          <TweakRadio
+            value={t.defaultUnits}
+            onChange={(v) => t.setTweak("defaultUnits", v)}
+            options={[
+              { value: "metric",   label: "Metric" },
+              { value: "imperial", label: "Imperial" },
+            ]}
+          />
+        </TweakSection>
+        <TweakSection title="Default view">
+          <TweakRadio
+            value={t.defaultView}
+            onChange={(v) => t.setTweak("defaultView", v)}
+            options={[
+              { value: "2d", label: "2D" },
+              { value: "3d", label: "3D" },
+            ]}
+          />
+        </TweakSection>
+        <TweakSection title="Map style">
+          <TweakRadio
+            value={t.mapStyle}
+            onChange={(v) => t.setTweak("mapStyle", v)}
+            options={[
+              { value: "satellite", label: "Satellite" },
+              { value: "hybrid",    label: "Hybrid" },
+              { value: "streets",   label: "Streets" },
+            ]}
+          />
+        </TweakSection>
+      </TweaksPanel>
+    </React.Fragment>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
