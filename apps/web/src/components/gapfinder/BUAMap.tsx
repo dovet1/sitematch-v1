@@ -770,17 +770,11 @@ export function BUAMap({
             })
               .setLngLat(e.lngLat)
               .setHTML(`
-                <div class="p-3 min-w-[200px]">
-                  <div class="font-semibold text-gray-900 mb-2 text-sm">${roadNumber}</div>
-                  <div class="space-y-1.5 text-sm">
-                    <div class="flex justify-between gap-4">
-                      <span class="text-gray-600">Type:</span>
-                      <span class="font-medium text-gray-900">${classification}</span>
-                    </div>
-                    <div class="flex justify-between gap-4">
-                      <span class="text-gray-600">Traffic:</span>
-                      <span class="font-semibold text-violet-600">${Math.round(aadt).toLocaleString()} /day</span>
-                    </div>
+                <div class="p-4">
+                  <div class="text-[15px] font-[600] mb-2.5" style="color: #171419;">${roadNumber}</div>
+                  <div class="flex justify-between gap-3">
+                    <span class="text-[13px]" style="color: #7C7588;">Traffic:</span>
+                    <span class="text-[14px] font-[700]" style="color: #7033FF;">${Math.round(aadt).toLocaleString()} /day</span>
                   </div>
                 </div>
               `)

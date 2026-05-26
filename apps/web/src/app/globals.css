@@ -1095,4 +1095,20 @@
       transform: none;
     }
   }
+
+  /* Traffic overlay popup styles - matches GapFinder paywall design system */
+  .traffic-popup .mapboxgl-popup-content {
+    padding: 0;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    border: 1px solid #E8E4DC;
+    font-family: var(--font-sans);
+    min-width: 220px;
+    background: #FFFFFF;
+    transition: opacity 0.2s ease;
+  }
+
+  .traffic-popup .mapboxgl-popup-tip {
+    border-top-color: #FFFFFF;
+  }
 }
