@@ -220,6 +220,52 @@ function getFirstSymbolLayerId(mapInstance: mapboxgl.Map): string | undefined {
   return firstSymbolLayer?.id
 }
 
+// GapFinder app-owned overlay symbol layers that should NOT be treated as basemap labels
+const GAPFINDER_OVERLAY_SYMBOL_IDS = [
+  'requirement-locations-cluster-count'
+]
+
+function getFirstBaseMapSymbolLayerId(mapInstance: mapboxgl.Map): string | undefined {
+  const layers = mapInstance.getStyle().layers || []
+  const firstBaseMapSymbol = layers.find(layer =>
+    layer.type === 'symbol' &&
+    Boolean(layer.layout?.['text-field']) &&
+    !GAPFINDER_OVERLAY_SYMBOL_IDS.includes(layer.id)
+  )
+
+  return firstBaseMapSymbol?.id
+}
+
+function positionGapFinderLayers(mapInstance: mapboxgl.Map): void {
+  const firstBaseMapSymbolId = getFirstBaseMapSymbolLayerId(mapInstance)
+  if (!firstBaseMapSymbolId) return
+
+  try {
+    // Define desired layer order (bottom to top):
+    // 1. BUA fill (already positioned correctly by default)
+    // 2. BUA outline (already positioned correctly by default)
+    // 3. Traffic roads (should be above BUAs but below labels)
+    // 4. Requirement circles/points (should be above traffic)
+    // 5. Requirement cluster counts (symbol - should be above everything except basemap labels)
+    // 6. Basemap labels (always on top)
+
+    const layersToPosition = [
+      { id: TRAFFIC_LAYER_ID, name: 'traffic' },
+      { id: REQUIREMENT_CLUSTER_LAYER_ID, name: 'requirement clusters' },
+      { id: REQUIREMENT_POINT_LAYER_ID, name: 'requirement points' },
+      { id: REQUIREMENT_CLUSTER_COUNT_LAYER_ID, name: 'requirement count symbols' }
+    ]
+
+    for (const { id, name } of layersToPosition) {
+      if (mapInstance.getLayer(id)) {
+        mapInstance.moveLayer(id, firstBaseMapSymbolId)
+      }
+    }
+  } catch (error) {
+    console.error('Failed to position GapFinder layers:', error)
+  }
+}
+
 export function enableGapFinder3DMode(mapInstance: mapboxgl.Map) {
   if (!mapInstance.getSource(TERRAIN_SOURCE_ID)) {
     mapInstance.addSource(TERRAIN_SOURCE_ID, {
@@ -660,7 +706,10 @@ export function BUAMap({
         url: `mapbox://${BUA_TILESET_ID}`
       })
 
-      // Add fill layer with population-based colors
+      // Get the first symbol layer to insert BUA layers before all labels
+      const firstBaseMapSymbolId = getFirstBaseMapSymbolLayerId(map.current)
+
+      // Add fill layer with population-based colors BEFORE symbol layers
       map.current.addLayer({
         id: BUA_LAYER_ID,
         type: 'fill',
@@ -684,9 +733,9 @@ export function BUAMap({
         layout: {
           visibility: mode === 'assess-area' ? 'none' : 'visible'
         }
-      })
+      }, firstBaseMapSymbolId)
 
-      // Add outline layer
+      // Add outline layer BEFORE symbol layers
       map.current.addLayer({
         id: BUA_OUTLINE_LAYER_ID,
         type: 'line',
@@ -699,7 +748,7 @@ export function BUAMap({
         layout: {
           visibility: mode === 'assess-area' ? 'none' : 'visible'
         }
-      })
+      }, firstBaseMapSymbolId)
 
       // Add traffic layer (hidden by default)
       if (!map.current.getSource(TRAFFIC_SOURCE_ID)) {
@@ -708,8 +757,8 @@ export function BUAMap({
           url: `mapbox://${TRAFFIC_TILESET_ID}`
         })
 
-        // Insert before first symbol layer (labels on top) using existing helper
-        const firstSymbolId = getFirstSymbolLayerId(map.current)
+        // Insert traffic layer before first basemap symbol (above BUAs, below labels)
+        const firstBaseMapSymbolId = getFirstBaseMapSymbolLayerId(map.current)
 
         map.current.addLayer({
           id: TRAFFIC_LAYER_ID,
@@ -743,7 +792,7 @@ export function BUAMap({
             ],
             'line-opacity': 0.75
           }
-        }, firstSymbolId)
+        }, firstBaseMapSymbolId)
 
         // Attach hover handlers immediately after layer creation (same effect)
         const handleMouseEnter = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
@@ -864,6 +913,9 @@ export function BUAMap({
           }
         })
       }
+
+      // Ensure proper layer ordering after layers are created/recreated
+      positionGapFinderLayers(map.current)
     }
 
     // Add layers initially
@@ -892,6 +944,9 @@ export function BUAMap({
     if (!map.current.getLayer(TRAFFIC_LAYER_ID)) return
 
     try {
+      // Ensure proper layer ordering
+      positionGapFinderLayers(map.current)
+
       // Toggle visibility
       map.current.setLayoutProperty(
         TRAFFIC_LAYER_ID,
@@ -1612,6 +1667,9 @@ export function BUAMap({
         'circle-stroke-color': '#ffffff'
       }
     })
+
+    // Ensure proper layer ordering after adding requirement layers
+    positionGapFinderLayers(map.current)
   }, [requirementGeoJson, mapLoaded])
 
   useEffect(() => {
