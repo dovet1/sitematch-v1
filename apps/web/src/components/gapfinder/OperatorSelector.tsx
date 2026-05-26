@@ -64,7 +64,7 @@ export function OperatorSelector({
                 <button
                   type="button"
                 aria-label="Explain match options"
-                className="flex h-4 w-4 items-center justify-center text-gray-400 transition-colors hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
+                className="flex h-4 w-4 items-center justify-center text-sm-ink3 transition-colors hover:text-sm-ink2 focus:outline-none focus:ring-2 focus:ring-sm-violet focus:ring-offset-2"
               >
                 <HelpCircle className="h-4 w-4 cursor-help" aria-hidden="true" />
               </button>
@@ -83,14 +83,14 @@ export function OperatorSelector({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 rounded-lg border border-gray-200 bg-gray-50 p-1">
+          <div className="grid grid-cols-2 rounded-sm-compact border border-sm-border bg-sm-bg p-1">
             <button
               type="button"
               onClick={() => onMatchingLogicChange?.('any')}
-              className={`h-8 rounded-md text-xs font-medium transition-colors ${
+              className={`h-8 rounded-sm-compact text-xs font-semibold tracking-tight transition-colors ${
                 matchingLogic === 'any'
-                  ? 'bg-white text-violet-700 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-sm-surface text-sm-violet shadow-sm'
+                  : 'text-sm-ink2 hover:text-sm-ink'
               }`}
             >
               Any
@@ -98,10 +98,10 @@ export function OperatorSelector({
             <button
               type="button"
               onClick={() => onMatchingLogicChange?.('all')}
-              className={`h-8 rounded-md text-xs font-medium transition-colors ${
+              className={`h-8 rounded-sm-compact text-xs font-semibold tracking-tight transition-colors ${
                 matchingLogic === 'all'
-                  ? 'bg-white text-violet-700 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-sm-surface text-sm-violet shadow-sm'
+                  : 'text-sm-ink2 hover:text-sm-ink'
               }`}
             >
               All

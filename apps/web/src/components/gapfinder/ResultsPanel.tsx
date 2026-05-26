@@ -66,10 +66,10 @@ export function ResultsPanel({
   const activeAreaIndicator = !isFindGapsMode && activeAssessArea
     ? {
         label: activeAssessArea === 'area-b' ? 'Showing Area B stores' : 'Showing Area A stores',
-        dotClassName: activeAssessArea === 'area-b' ? 'bg-teal-500' : 'bg-violet-500',
+        dotClassName: activeAssessArea === 'area-b' ? 'bg-teal-500' : 'bg-sm-violet',
         className: activeAssessArea === 'area-b'
           ? 'bg-teal-50 text-teal-700 border-teal-200'
-          : 'bg-violet-50 text-violet-700 border-violet-200'
+          : 'bg-sm-violet-tint text-sm-violet border-sm-border'
       }
     : null
 
@@ -80,11 +80,11 @@ export function ResultsPanel({
       aria-label={`${isFindGapsMode ? 'Matching Locations' : 'Nearby Brands'} Panel`}
     >
       {/* Header */}
-      <header className="bg-gradient-to-r from-violet-100 to-purple-100 px-4 py-4 border-b border-violet-200">
+      <header className="bg-sm-violet-tint px-4 py-4 border-b border-sm-border-soft">
         <div className="space-y-3">
           {/* Title + Export Button Row */}
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-base font-semibold text-gray-900" id="results-panel-title">
+            <h2 className="text-base font-semibold tracking-tight text-sm-ink" id="results-panel-title">
               {isFindGapsMode ? 'Matching Locations' : 'Nearby Brands'}
             </h2>
             {onExport && (
@@ -93,7 +93,7 @@ export function ResultsPanel({
                 size="sm"
                 onClick={onExport}
                 disabled={!canExport || isExporting}
-                className="h-8 w-8 p-0 border-violet-200 hover:bg-violet-50 hover:border-violet-300"
+                className="h-8 w-8 p-0 border-sm-border hover:bg-sm-violet-tint-soft hover:border-sm-violet"
                 aria-label={
                   isFindGapsMode
                     ? `Export all ${actualTotal.toLocaleString()} matching locations to CSV`
@@ -129,13 +129,13 @@ export function ResultsPanel({
 
           {/* Count/Status Row */}
           <div
-            className="text-sm text-gray-700 font-medium"
+            className="text-sm text-sm-ink font-semibold"
             aria-live="polite"
             aria-atomic="true"
           >
             {isLoading ? (
               <div className="flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-600" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-sm-violet" />
                 <span className="animate-pulse">Loading locations...</span>
               </div>
             ) : actualTotal > 1000 ? (
@@ -160,11 +160,11 @@ export function ResultsPanel({
         data-testid="results-scroll-container"
       >
         {isLoading ? (
-          <div className="p-4 text-center text-sm text-gray-500">
+          <div className="p-4 text-center text-sm text-sm-ink3">
             {isFindGapsMode ? 'Loading locations...' : 'Loading stores...'}
           </div>
         ) : results.length === 0 ? (
-          <div className="p-4 text-center text-sm text-gray-500">
+          <div className="p-4 text-center text-sm text-sm-ink3">
             {isFindGapsMode
               ? 'No locations match the current filters'
               : selectedPoint === null
@@ -172,20 +172,20 @@ export function ResultsPanel({
                 : 'No stores found in this area'}
           </div>
         ) : isFindGapsMode ? (
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-sm-border-soft">
             {results.map((bua: BUA, index) => (
               <button
                 key={bua.gsscode}
                 onClick={() => onItemClick(bua)}
                 className={cn(
-                  "w-full px-4 py-4 text-left hover:bg-violet-50 hover:shadow-sm transition-all duration-150",
-                  selectedBUA?.name === bua.name && "bg-violet-50",
+                  "w-full px-4 py-4 text-left hover:bg-sm-violet-tint-soft hover:shadow-sm transition-all duration-150",
+                  selectedBUA?.name === bua.name && "bg-sm-violet-tint-soft",
                   index === 0 && "pt-2",
                   index === results.length - 1 && "pb-2"
                 )}
               >
                 <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-violet-600 mt-0.5 flex-shrink-0" />
+                  <MapPin className="h-4 w-4 text-sm-violet mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 truncate">
                       {bua.name}

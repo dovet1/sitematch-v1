@@ -74,7 +74,7 @@ export function ComparisonModal({
     {
       label: 'Brands available in B, missing in A',
       count: comparisonData.missingInAOnly.length,
-      accent: 'border-violet-200 bg-violet-50 text-violet-800',
+      accent: 'border-sm-border bg-sm-violet-tint text-sm-violet',
     },
     {
       label: 'Brands available in A, missing in B',
@@ -84,23 +84,23 @@ export function ComparisonModal({
     {
       label: 'Brands missing in both areas',
       count: comparisonData.missingInBoth.length,
-      accent: 'border-gray-200 bg-gray-50 text-gray-800',
+      accent: 'border-sm-border bg-sm-bg text-sm-ink',
     },
   ]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[84vh] flex flex-col gap-7 border-violet-100 p-0 overflow-hidden">
-        <DialogHeader className="border-b border-violet-100 bg-gradient-to-r from-violet-50/80 to-purple-50/50 px-8 pb-6 pt-7 pr-12">
-          <DialogTitle className="flex flex-wrap items-center gap-3 text-gray-950">
+      <DialogContent className="max-w-4xl max-h-[84vh] flex flex-col gap-7 border-sm-border p-0 overflow-hidden">
+        <DialogHeader className="border-b border-sm-border-soft bg-sm-violet-tint px-8 pb-6 pt-7 pr-12">
+          <DialogTitle className="flex flex-wrap items-center gap-3 text-sm-ink">
             Area Comparison
             <div className="flex items-center gap-2 text-sm font-normal">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-white/80 px-2.5 py-1 text-xs font-medium text-violet-800">
-                <span className="h-2 w-2 rounded-full bg-violet-500" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-sm-border bg-sm-surface px-2.5 py-1 text-xs font-semibold text-sm-violet">
+                <span className="h-2 w-2 rounded-full bg-sm-violet" />
                 Area A
               </span>
-              <span className="text-xs text-gray-400">vs</span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-white/80 px-2.5 py-1 text-xs font-medium text-teal-800">
+              <span className="text-xs text-sm-ink3">vs</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-sm-surface px-2.5 py-1 text-xs font-semibold text-teal-800">
                 <span className="h-2 w-2 rounded-full bg-teal-500" />
                 Area B
               </span>
@@ -114,9 +114,9 @@ export function ComparisonModal({
         <div className="px-8">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {summaryItems.map((item) => (
-              <div key={item.label} className={`rounded-lg border px-5 py-4 ${item.accent}`}>
+              <div key={item.label} className={`rounded-sm-card border px-5 py-4 ${item.accent}`}>
                 <div className="text-2xl font-semibold leading-none">{item.count}</div>
-                <div className="mt-2 text-sm font-medium leading-relaxed">{item.label}</div>
+                <div className="mt-2 text-sm font-semibold leading-relaxed">{item.label}</div>
               </div>
             ))}
           </div>

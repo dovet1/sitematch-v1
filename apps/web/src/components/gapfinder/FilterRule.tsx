@@ -150,7 +150,7 @@ export function FilterRule({
             value={rule.connector || 'and'}
             onValueChange={handleConnectorChange}
           >
-            <SelectTrigger className="w-32 h-9 bg-white border-violet-300 text-sm font-medium">
+            <SelectTrigger className="w-32 h-9 bg-sm-surface border-sm-border text-sm font-semibold">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

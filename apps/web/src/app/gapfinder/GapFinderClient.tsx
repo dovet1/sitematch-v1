@@ -33,6 +33,11 @@ const MAX_POPULATION = 1200000 // 1.2 million
 const MIN_POPULATION = 5001 // Changed from 0
 type AssessArea = 'area-a' | 'area-b'
 
+const TRAFFIC_THRESHOLDS = [
+  0, 1000, 2000, 5000, 10000, 20000, 30000, 50000,
+  75000, 100000, 150000, 200000, 250000
+] // 13 steps with finer granularity at lower values
+
 const getTravelTimeCacheKey = (storeId: string, area: AssessArea) => {
   return `${storeId}:${area}`
 }
@@ -74,6 +79,12 @@ const moveTravelTimeAreaEntries = <T,>(
   }
 
   return next
+}
+
+const formatTrafficValue = (aadt: number): string => {
+  if (aadt === 0) return '0'
+  if (aadt >= 1000) return `${(aadt / 1000).toFixed(0)}k`
+  return aadt.toLocaleString()
 }
 
 export default function GapFinderClient() {
@@ -162,6 +173,10 @@ export default function GapFinderClient() {
   const [requirementBrandScope, setRequirementBrandScope] = useState<'all' | 'selected'>('all')
   const [selectedRequirementBrands, setSelectedRequirementBrands] = useState<string[]>([])  // Brand names for UI
   const [selectedRequirementListingIds, setSelectedRequirementListingIds] = useState<string[]>([])  // Listing IDs for API
+
+  // Traffic heatmap overlay state
+  const [showTrafficHeatmap, setShowTrafficHeatmap] = useState<boolean>(false)
+  const [trafficRange, setTrafficRange] = useState<[number, number]>([0, 250000])
 
   // Population filter collapsible state
   const [isPopulationFilterOpen, setIsPopulationFilterOpen] = useState<boolean>(false)
@@ -1188,24 +1203,24 @@ export default function GapFinderClient() {
 
   const renderRequirementLocationsControl = () => (
     <Collapsible open={showRequirementLocations} onOpenChange={setShowRequirementLocations}>
-      <div className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
+      <div className="flex items-center justify-between w-full p-4 hover:bg-sm-violet-tint-soft rounded-sm-btn transition-all duration-200">
         <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left">
           <ChevronDown
-            className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
+            className={`h-4 w-4 text-sm-ink3 transition-transform duration-200 ${
               showRequirementLocations ? 'rotate-0' : '-rotate-90'
             }`}
           />
-          <span className="font-medium text-gray-900">Requirement Locations</span>
+          <span className="font-semibold text-sm-ink">Requirement Locations</span>
         </CollapsibleTrigger>
         <button
           type="button"
           role="switch"
           aria-checked={showRequirementLocations}
           onClick={() => setShowRequirementLocations((enabled) => !enabled)}
-          className={`h-7 rounded-full px-3 text-xs font-medium transition-colors ${
+          className={`h-7 rounded-full px-3 text-xs font-semibold tracking-tight transition-colors ${
             showRequirementLocations
-              ? 'bg-violet-600 text-white shadow-sm hover:bg-violet-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-sm-violet text-white shadow-sm hover:bg-sm-violet-deep'
+              : 'bg-sm-border text-sm-ink2 hover:bg-sm-border-soft'
           }`}
         >
           {showRequirementLocations ? 'On' : 'Off'}
@@ -1215,15 +1230,15 @@ export default function GapFinderClient() {
         {showRequirementLocations && (
           <>
             <div className="px-2 space-y-2">
-              <Label className="text-xs text-gray-600">Show</Label>
-              <div className="grid grid-cols-2 rounded-lg border border-gray-200 bg-gray-50 p-1">
+              <Label className="text-xs text-sm-ink2">Show</Label>
+              <div className="grid grid-cols-2 rounded-sm-compact border border-sm-border bg-sm-bg p-1">
                 <button
                   type="button"
                   onClick={() => setRequirementBrandScope('all')}
-                  className={`h-8 rounded-md text-xs font-medium transition-colors ${
+                  className={`h-8 rounded-sm-compact text-xs font-semibold tracking-tight transition-colors ${
                     requirementBrandScope === 'all'
-                      ? 'bg-white text-violet-700 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-sm-surface text-sm-violet shadow-sm'
+                      : 'text-sm-ink2 hover:text-sm-ink'
                   }`}
                 >
                   All brands
@@ -1231,10 +1246,10 @@ export default function GapFinderClient() {
                 <button
                   type="button"
                   onClick={() => setRequirementBrandScope('selected')}
-                  className={`h-8 rounded-md text-xs font-medium transition-colors ${
+                  className={`h-8 rounded-sm-compact text-xs font-semibold tracking-tight transition-colors ${
                     requirementBrandScope === 'selected'
-                      ? 'bg-white text-violet-700 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-sm-surface text-sm-violet shadow-sm'
+                      : 'text-sm-ink2 hover:text-sm-ink'
                   }`}
                 >
                   Selected brands
@@ -1264,24 +1279,85 @@ export default function GapFinderClient() {
     </Collapsible>
   )
 
+  const renderTrafficHeatmapControl = () => {
+    const minTraffic = trafficRange[0]
+    const maxTraffic = trafficRange[1]
+
+    return (
+      <Collapsible open={showTrafficHeatmap} onOpenChange={setShowTrafficHeatmap}>
+        <div className="flex items-center justify-between w-full p-4 hover:bg-sm-violet-tint-soft rounded-sm-btn transition-all duration-200">
+          <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left">
+            <ChevronDown
+              className={`h-4 w-4 text-sm-ink3 transition-transform duration-200 ${
+                showTrafficHeatmap ? 'rotate-0' : '-rotate-90'
+              }`}
+            />
+            <span className="font-semibold text-sm-ink">Traffic</span>
+          </CollapsibleTrigger>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showTrafficHeatmap}
+            onClick={() => setShowTrafficHeatmap((enabled) => !enabled)}
+            className={`h-7 rounded-full px-3 text-xs font-semibold tracking-tight transition-colors ${
+              showTrafficHeatmap
+                ? 'bg-sm-violet text-white shadow-sm hover:bg-sm-violet-deep'
+                : 'bg-sm-border text-sm-ink2 hover:bg-sm-border-soft'
+            }`}
+          >
+            {showTrafficHeatmap ? 'On' : 'Off'}
+          </button>
+        </div>
+
+        <CollapsibleContent className="px-3 pb-6 pt-4 space-y-3">
+          <div className="px-2">
+            <Slider
+              value={trafficRange}
+              onValueChange={(value) => setTrafficRange(value as [number, number])}
+              min={0}
+              max={250000}
+              step={1000}
+              minStepsBetweenThumbs={1}
+              className="w-full"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-xs text-gray-600 mb-1 block">Min (vehicles/day)</Label>
+              <div className="text-sm font-semibold text-sm-violet">
+                {formatTrafficValue(minTraffic)}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600 mb-1 block">Max (vehicles/day)</Label>
+              <div className="text-sm font-semibold text-sm-violet">
+                {formatTrafficValue(maxTraffic)}
+              </div>
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    )
+  }
+
   return (
     <div className="h-screen bg-background overflow-hidden">
       <div className="flex flex-col h-full">
-        <header className="relative z-40 px-8 py-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-          <div className="absolute inset-0 bg-gradient-to-r from-violet-50/30 via-transparent to-purple-50/30 pointer-events-none" />
+        <header className="relative z-40 px-8 py-4 border-b border-sm-border-soft bg-sm-surface">
           <div className="relative flex items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => router.push('/')}
-                className="h-8 w-8 rounded-lg hover:bg-violet-50 hover:text-violet-700 transition-all duration-200"
+                className="h-8 w-8 rounded-sm-btn hover:bg-sm-violet-tint-soft hover:text-sm-violet transition-all duration-200"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div className="flex items-center gap-2">
-                <div className="h-8 w-1 bg-gradient-to-b from-violet-500 to-purple-600 rounded-full" />
-                <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
+                <div className="h-8 w-1 bg-sm-violet rounded-full" />
+                <h1 className="text-lg font-semibold text-sm-ink tracking-tight">
                   GapFinder
                 </h1>
               </div>
@@ -1290,24 +1366,24 @@ export default function GapFinderClient() {
         </header>
 
         <div className="flex-1 flex overflow-hidden">
-          <div className="w-[380px] border-r bg-gradient-to-b from-gray-50/50 to-background flex flex-col h-full">
+          <div className="w-[380px] border-r border-sm-border-soft bg-sm-surface flex flex-col h-full">
             <Tabs
               defaultValue="find-gaps"
               className="flex-1 flex flex-col overflow-hidden"
               onValueChange={(value) => setCurrentMode(value as 'find-gaps' | 'assess-area')}
             >
-              <div className="px-6 pt-5 pb-4 border-b border-gray-200/80 bg-gradient-to-b from-white to-gray-50/30">
-                <TabsList className="grid h-12 w-full grid-cols-2 rounded-xl border border-gray-200/80 bg-gradient-to-b from-white to-gray-50/50 p-1.5 shadow-sm ring-1 ring-black/5">
+              <div className="px-6 pt-5 pb-4 border-b border-sm-border-soft bg-sm-surface">
+                <TabsList className="grid h-12 w-full grid-cols-2 rounded-sm-card border border-sm-border bg-sm-surface p-1.5 shadow-sm">
                   <TabsTrigger
                     value="find-gaps"
-                    className="h-9 gap-2.5 rounded-lg px-4 text-sm font-semibold text-gray-600 transition-all duration-200 hover:bg-violet-50/80 hover:text-violet-700 data-[state=active]:bg-gradient-to-b data-[state=active]:from-violet-600 data-[state=active]:to-violet-700 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-violet-200/50"
+                    className="h-9 gap-2.5 rounded-sm-btn px-4 text-sm font-semibold tracking-tight text-sm-ink2 transition-all duration-200 hover:bg-sm-violet-tint-soft hover:text-sm-violet data-[state=active]:bg-sm-violet data-[state=active]:text-white data-[state=active]:shadow-sm"
                   >
                     <Search className="h-4 w-4" />
                     Find Gaps
                   </TabsTrigger>
                   <TabsTrigger
                     value="assess-area"
-                    className="h-9 gap-2.5 rounded-lg px-4 text-sm font-semibold text-gray-600 transition-all duration-200 hover:bg-violet-50/80 hover:text-violet-700 data-[state=active]:bg-gradient-to-b data-[state=active]:from-violet-600 data-[state=active]:to-violet-700 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:shadow-violet-200/50"
+                    className="h-9 gap-2.5 rounded-sm-btn px-4 text-sm font-semibold tracking-tight text-sm-ink2 transition-all duration-200 hover:bg-sm-violet-tint-soft hover:text-sm-violet data-[state=active]:bg-sm-violet data-[state=active]:text-white data-[state=active]:shadow-sm"
                   >
                     <MapPin className="h-4 w-4" />
                     Assess Area
@@ -1332,25 +1408,28 @@ export default function GapFinderClient() {
                 {/* 2. Collapsible: Requirement Locations */}
                 {renderRequirementLocationsControl()}
 
-                {/* 3. "Filters" Header/Divider */}
+                {/* 3. Traffic Heatmap */}
+                {renderTrafficHeatmapControl()}
+
+                {/* 4. "Filters" Header/Divider */}
                 <div className="pt-2 pb-4">
                   <div className="flex items-center gap-2 px-2">
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-violet-200 to-transparent" />
-                    <span className="text-xs font-medium text-violet-700 uppercase tracking-wider">Filters</span>
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-violet-200 to-transparent" />
+                    <div className="h-px flex-1 bg-sm-border-soft" />
+                    <span className="text-xs font-semibold text-sm-ink2 uppercase tracking-wider">Filters</span>
+                    <div className="h-px flex-1 bg-sm-border-soft" />
                   </div>
                 </div>
 
                 {/* 4. Collapsible: Population Range */}
                 <Collapsible open={isPopulationFilterOpen} onOpenChange={setIsPopulationFilterOpen}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-sm-violet-tint-soft rounded-sm-btn transition-all duration-200">
                     <div className="flex items-center gap-2">
                       <ChevronDown
-                        className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
+                        className={`h-4 w-4 text-sm-ink3 transition-transform duration-200 ${
                           isPopulationFilterOpen ? 'rotate-0' : '-rotate-90'
                         }`}
                       />
-                      <span className="font-medium text-gray-900">Population</span>
+                      <span className="font-semibold text-sm-ink">Population</span>
                     </div>
                     <Badge variant="secondary" className="text-xs">
                       {minPop === MIN_POPULATION && maxPop === MAX_POPULATION && !showSubFiveK ? 'All' : 'Filtered'}
@@ -1428,14 +1507,14 @@ export default function GapFinderClient() {
 
                 {/* 5. Collapsible: Brand Filters */}
                 <Collapsible open={isBrandFiltersOpen} onOpenChange={setIsBrandFiltersOpen}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-purple-50/30 rounded-lg transition-all duration-200">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-sm-violet-tint-soft rounded-sm-btn transition-all duration-200">
                     <div className="flex items-center gap-2">
                       <ChevronDown
-                        className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
+                        className={`h-4 w-4 text-sm-ink3 transition-transform duration-200 ${
                           isBrandFiltersOpen ? 'rotate-0' : '-rotate-90'
                         }`}
                       />
-                      <span className="font-medium text-gray-900">Brands</span>
+                      <span className="font-semibold text-sm-ink">Brands</span>
                     </div>
                     <Badge variant="secondary" className="text-xs">
                       {filterSet.rules.length === 0 ? 'All' : 'Filtered'}
@@ -1499,14 +1578,14 @@ export default function GapFinderClient() {
                     </Button>
                   </>
                 ) : comparisonMode === 'selecting-second' ? (
-                  <div className="relative rounded-xl border-2 border-dashed border-violet-300 bg-gradient-to-br from-violet-50/50 to-purple-50/30 p-8 text-center">
-                    <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center">
-                      <MapPin className="h-8 w-8 text-violet-600" />
+                  <div className="relative rounded-sm-card border-2 border-dashed border-sm-border bg-sm-violet-tint-soft p-8 text-center">
+                    <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-sm-violet-tint flex items-center justify-center">
+                      <MapPin className="h-8 w-8 text-sm-violet" />
                     </div>
-                    <h4 className="text-base font-semibold text-gray-900 mb-2">
+                    <h4 className="text-base font-semibold tracking-tight text-sm-ink mb-2">
                       Select Area B
                     </h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-sm-ink2">
                       Click on the map to choose the second point
                     </p>
                   </div>
@@ -1539,31 +1618,31 @@ export default function GapFinderClient() {
                     </div>
                     <button
                       onClick={handleAddSecondArea}
-                      className="relative rounded-xl border-2 border-dashed border-gray-300 bg-gradient-to-br from-gray-50/50 to-white p-6 text-center hover:border-violet-300 hover:from-violet-50/30 hover:to-purple-50/20 transition-all w-full"
+                      className="relative rounded-sm-card border-2 border-dashed border-sm-border bg-sm-surface p-6 text-center hover:border-sm-violet hover:bg-sm-violet-tint-soft transition-all w-full"
                     >
-                      <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
-                        <MapPin className="h-6 w-6 text-gray-400" />
+                      <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-sm-bg flex items-center justify-center">
+                        <MapPin className="h-6 w-6 text-sm-ink3" />
                       </div>
-                      <p className="text-sm font-medium text-gray-700">
+                      <p className="text-sm font-semibold text-sm-ink">
                         Add another area to compare
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-sm-ink3 mt-1">
                         Compare stores between two locations
                       </p>
                     </button>
                   </>
                 ) : (
-                  <div className="relative rounded-xl border-2 border-dashed border-gray-300 bg-gradient-to-br from-gray-50/50 to-white p-8 text-center">
-                    <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center">
-                      <MapPin className="h-8 w-8 text-violet-600" />
+                  <div className="relative rounded-sm-card border-2 border-dashed border-sm-border bg-sm-surface p-8 text-center">
+                    <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-sm-violet-tint flex items-center justify-center">
+                      <MapPin className="h-8 w-8 text-sm-violet" />
                     </div>
-                    <h4 className="text-base font-semibold text-gray-900 mb-2">
+                    <h4 className="text-base font-semibold tracking-tight text-sm-ink mb-2">
                       Select a location
                     </h4>
-                    <p className="text-sm text-gray-600 mb-1">
+                    <p className="text-sm text-sm-ink2 mb-1">
                       Click on the map to choose a point
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-sm-ink3">
                       Analyse stores within a custom radius
                     </p>
                   </div>
@@ -1572,22 +1651,22 @@ export default function GapFinderClient() {
                 {/* Radius Settings - Hidden in comparison mode */}
                 {comparisonMode !== 'comparing' && (
                 <Collapsible defaultOpen={false}>
-                  <CollapsibleTrigger className="group flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/60 hover:to-purple-50/40 rounded-xl transition-all duration-200 border border-transparent hover:border-violet-100/50">
+                  <CollapsibleTrigger className="group flex items-center justify-between w-full p-4 hover:bg-sm-violet-tint-soft rounded-sm-card transition-all duration-200 border border-transparent hover:border-sm-border">
                     <div className="flex items-center gap-2.5">
-                      <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-200 group-data-[state=open]:rotate-0 group-data-[state=closed]:-rotate-90" />
-                      <span className="font-semibold text-gray-900">Radius</span>
+                      <ChevronDown className="h-4 w-4 text-sm-ink3 transition-transform duration-200 group-data-[state=open]:rotate-0 group-data-[state=closed]:-rotate-90" />
+                      <span className="font-semibold text-sm-ink">Radius</span>
                     </div>
-                    <Badge variant="secondary" className="text-xs font-medium bg-violet-100 text-violet-700 border-violet-200">
+                    <Badge variant="secondary" className="text-xs font-semibold bg-sm-violet-tint-soft text-sm-violet border-sm-border">
                       {radiusMeters / 1000}km
                     </Badge>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="px-4 pb-6 pt-4 space-y-4">
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="radius-slider" className="text-sm font-medium text-gray-700">
+                        <Label htmlFor="radius-slider" className="text-sm font-semibold text-sm-ink">
                           Search Radius
                         </Label>
-                        <span className="text-sm font-semibold text-violet-700">
+                        <span className="text-sm font-semibold text-sm-violet">
                           {(radiusMeters / 1000).toFixed(1)} km
                         </span>
                       </div>
@@ -1600,23 +1679,23 @@ export default function GapFinderClient() {
                         step={500}
                         className="w-full"
                       />
-                      <div className="flex justify-between text-xs text-gray-500 px-0.5">
+                      <div className="flex justify-between text-xs text-sm-ink3 px-0.5">
                         <span>0.5 km</span>
                         <span>20 km</span>
                       </div>
                     </div>
 
                     <div className="pt-1">
-                      <Label className="text-xs font-medium text-gray-600 mb-2 block">Quick Select</Label>
+                      <Label className="text-xs font-semibold text-sm-ink2 mb-2 block">Quick Select</Label>
                       <div className="grid grid-cols-3 gap-2">
                         <Button
                           variant={radiusMeters === 1000 ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => setRadiusMeters(1000)}
-                          className={`text-xs font-semibold transition-all ${
+                          className={`text-xs font-semibold tracking-tight transition-all ${
                             radiusMeters === 1000
-                              ? 'bg-violet-600 hover:bg-violet-700 shadow-sm'
-                              : 'hover:bg-violet-50 hover:border-violet-300 hover:text-violet-700'
+                              ? 'bg-sm-violet hover:bg-sm-violet-deep shadow-sm'
+                              : 'hover:bg-sm-violet-tint-soft hover:border-sm-violet hover:text-sm-violet'
                           }`}
                         >
                           1 km
@@ -1625,10 +1704,10 @@ export default function GapFinderClient() {
                           variant={radiusMeters === 5000 ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => setRadiusMeters(5000)}
-                          className={`text-xs font-semibold transition-all ${
+                          className={`text-xs font-semibold tracking-tight transition-all ${
                             radiusMeters === 5000
-                              ? 'bg-violet-600 hover:bg-violet-700 shadow-sm'
-                              : 'hover:bg-violet-50 hover:border-violet-300 hover:text-violet-700'
+                              ? 'bg-sm-violet hover:bg-sm-violet-deep shadow-sm'
+                              : 'hover:bg-sm-violet-tint-soft hover:border-sm-violet hover:text-sm-violet'
                           }`}
                         >
                           5 km
@@ -1637,10 +1716,10 @@ export default function GapFinderClient() {
                           variant={radiusMeters === 10000 ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => setRadiusMeters(10000)}
-                          className={`text-xs font-semibold transition-all ${
+                          className={`text-xs font-semibold tracking-tight transition-all ${
                             radiusMeters === 10000
-                              ? 'bg-violet-600 hover:bg-violet-700 shadow-sm'
-                              : 'hover:bg-violet-50 hover:border-violet-300 hover:text-violet-700'
+                              ? 'bg-sm-violet hover:bg-sm-violet-deep shadow-sm'
+                              : 'hover:bg-sm-violet-tint-soft hover:border-sm-violet hover:text-sm-violet'
                           }`}
                         >
                           10 km
@@ -1653,15 +1732,15 @@ export default function GapFinderClient() {
 
                 {/* Store Filters */}
                 <Collapsible defaultOpen={false}>
-                  <CollapsibleTrigger className="group flex items-center justify-between w-full p-4 hover:bg-gradient-to-r hover:from-violet-50/60 hover:to-purple-50/40 rounded-xl transition-all duration-200 border border-transparent hover:border-violet-100/50">
+                  <CollapsibleTrigger className="group flex items-center justify-between w-full p-4 hover:bg-sm-violet-tint-soft rounded-sm-card transition-all duration-200 border border-transparent hover:border-sm-border">
                     <div className="flex items-center gap-2.5">
-                      <ChevronDown className="h-4 w-4 text-gray-500 transition-transform duration-200 group-data-[state=open]:rotate-0 group-data-[state=closed]:-rotate-90" />
-                      <span className="font-semibold text-gray-900">Brands</span>
+                      <ChevronDown className="h-4 w-4 text-sm-ink3 transition-transform duration-200 group-data-[state=open]:rotate-0 group-data-[state=closed]:-rotate-90" />
+                      <span className="font-semibold text-sm-ink">Brands</span>
                     </div>
-                    <Badge variant="secondary" className={`text-xs font-medium ${
+                    <Badge variant="secondary" className={`text-xs font-semibold ${
                       assessFascias.length + assessCategories.length === 0
-                        ? 'bg-gray-100 text-gray-600 border-gray-200'
-                        : 'bg-violet-100 text-violet-700 border-violet-200'
+                        ? 'bg-sm-border text-sm-ink2 border-sm-border'
+                        : 'bg-sm-violet-tint-soft text-sm-violet border-sm-border'
                     }`}>
                       {assessFascias.length + assessCategories.length === 0
                         ? 'All'
@@ -1669,7 +1748,7 @@ export default function GapFinderClient() {
                     </Badge>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="px-4 pb-6 pt-4">
-                    <div className="text-xs text-gray-600 mb-3 font-medium">
+                    <div className="text-xs text-sm-ink2 mb-3 font-medium">
                       Filter which stores to show in results
                     </div>
                     <UnifiedCategorySelector
@@ -1684,6 +1763,9 @@ export default function GapFinderClient() {
 
                 {/* Requirement Locations */}
                 {renderRequirementLocationsControl()}
+
+                {/* Traffic Heatmap */}
+                {renderTrafficHeatmapControl()}
               </TabsContent>
             </Tabs>
           </div>
@@ -1734,6 +1816,9 @@ export default function GapFinderClient() {
                   ? (activeArea === 'area-b' ? assessBadgeByStoreIdB : assessBadgeByStoreId)
                   : assessBadgeByStoreId
               }
+              showTrafficHeatmap={showTrafficHeatmap}
+              trafficMinAadt={trafficRange[0]}
+              trafficMaxAadt={trafficRange[1]}
             />
           </div>
 

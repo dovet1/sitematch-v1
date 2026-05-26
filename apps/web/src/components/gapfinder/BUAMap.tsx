@@ -26,6 +26,10 @@ const REQUIREMENT_CLUSTER_COUNT_LAYER_ID = 'requirement-locations-cluster-count'
 const REQUIREMENT_POINT_LAYER_ID = 'requirement-locations-point'
 const TERRAIN_SOURCE_ID = 'mapbox-dem'
 const THREE_D_BUILDINGS_LAYER_ID = 'gapfinder-3d-buildings'
+const TRAFFIC_SOURCE_ID = 'traffic-roads'
+const TRAFFIC_LAYER_ID = 'traffic-roads-layer'
+const TRAFFIC_TILESET_ID = 'dovet.a4p7c0q8'
+const TRAFFIC_SOURCE_LAYER = 'traffic_roads'
 
 function isValidCoordinate(point?: { lat: number; lng: number } | null): point is { lat: number; lng: number } {
   return !!point && Number.isFinite(point.lat) && Number.isFinite(point.lng)
@@ -437,6 +441,9 @@ interface BUAMapProps {
   selectedPointB?: { lat: number; lng: number } | null
   radiusMetersB?: number
   comparisonMode?: 'single' | 'selecting-second' | 'comparing'
+  showTrafficHeatmap?: boolean
+  trafficMinAadt?: number
+  trafficMaxAadt?: number
 }
 
 export function BUAMap({
@@ -468,11 +475,15 @@ export function BUAMap({
   assessBadgeByStoreId = {},
   selectedPointB = null,
   radiusMetersB = 5000,
-  comparisonMode = 'single'
+  comparisonMode = 'single',
+  showTrafficHeatmap = false,
+  trafficMinAadt = 0,
+  trafficMaxAadt = 250000
 }: BUAMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const popup = useRef<mapboxgl.Popup | null>(null)
+  const trafficPopupRef = useRef<mapboxgl.Popup | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [is3DMode, setIs3DMode] = useState(false)
   const pointMarker = useRef<mapboxgl.Marker | null>(null)
@@ -690,6 +701,107 @@ export function BUAMap({
         }
       })
 
+      // Add traffic layer (hidden by default)
+      if (!map.current.getSource(TRAFFIC_SOURCE_ID)) {
+        map.current.addSource(TRAFFIC_SOURCE_ID, {
+          type: 'vector',
+          url: `mapbox://${TRAFFIC_TILESET_ID}`
+        })
+
+        // Insert before first symbol layer (labels on top) using existing helper
+        const firstSymbolId = getFirstSymbolLayerId(map.current)
+
+        map.current.addLayer({
+          id: TRAFFIC_LAYER_ID,
+          type: 'line',
+          source: TRAFFIC_SOURCE_ID,
+          'source-layer': TRAFFIC_SOURCE_LAYER,
+          layout: {
+            visibility: 'none'
+          },
+          paint: {
+            'line-color': [
+              'interpolate',
+              ['linear'],
+              ['get', 'aadt'],
+              0, '#e5e7eb',
+              5000, '#fde68a',
+              10000, '#fbbf24',
+              20000, '#f97316',
+              35000, '#dc2626',
+              50000, '#991b1b'
+            ],
+            'line-width': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              8, 1,
+              10, 1.5,
+              12, 2.5,
+              14, 4,
+              16, 6
+            ],
+            'line-opacity': 0.75
+          }
+        }, firstSymbolId)
+
+        // Attach hover handlers immediately after layer creation (same effect)
+        const handleMouseEnter = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+          if (!map.current || !e.features || e.features.length === 0) return
+          map.current.getCanvas().style.cursor = 'pointer'
+
+          const feature = e.features[0]
+          const props = feature.properties
+
+          if (props) {
+            const roadNumber = props.road_number || 'Unknown'
+            const classification = props.road_classification || 'Unknown'
+            const aadt = props.aadt || 0
+
+            if (trafficPopupRef.current) {
+              trafficPopupRef.current.remove()
+            }
+
+            trafficPopupRef.current = new mapboxgl.Popup({
+              closeButton: false,
+              closeOnClick: false,
+              offset: 10,
+              className: 'traffic-popup'
+            })
+              .setLngLat(e.lngLat)
+              .setHTML(`
+                <div class="p-3 min-w-[200px]">
+                  <div class="font-semibold text-gray-900 mb-2 text-sm">${roadNumber}</div>
+                  <div class="space-y-1.5 text-sm">
+                    <div class="flex justify-between gap-4">
+                      <span class="text-gray-600">Type:</span>
+                      <span class="font-medium text-gray-900">${classification}</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                      <span class="text-gray-600">Traffic:</span>
+                      <span class="font-semibold text-violet-600">${Math.round(aadt).toLocaleString()} /day</span>
+                    </div>
+                  </div>
+                </div>
+              `)
+              .addTo(map.current)
+          }
+        }
+
+        const handleMouseLeave = () => {
+          if (map.current) {
+            map.current.getCanvas().style.cursor = ''
+          }
+          if (trafficPopupRef.current) {
+            trafficPopupRef.current.remove()
+            trafficPopupRef.current = null
+          }
+        }
+
+        map.current.on('mouseenter', TRAFFIC_LAYER_ID, handleMouseEnter)
+        map.current.on('mouseleave', TRAFFIC_LAYER_ID, handleMouseLeave)
+      }
+
       applyBUAFilters()
 
       // Add click handler (but only once - check if already exists)
@@ -772,8 +884,45 @@ export function BUAMap({
       if (map.current) {
         map.current.off('style.load', addBUALayer)
       }
+      // Clean up traffic popup on unmount
+      if (trafficPopupRef.current) {
+        trafficPopupRef.current.remove()
+        trafficPopupRef.current = null
+      }
     }
   }, [mapLoaded, mode])
+
+  // Update traffic layer visibility and filter
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return
+    if (!map.current.getLayer(TRAFFIC_LAYER_ID)) return
+
+    try {
+      // Toggle visibility
+      map.current.setLayoutProperty(
+        TRAFFIC_LAYER_ID,
+        'visibility',
+        showTrafficHeatmap ? 'visible' : 'none'
+      )
+
+      // Update filter based on min/max range
+      if (showTrafficHeatmap) {
+        if (trafficMinAadt > 0 || trafficMaxAadt < 250000) {
+          // Use coalesce to handle null/undefined AADT values (treat them as 0)
+          const aadtValue = ['coalesce', ['get', 'aadt'], 0]
+          map.current.setFilter(TRAFFIC_LAYER_ID, [
+            'all',
+            ['>=', aadtValue, trafficMinAadt],
+            ['<=', aadtValue, trafficMaxAadt]
+          ])
+        } else {
+          map.current.setFilter(TRAFFIC_LAYER_ID, null)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update traffic layer:', error)
+    }
+  }, [showTrafficHeatmap, trafficMinAadt, trafficMaxAadt, mapLoaded])
 
   // Toggle Mapbox terrain and building extrusions without recreating the map.
   useEffect(() => {

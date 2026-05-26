@@ -66,7 +66,7 @@ export function InlineTargetSelector({
 
       {/* Selection summary with numbered badges */}
       {targetBadgeMapping.length > 0 && (
-        <div className="p-2 bg-violet-50 rounded-lg border border-violet-200">
+        <div className="p-2 bg-sm-violet-tint rounded-sm-btn border border-sm-border">
           <div className="flex flex-wrap gap-1.5 max-h-[200px] overflow-y-auto">
             {targetBadgeMapping
               .filter(badge => {

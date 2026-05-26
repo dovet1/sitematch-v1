@@ -62,14 +62,14 @@ export function AreaAccordion({
   return (
     <Accordion type="single" value={value ?? undefined} onValueChange={onValueChange} collapsible className="space-y-2">
       {/* Area A */}
-      <AccordionItem value="area-a" className="border rounded-xl overflow-hidden bg-gradient-to-br from-violet-50 to-purple-50/50 border-violet-200/60">
-        <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-violet-100/30 transition-colors">
+      <AccordionItem value="area-a" className="border rounded-sm-card overflow-hidden bg-sm-violet-tint border-sm-border">
+        <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-sm-violet-tint-soft transition-colors">
           <div className="flex items-center gap-3 flex-1">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-violet-500 ring-2 ring-violet-300/50"></div>
-              <span className="font-semibold text-gray-900">Area A</span>
+              <div className="w-3 h-3 rounded-full bg-sm-violet ring-2 ring-sm-violet/30"></div>
+              <span className="font-semibold text-sm-ink">Area A</span>
             </div>
-            <Badge variant="secondary" className="text-xs font-medium bg-violet-100 text-violet-700 border-violet-200">
+            <Badge variant="secondary" className="text-xs font-semibold bg-sm-violet-tint-soft text-sm-violet border-sm-border">
               {formatRadius(radiusA)}
             </Badge>
             {storeCountA > 0 && (
@@ -83,8 +83,8 @@ export function AreaAccordion({
           <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-violet-600" />
-                <p className="text-xs text-gray-700 font-mono">
+                <MapPin className="h-4 w-4 text-sm-violet" />
+                <p className="text-xs text-sm-ink font-mono">
                   {pointA.lat.toFixed(4)}, {pointA.lng.toFixed(4)}
                 </p>
               </div>
@@ -92,7 +92,7 @@ export function AreaAccordion({
                 variant="ghost"
                 size="sm"
                 onClick={onClearA}
-                className="h-7 text-xs text-violet-700 hover:bg-violet-100/80 hover:text-violet-800"
+                className="h-7 text-xs text-sm-violet hover:bg-sm-violet-tint-soft hover:text-sm-violet"
               >
                 Clear
               </Button>
@@ -101,8 +101,8 @@ export function AreaAccordion({
             {/* Radius slider */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700">Radius</label>
-                <span className="text-sm font-semibold text-violet-700">{formatRadius(radiusA)}</span>
+                <label className="text-sm font-semibold text-sm-ink">Radius</label>
+                <span className="text-sm font-semibold text-sm-violet">{formatRadius(radiusA)}</span>
               </div>
               <Slider
                 value={[radiusA]}
@@ -131,14 +131,14 @@ export function AreaAccordion({
       </AccordionItem>
 
       {/* Area B */}
-      <AccordionItem value="area-b" className="border rounded-xl overflow-hidden bg-gradient-to-br from-teal-50 to-cyan-50/50 border-teal-200/60">
-        <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-teal-100/30 transition-colors">
+      <AccordionItem value="area-b" className="border rounded-sm-card overflow-hidden bg-teal-50 border-teal-200">
+        <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-teal-100/50 transition-colors">
           <div className="flex items-center gap-3 flex-1">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-teal-500 ring-2 ring-teal-300/50"></div>
-              <span className="font-semibold text-gray-900">Area B</span>
+              <span className="font-semibold text-sm-ink">Area B</span>
             </div>
-            <Badge variant="secondary" className="text-xs font-medium bg-teal-100 text-teal-700 border-teal-200">
+            <Badge variant="secondary" className="text-xs font-semibold bg-teal-100 text-teal-700 border-teal-200">
               {formatRadius(radiusB)}
             </Badge>
             {storeCountB > 0 && (
@@ -153,7 +153,7 @@ export function AreaAccordion({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-teal-600" />
-                <p className="text-xs text-gray-700 font-mono">
+                <p className="text-xs text-sm-ink font-mono">
                   {pointB.lat.toFixed(4)}, {pointB.lng.toFixed(4)}
                 </p>
               </div>

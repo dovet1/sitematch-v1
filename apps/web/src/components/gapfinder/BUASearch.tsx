@@ -193,15 +193,15 @@ export function BUASearch({
                 key={bua.gsscode}
                 onClick={() => handleSuggestionClick(bua)}
                 className={cn(
-                  'w-full px-4 py-3 text-left hover:bg-violet-50 transition-colors border-b border-gray-100 last:border-b-0',
-                  selectedIndex === index && 'bg-violet-50'
+                  'w-full px-4 py-3 text-left hover:bg-sm-violet-tint-soft transition-colors border-b border-sm-border-soft last:border-b-0',
+                  selectedIndex === index && 'bg-sm-violet-tint-soft'
                 )}
               >
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-violet-600 mt-0.5 flex-shrink-0" />
+                  <MapPin className="h-5 w-5 text-sm-violet mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900 truncate">{bua.name}</div>
-                    <div className="text-sm text-gray-600 mt-0.5">
+                    <div className="font-semibold text-sm-ink truncate">{bua.name}</div>
+                    <div className="text-sm text-sm-ink2 mt-0.5">
                       Population: {formatPopulation(bua.pop_final)}
                     </div>
                   </div>

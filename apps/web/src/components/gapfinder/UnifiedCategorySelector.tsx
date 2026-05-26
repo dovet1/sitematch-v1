@@ -365,7 +365,7 @@ export function UnifiedCategorySelector({
                                 ({fasciaCount} types)
                               </span>
                               {!isBrandExpanded && isPartiallySelected && (
-                                <span className="inline-block w-1.5 h-1.5 bg-violet-500 rounded-full ml-1.5 align-middle" title="Some types selected" />
+                                <span className="inline-block w-1.5 h-1.5 bg-sm-violet rounded-full ml-1.5 align-middle" title="Some types selected" />
                               )}
                             </div>
                             <div className="flex-shrink-0 mt-0.5">

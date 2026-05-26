@@ -149,11 +149,11 @@ export function FilterBuilder({
 
       {/* Rules List */}
       {filterSet.rules.length === 0 ? (
-        <div className="border-2 border-dashed border-violet-200 rounded-lg p-8 text-center bg-violet-50/30">
-          <p className="text-sm text-gray-600 mb-4">
+        <div className="border-2 border-dashed border-sm-border rounded-sm-card p-8 text-center bg-sm-violet-tint-soft">
+          <p className="text-sm text-sm-ink2 mb-4">
             No filters applied. Click below to add your first filter.
           </p>
-          <Button onClick={addRule} variant="outline" className="border-violet-300 text-violet-700 hover:bg-violet-50">
+          <Button onClick={addRule} variant="outline" className="border-sm-violet text-sm-violet hover:bg-sm-violet-tint-soft font-semibold">
             <Plus className="h-4 w-4 mr-2" />
             Add First Filter
           </Button>
@@ -184,11 +184,11 @@ export function FilterBuilder({
         <Button
           onClick={addRule}
           variant="outline"
-          className="w-full border-violet-300 text-violet-700 hover:bg-violet-50 transition-colors"
+          className="w-full border-sm-violet text-sm-violet hover:bg-sm-violet-tint-soft transition-colors font-semibold"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Filter Rule
-          <span className="ml-2 text-xs text-gray-500">
+          <span className="ml-2 text-xs text-sm-ink3">
             ({filterSet.rules.length}/{MAX_RULES})
           </span>
         </Button>
