@@ -29,21 +29,32 @@ export function SavedSketchesPanel() {
 
       const response = await fetch('/api/sitesketcher-v2/sketches');
 
+      if (response.status === 401) {
+        setError('Please sign in to access saved sketches');
+        setLoading(false);
+        return;
+      }
+
       if (response.status === 403) {
-        setError('Pro subscription required to access saved sketches');
+        const errorData = await response.json();
+        setError(errorData.error || 'Pro subscription required to access saved sketches');
         setLoading(false);
         return;
       }
 
       if (!response.ok) {
-        throw new Error('Failed to load sketches');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('API error:', response.status, errorData);
+        setError(errorData.error || 'Failed to load sketches');
+        setLoading(false);
+        return;
       }
 
       const data = await response.json();
       setSketches(data.sketches || []);
     } catch (err) {
       console.error('Error fetching sketches:', err);
-      setError('Failed to load sketches');
+      setError(err instanceof Error ? err.message : 'Failed to load sketches');
     } finally {
       setLoading(false);
     }

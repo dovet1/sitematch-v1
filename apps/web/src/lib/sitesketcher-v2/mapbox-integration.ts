@@ -118,9 +118,9 @@ function getDrawStyles() {
       type: 'circle',
       filter: ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['!=', 'mode', 'static']],
       paint: {
-        'circle-radius': 4,
+        'circle-radius': 7,
         'circle-color': '#fff',
-        'circle-stroke-width': 2,
+        'circle-stroke-width': 2.5,
         'circle-stroke-color': '#7033FF',
       },
     },
@@ -130,9 +130,9 @@ function getDrawStyles() {
       type: 'circle',
       filter: ['all', ['==', '$type', 'Point'], ['==', 'active', 'true']],
       paint: {
-        'circle-radius': 6,
+        'circle-radius': 8,
         'circle-color': '#fff',
-        'circle-stroke-width': 2,
+        'circle-stroke-width': 2.5,
         'circle-stroke-color': '#7033FF',
       },
     },
@@ -399,7 +399,8 @@ export function syncPolygonsTo3D(map: mapboxgl.Map, polygons: Polygon[]): void {
  * Setup parking fill and bay marking layers.
  */
 export function setupParkingLayer(map: mapboxgl.Map): void {
-  if (!map.isStyleLoaded()) return;
+  // Don't check isStyleLoaded() - it can return false after MapboxDraw is added
+  // The map 'load' event is sufficient to ensure we can add layers
 
   if (!map.getSource('parking-blocks')) {
     map.addSource('parking-blocks', {
@@ -421,16 +422,29 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
     });
   }
 
+  // Find the first symbol layer to insert parking layers before labels
+  const layers = map.getStyle().layers;
+  let firstSymbolId: string | undefined;
+  for (const layer of layers || []) {
+    if (layer.type === 'symbol') {
+      firstSymbolId = layer.id;
+      break;
+    }
+  }
+
   if (!map.getLayer('parking-block-fill')) {
     map.addLayer({
       id: 'parking-block-fill',
       type: 'fill',
       source: 'parking-blocks',
+      layout: {
+        visibility: 'visible',
+      },
       paint: {
         'fill-color': '#2F3437',
         'fill-opacity': ['case', ['boolean', ['get', 'selected'], false], 0.62, 0.48],
       },
-    });
+    }, firstSymbolId);
   }
 
   if (!map.getLayer('parking-selection-outline')) {
@@ -439,6 +453,7 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
       type: 'line',
       source: 'parking-blocks',
       layout: {
+        visibility: 'visible',
         'line-cap': 'round',
         'line-join': 'round',
       },
@@ -448,7 +463,7 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
         'line-width': 6,
         'line-blur': 0.5,
       },
-    });
+    }, firstSymbolId);
   }
 
   if (!map.getLayer('parking-block-outline')) {
@@ -457,6 +472,7 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
       type: 'line',
       source: 'parking-blocks',
       layout: {
+        visibility: 'visible',
         'line-cap': 'round',
         'line-join': 'round',
       },
@@ -465,7 +481,7 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
         'line-opacity': 0.95,
         'line-width': ['case', ['boolean', ['get', 'selected'], false], 2.25, 1.75],
       },
-    });
+    }, firstSymbolId);
   }
 
   if (!map.getLayer('parking-bay-lines')) {
@@ -474,6 +490,7 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
       type: 'line',
       source: 'parking-lines',
       layout: {
+        visibility: 'visible',
         'line-cap': 'round',
         'line-join': 'round',
       },
@@ -482,7 +499,7 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
         'line-opacity': ['case', ['boolean', ['get', 'selected'], false], 0.95, 0.82],
         'line-width': ['case', ['boolean', ['get', 'selected'], false], 1.4, 1.1],
       },
-    });
+    }, firstSymbolId);
   }
 
   if (!map.getLayer('parking-labels')) {
@@ -491,6 +508,7 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
       type: 'symbol',
       source: 'parking-blocks',
       layout: {
+        visibility: 'visible',
         'text-field': ['get', 'label'],
         'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 16],
         'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
@@ -503,7 +521,7 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
         'text-halo-color': '#2563EB',
         'text-halo-width': 2,
       },
-    });
+    }, firstSymbolId);
   }
 }
 

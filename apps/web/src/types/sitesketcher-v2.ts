@@ -56,6 +56,13 @@ export interface MeasurementChain {
   totalDistance: number;
 }
 
+export interface MapFocusRequest {
+  requestId: number;
+  center: [number, number];
+  bounds?: [[number, number], [number, number]];
+  zoom?: number;
+}
+
 export interface PolygonInProgress {
   points: [number, number][];
   colorIndex: number;

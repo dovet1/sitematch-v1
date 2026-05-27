@@ -50,12 +50,21 @@ function getProjectedPolygonArea(map: mapboxgl.Map, polygon: [number, number][])
   return Math.abs(area / 2);
 }
 
+function selectPolygonForVertexEditing(draw: MapboxDraw, polygonId: string): void {
+  try {
+    draw.changeMode('direct_select', { featureId: polygonId });
+  } catch {
+    draw.changeMode('simple_select', { featureIds: [polygonId] });
+  }
+}
+
 export function MapCanvas() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
   const parkingDragRef = useRef<{ id: string; moved: boolean } | null>(null);
   const suppressNextMapClickRef = useRef(false);
+  const isApplyingDrawUpdateRef = useRef(false);
   const isUserInteractionRef = useRef(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -67,6 +76,8 @@ export function MapCanvas() {
     polygons,
     parkingBlocks,
     selectedId,
+    selectedType,
+    mapFocusRequest,
     activeTool,
     selectedPolygonColorIndex,
     setViewport,
@@ -106,6 +117,7 @@ export function MapCanvas() {
       });
 
       map.on('load', () => {
+
         // Setup Mapbox Draw
         const draw = setupMapboxDraw(map);
         drawRef.current = draw;
@@ -157,6 +169,8 @@ export function MapCanvas() {
         });
 
         map.on('draw.update', (e: any) => {
+          isApplyingDrawUpdateRef.current = true;
+
           e.features.forEach((feature: any) => {
             // Convert Draw feature to Polygon updates
             const updatedPolygon = drawFeatureToPolygon(feature);
@@ -300,7 +314,7 @@ export function MapCanvas() {
                 .sort((a, b) => a.area - b.area)[0]?.polygon;
 
               if (hitPolygon) {
-                draw.changeMode('simple_select', { featureIds: [hitPolygon.id] });
+                selectPolygonForVertexEditing(draw, hitPolygon.id);
                 latestState.setSelectedId(hitPolygon.id, 'polygon');
                 return;
               }
@@ -390,18 +404,47 @@ export function MapCanvas() {
       if (activeTool === 'polygon') {
         enterPolygonDrawMode(drawRef.current, mapRef.current);
       } else if (activeTool === 'select') {
-        drawRef.current.changeMode('simple_select');
+        if (selectedId && selectedType === 'polygon') {
+          selectPolygonForVertexEditing(drawRef.current, selectedId);
+        } else {
+          drawRef.current.changeMode('simple_select');
+        }
       }
     }
-  }, [activeTool, isLoaded]);
+  }, [activeTool, selectedId, selectedType, isLoaded]);
+
+  // Keep Mapbox's canvas in lockstep with the flex layout as panels open/close.
+  useEffect(() => {
+    if (!mapContainerRef.current || !mapRef.current || !isLoaded) return;
+
+    const map = mapRef.current;
+    const resizeObserver = new ResizeObserver(() => {
+      map.resize();
+    });
+
+    resizeObserver.observe(mapContainerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [isLoaded]);
 
   // Sync polygon changes from store back to Draw
   useEffect(() => {
     if (mapRef.current && drawRef.current && isLoaded) {
-      loadPolygonsIntoDraw(drawRef.current, polygons);
+      if (isApplyingDrawUpdateRef.current) {
+        isApplyingDrawUpdateRef.current = false;
+      } else {
+        loadPolygonsIntoDraw(drawRef.current, polygons);
+
+        if (selectedId && selectedType === 'polygon') {
+          selectPolygonForVertexEditing(drawRef.current, selectedId);
+        }
+      }
+
       syncPolygonsTo3D(mapRef.current, polygons);
     }
-  }, [polygons, isLoaded]);
+  }, [polygons, selectedId, selectedType, isLoaded]);
 
   // Sync parking changes from store back to map layers
   useEffect(() => {
@@ -409,6 +452,38 @@ export function MapCanvas() {
       syncParkingToMap(mapRef.current, parkingBlocks, selectedId);
     }
   }, [parkingBlocks, selectedId, isLoaded]);
+
+  // Handle layer focus requests from panels.
+  useEffect(() => {
+    if (!mapRef.current || !isLoaded || !mapFocusRequest) return;
+
+    const map = mapRef.current;
+    if (mapFocusRequest.bounds) {
+      const [southWest, northEast] = mapFocusRequest.bounds;
+      const boundsAreCollapsed =
+        southWest[0] === northEast[0] && southWest[1] === northEast[1];
+
+      if (!boundsAreCollapsed) {
+        map.fitBounds(new mapboxgl.LngLatBounds(southWest, northEast), {
+          maxZoom: 19,
+          duration: 1000,
+          pitch: 0,
+          bearing: map.getBearing(),
+          essential: true,
+        });
+        return;
+      }
+    }
+
+    map.flyTo({
+      center: mapFocusRequest.center,
+      zoom: mapFocusRequest.zoom ?? 18.5,
+      pitch: 0,
+      bearing: map.getBearing(),
+      duration: 1000,
+      essential: true,
+    });
+  }, [mapFocusRequest, isLoaded]);
 
   // Handle programmatic viewport changes (e.g., from location search)
   useEffect(() => {

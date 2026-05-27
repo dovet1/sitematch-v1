@@ -2,7 +2,39 @@
 
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { POLYGON_COLORS } from '@/lib/sitesketcher-v2/constants';
-import { Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Polygon } from '@/types/sitesketcher-v2';
+import { Trash2 } from 'lucide-react';
+
+const LAYER_FOCUS_ZOOM = 18.5;
+
+function getPolygonBounds(polygon: Polygon): [[number, number], [number, number]] {
+  const bounds = polygon.points.reduce(
+    (acc, [lng, lat]) => ({
+      minLng: Math.min(acc.minLng, lng),
+      maxLng: Math.max(acc.maxLng, lng),
+      minLat: Math.min(acc.minLat, lat),
+      maxLat: Math.max(acc.maxLat, lat),
+    }),
+    {
+      minLng: Number.POSITIVE_INFINITY,
+      maxLng: Number.NEGATIVE_INFINITY,
+      minLat: Number.POSITIVE_INFINITY,
+      maxLat: Number.NEGATIVE_INFINITY,
+    }
+  );
+
+  return [
+    [bounds.minLng, bounds.minLat],
+    [bounds.maxLng, bounds.maxLat],
+  ];
+}
+
+function getBoundsCenter(bounds: [[number, number], [number, number]]): [number, number] {
+  return [
+    (bounds[0][0] + bounds[1][0]) / 2,
+    (bounds[0][1] + bounds[1][1]) / 2,
+  ];
+}
 
 export function LayersPanel() {
   const {
@@ -11,11 +43,28 @@ export function LayersPanel() {
     cadImages,
     selectedId,
     setSelectedId,
+    focusMap,
     deletePolygon,
     deleteParkingBlock,
   } = useSketchStore();
 
   const totalObjects = polygons.length + parkingBlocks.length + cadImages.length;
+  const focusPolygonLayer = (polygon: Polygon) => {
+    const bounds = getPolygonBounds(polygon);
+
+    setSelectedId(polygon.id, 'polygon');
+    focusMap({
+      center: getBoundsCenter(bounds),
+      bounds,
+    });
+  };
+  const focusParkingLayer = (id: string, center: [number, number]) => {
+    setSelectedId(id, 'parking');
+    focusMap({
+      center,
+      zoom: LAYER_FOCUS_ZOOM,
+    });
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -49,11 +98,11 @@ export function LayersPanel() {
                   key={polygon.id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => setSelectedId(polygon.id, 'polygon')}
+                  onClick={() => focusPolygonLayer(polygon)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      setSelectedId(polygon.id, 'polygon');
+                      focusPolygonLayer(polygon);
                     }
                   }}
                   className={`
@@ -109,11 +158,11 @@ export function LayersPanel() {
                   key={parking.id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => setSelectedId(parking.id, 'parking')}
+                  onClick={() => focusParkingLayer(parking.id, parking.anchor)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      setSelectedId(parking.id, 'parking');
+                      focusParkingLayer(parking.id, parking.anchor);
                     }
                   }}
                   className={`

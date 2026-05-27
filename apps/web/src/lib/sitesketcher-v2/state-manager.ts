@@ -10,6 +10,7 @@ import {
   HistoryState,
   PolygonInProgress,
   MeasurementChain,
+  MapFocusRequest,
 } from '@/types/sitesketcher-v2';
 import { DEFAULT_BUILDING_HEIGHT_METERS, DEFAULT_VIEWPORT, MAX_HISTORY_SIZE } from './constants';
 
@@ -43,6 +44,7 @@ interface SketchState {
 
   // Viewport
   viewport: { center: [number, number]; zoom: number; pitch: number; bearing: number };
+  mapFocusRequest: MapFocusRequest | null;
 
   // History
   history: HistoryState[];
@@ -99,6 +101,7 @@ interface SketchState {
 
   // Actions - Viewport
   setViewport: (viewport: Partial<SketchState['viewport']>) => void;
+  focusMap: (request: Omit<MapFocusRequest, 'requestId'>) => void;
 
   // Actions - History
   pushHistory: () => void;
@@ -152,6 +155,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   lastSaved: null,
 
   viewport: { ...DEFAULT_VIEWPORT },
+  mapFocusRequest: null,
 
   history: [],
   historyIndex: -1,
@@ -399,6 +403,13 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     set((state) => ({
       viewport: { ...state.viewport, ...viewport },
     })),
+  focusMap: (request) =>
+    set({
+      mapFocusRequest: {
+        ...request,
+        requestId: Date.now(),
+      },
+    }),
 
   // History actions
   pushHistory: () => {
@@ -475,6 +486,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       isDirty: false,
       lastSaved: null,
       viewport: { ...DEFAULT_VIEWPORT },
+      mapFocusRequest: null,
       history: [],
       historyIndex: -1,
     }),
