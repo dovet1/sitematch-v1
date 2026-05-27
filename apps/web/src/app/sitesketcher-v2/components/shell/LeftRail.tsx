@@ -121,7 +121,7 @@ function ToolButtonComponent({ tool, isActive, onClick }: ToolButtonComponentPro
       onClick={onClick}
       title={`${tool.label}${tool.shortcut ? ` (${tool.shortcut})` : ''}`}
       className={clsx(
-        'w-12 h-12 flex items-center justify-center rounded-lg transition-all',
+        'relative w-12 h-12 flex items-center justify-center rounded-lg transition-all',
         'hover:bg-sm-bg focus-ring',
         isActive
           ? 'bg-sm-violet text-white shadow-sm'
@@ -129,6 +129,17 @@ function ToolButtonComponent({ tool, isActive, onClick }: ToolButtonComponentPro
       )}
     >
       {tool.icon}
+      {tool.shortcut && (
+        <span
+          className={clsx(
+            'absolute bottom-1.5 right-2 font-mono text-[10px] leading-none',
+            isActive ? 'text-white/75' : 'text-sm-ink/45'
+          )}
+          aria-hidden="true"
+        >
+          {tool.shortcut}
+        </span>
+      )}
     </button>
   );
 }

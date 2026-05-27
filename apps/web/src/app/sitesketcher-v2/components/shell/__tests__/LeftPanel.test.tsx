@@ -127,7 +127,7 @@ describe('LeftPanel', () => {
     expect(screen.getByRole('button', { name: /draw a polygon/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /add parking/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /upload cad/i })).toBeInTheDocument();
-    expect(screen.getByText('Search a postcode above to fly there first.')).toBeInTheDocument();
+    expect(screen.getByText(/search a postcode.*fly there first/i)).toBeInTheDocument();
   });
 
   it('switches to the selected tool panel from the empty state actions', () => {

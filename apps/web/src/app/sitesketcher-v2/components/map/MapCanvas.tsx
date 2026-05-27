@@ -216,14 +216,18 @@ export function MapCanvas() {
 
         map.on('mouseenter', 'parking-block-fill', () => {
           const activeTool = useSketchStore.getState().activeTool;
-          if (activeTool === 'select' || activeTool === 'parking') {
+          if (activeTool === 'select') {
             map.getCanvas().style.cursor = 'move';
+          } else if (activeTool === 'parking') {
+            map.getCanvas().style.cursor = 'crosshair';
           }
         });
 
         map.on('mouseleave', 'parking-block-fill', () => {
           if (!parkingDragRef.current) {
-            map.getCanvas().style.cursor = '';
+            const activeTool = useSketchStore.getState().activeTool;
+            map.getCanvas().style.cursor =
+              activeTool === 'parking' || activeTool === 'measure' ? 'crosshair' : '';
           }
         });
 
@@ -260,7 +264,9 @@ export function MapCanvas() {
           suppressNextMapClickRef.current = true;
           parkingDragRef.current = null;
           map.dragPan.enable();
-          map.getCanvas().style.cursor = '';
+          const activeTool = useSketchStore.getState().activeTool;
+          map.getCanvas().style.cursor =
+            activeTool === 'parking' || activeTool === 'measure' ? 'crosshair' : '';
         });
 
         map.on('click', (event) => {
@@ -452,7 +458,7 @@ export function MapCanvas() {
       }
 
       // Set cursor style based on active tool
-      if (activeTool === 'measure') {
+      if (activeTool === 'measure' || activeTool === 'parking') {
         map.getCanvas().style.cursor = 'crosshair';
       } else {
         map.getCanvas().style.cursor = '';
