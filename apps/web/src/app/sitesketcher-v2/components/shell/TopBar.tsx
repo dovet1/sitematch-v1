@@ -138,7 +138,7 @@ export function TopBar() {
       const results = await debouncedSearch.current(query, {
         limit: 5,
         country: ['GB', 'IE'],
-        types: ['place', 'locality', 'neighborhood', 'address']
+        types: ['place', 'locality', 'neighborhood', 'address', 'postcode', 'poi', 'region']
       });
 
       setSearchResults(results);
@@ -290,7 +290,7 @@ export function TopBar() {
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             onFocus={() => setShowResults(searchResults.length > 0)}
-            placeholder="Search location..."
+            placeholder="Search location or postcode..."
             className="w-full pl-9 pr-3 py-2 text-sm bg-sm-bg border border-sm-border rounded-lg focus:outline-none focus:border-sm-violet transition-colors"
           />
           {isSearching && (
