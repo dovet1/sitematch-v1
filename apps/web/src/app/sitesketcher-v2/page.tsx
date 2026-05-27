@@ -137,10 +137,8 @@ export default function SiteSketcherV2Page() {
         <div className="flex-1 relative">
           <MapCanvas />
           <FloatingMapControls />
+          <RightInspector />
         </div>
-
-        {/* Right Inspector (conditional) */}
-        <RightInspector />
       </div>
 
       {/* Status Bar */}

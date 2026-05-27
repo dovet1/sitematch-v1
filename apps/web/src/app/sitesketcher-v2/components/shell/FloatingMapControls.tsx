@@ -13,7 +13,17 @@ import {
 } from 'lucide-react';
 
 export function FloatingMapControls() {
-  const { view, setView, units, setUnits, mapStyle, setMapStyle } = useSketchStore();
+  const {
+    view,
+    setView,
+    units,
+    setUnits,
+    mapStyle,
+    setMapStyle,
+    selectedId,
+    selectedType,
+  } = useSketchStore();
+  const hasInspector = selectedId !== null && selectedType !== null;
 
   const viewOptions: SegmentedOption<ViewMode>[] = [
     { value: '2d', label: '2D', icon: <Box className="w-3.5 h-3.5" /> },
@@ -32,7 +42,10 @@ export function FloatingMapControls() {
   ];
 
   return (
-    <div className="absolute bottom-6 right-6 flex flex-col gap-3">
+    <div
+      className="absolute bottom-6 z-10 flex flex-col gap-3 transition-[right] duration-[250ms] ease-in-out"
+      style={{ right: hasInspector ? '22rem' : '1.5rem' }}
+    >
       {/* View mode (2D/3D) */}
       <div className="bg-sm-surface border border-sm-border rounded-lg shadow-lg p-2">
         <Segmented

@@ -20,7 +20,7 @@ export function RightInspector() {
   };
 
   return (
-    <div className="w-80 bg-sm-surface border-l border-sm-border flex flex-col flex-shrink-0 transition-panel custom-scrollbar overflow-y-auto">
+    <div className="absolute top-0 right-0 bottom-0 z-20 w-80 bg-sm-surface border-l border-sm-border shadow-lg flex flex-col transition-panel custom-scrollbar overflow-y-auto">
       <div className="p-4 border-b border-sm-border flex items-center justify-between">
         <h2 className="text-sm font-semibold text-sm-ink">
           {getInspectorTitle(selectedType)}

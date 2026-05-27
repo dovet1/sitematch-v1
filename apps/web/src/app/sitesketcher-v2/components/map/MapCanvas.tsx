@@ -201,7 +201,17 @@ export function MapCanvas() {
 
         map.on('draw.selectionchange', (e: any) => {
           const selectedId = e.features[0]?.id || null;
-          setSelectedId(selectedId, selectedId ? 'polygon' : null);
+          if (selectedId) {
+            setSelectedId(selectedId, 'polygon');
+            return;
+          }
+
+          // Mapbox Draw emits an empty selection between direct_select targets.
+          // Let the click hit-test below clear selection intentionally, otherwise
+          // switching polygon A -> polygon B briefly closes/reopens inspector state.
+          if (useSketchStore.getState().activeTool !== 'select') {
+            setSelectedId(null, null);
+          }
         });
 
         map.on('mouseenter', 'parking-block-fill', () => {
@@ -423,9 +433,11 @@ export function MapCanvas() {
     }
   }, [view, isLoaded]);
 
-  // Handle tool changes
+  // Handle tool and selection changes
   useEffect(() => {
     if (mapRef.current && drawRef.current && isLoaded) {
+      const map = mapRef.current;
+
       if (activeTool === 'polygon') {
         enterPolygonDrawMode(drawRef.current, mapRef.current);
       } else if (activeTool === 'select') {
@@ -437,6 +449,13 @@ export function MapCanvas() {
       } else {
         // For measure, parking, cad tools: exit draw mode to prevent polygon vertex clicks
         drawRef.current.changeMode('simple_select');
+      }
+
+      // Set cursor style based on active tool
+      if (activeTool === 'measure') {
+        map.getCanvas().style.cursor = 'crosshair';
+      } else {
+        map.getCanvas().style.cursor = '';
       }
     }
   }, [activeTool, selectedId, selectedType, isLoaded]);
@@ -457,7 +476,8 @@ export function MapCanvas() {
     };
   }, [isLoaded]);
 
-  // Sync polygon changes from store back to Draw
+  // Sync polygon geometry changes from store back to Draw.
+  // Selection changes are handled separately above to avoid deleteAll/re-add flashes.
   useEffect(() => {
     if (mapRef.current && drawRef.current && isLoaded) {
       if (isApplyingDrawUpdateRef.current) {
@@ -465,6 +485,7 @@ export function MapCanvas() {
       } else {
         loadPolygonsIntoDraw(drawRef.current, polygons);
 
+        const { selectedId, selectedType } = useSketchStore.getState();
         if (selectedId && selectedType === 'polygon') {
           selectPolygonForVertexEditing(drawRef.current, selectedId);
         }
@@ -472,7 +493,7 @@ export function MapCanvas() {
 
       syncPolygonsTo3D(mapRef.current, polygons);
     }
-  }, [polygons, selectedId, selectedType, isLoaded]);
+  }, [polygons, isLoaded]);
 
   // Sync parking changes from store back to map layers
   useEffect(() => {
