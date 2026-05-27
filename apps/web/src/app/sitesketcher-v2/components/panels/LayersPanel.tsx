@@ -69,7 +69,6 @@ export function LayersPanel() {
   return (
     <div className="p-4 space-y-4">
       <div>
-        <h3 className="text-sm font-medium text-sm-ink mb-1">Layers</h3>
         <p className="text-xs text-sm-ink/60">
           {totalObjects} object{totalObjects !== 1 ? 's' : ''} in sketch
         </p>

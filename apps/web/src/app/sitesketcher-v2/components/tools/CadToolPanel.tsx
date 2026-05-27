@@ -3,7 +3,6 @@
 import { useState, useRef } from 'react';
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { Button } from '../primitives/Button';
-import { Badge } from '../primitives/Badge';
 import { Upload, FileImage } from 'lucide-react';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -70,10 +69,6 @@ export function CadToolPanel() {
   return (
     <div className="p-4 space-y-4">
       <div>
-        <div className="flex items-center gap-2 mb-3">
-          <h3 className="text-sm font-medium text-sm-ink">CAD Overlay</h3>
-          <Badge variant="violet">Pro</Badge>
-        </div>
         <p className="text-xs text-sm-ink/60 mb-4">
           Upload a CAD or site plan image (PNG/JPG) to overlay on the map. You'll calibrate the scale after upload.
         </p>

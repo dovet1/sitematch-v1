@@ -118,7 +118,6 @@ export function SavedSketchesPanel() {
   return (
     <div className="p-4 space-y-4">
       <div>
-        <h3 className="text-sm font-medium text-sm-ink mb-1">Saved Sketches</h3>
         <p className="text-xs text-sm-ink/60">
           Load or manage your saved sketches
         </p>

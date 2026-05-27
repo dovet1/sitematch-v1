@@ -8,6 +8,7 @@ import { CadToolPanel } from '../tools/CadToolPanel';
 import { MeasureToolPanel } from '../tools/MeasureToolPanel';
 import { LayersPanel } from '../panels/LayersPanel';
 import { SavedSketchesPanel } from '../panels/SavedSketchesPanel';
+import { Badge } from '../primitives/Badge';
 
 export function LeftPanel() {
   const {
@@ -39,9 +40,12 @@ export function LeftPanel() {
   return (
     <div className="w-80 bg-sm-surface border-r border-sm-border flex flex-col flex-shrink-0 transition-panel custom-scrollbar overflow-y-auto">
       <div className="p-4 border-b border-sm-border flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-sm-ink">
-          {getPanelTitle(panelContent)}
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-sm-ink">
+            {getPanelTitle(panelContent)}
+          </h2>
+          {panelContent === 'cad' && <Badge variant="violet">Pro</Badge>}
+        </div>
         <button
           className="p-1 hover:bg-sm-bg rounded transition-colors"
           onClick={handleClose}
