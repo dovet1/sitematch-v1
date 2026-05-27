@@ -9,11 +9,11 @@ import {
   Redo2,
   Search,
   ChevronRight,
-  Home,
   Loader2,
   MapPin
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createDebouncedLocationSearch, formatLocationDisplay } from '@/lib/mapbox';
 import type { LocationResult } from '@/lib/mapbox';
 
@@ -253,13 +253,20 @@ export function TopBar() {
       <div className="flex items-center gap-3">
         <Link
           href="/"
-          className="flex items-center gap-2 hover:opacity-70 transition-opacity"
+          className="w-8 h-8 flex items-center justify-center hover:opacity-70 transition-opacity"
+          aria-label="SiteMatcher home"
         >
-          <div className="w-8 h-8 bg-sm-violet rounded-lg flex items-center justify-center">
-            <Home className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-semibold text-sm text-sm-ink">CD</span>
+          <Image
+            src="/logo_icon.svg"
+            alt="SiteMatcher"
+            width={32}
+            height={32}
+            className="w-8 h-8"
+            priority
+          />
         </Link>
+
+        <span className="font-semibold text-sm text-sm-ink">SiteSketcher</span>
 
         <ChevronRight className="w-4 h-4 text-sm-ink/30" />
 
