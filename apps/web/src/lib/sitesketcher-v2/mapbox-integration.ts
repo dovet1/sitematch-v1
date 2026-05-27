@@ -401,6 +401,20 @@ export function syncPolygonsTo3D(map: mapboxgl.Map, polygons: Polygon[]): void {
 /**
  * Setup parking fill and bay marking layers.
  */
+function ensureParkingLayerOrder(map: mapboxgl.Map): void {
+  [
+    'parking-block-fill',
+    'parking-selection-outline',
+    'parking-block-outline',
+    'parking-bay-lines',
+    'parking-labels',
+  ].forEach((layerId) => {
+    if (map.getLayer(layerId)) {
+      map.moveLayer(layerId);
+    }
+  });
+}
+
 export function setupParkingLayer(map: mapboxgl.Map): void {
   // Don't check isStyleLoaded() - it can return false after MapboxDraw is added
   // The map 'load' event is sufficient to ensure we can add layers
@@ -425,16 +439,6 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
     });
   }
 
-  // Find the first symbol layer to insert parking layers before labels
-  const layers = map.getStyle().layers;
-  let firstSymbolId: string | undefined;
-  for (const layer of layers || []) {
-    if (layer.type === 'symbol') {
-      firstSymbolId = layer.id;
-      break;
-    }
-  }
-
   if (!map.getLayer('parking-block-fill')) {
     map.addLayer({
       id: 'parking-block-fill',
@@ -447,7 +451,7 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
         'fill-color': '#2F3437',
         'fill-opacity': ['case', ['boolean', ['get', 'selected'], false], 0.62, 0.48],
       },
-    }, firstSymbolId);
+    });
   }
 
   if (!map.getLayer('parking-selection-outline')) {
@@ -466,7 +470,7 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
         'line-width': 6,
         'line-blur': 0.5,
       },
-    }, firstSymbolId);
+    });
   }
 
   if (!map.getLayer('parking-block-outline')) {
@@ -484,7 +488,7 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
         'line-opacity': 0.95,
         'line-width': ['case', ['boolean', ['get', 'selected'], false], 2.25, 1.75],
       },
-    }, firstSymbolId);
+    });
   }
 
   if (!map.getLayer('parking-bay-lines')) {
@@ -502,7 +506,7 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
         'line-opacity': ['case', ['boolean', ['get', 'selected'], false], 0.95, 0.82],
         'line-width': ['case', ['boolean', ['get', 'selected'], false], 1.4, 1.1],
       },
-    }, firstSymbolId);
+    });
   }
 
   if (!map.getLayer('parking-labels')) {
@@ -524,8 +528,10 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
         'text-halo-color': '#2563EB',
         'text-halo-width': 2,
       },
-    }, firstSymbolId);
+    });
   }
+
+  ensureParkingLayerOrder(map);
 }
 
 /**
