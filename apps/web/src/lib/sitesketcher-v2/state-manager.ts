@@ -308,17 +308,19 @@ export const useSketchStore = create<SketchState>((set, get) => ({
 
   // UI actions
   setActiveTool: (tool) =>
-    set({
+    set((state) => ({
       activeTool: tool,
       activePanel: null, // Clear panel when tool is selected
-      selectedId: tool === 'select' ? get().selectedId : null,
-      selectedType: tool === 'select' ? get().selectedType : null,
-    }),
+      selectedId: tool === 'select' ? state.selectedId : null,
+      selectedType: tool === 'select' ? state.selectedType : null,
+      measurementInProgress: tool === 'measure' ? state.measurementInProgress : null, // Clear measurement when switching away
+    })),
 
   setActivePanel: (panel) =>
     set({
       activePanel: panel,
       activeTool: 'select', // Switch to select when panel is opened
+      measurementInProgress: null, // Clear measurement when panel is opened
     }),
 
   setSelectedId: (id, type) =>

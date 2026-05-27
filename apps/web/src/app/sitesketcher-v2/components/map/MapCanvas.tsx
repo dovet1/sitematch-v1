@@ -16,7 +16,9 @@ import {
   enterPolygonDrawMode,
   drawFeatureToPolygon,
 } from '@/lib/sitesketcher-v2/mapbox-integration';
+import { calculateEdgeDistance } from '@/lib/sitesketcher-v2/polygon-utils';
 import { PolygonLabels } from './PolygonLabels';
+import { MeasurementOverlay } from './MeasurementOverlay';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -81,6 +83,7 @@ export function MapCanvas() {
     mapFocusRequest,
     activeTool,
     selectedPolygonColorIndex,
+    measurementInProgress,
     setViewport,
     addPolygon,
     addParkingBlock,
@@ -283,6 +286,25 @@ export function MapCanvas() {
             return;
           }
 
+          if (state.activeTool === 'measure') {
+            const lngLat: [number, number] = [event.lngLat.lng, event.lngLat.lat];
+
+            // Start measurement if not already started
+            if (!state.measurementInProgress) {
+              state.startMeasurement();
+            }
+
+            // Get fresh state after startMeasurement
+            const latestState = useSketchStore.getState();
+            const prevPoint = latestState.measurementInProgress?.points.slice(-1)[0]?.lngLat;
+            const distance = prevPoint
+              ? calculateEdgeDistance(prevPoint, lngLat)
+              : undefined;
+
+            state.addMeasurementPoint(lngLat, distance);
+            return;
+          }
+
           if (state.activeTool === 'select') {
             const point = event.point;
             const lngLat: [number, number] = [event.lngLat.lng, event.lngLat.lat];
@@ -412,6 +434,9 @@ export function MapCanvas() {
         } else {
           drawRef.current.changeMode('simple_select');
         }
+      } else {
+        // For measure, parking, cad tools: exit draw mode to prevent polygon vertex clicks
+        drawRef.current.changeMode('simple_select');
       }
     }
   }, [activeTool, selectedId, selectedType, isLoaded]);
@@ -523,6 +548,9 @@ export function MapCanvas() {
 
       {/* Polygon labels overlay */}
       {isLoaded && <PolygonLabels />}
+
+      {/* Measurement overlay */}
+      {isLoaded && measurementInProgress && <MeasurementOverlay />}
 
       {!isLoaded && !mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-sm-bg">

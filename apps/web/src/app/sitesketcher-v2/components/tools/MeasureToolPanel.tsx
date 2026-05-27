@@ -30,7 +30,7 @@ export function MeasureToolPanel() {
       <div>
         <h3 className="text-sm font-medium text-sm-ink mb-3">Measure Distance</h3>
         <p className="text-xs text-sm-ink/60 mb-4">
-          Click points on the map to measure distances. Double-click or press Escape to finish.
+          Click points on the map to measure distances. Press Escape to clear.
         </p>
       </div>
 

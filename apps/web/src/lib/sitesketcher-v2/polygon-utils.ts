@@ -232,10 +232,10 @@ export function rotatePolygonPoints(
     const rotY = relX * sin + relY * cos;
 
     // Convert back to screen space
-    const rotatedScreen = {
-      x: centroidScreen.x + rotX,
-      y: centroidScreen.y + rotY
-    };
+    const rotatedScreen: [number, number] = [
+      centroidScreen.x + rotX,
+      centroidScreen.y + rotY
+    ];
 
     // Unproject back to lng/lat
     const rotatedLngLat = map.unproject(rotatedScreen);
