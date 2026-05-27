@@ -14,7 +14,7 @@ interface PolygonInspectorProps {
 }
 
 export function PolygonInspector({ polygonId }: PolygonInspectorProps) {
-  const { polygons, updatePolygon, deletePolygon, units } = useSketchStore();
+  const { polygons, updatePolygon, rotatePolygon, deletePolygon, units } = useSketchStore();
   const polygon = polygons.find(p => p.id === polygonId);
 
   const [localName, setLocalName] = useState(polygon?.name || '');
@@ -104,6 +104,16 @@ export function PolygonInspector({ polygonId }: PolygonInspectorProps) {
         max={100}
         step={1}
         suffix={units === 'metric' ? 'm' : 'ft'}
+      />
+
+      <Slider
+        label="Rotation"
+        value={polygon.rotation}
+        onChange={(rotation) => rotatePolygon(polygonId, rotation)}
+        min={0}
+        max={360}
+        step={1}
+        suffix="°"
       />
 
       <div className="space-y-2">

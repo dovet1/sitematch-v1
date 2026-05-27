@@ -183,3 +183,64 @@ export function calculateEdgeAngle(
 
   return angle;
 }
+
+/**
+ * Calculate centroid (center point) of a polygon
+ */
+export function calculateCentroid(points: [number, number][]): [number, number] {
+  const sum = points.reduce(
+    (acc, point) => [acc[0] + point[0], acc[1] + point[1]],
+    [0, 0]
+  );
+  return [sum[0] / points.length, sum[1] / points.length];
+}
+
+/**
+ * Rotate polygon points around centroid in screen-space.
+ * Uses screen-space projection to avoid spherical geometry distortion.
+ * Original points array is not modified - returns new rotated array.
+ */
+export function rotatePolygonPoints(
+  points: [number, number][],
+  rotationDegrees: number,
+  map: mapboxgl.Map
+): [number, number][] {
+  if (rotationDegrees === 0 || points.length === 0) return points;
+
+  // Calculate centroid in lng/lat
+  const centroid = calculateCentroid(points);
+
+  // Project centroid to screen space
+  const centroidScreen = map.project(centroid);
+
+  // Convert rotation to radians
+  const rotationRadians = (rotationDegrees * Math.PI) / 180;
+  const cos = Math.cos(rotationRadians);
+  const sin = Math.sin(rotationRadians);
+
+  // Rotate each point around centroid in screen space
+  const rotatedPoints = points.map(point => {
+    // Project to screen space
+    const pointScreen = map.project(point);
+
+    // Get relative position
+    const relX = pointScreen.x - centroidScreen.x;
+    const relY = pointScreen.y - centroidScreen.y;
+
+    // Apply rotation
+    const rotX = relX * cos - relY * sin;
+    const rotY = relX * sin + relY * cos;
+
+    // Convert back to screen space
+    const rotatedScreen = {
+      x: centroidScreen.x + rotX,
+      y: centroidScreen.y + rotY
+    };
+
+    // Unproject back to lng/lat
+    const rotatedLngLat = map.unproject(rotatedScreen);
+    return [rotatedLngLat.lng, rotatedLngLat.lat] as [number, number];
+  });
+
+  return rotatedPoints;
+}

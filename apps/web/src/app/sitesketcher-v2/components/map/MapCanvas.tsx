@@ -110,6 +110,7 @@ export function MapCanvas() {
       });
 
       mapRef.current = map;
+      useSketchStore.getState().setMapInstance(map);
 
       map.on('error', (event) => {
         console.error('Mapbox error:', event.error);
@@ -346,6 +347,7 @@ export function MapCanvas() {
         map.remove();
         mapRef.current = null;
         drawRef.current = null;
+        useSketchStore.getState().setMapInstance(null);
       };
     } catch (error) {
       console.error('Failed to initialize map:', error);

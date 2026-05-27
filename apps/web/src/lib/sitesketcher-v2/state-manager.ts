@@ -13,8 +13,13 @@ import {
   MapFocusRequest,
 } from '@/types/sitesketcher-v2';
 import { DEFAULT_BUILDING_HEIGHT_METERS, DEFAULT_VIEWPORT, MAX_HISTORY_SIZE } from './constants';
+import { rotatePolygonPoints } from './polygon-utils';
+import type mapboxgl from 'mapbox-gl';
 
 interface SketchState {
+  // Map reference (for coordinate transformations)
+  mapInstance: mapboxgl.Map | null;
+
   // Data
   polygons: Polygon[];
   parkingBlocks: ParkingBlock[];
@@ -50,9 +55,13 @@ interface SketchState {
   history: HistoryState[];
   historyIndex: number;
 
+  // Actions - Map
+  setMapInstance: (map: mapboxgl.Map | null) => void;
+
   // Actions - Polygons
   addPolygon: (polygon: Polygon) => void;
   updatePolygon: (id: string, updates: Partial<Polygon>) => void;
+  rotatePolygon: (id: string, newRotation: number) => void;
   deletePolygon: (id: string) => void;
   setPolygons: (polygons: Polygon[]) => void;
 
@@ -127,6 +136,7 @@ const createHistoryState = (state: SketchState): HistoryState => ({
 
 export const useSketchStore = create<SketchState>((set, get) => ({
   // Initial state
+  mapInstance: null,
   polygons: [],
   parkingBlocks: [],
   cadImages: [],
@@ -160,6 +170,9 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   history: [],
   historyIndex: -1,
 
+  // Map actions
+  setMapInstance: (map) => set({ mapInstance: map }),
+
   // Polygon actions
   addPolygon: (polygon) => {
     get().pushHistory(); // Push BEFORE mutation
@@ -174,6 +187,37 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     set((state) => ({
       polygons: state.polygons.map((p) =>
         p.id === id ? { ...p, ...updates, updatedAt: Date.now() } : p
+      ),
+      isDirty: true,
+    }));
+  },
+
+  rotatePolygon: (id, newRotation) => {
+    const state = get();
+    const { mapInstance } = state;
+
+    if (!mapInstance) {
+      console.warn('Cannot rotate polygon: map instance not available');
+      return;
+    }
+
+    const polygon = state.polygons.find(p => p.id === id);
+    if (!polygon) return;
+
+    // Calculate the delta rotation
+    const deltaRotation = newRotation - polygon.rotation;
+    if (deltaRotation === 0) return;
+
+    get().pushHistory(); // Push BEFORE mutation
+
+    // Rotate the actual points by the delta
+    const rotatedPoints = rotatePolygonPoints(polygon.points, deltaRotation, mapInstance);
+
+    set((state) => ({
+      polygons: state.polygons.map((p) =>
+        p.id === id
+          ? { ...p, points: rotatedPoints, rotation: newRotation, updatedAt: Date.now() }
+          : p
       ),
       isDirty: true,
     }));

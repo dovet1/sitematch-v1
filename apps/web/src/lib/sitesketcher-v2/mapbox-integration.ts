@@ -140,7 +140,9 @@ function getDrawStyles() {
 }
 
 /**
- * Convert Zustand Polygon to Mapbox Draw Feature
+ * Convert Zustand Polygon to Mapbox Draw Feature for editing.
+ * NOTE: Draw features use UNROTATED coordinates for vertex editing.
+ * Rotation is applied only in 3D extrusion layer (see polygonTo3DFeature).
  */
 export function polygonToDrawFeature(polygon: Polygon): any {
   const color = POLYGON_COLORS[polygon.colorIndex] || POLYGON_COLORS[0];
@@ -166,7 +168,8 @@ export function polygonToDrawFeature(polygon: Polygon): any {
 }
 
 /**
- * Convert Zustand Polygon to GeoJSON Feature for 3D extrusion
+ * Convert Zustand Polygon to GeoJSON Feature for 3D extrusion.
+ * Note: Rotation is already baked into polygon.points by rotatePolygon action.
  */
 function polygonTo3DFeature(polygon: Polygon): any {
   const color = POLYGON_COLORS[polygon.colorIndex] || POLYGON_COLORS[0];
