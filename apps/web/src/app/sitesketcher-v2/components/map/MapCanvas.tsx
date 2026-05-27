@@ -16,6 +16,7 @@ import {
   enterPolygonDrawMode,
   drawFeatureToPolygon,
 } from '@/lib/sitesketcher-v2/mapbox-integration';
+import { PolygonLabels } from './PolygonLabels';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -519,6 +520,9 @@ export function MapCanvas() {
   return (
     <div className="relative h-full w-full min-h-0 bg-sm-bg">
       <div ref={mapContainerRef} className="absolute inset-0 h-full w-full" />
+
+      {/* Polygon labels overlay */}
+      {isLoaded && <PolygonLabels />}
 
       {!isLoaded && !mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-sm-bg">

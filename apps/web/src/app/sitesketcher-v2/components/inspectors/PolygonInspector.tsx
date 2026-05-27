@@ -116,18 +116,11 @@ export function PolygonInspector({ polygonId }: PolygonInspectorProps) {
         suffix="°"
       />
 
-      <div className="space-y-2">
-        <Toggle
-          checked={polygon.showDistances}
-          onChange={(showDistances) => updatePolygon(polygonId, { showDistances })}
-          label="Show edge distances"
-        />
-        <Toggle
-          checked={polygon.showArea}
-          onChange={(showArea) => updatePolygon(polygonId, { showArea })}
-          label="Show area label"
-        />
-      </div>
+      <Toggle
+        checked={polygon.showDistances}
+        onChange={(showDistances) => updatePolygon(polygonId, { showDistances })}
+        label="Show edge distances"
+      />
 
       <div className="pt-4 border-t border-sm-border">
         <button
