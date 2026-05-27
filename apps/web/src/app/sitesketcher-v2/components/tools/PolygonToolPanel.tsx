@@ -22,7 +22,7 @@ export function PolygonToolPanel({
 
       <div>
         <label className="text-xs font-medium text-sm-ink block mb-2">
-          Color
+          Colour
         </label>
         <div className="grid grid-cols-3 gap-2">
           {POLYGON_COLORS.map((color, index) => (

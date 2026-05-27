@@ -523,6 +523,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       parkingBlocks: [],
       cadImages: [],
       activeTool: 'select',
+      activePanel: null,
       selectedId: null,
       selectedType: null,
       drawingInProgress: null,
@@ -554,6 +555,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       history: [],
       historyIndex: -1,
       activeTool: 'select',
+      activePanel: null,
       selectedId: null,
       selectedType: null,
     });
