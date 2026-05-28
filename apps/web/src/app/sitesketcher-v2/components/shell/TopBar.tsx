@@ -11,7 +11,8 @@ import {
   Search,
   ChevronRight,
   Loader2,
-  MapPin
+  MapPin,
+  Pencil,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -351,10 +352,11 @@ export function TopBar() {
           {sketchId && (
             <button
               onClick={() => setShowSaveModal(true)}
-              className="text-xs text-sm-ink/50 hover:text-sm-violet transition-colors"
+              className="p-1 text-sm-ink/50 hover:text-sm-violet hover:bg-sm-bg rounded transition-colors"
+              aria-label="Edit sketch details"
               title="Edit sketch details"
             >
-              Edit
+              <Pencil className="w-3.5 h-3.5" />
             </button>
           )}
           {isDirty && (
