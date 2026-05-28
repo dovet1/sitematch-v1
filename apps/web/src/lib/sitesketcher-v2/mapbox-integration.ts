@@ -255,7 +255,6 @@ function parkingBlockToFeature(parkingBlock: ParkingBlock, selectedId?: string |
       name: parkingBlock.name,
       spaces: parkingBlock.spaces,
       selected,
-      label: 'P',
     },
     geometry: {
       type: 'Polygon',
@@ -407,7 +406,6 @@ function ensureParkingLayerOrder(map: mapboxgl.Map): void {
     'parking-selection-outline',
     'parking-block-outline',
     'parking-bay-lines',
-    'parking-labels',
   ].forEach((layerId) => {
     if (map.getLayer(layerId)) {
       map.moveLayer(layerId);
@@ -509,26 +507,8 @@ export function setupParkingLayer(map: mapboxgl.Map): void {
     });
   }
 
-  if (!map.getLayer('parking-labels')) {
-    map.addLayer({
-      id: 'parking-labels',
-      type: 'symbol',
-      source: 'parking-blocks',
-      layout: {
-        visibility: 'visible',
-        'text-field': ['get', 'label'],
-        'text-size': ['interpolate', ['linear'], ['zoom'], 14, 10, 18, 16],
-        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-        'text-allow-overlap': true,
-        'text-ignore-placement': true,
-      },
-      paint: {
-        'text-color': '#FFFFFF',
-        'text-opacity': ['interpolate', ['linear'], ['zoom'], 14, 0, 15.5, 0.85],
-        'text-halo-color': '#2563EB',
-        'text-halo-width': 2,
-      },
-    });
+  if (map.getLayer('parking-labels')) {
+    map.removeLayer('parking-labels');
   }
 
   ensureParkingLayerOrder(map);

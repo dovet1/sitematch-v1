@@ -7,7 +7,7 @@ import { Input } from '../primitives/Input';
 import { Slider } from '../primitives/Slider';
 import { Toggle } from '../primitives/Toggle';
 import { Polygon } from '@/types/sitesketcher-v2';
-import { calculateArea } from '@/lib/sitesketcher-v2/polygon-utils';
+import { formatAreaBreakdown } from '@/lib/sitesketcher-v2/polygon-utils';
 
 interface PolygonInspectorProps {
   polygonId: string;
@@ -39,7 +39,7 @@ export function PolygonInspector({ polygonId }: PolygonInspectorProps) {
     }
   };
 
-  const area = calculateArea(polygon.points, units);
+  const area = formatAreaBreakdown(polygon.points, units);
 
   return (
     <div className="p-4 space-y-4">
@@ -91,8 +91,9 @@ export function PolygonInspector({ polygonId }: PolygonInspectorProps) {
         <label className="text-xs font-medium text-sm-ink block mb-2">
           Area
         </label>
-        <div className="text-sm font-mono text-sm-ink/70 bg-sm-bg p-2 rounded border border-sm-border">
-          {area}
+        <div className="font-mono bg-sm-bg p-2 rounded border border-sm-border">
+          <div className="text-sm text-sm-ink/80">{area.primary}</div>
+          <div className="text-xs text-sm-ink/55 mt-1">{area.secondary}</div>
         </div>
       </div>
 

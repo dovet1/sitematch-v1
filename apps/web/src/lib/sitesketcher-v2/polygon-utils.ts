@@ -152,6 +152,33 @@ export function calculateArea(points: [number, number][], units: 'metric' | 'imp
 }
 
 /**
+ * Format polygon area as both the selected square unit and larger land unit.
+ */
+export function formatAreaBreakdown(
+  points: [number, number][],
+  units: 'metric' | 'imperial'
+): { primary: string; secondary: string } {
+  const sqMeters = calculatePolygonArea(points);
+
+  if (units === 'imperial') {
+    const sqFeet = sqMeters * 10.7639;
+    const acres = sqFeet / 43560;
+
+    return {
+      primary: `${sqFeet.toFixed(0)} sq ft`,
+      secondary: `${acres.toFixed(2)} acres`,
+    };
+  }
+
+  const hectares = sqMeters / 10000;
+
+  return {
+    primary: `${sqMeters.toFixed(1)} m²`,
+    secondary: `${hectares.toFixed(2)} ha`,
+  };
+}
+
+/**
  * Check if a polygon is closed (first and last points are the same)
  */
 export function isPolygonClosed(points: [number, number][]): boolean {
