@@ -43,9 +43,6 @@ export function PolygonInspector({ polygonId }: PolygonInspectorProps) {
 
   return (
     <div className="p-4 space-y-4">
-      <div>
-        <h3 className="text-sm font-medium text-sm-ink mb-3">Polygon Properties</h3>
-      </div>
 
       <Input
         value={localName}
