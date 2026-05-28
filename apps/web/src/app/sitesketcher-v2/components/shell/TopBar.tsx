@@ -5,6 +5,7 @@ import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { Button } from '../primitives';
 import {
   Save,
+  FilePlus,
   Undo2,
   Redo2,
   Search,
@@ -16,11 +17,15 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createDebouncedLocationSearch, formatLocationDisplay } from '@/lib/mapbox';
 import type { LocationResult } from '@/lib/mapbox';
+import { SaveModal } from '../modals/SaveModal';
+import { NewSketchConfirmModal } from '../modals/NewSketchConfirmModal';
+import { toast } from 'sonner';
 
 export function TopBar() {
   const {
     sketchId,
     sketchName,
+    sketchDescription,
     isDirty,
     lastSaved,
     canUndo,
@@ -29,13 +34,20 @@ export function TopBar() {
     redo,
     getSketchData,
     setSketchName,
+    setSketchDescription,
     setSketchId,
     setLastSaved,
     markClean,
+    reset,
     setViewport,
+    polygons,
+    parkingBlocks,
+    cadImages,
   } = useSketchStore();
 
   const [saving, setSaving] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showNewSketchModal, setShowNewSketchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<LocationResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -45,20 +57,33 @@ export function TopBar() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const debouncedSearch = useRef(createDebouncedLocationSearch(300));
+  const objectCount = {
+    polygons: polygons.length,
+    parkingBlocks: parkingBlocks.length,
+    cadImages: cadImages.length,
+  };
+  const totalObjects = objectCount.polygons + objectCount.parkingBlocks + objectCount.cadImages;
+  const hasCurrentWork = Boolean(sketchId) || isDirty || totalObjects > 0;
+  const newSketchMode = !sketchId
+    ? 'unsaved'
+    : isDirty
+      ? 'saved-dirty'
+      : 'saved-clean';
 
-  const handleSave = async () => {
+  const performSave = async (name: string, description: string): Promise<boolean> => {
     setSaving(true);
 
     try {
       const data = getSketchData();
 
       if (sketchId) {
-        // Update existing sketch
+        // Update existing - always send description (empty string becomes null in API)
         const response = await fetch(`/api/sitesketcher-v2/sketches/${sketchId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: sketchName,
+            name,
+            description,
             data,
           }),
         });
@@ -66,7 +91,7 @@ export function TopBar() {
         if (response.status === 403) {
           const error = await response.json();
           alert(error.error || 'Pro subscription required to save');
-          return;
+          return false;
         }
 
         if (!response.ok) {
@@ -74,20 +99,19 @@ export function TopBar() {
         }
 
         const result = await response.json();
+        setSketchName(result.sketch.name);
+        setSketchDescription(result.sketch.description || '');
         setLastSaved(new Date(result.sketch.updated_at));
         markClean();
+        return true;
       } else {
-        // Create new sketch - prompt for name
-        const name = prompt('Enter sketch name:', sketchName);
-        if (!name) {
-          return;
-        }
-
+        // Create new
         const response = await fetch('/api/sitesketcher-v2/sketches', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name,
+            description,
             data,
           }),
         });
@@ -95,7 +119,7 @@ export function TopBar() {
         if (response.status === 403) {
           const error = await response.json();
           alert(error.error || 'Pro subscription required to save');
-          return;
+          return false;
         }
 
         if (!response.ok) {
@@ -105,14 +129,60 @@ export function TopBar() {
         const result = await response.json();
         setSketchId(result.sketch.id);
         setSketchName(result.sketch.name);
+        setSketchDescription(result.sketch.description || '');
         setLastSaved(new Date(result.sketch.updated_at));
         markClean();
+        return true;
       }
     } catch (error) {
       console.error('Save error:', error);
       alert('Failed to save sketch. Please try again.');
+      return false;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleModalSave = async (data: { name: string; description?: string }) => {
+    const desc = data.description ?? '';
+    const success = await performSave(data.name, desc);
+    if (success) {
+      setShowSaveModal(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!sketchId) {
+      // New sketch - open modal for name/description
+      setShowSaveModal(true);
+      return;
+    }
+
+    // Existing sketch - save data directly (metadata via Edit Details button)
+    await performSave(sketchName, sketchDescription);
+  };
+
+  const startNewSketch = () => {
+    const hadSavedSketch = Boolean(sketchId);
+
+    reset();
+    setShowNewSketchModal(false);
+    toast.success(
+      hadSavedSketch
+        ? 'Started a new sketch. Your previous sketch is still saved.'
+        : 'Started a new sketch.'
+    );
+  };
+
+  const handleNewSketch = () => {
+    if (!hasCurrentWork) return;
+    setShowNewSketchModal(true);
+  };
+
+  const handleSaveAndStartNew = async () => {
+    const success = await performSave(sketchName, sketchDescription);
+    if (success) {
+      startNewSketch();
     }
   };
 
@@ -220,8 +290,8 @@ export function TopBar() {
 
   // Auto-save effect
   useEffect(() => {
-    // Only auto-save if sketch already exists (has ID)
-    if (!sketchId || !isDirty || saving) return;
+    // Only auto-save if sketch already exists (has ID) and modal is not open
+    if (!sketchId || !isDirty || saving || showSaveModal || showNewSketchModal) return;
 
     const timer = setTimeout(async () => {
       try {
@@ -230,7 +300,11 @@ export function TopBar() {
         const response = await fetch(`/api/sitesketcher-v2/sketches/${sketchId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: sketchName, data }),
+          body: JSON.stringify({
+            name: sketchName,
+            description: sketchDescription,
+            data
+          }),
         });
 
         if (response.ok) {
@@ -245,7 +319,7 @@ export function TopBar() {
     }, 1000); // 1 second debounce
 
     return () => clearTimeout(timer);
-  }, [isDirty, sketchId, sketchName, saving, getSketchData, setLastSaved, markClean]);
+  }, [isDirty, sketchId, sketchName, sketchDescription, saving, showSaveModal, showNewSketchModal, getSketchData, setLastSaved, markClean]);
 
   return (
     <div className="h-14 bg-sm-surface border-b border-sm-border flex items-center justify-between px-4 flex-shrink-0">
@@ -274,6 +348,15 @@ export function TopBar() {
           <span className="text-sm font-medium text-sm-ink">
             {sketchName}
           </span>
+          {sketchId && (
+            <button
+              onClick={() => setShowSaveModal(true)}
+              className="text-xs text-sm-ink/50 hover:text-sm-violet transition-colors"
+              title="Edit sketch details"
+            >
+              Edit
+            </button>
+          )}
           {isDirty && (
             <span className="w-2 h-2 bg-sm-violet rounded-full" title="Unsaved changes" />
           )}
@@ -363,6 +446,16 @@ export function TopBar() {
 
         <Button
           size="md"
+          variant="secondary"
+          icon={<FilePlus className="w-4 h-4" />}
+          onClick={handleNewSketch}
+          disabled={!hasCurrentWork || saving}
+        >
+          New sketch
+        </Button>
+
+        <Button
+          size="md"
           variant="primary"
           icon={saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           onClick={handleSave}
@@ -371,6 +464,29 @@ export function TopBar() {
           {saving ? 'Saving...' : 'Save'}
         </Button>
       </div>
+
+      {showSaveModal && (
+        <SaveModal
+          currentName={sketchName}
+          currentDescription={sketchDescription}
+          objectCount={objectCount}
+          onSave={handleModalSave}
+          onCancel={() => setShowSaveModal(false)}
+          isLoading={saving}
+        />
+      )}
+
+      {showNewSketchModal && (
+        <NewSketchConfirmModal
+          mode={newSketchMode}
+          sketchName={sketchName}
+          objectCount={objectCount}
+          onCancel={() => setShowNewSketchModal(false)}
+          onStartNew={startNewSketch}
+          onSaveAndStart={handleSaveAndStartNew}
+          isLoading={saving}
+        />
+      )}
     </div>
   );
 }

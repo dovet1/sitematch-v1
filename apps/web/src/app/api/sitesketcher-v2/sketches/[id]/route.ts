@@ -112,7 +112,7 @@ export async function PUT(
     // Build update object with only provided fields
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
-    if (description !== undefined) updateData.description = description;
+    if (description !== undefined) updateData.description = description || null;
     if (v2Data !== undefined) updateData.data = v2Data;
     if (thumbnail_url !== undefined) updateData.thumbnail_url = thumbnail_url;
     if (location !== undefined) updateData.location = location;

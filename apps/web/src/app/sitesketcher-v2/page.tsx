@@ -10,6 +10,7 @@ import { StatusBar } from './components/shell/StatusBar';
 import { FloatingMapControls } from './components/shell/FloatingMapControls';
 import { MapCanvas } from './components/map/MapCanvas';
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
+import { Toaster } from 'sonner';
 
 const MINIMUM_WIDTH = 1024;
 
@@ -129,6 +130,8 @@ export default function SiteSketcherV2Page() {
   // Main SiteSketcher v2 UI
   return (
     <div className="sitesketcher-v2-container">
+      <Toaster position="top-center" richColors />
+
       {/* Top Bar */}
       <TopBar />
 

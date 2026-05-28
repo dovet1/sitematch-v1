@@ -46,6 +46,7 @@ interface SketchState {
   // Sketch metadata
   sketchId: string | null;
   sketchName: string;
+  sketchDescription: string;
   isDirty: boolean;
   lastSaved: Date | null;
 
@@ -107,6 +108,7 @@ interface SketchState {
   // Actions - Sketch
   setSketchId: (id: string | null) => void;
   setSketchName: (name: string) => void;
+  setSketchDescription: (description: string) => void;
   markDirty: () => void;
   markClean: () => void;
   setLastSaved: (date: Date | null) => void;
@@ -165,6 +167,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
 
   sketchId: null,
   sketchName: 'Untitled Sketch',
+  sketchDescription: '',
   isDirty: false,
   lastSaved: null,
 
@@ -476,6 +479,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   // Sketch actions
   setSketchId: (id) => set({ sketchId: id }),
   setSketchName: (name) => set({ sketchName: name, isDirty: true }),
+  setSketchDescription: (description) => set({ sketchDescription: description, isDirty: true }),
   markDirty: () => set({ isDirty: true }),
   markClean: () => set({ isDirty: false }),
   setLastSaved: (date) => set({ lastSaved: date }),
@@ -568,6 +572,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       frozenMeasurement: null,
       sketchId: null,
       sketchName: 'Untitled Sketch',
+      sketchDescription: '',
       isDirty: false,
       lastSaved: null,
       viewport: { ...DEFAULT_VIEWPORT },
@@ -590,6 +595,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       sideLabelsOn: data.settings?.sideLabelsOn ?? true,
       sketchId: sketch.id,
       sketchName: sketch.name,
+      sketchDescription: sketch.description || '',
       isDirty: false,
       lastSaved: new Date(sketch.updated_at),
       history: [],
