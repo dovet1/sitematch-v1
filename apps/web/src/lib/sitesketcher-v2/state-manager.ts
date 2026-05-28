@@ -14,6 +14,7 @@ import {
 } from '@/types/sitesketcher-v2';
 import { DEFAULT_BUILDING_HEIGHT_METERS, DEFAULT_VIEWPORT, MAX_HISTORY_SIZE } from './constants';
 import { rotatePolygonPoints } from './polygon-utils';
+import { measurementPreviewStore } from './measurement-preview-store';
 import type mapboxgl from 'mapbox-gl';
 
 interface SketchState {
@@ -307,21 +308,31 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   setCadImages: (cadImages) => set({ cadImages }),
 
   // UI actions
-  setActiveTool: (tool) =>
-    set((state) => ({
+  setActiveTool: (tool) => {
+    // Clear preview when switching away from measure tool
+    if (tool !== 'measure') {
+      measurementPreviewStore.clear();
+    }
+
+    return set((state) => ({
       activeTool: tool,
       activePanel: null, // Clear panel when tool is selected
       selectedId: tool === 'select' ? state.selectedId : null,
       selectedType: tool === 'select' ? state.selectedType : null,
       measurementInProgress: tool === 'measure' ? state.measurementInProgress : null, // Clear measurement when switching away
-    })),
+    }));
+  },
 
-  setActivePanel: (panel) =>
-    set({
+  setActivePanel: (panel) => {
+    // Always clear measurement and preview (opening panels always nulls measurement)
+    measurementPreviewStore.clear();
+
+    return set({
       activePanel: panel,
       activeTool: 'select', // Switch to select when panel is opened
       measurementInProgress: null, // Clear measurement when panel is opened
-    }),
+    });
+  },
 
   setSelectedId: (id, type) =>
     set({
@@ -406,15 +417,17 @@ export const useSketchStore = create<SketchState>((set, get) => ({
 
   cancelPolygonDrawing: () => set({ drawingInProgress: null }),
 
-  startMeasurement: () =>
-    set({
+  startMeasurement: () => {
+    measurementPreviewStore.clear(); // Clear any previous preview
+    return set({
       measurementInProgress: {
         id: `measurement-${Date.now()}`,
         points: [],
         totalDistance: 0,
       },
       activeTool: 'measure',
-    }),
+    });
+  },
 
   addMeasurementPoint: (point, distance) => {
     const state = get();
@@ -433,9 +446,15 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     });
   },
 
-  finishMeasurement: () => set({ measurementInProgress: null }),
+  finishMeasurement: () => {
+    measurementPreviewStore.clear();
+    return set({ measurementInProgress: null });
+  },
 
-  cancelMeasurement: () => set({ measurementInProgress: null }),
+  cancelMeasurement: () => {
+    measurementPreviewStore.clear();
+    return set({ measurementInProgress: null });
+  },
 
   // Sketch actions
   setSketchId: (id) => set({ sketchId: id }),
@@ -517,8 +536,9 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   },
 
   // Reset actions
-  reset: () =>
-    set({
+  reset: () => {
+    measurementPreviewStore.clear(); // MUST clear preview on reset
+    return set({
       polygons: [],
       parkingBlocks: [],
       cadImages: [],
@@ -536,9 +556,11 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       mapFocusRequest: null,
       history: [],
       historyIndex: -1,
-    }),
+    });
+  },
 
   loadSketch: (sketch) => {
+    measurementPreviewStore.clear(); // Clear preview when loading sketch
     const data = sketch.data;
     set({
       polygons: data.polygons || [],
@@ -558,6 +580,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       activePanel: null,
       selectedId: null,
       selectedType: null,
+      measurementInProgress: null, // Explicitly clear measurement on load
     });
 
     // Push initial history state

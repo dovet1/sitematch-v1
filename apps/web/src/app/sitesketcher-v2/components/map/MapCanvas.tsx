@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
+import { measurementPreviewStore } from '@/lib/sitesketcher-v2/measurement-preview-store';
 import { MAPBOX_TOKEN, MAP_STYLES } from '@/lib/sitesketcher-v2/constants';
 import {
   initializeMap,
@@ -249,13 +250,34 @@ export function MapCanvas() {
 
         map.on('mousemove', (event) => {
           const dragState = parkingDragRef.current;
-          if (!dragState) return;
+          if (dragState) {
+            dragState.moved = true;
+            useSketchStore.getState().moveParkingBlock(dragState.id, [
+              event.lngLat.lng,
+              event.lngLat.lat,
+            ]);
+            return;
+          }
 
-          dragState.moved = true;
-          useSketchStore.getState().moveParkingBlock(dragState.id, [
-            event.lngLat.lng,
-            event.lngLat.lat,
-          ]);
+          // CRITICAL: Read live state - don't close over render state
+          const latestState = useSketchStore.getState();
+
+          // Only track when measure tool is active
+          if (latestState.activeTool !== 'measure') return;
+
+          const measurement = latestState.measurementInProgress;
+
+          // Only show preview if at least one point exists
+          if (!measurement || measurement.points.length === 0) return;
+
+          // Get last confirmed measurement point
+          const lastPoint = measurement.points[measurement.points.length - 1].lngLat;
+
+          // Update preview store with cursor position
+          measurementPreviewStore.setState({
+            lastMeasurementPoint: lastPoint,
+            currentCursorPosition: [event.lngLat.lng, event.lngLat.lat],
+          });
         });
 
         map.on('mouseup', () => {
@@ -319,6 +341,11 @@ export function MapCanvas() {
               : undefined;
 
             state.addMeasurementPoint(lngLat, distance);
+
+            // Clear cursor position to prevent stale preview line
+            measurementPreviewStore.setState({
+              currentCursorPosition: null,
+            });
             return;
           }
 

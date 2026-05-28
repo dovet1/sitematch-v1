@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useSyncExternalStore } from 'react';
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
+import { measurementPreviewStore } from '@/lib/sitesketcher-v2/measurement-preview-store';
 import {
   calculateMidpoint,
   calculateEdgeAngle,
@@ -22,17 +23,42 @@ interface PointPosition {
   y: number; // Screen y coordinate (pixels)
 }
 
+interface PreviewLine {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+interface PreviewPoint {
+  x: number;
+  y: number;
+}
+
 export function MeasurementOverlay() {
   const [labels, setLabels] = useState<LabelPosition[]>([]);
   const [points, setPoints] = useState<PointPosition[]>([]);
+  const [previewLine, setPreviewLine] = useState<PreviewLine | null>(null);
+  const [previewLabel, setPreviewLabel] = useState<LabelPosition | null>(null);
+  const [previewPoint, setPreviewPoint] = useState<PreviewPoint | null>(null);
   const { mapInstance, measurementInProgress, units } = useSketchStore();
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Subscribe to preview store for real-time cursor tracking
+  const previewState = useSyncExternalStore(
+    measurementPreviewStore.subscribe,
+    measurementPreviewStore.getState,
+    measurementPreviewStore.getState // SSR compatibility
+  );
 
   // Calculate and update visual positions
   const updateVisuals = useCallback(() => {
     if (!mapInstance || !measurementInProgress || measurementInProgress.points.length === 0) {
       setLabels([]);
       setPoints([]);
+      setPreviewLine(null);
+      setPreviewLabel(null);
+      setPreviewPoint(null); // CRITICAL: Also clear preview point
       return;
     }
 
@@ -68,9 +94,51 @@ export function MeasurementOverlay() {
       });
     }
 
+    // Calculate preview segment if cursor is active
+    if (previewState && previewState.lastMeasurementPoint && previewState.currentCursorPosition) {
+      const p1Screen = mapInstance.project(previewState.lastMeasurementPoint);
+      const p2Screen = mapInstance.project(previewState.currentCursorPosition);
+
+      setPreviewLine({
+        x1: p1Screen.x,
+        y1: p1Screen.y,
+        x2: p2Screen.x,
+        y2: p2Screen.y,
+      });
+
+      setPreviewPoint({ x: p2Screen.x, y: p2Screen.y });
+
+      const distance = calculateEdgeDistance(
+        previewState.lastMeasurementPoint,
+        previewState.currentCursorPosition
+      );
+      const midpoint: [number, number] = [
+        (previewState.lastMeasurementPoint[0] + previewState.currentCursorPosition[0]) / 2,
+        (previewState.lastMeasurementPoint[1] + previewState.currentCursorPosition[1]) / 2,
+      ];
+      const midpointScreen = mapInstance.project(midpoint);
+      const angle = calculateEdgeAngle(
+        mapInstance,
+        previewState.lastMeasurementPoint,
+        previewState.currentCursorPosition
+      );
+
+      setPreviewLabel({
+        x: midpointScreen.x,
+        y: midpointScreen.y,
+        text: formatDistance(distance, units),
+        rotation: angle,
+        segmentIndex: -1, // Use -1 for preview to distinguish from confirmed segments
+      });
+    } else {
+      setPreviewLine(null);
+      setPreviewLabel(null);
+      setPreviewPoint(null);
+    }
+
     setPoints(newPoints);
     setLabels(newLabels);
-  }, [mapInstance, measurementInProgress, units]);
+  }, [mapInstance, measurementInProgress, units, previewState]);
 
   // Subscribe to map events (move, zoom, rotate, pitch, resize)
   useEffect(() => {
@@ -168,6 +236,39 @@ export function MeasurementOverlay() {
           {label.text}
         </text>
       ))}
+
+      {/* Preview line and label */}
+      {previewLine && (
+        <>
+          <line
+            className="measurement-preview-line"
+            x1={previewLine.x1}
+            y1={previewLine.y1}
+            x2={previewLine.x2}
+            y2={previewLine.y2}
+          />
+          {previewPoint && (
+            <circle
+              className="measurement-preview-point"
+              cx={previewPoint.x}
+              cy={previewPoint.y}
+              r={6}
+            />
+          )}
+          {previewLabel && (
+            <text
+              className="measurement-preview-label"
+              x={previewLabel.x}
+              y={previewLabel.y}
+              transform={`rotate(${previewLabel.rotation}, ${previewLabel.x}, ${previewLabel.y})`}
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {previewLabel.text}
+            </text>
+          )}
+        </>
+      )}
     </svg>
   );
 }
