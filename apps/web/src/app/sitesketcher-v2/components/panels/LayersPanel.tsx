@@ -49,6 +49,7 @@ export function LayersPanel() {
   } = useSketchStore();
 
   const totalObjects = polygons.length + parkingBlocks.length + cadImages.length;
+  const totalParkingSpaces = parkingBlocks.reduce((sum, parking) => sum + parking.spaces, 0);
   const focusPolygonLayer = (polygon: Polygon) => {
     const bounds = getPolygonBounds(polygon);
 
@@ -146,7 +147,8 @@ export function LayersPanel() {
       {parkingBlocks.length > 0 && (
         <div>
           <h4 className="text-xs font-medium text-sm-ink/70 mb-2 uppercase tracking-wide">
-            Parking ({parkingBlocks.length})
+            Parking ({parkingBlocks.length}) · {totalParkingSpaces}{' '}
+            {totalParkingSpaces === 1 ? 'space' : 'spaces'}
           </h4>
           <div className="space-y-1">
             {parkingBlocks.map((parking) => {
@@ -176,6 +178,9 @@ export function LayersPanel() {
                   <div className="w-4 h-4 rounded border-2 flex-shrink-0 bg-teal-500/20 border-teal-600" />
                   <span className="text-sm text-sm-ink flex-1 truncate">
                     {parking.name}
+                  </span>
+                  <span className="text-xs text-sm-ink/50 flex-shrink-0">
+                    {parking.spaces} {parking.spaces === 1 ? 'space' : 'spaces'}
                   </span>
                   <button
                     type="button"
