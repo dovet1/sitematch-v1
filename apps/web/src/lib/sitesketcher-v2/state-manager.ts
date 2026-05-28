@@ -41,6 +41,7 @@ interface SketchState {
   // Drawing state
   drawingInProgress: PolygonInProgress | null;
   measurementInProgress: MeasurementChain | null;
+  frozenMeasurement: MeasurementChain | null; // Measurement that's finished drawing but still visible
 
   // Sketch metadata
   sketchId: string | null;
@@ -101,6 +102,7 @@ interface SketchState {
   addMeasurementPoint: (point: [number, number], distance?: number) => void;
   finishMeasurement: () => void;
   cancelMeasurement: () => void;
+  freezeMeasurement: () => void; // Stop drawing but keep visible
 
   // Actions - Sketch
   setSketchId: (id: string | null) => void;
@@ -159,6 +161,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
 
   drawingInProgress: null,
   measurementInProgress: null,
+  frozenMeasurement: null,
 
   sketchId: null,
   sketchName: 'Untitled Sketch',
@@ -320,6 +323,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       selectedId: tool === 'select' ? state.selectedId : null,
       selectedType: tool === 'select' ? state.selectedType : null,
       measurementInProgress: tool === 'measure' ? state.measurementInProgress : null, // Clear measurement when switching away
+      frozenMeasurement: tool === 'measure' ? state.frozenMeasurement : null, // Clear frozen measurement when switching away
     }));
   },
 
@@ -331,6 +335,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       activePanel: panel,
       activeTool: 'select', // Switch to select when panel is opened
       measurementInProgress: null, // Clear measurement when panel is opened
+      frozenMeasurement: null, // Clear frozen measurement when panel is opened
     });
   },
 
@@ -426,6 +431,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
         totalDistance: 0,
       },
       activeTool: 'measure',
+      frozenMeasurement: null, // Clear any frozen measurement when starting new measurement
     });
   },
 
@@ -453,7 +459,18 @@ export const useSketchStore = create<SketchState>((set, get) => ({
 
   cancelMeasurement: () => {
     measurementPreviewStore.clear();
-    return set({ measurementInProgress: null });
+    return set({ measurementInProgress: null, frozenMeasurement: null });
+  },
+
+  freezeMeasurement: () => {
+    const state = get();
+    if (!state.measurementInProgress) return;
+
+    measurementPreviewStore.clear();
+    return set({
+      frozenMeasurement: state.measurementInProgress,
+      measurementInProgress: null,
+    });
   },
 
   // Sketch actions
@@ -548,6 +565,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       selectedType: null,
       drawingInProgress: null,
       measurementInProgress: null,
+      frozenMeasurement: null,
       sketchId: null,
       sketchName: 'Untitled Sketch',
       isDirty: false,
@@ -581,6 +599,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       selectedId: null,
       selectedType: null,
       measurementInProgress: null, // Explicitly clear measurement on load
+      frozenMeasurement: null, // Explicitly clear frozen measurement on load
     });
 
     // Push initial history state

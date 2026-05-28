@@ -86,6 +86,7 @@ export function MapCanvas() {
     activeTool,
     selectedPolygonColorIndex,
     measurementInProgress,
+    frozenMeasurement,
     setViewport,
     addPolygon,
     addParkingBlock,
@@ -327,6 +328,11 @@ export function MapCanvas() {
 
           if (state.activeTool === 'measure') {
             const lngLat: [number, number] = [event.lngLat.lng, event.lngLat.lat];
+
+            // Don't allow new points if there's a frozen measurement
+            if (state.frozenMeasurement) {
+              return;
+            }
 
             // Start measurement if not already started
             if (!state.measurementInProgress) {
@@ -605,7 +611,7 @@ export function MapCanvas() {
       {isLoaded && <PolygonLabels />}
 
       {/* Measurement overlay */}
-      {isLoaded && measurementInProgress && <MeasurementOverlay />}
+      {isLoaded && (measurementInProgress || frozenMeasurement) && <MeasurementOverlay />}
 
       {/* Polygon drawing preview overlay */}
       {isLoaded && <PolygonDrawPreviewOverlay />}

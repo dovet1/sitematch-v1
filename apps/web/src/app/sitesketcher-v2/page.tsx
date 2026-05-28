@@ -68,6 +68,13 @@ export default function SiteSketcherV2Page() {
           store.setActiveTool('select');
           store.cancelMeasurement();
           break;
+        case 'enter':
+          // If in measure mode with an active measurement, freeze it
+          if (store.activeTool === 'measure' && store.measurementInProgress) {
+            e.preventDefault();
+            store.freezeMeasurement();
+          }
+          break;
         case 'z':
           if (e.metaKey || e.ctrlKey) {
             e.preventDefault();

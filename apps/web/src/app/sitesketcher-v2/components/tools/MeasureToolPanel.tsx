@@ -5,17 +5,18 @@ import { Button } from '../primitives/Button';
 import { calculateDistance } from '@/lib/sitesketcher-v2/polygon-utils';
 
 export function MeasureToolPanel() {
-  const { measurementInProgress, units, cancelMeasurement } = useSketchStore();
+  const { measurementInProgress, frozenMeasurement, units, cancelMeasurement } = useSketchStore();
+  const displayedMeasurement = measurementInProgress ?? frozenMeasurement;
 
   // Calculate total distance
   let totalDistance = 0;
   const segments: { distance: string; index: number }[] = [];
 
-  if (measurementInProgress && measurementInProgress.points.length > 1) {
-    for (let i = 1; i < measurementInProgress.points.length; i++) {
+  if (displayedMeasurement && displayedMeasurement.points.length > 1) {
+    for (let i = 1; i < displayedMeasurement.points.length; i++) {
       const dist = calculateDistance(
-        measurementInProgress.points[i - 1].lngLat,
-        measurementInProgress.points[i].lngLat,
+        displayedMeasurement.points[i - 1].lngLat,
+        displayedMeasurement.points[i].lngLat,
         units
       );
       totalDistance += parseFloat(dist.replace(/[^\d.]/g, ''));
@@ -29,11 +30,11 @@ export function MeasureToolPanel() {
     <div className="p-4 space-y-4">
       <div>
         <p className="text-xs text-sm-ink/60 mb-4">
-          Click points on the map to measure distances. Press Escape to clear.
+          Click points on the map to measure distances. Press Enter to finish, or Escape to clear.
         </p>
       </div>
 
-      {measurementInProgress && measurementInProgress.points.length > 0 ? (
+      {displayedMeasurement && displayedMeasurement.points.length > 0 ? (
         <>
           <div className="p-3 bg-sm-violet-tint-soft border border-sm-violet/20 rounded-lg">
             <div className="text-xs font-medium text-sm-ink mb-1">Total Distance</div>
@@ -59,11 +60,11 @@ export function MeasureToolPanel() {
             </div>
           )}
 
-        <Button
-          variant="ghost"
-          onClick={cancelMeasurement}
-          className="w-full"
-        >
+          <Button
+            variant="ghost"
+            onClick={cancelMeasurement}
+            className="w-full"
+          >
             Clear Measurement
           </Button>
         </>
@@ -81,6 +82,12 @@ export function MeasureToolPanel() {
               M
             </kbd>{' '}
             Measure tool
+          </li>
+          <li>
+            <kbd className="px-1.5 py-0.5 bg-sm-bg border border-sm-border rounded font-mono text-[10px]">
+              Enter
+            </kbd>{' '}
+            Finish and keep visible
           </li>
           <li>
             <kbd className="px-1.5 py-0.5 bg-sm-bg border border-sm-border rounded font-mono text-[10px]">
