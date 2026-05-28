@@ -4,6 +4,86 @@ import { polygonPreviewStore } from './polygon-preview-store';
 import mapboxgl from 'mapbox-gl';
 
 /**
+ * Helper function to update cursor snapping state.
+ * Centralizes snapping logic for both keyboard and mouse events.
+ *
+ * @param state - The Mapbox Draw mode state
+ * @param isShiftHeld - Whether the shift key is currently held
+ * @param rawCursor - Optional raw cursor position [lng, lat] for atomic updates
+ * @returns The display cursor position, or null if no raw cursor available
+ */
+function updateCursorSnapping(
+  state: any,
+  isShiftHeld: boolean,
+  rawCursor?: [number, number]
+): [number, number] | null {
+  // Get raw cursor position (from param or store)
+  const rawCursorPosition = rawCursor || polygonPreviewStore.getState().rawCursorPosition;
+
+  // Early cleanup if no raw cursor position
+  if (!rawCursorPosition) {
+    polygonPreviewStore.setState({
+      snappedCursorPosition: null,
+      isSnapping: false,
+    });
+    if (state.map && state.map.getCanvas) {
+      state.map.getCanvas().style.setProperty('cursor', 'crosshair', 'important');
+    }
+    return null;
+  }
+
+  // Get last confirmed point
+  const lastConfirmedPoint =
+    state.polygon.coordinates[0].length >= 2
+      ? state.polygon.coordinates[0][state.polygon.coordinates[0].length - 2]
+      : null;
+
+  // Compute display cursor (snapped or raw based on shift state)
+  const displayCursor = getDisplayCursorPosition(
+    state.map,
+    rawCursorPosition,
+    lastConfirmedPoint,
+    isShiftHeld
+  );
+
+  // Update Draw's moving coordinate
+  if (state.polygon.coordinates[0].length > 0) {
+    state.polygon.updateCoordinate(
+      `0.${state.polygon.coordinates[0].length - 1}`,
+      displayCursor[0],
+      displayCursor[1]
+    );
+  }
+
+  // Build state update object
+  const stateUpdate: any = {
+    currentCursorPosition: displayCursor,
+    snappedCursorPosition: isShiftHeld && lastConfirmedPoint ? displayCursor : null,
+    isSnapping: isShiftHeld,
+  };
+
+  // Include raw cursor if provided (for atomic updates from mouse move)
+  if (rawCursor) {
+    stateUpdate.rawCursorPosition = rawCursorPosition;
+  }
+
+  // Update preview store atomically
+  polygonPreviewStore.setState(stateUpdate);
+
+  // Set cursor style
+  if (state.map && state.map.getCanvas) {
+    const canvas = state.map.getCanvas();
+    if (isShiftHeld && lastConfirmedPoint) {
+      canvas.style.setProperty('cursor', 'none', 'important');
+    } else {
+      canvas.style.setProperty('cursor', 'crosshair', 'important');
+    }
+  }
+
+  return displayCursor;
+}
+
+/**
  * Custom Mapbox Draw mode for drawing polygons with 90° snapping.
  * Extends the built-in draw_polygon mode.
  */
@@ -43,66 +123,72 @@ export const PolygonMode: any = {
     const drawPolygonMode = MapboxDraw.modes.draw_polygon as any;
     const result = drawPolygonMode.clickAnywhere.call(this, state, e);
 
-    // Update preview store with new last confirmed point
+    // Update preview store with new last confirmed point and clear all cursor fields
     const confirmedPoint =
       state.polygon.coordinates[0].length >= 2
         ? state.polygon.coordinates[0][state.polygon.coordinates[0].length - 2]
         : null;
     polygonPreviewStore.setState({
       lastPlacedPoint: confirmedPoint,
-      currentCursorPosition: null, // Clear cursor to prevent stale preview
+      currentCursorPosition: null,
+      rawCursorPosition: null,
+      snappedCursorPosition: null,
     });
 
     return result;
   },
 
   onMouseMove(state: any, e: any) {
-    // Get last confirmed point (guarded)
-    const lastConfirmedPoint =
-      state.polygon.coordinates[0].length >= 2
-        ? state.polygon.coordinates[0][state.polygon.coordinates[0].length - 2]
-        : null;
+    // Get raw cursor position
+    const rawCursor: [number, number] = [e.lngLat.lng, e.lngLat.lat];
 
     // Get shift state
     const isShiftHeld = e.originalEvent?.shiftKey || false;
 
-    // Compute snapped position using shared helper
-    const displayCursor = getDisplayCursorPosition(
-      state.map,
-      [e.lngLat.lng, e.lngLat.lat],
-      lastConfirmedPoint,
-      isShiftHeld
-    );
-
-    // Update the moving coordinate if there are points
-    if (state.polygon.coordinates[0].length > 0) {
-      state.polygon.updateCoordinate(
-        `0.${state.polygon.coordinates[0].length - 1}`,
-        displayCursor[0],
-        displayCursor[1]
-      );
-    }
+    // Update cursor snapping (performs atomic store update)
+    const displayCursor = updateCursorSnapping(state, isShiftHeld, rawCursor);
 
     // Override event to ensure Draw's handler sees snapped position
-    e.lngLat = {
-      lng: displayCursor[0],
-      lat: displayCursor[1],
-    };
+    if (displayCursor) {
+      e.lngLat = {
+        lng: displayCursor[0],
+        lat: displayCursor[1],
+      };
+    }
 
     // Call original onMouseMove
     const drawPolygonMode = MapboxDraw.modes.draw_polygon as any;
     const result = drawPolygonMode.onMouseMove.call(this, state, e);
 
-    // Update preview store with cursor position
-    polygonPreviewStore.setState({
-      currentCursorPosition: displayCursor,
-      isSnapping: isShiftHeld,
-    });
-
     return result;
   },
 
+  onKeyUp(state: any, e: any) {
+    if (e.keyCode === 16) {
+      // Shift key released
+      updateCursorSnapping(state, false);
+    }
+    // Call original handler if it exists
+    const drawPolygonMode = MapboxDraw.modes.draw_polygon as any;
+    return drawPolygonMode.onKeyUp?.call(this, state, e);
+  },
+
+  onKeyDown(state: any, e: any) {
+    if (e.keyCode === 16) {
+      // Shift key pressed
+      updateCursorSnapping(state, true);
+    }
+    // Call original handler if it exists
+    const drawPolygonMode = MapboxDraw.modes.draw_polygon as any;
+    return drawPolygonMode.onKeyDown?.call(this, state, e);
+  },
+
   onStop(state: any) {
+    // Restore cursor style
+    if (state.map && state.map.getCanvas) {
+      state.map.getCanvas().style.removeProperty('cursor');
+    }
+
     // Clear preview store when exiting drawing mode
     polygonPreviewStore.clear();
 

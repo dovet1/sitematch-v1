@@ -178,6 +178,25 @@
   pointer-events: none;
 }
 
+/* Custom snap cursor overlay */
+.polygon-snap-cursor {
+  pointer-events: none;
+}
+
+.snap-cursor-crosshair {
+  stroke: theme('colors.sm-violet');
+  stroke-width: 2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.snap-cursor-dot {
+  fill: theme('colors.sm-violet');
+  stroke: white;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
 /* 3D vignette overlay */
 .view-3d-vignette {
   position: absolute;

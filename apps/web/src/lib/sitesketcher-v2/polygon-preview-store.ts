@@ -3,6 +3,8 @@ type Listener = () => void;
 interface PreviewState {
   lastPlacedPoint: [number, number] | null;
   currentCursorPosition: [number, number] | null;
+  rawCursorPosition: [number, number] | null;
+  snappedCursorPosition: [number, number] | null;
   isSnapping: boolean;
 }
 
@@ -10,6 +12,8 @@ class PolygonPreviewStore {
   private state: PreviewState = {
     lastPlacedPoint: null,
     currentCursorPosition: null,
+    rawCursorPosition: null,
+    snappedCursorPosition: null,
     isSnapping: false,
   };
   private listeners = new Set<Listener>();
@@ -31,6 +35,8 @@ class PolygonPreviewStore {
     this.state = {
       lastPlacedPoint: null,
       currentCursorPosition: null,
+      rawCursorPosition: null,
+      snappedCursorPosition: null,
       isSnapping: false,
     };
     this.listeners.forEach((listener) => listener());

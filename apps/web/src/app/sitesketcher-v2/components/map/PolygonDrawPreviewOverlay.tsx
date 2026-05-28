@@ -26,6 +26,7 @@ interface PreviewLine {
 export function PolygonDrawPreviewOverlay() {
   const [label, setLabel] = useState<PreviewLabel | null>(null);
   const [line, setLine] = useState<PreviewLine | null>(null);
+  const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Subscribe to preview store using useSyncExternalStore
@@ -45,12 +46,21 @@ export function PolygonDrawPreviewOverlay() {
     if (!mapInstance || !previewState) {
       setLabel(null);
       setLine(null);
+      setCursorPosition(null);
       return;
     }
 
-    const { lastPlacedPoint, currentCursorPosition } = previewState;
+    const { lastPlacedPoint, currentCursorPosition, snappedCursorPosition } = previewState;
 
-    // Need both points to show preview
+    // Update custom cursor position if snapping is active
+    if (snappedCursorPosition) {
+      const cursorScreen = mapInstance.project(snappedCursorPosition);
+      setCursorPosition({ x: cursorScreen.x, y: cursorScreen.y });
+    } else {
+      setCursorPosition(null);
+    }
+
+    // Need both points to show preview line
     if (!lastPlacedPoint || !currentCursorPosition) {
       setLabel(null);
       setLine(null);
@@ -143,8 +153,8 @@ export function PolygonDrawPreviewOverlay() {
     updateVisuals();
   }, [updateVisuals]);
 
-  // Don't render if no preview data
-  if (!label || !line) {
+  // Don't render if no preview data and no snapped cursor
+  if (!label && !line && !cursorPosition) {
     return null;
   }
 
@@ -156,25 +166,57 @@ export function PolygonDrawPreviewOverlay() {
       style={{ zIndex: 10 }}
     >
       {/* Preview line */}
-      <line
-        className="polygon-preview-line"
-        x1={line.x1}
-        y1={line.y1}
-        x2={line.x2}
-        y2={line.y2}
-      />
+      {line && (
+        <line
+          className="polygon-preview-line"
+          x1={line.x1}
+          y1={line.y1}
+          x2={line.x2}
+          y2={line.y2}
+        />
+      )}
 
       {/* Distance label */}
-      <text
-        className="polygon-preview-label"
-        x={label.x}
-        y={label.y}
-        transform={`rotate(${label.rotation}, ${label.x}, ${label.y})`}
-        textAnchor="middle"
-        dominantBaseline="middle"
-      >
-        {label.text}
-      </text>
+      {label && (
+        <text
+          className="polygon-preview-label"
+          x={label.x}
+          y={label.y}
+          transform={`rotate(${label.rotation}, ${label.x}, ${label.y})`}
+          textAnchor="middle"
+          dominantBaseline="middle"
+        >
+          {label.text}
+        </text>
+      )}
+
+      {/* Custom cursor indicator when snapping */}
+      {cursorPosition && (
+        <g className="polygon-snap-cursor">
+          {/* Crosshair lines */}
+          <line
+            x1={cursorPosition.x - 10}
+            y1={cursorPosition.y}
+            x2={cursorPosition.x + 10}
+            y2={cursorPosition.y}
+            className="snap-cursor-crosshair"
+          />
+          <line
+            x1={cursorPosition.x}
+            y1={cursorPosition.y - 10}
+            x2={cursorPosition.x}
+            y2={cursorPosition.y + 10}
+            className="snap-cursor-crosshair"
+          />
+          {/* Center dot */}
+          <circle
+            cx={cursorPosition.x}
+            cy={cursorPosition.y}
+            r={3}
+            className="snap-cursor-dot"
+          />
+        </g>
+      )}
     </svg>
   );
 }
