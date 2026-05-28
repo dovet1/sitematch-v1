@@ -19,6 +19,7 @@ import {
 import { calculateEdgeDistance } from '@/lib/sitesketcher-v2/polygon-utils';
 import { PolygonLabels } from './PolygonLabels';
 import { MeasurementOverlay } from './MeasurementOverlay';
+import { PolygonDrawPreviewOverlay } from './PolygonDrawPreviewOverlay';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -578,6 +579,9 @@ export function MapCanvas() {
 
       {/* Measurement overlay */}
       {isLoaded && measurementInProgress && <MeasurementOverlay />}
+
+      {/* Polygon drawing preview overlay */}
+      {isLoaded && <PolygonDrawPreviewOverlay />}
 
       {!isLoaded && !mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-sm-bg">

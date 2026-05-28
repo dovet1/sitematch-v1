@@ -35,6 +35,22 @@ export function snapTo90Degrees(
 }
 
 /**
+ * Get the display cursor position with optional snapping.
+ * Ensures consistent snapping between Draw's preview line and overlay label.
+ */
+export function getDisplayCursorPosition(
+  map: mapboxgl.Map,
+  rawCursorPosition: [number, number],
+  lastConfirmedPoint: [number, number] | null,
+  isShiftHeld: boolean
+): [number, number] {
+  if (!isShiftHeld || !lastConfirmedPoint) {
+    return rawCursorPosition;
+  }
+  return snapTo90Degrees(map, lastConfirmedPoint, rawCursorPosition);
+}
+
+/**
  * Calculate edge distance between two points in meters
  */
 export function calculateEdgeDistance(

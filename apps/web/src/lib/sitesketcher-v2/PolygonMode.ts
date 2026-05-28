@@ -1,5 +1,6 @@
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import { snapTo90Degrees } from './polygon-utils';
+import { getDisplayCursorPosition } from './polygon-utils';
+import { polygonPreviewStore } from './polygon-preview-store';
 import mapboxgl from 'mapbox-gl';
 
 /**
@@ -13,54 +14,100 @@ export const PolygonMode: any = {
     const drawPolygonMode = MapboxDraw.modes.draw_polygon as any;
     const state = drawPolygonMode.onSetup.call(this, opts);
     state.map = opts.map; // Store map reference for projection
+    polygonPreviewStore.clear(); // Clear any previous preview state
     return state;
   },
 
   clickAnywhere(state: any, e: any) {
-    // Hold Shift to snap new edges to 90 degrees. Normal clicks should land
-    // exactly where the user clicked.
-    if (e.originalEvent?.shiftKey && state.polygon.coordinates[0].length > 1) {
-      const lastPoint = state.polygon.coordinates[0][state.polygon.coordinates[0].length - 2];
-      const currentPoint = [e.lngLat.lng, e.lngLat.lat];
+    // Get current last confirmed point (or null if first point)
+    const lastConfirmedPoint =
+      state.polygon.coordinates[0].length >= 2
+        ? state.polygon.coordinates[0][state.polygon.coordinates[0].length - 2]
+        : null;
 
-      // Snap to 90°
-      const snapped = snapTo90Degrees(
-        state.map,
-        lastPoint as [number, number],
-        currentPoint as [number, number]
-      );
+    // Compute snapped position using shared helper
+    const displayCursor = getDisplayCursorPosition(
+      state.map,
+      [e.lngLat.lng, e.lngLat.lat],
+      lastConfirmedPoint,
+      e.originalEvent?.shiftKey || false
+    );
 
-      // Override the click coordinates
-      e.lngLat = {
-        lng: snapped[0],
-        lat: snapped[1],
-      };
-    }
+    // Override event to ensure actual vertex placement matches preview
+    e.lngLat = {
+      lng: displayCursor[0],
+      lat: displayCursor[1],
+    };
 
     // Call original clickAnywhere
     const drawPolygonMode = MapboxDraw.modes.draw_polygon as any;
-    return drawPolygonMode.clickAnywhere.call(this, state, e);
+    const result = drawPolygonMode.clickAnywhere.call(this, state, e);
+
+    // Update preview store with new last confirmed point
+    const confirmedPoint =
+      state.polygon.coordinates[0].length >= 2
+        ? state.polygon.coordinates[0][state.polygon.coordinates[0].length - 2]
+        : null;
+    polygonPreviewStore.setState({
+      lastPlacedPoint: confirmedPoint,
+      currentCursorPosition: null, // Clear cursor to prevent stale preview
+    });
+
+    return result;
   },
 
   onMouseMove(state: any, e: any) {
-    // Hold Shift to preview snapped edges; otherwise follow the pointer exactly.
-    if (e.originalEvent?.shiftKey && state.polygon.coordinates[0].length > 1) {
-      const lastPoint = state.polygon.coordinates[0][state.polygon.coordinates[0].length - 2];
-      const currentPoint = [e.lngLat.lng, e.lngLat.lat];
+    // Get last confirmed point (guarded)
+    const lastConfirmedPoint =
+      state.polygon.coordinates[0].length >= 2
+        ? state.polygon.coordinates[0][state.polygon.coordinates[0].length - 2]
+        : null;
 
-      // Snap to 90°
-      const snapped = snapTo90Degrees(
-        state.map,
-        lastPoint as [number, number],
-        currentPoint as [number, number]
+    // Get shift state
+    const isShiftHeld = e.originalEvent?.shiftKey || false;
+
+    // Compute snapped position using shared helper
+    const displayCursor = getDisplayCursorPosition(
+      state.map,
+      [e.lngLat.lng, e.lngLat.lat],
+      lastConfirmedPoint,
+      isShiftHeld
+    );
+
+    // Update the moving coordinate if there are points
+    if (state.polygon.coordinates[0].length > 0) {
+      state.polygon.updateCoordinate(
+        `0.${state.polygon.coordinates[0].length - 1}`,
+        displayCursor[0],
+        displayCursor[1]
       );
-
-      // Update the moving point
-      state.polygon.updateCoordinate(`0.${state.polygon.coordinates[0].length - 1}`, snapped[0], snapped[1]);
     }
+
+    // Override event to ensure Draw's handler sees snapped position
+    e.lngLat = {
+      lng: displayCursor[0],
+      lat: displayCursor[1],
+    };
 
     // Call original onMouseMove
     const drawPolygonMode = MapboxDraw.modes.draw_polygon as any;
-    return drawPolygonMode.onMouseMove.call(this, state, e);
+    const result = drawPolygonMode.onMouseMove.call(this, state, e);
+
+    // Update preview store with cursor position
+    polygonPreviewStore.setState({
+      currentCursorPosition: displayCursor,
+      isSnapping: isShiftHeld,
+    });
+
+    return result;
+  },
+
+  onStop(state: any) {
+    // Clear preview store when exiting drawing mode
+    polygonPreviewStore.clear();
+
+    // Call and return original Draw handler
+    const drawPolygonMode = MapboxDraw.modes.draw_polygon as any;
+    return drawPolygonMode.onStop?.call(this, state);
   },
 };
