@@ -28,6 +28,17 @@ export function CadInspector({ cadImageId }: CadInspectorProps) {
         <h3 className="text-sm font-medium text-sm-ink mb-3">CAD Properties</h3>
       </div>
 
+      {cad.anchor === null && (
+        <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+          <div className="text-xs font-medium text-orange-600 mb-1">
+            Not Placed Yet
+          </div>
+          <div className="text-[11px] text-sm-ink/70">
+            Go to Layers panel and click this CAD to place it on the map.
+          </div>
+        </div>
+      )}
+
       <div>
         <label className="text-xs font-medium text-sm-ink block mb-2">
           Filename
@@ -65,17 +76,42 @@ export function CadInspector({ cadImageId }: CadInspectorProps) {
         />
       </div>
 
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-sm-ink">
+          Lock Position
+        </label>
+        <button
+          onClick={() => updateCadImage(cadImageId, { locked: !cad.locked })}
+          disabled={cad.anchor === null}
+          className={`px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            cad.locked
+              ? 'bg-sm-violet text-white'
+              : 'bg-sm-bg border border-sm-border text-sm-ink hover:bg-sm-bg-hover'
+          }`}
+        >
+          {cad.locked ? 'Locked' : 'Unlocked'}
+        </button>
+      </div>
+
       <div className="p-3 bg-sm-bg border border-sm-border rounded">
         <div className="text-xs font-medium text-sm-ink mb-1">Calibration</div>
         <div className="text-[11px] text-sm-ink/70">
           Scale: {cad.metresPerPixel.toFixed(4)} m/px
         </div>
         <div className="text-[11px] text-sm-ink/70">
-          Size: {cad.imageWidthPx} × {cad.imageHeightPx} px
+          Dimensions: {(cad.imageWidthPx * cad.metresPerPixel).toFixed(1)}m × {(cad.imageHeightPx * cad.metresPerPixel).toFixed(1)}m
+        </div>
+        <div className="text-[11px] text-sm-ink/70">
+          Image: {cad.imageWidthPx} × {cad.imageHeightPx} px
         </div>
         {cad.calibrationPoints && (
           <div className="text-[11px] text-sm-ink/70 mt-1">
-            Calibrated with {cad.calibrationPoints.distance}m reference
+            Calibrated with {cad.calibrationPoints.distance.toFixed(1)}m reference
+          </div>
+        )}
+        {cad.anchor && (
+          <div className="text-[11px] text-sm-ink/70 mt-1">
+            Position: {cad.anchor[1].toFixed(6)}, {cad.anchor[0].toFixed(6)}
           </div>
         )}
       </div>

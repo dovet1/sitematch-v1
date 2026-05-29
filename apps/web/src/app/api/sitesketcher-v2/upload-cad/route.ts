@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { hasProAccess } from '@/lib/subscription-utils';
 import { getCurrentUser } from '@/lib/auth';
 import { createServerClient } from '@/lib/supabase';
+import sharp from 'sharp';
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
 
 export async function POST(request: NextRequest) {
@@ -33,14 +34,14 @@ export async function POST(request: NextRequest) {
     // 4. Validate MIME type
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return NextResponse.json({
-        error: 'Only PNG and JPG images allowed',
+        error: 'Only PNG and JPG files allowed',
       }, { status: 400 });
     }
 
     // 5. Validate size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json({
-        error: 'File too large (max 20MB)',
+        error: 'File too large (max 50MB)',
       }, { status: 400 });
     }
 
@@ -58,17 +59,42 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // 7. Generate unique filename
+    // 7. Process file
+    let processedBuffer = Buffer.from(await file.arrayBuffer());
+    let fileName = file.name;
+    let contentType = file.type;
+    let extension = ext;
+
+    // 8. Optional: Downsample large images
+    const MAX_DIMENSION = 4096;
+    let metadata = await sharp(processedBuffer).metadata();
+
+    if (metadata.width && metadata.height && (metadata.width > MAX_DIMENSION || metadata.height > MAX_DIMENSION)) {
+      processedBuffer = await sharp(processedBuffer)
+        .resize(MAX_DIMENSION, MAX_DIMENSION, {
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .png({ quality: 90 })
+        .toBuffer();
+    }
+
+    // 9. CRITICAL: Extract dimensions AFTER downsampling
+    metadata = await sharp(processedBuffer).metadata();
+    const imageWidthPx = metadata.width || 0;
+    const imageHeightPx = metadata.height || 0;
+
+    // 10. Generate unique filename
     const timestamp = Date.now();
     const uuid = crypto.randomUUID();
-    const storagePath = `${user.id}/${timestamp}-${uuid}.${ext}`;
+    const storagePath = `${user.id}/${timestamp}-${uuid}.${extension}`;
 
-    // 8. Upload to Supabase storage
+    // 11. Upload to Supabase storage
     const supabase = await createServerClient();
     const { error: uploadError } = await supabase.storage
       .from('cad-images')
-      .upload(storagePath, file, {
-        contentType: file.type,
+      .upload(storagePath, processedBuffer, {
+        contentType: contentType,
         upsert: false,
       });
 
@@ -77,27 +103,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
     }
 
-    // 9. Get public URL
+    // 12. Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('cad-images')
       .getPublicUrl(storagePath);
 
-    // 10. Get image dimensions (basic - client can also do this)
-    // For now, returning 0 - proper image dimension extraction would require
-    // additional library like sharp or image-size
-    const imageWidthPx = 0;
-    const imageHeightPx = 0;
-
-    // 11. Return upload result
+    // 13. Return upload result
     return NextResponse.json({
       id: uuid,
-      fileName: file.name,
+      fileName: fileName,
       url: publicUrl,
       storagePath: storagePath, // CRITICAL for cleanup
       imageWidthPx,
       imageHeightPx,
       metresPerPixel: 0, // Will be set during calibration
-      anchor: [0, 0] as [number, number], // Will be set on map placement
+      anchor: null, // Will be set on map placement
       rotation: 0,
       opacity: 0.7, // Default opacity
       createdAt: Date.now(),

@@ -3,7 +3,7 @@
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { POLYGON_COLORS } from '@/lib/sitesketcher-v2/constants';
 import { Polygon } from '@/types/sitesketcher-v2';
-import { Trash2 } from 'lucide-react';
+import { Trash2, MapPin } from 'lucide-react';
 
 const LAYER_FOCUS_ZOOM = 18.5;
 
@@ -46,6 +46,8 @@ export function LayersPanel() {
     focusMap,
     deletePolygon,
     deleteParkingBlock,
+    startCadPlacement,
+    deleteCadImage,
   } = useSketchStore();
 
   const totalObjects = polygons.length + parkingBlocks.length + cadImages.length;
@@ -65,6 +67,17 @@ export function LayersPanel() {
       center,
       zoom: LAYER_FOCUS_ZOOM,
     });
+  };
+
+  const focusCadLayer = (id: string, anchor: [number, number] | null) => {
+    if (anchor) {
+      // Placed - focus on map
+      setSelectedId(id, 'cad');
+      focusMap({ center: anchor, zoom: LAYER_FOCUS_ZOOM });
+    } else {
+      // Unplaced - enter placement mode
+      startCadPlacement(id);
+    }
   };
 
   return (
@@ -205,12 +218,66 @@ export function LayersPanel() {
       {cadImages.length > 0 && (
         <div>
           <h4 className="text-xs font-medium text-sm-ink/70 mb-2 uppercase tracking-wide">
-            CAD Images ({cadImages.length})
+            My CADs ({cadImages.length})
           </h4>
           <div className="space-y-1">
-            <div className="text-sm text-sm-ink/50 text-center py-4">
-              Coming soon
-            </div>
+            {cadImages.map((cad) => {
+              const isSelected = selectedId === cad.id;
+              const isPlaced = cad.anchor !== null;
+
+              return (
+                <div
+                  key={cad.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => focusCadLayer(cad.id, cad.anchor)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      focusCadLayer(cad.id, cad.anchor);
+                    }
+                  }}
+                  className={`
+                    group w-full flex items-center gap-2 p-2 rounded transition-all text-left cursor-pointer
+                    ${isSelected ? 'bg-sm-violet/10 border border-sm-violet' : 'hover:bg-sm-bg border border-transparent'}
+                  `}
+                >
+                  {/* Icon */}
+                  <div className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center ${
+                    isPlaced ? 'bg-blue-500/20 border-blue-600' : 'bg-orange-500/20 border-orange-600'
+                  }`}>
+                    {!isPlaced && <MapPin className="w-3 h-3 text-orange-600" />}
+                  </div>
+
+                  {/* Filename */}
+                  <span className="text-sm text-sm-ink flex-1 truncate">
+                    {cad.fileName}
+                  </span>
+
+                  {/* Status badge */}
+                  {!isPlaced && (
+                    <span className="text-[10px] text-orange-600 bg-orange-500/10 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
+                      Click to place
+                    </span>
+                  )}
+
+                  {/* Delete button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete ${cad.fileName}?`)) {
+                        deleteCadImage(cad.id);
+                      }
+                    }}
+                    className="p-1 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3 h-3 text-red-600" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

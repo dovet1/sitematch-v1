@@ -4,15 +4,33 @@ import { useState, useRef } from 'react';
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { Button } from '../primitives/Button';
 import { Upload, FileImage } from 'lucide-react';
+import { CleanupModal } from '../modals/CleanupModal';
+import { CalibrationModal } from '../modals/CalibrationModal';
+import type { CadImage } from '@/types/sitesketcher-v2';
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
 
+interface UploadResult {
+  id: string;
+  fileName: string;
+  url: string;
+  storagePath: string;
+  imageWidthPx: number;
+  imageHeightPx: number;
+}
+
 export function CadToolPanel() {
-  const { cadImages } = useSketchStore();
+  const { cadImages, addCadImage, mapInstance } = useSketchStore();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Modal flow state
+  const [uploadedImage, setUploadedImage] = useState<UploadResult | null>(null);
+  const [showCleanupModal, setShowCleanupModal] = useState(false);
+  const [showCalibrationModal, setShowCalibrationModal] = useState(false);
+  const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -28,7 +46,7 @@ export function CadToolPanel() {
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      setError('File too large (max 20MB)');
+      setError('File too large (max 50MB)');
       return;
     }
 
@@ -49,10 +67,8 @@ export function CadToolPanel() {
       }
 
       const result = await response.json();
-
-      // TODO: Open calibration modal with result
-      // For now, just log success
-      console.log('CAD uploaded successfully:', result);
+      setUploadedImage(result);
+      setShowCleanupModal(true); // Open cleanup modal
 
       // Reset file input
       if (fileInputRef.current) {
@@ -64,6 +80,93 @@ export function CadToolPanel() {
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleCleanupComplete = async (result: {
+    processedBlob: Blob;
+    newWidthPx: number;
+    newHeightPx: number;
+  }) => {
+    if (!uploadedImage) return;
+
+    try {
+      // Upload processed blob to Supabase
+      const formData = new FormData();
+      // CRITICAL: Use .png filename for processed file (cleanup always outputs PNG)
+      const processedFileName = uploadedImage.fileName.replace(/\.(jpg|jpeg|png|pdf)$/i, '.png');
+      formData.append('file', result.processedBlob, processedFileName);
+      formData.append('originalStoragePath', uploadedImage.storagePath);
+
+      const response = await fetch('/api/sitesketcher-v2/process-cad', {
+        method: 'POST',
+        body: formData,
+      });
+
+      // CRITICAL: Check response.ok before parsing
+      if (!response.ok) {
+        let errorMessage = 'Failed to process CAD image';
+        try {
+          const error = await response.json();
+          errorMessage = error.error || errorMessage;
+        } catch {
+          // If response is not JSON, use default message
+          const text = await response.text();
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const processed = await response.json();
+
+      // CRITICAL: Use SERVER-VERIFIED dimensions, not client-reported
+      // Also update storagePath and fileName since cleanup creates new .png file
+      setUploadedImage({
+        ...uploadedImage,
+        fileName: processedFileName, // Updated to .png extension
+        imageWidthPx: processed.imageWidthPx,
+        imageHeightPx: processed.imageHeightPx,
+        storagePath: processed.storagePath, // Updated path (.png extension)
+      });
+      setProcessedImageUrl(processed.url);
+      setShowCleanupModal(false);
+      setShowCalibrationModal(true); // Open calibration modal
+    } catch (err: any) {
+      setError(err.message || 'Failed to process CAD image');
+      console.error('Cleanup processing error:', err);
+      // Keep cleanup modal open so user can retry or cancel
+    }
+  };
+
+  const handleCalibrationComplete = (calibration: {
+    metresPerPixel: number;
+    calibrationPoints: {
+      a: { x: number; y: number };
+      b: { x: number; y: number };
+      distance: number;
+    };
+  }) => {
+    if (!uploadedImage || !mapInstance) return;
+
+    const cadImage: CadImage = {
+      id: crypto.randomUUID(),
+      fileName: uploadedImage.fileName,
+      url: processedImageUrl || uploadedImage.url,
+      storagePath: uploadedImage.storagePath,
+      metresPerPixel: calibration.metresPerPixel,
+      anchor: null, // Start unplaced - user will click to place
+      rotation: 0,
+      opacity: 0.6,
+      imageWidthPx: uploadedImage.imageWidthPx,
+      imageHeightPx: uploadedImage.imageHeightPx,
+      calibrationPoints: calibration.calibrationPoints,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    addCadImage(cadImage);
+    setShowCalibrationModal(false);
+    setUploadedImage(null);
+    setProcessedImageUrl(null);
   };
 
   return (
@@ -101,7 +204,7 @@ export function CadToolPanel() {
                 or click to browse
               </div>
               <div className="text-[10px] text-sm-ink/40 mt-1">
-                PNG or JPG, max 20MB
+                PNG or JPG, max 50MB
               </div>
             </div>
           </button>
@@ -177,6 +280,39 @@ export function CadToolPanel() {
           </li>
         </ul>
       </div>
+
+      {showCleanupModal && uploadedImage && (
+        <CleanupModal
+          imageUrl={uploadedImage.url}
+          imageWidthPx={uploadedImage.imageWidthPx}
+          imageHeightPx={uploadedImage.imageHeightPx}
+          fileName={uploadedImage.fileName}
+          onComplete={handleCleanupComplete}
+          onSkip={() => {
+            setShowCleanupModal(false);
+            setShowCalibrationModal(true);
+          }}
+          onCancel={() => {
+            // Delete uploaded file
+            setShowCleanupModal(false);
+            setUploadedImage(null);
+          }}
+        />
+      )}
+
+      {showCalibrationModal && uploadedImage && (
+        <CalibrationModal
+          imageUrl={processedImageUrl || uploadedImage.url}
+          imageWidthPx={uploadedImage.imageWidthPx}
+          imageHeightPx={uploadedImage.imageHeightPx}
+          fileName={uploadedImage.fileName}
+          onComplete={handleCalibrationComplete}
+          onCancel={() => {
+            setShowCalibrationModal(false);
+            setUploadedImage(null);
+          }}
+        />
+      )}
     </div>
   );
 }

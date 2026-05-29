@@ -31,7 +31,7 @@ export interface CadImage {
   url: string; // Supabase storage public URL
   storagePath: string; // CRITICAL: Storage path for cleanup (e.g., "user-id/123-uuid.png")
   metresPerPixel: number; // from calibration
-  anchor: [number, number]; // center
+  anchor: [number, number] | null; // center (null if not yet placed)
   rotation: number;
   opacity: number; // 0-1
   imageWidthPx: number;
@@ -41,6 +41,7 @@ export interface CadImage {
     b: { x: number; y: number };
     distance: number;
   };
+  locked?: boolean; // Prevents accidental dragging
   createdAt: number;
   updatedAt: number;
 }
@@ -112,7 +113,6 @@ export type ViewMode = '2d' | '3d';
 export interface HistoryState {
   polygons: Polygon[];
   parkingBlocks: ParkingBlock[];
-  cadImages: CadImage[];
   timestamp: number;
 }
 

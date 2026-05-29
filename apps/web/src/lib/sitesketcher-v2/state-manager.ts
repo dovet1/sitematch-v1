@@ -42,6 +42,7 @@ interface SketchState {
   drawingInProgress: PolygonInProgress | null;
   measurementInProgress: MeasurementChain | null;
   frozenMeasurement: MeasurementChain | null; // Measurement that's finished drawing but still visible
+  cadPlacementInProgress: string | null; // ID of CAD being placed
 
   // Sketch metadata
   sketchId: string | null;
@@ -78,8 +79,12 @@ interface SketchState {
   // Actions - CAD Images
   addCadImage: (cadImage: CadImage) => void;
   updateCadImage: (id: string, updates: Partial<CadImage>) => void;
+  moveCadImage: (id: string, anchor: [number, number]) => void;
   deleteCadImage: (id: string) => void;
   setCadImages: (cadImages: CadImage[]) => void;
+  startCadPlacement: (id: string) => void;
+  placeCadImage: (id: string, anchor: [number, number]) => void;
+  cancelCadPlacement: () => void;
 
   // Actions - UI
   setActiveTool: (tool: Tool) => void;
@@ -135,7 +140,6 @@ interface SketchState {
 const createHistoryState = (state: SketchState): HistoryState => ({
   polygons: JSON.parse(JSON.stringify(state.polygons)),
   parkingBlocks: JSON.parse(JSON.stringify(state.parkingBlocks)),
-  cadImages: JSON.parse(JSON.stringify(state.cadImages)),
   timestamp: Date.now(),
 });
 
@@ -164,6 +168,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   drawingInProgress: null,
   measurementInProgress: null,
   frozenMeasurement: null,
+  cadPlacementInProgress: null,
 
   sketchId: null,
   sketchName: 'Untitled Sketch',
@@ -284,7 +289,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
 
   // CAD image actions
   addCadImage: (cadImage) => {
-    get().pushHistory(); // Push BEFORE mutation
+    // NO pushHistory() - CAD operations not in undo stack (deferred to future PR)
     set((state) => ({
       cadImages: [...state.cadImages, cadImage],
       isDirty: true,
@@ -292,7 +297,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   },
 
   updateCadImage: (id, updates) => {
-    get().pushHistory(); // Push BEFORE mutation
+    // NO pushHistory() - CAD operations not in undo stack (deferred to future PR)
     set((state) => ({
       cadImages: state.cadImages.map((ci) =>
         ci.id === id ? { ...ci, ...updates, updatedAt: Date.now() } : ci
@@ -301,17 +306,51 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     }));
   },
 
+  moveCadImage: (id, anchor) => {
+    // DOES NOT push history - used during drag operations
+    // History is pushed once on mousedown
+    set((state) => ({
+      cadImages: state.cadImages.map((ci) =>
+        ci.id === id ? { ...ci, anchor, updatedAt: Date.now() } : ci
+      ),
+      isDirty: true,
+    }));
+  },
+
   deleteCadImage: (id) => {
-    get().pushHistory(); // Push BEFORE mutation
+    // NO pushHistory() - CAD operations not in undo stack (deferred to future PR)
     set((state) => ({
       cadImages: state.cadImages.filter((ci) => ci.id !== id),
       selectedId: state.selectedId === id ? null : state.selectedId,
       selectedType: state.selectedId === id ? null : state.selectedType,
+      cadPlacementInProgress: state.cadPlacementInProgress === id ? null : state.cadPlacementInProgress,
       isDirty: true,
     }));
   },
 
   setCadImages: (cadImages) => set({ cadImages }),
+
+  startCadPlacement: (id) => set({
+    cadPlacementInProgress: id,
+    activeTool: 'select',
+    selectedId: id,
+    selectedType: 'cad',
+  }),
+
+  placeCadImage: (id, anchor) => {
+    // NO pushHistory() - CAD operations deferred from undo system (see Known Limitations)
+    set((state) => ({
+      cadImages: state.cadImages.map((ci) =>
+        ci.id === id ? { ...ci, anchor, updatedAt: Date.now() } : ci
+      ),
+      cadPlacementInProgress: null,
+      isDirty: true,
+    }));
+  },
+
+  cancelCadPlacement: () => set({
+    cadPlacementInProgress: null,
+  }),
 
   // UI actions
   setActiveTool: (tool) => {
@@ -327,6 +366,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       selectedType: tool === 'select' ? state.selectedType : null,
       measurementInProgress: tool === 'measure' ? state.measurementInProgress : null, // Clear measurement when switching away
       frozenMeasurement: tool === 'measure' ? state.frozenMeasurement : null, // Clear frozen measurement when switching away
+      cadPlacementInProgress: null, // Cancel placement when switching tools
     }));
   },
 
@@ -339,6 +379,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       activeTool: 'select', // Switch to select when panel is opened
       measurementInProgress: null, // Clear measurement when panel is opened
       frozenMeasurement: null, // Clear frozen measurement when panel is opened
+      cadPlacementInProgress: null, // Cancel placement when opening panels
     });
   },
 
@@ -516,6 +557,13 @@ export const useSketchStore = create<SketchState>((set, get) => ({
 
   undo: () => {
     const state = get();
+
+    // Clear placement mode even if no history available (before canUndo check)
+    // This ensures Escape-like behavior when user presses undo during placement
+    if (state.cadPlacementInProgress) {
+      set({ cadPlacementInProgress: null });
+    }
+
     if (!state.canUndo()) return;
 
     const newIndex = state.historyIndex - 1;
@@ -524,7 +572,8 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     set({
       polygons: historyState.polygons,
       parkingBlocks: historyState.parkingBlocks,
-      cadImages: historyState.cadImages,
+      cadImages: state.cadImages, // Preserve current CAD state
+      cadPlacementInProgress: null, // Clear transient placement mode (redundant but explicit)
       historyIndex: newIndex,
       isDirty: true,
     });
@@ -532,6 +581,12 @@ export const useSketchStore = create<SketchState>((set, get) => ({
 
   redo: () => {
     const state = get();
+
+    // Clear placement mode even if no history available (before canRedo check)
+    if (state.cadPlacementInProgress) {
+      set({ cadPlacementInProgress: null });
+    }
+
     if (!state.canRedo()) return;
 
     const newIndex = state.historyIndex + 1;
@@ -540,7 +595,8 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     set({
       polygons: historyState.polygons,
       parkingBlocks: historyState.parkingBlocks,
-      cadImages: historyState.cadImages,
+      cadImages: state.cadImages, // Preserve current CAD state
+      cadPlacementInProgress: null, // Clear transient placement mode (redundant but explicit)
       historyIndex: newIndex,
       isDirty: true,
     });
@@ -570,6 +626,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       drawingInProgress: null,
       measurementInProgress: null,
       frozenMeasurement: null,
+      cadPlacementInProgress: null,
       sketchId: null,
       sketchName: 'Untitled Sketch',
       sketchDescription: '',
@@ -606,6 +663,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       selectedType: null,
       measurementInProgress: null, // Explicitly clear measurement on load
       frozenMeasurement: null, // Explicitly clear frozen measurement on load
+      cadPlacementInProgress: null, // Explicitly clear placement on load
     });
 
     // Push initial history state

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { measurementPreviewStore } from '@/lib/sitesketcher-v2/measurement-preview-store';
 import { MAPBOX_TOKEN, MAP_STYLES } from '@/lib/sitesketcher-v2/constants';
@@ -16,8 +16,13 @@ import {
   loadPolygonsIntoDraw,
   enterPolygonDrawMode,
   drawFeatureToPolygon,
+  addCadImageToMap,
+  updateCadImageOnMap,
+  removeCadImageFromMap,
 } from '@/lib/sitesketcher-v2/mapbox-integration';
+import { calculateCadImageCorners } from '@/lib/sitesketcher-v2/cad-utils';
 import { calculateEdgeDistance } from '@/lib/sitesketcher-v2/polygon-utils';
+import type { CadImage } from '@/types/sitesketcher-v2';
 import { PolygonLabels } from './PolygonLabels';
 import { MeasurementOverlay } from './MeasurementOverlay';
 import { PolygonDrawPreviewOverlay } from './PolygonDrawPreviewOverlay';
@@ -63,14 +68,43 @@ function selectPolygonForVertexEditing(draw: MapboxDraw, polygonId: string): voi
   }
 }
 
+type CadLayerHandlers = {
+  mousedown: (e: mapboxgl.MapLayerMouseEvent) => void;
+  mouseenter: () => void;
+  mouseleave: () => void;
+};
+
+function findCadImageAtPoint(
+  map: mapboxgl.Map,
+  point: mapboxgl.Point,
+  cadImages: CadImage[]
+): string | null {
+  const placedCadImages = cadImages.filter((cadImage) => cadImage.anchor !== null);
+
+  for (const cadImage of [...placedCadImages].reverse()) {
+    const screenCorners = calculateCadImageCorners(cadImage).map((corner) => {
+      const projected = map.project(corner);
+      return [projected.x, projected.y] as [number, number];
+    });
+
+    if (isPointInPolygon([point.x, point.y], screenCorners)) {
+      return cadImage.id;
+    }
+  }
+
+  return null;
+}
+
 export function MapCanvas() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
   const parkingDragRef = useRef<{ id: string; moved: boolean } | null>(null);
+  const cadDragRef = useRef<{ id: string; moved: boolean } | null>(null);
   const suppressNextMapClickRef = useRef(false);
   const isApplyingDrawUpdateRef = useRef(false);
   const isUserInteractionRef = useRef(true);
+  const cadLayerHandlersRef = useRef<Map<string, CadLayerHandlers>>(new Map());
   const [isLoaded, setIsLoaded] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
@@ -80,6 +114,7 @@ export function MapCanvas() {
     viewport,
     polygons,
     parkingBlocks,
+    cadImages,
     selectedId,
     selectedType,
     mapFocusRequest,
@@ -87,13 +122,115 @@ export function MapCanvas() {
     selectedPolygonColorIndex,
     measurementInProgress,
     frozenMeasurement,
+    cadPlacementInProgress,
     setViewport,
     addPolygon,
     addParkingBlock,
     updatePolygon,
     deletePolygon,
     setSelectedId,
+    moveCadImage,
+    placeCadImage,
+    cancelCadPlacement,
   } = useSketchStore();
+
+  // CAD drag handlers - use live store reads to avoid listener churn
+  const handleCadMouseDown = useCallback((
+    e: mapboxgl.MapMouseEvent | mapboxgl.MapLayerMouseEvent,
+    cadId: string
+  ) => {
+    const id = cadId;
+    if (!id || !mapRef.current) return;
+
+    // CRITICAL: Live store read instead of dependency - prevents re-registration during drag
+    const cad = useSketchStore.getState().cadImages.find(c => c.id === id);
+    if (!cad || cad.locked || cad.anchor === null) return;
+
+    e.preventDefault();
+
+    // CRITICAL: Disable map drag pan (mirror parking drag behavior)
+    mapRef.current.dragPan.disable();
+
+    cadDragRef.current = { id, moved: false };
+    suppressNextMapClickRef.current = true;
+    mapRef.current.getCanvas().style.cursor = 'grabbing';
+    setSelectedId(id, 'cad');
+    // REMOVE: pushHistory(); - CAD operations deferred from undo system (see Known Limitations)
+  }, [setSelectedId]);
+
+  const handleCadMouseMove = useCallback((e: mapboxgl.MapMouseEvent) => {
+    if (!cadDragRef.current) return;
+
+    const { id } = cadDragRef.current;
+    cadDragRef.current.moved = true;
+
+    // Use moveCadImage (no history push) instead of updateCadImage
+    moveCadImage(id, [e.lngLat.lng, e.lngLat.lat]);
+  }, [moveCadImage]);
+
+  const handleCadMouseUp = useCallback(() => {
+    if (cadDragRef.current && mapRef.current) {
+      // CRITICAL: Re-enable map drag pan
+      mapRef.current.dragPan.enable();
+      mapRef.current.getCanvas().style.cursor = '';
+      cadDragRef.current = null;
+      // History already pushed on mousedown, no action needed here
+    }
+  }, []);
+
+  // CRITICAL: Use live store read for locked state to avoid listener churn
+  const handleCadMouseEnter = useCallback((cadId: string) => () => {
+    if (!mapRef.current) return;
+    const cad = useSketchStore.getState().cadImages.find(c => c.id === cadId);
+    if (!cad?.locked) {
+      mapRef.current.getCanvas().style.cursor = 'grab';
+    }
+  }, []);
+
+  const handleCadMouseLeave = useCallback(() => {
+    if (mapRef.current) {
+      mapRef.current.getCanvas().style.cursor = '';
+    }
+  }, []);
+
+  const unregisterCadLayerHandlers = useCallback((map: mapboxgl.Map, cadId: string) => {
+    const handlers = cadLayerHandlersRef.current.get(cadId);
+    if (!handlers) return;
+
+    try {
+      map.off('mousedown', `cad-layer-${cadId}`, handlers.mousedown);
+      map.off('mouseenter', `cad-layer-${cadId}`, handlers.mouseenter);
+      map.off('mouseleave', `cad-layer-${cadId}`, handlers.mouseleave);
+    } catch (error) {
+      console.warn(`Failed to remove CAD layer handlers for ${cadId}:`, error);
+    } finally {
+      cadLayerHandlersRef.current.delete(cadId);
+    }
+  }, []);
+
+  const unregisterAllCadLayerHandlers = useCallback((map: mapboxgl.Map) => {
+    Array.from(cadLayerHandlersRef.current.keys()).forEach((cadId) => {
+      unregisterCadLayerHandlers(map, cadId);
+    });
+  }, [unregisterCadLayerHandlers]);
+
+  const registerCadLayerHandlers = useCallback((map: mapboxgl.Map, cadId: string) => {
+    if (cadLayerHandlersRef.current.has(cadId)) return;
+    if (!map.getLayer(`cad-layer-${cadId}`)) return;
+
+    const mouseenterHandler = handleCadMouseEnter(cadId);
+    const handlers: CadLayerHandlers = {
+      mousedown: (event) => handleCadMouseDown(event, cadId),
+      mouseenter: mouseenterHandler,
+      mouseleave: handleCadMouseLeave,
+    };
+
+    map.on('mousedown', `cad-layer-${cadId}`, handlers.mousedown);
+    map.on('mouseenter', `cad-layer-${cadId}`, handlers.mouseenter);
+    map.on('mouseleave', `cad-layer-${cadId}`, handlers.mouseleave);
+
+    cadLayerHandlersRef.current.set(cadId, handlers);
+  }, [handleCadMouseDown, handleCadMouseEnter, handleCadMouseLeave]);
 
   // Initialize map
   useEffect(() => {
@@ -249,7 +386,20 @@ export function MapCanvas() {
           map.getCanvas().style.cursor = 'grabbing';
         });
 
+        map.on('mousedown', (event) => {
+          const state = useSketchStore.getState();
+          if (state.activeTool !== 'select') return;
+
+          const cadId = findCadImageAtPoint(map, event.point, state.cadImages);
+          if (!cadId) return;
+
+          handleCadMouseDown(event, cadId);
+        });
+
         map.on('mousemove', (event) => {
+          // Handle CAD drag
+          handleCadMouseMove(event);
+
           const dragState = parkingDragRef.current;
           if (dragState) {
             dragState.moved = true;
@@ -282,6 +432,9 @@ export function MapCanvas() {
         });
 
         map.on('mouseup', () => {
+          // Handle CAD drag
+          handleCadMouseUp();
+
           const dragState = parkingDragRef.current;
           if (!dragState) return;
 
@@ -300,6 +453,13 @@ export function MapCanvas() {
           }
 
           const state = useSketchStore.getState();
+
+          // Handle CAD placement (highest priority)
+          if (state.cadPlacementInProgress) {
+            const anchor: [number, number] = [event.lngLat.lng, event.lngLat.lat];
+            placeCadImage(state.cadPlacementInProgress, anchor);
+            return;
+          }
 
           if (state.activeTool === 'parking') {
             const existingNames = state.parkingBlocks.map((parking) => parking.name);
@@ -379,6 +539,29 @@ export function MapCanvas() {
                 }
               }
 
+              // Check for CAD layer clicks
+              const cadLayers = latestState.cadImages
+                .filter(c => c.anchor !== null)
+                .map(c => `cad-layer-${c.id}`);
+
+              if (cadLayers.length > 0) {
+                const cadFeatures = map.queryRenderedFeatures(
+                  [
+                    [point.x - 4, point.y - 4],
+                    [point.x + 4, point.y + 4],
+                  ],
+                  { layers: cadLayers }
+                );
+
+                const cadFeatureLayerId = cadFeatures[0]?.layer?.id;
+                if (cadFeatureLayerId) {
+                  const cadId = cadFeatureLayerId.replace('cad-layer-', '');
+                  draw.changeMode('simple_select', { featureIds: [] });
+                  latestState.setSelectedId(cadId, 'cad');
+                  return;
+                }
+              }
+
               const hitPolygon = latestState.polygons
                 .filter((polygon) => isPointInPolygon(lngLat, polygon.points))
                 .map((polygon) => ({
@@ -417,6 +600,7 @@ export function MapCanvas() {
       });
 
       return () => {
+        unregisterAllCadLayerHandlers(map);
         map.remove();
         mapRef.current = null;
         drawRef.current = null;
@@ -433,12 +617,24 @@ export function MapCanvas() {
   useEffect(() => {
     if (mapRef.current && drawRef.current && isLoaded) {
       const map = mapRef.current;
-      const draw = drawRef.current;
+
+      unregisterAllCadLayerHandlers(map);
 
       map.once('style.load', () => {
         const is3D = useSketchStore.getState().view === '3d';
         setup3DLayer(map);
         setupParkingLayer(map);
+
+        // Re-add CAD layers (skip unplaced)
+        const currentCadImages = useSketchStore.getState().cadImages;
+        currentCadImages.forEach(cadImage => {
+          if (cadImage.anchor !== null) { // ONLY add placed CADs
+            addCadImageToMap(map, cadImage);
+            registerCadLayerHandlers(map, cadImage.id);
+          }
+        });
+
+        // IMPORTANT: Keep existing live state reads (lines 473-478)
         syncPolygonsTo3D(map, useSketchStore.getState().polygons);
         syncParkingToMap(
           map,
@@ -450,7 +646,7 @@ export function MapCanvas() {
 
       map.setStyle(MAP_STYLES[mapStyle]);
     }
-  }, [mapStyle, isLoaded]);
+  }, [mapStyle, isLoaded, registerCadLayerHandlers, unregisterAllCadLayerHandlers]);
 
   // Handle view mode changes
   useEffect(() => {
@@ -492,13 +688,13 @@ export function MapCanvas() {
       }
 
       // Set cursor style based on active tool
-      if (activeTool === 'measure' || activeTool === 'parking') {
+      if (activeTool === 'measure' || activeTool === 'parking' || cadPlacementInProgress) {
         map.getCanvas().style.cursor = 'crosshair';
       } else {
         map.getCanvas().style.cursor = '';
       }
     }
-  }, [activeTool, selectedId, selectedType, isLoaded]);
+  }, [activeTool, selectedId, selectedType, isLoaded, cadPlacementInProgress]);
 
   // Keep Mapbox's canvas in lockstep with the flex layout as panels open/close.
   useEffect(() => {
@@ -541,6 +737,40 @@ export function MapCanvas() {
       syncParkingToMap(mapRef.current, parkingBlocks, selectedId);
     }
   }, [parkingBlocks, selectedId, isLoaded]);
+
+  // Sync CAD images with map
+  useEffect(() => {
+    if (!mapRef.current || !isLoaded) return;
+
+    const map = mapRef.current;
+
+    // Remove layers not in state OR that are now unplaced
+    const layerIds = map.getStyle().layers
+      .filter(l => l.id.startsWith('cad-layer-'))
+      .map(l => l.id.replace('cad-layer-', ''));
+
+    layerIds.forEach(id => {
+      const cad = cadImages.find(c => c.id === id);
+      // Remove if CAD deleted OR if CAD unplaced (e.g., via undo)
+      if (!cad || cad.anchor === null) {
+        unregisterCadLayerHandlers(map, id);
+        removeCadImageFromMap(map, id);
+      }
+    });
+
+    // Add/update layers from state
+    cadImages.forEach(cadImage => {
+      // Skip unplaced CADs
+      if (cadImage.anchor === null) return;
+
+      if (map.getSource(`cad-image-${cadImage.id}`)) {
+        updateCadImageOnMap(map, cadImage);
+      } else {
+        addCadImageToMap(map, cadImage);
+      }
+      registerCadLayerHandlers(map, cadImage.id);
+    });
+  }, [cadImages, isLoaded, registerCadLayerHandlers, unregisterCadLayerHandlers]);
 
   // Handle layer focus requests from panels.
   useEffect(() => {
@@ -602,6 +832,17 @@ export function MapCanvas() {
       });
     }
   }, [viewport.center, viewport.zoom, viewport.pitch, viewport.bearing, isLoaded]);
+
+  // Cancel CAD placement on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && cadPlacementInProgress) {
+        cancelCadPlacement();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cadPlacementInProgress, cancelCadPlacement]);
 
   return (
     <div className="relative h-full w-full min-h-0 bg-sm-bg">

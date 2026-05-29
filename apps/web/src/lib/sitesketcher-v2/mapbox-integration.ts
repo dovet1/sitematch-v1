@@ -1,8 +1,9 @@
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import { ParkingBlock, Polygon } from '@/types/sitesketcher-v2';
+import { ParkingBlock, Polygon, CadImage } from '@/types/sitesketcher-v2';
 import { DEFAULT_BUILDING_HEIGHT_METERS, PARKING_DIMENSIONS, POLYGON_COLORS } from './constants';
 import { PolygonMode } from './PolygonMode';
+import { calculateCadImageCorners } from './cad-utils';
 
 /**
  * Initialize Mapbox GL JS map
@@ -658,4 +659,83 @@ export function flyToViewport(
     bearing: viewport.bearing || 0,
     duration: 1500,
   });
+}
+
+/**
+ * Add CAD image to map as raster layer
+ */
+export function addCadImageToMap(
+  map: mapboxgl.Map,
+  cadImage: CadImage
+): void {
+  if (cadImage.anchor === null) {
+    // Silent return - this is expected for unplaced CADs
+    return;
+  }
+  const corners = calculateCadImageCorners(cadImage);
+
+  // Add source
+  map.addSource(`cad-image-${cadImage.id}`, {
+    type: 'image',
+    url: cadImage.url,
+    coordinates: corners,
+  });
+
+  // CRITICAL: Guard layer insertion - firstPolygonLayer may not exist after setStyle
+  const firstPolygonLayer = 'gl-draw-polygon-fill-inactive';
+  const beforeLayer = map.getLayer(firstPolygonLayer) ? firstPolygonLayer : undefined;
+
+  map.addLayer({
+    id: `cad-layer-${cadImage.id}`,
+    source: `cad-image-${cadImage.id}`,
+    type: 'raster',
+    paint: {
+      'raster-opacity': cadImage.opacity,
+      'raster-fade-duration': 0, // Instant opacity changes
+    },
+  }, beforeLayer); // Insert before polygons if layer exists, otherwise add to top
+}
+
+/**
+ * Update CAD image coordinates and opacity on map
+ */
+export function updateCadImageOnMap(
+  map: mapboxgl.Map,
+  cadImage: CadImage
+): void {
+  if (cadImage.anchor === null) {
+    // Silent return - this is expected for unplaced CADs
+    return;
+  }
+  const corners = calculateCadImageCorners(cadImage);
+
+  // Update source coordinates
+  const source = map.getSource(`cad-image-${cadImage.id}`) as mapboxgl.ImageSource;
+  if (source) {
+    source.updateImage({ url: cadImage.url, coordinates: corners });
+  }
+
+  // Update opacity
+  if (map.getLayer(`cad-layer-${cadImage.id}`)) {
+    map.setPaintProperty(
+      `cad-layer-${cadImage.id}`,
+      'raster-opacity',
+      cadImage.opacity
+    );
+  }
+}
+
+/**
+ * Remove CAD image from map
+ */
+export function removeCadImageFromMap(
+  map: mapboxgl.Map,
+  cadImageId: string
+): void {
+  if (map.getLayer(`cad-layer-${cadImageId}`)) {
+    map.removeLayer(`cad-layer-${cadImageId}`);
+  }
+  if (map.getSource(`cad-image-${cadImageId}`)) {
+    map.removeSource(`cad-image-${cadImageId}`);
+  }
 }

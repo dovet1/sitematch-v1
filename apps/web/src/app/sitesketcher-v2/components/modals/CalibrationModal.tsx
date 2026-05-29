@@ -36,6 +36,7 @@ export function CalibrationModal({
   const [knownDistance, setKnownDistance] = useState('30');
   const [units, setUnits] = useState<'metric' | 'imperial'>('metric');
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageScale, setImageScale] = useState(1); // CRITICAL: Store scale factor for coordinate conversion
 
   const unitOptions: SegmentedOption<'metric' | 'imperial'>[] = [
     { value: 'metric', label: 'Metres' },
@@ -62,6 +63,7 @@ export function CalibrationModal({
 
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       setImageLoaded(true);
+      setImageScale(scale); // CRITICAL: Store scale for coordinate conversion
 
       // Draw points if they exist
       if (pointA) {
@@ -122,9 +124,19 @@ export function CalibrationModal({
     const distance = parseFloat(knownDistance);
     if (isNaN(distance) || distance <= 0) return;
 
-    // Calculate pixel distance
-    const dx = pointB.x - pointA.x;
-    const dy = pointB.y - pointA.y;
+    // CRITICAL: Convert canvas coordinates to original image coordinates
+    const originalPointA = {
+      x: pointA.x / imageScale,
+      y: pointA.y / imageScale,
+    };
+    const originalPointB = {
+      x: pointB.x / imageScale,
+      y: pointB.y / imageScale,
+    };
+
+    // Calculate pixel distance in ORIGINAL image coordinates
+    const dx = originalPointB.x - originalPointA.x;
+    const dy = originalPointB.y - originalPointA.y;
     const pixelDistance = Math.sqrt(dx * dx + dy * dy);
 
     // Convert to metres
@@ -138,8 +150,8 @@ export function CalibrationModal({
     onComplete({
       metresPerPixel,
       calibrationPoints: {
-        a: pointA,
-        b: pointB,
+        a: originalPointA, // Store original coordinates
+        b: originalPointB,
         distance: knownDistanceMetres,
       },
     });
