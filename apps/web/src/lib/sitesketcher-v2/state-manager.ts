@@ -364,7 +364,8 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       // New flow: place from library
       set({
         cadPlacementInProgress: { savedCadId: savedCadIdOrLegacyId },
-        activeTool: 'select',
+        activeTool: 'cad',
+        activePanel: null,
         selectedId: null, // No selection until instance created
         selectedType: null,
       });
@@ -372,7 +373,8 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       // Legacy flow: placing existing CAD image
       set({
         cadPlacementInProgress: null, // Legacy uses different mechanism
-        activeTool: 'select',
+        activeTool: 'cad',
+        activePanel: null,
         selectedId: savedCadIdOrLegacyId,
         selectedType: 'cad',
       });
@@ -487,6 +489,8 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       cadPlacementInProgress: null,
       selectedId: instance.id,
       selectedType: 'cad',
+      activeTool: 'select',
+      activePanel: null,
       isDirty: true,
     }));
   },

@@ -184,6 +184,10 @@ export function MapCanvas() {
     if (!id || !mapRef.current) return;
 
     // CRITICAL: Live store read instead of dependency - prevents re-registration during drag
+    const state = useSketchStore.getState();
+    if (state.cadPlacementInProgress) return;
+    if (state.activeTool !== 'select' && state.activeTool !== 'cad') return;
+
     const cadState = getCadInteractionState(id);
     if (!cadState.exists || cadState.locked) return;
 
@@ -434,7 +438,8 @@ export function MapCanvas() {
 
         map.on('mousedown', (event) => {
           const state = useSketchStore.getState();
-          if (state.activeTool !== 'select') return;
+          if (state.cadPlacementInProgress) return;
+          if (state.activeTool !== 'select' && state.activeTool !== 'cad') return;
 
           const cadId = findCadImageAtPoint(
             map,

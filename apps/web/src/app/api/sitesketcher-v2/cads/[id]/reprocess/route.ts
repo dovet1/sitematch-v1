@@ -7,9 +7,11 @@ import sharp from 'sharp';
 // PATCH /api/sitesketcher-v2/cads/:id/reprocess - Image reprocess endpoint (for cleanup)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     // Auth check
     const user = await getCurrentUser();
     if (!user) {
@@ -57,7 +59,7 @@ export async function PATCH(
     const { data: existingCad, error: fetchError } = await supabase
       .from('saved_cads')
       .select('storage_path, user_id')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (fetchError || !existingCad) {
@@ -156,7 +158,7 @@ export async function PATCH(
         image_width_px: imageWidthPx,
         image_height_px: imageHeightPx,
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id)
       .select()
       .single();

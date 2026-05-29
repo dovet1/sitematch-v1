@@ -6,9 +6,11 @@ import { createServerClient } from '@/lib/supabase';
 // PATCH /api/sitesketcher-v2/cads/:id - Update CAD (rename, recalibrate)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     // Auth check
     const user = await getCurrentUser();
     if (!user) {
@@ -70,7 +72,7 @@ export async function PATCH(
     const { data, error } = await supabase
       .from('saved_cads')
       .update(updates)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id)
       .select()
       .single();
@@ -117,9 +119,11 @@ export async function PATCH(
 // DELETE /api/sitesketcher-v2/cads/:id - Delete CAD row + cleanup storage (orphans instances)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     // Auth check
     const user = await getCurrentUser();
     if (!user) {
@@ -140,7 +144,7 @@ export async function DELETE(
     const { data, error: deleteError } = await supabase
       .from('saved_cads')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id)
       .select('storage_path')
       .single();

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { LeftPanel } from '../LeftPanel';
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
-import type { CadImage, ParkingBlock, Polygon } from '@/types/sitesketcher-v2';
+import type { CadImage, CadInstance, ParkingBlock, Polygon } from '@/types/sitesketcher-v2';
 
 jest.mock('@/lib/sitesketcher-v2/state-manager', () => ({
   useSketchStore: jest.fn(),
@@ -75,12 +75,24 @@ const sampleCadImage: CadImage = {
   updatedAt: 1,
 };
 
+const sampleCadInstance: CadInstance = {
+  id: 'cad-instance-1',
+  savedCadId: 'saved-cad-1',
+  anchor: [-0.1, 51.5],
+  rotation: 0,
+  opacity: 1,
+  locked: false,
+  createdAt: 1,
+  updatedAt: 1,
+};
+
 type MockSketchState = {
   activeTool: 'select' | 'polygon' | 'parking' | 'cad' | 'measure';
   activePanel: 'layers' | 'saved' | null;
   polygons: Polygon[];
   parkingBlocks: ParkingBlock[];
   cadImages: CadImage[];
+  cadInstances: CadInstance[];
   selectedPolygonColorIndex: number;
   setActiveTool: jest.Mock;
   setActivePanel: jest.Mock;
@@ -96,6 +108,7 @@ function setMockState(updates: Partial<MockSketchState> = {}) {
     polygons: [],
     parkingBlocks: [],
     cadImages: [],
+    cadInstances: [],
     selectedPolygonColorIndex: 0,
     setActiveTool: jest.fn((tool: MockSketchState['activeTool']) => {
       mockState = { ...mockState, activeTool: tool, activePanel: null };
@@ -167,6 +180,11 @@ describe('LeftPanel', () => {
     expect(container.firstChild).toBeNull();
 
     setMockState({ cadImages: [sampleCadImage] });
+    rerender(<LeftPanel />);
+    expect(screen.queryByText('Start sketching')).not.toBeInTheDocument();
+    expect(container.firstChild).toBeNull();
+
+    setMockState({ cadInstances: [sampleCadInstance] });
     rerender(<LeftPanel />);
     expect(screen.queryByText('Start sketching')).not.toBeInTheDocument();
     expect(container.firstChild).toBeNull();

@@ -17,6 +17,7 @@ export function LeftPanel() {
     polygons,
     parkingBlocks,
     cadImages,
+    cadInstances,
     selectedPolygonColorIndex,
     setActiveTool,
     setActivePanel,
@@ -24,7 +25,10 @@ export function LeftPanel() {
   } = useSketchStore();
 
   const hasSketchContent =
-    polygons.length > 0 || parkingBlocks.length > 0 || cadImages.length > 0;
+    polygons.length > 0 ||
+    parkingBlocks.length > 0 ||
+    cadImages.length > 0 ||
+    cadInstances.length > 0;
   const showSelectEmptyState =
     activeTool === 'select' && activePanel === null && !hasSketchContent;
   const isVisible = activeTool !== 'select' || activePanel !== null || showSelectEmptyState;

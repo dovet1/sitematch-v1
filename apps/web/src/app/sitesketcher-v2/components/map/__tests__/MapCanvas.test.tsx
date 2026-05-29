@@ -17,11 +17,14 @@ const mockActions = {
   setSelectedId: jest.fn(),
   pushHistory: jest.fn(),
   moveCadImage: jest.fn(),
+  updateCadInstance: jest.fn(),
   placeCadImage: jest.fn(),
+  placeCadInstance: jest.fn(),
   cancelCadPlacement: jest.fn(),
   setMapInstance: jest.fn(),
   startMeasurement: jest.fn(),
   addMeasurementPoint: jest.fn(),
+  getCadForInstance: jest.fn(),
 };
 
 jest.mock('@/lib/sitesketcher-v2/state-manager', () => ({
@@ -188,6 +191,8 @@ function setMockState(updates: Record<string, any> = {}) {
     polygons: [],
     parkingBlocks: [],
     cadImages: [],
+    cadInstances: [],
+    savedCads: [],
     selectedId: null,
     selectedType: null,
     mapFocusRequest: null,
@@ -300,6 +305,62 @@ describe('MapCanvas CAD layer handlers', () => {
 
     expect(fakeMap.dragPan.disable).toHaveBeenCalled();
     expect(mockActions.setSelectedId).toHaveBeenCalledWith('cad-1', 'cad');
+  });
+
+  it('selects CAD from map mousedown while the CAD sidebar is open', async () => {
+    const { rerender } = render(<MapCanvas />);
+
+    act(() => {
+      fakeMap.emit('load');
+    });
+
+    act(() => {
+      setMockState({ activeTool: 'cad', cadImages: [sampleCadImage] });
+    });
+    rerender(<MapCanvas />);
+
+    const projectedAnchor = fakeMap.project(sampleCadImage.anchor!);
+
+    act(() => {
+      fakeMap.emit('mousedown', {
+        point: projectedAnchor,
+        lngLat: { lng: sampleCadImage.anchor![0], lat: sampleCadImage.anchor![1] },
+        preventDefault: jest.fn(),
+      });
+    });
+
+    expect(fakeMap.dragPan.disable).toHaveBeenCalled();
+    expect(mockActions.setSelectedId).toHaveBeenCalledWith('cad-1', 'cad');
+  });
+
+  it('does not select an existing CAD while placing a new CAD', async () => {
+    const { rerender } = render(<MapCanvas />);
+
+    act(() => {
+      fakeMap.emit('load');
+    });
+
+    act(() => {
+      setMockState({
+        activeTool: 'cad',
+        cadImages: [sampleCadImage],
+        cadPlacementInProgress: { savedCadId: 'saved-cad-1' },
+      });
+    });
+    rerender(<MapCanvas />);
+
+    const projectedAnchor = fakeMap.project(sampleCadImage.anchor!);
+
+    act(() => {
+      fakeMap.emit('mousedown', {
+        point: projectedAnchor,
+        lngLat: { lng: sampleCadImage.anchor![0], lat: sampleCadImage.anchor![1] },
+        preventDefault: jest.fn(),
+      });
+    });
+
+    expect(fakeMap.dragPan.disable).not.toHaveBeenCalled();
+    expect(mockActions.setSelectedId).not.toHaveBeenCalledWith('cad-1', 'cad');
   });
 
   it('unregisters CAD handlers before removing an unplaced CAD layer', async () => {
