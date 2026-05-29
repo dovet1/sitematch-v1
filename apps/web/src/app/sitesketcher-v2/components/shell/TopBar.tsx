@@ -18,6 +18,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createDebouncedLocationSearch, formatLocationDisplay } from '@/lib/mapbox';
 import type { LocationResult } from '@/lib/mapbox';
+import { getSketchObjectCount } from '@/lib/sitesketcher-v2/object-count';
 import { SaveModal } from '../modals/SaveModal';
 import { NewSketchConfirmModal } from '../modals/NewSketchConfirmModal';
 import { toast } from 'sonner';
@@ -44,6 +45,7 @@ export function TopBar() {
     polygons,
     parkingBlocks,
     cadImages,
+    cadInstances,
   } = useSketchStore();
 
   const [saving, setSaving] = useState(false);
@@ -58,11 +60,7 @@ export function TopBar() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const debouncedSearch = useRef(createDebouncedLocationSearch(300));
-  const objectCount = {
-    polygons: polygons.length,
-    parkingBlocks: parkingBlocks.length,
-    cadImages: cadImages.length,
-  };
+  const objectCount = getSketchObjectCount({ polygons, parkingBlocks, cadImages, cadInstances });
   const totalObjects = objectCount.polygons + objectCount.parkingBlocks + objectCount.cadImages;
   const hasCurrentWork = Boolean(sketchId) || isDirty || totalObjects > 0;
   const newSketchMode = !sketchId

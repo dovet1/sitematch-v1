@@ -40,54 +40,49 @@ function calculateCornersFromParams(
   metresPerPixel: number,
   rotation: number
 ): [[number, number], [number, number], [number, number], [number, number]] {
-
-  // Calculate image extent in meters
   const widthMetres = imageWidthPx * metresPerPixel;
   const heightMetres = imageHeightPx * metresPerPixel;
+  const halfWidth = widthMetres / 2;
+  const halfHeight = heightMetres / 2;
 
-  // Convert to degrees at anchor latitude
-  const metersPerDegreeLat = 110540;
-  const metersPerDegreeLng = 111320 * Math.cos(anchor[1] * Math.PI / 180);
-
-  const widthDegrees = widthMetres / metersPerDegreeLng;
-  const heightDegrees = heightMetres / metersPerDegreeLat;
-
-  // Calculate unrotated corners
-  const halfWidth = widthDegrees / 2;
-  const halfHeight = heightDegrees / 2;
-
-  const corners: [number, number][] = [
-    [anchor[0] - halfWidth, anchor[1] + halfHeight], // topLeft
-    [anchor[0] + halfWidth, anchor[1] + halfHeight], // topRight
-    [anchor[0] + halfWidth, anchor[1] - halfHeight], // bottomRight
-    [anchor[0] - halfWidth, anchor[1] - halfHeight], // bottomLeft
+  const localCorners: [number, number][] = [
+    [-halfWidth, halfHeight], // topLeft
+    [halfWidth, halfHeight], // topRight
+    [halfWidth, -halfHeight], // bottomRight
+    [-halfWidth, -halfHeight], // bottomLeft
   ];
 
-  // Apply rotation if needed
-  if (rotation !== 0) {
-    return corners.map(corner => rotatePoint(corner, anchor, rotation)) as any;
-  }
-
-  return corners as any;
+  return localCorners.map(([eastMeters, northMeters]) => {
+    const [rotatedEast, rotatedNorth] = rotateLocalPoint(eastMeters, northMeters, rotation);
+    return localMetresToLngLat(anchor, rotatedEast, rotatedNorth);
+  }) as [[number, number], [number, number], [number, number], [number, number]];
 }
 
-/**
- * Rotate a point around a center point by a given angle
- */
-function rotatePoint(
-  point: [number, number],
-  center: [number, number],
+function rotateLocalPoint(
+  eastMeters: number,
+  northMeters: number,
   angleDegrees: number
 ): [number, number] {
   const angleRad = (angleDegrees * Math.PI) / 180;
   const cos = Math.cos(angleRad);
   const sin = Math.sin(angleRad);
 
-  const dx = point[0] - center[0];
-  const dy = point[1] - center[1];
+  return [
+    eastMeters * cos - northMeters * sin,
+    eastMeters * sin + northMeters * cos,
+  ];
+}
+
+function localMetresToLngLat(
+  anchor: [number, number],
+  eastMeters: number,
+  northMeters: number
+): [number, number] {
+  const metersPerDegreeLat = 110540;
+  const metersPerDegreeLng = 111320 * Math.cos(anchor[1] * Math.PI / 180);
 
   return [
-    center[0] + (dx * cos - dy * sin),
-    center[1] + (dx * sin + dy * cos),
+    anchor[0] + eastMeters / metersPerDegreeLng,
+    anchor[1] + northMeters / metersPerDegreeLat,
   ];
 }
