@@ -348,7 +348,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       cadImages: state.cadImages.filter((ci) => ci.id !== id),
       selectedId: state.selectedId === id ? null : state.selectedId,
       selectedType: state.selectedId === id ? null : state.selectedType,
-      cadPlacementInProgress: state.cadPlacementInProgress === id ? null : state.cadPlacementInProgress,
+      cadPlacementInProgress: state.cadPlacementInProgress,
       isDirty: true,
     }));
   },

@@ -22,7 +22,7 @@ import {
 } from '@/lib/sitesketcher-v2/mapbox-integration';
 import { calculateCadImageCorners } from '@/lib/sitesketcher-v2/cad-utils';
 import { calculateEdgeDistance } from '@/lib/sitesketcher-v2/polygon-utils';
-import type { CadImage } from '@/types/sitesketcher-v2';
+import type { CadImage, CadInstance, SavedCad } from '@/types/sitesketcher-v2';
 import { PolygonLabels } from './PolygonLabels';
 import { MeasurementOverlay } from './MeasurementOverlay';
 import { PolygonDrawPreviewOverlay } from './PolygonDrawPreviewOverlay';
@@ -77,22 +77,58 @@ type CadLayerHandlers = {
 function findCadImageAtPoint(
   map: mapboxgl.Map,
   point: mapboxgl.Point,
-  cadImages: CadImage[]
+  cadImages: CadImage[],
+  cadInstances: CadInstance[],
+  savedCads: SavedCad[]
 ): string | null {
-  const placedCadImages = cadImages.filter((cadImage) => cadImage.anchor !== null);
+  const placedCadItems: Array<{
+    id: string;
+    corners: [[number, number], [number, number], [number, number], [number, number]];
+  }> = [
+    ...cadImages
+      .filter((cadImage) => cadImage.anchor !== null)
+      .map((cadImage) => ({
+        id: cadImage.id,
+        corners: calculateCadImageCorners(cadImage),
+      })),
+    ...cadInstances.flatMap((instance) => {
+      const savedCad = savedCads.find((cad) => cad.id === instance.savedCadId);
+      if (!savedCad) return [];
 
-  for (const cadImage of [...placedCadImages].reverse()) {
-    const screenCorners = calculateCadImageCorners(cadImage).map((corner) => {
+      return [{
+        id: instance.id,
+        corners: calculateCadImageCorners(instance, savedCad),
+      }];
+    }),
+  ];
+
+  for (const cadItem of [...placedCadItems].reverse()) {
+    const screenCorners = cadItem.corners.map((corner) => {
       const projected = map.project(corner);
       return [projected.x, projected.y] as [number, number];
     });
 
     if (isPointInPolygon([point.x, point.y], screenCorners)) {
-      return cadImage.id;
+      return cadItem.id;
     }
   }
 
   return null;
+}
+
+function getCadInteractionState(id: string): { locked: boolean; exists: boolean } {
+  const state = useSketchStore.getState();
+  const legacyCad = state.cadImages.find((cad) => cad.id === id);
+  if (legacyCad) {
+    return { locked: Boolean(legacyCad.locked), exists: legacyCad.anchor !== null };
+  }
+
+  const instance = state.cadInstances.find((cadInstance) => cadInstance.id === id);
+  if (instance) {
+    return { locked: Boolean(instance.locked), exists: true };
+  }
+
+  return { locked: false, exists: false };
 }
 
 export function MapCanvas() {
@@ -148,8 +184,8 @@ export function MapCanvas() {
     if (!id || !mapRef.current) return;
 
     // CRITICAL: Live store read instead of dependency - prevents re-registration during drag
-    const cad = useSketchStore.getState().cadImages.find(c => c.id === id);
-    if (!cad || cad.locked || cad.anchor === null) return;
+    const cadState = getCadInteractionState(id);
+    if (!cadState.exists || cadState.locked) return;
 
     e.preventDefault();
 
@@ -169,9 +205,14 @@ export function MapCanvas() {
     const { id } = cadDragRef.current;
     cadDragRef.current.moved = true;
 
-    // Use moveCadImage (no history push) instead of updateCadImage
-    moveCadImage(id, [e.lngLat.lng, e.lngLat.lat]);
-  }, [moveCadImage]);
+    const state = useSketchStore.getState();
+    const anchor: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+    if (state.cadInstances.some((instance) => instance.id === id)) {
+      updateCadInstance(id, { anchor });
+    } else {
+      moveCadImage(id, anchor);
+    }
+  }, [moveCadImage, updateCadInstance]);
 
   const handleCadMouseUp = useCallback(() => {
     if (cadDragRef.current && mapRef.current) {
@@ -186,8 +227,8 @@ export function MapCanvas() {
   // CRITICAL: Use live store read for locked state to avoid listener churn
   const handleCadMouseEnter = useCallback((cadId: string) => () => {
     if (!mapRef.current) return;
-    const cad = useSketchStore.getState().cadImages.find(c => c.id === cadId);
-    if (!cad?.locked) {
+    const cadState = getCadInteractionState(cadId);
+    if (cadState.exists && !cadState.locked) {
       mapRef.current.getCanvas().style.cursor = 'grab';
     }
   }, []);
@@ -395,7 +436,13 @@ export function MapCanvas() {
           const state = useSketchStore.getState();
           if (state.activeTool !== 'select') return;
 
-          const cadId = findCadImageAtPoint(map, event.point, state.cadImages);
+          const cadId = findCadImageAtPoint(
+            map,
+            event.point,
+            state.cadImages,
+            state.cadInstances,
+            state.savedCads
+          );
           if (!cadId) return;
 
           handleCadMouseDown(event, cadId);
@@ -553,9 +600,12 @@ export function MapCanvas() {
               }
 
               // Check for CAD layer clicks
-              const cadLayers = latestState.cadImages
-                .filter(c => c.anchor !== null)
-                .map(c => `cad-layer-${c.id}`);
+              const cadLayers = [
+                ...latestState.cadImages
+                  .filter(c => c.anchor !== null)
+                  .map(c => `cad-layer-${c.id}`),
+                ...latestState.cadInstances.map(instance => `cad-layer-${instance.id}`),
+              ].filter(layerId => map.getLayer(layerId));
 
               if (cadLayers.length > 0) {
                 const cadFeatures = map.queryRenderedFeatures(
@@ -644,6 +694,15 @@ export function MapCanvas() {
           if (cadImage.anchor !== null) { // ONLY add placed CADs
             addCadImageToMap(map, cadImage);
             registerCadLayerHandlers(map, cadImage.id);
+          }
+        });
+
+        const state = useSketchStore.getState();
+        state.cadInstances.forEach(instance => {
+          const savedCad = state.savedCads.find(cad => cad.id === instance.savedCadId);
+          if (savedCad) {
+            addCadImageToMap(map, instance, savedCad);
+            registerCadLayerHandlers(map, instance.id);
           }
         });
 
@@ -764,8 +823,9 @@ export function MapCanvas() {
 
     layerIds.forEach(id => {
       const cad = cadImages.find(c => c.id === id);
+      const instance = cadInstances.find(c => c.id === id);
       // Remove if CAD deleted OR if CAD unplaced (e.g., via undo)
-      if (!cad || cad.anchor === null) {
+      if (!instance && (!cad || cad.anchor === null)) {
         unregisterCadLayerHandlers(map, id);
         removeCadImageFromMap(map, id);
       }
@@ -783,7 +843,7 @@ export function MapCanvas() {
       }
       registerCadLayerHandlers(map, cadImage.id);
     });
-  }, [cadImages, isLoaded, registerCadLayerHandlers, unregisterCadLayerHandlers]);
+  }, [cadImages, cadInstances, isLoaded, registerCadLayerHandlers, unregisterCadLayerHandlers]);
 
   // NEW: Sync cadInstances to map
   useEffect(() => {
