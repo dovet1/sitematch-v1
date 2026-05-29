@@ -60,7 +60,7 @@ export function DropdownMenu({ items, trigger, align = 'right' }: DropdownMenuPr
       {isOpen && (
         <div
           className={clsx(
-            'absolute top-full mt-1 bg-sm-surface border border-sm-border rounded-lg shadow-lg py-1 min-w-[160px] z-50',
+            'absolute top-full mt-1 bg-sm-surface border border-sm-border rounded-lg shadow-lg py-1 min-w-[160px] z-[100]',
             align === 'right' ? 'right-0' : 'left-0'
           )}
         >

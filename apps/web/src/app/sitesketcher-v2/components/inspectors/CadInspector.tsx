@@ -210,10 +210,6 @@ function CadInstanceInspector({ instance, savedCad, onUpdate, onDelete }: {
   return (
     <div className="p-4 space-y-4">
       <div>
-        <h3 className="text-sm font-medium text-sm-ink mb-3">CAD Instance</h3>
-      </div>
-
-      <div>
         <label className="text-xs font-medium text-sm-ink block mb-2">
           Name
         </label>
@@ -251,22 +247,6 @@ function CadInstanceInspector({ instance, savedCad, onUpdate, onDelete }: {
           step={1}
           suffix="°"
         />
-      </div>
-
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-sm-ink">
-          Lock Position
-        </label>
-        <button
-          onClick={() => onUpdate(instance.id, { locked: !instance.locked })}
-          className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-            instance.locked
-              ? 'bg-sm-violet text-white'
-              : 'bg-sm-bg border border-sm-border text-sm-ink hover:bg-sm-bg-hover'
-          }`}
-        >
-          {instance.locked ? 'Locked' : 'Unlocked'}
-        </button>
       </div>
 
       <div className="p-3 bg-sm-bg border border-sm-border rounded">

@@ -5,13 +5,14 @@ import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { Button } from '../primitives/Button';
 import { DropdownMenu } from '../primitives/DropdownMenu';
 import { Upload, Check, AlertCircle, Edit, RotateCcw, Trash2 } from 'lucide-react';
-import { CleanupModal } from '../modals/CleanupModal';
 import { CalibrationModal } from '../modals/CalibrationModal';
 import type { CadImage, SavedCad } from '@/types/sitesketcher-v2';
 import { clsx } from 'clsx';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
+const DEFAULT_BG_THRESHOLD = 245;
+const DEFAULT_CROP_PADDING = 20;
 
 interface UploadResult {
   id: string;
@@ -21,6 +22,132 @@ interface UploadResult {
   imageWidthPx: number;
   imageHeightPx: number;
 }
+
+interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const loadImage = (url: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Failed to load CAD image for cleanup'));
+    image.src = url;
+  });
+
+const calculateAutoCropBounds = (
+  imageData: ImageData,
+  width: number,
+  height: number,
+  padding: number
+): CropRect => {
+  let minX = width;
+  let maxX = 0;
+  let minY = height;
+  let maxY = 0;
+  let hasContent = false;
+
+  const data = imageData.data;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const alpha = data[(y * width + x) * 4 + 3];
+      if (alpha > 10) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+        hasContent = true;
+      }
+    }
+  }
+
+  if (!hasContent) {
+    return { x: 0, y: 0, width, height };
+  }
+
+  const cropX = Math.max(0, minX - padding);
+  const cropY = Math.max(0, minY - padding);
+  const cropWidth = Math.min(width - cropX, maxX - minX + padding * 2);
+  const cropHeight = Math.min(height - cropY, maxY - minY + padding * 2);
+
+  return {
+    x: cropX,
+    y: cropY,
+    width: cropWidth,
+    height: cropHeight,
+  };
+};
+
+const createDefaultCleanedCadBlob = async (imageUrl: string) => {
+  const image = await loadImage(imageUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Could not create canvas context');
+
+  context.drawImage(image, 0, 0);
+
+  const imageData = context.getImageData(0, 0, image.width, image.height);
+  const data = imageData.data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    if (r > DEFAULT_BG_THRESHOLD && g > DEFAULT_BG_THRESHOLD && b > DEFAULT_BG_THRESHOLD) {
+      data[i + 3] = 0;
+    }
+  }
+
+  context.putImageData(imageData, 0, 0);
+
+  const cropRect = calculateAutoCropBounds(
+    imageData,
+    image.width,
+    image.height,
+    DEFAULT_CROP_PADDING
+  );
+
+  const finalCanvas = document.createElement('canvas');
+  finalCanvas.width = cropRect.width;
+  finalCanvas.height = cropRect.height;
+
+  const finalContext = finalCanvas.getContext('2d');
+  if (!finalContext) throw new Error('Could not create final canvas context');
+
+  finalContext.drawImage(
+    canvas,
+    cropRect.x,
+    cropRect.y,
+    cropRect.width,
+    cropRect.height,
+    0,
+    0,
+    cropRect.width,
+    cropRect.height
+  );
+
+  const processedBlob = await new Promise<Blob>((resolve, reject) => {
+    finalCanvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Failed to create processed CAD image'));
+    }, 'image/png');
+  });
+
+  return {
+    processedBlob,
+    newWidthPx: cropRect.width,
+    newHeightPx: cropRect.height,
+  };
+};
 
 export function CadToolPanel() {
   const {
@@ -35,12 +162,12 @@ export function CadToolPanel() {
   } = useSketchStore();
 
   const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Modal flow state
   const [uploadedImage, setUploadedImage] = useState<UploadResult | null>(null);
-  const [showCleanupModal, setShowCleanupModal] = useState(false);
   const [showCalibrationModal, setShowCalibrationModal] = useState(false);
   const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null);
 
@@ -48,10 +175,7 @@ export function CadToolPanel() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const uploadFile = async (file: File) => {
     setError(null);
 
     // Validate file type
@@ -83,8 +207,7 @@ export function CadToolPanel() {
       }
 
       const result = await response.json();
-      setUploadedImage(result);
-      setShowCleanupModal(true);
+      await processUploadedImage(result);
 
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -97,18 +220,32 @@ export function CadToolPanel() {
     }
   };
 
-  const handleCleanupComplete = async (result: {
-    processedBlob: Blob;
-    newWidthPx: number;
-    newHeightPx: number;
-  }) => {
-    if (!uploadedImage) return;
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
+    await uploadFile(file);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (uploading) return;
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    await uploadFile(file);
+  };
+
+  const processUploadedImage = async (image: UploadResult) => {
     try {
+      const result = await createDefaultCleanedCadBlob(image.url);
       const formData = new FormData();
-      const processedFileName = uploadedImage.fileName.replace(/\.(jpg|jpeg|png|pdf)$/i, '.png');
+      const processedFileName = image.fileName.replace(/\.(jpg|jpeg|png|pdf)$/i, '.png');
       formData.append('file', result.processedBlob, processedFileName);
-      formData.append('originalStoragePath', uploadedImage.storagePath);
+      formData.append('originalStoragePath', image.storagePath);
 
       const response = await fetch('/api/sitesketcher-v2/process-cad', {
         method: 'POST',
@@ -130,14 +267,13 @@ export function CadToolPanel() {
       const processed = await response.json();
 
       setUploadedImage({
-        ...uploadedImage,
+        ...image,
         fileName: processedFileName,
         imageWidthPx: processed.imageWidthPx,
         imageHeightPx: processed.imageHeightPx,
         storagePath: processed.storagePath,
       });
       setProcessedImageUrl(processed.url);
-      setShowCleanupModal(false);
       setShowCalibrationModal(true);
     } catch (err: any) {
       setError(err.message || 'Failed to process CAD image');
@@ -255,22 +391,13 @@ export function CadToolPanel() {
 
   return (
     <div className="p-4 space-y-4">
-      {/* Header */}
-      <div>
-        <h3 className="text-sm font-semibold text-sm-ink mb-1">My CADs</h3>
-        <p className="text-xs text-sm-ink/60">
-          {savedCadsLoading
-            ? 'Loading...'
-            : cadPlacementInProgress
-            ? 'Placing on map'
-            : savedCads.length === 0
-            ? 'Upload your first CAD plan'
-            : `${savedCads.length} plan${savedCads.length !== 1 ? 's' : ''} • synced to your account`}
+      {/* Upload Dropzone */}
+      <div className="space-y-3">
+        <p className="text-xs leading-5 text-sm-ink/60">
+          Upload a CAD or site plan image (PNG/JPG) to overlay on the map. You&apos;ll
+          calibrate the scale after upload.
         </p>
-      </div>
 
-      {/* Upload Button */}
-      <div>
         <input
           ref={fileInputRef}
           type="file"
@@ -281,17 +408,49 @@ export function CadToolPanel() {
         />
 
         <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            const nextTarget = e.relatedTarget as Node | null;
+            if (!nextTarget || !e.currentTarget.contains(nextTarget)) {
+              setIsDragging(false);
+            }
+          }}
+          onDrop={handleDrop}
           disabled={uploading}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-sm-violet/10 hover:bg-sm-violet/20 text-sm-violet font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className={clsx(
+            'w-full min-h-[184px] rounded-2xl border-2 border-dashed px-4 py-6',
+            'flex flex-col items-center justify-center text-center transition-colors',
+            'bg-white border-[#ded8cf] hover:bg-[#f7f2ff] hover:border-[#c6a4ff] focus-ring',
+            uploading && 'cursor-not-allowed opacity-60',
+            isDragging && !uploading && 'bg-[#f7f2ff] border-[#c6a4ff]'
+          )}
         >
-          <Upload className="w-4 h-4" />
-          {uploading ? 'Uploading...' : 'Upload a CAD plan'}
+          <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#eadcff] text-[#6d38ff]">
+            <Upload className="h-5 w-5" />
+          </span>
+          <span className="text-xs font-semibold text-sm-ink">
+            {uploading ? 'Preparing CAD...' : 'Drop CAD image here'}
+          </span>
+          <span className="mt-3 text-xs text-[#8b8494]">
+            or click to browse
+          </span>
+          <span className="mt-4 text-[10px] leading-none text-[#aaa3b2]">
+            PNG or JPG, max 50MB
+          </span>
         </button>
-        <p className="text-[10px] text-sm-ink/40 text-center mt-1.5">
-          PNG • JPG up to 50 MB
-        </p>
       </div>
+
+      <div className="border-t border-sm-border" />
 
       {/* Error Display */}
       {error && (
@@ -322,7 +481,7 @@ export function CadToolPanel() {
             <div
               key={cad.id}
               className={clsx(
-                'group relative bg-sm-surface border rounded-lg overflow-hidden transition-all',
+                'group relative bg-sm-surface border rounded-lg overflow-visible transition-all',
                 cadPlacementInProgress &&
                   typeof cadPlacementInProgress === 'object' &&
                   cadPlacementInProgress.savedCadId === cad.id
@@ -331,13 +490,13 @@ export function CadToolPanel() {
               )}
             >
               {/* Thumbnail */}
-              <div className="relative h-20 bg-sm-bg overflow-hidden">
+              <div className="relative h-20 bg-sm-bg overflow-visible">
                 <img
                   src={cad.url}
                   alt={cad.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded-t-lg"
                 />
-                <div className="absolute top-2 right-2">
+                <div className="absolute top-2 right-2 z-[110]">
                   <DropdownMenu
                     align="right"
                     items={[
@@ -383,13 +542,6 @@ export function CadToolPanel() {
                   </div>
                 )}
 
-                {/* Metadata */}
-                <div className="text-[10px] text-sm-ink/50 space-y-0.5">
-                  <div>
-                    {cad.imageWidthPx} × {cad.imageHeightPx} • {cad.imageWidthPx} × {cad.imageHeightPx} px
-                  </div>
-                </div>
-
                 {/* Place Button */}
                 <Button
                   onClick={() => handlePlaceOnMap(cad.id)}
@@ -424,24 +576,6 @@ export function CadToolPanel() {
       </div>
 
       {/* Modals */}
-      {showCleanupModal && uploadedImage && (
-        <CleanupModal
-          imageUrl={uploadedImage.url}
-          imageWidthPx={uploadedImage.imageWidthPx}
-          imageHeightPx={uploadedImage.imageHeightPx}
-          fileName={uploadedImage.fileName}
-          onComplete={handleCleanupComplete}
-          onSkip={() => {
-            setShowCleanupModal(false);
-            setShowCalibrationModal(true);
-          }}
-          onCancel={() => {
-            setShowCleanupModal(false);
-            setUploadedImage(null);
-          }}
-        />
-      )}
-
       {showCalibrationModal && uploadedImage && (
         <CalibrationModal
           imageUrl={processedImageUrl || uploadedImage.url}

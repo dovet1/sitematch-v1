@@ -2,8 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '../primitives/Button';
-import { Slider } from '../primitives/Slider';
 import { X } from 'lucide-react';
+
+const DEFAULT_BG_THRESHOLD = 245;
+const DEFAULT_CROP_PADDING = 20;
+const MIN_CROP_SIZE = 10;
 
 interface CleanupModalProps {
   imageUrl: string;
@@ -39,11 +42,10 @@ export function CleanupModal({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  // Processing settings
-  const [bgThreshold, setBgThreshold] = useState(245);
-  const [cropPadding, setCropPadding] = useState(20);
   const [manualCropEnabled, setManualCropEnabled] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [isDraggingCrop, setIsDraggingCrop] = useState(false);
+  const [cropDragStart, setCropDragStart] = useState<{ x: number; y: number } | null>(null);
 
   // Manual crop state
   const [cropRect, setCropRect] = useState<CropRect>({
@@ -55,10 +57,23 @@ export function CleanupModal({
 
   // Store original image
   const originalImageRef = useRef<HTMLImageElement | null>(null);
+  const previewScaleRef = useRef(1);
 
   // Use ref to access cropRect in manual mode without causing re-renders
   const cropRectRef = useRef(cropRect);
   cropRectRef.current = cropRect;
+
+  const clampCropRect = useCallback((rect: CropRect, width: number, height: number): CropRect => {
+    const x = Math.max(0, Math.min(Math.round(rect.x), width - MIN_CROP_SIZE));
+    const y = Math.max(0, Math.min(Math.round(rect.y), height - MIN_CROP_SIZE));
+
+    return {
+      x,
+      y,
+      width: Math.max(MIN_CROP_SIZE, Math.min(Math.round(rect.width), width - x)),
+      height: Math.max(MIN_CROP_SIZE, Math.min(Math.round(rect.height), height - y)),
+    };
+  }, []);
 
   const calculateAutoCropBounds = useCallback((
     imageData: ImageData,
@@ -104,29 +119,12 @@ export function CleanupModal({
     };
   }, []);
 
-  const drawProcessedImage = useCallback(() => {
-    const canvas = canvasRef.current;
-    const img = originalImageRef.current;
-    if (!canvas || !img) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (showOriginal) {
-      // Show original image
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      return;
-    }
-
-    // Draw image to temp canvas at full size for processing
+  const createProcessedCanvas = useCallback((img: HTMLImageElement) => {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = img.width;
     tempCanvas.height = img.height;
     const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) return;
+    if (!tempCtx) return null;
 
     tempCtx.drawImage(img, 0, 0);
 
@@ -139,36 +137,108 @@ export function CleanupModal({
       const g = data[i + 1];
       const b = data[i + 2];
 
-      // If pixel is above threshold (white-ish), make transparent
-      if (r > bgThreshold && g > bgThreshold && b > bgThreshold) {
+      if (r > DEFAULT_BG_THRESHOLD && g > DEFAULT_BG_THRESHOLD && b > DEFAULT_BG_THRESHOLD) {
         data[i + 3] = 0;
       }
     }
 
     tempCtx.putImageData(imageData, 0, 0);
+    return { tempCanvas, imageData };
+  }, []);
 
-    // Calculate crop bounds
-    let finalCropRect: CropRect;
-    if (!manualCropEnabled) {
-      finalCropRect = calculateAutoCropBounds(imageData, img.width, img.height, cropPadding);
-      // Update crop rect state for dimensions display (use functional update to avoid dependency)
-      setCropRect(prev => {
-        // Only update if values actually changed to prevent unnecessary re-renders
-        if (prev.x !== finalCropRect.x || prev.y !== finalCropRect.y ||
-            prev.width !== finalCropRect.width || prev.height !== finalCropRect.height) {
-          return finalCropRect;
-        }
-        return prev;
-      });
-    } else {
-      // Use current manual crop rect from ref
-      finalCropRect = cropRectRef.current;
+  const getCanvasImagePoint = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    const img = originalImageRef.current;
+    if (!canvas || !img) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = img.width / rect.width;
+    const scaleY = img.height / rect.height;
+
+    return {
+      x: Math.max(0, Math.min(img.width, (event.clientX - rect.left) * scaleX)),
+      y: Math.max(0, Math.min(img.height, (event.clientY - rect.top) * scaleY)),
+    };
+  }, []);
+
+  const drawManualCropOverlay = useCallback((
+    ctx: CanvasRenderingContext2D,
+    rect: CropRect,
+    scale: number
+  ) => {
+    const x = rect.x * scale;
+    const y = rect.y * scale;
+    const width = rect.width * scale;
+    const height = rect.height * scale;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(11, 11, 11, 0.42)';
+    ctx.fillRect(0, 0, ctx.canvas.width, y);
+    ctx.fillRect(0, y + height, ctx.canvas.width, ctx.canvas.height - y - height);
+    ctx.fillRect(0, y, x, height);
+    ctx.fillRect(x + width, y, ctx.canvas.width - x - width, height);
+
+    ctx.strokeStyle = '#7033FF';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, width, height);
+
+    ctx.fillStyle = '#7033FF';
+    const handleSize = 8;
+    const handles = [
+      [x, y],
+      [x + width, y],
+      [x, y + height],
+      [x + width, y + height],
+    ];
+    handles.forEach(([handleX, handleY]) => {
+      ctx.fillRect(handleX - handleSize / 2, handleY - handleSize / 2, handleSize, handleSize);
+    });
+    ctx.restore();
+  }, []);
+
+  const drawProcessedImage = useCallback(() => {
+    const canvas = canvasRef.current;
+    const img = originalImageRef.current;
+    if (!canvas || !img) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const processed = createProcessedCanvas(img);
+    if (!processed) return;
+
+    const { tempCanvas, imageData } = processed;
+    const scale = previewScaleRef.current;
+
+    if (manualCropEnabled) {
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(showOriginal ? img : tempCanvas, 0, 0, canvas.width, canvas.height);
+      drawManualCropOverlay(ctx, clampCropRect(cropRectRef.current, img.width, img.height), scale);
+      return;
     }
 
-    // Draw cropped result to display canvas (scaled)
-    const scale = canvas.width / img.width;
+    const finalCropRect = calculateAutoCropBounds(
+      imageData,
+      img.width,
+      img.height,
+      DEFAULT_CROP_PADDING
+    );
+
+    setCropRect(prev => {
+      if (prev.x !== finalCropRect.x || prev.y !== finalCropRect.y ||
+          prev.width !== finalCropRect.width || prev.height !== finalCropRect.height) {
+        return finalCropRect;
+      }
+      return prev;
+    });
+
+    canvas.width = finalCropRect.width * scale;
+    canvas.height = finalCropRect.height * scale;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(
-      tempCanvas,
+      showOriginal ? img : tempCanvas,
       finalCropRect.x,
       finalCropRect.y,
       finalCropRect.width,
@@ -178,7 +248,14 @@ export function CleanupModal({
       finalCropRect.width * scale,
       finalCropRect.height * scale
     );
-  }, [showOriginal, bgThreshold, cropPadding, manualCropEnabled, calculateAutoCropBounds]);
+  }, [
+    showOriginal,
+    manualCropEnabled,
+    calculateAutoCropBounds,
+    clampCropRect,
+    createProcessedCanvas,
+    drawManualCropOverlay,
+  ]);
 
   // Load and draw image
   useEffect(() => {
@@ -196,9 +273,7 @@ export function CleanupModal({
       // Scale preview to max 800px for performance
       const maxPreview = 800;
       const scale = Math.min(1, maxPreview / Math.max(img.width, img.height));
-
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
+      previewScaleRef.current = scale;
 
       setImageLoaded(true);
     };
@@ -212,41 +287,68 @@ export function CleanupModal({
     }
   }, [imageLoaded, drawProcessedImage]);
 
+  const handleManualCropToggle = (enabled: boolean) => {
+    setManualCropEnabled(enabled);
+    setIsDraggingCrop(false);
+    setCropDragStart(null);
+  };
+
+  const handleCropPointerDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!manualCropEnabled || showOriginal || processing) return;
+
+    const point = getCanvasImagePoint(event);
+    if (!point) return;
+
+    setCropDragStart(point);
+    setCropRect({
+      x: point.x,
+      y: point.y,
+      width: MIN_CROP_SIZE,
+      height: MIN_CROP_SIZE,
+    });
+    setIsDraggingCrop(true);
+  };
+
+  const handleCropPointerMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!manualCropEnabled || !isDraggingCrop || !cropDragStart) return;
+
+    const point = getCanvasImagePoint(event);
+    if (!point) return;
+
+    const img = originalImageRef.current;
+    if (!img) return;
+
+    const x = Math.round(Math.min(cropDragStart.x, point.x));
+    const y = Math.round(Math.min(cropDragStart.y, point.y));
+    const width = Math.round(Math.max(MIN_CROP_SIZE, Math.abs(point.x - cropDragStart.x)));
+    const height = Math.round(Math.max(MIN_CROP_SIZE, Math.abs(point.y - cropDragStart.y)));
+
+    setCropRect(clampCropRect({ x, y, width, height }, img.width, img.height));
+  };
+
+  const handleCropPointerUp = () => {
+    setIsDraggingCrop(false);
+    setCropDragStart(null);
+  };
+
   const handleNext = async () => {
     const img = originalImageRef.current;
     if (!img) return;
 
     setProcessing(true);
     try {
-      // Create final processed image
-      const tempCanvas = document.createElement('canvas');
-      const tempCtx = tempCanvas.getContext('2d');
-      if (!tempCtx) throw new Error('Could not create canvas context');
-
-      tempCanvas.width = img.width;
-      tempCanvas.height = img.height;
-      tempCtx.drawImage(img, 0, 0);
-
-      // Apply background removal
-      const imageData = tempCtx.getImageData(0, 0, img.width, img.height);
-      const data = imageData.data;
-
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-
-        if (r > bgThreshold && g > bgThreshold && b > bgThreshold) {
-          data[i + 3] = 0;
-        }
-      }
-
-      tempCtx.putImageData(imageData, 0, 0);
+      const processed = createProcessedCanvas(img);
+      if (!processed) throw new Error('Could not create canvas context');
 
       // Calculate final crop bounds
-      let finalCropRect = cropRect;
+      let finalCropRect = clampCropRect(cropRect, img.width, img.height);
       if (!manualCropEnabled) {
-        finalCropRect = calculateAutoCropBounds(imageData, img.width, img.height, cropPadding);
+        finalCropRect = calculateAutoCropBounds(
+          processed.imageData,
+          img.width,
+          img.height,
+          DEFAULT_CROP_PADDING
+        );
       }
 
       // Create final cropped canvas
@@ -257,7 +359,7 @@ export function CleanupModal({
       if (!finalCtx) throw new Error('Could not create final canvas context');
 
       finalCtx.drawImage(
-        tempCanvas,
+        processed.tempCanvas,
         finalCropRect.x,
         finalCropRect.y,
         finalCropRect.width,
@@ -310,7 +412,11 @@ export function CleanupModal({
             <div className="border border-sm-border rounded-lg overflow-hidden bg-sm-bg">
               <canvas
                 ref={canvasRef}
-                className="max-w-full"
+                onMouseDown={handleCropPointerDown}
+                onMouseMove={handleCropPointerMove}
+                onMouseUp={handleCropPointerUp}
+                onMouseLeave={handleCropPointerUp}
+                className={manualCropEnabled && !showOriginal ? 'max-w-full cursor-crosshair' : 'max-w-full'}
                 style={{ display: 'block', margin: '0 auto' }}
               />
             </div>
@@ -340,52 +446,24 @@ export function CleanupModal({
                 </Button>
               </div>
 
-              <div>
-                <label className="text-xs font-medium text-sm-ink block mb-2">
-                  Background Threshold
-                </label>
-                <Slider
-                  value={bgThreshold}
-                  onChange={setBgThreshold}
-                  min={200}
-                  max={255}
-                  step={1}
-                />
-                <p className="text-xs text-sm-ink/50 mt-1">
-                  Pixels brighter than this value will be made transparent
-                </p>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-sm-ink block mb-2">
-                  Crop Padding
-                </label>
-                <Slider
-                  value={cropPadding}
-                  onChange={setCropPadding}
-                  min={0}
-                  max={100}
-                  step={5}
-                  suffix="px"
-                  disabled={manualCropEnabled}
-                />
-                <p className="text-xs text-sm-ink/50 mt-1">
-                  Extra space to keep around the detected content
-                </p>
-              </div>
-
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="manual-crop"
                   checked={manualCropEnabled}
-                  onChange={(e) => setManualCropEnabled(e.target.checked)}
+                  onChange={(e) => handleManualCropToggle(e.target.checked)}
                   className="rounded border-sm-border"
                 />
                 <label htmlFor="manual-crop" className="text-sm text-sm-ink cursor-pointer">
-                  Enable manual crop (coming soon)
+                  Crop manually
                 </label>
               </div>
+
+              {manualCropEnabled && (
+                <p className="text-xs text-sm-ink/50">
+                  Drag over the cleaned image to keep only the store plan area.
+                </p>
+              )}
 
               <div className="p-3 bg-sm-violet-tint-soft border border-sm-violet/20 rounded">
                 <div className="text-xs text-sm-ink/70">
