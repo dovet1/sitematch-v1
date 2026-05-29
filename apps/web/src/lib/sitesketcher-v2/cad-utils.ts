@@ -1,16 +1,45 @@
-import type { CadImage } from '@/types/sitesketcher-v2';
+import type { CadImage, CadInstance, SavedCad } from '@/types/sitesketcher-v2';
 
 /**
  * Calculate the four corner coordinates for a CAD image on the map
  * Returns [topLeft, topRight, bottomRight, bottomLeft] in [lng, lat] format
+ *
+ * Supports both legacy CadImage and new CadInstance + SavedCad model
  */
 export function calculateCadImageCorners(
-  cadImage: CadImage
+  cadImageOrInstance: CadImage | CadInstance,
+  savedCad?: SavedCad
 ): [[number, number], [number, number], [number, number], [number, number]] {
-  if (cadImage.anchor === null) {
-    throw new Error(`Cannot calculate corners for unplaced CAD ${cadImage.id}`);
+  // Handle legacy CadImage
+  if ('fileName' in cadImageOrInstance) {
+    const cadImage = cadImageOrInstance as CadImage;
+    if (cadImage.anchor === null) {
+      throw new Error(`Cannot calculate corners for unplaced CAD ${cadImage.id}`);
+    }
+    const { anchor, imageWidthPx, imageHeightPx, metresPerPixel, rotation } = cadImage;
+    return calculateCornersFromParams(anchor, imageWidthPx, imageHeightPx, metresPerPixel, rotation);
   }
-  const { anchor, imageWidthPx, imageHeightPx, metresPerPixel, rotation } = cadImage;
+
+  // Handle new CadInstance + SavedCad model
+  const instance = cadImageOrInstance as CadInstance;
+  if (!savedCad) {
+    throw new Error(`SavedCad required for CadInstance ${instance.id}`);
+  }
+  const { anchor, rotation } = instance;
+  const { imageWidthPx, imageHeightPx, metresPerPixel } = savedCad;
+  return calculateCornersFromParams(anchor, imageWidthPx, imageHeightPx, metresPerPixel, rotation);
+}
+
+/**
+ * Internal helper to calculate corners from parameters
+ */
+function calculateCornersFromParams(
+  anchor: [number, number],
+  imageWidthPx: number,
+  imageHeightPx: number,
+  metresPerPixel: number,
+  rotation: number
+): [[number, number], [number, number], [number, number], [number, number]] {
 
   // Calculate image extent in meters
   const widthMetres = imageWidthPx * metresPerPixel;

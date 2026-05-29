@@ -17,6 +17,7 @@ const MINIMUM_WIDTH = 1024;
 export default function SiteSketcherV2Page() {
   const [isSupported, setIsSupported] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const loadSavedCads = useSketchStore((state) => state.loadSavedCads);
 
   useEffect(() => {
     const checkViewport = () => {
@@ -32,6 +33,11 @@ export default function SiteSketcherV2Page() {
     window.addEventListener('resize', checkViewport);
     return () => window.removeEventListener('resize', checkViewport);
   }, []);
+
+  // Load CAD library on mount
+  useEffect(() => {
+    loadSavedCads();
+  }, [loadSavedCads]);
 
   // Keyboard shortcuts
   useEffect(() => {

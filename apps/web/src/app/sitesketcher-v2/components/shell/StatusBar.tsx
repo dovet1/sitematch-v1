@@ -4,9 +4,10 @@ import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { MousePointer2 } from 'lucide-react';
 
 export function StatusBar() {
-  const { activeTool, polygons, parkingBlocks, cadImages, viewport } = useSketchStore();
+  const { activeTool, polygons, parkingBlocks, cadImages, cadInstances, viewport } = useSketchStore();
 
-  const totalObjects = polygons.length + parkingBlocks.length + cadImages.length;
+  const totalCads = cadImages.length + cadInstances.length;
+  const totalObjects = polygons.length + parkingBlocks.length + totalCads;
 
   return (
     <div className="h-8 bg-sm-surface border-t border-sm-border flex items-center justify-between px-4 text-xs text-sm-ink/60 flex-shrink-0">
@@ -29,8 +30,8 @@ export function StatusBar() {
             {parkingBlocks.length > 0 && (
               <span>{parkingBlocks.length} parking</span>
             )}
-            {cadImages.length > 0 && (
-              <span>{cadImages.length} CAD</span>
+            {totalCads > 0 && (
+              <span>{totalCads} CAD</span>
             )}
           </div>
         )}

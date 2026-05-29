@@ -3,6 +3,8 @@ import {
   Polygon,
   ParkingBlock,
   CadImage,
+  SavedCad,
+  CadInstance,
   Tool,
   MapStyle,
   Units,
@@ -24,7 +26,11 @@ interface SketchState {
   // Data
   polygons: Polygon[];
   parkingBlocks: ParkingBlock[];
-  cadImages: CadImage[];
+  cadImages: CadImage[]; // DEPRECATED: Will be removed after migration
+  cadInstances: CadInstance[];
+  savedCads: SavedCad[];
+  savedCadsLoading: boolean;
+  savedCadsError: string | null;
 
   // UI state
   activeTool: Tool;
@@ -42,7 +48,7 @@ interface SketchState {
   drawingInProgress: PolygonInProgress | null;
   measurementInProgress: MeasurementChain | null;
   frozenMeasurement: MeasurementChain | null; // Measurement that's finished drawing but still visible
-  cadPlacementInProgress: string | null; // ID of CAD being placed
+  cadPlacementInProgress: { savedCadId: string } | null; // SavedCad being placed (no instance until placement)
 
   // Sketch metadata
   sketchId: string | null;
@@ -76,15 +82,30 @@ interface SketchState {
   deleteParkingBlock: (id: string) => void;
   setParkingBlocks: (parkingBlocks: ParkingBlock[]) => void;
 
-  // Actions - CAD Images
+  // Actions - CAD Images (DEPRECATED)
   addCadImage: (cadImage: CadImage) => void;
   updateCadImage: (id: string, updates: Partial<CadImage>) => void;
   moveCadImage: (id: string, anchor: [number, number]) => void;
   deleteCadImage: (id: string) => void;
   setCadImages: (cadImages: CadImage[]) => void;
-  startCadPlacement: (id: string) => void;
+  startCadPlacement: (savedCadIdOrLegacyId: string) => void;
   placeCadImage: (id: string, anchor: [number, number]) => void;
   cancelCadPlacement: () => void;
+
+  // Actions - SavedCad Library
+  loadSavedCads: () => Promise<void>;
+  addSavedCad: (cad: SavedCad) => void;
+  updateSavedCad: (id: string, updates: Partial<SavedCad>) => void;
+  deleteSavedCad: (id: string) => void;
+
+  // Actions - CAD Instances
+  addCadInstance: (instance: CadInstance) => void;
+  updateCadInstance: (id: string, updates: Partial<CadInstance>) => void;
+  deleteCadInstance: (id: string) => void;
+  placeCadInstance: (savedCadId: string, anchor: [number, number]) => void;
+
+  // Helpers
+  getCadForInstance: (instanceId: string) => SavedCad | null;
 
   // Actions - UI
   setActiveTool: (tool: Tool) => void;
@@ -148,7 +169,11 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   mapInstance: null,
   polygons: [],
   parkingBlocks: [],
-  cadImages: [],
+  cadImages: [], // DEPRECATED
+  cadInstances: [],
+  savedCads: [],
+  savedCadsLoading: false,
+  savedCadsError: null,
 
   activeTool: 'select',
   activePanel: null,
@@ -330,12 +355,29 @@ export const useSketchStore = create<SketchState>((set, get) => ({
 
   setCadImages: (cadImages) => set({ cadImages }),
 
-  startCadPlacement: (id) => set({
-    cadPlacementInProgress: id,
-    activeTool: 'select',
-    selectedId: id,
-    selectedType: 'cad',
-  }),
+  startCadPlacement: (savedCadIdOrLegacyId) => {
+    // NEW: Check if it's a savedCadId or legacy CAD image ID
+    const state = get();
+    const isSavedCad = state.savedCads.some(cad => cad.id === savedCadIdOrLegacyId);
+
+    if (isSavedCad) {
+      // New flow: place from library
+      set({
+        cadPlacementInProgress: { savedCadId: savedCadIdOrLegacyId },
+        activeTool: 'select',
+        selectedId: null, // No selection until instance created
+        selectedType: null,
+      });
+    } else {
+      // Legacy flow: placing existing CAD image
+      set({
+        cadPlacementInProgress: null, // Legacy uses different mechanism
+        activeTool: 'select',
+        selectedId: savedCadIdOrLegacyId,
+        selectedType: 'cad',
+      });
+    }
+  },
 
   placeCadImage: (id, anchor) => {
     // NO pushHistory() - CAD operations deferred from undo system (see Known Limitations)
@@ -351,6 +393,111 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   cancelCadPlacement: () => set({
     cadPlacementInProgress: null,
   }),
+
+  // SavedCad Library actions
+  loadSavedCads: async () => {
+    set({ savedCadsLoading: true, savedCadsError: null });
+
+    try {
+      const response = await fetch('/api/sitesketcher-v2/cads');
+
+      if (!response.ok) {
+        throw new Error(`Failed to load CAD library: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      set({
+        savedCads: data.cads || [],
+        savedCadsLoading: false,
+        savedCadsError: null,
+      });
+    } catch (error) {
+      console.error('Failed to load saved CADs:', error);
+      set({
+        savedCadsLoading: false,
+        savedCadsError: error instanceof Error ? error.message : 'Failed to load CAD library',
+      });
+    }
+  },
+
+  addSavedCad: (cad) => {
+    set((state) => ({
+      savedCads: [...state.savedCads, cad],
+    }));
+  },
+
+  updateSavedCad: (id, updates) => {
+    set((state) => ({
+      savedCads: state.savedCads.map((cad) =>
+        cad.id === id ? { ...cad, ...updates } : cad
+      ),
+    }));
+  },
+
+  deleteSavedCad: (id) => {
+    set((state) => ({
+      savedCads: state.savedCads.filter((cad) => cad.id !== id),
+    }));
+  },
+
+  // CAD Instance actions
+  addCadInstance: (instance) => {
+    // NO pushHistory() - CAD operations not in undo stack (deferred to future PR)
+    set((state) => ({
+      cadInstances: [...state.cadInstances, instance],
+      isDirty: true,
+    }));
+  },
+
+  updateCadInstance: (id, updates) => {
+    // NO pushHistory() - CAD operations not in undo stack (deferred to future PR)
+    set((state) => ({
+      cadInstances: state.cadInstances.map((instance) =>
+        instance.id === id ? { ...instance, ...updates, updatedAt: Date.now() } : instance
+      ),
+      isDirty: true,
+    }));
+  },
+
+  deleteCadInstance: (id) => {
+    // NO pushHistory() - CAD operations not in undo stack (deferred to future PR)
+    set((state) => ({
+      cadInstances: state.cadInstances.filter((instance) => instance.id !== id),
+      selectedId: state.selectedId === id ? null : state.selectedId,
+      selectedType: state.selectedId === id ? null : state.selectedType,
+      isDirty: true,
+    }));
+  },
+
+  placeCadInstance: (savedCadId, anchor) => {
+    // NO pushHistory() - CAD operations deferred from undo system
+    const instance: CadInstance = {
+      id: `cad-instance-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      savedCadId,
+      anchor,
+      rotation: 0,
+      opacity: 0.7,
+      locked: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    set((state) => ({
+      cadInstances: [...state.cadInstances, instance],
+      cadPlacementInProgress: null,
+      selectedId: instance.id,
+      selectedType: 'cad',
+      isDirty: true,
+    }));
+  },
+
+  // Helper
+  getCadForInstance: (instanceId) => {
+    const state = get();
+    const instance = state.cadInstances.find((i) => i.id === instanceId);
+    if (!instance) return null;
+    return state.savedCads.find((cad) => cad.id === instance.savedCadId) || null;
+  },
 
   // UI actions
   setActiveTool: (tool) => {
@@ -572,7 +719,8 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     set({
       polygons: historyState.polygons,
       parkingBlocks: historyState.parkingBlocks,
-      cadImages: state.cadImages, // Preserve current CAD state
+      cadImages: state.cadImages, // Preserve current CAD state (legacy)
+      cadInstances: state.cadInstances, // Preserve current CAD instances
       cadPlacementInProgress: null, // Clear transient placement mode (redundant but explicit)
       historyIndex: newIndex,
       isDirty: true,
@@ -595,7 +743,8 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     set({
       polygons: historyState.polygons,
       parkingBlocks: historyState.parkingBlocks,
-      cadImages: state.cadImages, // Preserve current CAD state
+      cadImages: state.cadImages, // Preserve current CAD state (legacy)
+      cadInstances: state.cadInstances, // Preserve current CAD instances
       cadPlacementInProgress: null, // Clear transient placement mode (redundant but explicit)
       historyIndex: newIndex,
       isDirty: true,
@@ -618,7 +767,9 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     return set({
       polygons: [],
       parkingBlocks: [],
-      cadImages: [],
+      cadImages: [], // Legacy
+      cadInstances: [],
+      // NOTE: Do NOT reset savedCads - library persists across sketches
       activeTool: 'select',
       activePanel: null,
       selectedId: null,
@@ -645,7 +796,9 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     set({
       polygons: data.polygons || [],
       parkingBlocks: data.parkingBlocks || [],
-      cadImages: data.cadImages || [],
+      cadImages: data.cadImages || [], // Legacy support
+      cadInstances: data.cadInstances || [],
+      // NOTE: savedCads remain unchanged - library persists across sketch loads
       viewport: data.viewport || { ...DEFAULT_VIEWPORT },
       units: data.settings?.units || 'metric',
       mapStyle: (data.settings?.mapStyle as MapStyle) || 'hybrid',
@@ -677,7 +830,8 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       version: 2,
       polygons: state.polygons,
       parkingBlocks: state.parkingBlocks,
-      cadImages: state.cadImages,
+      cadImages: state.cadImages, // Legacy support (can be removed after full migration)
+      cadInstances: state.cadInstances,
       viewport: state.viewport,
       settings: {
         units: state.units,

@@ -41,6 +41,8 @@ export function LayersPanel() {
     polygons,
     parkingBlocks,
     cadImages,
+    cadInstances,
+    getCadForInstance,
     selectedId,
     setSelectedId,
     focusMap,
@@ -48,9 +50,11 @@ export function LayersPanel() {
     deleteParkingBlock,
     startCadPlacement,
     deleteCadImage,
+    deleteCadInstance,
   } = useSketchStore();
 
-  const totalObjects = polygons.length + parkingBlocks.length + cadImages.length;
+  const totalCads = cadImages.length + cadInstances.length;
+  const totalObjects = polygons.length + parkingBlocks.length + totalCads;
   const totalParkingSpaces = parkingBlocks.reduce((sum, parking) => sum + parking.spaces, 0);
   const focusPolygonLayer = (polygon: Polygon) => {
     const bounds = getPolygonBounds(polygon);
@@ -78,6 +82,11 @@ export function LayersPanel() {
       // Unplaced - enter placement mode
       startCadPlacement(id);
     }
+  };
+
+  const focusCadInstanceLayer = (instanceId: string, anchor: [number, number]) => {
+    setSelectedId(instanceId, 'cad');
+    focusMap({ center: anchor, zoom: LAYER_FOCUS_ZOOM });
   };
 
   return (
@@ -215,12 +224,13 @@ export function LayersPanel() {
         </div>
       )}
 
-      {cadImages.length > 0 && (
+      {totalCads > 0 && (
         <div>
           <h4 className="text-xs font-medium text-sm-ink/70 mb-2 uppercase tracking-wide">
-            My CADs ({cadImages.length})
+            CAD Plans ({totalCads})
           </h4>
           <div className="space-y-1">
+            {/* Legacy CadImages */}
             {cadImages.map((cad) => {
               const isSelected = selectedId === cad.id;
               const isPlaced = cad.anchor !== null;
@@ -272,6 +282,59 @@ export function LayersPanel() {
                     }}
                     className="p-1 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Delete"
+                  >
+                    <Trash2 className="w-3 h-3 text-red-600" />
+                  </button>
+                </div>
+              );
+            })}
+
+            {/* New CadInstances */}
+            {cadInstances.map((instance) => {
+              const isSelected = selectedId === instance.id;
+              const savedCad = getCadForInstance(instance.id);
+
+              return (
+                <div
+                  key={instance.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => focusCadInstanceLayer(instance.id, instance.anchor)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      focusCadInstanceLayer(instance.id, instance.anchor);
+                    }
+                  }}
+                  className={`
+                    group w-full flex items-center gap-2 p-2 rounded transition-all text-left cursor-pointer
+                    ${isSelected ? 'bg-sm-violet/10 border border-sm-violet' : 'hover:bg-sm-bg border border-transparent'}
+                  `}
+                >
+                  {/* Icon */}
+                  <div className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center ${
+                    savedCad ? 'bg-blue-500/20 border-blue-600' : 'bg-red-500/20 border-red-600'
+                  }`}>
+                    {!savedCad && <span className="text-[8px] text-red-600">✕</span>}
+                  </div>
+
+                  {/* Name */}
+                  <span className={`text-sm flex-1 truncate ${savedCad ? 'text-sm-ink' : 'text-sm-ink/40'}`}>
+                    {savedCad ? savedCad.name : 'Deleted CAD'}
+                  </span>
+
+                  {/* Delete button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const name = savedCad ? savedCad.name : 'this CAD instance';
+                      if (confirm(`Remove ${name} from sketch?`)) {
+                        deleteCadInstance(instance.id);
+                      }
+                    }}
+                    className="p-1 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove from sketch"
                   >
                     <Trash2 className="w-3 h-3 text-red-600" />
                   </button>

@@ -11,7 +11,9 @@ interface CalibrationModalProps {
   imageWidthPx: number;
   imageHeightPx: number;
   fileName: string;
+  initialName?: string;
   onComplete: (calibration: {
+    name: string;
     metresPerPixel: number;
     calibrationPoints: {
       a: { x: number; y: number };
@@ -27,10 +29,16 @@ export function CalibrationModal({
   imageWidthPx,
   imageHeightPx,
   fileName,
+  initialName,
   onComplete,
   onCancel,
 }: CalibrationModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Default name: fileName without extension
+  const defaultName = initialName || fileName.replace(/\.[^/.]+$/, '');
+
+  const [name, setName] = useState(defaultName);
   const [pointA, setPointA] = useState<{ x: number; y: number } | null>(null);
   const [pointB, setPointB] = useState<{ x: number; y: number } | null>(null);
   const [knownDistance, setKnownDistance] = useState('30');
@@ -119,7 +127,7 @@ export function CalibrationModal({
   };
 
   const handleConfirm = () => {
-    if (!pointA || !pointB || !knownDistance) return;
+    if (!pointA || !pointB || !knownDistance || !name.trim()) return;
 
     const distance = parseFloat(knownDistance);
     if (isNaN(distance) || distance <= 0) return;
@@ -148,6 +156,7 @@ export function CalibrationModal({
     const metresPerPixel = knownDistanceMetres / pixelDistance;
 
     onComplete({
+      name: name.trim(),
       metresPerPixel,
       calibrationPoints: {
         a: originalPointA, // Store original coordinates
@@ -157,7 +166,7 @@ export function CalibrationModal({
     });
   };
 
-  const canConfirm = pointA && pointB && knownDistance && parseFloat(knownDistance) > 0;
+  const canConfirm = name.trim() && pointA && pointB && knownDistance && parseFloat(knownDistance) > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -176,6 +185,19 @@ export function CalibrationModal({
         </div>
 
         <div className="p-6 space-y-4">
+          <div>
+            <label className="text-xs font-medium text-sm-ink block mb-2">
+              CAD Name *
+            </label>
+            <Input
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="e.g. Site Plan A"
+              autoFocus
+            />
+          </div>
+
           <div>
             <p className="text-sm text-sm-ink mb-3">
               Click two points on the image with a known distance between them.

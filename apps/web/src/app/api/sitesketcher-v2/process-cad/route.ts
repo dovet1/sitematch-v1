@@ -47,18 +47,19 @@ export async function POST(request: NextRequest) {
     }
 
     // CRITICAL: Verify path ownership - ensure originalStoragePath belongs to this user
-    // Path format should be: {userId}/{timestamp}-{filename}
-    if (!originalStoragePath.startsWith(user.id + '/')) {
-      return NextResponse.json({ error: 'Invalid storage path' }, { status: 403 });
+    // Must be tmp path: {userId}/tmp/{filename}
+    const tmpPathRegex = new RegExp(`^${user.id}/tmp/`);
+    if (!tmpPathRegex.test(originalStoragePath)) {
+      return NextResponse.json({
+        error: 'Invalid storage path. Must be a temporary path.'
+      }, { status: 403 });
     }
 
-    // CRITICAL: Create unique storage path with -processed- prefix and UUID (cleanup always outputs PNG)
-    // This ensures cache busting even for original PNG files and prevents delete-after-upload race condition
-    const pathParts = originalStoragePath.split('/');
-    const fileName = pathParts[pathParts.length - 1];
-    const baseName = fileName.replace(/\.(jpg|jpeg|png|pdf)$/i, '');
-    const processedFileName = `${baseName}-processed-${crypto.randomUUID()}.png`;
-    const processedStoragePath = [...pathParts.slice(0, -1), processedFileName].join('/');
+    // CRITICAL: Create NEW tmp storage path (preserves tmp lifecycle)
+    // Format: {userId}/tmp/{timestamp}-{uuid}.png
+    const timestamp = Date.now();
+    const uuid = crypto.randomUUID();
+    const processedStoragePath = `${user.id}/tmp/${timestamp}-${uuid}.png`;
 
     const buffer = await file.arrayBuffer();
     const supabase = await createServerClient();

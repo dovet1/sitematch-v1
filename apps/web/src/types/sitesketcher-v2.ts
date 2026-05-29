@@ -25,6 +25,39 @@ export interface ParkingBlock {
   updatedAt: number;
 }
 
+// SavedCad: Library item stored in saved_cads table
+export interface SavedCad {
+  id: string;
+  userId: string;
+  name: string;
+  fileName: string;
+  url: string;
+  storagePath: string;
+  metresPerPixel: number;
+  imageWidthPx: number;
+  imageHeightPx: number;
+  calibrationPoints?: {
+    a: { x: number; y: number };
+    b: { x: number; y: number };
+    distance: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+// CadInstance: Placed instance stored in sketch JSONB
+export interface CadInstance {
+  id: string;
+  savedCadId: string;
+  anchor: [number, number]; // NOT nullable - instance only exists after placement
+  rotation: number;
+  opacity: number;
+  locked?: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// DEPRECATED: Old CadImage type - will be removed after migration
 export interface CadImage {
   id: string;
   fileName: string;
@@ -87,7 +120,8 @@ export interface SketchData {
   version: 2; // v2 marker - critical for filtering
   polygons: Polygon[];
   parkingBlocks: ParkingBlock[];
-  cadImages: CadImage[];
+  cadInstances: CadInstance[]; // CHANGED from cadImages
+  cadImages?: CadImage[]; // DEPRECATED: Keep for backward compatibility during transition
   viewport: { center: [number, number]; zoom: number; pitch: number; bearing: number };
   settings: { units: 'metric' | 'imperial'; mapStyle: string; sideLabelsOn: boolean };
 }

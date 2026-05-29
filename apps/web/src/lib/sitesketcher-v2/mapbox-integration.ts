@@ -1,6 +1,6 @@
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import { ParkingBlock, Polygon, CadImage } from '@/types/sitesketcher-v2';
+import { ParkingBlock, Polygon, CadImage, CadInstance, SavedCad } from '@/types/sitesketcher-v2';
 import { DEFAULT_BUILDING_HEIGHT_METERS, PARKING_DIMENSIONS, POLYGON_COLORS } from './constants';
 import { PolygonMode } from './PolygonMode';
 import { calculateCadImageCorners } from './cad-utils';
@@ -663,21 +663,53 @@ export function flyToViewport(
 
 /**
  * Add CAD image to map as raster layer
+ * Supports both legacy CadImage and new CadInstance + SavedCad model
  */
 export function addCadImageToMap(
   map: mapboxgl.Map,
-  cadImage: CadImage
+  cadImageOrInstance: CadImage | CadInstance,
+  savedCad?: SavedCad
 ): void {
-  if (cadImage.anchor === null) {
-    // Silent return - this is expected for unplaced CADs
+  // Handle legacy CadImage
+  if ('fileName' in cadImageOrInstance) {
+    const cadImage = cadImageOrInstance as CadImage;
+    if (cadImage.anchor === null) {
+      return;
+    }
+    const corners = calculateCadImageCorners(cadImage);
+    const id = cadImage.id;
+    const url = cadImage.url;
+    const opacity = cadImage.opacity;
+
+    addCadToMap(map, id, url, corners, opacity);
     return;
   }
-  const corners = calculateCadImageCorners(cadImage);
 
+  // Handle new CadInstance + SavedCad model
+  const instance = cadImageOrInstance as CadInstance;
+  if (!savedCad) {
+    console.warn(`Cannot render CadInstance ${instance.id}: SavedCad not found`);
+    return;
+  }
+
+  const corners = calculateCadImageCorners(instance, savedCad);
+  addCadToMap(map, instance.id, savedCad.url, corners, instance.opacity);
+}
+
+/**
+ * Internal helper to add CAD to map
+ */
+function addCadToMap(
+  map: mapboxgl.Map,
+  id: string,
+  url: string,
+  corners: [[number, number], [number, number], [number, number], [number, number]],
+  opacity: number
+): void {
   // Add source
-  map.addSource(`cad-image-${cadImage.id}`, {
+  map.addSource(`cad-image-${id}`, {
     type: 'image',
-    url: cadImage.url,
+    url,
     coordinates: corners,
   });
 
@@ -686,11 +718,11 @@ export function addCadImageToMap(
   const beforeLayer = map.getLayer(firstPolygonLayer) ? firstPolygonLayer : undefined;
 
   map.addLayer({
-    id: `cad-layer-${cadImage.id}`,
-    source: `cad-image-${cadImage.id}`,
+    id: `cad-layer-${id}`,
+    source: `cad-image-${id}`,
     type: 'raster',
     paint: {
-      'raster-opacity': cadImage.opacity,
+      'raster-opacity': opacity,
       'raster-fade-duration': 0, // Instant opacity changes
     },
   }, beforeLayer); // Insert before polygons if layer exists, otherwise add to top
@@ -698,29 +730,57 @@ export function addCadImageToMap(
 
 /**
  * Update CAD image coordinates and opacity on map
+ * Supports both legacy CadImage and new CadInstance + SavedCad model
  */
 export function updateCadImageOnMap(
   map: mapboxgl.Map,
-  cadImage: CadImage
+  cadImageOrInstance: CadImage | CadInstance,
+  savedCad?: SavedCad
 ): void {
-  if (cadImage.anchor === null) {
-    // Silent return - this is expected for unplaced CADs
+  // Handle legacy CadImage
+  if ('fileName' in cadImageOrInstance) {
+    const cadImage = cadImageOrInstance as CadImage;
+    if (cadImage.anchor === null) {
+      return;
+    }
+    const corners = calculateCadImageCorners(cadImage);
+    updateCadOnMap(map, cadImage.id, cadImage.url, corners, cadImage.opacity);
     return;
   }
-  const corners = calculateCadImageCorners(cadImage);
 
+  // Handle new CadInstance + SavedCad model
+  const instance = cadImageOrInstance as CadInstance;
+  if (!savedCad) {
+    console.warn(`Cannot update CadInstance ${instance.id}: SavedCad not found`);
+    return;
+  }
+
+  const corners = calculateCadImageCorners(instance, savedCad);
+  updateCadOnMap(map, instance.id, savedCad.url, corners, instance.opacity);
+}
+
+/**
+ * Internal helper to update CAD on map
+ */
+function updateCadOnMap(
+  map: mapboxgl.Map,
+  id: string,
+  url: string,
+  corners: [[number, number], [number, number], [number, number], [number, number]],
+  opacity: number
+): void {
   // Update source coordinates
-  const source = map.getSource(`cad-image-${cadImage.id}`) as mapboxgl.ImageSource;
+  const source = map.getSource(`cad-image-${id}`) as mapboxgl.ImageSource;
   if (source) {
-    source.updateImage({ url: cadImage.url, coordinates: corners });
+    source.updateImage({ url, coordinates: corners });
   }
 
   // Update opacity
-  if (map.getLayer(`cad-layer-${cadImage.id}`)) {
+  if (map.getLayer(`cad-layer-${id}`)) {
     map.setPaintProperty(
-      `cad-layer-${cadImage.id}`,
+      `cad-layer-${id}`,
       'raster-opacity',
-      cadImage.opacity
+      opacity
     );
   }
 }
@@ -738,4 +798,22 @@ export function removeCadImageFromMap(
   if (map.getSource(`cad-image-${cadImageId}`)) {
     map.removeSource(`cad-image-${cadImageId}`);
   }
+}
+
+/**
+ * Force refresh CAD image source for cache-busting
+ * Used after image reprocessing to ensure new image is loaded
+ */
+export function refreshCadImageSource(
+  map: mapboxgl.Map,
+  cadImageOrInstance: CadImage | CadInstance,
+  savedCad?: SavedCad
+): void {
+  const id = cadImageOrInstance.id;
+
+  // Remove existing layers/sources
+  removeCadImageFromMap(map, id);
+
+  // Re-add with updated image (cache-busted by new URL)
+  addCadImageToMap(map, cadImageOrInstance, savedCad);
 }

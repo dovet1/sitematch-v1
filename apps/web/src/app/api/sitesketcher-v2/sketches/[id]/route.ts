@@ -170,28 +170,9 @@ export async function DELETE(
 
     const supabase = await createServerClient();
 
-    // First fetch the sketch to check for CAD images
-    const { data: sketch } = await supabase
-      .from('site_sketches')
-      .select('data')
-      .eq('id', (await params).id)
-      .eq('user_id', user.id)
-      .eq('data->>version', '2')
-      .single();
-
-    // If sketch has CAD images, delete them from storage
-    if (sketch?.data?.cadImages) {
-      const cadImages = sketch.data.cadImages as any[];
-      const filePaths = cadImages
-        .map((img: any) => img.storagePath)
-        .filter(Boolean);
-
-      if (filePaths.length > 0) {
-        await supabase.storage
-          .from('cad-images')
-          .remove(filePaths);
-      }
-    }
+    // NOTE: No longer delete CAD storage files on sketch delete
+    // Legacy cadImages stored in sketches: Will become orphaned (acceptable - user may have them in other sketches)
+    // New cadInstances: Reference savedCads which are managed independently via library
 
     // Delete the sketch
     const { data, error } = await supabase

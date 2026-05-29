@@ -84,10 +84,10 @@ export async function POST(request: NextRequest) {
     const imageWidthPx = metadata.width || 0;
     const imageHeightPx = metadata.height || 0;
 
-    // 10. Generate unique filename
+    // 10. Generate unique filename with tmp/ prefix
     const timestamp = Date.now();
     const uuid = crypto.randomUUID();
-    const storagePath = `${user.id}/${timestamp}-${uuid}.${extension}`;
+    const storagePath = `${user.id}/tmp/${timestamp}-${uuid}.${extension}`;
 
     // 11. Upload to Supabase storage
     const supabase = await createServerClient();

@@ -115,6 +115,9 @@ export function MapCanvas() {
     polygons,
     parkingBlocks,
     cadImages,
+    cadInstances,
+    savedCads,
+    getCadForInstance,
     selectedId,
     selectedType,
     mapFocusRequest,
@@ -130,7 +133,9 @@ export function MapCanvas() {
     deletePolygon,
     setSelectedId,
     moveCadImage,
+    updateCadInstance,
     placeCadImage,
+    placeCadInstance,
     cancelCadPlacement,
   } = useSketchStore();
 
@@ -457,7 +462,15 @@ export function MapCanvas() {
           // Handle CAD placement (highest priority)
           if (state.cadPlacementInProgress) {
             const anchor: [number, number] = [event.lngLat.lng, event.lngLat.lat];
-            placeCadImage(state.cadPlacementInProgress, anchor);
+
+            // NEW: Check if this is a savedCadId (new flow) or legacy cadImageId
+            if (typeof state.cadPlacementInProgress === 'object' && 'savedCadId' in state.cadPlacementInProgress) {
+              // New flow: create instance from savedCadId
+              placeCadInstance(state.cadPlacementInProgress.savedCadId, anchor);
+            } else {
+              // Legacy flow: place existing cadImage
+              placeCadImage(state.cadPlacementInProgress as string, anchor);
+            }
             return;
           }
 
@@ -771,6 +784,45 @@ export function MapCanvas() {
       registerCadLayerHandlers(map, cadImage.id);
     });
   }, [cadImages, isLoaded, registerCadLayerHandlers, unregisterCadLayerHandlers]);
+
+  // NEW: Sync cadInstances to map
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current) return;
+    const map = mapRef.current;
+
+    // Remove instance layers not in state
+    const layerIds = map.getStyle().layers
+      .filter(l => l.id.startsWith('cad-layer-'))
+      .map(l => l.id.replace('cad-layer-', ''));
+
+    layerIds.forEach(id => {
+      const instance = cadInstances.find(i => i.id === id);
+      if (!instance) {
+        // Check if it's a legacy cadImage before removing
+        const isLegacyCad = cadImages.find(c => c.id === id);
+        if (!isLegacyCad) {
+          unregisterCadLayerHandlers(map, id);
+          removeCadImageFromMap(map, id);
+        }
+      }
+    });
+
+    // Add/update instance layers
+    cadInstances.forEach(instance => {
+      const savedCad = getCadForInstance(instance.id);
+      if (!savedCad) {
+        // Orphaned instance - skip rendering
+        return;
+      }
+
+      if (map.getSource(`cad-image-${instance.id}`)) {
+        updateCadImageOnMap(map, instance, savedCad);
+      } else {
+        addCadImageToMap(map, instance, savedCad);
+      }
+      registerCadLayerHandlers(map, instance.id);
+    });
+  }, [cadInstances, savedCads, getCadForInstance, isLoaded, registerCadLayerHandlers, unregisterCadLayerHandlers]);
 
   // Handle layer focus requests from panels.
   useEffect(() => {
