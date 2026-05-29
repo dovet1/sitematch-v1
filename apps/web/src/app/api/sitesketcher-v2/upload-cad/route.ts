@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Process file
-    let processedBuffer = Buffer.from(await file.arrayBuffer());
+    let processedBuffer: Buffer<ArrayBufferLike> = Buffer.from(await file.arrayBuffer());
     let fileName = file.name;
     let contentType = file.type;
     let extension = ext;

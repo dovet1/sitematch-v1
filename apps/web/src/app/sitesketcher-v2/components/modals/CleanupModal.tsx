@@ -19,6 +19,13 @@ interface CleanupModalProps {
   onCancel: () => void;
 }
 
+interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export function CleanupModal({
   imageUrl,
   imageWidthPx,
@@ -39,7 +46,7 @@ export function CleanupModal({
   const [showOriginal, setShowOriginal] = useState(false);
 
   // Manual crop state
-  const [cropRect, setCropRect] = useState({
+  const [cropRect, setCropRect] = useState<CropRect>({
     x: 0,
     y: 0,
     width: imageWidthPx,
@@ -141,7 +148,7 @@ export function CleanupModal({
     tempCtx.putImageData(imageData, 0, 0);
 
     // Calculate crop bounds
-    let finalCropRect;
+    let finalCropRect: CropRect;
     if (!manualCropEnabled) {
       finalCropRect = calculateAutoCropBounds(imageData, img.width, img.height, cropPadding);
       // Update crop rect state for dimensions display (use functional update to avoid dependency)
@@ -318,14 +325,14 @@ export function CleanupModal({
             <>
               <div className="flex items-center gap-2">
                 <Button
-                  variant={showOriginal ? 'ghost' : 'default'}
+                  variant={showOriginal ? 'ghost' : 'primary'}
                   onClick={() => setShowOriginal(false)}
                   size="sm"
                 >
                   Processed
                 </Button>
                 <Button
-                  variant={showOriginal ? 'default' : 'ghost'}
+                  variant={showOriginal ? 'primary' : 'ghost'}
                   onClick={() => setShowOriginal(true)}
                   size="sm"
                 >
