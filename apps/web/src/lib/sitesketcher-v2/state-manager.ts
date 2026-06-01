@@ -164,6 +164,31 @@ const createHistoryState = (state: SketchState): HistoryState => ({
   timestamp: Date.now(),
 });
 
+const reconcileSelectionWithHistoryState = (
+  state: SketchState,
+  historyState: HistoryState
+): Pick<SketchState, 'selectedId' | 'selectedType'> => {
+  if (!state.selectedId || !state.selectedType) {
+    return { selectedId: state.selectedId, selectedType: state.selectedType };
+  }
+
+  if (
+    state.selectedType === 'polygon' &&
+    !historyState.polygons.some((polygon) => polygon.id === state.selectedId)
+  ) {
+    return { selectedId: null, selectedType: null };
+  }
+
+  if (
+    state.selectedType === 'parking' &&
+    !historyState.parkingBlocks.some((parkingBlock) => parkingBlock.id === state.selectedId)
+  ) {
+    return { selectedId: null, selectedType: null };
+  }
+
+  return { selectedId: state.selectedId, selectedType: state.selectedType };
+};
+
 export const useSketchStore = create<SketchState>((set, get) => ({
   // Initial state
   mapInstance: null,
@@ -723,12 +748,15 @@ export const useSketchStore = create<SketchState>((set, get) => ({
 
     const newIndex = state.historyIndex - 1;
     const historyState = state.history[newIndex];
+    const reconciledSelection = reconcileSelectionWithHistoryState(state, historyState);
 
     set({
       polygons: historyState.polygons,
       parkingBlocks: historyState.parkingBlocks,
       cadImages: state.cadImages, // Preserve current CAD state (legacy)
       cadInstances: state.cadInstances, // Preserve current CAD instances
+      selectedId: reconciledSelection.selectedId,
+      selectedType: reconciledSelection.selectedType,
       cadPlacementInProgress: null, // Clear transient placement mode (redundant but explicit)
       historyIndex: newIndex,
       isDirty: true,
@@ -747,12 +775,15 @@ export const useSketchStore = create<SketchState>((set, get) => ({
 
     const newIndex = state.historyIndex + 1;
     const historyState = state.history[newIndex];
+    const reconciledSelection = reconcileSelectionWithHistoryState(state, historyState);
 
     set({
       polygons: historyState.polygons,
       parkingBlocks: historyState.parkingBlocks,
       cadImages: state.cadImages, // Preserve current CAD state (legacy)
       cadInstances: state.cadInstances, // Preserve current CAD instances
+      selectedId: reconciledSelection.selectedId,
+      selectedType: reconciledSelection.selectedType,
       cadPlacementInProgress: null, // Clear transient placement mode (redundant but explicit)
       historyIndex: newIndex,
       isDirty: true,

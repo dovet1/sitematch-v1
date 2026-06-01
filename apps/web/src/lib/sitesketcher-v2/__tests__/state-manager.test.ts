@@ -1,5 +1,5 @@
 import { useSketchStore } from '../state-manager';
-import type { Polygon, SavedCad } from '@/types/sitesketcher-v2';
+import type { ParkingBlock, Polygon, SavedCad } from '@/types/sitesketcher-v2';
 
 const savedCad: SavedCad = {
   id: 'saved-cad-1',
@@ -29,6 +29,18 @@ const polygon: Polygon = {
   height: 10,
   showDistances: true,
   showArea: true,
+  createdAt: 1,
+  updatedAt: 1,
+};
+
+const parkingBlock: ParkingBlock = {
+  id: 'parking-1',
+  name: 'Parking A',
+  spaces: 10,
+  layout: 'single',
+  stallSize: 'standard',
+  anchor: [0, 0],
+  rotation: 0,
   createdAt: 1,
   updatedAt: 1,
 };
@@ -68,6 +80,76 @@ describe('SiteSketcher v2 CAD placement state', () => {
     expect(state.cadPlacementInProgress).toBeNull();
     expect(state.selectedType).toBe('cad');
     expect(state.selectedId).toBe(state.cadInstances[0].id);
+  });
+});
+
+describe('SiteSketcher v2 history selection reconciliation', () => {
+  beforeEach(() => {
+    useSketchStore.getState().reset();
+    useSketchStore.setState({
+      polygons: [],
+      parkingBlocks: [],
+      history: [],
+      historyIndex: -1,
+      selectedId: null,
+      selectedType: null,
+    });
+  });
+
+  it('clears selected polygon when undo restores a state without that polygon', () => {
+    const store = useSketchStore.getState();
+
+    store.pushHistory();
+    useSketchStore.setState({
+      polygons: [JSON.parse(JSON.stringify(polygon))],
+      selectedId: polygon.id,
+      selectedType: 'polygon',
+    });
+    useSketchStore.getState().pushHistory();
+
+    useSketchStore.getState().undo();
+
+    const state = useSketchStore.getState();
+    expect(state.polygons).toHaveLength(0);
+    expect(state.selectedId).toBeNull();
+    expect(state.selectedType).toBeNull();
+  });
+
+  it('keeps selected polygon when undo restores a state where that polygon still exists', () => {
+    useSketchStore.setState({
+      polygons: [JSON.parse(JSON.stringify(polygon))],
+      selectedId: polygon.id,
+      selectedType: 'polygon',
+    });
+    useSketchStore.getState().pushHistory();
+    useSketchStore.getState().updatePolygon(polygon.id, { height: 25 });
+
+    useSketchStore.getState().undo();
+
+    const state = useSketchStore.getState();
+    expect(state.polygons).toHaveLength(1);
+    expect(state.polygons[0].height).toBe(10);
+    expect(state.selectedId).toBe(polygon.id);
+    expect(state.selectedType).toBe('polygon');
+  });
+
+  it('clears selected parking block when undo restores a state without that parking block', () => {
+    const store = useSketchStore.getState();
+
+    store.pushHistory();
+    useSketchStore.setState({
+      parkingBlocks: [JSON.parse(JSON.stringify(parkingBlock))],
+      selectedId: parkingBlock.id,
+      selectedType: 'parking',
+    });
+    useSketchStore.getState().pushHistory();
+
+    useSketchStore.getState().undo();
+
+    const state = useSketchStore.getState();
+    expect(state.parkingBlocks).toHaveLength(0);
+    expect(state.selectedId).toBeNull();
+    expect(state.selectedType).toBeNull();
   });
 });
 

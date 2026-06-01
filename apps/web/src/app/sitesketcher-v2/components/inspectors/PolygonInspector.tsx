@@ -24,6 +24,21 @@ export function PolygonInspector({ polygonId }: PolygonInspectorProps) {
     setLocalName(polygon?.name || '');
   }, [polygon?.name]);
 
+  // Height gesture handlers using the custom hook
+  // IMPORTANT: Must be called before any conditional returns to satisfy React hooks rules
+  const heightGesture = useGestureHistory(
+    () => useSketchStore.getState().polygons.find(p => p.id === polygonId)?.height,
+    (height: number) => updatePolygon(polygonId, { height }, { recordHistory: false }),
+    pushHistory
+  );
+
+  // Rotation gesture handlers using the custom hook
+  const rotationGesture = useGestureHistory(
+    () => useSketchStore.getState().polygons.find(p => p.id === polygonId)?.rotation,
+    (rotation: number) => rotatePolygon(polygonId, rotation, { recordHistory: false }),
+    pushHistory
+  );
+
   if (!polygon) {
     return (
       <div className="p-4 text-sm text-sm-ink/50">
@@ -39,20 +54,6 @@ export function PolygonInspector({ polygonId }: PolygonInspectorProps) {
       setLocalName(polygon.name);
     }
   };
-
-  // Height gesture handlers using the custom hook
-  const heightGesture = useGestureHistory(
-    () => useSketchStore.getState().polygons.find(p => p.id === polygonId)?.height,
-    (height: number) => updatePolygon(polygonId, { height }, { recordHistory: false }),
-    pushHistory
-  );
-
-  // Rotation gesture handlers using the custom hook
-  const rotationGesture = useGestureHistory(
-    () => useSketchStore.getState().polygons.find(p => p.id === polygonId)?.rotation,
-    (rotation: number) => rotatePolygon(polygonId, rotation, { recordHistory: false }),
-    pushHistory
-  );
 
   const area = formatAreaBreakdown(polygon.points, units);
 

@@ -139,6 +139,7 @@ export function MapCanvas() {
   const cadDragRef = useRef<{ id: string; moved: boolean } | null>(null);
   const suppressNextMapClickRef = useRef(false);
   const isApplyingDrawUpdateRef = useRef(false);
+  const isProgrammaticDrawSyncRef = useRef(false);
   const isUserInteractionRef = useRef(true);
   const cadLayerHandlersRef = useRef<Map<string, CadLayerHandlers>>(new Map());
   const [isLoaded, setIsLoaded] = useState(false);
@@ -383,8 +384,18 @@ export function MapCanvas() {
 
         map.on('draw.delete', (e: any) => {
           console.log('Draw delete:', e);
+
+          // Skip if this is a programmatic sync operation
+          if (isProgrammaticDrawSyncRef.current) {
+            return;
+          }
+
           e.features.forEach((feature: any) => {
-            deletePolygon(feature.id);
+            // Additional safety: only delete if polygon still exists in state
+            const exists = useSketchStore.getState().polygons.some(p => p.id === feature.id);
+            if (exists) {
+              deletePolygon(feature.id);
+            }
           });
           syncDrawTo3D(map, draw);
         });
@@ -796,8 +807,15 @@ export function MapCanvas() {
       if (isApplyingDrawUpdateRef.current) {
         isApplyingDrawUpdateRef.current = false;
       } else {
-        loadPolygonsIntoDraw(drawRef.current, polygons);
+        // Guard only the programmatic sync that calls deleteAll
+        isProgrammaticDrawSyncRef.current = true;
+        try {
+          loadPolygonsIntoDraw(drawRef.current, polygons);
+        } finally {
+          isProgrammaticDrawSyncRef.current = false;
+        }
 
+        // Selection changes happen after sync guard is released
         const { selectedId, selectedType } = useSketchStore.getState();
         if (selectedId && selectedType === 'polygon') {
           selectPolygonForVertexEditing(drawRef.current, selectedId);

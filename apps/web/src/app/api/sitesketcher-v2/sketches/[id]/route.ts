@@ -127,7 +127,14 @@ export async function PUT(
       .single();
 
     if (error) {
-      console.error('Error updating v2 sketch:', error);
+      console.error('[SiteSketcher V2] Sketch update failed:', {
+        sketchId: (await params).id,
+        userId: user.id,
+        error: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       return NextResponse.json(
         { error: 'Failed to update sketch' },
         { status: 500 }
