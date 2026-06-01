@@ -32,18 +32,22 @@ function updateCursorSnapping(
     return null;
   }
 
-  // Get last confirmed point
-  const lastConfirmedPoint =
-    state.polygon.coordinates[0].length >= 2
-      ? state.polygon.coordinates[0][state.polygon.coordinates[0].length - 2]
-      : null;
+  // Get last confirmed point and previous edge start with defensive copying
+  const coords = state.polygon.coordinates[0];
+  const lastConfirmedPoint = coords.length >= 2
+    ? [coords[coords.length - 2][0], coords[coords.length - 2][1]] as [number, number]
+    : null;
+  const previousEdgeStart = coords.length >= 3
+    ? [coords[coords.length - 3][0], coords[coords.length - 3][1]] as [number, number]
+    : null;
 
   // Compute display cursor (snapped or raw based on shift state)
   const displayCursor = getDisplayCursorPosition(
     state.map,
     rawCursorPosition,
     lastConfirmedPoint,
-    isShiftHeld
+    isShiftHeld,
+    previousEdgeStart
   );
 
   // Update Draw's moving coordinate
@@ -99,18 +103,22 @@ export const PolygonMode: any = {
   },
 
   clickAnywhere(state: any, e: any) {
-    // Get current last confirmed point (or null if first point)
-    const lastConfirmedPoint =
-      state.polygon.coordinates[0].length >= 2
-        ? state.polygon.coordinates[0][state.polygon.coordinates[0].length - 2]
-        : null;
+    // Get current last confirmed point and previous edge start with defensive copying
+    const coords = state.polygon.coordinates[0];
+    const lastConfirmedPoint = coords.length >= 2
+      ? [coords[coords.length - 2][0], coords[coords.length - 2][1]] as [number, number]
+      : null;
+    const previousEdgeStart = coords.length >= 3
+      ? [coords[coords.length - 3][0], coords[coords.length - 3][1]] as [number, number]
+      : null;
 
     // Compute snapped position using shared helper
     const displayCursor = getDisplayCursorPosition(
       state.map,
       [e.lngLat.lng, e.lngLat.lat],
       lastConfirmedPoint,
-      e.originalEvent?.shiftKey || false
+      e.originalEvent?.shiftKey || false,
+      previousEdgeStart
     );
 
     // Override event to ensure actual vertex placement matches preview
@@ -124,16 +132,21 @@ export const PolygonMode: any = {
     const result = drawPolygonMode.clickAnywhere.call(this, state, e);
 
     // Update preview store with new last confirmed point and clear all cursor fields
-    const confirmedPoint =
-      state.polygon.coordinates[0].length >= 2
-        ? state.polygon.coordinates[0][state.polygon.coordinates[0].length - 2]
-        : null;
+    const confirmedPoint = coords.length >= 2
+      ? [coords[coords.length - 2][0], coords[coords.length - 2][1]] as [number, number]
+      : null;
     polygonPreviewStore.setState({
       lastPlacedPoint: confirmedPoint,
       currentCursorPosition: null,
       rawCursorPosition: null,
       snappedCursorPosition: null,
+      isSnapping: false,
     });
+
+    // Restore cursor style to avoid DOM/state mismatch
+    if (state.map && state.map.getCanvas) {
+      state.map.getCanvas().style.setProperty('cursor', 'crosshair', 'important');
+    }
 
     return result;
   },

@@ -2,28 +2,68 @@ import mapboxgl from 'mapbox-gl';
 import { SNAP_ANGLE } from './constants';
 
 /**
+ * Helper function to calculate circular angular distance between two angles.
+ * Handles wraparound at ±180° correctly.
+ */
+function angleDelta(a: number, b: number): number {
+  return Math.abs(((a - b + 540) % 360) - 180);
+}
+
+/**
  * Snap to 90° angles using screen-space (projected) coordinates.
  * This avoids distortion from lng/lat spherical geometry at UK latitudes.
+ *
+ * @param previousEdgeStart - Optional start point of the previous edge for relative perpendicular snapping
  */
 export function snapTo90Degrees(
   map: mapboxgl.Map,
   lastLngLat: [number, number],
-  currentLngLat: [number, number]
+  currentLngLat: [number, number],
+  previousEdgeStart?: [number, number] | null
 ): [number, number] {
   // Convert to screen coordinates (pixels)
   const lastPoint = map.project(lastLngLat);
   const currentPoint = map.project(currentLngLat);
 
-  // Calculate angle in screen space (Cartesian)
+  // Calculate current cursor angle and distance in screen space
   const dx = currentPoint.x - lastPoint.x;
   const dy = currentPoint.y - lastPoint.y;
-  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-  // Snap to nearest 90° (0, 90, 180, 270)
-  const snappedAngle = Math.round(angle / SNAP_ANGLE) * SNAP_ANGLE;
-
-  // Calculate distance in screen space
+  const cursorAngle = Math.atan2(dy, dx) * (180 / Math.PI);
   const distance = Math.sqrt(dx * dx + dy * dy);
+
+  let snappedAngle: number;
+
+  // Case 1: No previous edge - snap to absolute cardinal directions
+  if (!previousEdgeStart) {
+    snappedAngle = Math.round(cursorAngle / SNAP_ANGLE) * SNAP_ANGLE;
+  }
+  // Case 2: Previous edge exists - snap perpendicular to it
+  else {
+    // Calculate previous edge angle in screen space
+    const prevEdgeStart = map.project(previousEdgeStart);
+    const prevEdgeEnd = lastPoint;
+
+    const prevDx = prevEdgeEnd.x - prevEdgeStart.x;
+    const prevDy = prevEdgeEnd.y - prevEdgeStart.y;
+    const prevEdgeLength = Math.sqrt(prevDx * prevDx + prevDy * prevDy);
+
+    // If previous edge is effectively zero-length, fall back to absolute snapping
+    if (prevEdgeLength < 0.1) {
+      snappedAngle = Math.round(cursorAngle / SNAP_ANGLE) * SNAP_ANGLE;
+    } else {
+      const prevEdgeAngle = Math.atan2(prevDy, prevDx) * (180 / Math.PI);
+
+      // Calculate two perpendicular angles (±90° from previous edge)
+      const perpAngle1 = prevEdgeAngle + 90;
+      const perpAngle2 = prevEdgeAngle - 90;
+
+      // Choose the perpendicular angle closest to cursor direction using circular distance
+      const diff1 = angleDelta(cursorAngle, perpAngle1);
+      const diff2 = angleDelta(cursorAngle, perpAngle2);
+
+      snappedAngle = diff1 < diff2 ? perpAngle1 : perpAngle2;
+    }
+  }
 
   // Calculate snapped screen position
   const snappedX = lastPoint.x + distance * Math.cos((snappedAngle * Math.PI) / 180);
@@ -42,12 +82,13 @@ export function getDisplayCursorPosition(
   map: mapboxgl.Map,
   rawCursorPosition: [number, number],
   lastConfirmedPoint: [number, number] | null,
-  isShiftHeld: boolean
+  isShiftHeld: boolean,
+  previousEdgeStart?: [number, number] | null
 ): [number, number] {
   if (!isShiftHeld || !lastConfirmedPoint) {
     return rawCursorPosition;
   }
-  return snapTo90Degrees(map, lastConfirmedPoint, rawCursorPosition);
+  return snapTo90Degrees(map, lastConfirmedPoint, rawCursorPosition, previousEdgeStart);
 }
 
 /**
