@@ -466,7 +466,7 @@ export function TopBar() {
           <button
             type="button"
             onClick={() => router.push('/pricing')}
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md bg-[#7033FF] px-3 text-sm text-white shadow-sm transition-colors hover:bg-[#5421CC] focus-ring"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#7033FF] px-3.5 py-2 text-sm text-white shadow-sm transition-colors hover:bg-[#5421CC] focus-ring"
           >
             <Lock className="h-3.5 w-3.5" />
             Upgrade To Save

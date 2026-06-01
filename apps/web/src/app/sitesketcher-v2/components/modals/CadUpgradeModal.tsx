@@ -1,9 +1,9 @@
 'use client';
 
-import { Button } from '../primitives/Button';
-import { X, Layers, Check } from 'lucide-react';
-import { PRICING, ACTIVE_PROMOTION } from '@/data/homepage-new/constants';
-import { useState } from 'react';
+import { X, Loader2 } from 'lucide-react';
+import { Check } from '@/components/homepage-new/icons/Check';
+import { getUpgradePricing } from '@/data/homepage-new/constants';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
 interface CadUpgradeModalProps {
@@ -14,20 +14,34 @@ interface CadUpgradeModalProps {
 
 export function CadUpgradeModal({ onClose, billingInterval, onUpgrade }: CadUpgradeModalProps) {
   const [upgrading, setUpgrading] = useState(false);
+  const [syncPending, setSyncPending] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
-  const plusPricing = billingInterval === 'month' ? PRICING.plus.monthly : PRICING.plus.annual;
-  const proPricing = billingInterval === 'month' ? PRICING.pro.monthly : PRICING.pro.annual;
+  // Get pricing comparison using centralized helper
+  const pricing = getUpgradePricing(billingInterval);
 
   const cadFeatures = [
-    'Upload CAD drawings and site plans',
-    'Calibrate scale with two-point measurement',
-    'Adjust opacity and positioning',
-    'Overlay multiple CAD layers',
-    'Lock CAD images to prevent accidental edits',
+    'Everything in Pro tier',
+    'Add your CAD drawings to site sketches',
+    'Full access to GapFinder',
+    'Priority email support',
   ];
+
+  // Escape key handler
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
 
   const handleUpgrade = async () => {
     setUpgrading(true);
+    setUpgradeError(null);
 
     try {
       const response = await fetch('/api/stripe/upgrade-subscription', {
@@ -35,127 +49,168 @@ export function CadUpgradeModal({ onClose, billingInterval, onUpgrade }: CadUpgr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           targetTier: 'plus',
-          billingInterval: billingInterval === 'month' ? 'monthly' : 'yearly',
+          billingInterval, // Already 'month' | 'year', don't convert
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Upgrade failed');
+        throw new Error(data.message || data.error || data.details || 'Upgrade failed');
       }
 
+      // Check if database sync is pending
+      if (data.tierUpdatePending) {
+        setSyncPending(true);
+        setUpgrading(false);
+        return;
+      }
+
+      // Success! Show toast and reload page
       toast.success('Successfully upgraded to Plus!');
 
       if (onUpgrade) {
         onUpgrade();
       }
 
-      onClose();
+      // Hard reload to trigger useSubscriptionTier refetch
+      window.location.reload();
     } catch (error) {
       console.error('Upgrade error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to upgrade. Please try again.');
-    } finally {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upgrade. Please try again.';
+      setUpgradeError(errorMessage);
+      toast.error(errorMessage);
       setUpgrading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-sm-surface border border-sm-border rounded-[10px] shadow-2xl max-w-lg w-full">
-        {/* Header with gradient */}
-        <div className="relative p-6 bg-gradient-to-br from-violet-600 to-purple-700 rounded-t-[10px]">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-1.5 hover:bg-white/10 rounded transition-colors"
-          >
-            <X className="w-5 h-5 text-white" />
-          </button>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-4xl bg-white rounded-[18px] shadow-2xl border border-[#E8E4DC] overflow-hidden relative max-h-[calc(100vh-3rem)] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="paywall-title"
+        aria-describedby="paywall-description"
+      >
+        {/* Close Button */}
+        <button
+          className="absolute right-6 top-6 text-[#7C7588] hover:text-[#171419] transition-colors z-10"
+          aria-label="Close"
+          onClick={onClose}
+        >
+          <X className="h-5 w-5" />
+        </button>
 
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-white/10 rounded-lg backdrop-blur-sm">
-              <Layers className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-[600] text-white">CAD Overlay is Plus Only</h2>
-              <p className="text-sm text-white/80 mt-0.5">Upgrade to unlock CAD features</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-5">
-          <p className="text-[13.5px] text-sm-ink/70 leading-relaxed">
-            Overlay CAD drawings and site plans directly onto satellite imagery with precise calibration
-            and adjustable transparency.
-          </p>
-
-          {/* Features list */}
-          <div>
-            <h3 className="text-sm font-[600] text-sm-ink mb-3">CAD Features</h3>
-            <div className="space-y-2">
-              {cadFeatures.map((feature) => (
-                <div key={feature} className="flex items-start gap-2">
-                  <div className="mt-0.5">
-                    <Check className="w-4 h-4 text-[#7033FF]" />
-                  </div>
-                  <span className="text-[13.5px] text-sm-ink/70">{feature}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Pricing */}
-          <div className="p-4 bg-[#F5F1FF] border border-[rgba(112,51,255,0.2)] rounded-lg">
-            {ACTIVE_PROMOTION.isActive && (
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF6B35] rounded-full mb-3">
-                <span className="text-[12px] font-[600] text-white">
-                  {ACTIVE_PROMOTION.name} — {ACTIVE_PROMOTION.discountPercent}% off
-                </span>
+        {/* Two Column Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 min-h-[500px]">
+          {/* Left Column - Features */}
+          <div className="bg-[#FBFAF7] p-8 md:p-10 border-b md:border-r md:border-b-0 border-[#E8E4DC] flex flex-col justify-center">
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-[15px] font-[600] text-[#171419] mb-4 tracking-[-0.01em]">
+                  Plus tier benefits:
+                </h3>
               </div>
-            )}
 
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] font-[600] text-sm-ink/60 uppercase tracking-wide">
-                Pro → Plus Upgrade
-              </span>
-              {plusPricing.discount && (
-                <span className="text-xs font-[600] text-[#7033FF]">{plusPricing.discount}</span>
-              )}
+              <ul className="space-y-4">
+                {cadFeatures.map((feature) => (
+                  <li key={feature} className="flex items-start gap-3">
+                    <Check size={16} color="#7033FF" />
+                    <span className="text-[14px] text-[#171419] leading-[1.5]">
+                      {feature}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
+          </div>
 
-            <div className="flex items-baseline gap-2 mb-1">
-              {plusPricing.strike && (
-                <span className="text-lg line-through text-sm-ink/40">{plusPricing.strike}</span>
+          {/* Right Column - Upgrade Content */}
+          <div className="bg-white p-8 md:p-10 flex flex-col justify-center">
+            <div className="space-y-6">
+              {/* Header */}
+              <div>
+                <h2 id="paywall-title" className="text-[24px] font-[600] text-[#171419] mb-2 tracking-[-0.02em]">
+                  Upgrade to Plus
+                </h2>
+                <p id="paywall-description" className="text-[14px] text-[#7C7588]">
+                  Get access to CAD Overlay and advanced site planning tools
+                </p>
+              </div>
+
+              {/* Pricing Breakdown */}
+              <div className="bg-[#F5F1FF] rounded-[10px] p-5 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-[14px] text-[#4A4451]">Current: Pro</span>
+                  <span className="text-[15px] font-[600] text-[#171419]">
+                    {pricing.current.display}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[14px] text-[#4A4451]">New: Plus</span>
+                  <span className="text-[15px] font-[600] text-[#7033FF]">
+                    {pricing.new.display}
+                  </span>
+                </div>
+                <div className="border-t border-[#EEE9FF] pt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[14px] text-[#4A4451]">Additional</span>
+                    <span className="text-[16px] font-[600] text-[#7033FF]">
+                      {pricing.difference.display}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Error Display */}
+              {upgradeError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-[10px]">
+                  <p className="text-[13px] text-red-700">{upgradeError}</p>
+                </div>
               )}
-              <span className="text-2xl font-[600] text-sm-ink">{plusPricing.price}</span>
-              <span className="text-sm text-sm-ink/60">{plusPricing.suffix}</span>
-            </div>
 
-            <p className="text-xs text-sm-ink/60 leading-relaxed">
-              {plusPricing.footnote}
-            </p>
+              {/* Sync Pending Display */}
+              {syncPending && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-[10px]">
+                  <p className="text-[13px] text-blue-700 mb-2">
+                    Your upgrade is being processed. Please refresh the page.
+                  </p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="w-full h-[36px] bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-[600] rounded-[8px] transition-colors"
+                  >
+                    Refresh Page
+                  </button>
+                </div>
+              )}
 
-            <div className="mt-3 pt-3 border-t border-[rgba(112,51,255,0.15)]">
-              <p className="text-xs text-sm-ink/60">
-                You'll be charged a prorated amount for the remainder of your billing period.
-                Your new rate takes effect immediately.
+              {/* CTA Button */}
+              <button
+                onClick={handleUpgrade}
+                disabled={upgrading || syncPending}
+                className="w-full h-[44px] bg-[#7033FF] hover:bg-[#5421CC] text-white text-[15px] font-[600] rounded-[10px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#7033FF]"
+              >
+                {upgrading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Upgrading...</span>
+                  </div>
+                ) : (
+                  'Upgrade to Plus Now'
+                )}
+              </button>
+
+              {/* Footer Note */}
+              <p className="text-[12px] text-center text-[#7C7588] leading-[1.5]">
+                You'll be charged a prorated amount for the remainder of your billing period
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Footer actions */}
-        <div className="flex items-center justify-end gap-2 p-4 border-t border-sm-border bg-sm-bg/30">
-          <Button variant="ghost" onClick={onClose} disabled={upgrading}>
-            Maybe Later
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleUpgrade}
-            disabled={upgrading}
-            className="bg-[#7033FF] hover:bg-[#5421CC] text-white h-[44px]"
-          >
-            {upgrading ? 'Upgrading...' : 'Upgrade to Plus'}
-          </Button>
         </div>
       </div>
     </div>
