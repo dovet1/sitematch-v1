@@ -196,7 +196,7 @@ export function CadToolPanel() {
                   CAD Overlay is Plus Only
                 </h3>
                 <p className="text-xs text-[#171419]/70 leading-relaxed">
-                  Upload your CAD drawings and site plans and add them to your SiteSketches
+                  Upload your CAD drawings and site plans then add them to your SiteSketches
                 </p>
               </div>
             </div>
