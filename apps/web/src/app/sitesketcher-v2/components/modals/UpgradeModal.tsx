@@ -2,6 +2,7 @@
 
 import { Button } from '../primitives/Button';
 import { X, Sparkles, Check } from 'lucide-react';
+import { PRICING, ACTIVE_PROMOTION } from '@/data/homepage-new/constants';
 
 interface UpgradeModalProps {
   reason: 'save' | 'polygon_limit' | 'cad_upload' | 'parking_limit';
@@ -17,28 +18,31 @@ export function UpgradeModal({ reason, onClose, onUpgrade }: UpgradeModalProps) 
     },
     polygon_limit: {
       title: 'Polygon Limit Reached',
-      description: 'Free users are limited to 1 polygon. Upgrade to Pro for unlimited polygons and parking blocks.',
+      description: 'Free users are limited to 2 polygons. Upgrade to Pro for unlimited polygons and parking blocks.',
     },
     cad_upload: {
-      title: 'CAD Upload Requires Pro',
-      description: 'Upgrade to Pro to overlay CAD images and site plans on your sketches.',
+      title: 'CAD Upload Requires Plus',
+      description: 'Upgrade to Plus to overlay CAD images and site plans on your sketches.',
     },
     parking_limit: {
       title: 'Parking Limit Reached',
-      description: 'Free users are limited to 1 parking block. Upgrade to Pro for unlimited parking blocks.',
+      description: 'Free users are limited to 2 parking blocks. Upgrade to Pro for unlimited parking blocks.',
     },
   };
 
   const message = messages[reason];
 
+  // Pro features (CAD is Plus-only, so excluded here)
   const features = [
     'Unlimited polygons and parking blocks',
+    'Unlimited measurements',
     'Save and load sketches',
-    'CAD overlay with calibration',
-    'Export to PNG, PDF, and CSV',
+    'Export to PNG and CSV',
     '3D visualization mode',
     'Edge distance and area labels',
   ];
+
+  const proPricing = PRICING.pro.monthly;
 
   const handleUpgrade = () => {
     if (onUpgrade) {
@@ -85,12 +89,32 @@ export function UpgradeModal({ reason, onClose, onUpgrade }: UpgradeModalProps) 
           </div>
 
           <div className="p-4 bg-sm-violet-tint-soft border border-sm-violet/20 rounded-lg">
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-2xl font-bold text-sm-ink">£12</span>
-              <span className="text-sm text-sm-ink/60">per month</span>
+            {ACTIVE_PROMOTION.isActive && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF6B35] rounded-full mb-3">
+                <span className="text-[12px] font-[600] text-white">
+                  {ACTIVE_PROMOTION.name} — {ACTIVE_PROMOTION.discountPercent}% off
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mb-1">
+              {proPricing.strike && (
+                <span className="text-lg line-through text-sm-ink/40">{proPricing.strike}</span>
+              )}
             </div>
+
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="text-2xl font-bold text-sm-ink">{proPricing.price}</span>
+              <span className="text-sm text-sm-ink/60">{proPricing.suffix}</span>
+              {proPricing.discount && (
+                <span className="text-xs font-[600] text-[#7033FF] bg-white px-2 py-0.5 rounded-full">
+                  {proPricing.discount}
+                </span>
+              )}
+            </div>
+
             <p className="text-xs text-sm-ink/60">
-              Cancel anytime. No long-term commitment.
+              {proPricing.footnote}
             </p>
           </div>
         </div>

@@ -9,15 +9,21 @@ import { RightInspector } from './components/shell/RightInspector';
 import { StatusBar } from './components/shell/StatusBar';
 import { FloatingMapControls } from './components/shell/FloatingMapControls';
 import { MapCanvas } from './components/map/MapCanvas';
+import { AnonymousPaywallOverlay } from './components/overlays/AnonymousPaywallOverlay';
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
-import { Toaster } from 'sonner';
+import { useAuth } from '@/hooks/use-auth';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import { TIER_FEATURES } from '@/lib/sitesketcher-v2/constants';
+import { Toaster, toast } from 'sonner';
 
 const MINIMUM_WIDTH = 1024;
 
 export default function SiteSketcherV2Page() {
   const [isSupported, setIsSupported] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-  const loadSavedCads = useSketchStore((state) => state.loadSavedCads);
+  const { user, loading: authLoading } = useAuth();
+  const { hasProAccess, hasPlusAccess, loading: tierLoading } = useSubscriptionTier();
+  const { loadSavedCads, setEffectiveAccess, sketchId, loadSketch } = useSketchStore();
 
   useEffect(() => {
     const checkViewport = () => {
@@ -34,10 +40,55 @@ export default function SiteSketcherV2Page() {
     return () => window.removeEventListener('resize', checkViewport);
   }, []);
 
-  // Load CAD library on mount
+  // Sync effective access and handle mid-session subscription changes
   useEffect(() => {
-    loadSavedCads();
-  }, [loadSavedCads]);
+    if (!tierLoading) {
+      const tierLimits = hasPlusAccess
+        ? TIER_FEATURES.plus
+        : hasProAccess
+        ? TIER_FEATURES.pro
+        : TIER_FEATURES.free;
+
+      const prevAccess = useSketchStore.getState().effectiveAccess;
+      const newAccess = { hasProAccess, hasPlusAccess, tierLimits };
+
+      // Check if Plus access changed
+      const accessChanged = prevAccess.hasPlusAccess !== hasPlusAccess;
+
+      // Update store
+      setEffectiveAccess(newAccess);
+
+      // If Plus access changed and a sketch is loaded, refetch from server
+      if (accessChanged && sketchId) {
+        // CRITICAL: Refetch from server, not reload from current state
+        // Current state has empty CAD arrays for non-Plus, but server has full data
+        fetch(`/api/sitesketcher-v2/sketches/${sketchId}`)
+          .then(res => {
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+            }
+            return res.json();
+          })
+          .then(({ sketch }) => {
+            if (sketch) {
+              // loadSketch will re-apply CAD filtering based on new effectiveAccess
+              loadSketch(sketch);
+            }
+          })
+          .catch(err => {
+            console.error('Failed to reload sketch after tier change:', err);
+            toast.error('Failed to update sketch. Please refresh the page.');
+          });
+      }
+    }
+  }, [hasProAccess, hasPlusAccess, tierLoading, sketchId, loadSketch, setEffectiveAccess]);
+
+  // Gate CAD library loading behind Plus access
+  useEffect(() => {
+    if (!tierLoading && hasPlusAccess) {
+      loadSavedCads();
+    }
+  }, [tierLoading, hasPlusAccess, loadSavedCads]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -120,7 +171,7 @@ export default function SiteSketcherV2Page() {
   }, []);
 
   // Show loading state briefly to avoid flash
-  if (isLoading) {
+  if (isLoading || authLoading || tierLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-sm-bg">
         <div className="text-sm-ink/50">Loading...</div>
@@ -131,6 +182,16 @@ export default function SiteSketcherV2Page() {
   // Show unsupported viewport screen if needed
   if (!isSupported) {
     return <UnsupportedViewport />;
+  }
+
+  // Show anonymous paywall overlay if user is not logged in
+  if (!user) {
+    return (
+      <>
+        <Toaster position="top-center" richColors />
+        <AnonymousPaywallOverlay />
+      </>
+    );
   }
 
   // Main SiteSketcher v2 UI

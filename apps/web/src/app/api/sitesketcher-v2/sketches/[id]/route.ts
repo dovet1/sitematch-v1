@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
-import { hasProAccess } from '@/lib/subscription-utils';
+import { hasProAccess, hasPlusAccess } from '@/lib/subscription-utils';
+import { sanitizeSketchForUser } from '@/lib/sitesketcher-v2/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +30,7 @@ export async function GET(
       );
     }
 
+    const isPlus = await hasPlusAccess(user.id);
     const supabase = await createServerClient();
 
     const { data: sketch, error } = await supabase
@@ -47,7 +49,13 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ sketch });
+    // Sanitize CAD data based on Plus access
+    const sanitizedSketch = {
+      ...sketch,
+      data: sanitizeSketchForUser(sketch.data, isPlus),
+    };
+
+    return NextResponse.json({ sketch: sanitizedSketch });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
@@ -81,28 +89,53 @@ export async function PUT(
       );
     }
 
+    const isPlus = await hasPlusAccess(user.id);
     const supabase = await createServerClient();
 
     const body = await request.json();
     const { name, description, data, thumbnail_url, location } = body;
 
     // Ensure version is set to 2
-    const v2Data = data ? {
+    let v2Data = data ? {
       ...data,
       version: 2,
     } : undefined;
+
+    // CAD preservation: If user is non-Plus and sending empty CAD arrays, merge back preserved CAD from DB
+    if (v2Data && !isPlus) {
+      const { data: existingSketch } = await supabase
+        .from('site_sketches')
+        .select('data')
+        .eq('id', (await params).id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (existingSketch?.data) {
+        // Preserve existing CAD data if client sent empty arrays
+        const clientCadImages = v2Data.cadImages || [];
+        const clientCadInstances = v2Data.cadInstances || [];
+
+        if (clientCadImages.length === 0 && clientCadInstances.length === 0) {
+          v2Data = {
+            ...v2Data,
+            cadImages: existingSketch.data.cadImages || [],
+            cadInstances: existingSketch.data.cadInstances || [],
+          };
+        }
+      }
+    }
 
     // Tier enforcement if data is being updated
     if (v2Data && !isPro) {
       const polygonCount = v2Data.polygons?.length || 0;
       const parkingCount = v2Data.parkingBlocks?.length || 0;
 
-      if (polygonCount > 1 || parkingCount > 1) {
+      if (polygonCount > 2 || parkingCount > 2) {
         return NextResponse.json(
           {
-            error: 'Free tier limited to 1 polygon and 1 parking block. Upgrade to Pro for unlimited objects.',
+            error: 'Free tier limited to 2 polygons and 2 parking blocks. Upgrade to Pro for unlimited objects.',
             tier: 'free',
-            limit: { polygons: 1, parkingBlocks: 1 }
+            limit: { polygons: 2, parkingBlocks: 2 }
           },
           { status: 403 }
         );

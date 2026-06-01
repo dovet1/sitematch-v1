@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hasProAccess } from '@/lib/subscription-utils';
+import { hasPlusAccess } from '@/lib/subscription-utils';
 import { getCurrentUser } from '@/lib/auth';
 import { createServerClient } from '@/lib/supabase';
 import sharp from 'sharp';
@@ -16,10 +16,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Pro check
-    const isProUser = await hasProAccess(user.id);
-    if (!isProUser) {
+    const isPlusUser = await hasPlusAccess(user.id);
+    if (!isPlusUser) {
       return NextResponse.json({
-        error: 'CAD uploads require Pro or Plus tier.',
+        error: 'CAD uploads require Plus tier.',
       }, { status: 403 });
     }
 
