@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import { ChangeEvent } from 'react';
+import { ChangeEvent, KeyboardEvent, PointerEvent } from 'react';
 
 export interface SliderProps {
   value: number;
@@ -11,6 +11,8 @@ export interface SliderProps {
   showValue?: boolean;
   suffix?: string;
   disabled?: boolean;
+  onChangeStart?: () => void;
+  onChangeEnd?: () => void;
 }
 
 export function Slider({
@@ -23,9 +25,42 @@ export function Slider({
   showValue = true,
   suffix,
   disabled = false,
+  onChangeStart,
+  onChangeEnd,
 }: SliderProps) {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     onChange(parseFloat(e.target.value));
+  };
+
+  const handlePointerDown = (e: PointerEvent<HTMLInputElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    onChangeStart?.();
+  };
+
+  const handlePointerUp = (e: PointerEvent<HTMLInputElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    onChangeEnd?.();
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowRight' ||
+      e.key === 'ArrowUp' ||
+      e.key === 'ArrowDown' ||
+      e.key === 'Home' ||
+      e.key === 'End' ||
+      e.key === 'PageUp' ||
+      e.key === 'PageDown'
+    ) {
+      onChangeStart?.();
+    }
+  };
+
+  const handleKeyUp = () => {
+    onChangeEnd?.();
   };
 
   const percentage = ((value - min) / (max - min)) * 100;
@@ -51,6 +86,12 @@ export function Slider({
           step={step}
           value={value}
           onChange={handleChange}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onKeyDown={handleKeyDown}
+          onKeyUp={handleKeyUp}
+          onBlur={onChangeEnd}
           disabled={disabled}
           className={clsx(
             'w-full h-2 rounded-full appearance-none cursor-pointer slider-v2',

@@ -8,13 +8,14 @@ import { Slider } from '../primitives/Slider';
 import { Toggle } from '../primitives/Toggle';
 import { Polygon } from '@/types/sitesketcher-v2';
 import { formatAreaBreakdown } from '@/lib/sitesketcher-v2/polygon-utils';
+import { useGestureHistory } from '@/lib/sitesketcher-v2/hooks/useGestureHistory';
 
 interface PolygonInspectorProps {
   polygonId: string;
 }
 
 export function PolygonInspector({ polygonId }: PolygonInspectorProps) {
-  const { polygons, updatePolygon, rotatePolygon, deletePolygon, units } = useSketchStore();
+  const { polygons, updatePolygon, rotatePolygon, deletePolygon, pushHistory, units } = useSketchStore();
   const polygon = polygons.find(p => p.id === polygonId);
 
   const [localName, setLocalName] = useState(polygon?.name || '');
@@ -38,6 +39,20 @@ export function PolygonInspector({ polygonId }: PolygonInspectorProps) {
       setLocalName(polygon.name);
     }
   };
+
+  // Height gesture handlers using the custom hook
+  const heightGesture = useGestureHistory(
+    () => useSketchStore.getState().polygons.find(p => p.id === polygonId)?.height,
+    (height: number) => updatePolygon(polygonId, { height }, { recordHistory: false }),
+    pushHistory
+  );
+
+  // Rotation gesture handlers using the custom hook
+  const rotationGesture = useGestureHistory(
+    () => useSketchStore.getState().polygons.find(p => p.id === polygonId)?.rotation,
+    (rotation: number) => rotatePolygon(polygonId, rotation, { recordHistory: false }),
+    pushHistory
+  );
 
   const area = formatAreaBreakdown(polygon.points, units);
 
@@ -97,7 +112,9 @@ export function PolygonInspector({ polygonId }: PolygonInspectorProps) {
       <Slider
         label="Height (3D)"
         value={polygon.height}
-        onChange={(height) => updatePolygon(polygonId, { height })}
+        onChange={heightGesture.handleChange}
+        onChangeStart={heightGesture.handleStart}
+        onChangeEnd={heightGesture.handleEnd}
         min={0}
         max={100}
         step={1}
@@ -107,7 +124,9 @@ export function PolygonInspector({ polygonId }: PolygonInspectorProps) {
       <Slider
         label="Rotation"
         value={polygon.rotation}
-        onChange={(rotation) => rotatePolygon(polygonId, rotation)}
+        onChange={rotationGesture.handleChange}
+        onChangeStart={rotationGesture.handleStart}
+        onChangeEnd={rotationGesture.handleEnd}
         min={0}
         max={360}
         step={1}

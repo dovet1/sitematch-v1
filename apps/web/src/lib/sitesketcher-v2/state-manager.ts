@@ -70,8 +70,8 @@ interface SketchState {
 
   // Actions - Polygons
   addPolygon: (polygon: Polygon) => void;
-  updatePolygon: (id: string, updates: Partial<Polygon>) => void;
-  rotatePolygon: (id: string, newRotation: number) => void;
+  updatePolygon: (id: string, updates: Partial<Polygon>, options?: { recordHistory?: boolean }) => void;
+  rotatePolygon: (id: string, newRotation: number, options?: { recordHistory?: boolean }) => void;
   deletePolygon: (id: string) => void;
   setPolygons: (polygons: Polygon[]) => void;
 
@@ -219,8 +219,10 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     }));
   },
 
-  updatePolygon: (id, updates) => {
-    get().pushHistory(); // Push BEFORE mutation
+  updatePolygon: (id, updates, options) => {
+    if (options?.recordHistory !== false) {
+      get().pushHistory(); // Push BEFORE mutation
+    }
     set((state) => ({
       polygons: state.polygons.map((p) =>
         p.id === id ? { ...p, ...updates, updatedAt: Date.now() } : p
@@ -229,7 +231,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     }));
   },
 
-  rotatePolygon: (id, newRotation) => {
+  rotatePolygon: (id, newRotation, options) => {
     const state = get();
     const { mapInstance } = state;
 
@@ -245,7 +247,9 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     const deltaRotation = newRotation - polygon.rotation;
     if (deltaRotation === 0) return;
 
-    get().pushHistory(); // Push BEFORE mutation
+    if (options?.recordHistory !== false) {
+      get().pushHistory(); // Push BEFORE mutation
+    }
 
     // Rotate the actual points by the delta
     const rotatedPoints = rotatePolygonPoints(polygon.points, deltaRotation, mapInstance);
