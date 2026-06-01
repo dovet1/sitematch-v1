@@ -85,7 +85,8 @@ export function UnifiedCategorySelector({
       try {
         // Fetch all reference data in a single optimized request
         // This replaces ~102 individual requests with 1 request
-        const response = await fetch('/api/public/gapfinder-reference-data')
+        // Cache bust: force fresh data after cache fix deployment
+        const response = await fetch('/api/public/gapfinder-reference-data?v=2')
         if (!response.ok) throw new Error('Failed to load reference data')
 
         const data = await response.json()

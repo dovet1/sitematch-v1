@@ -658,7 +658,8 @@ export default function GapFinderClient() {
       try {
         // Fetch all reference data in a single optimized request
         // This replaces ~101 individual requests with 1 request
-        const response = await fetch('/api/public/gapfinder-reference-data')
+        // Cache bust: force fresh data after cache fix deployment
+        const response = await fetch('/api/public/gapfinder-reference-data?v=2')
         if (!response.ok) {
           setTargetNames({})
           return
