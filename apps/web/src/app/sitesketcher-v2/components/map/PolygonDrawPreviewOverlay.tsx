@@ -5,7 +5,7 @@ import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { polygonPreviewStore } from '@/lib/sitesketcher-v2/polygon-preview-store';
 import {
   calculateEdgeDistance,
-  formatDistance,
+  formatPolygonLineDistance,
   calculateEdgeAngle,
 } from '@/lib/sitesketcher-v2/polygon-utils';
 
@@ -87,7 +87,7 @@ export function PolygonDrawPreviewOverlay() {
     ];
     const midpointScreen = mapInstance.project(midpoint);
     const angle = calculateEdgeAngle(mapInstance, lastPlacedPoint, currentCursorPosition);
-    const formattedDistance = formatDistance(distance, units);
+    const formattedDistance = formatPolygonLineDistance(distance, units);
 
     setLabel({
       x: midpointScreen.x,

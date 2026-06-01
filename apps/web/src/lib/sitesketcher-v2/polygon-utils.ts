@@ -149,6 +149,17 @@ export function formatDistance(meters: number, units: 'metric' | 'imperial'): st
 }
 
 /**
+ * Format polygon line distance as whole metres or feet.
+ */
+export function formatPolygonLineDistance(meters: number, units: 'metric' | 'imperial'): string {
+  if (units === 'imperial') {
+    return `${Math.round(meters * 3.28084)}ft`;
+  }
+
+  return `${Math.round(meters)}m`;
+}
+
+/**
  * Calculate and format distance between two coordinates.
  */
 export function calculateDistance(

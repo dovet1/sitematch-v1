@@ -7,13 +7,13 @@ import {
   calculateMidpoint,
   calculateEdgeAngle,
   calculateEdgeDistance,
-  formatDistance,
+  formatPolygonLineDistance,
 } from '@/lib/sitesketcher-v2/polygon-utils';
 
 interface LabelPosition {
   x: number; // Screen x coordinate (pixels)
   y: number; // Screen y coordinate (pixels)
-  text: string; // Formatted text ("12.5m")
+  text: string; // Formatted text ("12m")
   rotation: number; // Rotation angle in degrees
   polygonId: string; // For React key generation
 }
@@ -54,7 +54,7 @@ export function PolygonLabels() {
         const screenPos = mapInstance.project(midpoint);
         const angle = calculateEdgeAngle(mapInstance, point1, point2);
         const distance = calculateEdgeDistance(point1, point2);
-        const text = formatDistance(distance, units);
+        const text = formatPolygonLineDistance(distance, units);
 
         newLabels.push({
           x: screenPos.x,
