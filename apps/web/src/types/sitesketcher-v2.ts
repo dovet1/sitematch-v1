@@ -156,3 +156,28 @@ export interface PolygonColor {
   stroke: string;
   fill: string;
 }
+
+// Subscription tier types
+export interface TierLimits {
+  maxPolygons: number;
+  maxParkingBlocks: number;
+  maxCadImages: number;
+  maxMeasurementPoints: number; // Points, not segments (21 points = 20 segments)
+  canSave: boolean;
+  canExport: boolean;
+}
+
+export type SubscriptionTier = 'free' | 'pro' | 'plus';
+
+export interface LimitStatus {
+  current: number;
+  max: number;
+  reached: boolean;
+  remaining: number;
+}
+
+export interface EffectiveAccess {
+  hasProAccess: boolean; // Pro OR Plus with valid status
+  hasPlusAccess: boolean; // Plus with valid status
+  tierLimits: TierLimits;
+}

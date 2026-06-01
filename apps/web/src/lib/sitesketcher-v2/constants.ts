@@ -63,9 +63,38 @@ export const DEFAULT_VIEWPORT = {
 
 // Free tier limits
 export const FREE_TIER_LIMITS = {
-  maxPolygons: 1,
-  maxParkingBlocks: 1,
+  maxPolygons: 2,
+  maxParkingBlocks: 2,
   maxCadImages: 0,
+  maxMeasurementPoints: 21, // 20 segments = 21 points
+};
+
+// Tier feature mapping
+export const TIER_FEATURES = {
+  free: {
+    maxPolygons: 2,
+    maxParkingBlocks: 2,
+    maxCadImages: 0,
+    maxMeasurementPoints: 21, // 20 segments = 21 points
+    canSave: false, // Free users cannot save
+    canExport: false,
+  },
+  pro: {
+    maxPolygons: Infinity,
+    maxParkingBlocks: Infinity,
+    maxCadImages: 0,
+    maxMeasurementPoints: Infinity,
+    canSave: true,
+    canExport: true,
+  },
+  plus: {
+    maxPolygons: Infinity,
+    maxParkingBlocks: Infinity,
+    maxCadImages: Infinity,
+    maxMeasurementPoints: Infinity,
+    canSave: true,
+    canExport: true,
+  },
 };
 
 // Mapbox token (from env)

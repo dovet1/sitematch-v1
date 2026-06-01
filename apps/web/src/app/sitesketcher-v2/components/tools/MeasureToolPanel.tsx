@@ -3,10 +3,23 @@
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { Button } from '../primitives/Button';
 import { calculateDistance } from '@/lib/sitesketcher-v2/polygon-utils';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import { LimitWarning } from '../primitives/LimitWarning';
+import { useRouter } from 'next/navigation';
 
 export function MeasureToolPanel() {
-  const { measurementInProgress, frozenMeasurement, units, cancelMeasurement } = useSketchStore();
+  const router = useRouter();
+  const { hasProAccess } = useSubscriptionTier();
+  const {
+    measurementInProgress,
+    frozenMeasurement,
+    units,
+    cancelMeasurement,
+    getMeasurementPointCount,
+    effectiveAccess
+  } = useSketchStore();
   const displayedMeasurement = measurementInProgress ?? frozenMeasurement;
+  const pointCount = getMeasurementPointCount();
 
   // Calculate total distance
   let totalDistance = 0;
@@ -26,8 +39,23 @@ export function MeasureToolPanel() {
 
   const unitLabel = units === 'metric' ? 'm' : 'ft';
 
+  // Check if limit is reached (21 points = 20 segments)
+  const segmentCount = pointCount > 0 ? pointCount - 1 : 0;
+  const maxSegments = effectiveAccess.tierLimits.maxMeasurementPoints - 1;
+  const limitReached = pointCount >= effectiveAccess.tierLimits.maxMeasurementPoints;
+
   return (
     <div className="p-4 space-y-4">
+      {!hasProAccess && limitReached && (
+        <LimitWarning
+          feature="measurement"
+          current={segmentCount}
+          max={maxSegments}
+          reached={limitReached}
+          onUpgrade={() => router.push('/settings/billing?upgrade=pro')}
+        />
+      )}
+
       <div>
         <p className="text-xs text-sm-ink/60 mb-4">
           Click points on the map to measure distances. Press Enter to finish, or Escape to clear.

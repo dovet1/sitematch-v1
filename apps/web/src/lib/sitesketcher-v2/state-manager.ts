@@ -13,8 +13,10 @@ import {
   PolygonInProgress,
   MeasurementChain,
   MapFocusRequest,
+  EffectiveAccess,
+  LimitStatus,
 } from '@/types/sitesketcher-v2';
-import { DEFAULT_BUILDING_HEIGHT_METERS, DEFAULT_VIEWPORT, MAX_HISTORY_SIZE } from './constants';
+import { DEFAULT_BUILDING_HEIGHT_METERS, DEFAULT_VIEWPORT, MAX_HISTORY_SIZE, TIER_FEATURES } from './constants';
 import { rotatePolygonPoints } from './polygon-utils';
 import { measurementPreviewStore } from './measurement-preview-store';
 import type mapboxgl from 'mapbox-gl';
@@ -65,8 +67,21 @@ interface SketchState {
   history: HistoryState[];
   historyIndex: number;
 
+  // Subscription tier access
+  effectiveAccess: EffectiveAccess;
+
   // Actions - Map
   setMapInstance: (map: mapboxgl.Map | null) => void;
+
+  // Actions - Subscription tier
+  setEffectiveAccess: (access: EffectiveAccess) => void;
+  checkPolygonLimit: () => boolean;
+  checkParkingLimit: () => boolean;
+  checkCadLimit: () => boolean;
+  checkMeasurementLimit: () => boolean;
+  getPolygonLimitStatus: () => LimitStatus;
+  getParkingLimitStatus: () => LimitStatus;
+  getMeasurementPointCount: () => number;
 
   // Actions - Polygons
   addPolygon: (polygon: Polygon) => void;
@@ -232,8 +247,69 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   history: [],
   historyIndex: -1,
 
+  // Subscription tier access (initialize with free tier)
+  effectiveAccess: {
+    hasProAccess: false,
+    hasPlusAccess: false,
+    tierLimits: TIER_FEATURES.free,
+  },
+
   // Map actions
   setMapInstance: (map) => set({ mapInstance: map }),
+
+  // Subscription tier actions
+  setEffectiveAccess: (access) => set({ effectiveAccess: access }),
+
+  checkPolygonLimit: () => {
+    const state = get();
+    return state.polygons.length < state.effectiveAccess.tierLimits.maxPolygons;
+  },
+
+  checkParkingLimit: () => {
+    const state = get();
+    return state.parkingBlocks.length < state.effectiveAccess.tierLimits.maxParkingBlocks;
+  },
+
+  checkCadLimit: () => {
+    const state = get();
+    const cadCount = state.cadInstances.length + state.cadImages.length;
+    return cadCount < state.effectiveAccess.tierLimits.maxCadImages;
+  },
+
+  checkMeasurementLimit: () => {
+    const state = get();
+    const pointCount = state.measurementInProgress?.points.length || 0;
+    return pointCount < state.effectiveAccess.tierLimits.maxMeasurementPoints;
+  },
+
+  getPolygonLimitStatus: () => {
+    const state = get();
+    const current = state.polygons.length;
+    const max = state.effectiveAccess.tierLimits.maxPolygons;
+    return {
+      current,
+      max,
+      reached: current >= max,
+      remaining: Math.max(0, max - current),
+    };
+  },
+
+  getParkingLimitStatus: () => {
+    const state = get();
+    const current = state.parkingBlocks.length;
+    const max = state.effectiveAccess.tierLimits.maxParkingBlocks;
+    return {
+      current,
+      max,
+      reached: current >= max,
+      remaining: Math.max(0, max - current),
+    };
+  },
+
+  getMeasurementPointCount: () => {
+    const state = get();
+    return state.measurementInProgress?.points.length || 0;
+  },
 
   // Polygon actions
   addPolygon: (polygon) => {
@@ -831,12 +907,19 @@ export const useSketchStore = create<SketchState>((set, get) => ({
 
   loadSketch: (sketch) => {
     measurementPreviewStore.clear(); // Clear preview when loading sketch
+    const { effectiveAccess } = get();
+
+    // Extract sketch data and metadata
     const data = sketch.data;
+    const cadImages = data.cadImages || [];
+    const cadInstances = data.cadInstances || [];
+
     set({
       polygons: data.polygons || [],
       parkingBlocks: data.parkingBlocks || [],
-      cadImages: data.cadImages || [], // Legacy support
-      cadInstances: data.cadInstances || [],
+      // CAD visibility filtering (empty for non-Plus, full for Plus)
+      cadImages: effectiveAccess.hasPlusAccess ? cadImages : [],
+      cadInstances: effectiveAccess.hasPlusAccess ? cadInstances : [],
       // NOTE: savedCads remain unchanged - library persists across sketch loads
       viewport: data.viewport || { ...DEFAULT_VIEWPORT },
       units: data.settings?.units || 'metric',

@@ -28,6 +28,7 @@ import { MeasurementOverlay } from './MeasurementOverlay';
 import { PolygonDrawPreviewOverlay } from './PolygonDrawPreviewOverlay';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import { toast } from 'sonner';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
@@ -81,6 +82,12 @@ function findCadImageAtPoint(
   cadInstances: CadInstance[],
   savedCads: SavedCad[]
 ): string | null {
+  // Check Plus access - no CAD interaction for non-Plus users
+  const { effectiveAccess } = useSketchStore.getState();
+  if (!effectiveAccess.hasPlusAccess) {
+    return null;
+  }
+
   const placedCadItems: Array<{
     id: string;
     corners: [[number, number], [number, number], [number, number], [number, number]];
@@ -335,6 +342,18 @@ export function MapCanvas() {
 
         // Setup Draw event listeners
         map.on('draw.create', (e: any) => {
+          const { checkPolygonLimit } = useSketchStore.getState();
+
+          // Check limit BEFORE processing the polygon
+          if (!checkPolygonLimit()) {
+            // Delete the just-created draw feature
+            const featureIds = e.features.map((f: any) => f.id);
+            draw.delete(featureIds);
+
+            toast.error('Polygon limit reached. Upgrade to Pro for unlimited polygons.');
+            return; // Block polygon creation
+          }
+
           e.features.forEach((feature: any) => {
             // Convert Draw feature to Zustand polygon
             const polygon = drawFeatureToPolygon(feature);
@@ -524,6 +543,13 @@ export function MapCanvas() {
 
           // Handle CAD placement (highest priority)
           if (state.cadPlacementInProgress) {
+            // Check Plus access before CAD placement
+            const { effectiveAccess } = state;
+            if (!effectiveAccess.hasPlusAccess) {
+              toast.error('CAD overlay requires Plus subscription.');
+              return;
+            }
+
             const anchor: [number, number] = [event.lngLat.lng, event.lngLat.lat];
 
             // NEW: Check if this is a savedCadId (new flow) or legacy cadImageId
@@ -538,6 +564,13 @@ export function MapCanvas() {
           }
 
           if (state.activeTool === 'parking') {
+            // Check parking limit before placement
+            const { checkParkingLimit } = state;
+            if (!checkParkingLimit()) {
+              toast.error('Parking limit reached. Upgrade to Pro for unlimited parking blocks.');
+              return;
+            }
+
             const existingNames = state.parkingBlocks.map((parking) => parking.name);
             let nameIndex = 1;
             let name = `Parking ${nameIndex}`;
@@ -567,6 +600,13 @@ export function MapCanvas() {
 
             // Don't allow new points if there's a frozen measurement
             if (state.frozenMeasurement) {
+              return;
+            }
+
+            // Check measurement limit before adding point
+            const { checkMeasurementLimit } = state;
+            if (!checkMeasurementLimit()) {
+              toast.error('Measurement segment limit reached (20 segments). Upgrade to Pro for unlimited measurements.');
               return;
             }
 

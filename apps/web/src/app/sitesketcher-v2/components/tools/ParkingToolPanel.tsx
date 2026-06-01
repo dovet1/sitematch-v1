@@ -4,10 +4,16 @@ import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { Stepper } from '../primitives/Stepper';
 import { Segmented, SegmentedOption } from '../primitives/Segmented';
 import { PARKING_DIMENSIONS } from '@/lib/sitesketcher-v2/constants';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import { LimitWarning } from '../primitives/LimitWarning';
+import { useRouter } from 'next/navigation';
 
 export function ParkingToolPanel() {
-  const { parkingPlacement, setParkingPlacement } = useSketchStore();
+  const router = useRouter();
+  const { hasProAccess } = useSubscriptionTier();
+  const { parkingPlacement, setParkingPlacement, getParkingLimitStatus } = useSketchStore();
   const { spaces, layout, stallSize } = parkingPlacement;
+  const limitStatus = getParkingLimitStatus();
 
   const layoutOptions: SegmentedOption<'single' | 'double'>[] = [
     { value: 'single', label: 'Single Row' },
@@ -26,6 +32,16 @@ export function ParkingToolPanel() {
 
   return (
     <div className="p-4 space-y-4">
+      {!hasProAccess && limitStatus.reached && (
+        <LimitWarning
+          feature="parking"
+          current={limitStatus.current}
+          max={limitStatus.max}
+          reached={limitStatus.reached}
+          onUpgrade={() => router.push('/settings/billing?upgrade=pro')}
+        />
+      )}
+
       <div>
         <p className="text-xs text-sm-ink/60 mb-4">
           Click on the map to place a parking block. Drag to rotate.

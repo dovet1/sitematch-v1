@@ -1,6 +1,10 @@
 'use client';
 
 import { POLYGON_COLORS } from '@/lib/sitesketcher-v2/constants';
+import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import { LimitWarning } from '../primitives/LimitWarning';
+import { useRouter } from 'next/navigation';
 
 interface PolygonToolPanelProps {
   selectedColorIndex: number;
@@ -11,8 +15,23 @@ export function PolygonToolPanel({
   selectedColorIndex,
   onColorChange,
 }: PolygonToolPanelProps) {
+  const router = useRouter();
+  const { hasProAccess } = useSubscriptionTier();
+  const getPolygonLimitStatus = useSketchStore((state) => state.getPolygonLimitStatus);
+  const limitStatus = getPolygonLimitStatus();
+
   return (
     <div className="p-4 space-y-4">
+      {!hasProAccess && limitStatus.reached && (
+        <LimitWarning
+          feature="polygon"
+          current={limitStatus.current}
+          max={limitStatus.max}
+          reached={limitStatus.reached}
+          onUpgrade={() => router.push('/settings/billing?upgrade=pro')}
+        />
+      )}
+
       <div>
         <p className="text-xs text-sm-ink/60 mb-4">
           Click to place points. Hold Shift to snap edges to 90° angles.

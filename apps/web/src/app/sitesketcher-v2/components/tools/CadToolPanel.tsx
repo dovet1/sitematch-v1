@@ -4,10 +4,12 @@ import { useState, useRef } from 'react';
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
 import { Button } from '../primitives/Button';
 import { DropdownMenu } from '../primitives/DropdownMenu';
-import { Upload, Check, AlertCircle, Edit, RotateCcw, Trash2 } from 'lucide-react';
+import { Upload, Check, AlertCircle, Edit, RotateCcw, Trash2, Layers } from 'lucide-react';
 import { CalibrationModal } from '../modals/CalibrationModal';
+import { CadUpgradeModal } from '../modals/CadUpgradeModal';
 import type { CadImage, SavedCad } from '@/types/sitesketcher-v2';
 import { clsx } from 'clsx';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
@@ -150,6 +152,7 @@ const createDefaultCleanedCadBlob = async (imageUrl: string) => {
 };
 
 export function CadToolPanel() {
+  const { hasProAccess, hasPlusAccess, billingInterval } = useSubscriptionTier();
   const {
     savedCads,
     savedCadsLoading,
@@ -174,6 +177,60 @@ export function CadToolPanel() {
   // Rename state
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+
+  // CAD upgrade modal state
+  const [showCadUpgradeModal, setShowCadUpgradeModal] = useState(false);
+
+  // Show upgrade modal for non-Plus users
+  if (!hasPlusAccess) {
+    return (
+      <>
+        <div className="p-4 space-y-4">
+          <div className="p-6 bg-[#F5F1FF] border border-[rgba(112,51,255,0.2)] rounded-lg">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="p-2 bg-white rounded">
+                <Layers className="w-5 h-5 text-[#7033FF]" />
+              </div>
+              <div>
+                <h3 className="text-sm font-[600] text-[#171419] mb-1">
+                  CAD Overlay is Plus Only
+                </h3>
+                <p className="text-xs text-[#171419]/70 leading-relaxed">
+                  Upload CAD drawings and site plans, calibrate the scale, and overlay them on your sketches
+                  with adjustable opacity.
+                </p>
+              </div>
+            </div>
+
+            {hasProAccess ? (
+              <Button
+                onClick={() => setShowCadUpgradeModal(true)}
+                variant="primary"
+                className="w-full bg-[#7033FF] hover:bg-[#5421CC] text-white"
+              >
+                Upgrade to Plus
+              </Button>
+            ) : (
+              <Button
+                onClick={() => (window.location.href = '/settings/billing?upgrade=plus')}
+                variant="primary"
+                className="w-full bg-[#7033FF] hover:bg-[#5421CC] text-white"
+              >
+                Upgrade to Plus
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {showCadUpgradeModal && hasProAccess && (
+          <CadUpgradeModal
+            onClose={() => setShowCadUpgradeModal(false)}
+            billingInterval={billingInterval || 'month'}
+          />
+        )}
+      </>
+    );
+  }
 
   const uploadFile = async (file: File) => {
     setError(null);
