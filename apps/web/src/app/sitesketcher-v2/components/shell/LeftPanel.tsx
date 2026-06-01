@@ -1,7 +1,7 @@
 'use client';
 
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager';
-import { Car, FileUp, Pentagon, Sparkles, X } from 'lucide-react';
+import { Car, FileUp, Pentagon, X } from 'lucide-react';
 import { PolygonToolPanel } from '../tools/PolygonToolPanel';
 import { ParkingToolPanel } from '../tools/ParkingToolPanel';
 import { CadToolPanel } from '../tools/CadToolPanel';
@@ -88,10 +88,10 @@ function SelectEmptyState({ onSelectTool }: SelectEmptyStateProps) {
     <div className="flex-1 p-4 pt-10">
       <div className="flex flex-col items-center text-center">
         <div className="w-10 h-10 rounded-lg bg-sm-violet/10 flex items-center justify-center mb-4">
-          <Sparkles className="w-4 h-4 text-sm-violet" />
+          <Pentagon className="w-4 h-4 text-sm-violet" />
         </div>
 
-        <h2 className="text-sm font-semibold text-sm-ink mb-2">Start sketching</h2>
+        <h2 className="text-sm font-semibold text-sm-ink mb-2">Start Sketching</h2>
         <p className="text-xs leading-5 text-sm-ink/60 max-w-[220px] mb-5">
           Pick a tool on the left, then click on the map to drop your first point.
         </p>

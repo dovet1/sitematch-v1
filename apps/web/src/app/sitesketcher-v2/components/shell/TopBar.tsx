@@ -6,6 +6,7 @@ import { Button } from '../primitives';
 import {
   Save,
   FilePlus,
+  Lock,
   Undo2,
   Redo2,
   Search,
@@ -16,6 +17,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 import { createDebouncedLocationSearch, formatLocationDisplay } from '@/lib/mapbox';
 import type { LocationResult } from '@/lib/mapbox';
 import { getSketchObjectCount } from '@/lib/sitesketcher-v2/object-count';
@@ -24,6 +28,9 @@ import { NewSketchConfirmModal } from '../modals/NewSketchConfirmModal';
 import { toast } from 'sonner';
 
 export function TopBar() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { hasProAccess, loading: tierLoading } = useSubscriptionTier();
   const {
     sketchId,
     sketchName,
@@ -63,6 +70,7 @@ export function TopBar() {
   const objectCount = getSketchObjectCount({ polygons, parkingBlocks, cadImages, cadInstances });
   const totalObjects = objectCount.polygons + objectCount.parkingBlocks + objectCount.cadImages;
   const hasCurrentWork = Boolean(sketchId) || isDirty || totalObjects > 0;
+  const showUpgradeSaveButton = Boolean(user) && !tierLoading && !hasProAccess;
   const newSketchMode = !sketchId
     ? 'unsaved'
     : isDirty
@@ -451,18 +459,29 @@ export function TopBar() {
           onClick={handleNewSketch}
           disabled={!hasCurrentWork || saving}
         >
-          New sketch
+          New Sketch
         </Button>
 
-        <Button
-          size="md"
-          variant="primary"
-          icon={saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          onClick={handleSave}
-          disabled={!isDirty || saving}
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </Button>
+        {showUpgradeSaveButton ? (
+          <button
+            type="button"
+            onClick={() => router.push('/pricing')}
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md bg-[#7033FF] px-3 text-sm text-white shadow-sm transition-colors hover:bg-[#5421CC] focus-ring"
+          >
+            <Lock className="h-3.5 w-3.5" />
+            Upgrade To Save
+          </button>
+        ) : (
+          <Button
+            size="md"
+            variant="primary"
+            icon={saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            onClick={handleSave}
+            disabled={!isDirty || saving}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+        )}
       </div>
 
       {showSaveModal && (

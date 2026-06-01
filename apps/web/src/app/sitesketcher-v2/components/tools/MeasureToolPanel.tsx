@@ -52,7 +52,7 @@ export function MeasureToolPanel() {
           current={segmentCount}
           max={maxSegments}
           reached={limitReached}
-          onUpgrade={() => router.push('/settings/billing?upgrade=pro')}
+          onUpgrade={() => router.push('/pricing')}
         />
       )}
 

@@ -196,8 +196,7 @@ export function CadToolPanel() {
                   CAD Overlay is Plus Only
                 </h3>
                 <p className="text-xs text-[#171419]/70 leading-relaxed">
-                  Upload CAD drawings and site plans, calibrate the scale, and overlay them on your sketches
-                  with adjustable opacity.
+                  Upload your CAD drawings and site plans and add them to your SiteSketches
                 </p>
               </div>
             </div>
@@ -212,7 +211,7 @@ export function CadToolPanel() {
               </Button>
             ) : (
               <Button
-                onClick={() => (window.location.href = '/settings/billing?upgrade=plus')}
+                onClick={() => (window.location.href = '/pricing')}
                 variant="primary"
                 className="w-full bg-[#7033FF] hover:bg-[#5421CC] text-white"
               >

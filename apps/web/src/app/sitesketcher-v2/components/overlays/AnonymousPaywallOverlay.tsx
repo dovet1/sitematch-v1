@@ -86,7 +86,7 @@ export function AnonymousPaywallOverlay() {
               <li className="flex items-start gap-2">
                 <Check className="w-4 h-4 text-[#7033FF] flex-shrink-0 mt-0.5" />
                 <span className="text-[13.5px] text-[#171419] font-inter leading-[1.5] font-[600]">
-                  CAD overlay with calibration
+                  Add CADs to the map
                 </span>
               </li>
             </ul>

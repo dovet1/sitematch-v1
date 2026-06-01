@@ -28,7 +28,7 @@ export function PolygonToolPanel({
           current={limitStatus.current}
           max={limitStatus.max}
           reached={limitStatus.reached}
-          onUpgrade={() => router.push('/settings/billing?upgrade=pro')}
+          onUpgrade={() => router.push('/pricing')}
         />
       )}
 

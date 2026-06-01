@@ -37,13 +37,11 @@ export const PRICING = {
     ctaStyle: "outline" as const,
     intro: "Everything in Free, plus",
     features: [
-      { text: "Full search & filters", on: true },
+      { text: "Search & filter all requirements", on: true },
       { text: "Reveal contact details", on: true },
       { text: "SiteAnalyser reports", on: true },
       { text: "SiteSketcher layouts", on: true },
       { text: "Requirement alerts", on: true },
-      { text: "Data exports", on: true },
-      { text: "GapFinder", on: false },
     ],
   },
   plus: {
@@ -69,9 +67,8 @@ export const PRICING = {
     intro: "Everything in Pro, plus",
     features: [
       { text: "GapFinder access", on: true, highlight: true },
+      { text: "Add CADs to SiteSketcher", on: true },
       { text: "Priority email support", on: true },
-      { text: "Unlimited alerts & exports", on: true },
-      { text: "Multiple user seats", on: true },
     ],
     callout: {
       title: "GapFinder included",
