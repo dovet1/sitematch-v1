@@ -30,7 +30,7 @@ interface ResultsPanelProps {
   selectedLsoaCodes?: Set<string>;
   nationalAverages?: Record<string, number>;
   isFreeTier?: boolean;
-  onUpgradeClick?: (feature?: 'save' | 'traffic' | 'count' | 'demographics') => void;
+  onUpgradeClick?: () => void;
   activeSection?: NavigationSection;
 }
 
@@ -72,6 +72,7 @@ export function ResultsPanel({
   selectedLsoaCodes,
   nationalAverages = {},
   isFreeTier = false,
+  onUpgradeClick,
   activeSection = 'overview',
 }: ResultsPanelProps) {
   const { user } = useAuth();
@@ -546,7 +547,7 @@ export function ResultsPanel({
             );
 
             return shouldBlur ? (
-              <BlurOverlay onUpgradeClick={handleUpgradeClick} title="Detailed Demographics">
+              <BlurOverlay onUpgradeClick={onUpgradeClick || handleUpgradeClick} title="Detailed Demographics">
                 {content}
               </BlurOverlay>
             ) : content;

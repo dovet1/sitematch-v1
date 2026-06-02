@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { ChevronRight, MapPin, X, Loader2, Sparkles, Save } from 'lucide-react'
+import { ChevronRight, MapPin, X, Loader2, Sparkles, Save, Lock } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '../primitives/Button'
@@ -22,6 +22,7 @@ interface TopBarProps {
   onSave: () => void
   analysisName?: string | null
   analysisId?: string | null
+  hasProAccess: boolean
 }
 
 export function TopBar({
@@ -37,6 +38,7 @@ export function TopBar({
   onSave,
   analysisName,
   analysisId,
+  hasProAccess,
 }: TopBarProps) {
   const [locationQuery, setLocationQuery] = useState('')
   const [locationResults, setLocationResults] = useState<LocationResult[]>([])
@@ -290,11 +292,11 @@ export function TopBar({
         <Button
           onClick={onSave}
           disabled={!hasResults}
-          variant="primary"
+          variant={hasProAccess ? "primary" : "secondary"}
           size="sm"
-          icon={<Save className="h-3.5 w-3.5" />}
+          icon={hasProAccess ? <Save className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
         >
-          Save Analysis
+          {hasProAccess ? 'Save Analysis' : 'Upgrade to Save'}
         </Button>
       </div>
     </header>

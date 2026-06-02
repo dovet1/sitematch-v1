@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BarChart3, Building2, Eye, Loader2, MapPin, Trash2 } from 'lucide-react'
+import { BarChart3, Building2, Eye, Loader2, Lock, MapPin, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '../primitives/Button'
+import { SiteAnalyserLimitWarning } from '../primitives/SiteAnalyserLimitWarning'
 
 interface SavedAnalysis {
   id: string
@@ -19,9 +20,17 @@ interface SavedAnalysis {
 
 interface SavedAnalysesPanelProps {
   onViewAnalysis?: () => void
+  hasProAccess: boolean
+  tierLoading: boolean
+  onUpgradeClick: () => void
 }
 
-export function SavedAnalysesPanel({ onViewAnalysis }: SavedAnalysesPanelProps) {
+export function SavedAnalysesPanel({
+  onViewAnalysis,
+  hasProAccess,
+  tierLoading,
+  onUpgradeClick,
+}: SavedAnalysesPanelProps) {
   const router = useRouter()
   const [analyses, setAnalyses] = useState<SavedAnalysis[]>([])
   const [loading, setLoading] = useState(true)
@@ -101,6 +110,13 @@ export function SavedAnalysesPanel({ onViewAnalysis }: SavedAnalysesPanelProps) 
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
+        {!tierLoading && !hasProAccess && (
+          <SiteAnalyserLimitWarning
+            message="Upgrade to Pro to save and load demographic analyses."
+            onUpgrade={onUpgradeClick}
+          />
+        )}
+
         {loading && (
           <div className="flex items-center justify-center py-10">
             <Loader2 className="h-5 w-5 animate-spin text-sm-violet" />
@@ -164,24 +180,38 @@ export function SavedAnalysesPanel({ onViewAnalysis }: SavedAnalysesPanelProps) 
                 </div>
 
                 <div className="mt-3 flex items-center gap-2">
-                  <Button
-                    className="flex-1"
-                    size="sm"
-                    variant="primary"
-                    icon={<Eye className="h-3.5 w-3.5" />}
-                    onClick={() => handleView(analysis.id)}
-                  >
-                    View
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    icon={<Trash2 className="h-3.5 w-3.5" />}
-                    isLoading={deletingId === analysis.id}
-                    onClick={() => handleDelete(analysis)}
-                    title="Delete analysis"
-                    aria-label={`Delete ${analysis.name}`}
-                  />
+                  {hasProAccess ? (
+                    <>
+                      <Button
+                        className="flex-1"
+                        size="sm"
+                        variant="primary"
+                        icon={<Eye className="h-3.5 w-3.5" />}
+                        onClick={() => handleView(analysis.id)}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        icon={<Trash2 className="h-3.5 w-3.5" />}
+                        isLoading={deletingId === analysis.id}
+                        onClick={() => handleDelete(analysis)}
+                        title="Delete analysis"
+                        aria-label={`Delete ${analysis.name}`}
+                      />
+                    </>
+                  ) : (
+                    <Button
+                      className="flex-1"
+                      size="sm"
+                      variant="secondary"
+                      icon={<Lock className="h-3.5 w-3.5" />}
+                      onClick={onUpgradeClick}
+                    >
+                      Upgrade to View
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

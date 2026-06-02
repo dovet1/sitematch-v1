@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { Building2 } from 'lucide-react'
+import { Building2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { TopBar } from './components/shell/TopBar'
 import { LeftRail } from './components/shell/LeftRail'
@@ -21,6 +21,7 @@ import type { LocationResult } from '@/lib/mapbox'
 import { Button } from './components/primitives/Button'
 import { SaveAnalysisModal } from './components/modals/SaveAnalysisModal'
 import { SiteAnalyserUpgradeModal } from './components/modals/SiteAnalyserUpgradeModal'
+import { AnonymousPaywallOverlay } from './components/overlays/AnonymousPaywallOverlay'
 
 // Navigation section type
 type NavigationSection = 'overview' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health'
@@ -48,8 +49,8 @@ export default function SiteDemographerDesktop() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
-  const { user } = useAuth()
-  const { hasProAccess } = useSubscriptionTier()
+  const { user, loading: authLoading } = useAuth()
+  const { hasProAccess, loading: tierLoading } = useSubscriptionTier()
 
   // Preserve full path including query params
   const currentPath = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '')
@@ -97,11 +98,12 @@ export default function SiteDemographerDesktop() {
   const [showCountPoints, setShowCountPoints] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
-  const [upgradeFeature, setUpgradeFeature] = useState<'save' | 'traffic' | 'count' | 'demographics'>('demographics')
   const [loadingAnalysis, setLoadingAnalysis] = useState(false)
   const [analyzedLocation, setAnalyzedLocation] = useState<LocationResult | null>(null)
   const [analysisName, setAnalysisName] = useState<string | null>(null)
   const [analysisId, setAnalysisId] = useState<string | null>(null)
+  const loadedAnalysisIdRef = useRef<string | null>(null)  // Track last loaded ID
+  const loadingAnalysisRef = useRef<boolean>(false)        // Track in-flight status
 
   // Navigation state
   const [activeSection, setActiveSection] = useState<NavigationSection>('overview')
@@ -121,13 +123,33 @@ export default function SiteDemographerDesktop() {
 
   // Load saved analysis from query parameter
   useEffect(() => {
-    const analysisId = searchParams?.get('analysis')
-    if (!analysisId || loadingAnalysis) return
+    const urlAnalysisId = searchParams?.get('analysis')
+
+    // Skip if no ID, already loading, or already loaded this ID
+    if (!urlAnalysisId || loadingAnalysisRef.current || loadedAnalysisIdRef.current === urlAnalysisId) {
+      return
+    }
+
+    // Wait for auth/tier loading to complete
+    if (authLoading || tierLoading) return
+
+    // Block anonymous users
+    if (!user) return
+
+    // Block free users - show upgrade modal instead of toast/redirect
+    if (!hasProAccess) {
+      // Clear the query param to prevent effect re-runs
+      router.replace('/new-dashboard/tools/site-demographer-v2')
+      // Show unified upgrade modal (consistent with other upgrade flows)
+      setShowUpgradeModal(true)
+      return
+    }
 
     const loadAnalysis = async () => {
-      setLoadingAnalysis(true)
+      loadingAnalysisRef.current = true  // Mark as loading (ref)
+      setLoadingAnalysis(true)            // Also update UI state
       try {
-        const response = await fetch(`/api/demographic-analyses/${analysisId}`)
+        const response = await fetch(`/api/demographic-analyses/${urlAnalysisId}`)
 
         if (!response.ok) {
           const errorData = await response.json()
@@ -164,9 +186,10 @@ export default function SiteDemographerDesktop() {
         // Set analyzed location for map
         setAnalyzedLocation(reconstructedLocation)
 
-        // Set analysis name and ID
+        // After successful load:
+        loadedAnalysisIdRef.current = urlAnalysisId  // Mark as loaded
         setAnalysisName(analysis.name)
-        setAnalysisId(analysisId)
+        setAnalysisId(urlAnalysisId)
 
         toast.success('Analysis loaded successfully')
       } catch (error) {
@@ -174,12 +197,26 @@ export default function SiteDemographerDesktop() {
         toast.error(error instanceof Error ? error.message : 'Failed to load analysis')
         router.replace('/new-dashboard/tools/site-demographer-v2')
       } finally {
-        setLoadingAnalysis(false)
+        loadingAnalysisRef.current = false  // Clear loading flag (ref)
+        setLoadingAnalysis(false)            // Also update UI state
       }
     }
 
     loadAnalysis()
-  }, [searchParams])
+  }, [
+    searchParams,
+    authLoading,
+    tierLoading,
+    user,
+    hasProAccess,
+    router,
+    loadSavedAnalysis,
+    initializeSelection,
+    setSelectedLocation,
+    setMeasurementMode,
+    setMeasurementValue,
+    setAnalyzedLocation,
+  ])
 
   // Re-fetch aggregated data when selection changes
   useEffect(() => {
@@ -249,14 +286,12 @@ export default function SiteDemographerDesktop() {
     if (hasProAccess) {
       setShowSaveModal(true)
     } else {
-      setUpgradeFeature('save')
       setShowUpgradeModal(true)
     }
   }
 
   const handleTrafficToggle = () => {
     if (!hasProAccess && !showTraffic) {
-      setUpgradeFeature('traffic')
       setShowUpgradeModal(true)
       return
     }
@@ -265,7 +300,6 @@ export default function SiteDemographerDesktop() {
 
   const handleCountPointsToggle = () => {
     if (!hasProAccess && !showCountPoints) {
-      setUpgradeFeature('count')
       setShowUpgradeModal(true)
       return
     }
@@ -295,6 +329,20 @@ export default function SiteDemographerDesktop() {
     setActiveSection('overview')
   }
 
+  // Show loading state while auth/subscription is being determined
+  if (authLoading || tierLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-sm-bg">
+        <Loader2 className="h-8 w-8 animate-spin text-sm-violet" />
+      </div>
+    )
+  }
+
+  // Block anonymous users with full-screen overlay
+  if (!user) {
+    return <AnonymousPaywallOverlay />
+  }
+
   return (
     <div className="h-screen flex flex-col bg-sm-bg">
       {/* TopBar */}
@@ -311,6 +359,7 @@ export default function SiteDemographerDesktop() {
         onSave={handleSaveClick}
         analysisName={analysisName}
         analysisId={analysisId}
+        hasProAccess={hasProAccess}
       />
 
       {/* Site Context Banner */}
@@ -357,7 +406,12 @@ export default function SiteDemographerDesktop() {
         {/* LeftPanel */}
         <LeftPanel>
           {activePanel === 'saved-analyses' ? (
-            <SavedAnalysesPanel onViewAnalysis={handleViewSavedAnalysis} />
+            <SavedAnalysesPanel
+              onViewAnalysis={handleViewSavedAnalysis}
+              hasProAccess={hasProAccess}
+              tierLoading={tierLoading}
+              onUpgradeClick={() => setShowUpgradeModal(true)}
+            />
           ) : (
             <ResultsPanel
               loading={loading}
@@ -370,8 +424,7 @@ export default function SiteDemographerDesktop() {
               selectedLsoaCodes={selectedLsoaCodes}
               nationalAverages={nationalAverages}
               isFreeTier={!hasProAccess}
-              onUpgradeClick={(feature?: 'save' | 'traffic' | 'count' | 'demographics') => {
-                setUpgradeFeature(feature || 'demographics')
+              onUpgradeClick={() => {
                 setShowUpgradeModal(true)
               }}
               activeSection={activeSection}
@@ -450,7 +503,6 @@ export default function SiteDemographerDesktop() {
       <SiteAnalyserUpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        feature={upgradeFeature}
         onUpgrade={handleUpgradeModalAction}
       />
     </div>

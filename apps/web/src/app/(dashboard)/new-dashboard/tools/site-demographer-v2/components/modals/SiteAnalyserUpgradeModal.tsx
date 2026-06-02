@@ -6,36 +6,19 @@ import { Zap, Users, MapPin, TrendingUp, Lock } from 'lucide-react';
 interface SiteAnalyserUpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  feature?: 'save' | 'traffic' | 'count' | 'demographics';
   onUpgrade: () => void;
 }
 
 export function SiteAnalyserUpgradeModal({
   isOpen,
   onClose,
-  feature = 'demographics',
   onUpgrade,
 }: SiteAnalyserUpgradeModalProps) {
-  const getFeatureMessage = () => {
-    switch (feature) {
-      case 'save':
-        return 'Save your demographic analyses and revisit them anytime.';
-      case 'traffic':
-        return 'View detailed traffic flow data to understand site accessibility.';
-      case 'count':
-        return 'Access precise traffic count points from DfT data.';
-      case 'demographics':
-        return 'Unlock detailed demographic breakdowns for deeper insights.';
-      default:
-        return 'Access all SiteAnalyser Pro features.';
-    }
-  };
-
   const features = [
-    { icon: Users, text: 'Detailed demographic breakdowns' },
-    { icon: MapPin, text: 'Traffic flow & count point data' },
-    { icon: TrendingUp, text: 'Save and revisit analyses' },
-    { icon: Lock, text: 'Unlock all premium insights' },
+    { icon: Users, text: 'Full demographic breakdowns across all categories' },
+    { icon: MapPin, text: 'Traffic flow and count point data' },
+    { icon: TrendingUp, text: 'Save and revisit analyses anytime' },
+    { icon: Lock, text: 'Unlimited access to all insights' },
   ];
 
   return (
@@ -55,7 +38,7 @@ export function SiteAnalyserUpgradeModal({
 
         {/* Message */}
         <p className="text-[15px] leading-[1.5] text-sm-ink/60 font-inter text-center mt-3">
-          {getFeatureMessage()}
+          Unlock the full power of SiteAnalyser with comprehensive demographic insights, traffic data, and the ability to save your analyses.
         </p>
 
         {/* Features List */}
