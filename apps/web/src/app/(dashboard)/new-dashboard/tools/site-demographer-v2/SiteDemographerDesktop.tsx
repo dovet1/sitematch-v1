@@ -9,6 +9,7 @@ import { LeftRail } from './components/shell/LeftRail'
 import { LeftPanel } from './components/shell/LeftPanel'
 import { StatusBar } from './components/shell/StatusBar'
 import { ResultsPanel } from './components/panels/ResultsPanel'
+import { SavedAnalysesPanel } from './components/panels/SavedAnalysesPanel'
 import { MapCanvas } from './components/map/MapCanvas'
 import { useDemographicsData } from '@/components/demographics/shared/hooks/useDemographicsData'
 import { useLsoaSelection } from '@/components/demographics/shared/hooks/useLsoaSelection'
@@ -23,10 +24,13 @@ import { SiteAnalyserUpgradeModal } from './components/modals/SiteAnalyserUpgrad
 
 // Navigation section type
 type NavigationSection = 'overview' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health'
+type LeftPanelType = 'saved-analyses' | null
 
 // Conversion constants
 const WALK_SPEED_MPH = 3
 const DRIVE_SPEED_MPH = 35
+const DEFAULT_MAP_CENTER = { lat: 54.5, lng: -3 }
+const DEFAULT_MAP_RADIUS_MILES = 120
 
 // Convert measurement to radius in miles
 function convertToRadiusMiles(mode: 'distance' | 'drive_time' | 'walk_time', value: number): number {
@@ -101,6 +105,7 @@ export default function SiteDemographerDesktop() {
 
   // Navigation state
   const [activeSection, setActiveSection] = useState<NavigationSection>('overview')
+  const [activePanel, setActivePanel] = useState<LeftPanelType>(null)
 
   // Construct analysisData for save modal (lines 891-903 from DemographicsResults)
   const analysisData = selectedLocation && selectedLsoaCodes && rawDemographicsData ? {
@@ -277,7 +282,17 @@ export default function SiteDemographerDesktop() {
   }
 
   const handleNavigationClick = (section: NavigationSection) => {
+    setActivePanel(null)
     setActiveSection(section)
+  }
+
+  const handleSavedAnalysesClick = () => {
+    setActivePanel('saved-analyses')
+  }
+
+  const handleViewSavedAnalysis = () => {
+    setActivePanel(null)
+    setActiveSection('overview')
   }
 
   return (
@@ -333,101 +348,92 @@ export default function SiteDemographerDesktop() {
         {/* LeftRail */}
         <LeftRail
           activeSection={activeSection}
+          activePanel={activePanel}
           onNavigationClick={handleNavigationClick}
+          onSavedAnalysesClick={handleSavedAnalysesClick}
           hasResults={!!rawDemographicsData}
         />
 
-        {/* LeftPanel with ResultsPanel */}
+        {/* LeftPanel */}
         <LeftPanel>
-          <ResultsPanel
-            loading={loading}
-            error={error}
-            location={selectedLocation}
-            measurementMode={measurementMode}
-            measurementValue={measurementValue}
-            totalLsoaCount={allLsoaCodes.length}
-            rawData={rawDemographicsData}
-            selectedLsoaCodes={selectedLsoaCodes}
-            nationalAverages={nationalAverages}
-            isFreeTier={!hasProAccess}
-            isochroneGeometry={isochroneGeometry}
-            linkedSiteId={linkedSiteId}
-            onUpgradeClick={(feature?: 'save' | 'traffic' | 'count' | 'demographics') => {
-              setUpgradeFeature(feature || 'demographics')
-              setShowUpgradeModal(true)
-            }}
-            onSave={handleSaveClick}
-            activeSection={activeSection}
-          />
+          {activePanel === 'saved-analyses' ? (
+            <SavedAnalysesPanel onViewAnalysis={handleViewSavedAnalysis} />
+          ) : (
+            <ResultsPanel
+              loading={loading}
+              error={error}
+              location={selectedLocation}
+              measurementMode={measurementMode}
+              measurementValue={measurementValue}
+              totalLsoaCount={allLsoaCodes.length}
+              rawData={rawDemographicsData}
+              selectedLsoaCodes={selectedLsoaCodes}
+              nationalAverages={nationalAverages}
+              isFreeTier={!hasProAccess}
+              onUpgradeClick={(feature?: 'save' | 'traffic' | 'count' | 'demographics') => {
+                setUpgradeFeature(feature || 'demographics')
+                setShowUpgradeModal(true)
+              }}
+              activeSection={activeSection}
+            />
+          )}
         </LeftPanel>
 
         {/* Map Canvas */}
         <div className="flex-1 relative min-h-0 flex flex-col">
-          {analyzedLocation ? (
-            <>
-              <div className="flex-1 relative">
-                <MapCanvas
-                  center={{ lat: analyzedLocation.center[1], lng: analyzedLocation.center[0] }}
-                  radiusMiles={convertToRadiusMiles(measurementMode, measurementValue)}
-                  isochroneGeometry={isochroneGeometry}
-                  loading={loading}
-                  measurementMode={measurementMode}
-                  measurementValue={measurementValue}
-                  selectedLsoaCodes={selectedLsoaCodes}
-                  allLsoaCodes={allLsoaCodes}
-                  onLsoaToggle={toggleLsoa}
-                  lsoaTooltipData={lsoaTooltipData}
-                  showTraffic={showTraffic}
-                  showCountPoints={showCountPoints}
-                />
+          <div className="flex-1 relative">
+            <MapCanvas
+              center={
+                analyzedLocation
+                  ? { lat: analyzedLocation.center[1], lng: analyzedLocation.center[0] }
+                  : DEFAULT_MAP_CENTER
+              }
+              radiusMiles={
+                analyzedLocation
+                  ? convertToRadiusMiles(measurementMode, measurementValue)
+                  : DEFAULT_MAP_RADIUS_MILES
+              }
+              isochroneGeometry={analyzedLocation ? isochroneGeometry : null}
+              loading={loading}
+              measurementMode={measurementMode}
+              measurementValue={measurementValue}
+              selectedLsoaCodes={selectedLsoaCodes}
+              allLsoaCodes={allLsoaCodes}
+              onLsoaToggle={toggleLsoa}
+              lsoaTooltipData={lsoaTooltipData}
+              showTraffic={showTraffic}
+              showCountPoints={showCountPoints}
+              showAnalysisOverlay={!!analyzedLocation}
+            />
 
-                {/* Traffic & Count Point Toggles - Floating Buttons */}
-                <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2">
-                  <Button
-                    onClick={handleTrafficToggle}
-                    variant={showTraffic ? 'primary' : 'secondary'}
-                    size="sm"
-                  >
-                    {showTraffic ? 'Hide Traffic' : 'Show Traffic'}
-                    {!hasProAccess && !showTraffic && <span className="ml-1.5 text-xs">🔒</span>}
-                  </Button>
-                  <Button
-                    onClick={handleCountPointsToggle}
-                    variant={showCountPoints ? 'primary' : 'secondary'}
-                    size="sm"
-                  >
-                    {showCountPoints ? 'Hide Count Points' : 'Show Count Points'}
-                    {!hasProAccess && !showCountPoints && <span className="ml-1.5 text-xs">🔒</span>}
-                  </Button>
-                </div>
+            {analyzedLocation && (
+              <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2">
+                <Button
+                  onClick={handleTrafficToggle}
+                  variant={showTraffic ? 'primary' : 'secondary'}
+                  size="sm"
+                >
+                  {showTraffic ? 'Hide Traffic' : 'Show Traffic'}
+                  {!hasProAccess && !showTraffic && <span className="ml-1.5 text-xs">🔒</span>}
+                </Button>
+                <Button
+                  onClick={handleCountPointsToggle}
+                  variant={showCountPoints ? 'primary' : 'secondary'}
+                  size="sm"
+                >
+                  {showCountPoints ? 'Hide Count Points' : 'Show Count Points'}
+                  {!hasProAccess && !showCountPoints && <span className="ml-1.5 text-xs">🔒</span>}
+                </Button>
               </div>
+            )}
+          </div>
 
-              {/* StatusBar */}
-              <StatusBar
-                measurementMode={measurementMode}
-                measurementValue={measurementValue}
-                lsoaCount={selectedLsoaCodes.size}
-              />
-            </>
-          ) : loading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-sm-violet/20 border-t-sm-violet mx-auto mb-4" />
-                <p className="text-sm text-sm-ink/60">Analysing location...</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center max-w-sm px-8">
-                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-sm-violet/10 flex items-center justify-center">
-                  <svg className="w-10 h-10 text-sm-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                  </svg>
-                </div>
-                <p className="text-base font-medium text-sm-ink mb-2">Ready to analyse</p>
-                <p className="text-sm text-sm-ink/60">Enter a UK location above to view demographic insights</p>
-              </div>
-            </div>
+          {analyzedLocation && (
+            <StatusBar
+              measurementMode={measurementMode}
+              measurementValue={measurementValue}
+              lsoaCount={selectedLsoaCodes.size}
+            />
           )}
         </div>
       </div>

@@ -1,19 +1,16 @@
 'use client';
 
-import { Users, AlertCircle, MapPin, Info, Save, Briefcase, GraduationCap, Car, Heart, TrendingUp } from 'lucide-react';
+import { Users, AlertCircle, MapPin, Info, Briefcase, GraduationCap, Car, Heart, TrendingUp } from 'lucide-react';
 import type { LocationResult } from '@/lib/mapbox';
 import { formatLocationDisplay } from '@/lib/mapbox';
 import type { MeasurementMode } from '@/components/demographics/desktop/LocationInputPanel';
 import { useState, useMemo } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { AffluenceMethodologyModal } from '@/components/demographics/AffluenceMethodologyModal';
-import { SaveAnalysisModal } from '@/components/demographics/SaveAnalysisModal';
-import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import type { CoverageStatus } from '@/lib/types/demographics';
 import { getCoverageMessages } from '@/lib/coverage-utils';
-import { Button } from '../primitives/Button';
 import { PopulationCard } from '../cards/PopulationCard';
 import { AffluenceCard } from '../cards/AffluenceCard';
 import { BlurOverlay } from '@/components/demographics/BlurOverlay';
@@ -33,9 +30,6 @@ interface ResultsPanelProps {
   selectedLsoaCodes?: Set<string>;
   nationalAverages?: Record<string, number>;
   isFreeTier?: boolean;
-  isochroneGeometry?: any;
-  linkedSiteId?: string | null;
-  onSave?: () => void;
   onUpgradeClick?: (feature?: 'save' | 'traffic' | 'count' | 'demographics') => void;
   activeSection?: NavigationSection;
 }
@@ -78,13 +72,9 @@ export function ResultsPanel({
   selectedLsoaCodes,
   nationalAverages = {},
   isFreeTier = false,
-  isochroneGeometry,
-  linkedSiteId,
-  onSave,
   activeSection = 'overview',
 }: ResultsPanelProps) {
   const { user } = useAuth();
-  const { hasProAccess } = useSubscriptionTier();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -99,9 +89,6 @@ export function ResultsPanel({
 
   // State for methodology modal
   const [methodologyModalOpen, setMethodologyModalOpen] = useState(false);
-
-  // State for save analysis modal
-  const [showSaveModal, setShowSaveModal] = useState(false);
 
   const toggleCategory = (category: CategoryType) => {
     setExpandedCategories((prev) => {
@@ -397,7 +384,7 @@ export function ResultsPanel({
             No Data Yet
           </h3>
           <p className="text-sm text-sm-ink/60 leading-relaxed">
-            Select a location and click "Analyse" to view demographics.
+            Search for a location and click "Analyse" to view demographics.
           </p>
         </div>
       </div>
@@ -530,22 +517,6 @@ export function ResultsPanel({
                 nationalAverages={nationalAverages}
                 onMethodologyClick={() => setMethodologyModalOpen(true)}
               />
-              {/* Save Analysis Button */}
-              <Button
-                onClick={() => {
-                  if (!hasProAccess) {
-                    handleUpgradeClick();
-                  } else {
-                    setShowSaveModal(true);
-                  }
-                }}
-                variant="primary"
-                size="sm"
-                className="w-full"
-                icon={<Save className="h-4 w-4" />}
-              >
-                {hasProAccess ? 'Save Analysis' : 'Save Analysis (Pro)'}
-              </Button>
             </>
           )}
 
@@ -588,30 +559,6 @@ export function ResultsPanel({
           />
         </div>
       </div>
-
-      {/* Save Analysis Modal */}
-      <SaveAnalysisModal
-        open={showSaveModal}
-        onClose={() => setShowSaveModal(false)}
-        onSuccess={() => {
-          setShowSaveModal(false);
-          onSave?.();
-        }}
-        analysisData={location && selectedLsoaCodes && rawData ? {
-          location: {
-            lat: location.center[1],
-            lng: location.center[0],
-          },
-          location_name: formatLocationDisplay(location),
-          measurement_mode: measurementMode,
-          measurement_value: measurementValue,
-          selected_lsoa_codes: Array.from(selectedLsoaCodes),
-          demographics_data: rawData,
-          national_averages: nationalAverages,
-          isochrone_geometry: isochroneGeometry,
-        } : null}
-        linkedSiteId={linkedSiteId}
-      />
     </div>
   );
 }

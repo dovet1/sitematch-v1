@@ -267,7 +267,7 @@ export function DemographicsResults({
             No Data Yet
           </h3>
           <p className="text-sm text-gray-500 leading-relaxed">
-            Select a location and click "Analyse" to view demographics.
+            Search for a location and click "Analyse" to view demographics.
           </p>
         </div>
       </div>

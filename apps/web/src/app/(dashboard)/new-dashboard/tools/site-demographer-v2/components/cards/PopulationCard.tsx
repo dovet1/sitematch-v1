@@ -11,8 +11,8 @@ export function PopulationCard({ totalPopulation, totalHouseholds }: PopulationC
   const formatNumber = (num: number) => num.toLocaleString();
 
   return (
-    <div className="bg-sm-surface border border-sm-border rounded-lg p-3">
-      <div className="grid grid-cols-2 gap-3">
+    <div className="space-y-3">
+      <div className="bg-sm-surface border border-sm-border rounded-lg p-3">
         <div className="flex items-center gap-2">
           <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-sm-violet/10 flex items-center justify-center">
             <Users className="w-4 h-4 text-sm-violet" />
@@ -26,6 +26,9 @@ export function PopulationCard({ totalPopulation, totalHouseholds }: PopulationC
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="bg-sm-surface border border-sm-border rounded-lg p-3">
         <div className="flex items-center gap-2">
           <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-sm-violet/10 flex items-center justify-center">
             <Home className="w-4 h-4 text-sm-violet" />

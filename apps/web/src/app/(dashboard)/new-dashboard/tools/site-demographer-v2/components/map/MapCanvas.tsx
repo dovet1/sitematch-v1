@@ -20,6 +20,7 @@ const COUNT_POINTS_TILESET_ID = 'dovet.b44k9tis';
 const COUNT_POINTS_SOURCE_ID = 'traffic-counts';
 const COUNT_POINTS_LAYER_ID = 'traffic-counts-layer';
 const COUNT_POINTS_SOURCE_LAYER = 'traffic_counts';
+const UK_OVERVIEW_ZOOM = 5.2;
 
 interface MapCanvasProps {
   center: { lat: number; lng: number };
@@ -35,6 +36,7 @@ interface MapCanvasProps {
   showTraffic?: boolean; // Optional toggle for traffic layer visibility
   showCountPoints?: boolean; // Optional toggle for DfT count points visibility
   isMobile?: boolean; // Optional flag for mobile layout adjustments
+  showAnalysisOverlay?: boolean; // Hide marker/radius/LSOA interactions before an analysis exists
 }
 
 export function MapCanvas({
@@ -51,6 +53,7 @@ export function MapCanvas({
   showTraffic = false,
   isMobile = false,
   showCountPoints = false,
+  showAnalysisOverlay = true,
 }: MapCanvasProps) {
   // Format display text based on mode
   const getMeasurementDisplay = () => {
@@ -99,7 +102,7 @@ export function MapCanvas({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-streets-v12',
       center: [center.lng, center.lat],
-      zoom: calculateZoom(radiusMiles),
+      zoom: showAnalysisOverlay ? calculateZoom(radiusMiles) : UK_OVERVIEW_ZOOM,
     });
 
     map.current.on('load', () => {
@@ -113,11 +116,34 @@ export function MapCanvas({
         setMapLoaded(false);
       }
     };
-  }, [center.lng, center.lat, radiusMiles]);
+  }, [center.lng, center.lat, radiusMiles, showAnalysisOverlay]);
 
   // Update map center, zoom, and add marker when center or radius changes
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
+
+    // Remove existing marker before deciding whether to add a new one.
+    const existingMarker = document.querySelector('.demographics-marker');
+    if (existingMarker) {
+      existingMarker.remove();
+    }
+
+    if (!showAnalysisOverlay) {
+      const centerChanged = !lastCenter.current ||
+        lastCenter.current.lat !== center.lat ||
+        lastCenter.current.lng !== center.lng;
+
+      if (centerChanged) {
+        map.current.flyTo({
+          center: [center.lng, center.lat],
+          zoom: UK_OVERVIEW_ZOOM,
+          essential: true,
+        });
+      }
+
+      lastCenter.current = { lat: center.lat, lng: center.lng };
+      return;
+    }
 
     // Check if the center has actually changed (new location search)
     const centerChanged = !lastCenter.current ||
@@ -134,12 +160,6 @@ export function MapCanvas({
       lastCenter.current = { lat: center.lat, lng: center.lng };
     }
 
-    // Remove existing marker
-    const existingMarker = document.querySelector('.demographics-marker');
-    if (existingMarker) {
-      existingMarker.remove();
-    }
-
     // Add marker for search location
     new mapboxgl.Marker({
       color: '#6D28D9', // sm-violet color
@@ -147,28 +167,36 @@ export function MapCanvas({
     })
       .setLngLat([center.lng, center.lat])
       .addTo(map.current);
-  }, [center, radiusMiles, mapLoaded]);
+  }, [center, radiusMiles, mapLoaded, showAnalysisOverlay]);
 
   // Draw radius circle
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    // Always redraw when dependencies change - the effect only runs when center, radius,
-    // isochroneGeometry, or mapLoaded changes, so we should always proceed with the draw
+    const removeCircle = () => {
+      if (!map.current) return;
+
+      if (map.current.getLayer('radius-circle-fill')) {
+        map.current.removeLayer('radius-circle-fill');
+      }
+      if (map.current.getLayer('radius-circle-outline')) {
+        map.current.removeLayer('radius-circle-outline');
+      }
+      if (map.current.getSource('radius-circle')) {
+        map.current.removeSource('radius-circle');
+      }
+    };
+
+    if (!showAnalysisOverlay) {
+      removeCircle();
+      return;
+    }
 
     const addCircle = () => {
       if (!map.current || !map.current.isStyleLoaded()) return;
 
       // Remove existing overlay source and layers
-      if (map.current.getSource('radius-circle')) {
-        if (map.current.getLayer('radius-circle-fill')) {
-          map.current.removeLayer('radius-circle-fill');
-        }
-        if (map.current.getLayer('radius-circle-outline')) {
-          map.current.removeLayer('radius-circle-outline');
-        }
-        map.current.removeSource('radius-circle');
-      }
+      removeCircle();
 
       // Determine which geometry to use
       let geometry: any;
@@ -245,7 +273,7 @@ export function MapCanvas({
     } else {
       map.current.once('style.load', addCircle);
     }
-  }, [center, radiusMiles, isochroneGeometry, mapLoaded]);
+  }, [center, radiusMiles, isochroneGeometry, mapLoaded, measurementMode, showAnalysisOverlay]);
 
   // Draw LSOA boundaries using Mapbox vector tileset
   useEffect(() => {
@@ -569,7 +597,8 @@ export function MapCanvas({
 
   // Add click handlers after layers are created
   useEffect(() => {
-    if (!map.current || !mapLoaded) {
+    if (!map.current || !mapLoaded || !showAnalysisOverlay) {
+      setHoveredLsoa(null);
       return;
     }
 
@@ -673,7 +702,7 @@ export function MapCanvas({
       if (timeoutId) clearTimeout(timeoutId);
       if (handlerCleanup) handlerCleanup();
     };
-  }, [mapLoaded, onLsoaToggle, lsoaTooltipData]);
+  }, [mapLoaded, onLsoaToggle, lsoaTooltipData, showAnalysisOverlay]);
 
   // Update filters when selection changes
   useEffect(() => {
@@ -690,6 +719,15 @@ export function MapCanvas({
 
       console.log('[MapCanvas] Updating filters for', allLsoaCodes.length, 'LSOAs');
       console.log('[MapCanvas] Selected count:', selectedLsoaCodes.size);
+
+      if (!showAnalysisOverlay) {
+        map.current.setFilter('lsoa-fill-selected', ['in', ['get', 'LSOA21CD'], ['literal', []]]);
+        map.current.setFilter('lsoa-outline-selected', ['in', ['get', 'LSOA21CD'], ['literal', []]]);
+        map.current.setFilter('lsoa-fill-deselected', ['in', ['get', 'LSOA21CD'], ['literal', []]]);
+        map.current.setFilter('lsoa-outline-deselected', ['in', ['get', 'LSOA21CD'], ['literal', []]]);
+        setHoveredLsoa(null);
+        return;
+      }
 
       // Convert Sets to Arrays for filter expressions
       const selectedArray = Array.from(selectedLsoaCodes);
@@ -710,7 +748,7 @@ export function MapCanvas({
     };
 
     updateFilters();
-  }, [selectedLsoaCodes, mapLoaded, allLsoaCodes]);
+  }, [selectedLsoaCodes, mapLoaded, allLsoaCodes, showAnalysisOverlay]);
 
   // Add count points click handlers
   useEffect(() => {
@@ -844,7 +882,7 @@ export function MapCanvas({
       <div ref={mapContainer} className="w-full h-full" />
 
       {/* LSOA Info Box - Top Right */}
-      {hoveredLsoa && !hoveredRoad && (
+      {showAnalysisOverlay && hoveredLsoa && !hoveredRoad && (
         <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 min-w-[240px] z-10">
           <div className="font-semibold text-gray-900 mb-2">{hoveredLsoa.geo_name}</div>
           <div className="space-y-1 text-sm text-gray-600">
