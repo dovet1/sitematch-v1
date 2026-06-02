@@ -307,7 +307,7 @@ export function UnifiedHeader({
       description: 'Sketch your ideal site location',
     },
     {
-      href: '/new-dashboard/tools/site-demographer',
+      href: '/siteanalyser',
       label: 'SiteAnalyser',
       description: 'Analyse demographics around any site',
     }

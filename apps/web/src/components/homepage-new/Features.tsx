@@ -73,7 +73,7 @@ export function Features() {
           videoLabel="SiteAnalyser"
           videoNote="Dropping a pin, isochrone forming, stats panel populating"
           videoSrc="/gapfinder/homepage_gifs/siteanalyser_gif.mp4"
-          ctas={[{ label: "Try For Free", style: "violet", href: "/new-dashboard/tools/site-demographer" }]}
+          ctas={[{ label: "Try For Free", style: "violet", href: "/siteanalyser" }]}
         />
 
         {/* Feature 4: SiteSketcher */}

@@ -42,7 +42,23 @@ const nextConfig = {
   },
   // Configure for Supabase
   async redirects() {
-    return []
+    return [
+      {
+        source: '/sitesketcher-v2',
+        destination: '/sitesketcher',
+        permanent: false,
+      },
+      {
+        source: '/new-dashboard/tools/site-demographer',
+        destination: '/siteanalyser',
+        permanent: false,
+      },
+      {
+        source: '/new-dashboard/tools/site-demographer-v2',
+        destination: '/siteanalyser',
+        permanent: false,
+      },
+    ]
   },
   async rewrites() {
     return []

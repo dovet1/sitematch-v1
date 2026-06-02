@@ -139,7 +139,7 @@ export default function SiteDemographerDesktop() {
     // Block free users - show upgrade modal instead of toast/redirect
     if (!hasProAccess) {
       // Clear the query param to prevent effect re-runs
-      router.replace('/new-dashboard/tools/site-demographer-v2')
+      router.replace('/siteanalyser')
       // Show unified upgrade modal (consistent with other upgrade flows)
       setShowUpgradeModal(true)
       return
@@ -195,7 +195,7 @@ export default function SiteDemographerDesktop() {
       } catch (error) {
         console.error('Error loading saved analysis:', error)
         toast.error(error instanceof Error ? error.message : 'Failed to load analysis')
-        router.replace('/new-dashboard/tools/site-demographer-v2')
+        router.replace('/siteanalyser')
       } finally {
         loadingAnalysisRef.current = false  // Clear loading flag (ref)
         setLoadingAnalysis(false)            // Also update UI state

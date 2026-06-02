@@ -178,7 +178,7 @@ export function AnonymousPaywallOverlay() {
               <div className="space-y-3">
                 <button
                   onClick={() =>
-                    router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent('/sitesketcher-v2')}`)
+                    router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent('/sitesketcher')}`)
                   }
                   className="w-full h-[44px] bg-[#7033FF] hover:bg-[#5421CC] text-white text-[15px] font-[600] rounded-[10px] font-inter transition-colors"
                 >
@@ -187,7 +187,7 @@ export function AnonymousPaywallOverlay() {
 
                 <button
                   onClick={() =>
-                    router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent('/sitesketcher-v2')}`)
+                    router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent('/sitesketcher')}`)
                   }
                   className="w-full h-[40px] bg-transparent text-[#7C7588] hover:text-[#4A4451] hover:bg-[#FBFAF7] text-[14px] font-[500] rounded-[10px] font-inter transition-colors border border-[#E8E4DC]"
                 >

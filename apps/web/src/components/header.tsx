@@ -37,6 +37,7 @@ export function Header() {
     pathname === '/search' ||
     pathname === '/sitesketcher' ||
     pathname === '/sitesketcher-v2' ||
+    pathname === '/siteanalyser' ||
     pathname?.startsWith('/new-dashboard')
   ) {
     return null
@@ -100,7 +101,7 @@ function HeaderContent() {
       onClick: handleSiteSketcherClick,
     },
     {
-      href: '/new-dashboard/tools/site-demographer',
+      href: '/siteanalyser',
       label: 'SiteAnalyser',
       description: 'Analyse demographics around any site',
     },

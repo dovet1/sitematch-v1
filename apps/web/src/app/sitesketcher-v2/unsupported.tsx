@@ -41,7 +41,7 @@ export default function UnsupportedViewport() {
             href="/sitesketcher"
             className="inline-flex items-center justify-center px-6 py-3 border border-sm-border bg-sm-surface text-sm-ink rounded-lg font-medium hover:bg-sm-bg transition-colors"
           >
-            Try SiteSketcher v1
+            Try SiteSketcher
           </a>
         </div>
 

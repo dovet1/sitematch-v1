@@ -761,7 +761,7 @@ export function OutputsTab({ userId }: OutputsTabProps) {
                 <p className="text-gray-600 font-medium">No analyses yet</p>
                 <p className="text-sm text-gray-500 mt-2">Create location analyses using SiteAnalyser</p>
                 <Button
-                  onClick={() => router.push('/new-dashboard/tools/site-demographer')}
+                  onClick={() => router.push('/siteanalyser')}
                   className="mt-4 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl"
                 >
                   <BarChart3 className="h-4 w-4 mr-2" />
@@ -815,7 +815,7 @@ export function OutputsTab({ userId }: OutputsTabProps) {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => router.push(`/new-dashboard/tools/site-demographer?analysis=${analysis.id}`)}
+                          onClick={() => router.push(`/siteanalyser?analysis=${analysis.id}`)}
                           className="flex-1 text-purple-600 border-purple-300 hover:bg-purple-50 font-bold"
                         >
                           <Eye className="h-4 w-4 mr-1.5" />
@@ -899,7 +899,7 @@ export function OutputsTab({ userId }: OutputsTabProps) {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => router.push(`/new-dashboard/tools/site-demographer?analysis=${analysis.id}`)}
+                                onClick={() => router.push(`/siteanalyser?analysis=${analysis.id}`)}
                                 className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 font-bold"
                               >
                                 <Eye className="h-4 w-4" />

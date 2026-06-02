@@ -71,7 +71,7 @@ export function SavedAnalysesPanel({
 
   const handleView = (analysisId: string) => {
     onViewAnalysis?.()
-    router.push(`/new-dashboard/tools/site-demographer-v2?analysis=${analysisId}`)
+    router.push(`/siteanalyser?analysis=${analysisId}`)
   }
 
   const handleDelete = async (analysis: SavedAnalysis) => {

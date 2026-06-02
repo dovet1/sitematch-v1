@@ -49,7 +49,7 @@ export function ToolsTab() {
       gradient: 'from-violet-500 to-purple-600',
       iconBg: 'bg-violet-100',
       iconColor: 'text-violet-600',
-      onClick: () => router.push('/new-dashboard/tools/site-demographer'),
+      onClick: () => router.push('/siteanalyser'),
     },
     {
       id: 'gapfinder',

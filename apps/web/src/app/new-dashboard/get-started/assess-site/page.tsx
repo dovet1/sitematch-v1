@@ -51,7 +51,7 @@ export default function GetStartedAssessSitePage() {
                 <p className="text-gray-600 mb-4 text-sm">
                   Analyse demographic data around a site
                 </p>
-                <Link href="/new-dashboard/tools/site-demographer" className="block">
+                <Link href="/siteanalyser" className="block">
                   <Button className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700">
                     Open Tool
                     <ArrowRight className="h-4 w-4 ml-2" />

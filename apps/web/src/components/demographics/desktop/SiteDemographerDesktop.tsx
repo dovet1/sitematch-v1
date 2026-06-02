@@ -140,7 +140,7 @@ export function SiteDemographerDesktop() {
         console.error('Error loading saved analysis:', error);
         toast.error(error instanceof Error ? error.message : 'Failed to load analysis');
         // Clear the query parameter on error
-        router.replace('/new-dashboard/tools/site-demographer');
+        router.replace('/siteanalyser');
       } finally {
         setLoadingAnalysis(false);
       }
