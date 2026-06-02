@@ -282,18 +282,9 @@ export function TopBar({
           disabled={!canAnalyze || loading}
           variant="secondary"
           size="sm"
+          icon={loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
         >
-          {loading ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-3.5 w-3.5" />
-              Analyse
-            </>
-          )}
+          {loading ? 'Analyzing...' : 'Analyse'}
         </Button>
 
         <Button
@@ -301,8 +292,8 @@ export function TopBar({
           disabled={!hasResults}
           variant="primary"
           size="sm"
+          icon={<Save className="h-3.5 w-3.5" />}
         >
-          <Save className="h-3.5 w-3.5" />
           Save Analysis
         </Button>
       </div>

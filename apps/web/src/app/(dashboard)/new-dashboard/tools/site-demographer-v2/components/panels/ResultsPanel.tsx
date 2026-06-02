@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, AlertCircle, MapPin, Info, Save } from 'lucide-react';
+import { Users, AlertCircle, MapPin, Info, Save, Briefcase, GraduationCap, Car, Heart, TrendingUp } from 'lucide-react';
 import type { LocationResult } from '@/lib/mapbox';
 import { formatLocationDisplay } from '@/lib/mapbox';
 import type { MeasurementMode } from '@/components/demographics/desktop/LocationInputPanel';
@@ -16,7 +16,9 @@ import { getCoverageMessages } from '@/lib/coverage-utils';
 import { Button } from '../primitives/Button';
 import { PopulationCard } from '../cards/PopulationCard';
 import { AffluenceCard } from '../cards/AffluenceCard';
-import { CategoryAccordion } from '../cards/CategoryAccordion';
+import { BlurOverlay } from '@/components/demographics/BlurOverlay';
+
+type NavigationSection = 'overview' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health';
 
 interface ResultsPanelProps {
   loading: boolean;
@@ -35,6 +37,7 @@ interface ResultsPanelProps {
   linkedSiteId?: string | null;
   onSave?: () => void;
   onUpgradeClick?: (feature?: 'save' | 'traffic' | 'count' | 'demographics') => void;
+  activeSection?: NavigationSection;
 }
 
 type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health' | 'affluence';
@@ -42,11 +45,11 @@ type CategoryType = 'population' | 'demographics' | 'employment' | 'education' |
 const CATEGORIES: { value: CategoryType; label: string; icon: any; color: string }[] = [
   { value: 'population', label: 'Population & Households', icon: Users, color: 'violet' },
   { value: 'demographics', label: 'Demographics', icon: Users, color: 'blue' },
-  { value: 'employment', label: 'Employment', icon: Users, color: 'green' },
-  { value: 'education', label: 'Education', icon: Users, color: 'indigo' },
-  { value: 'mobility', label: 'Mobility', icon: Users, color: 'cyan' },
-  { value: 'health', label: 'Health', icon: Users, color: 'rose' },
-  { value: 'affluence', label: 'Affluence', icon: Users, color: 'emerald' },
+  { value: 'employment', label: 'Employment', icon: Briefcase, color: 'green' },
+  { value: 'education', label: 'Education', icon: GraduationCap, color: 'indigo' },
+  { value: 'mobility', label: 'Mobility', icon: Car, color: 'cyan' },
+  { value: 'health', label: 'Health', icon: Heart, color: 'rose' },
+  { value: 'affluence', label: 'Affluence', icon: TrendingUp, color: 'emerald' },
 ];
 
 interface ChartData {
@@ -78,6 +81,7 @@ export function ResultsPanel({
   isochroneGeometry,
   linkedSiteId,
   onSave,
+  activeSection = 'overview',
 }: ResultsPanelProps) {
   const { user } = useAuth();
   const { hasProAccess } = useSubscriptionTier();
@@ -276,6 +280,94 @@ export function ResultsPanel({
   }, [rawData, nationalAverages]);
 
   const formatNumber = (num: number) => num.toLocaleString();
+  const formatPercentage = (num: number) => `${num.toFixed(1)}%`;
+
+  // Render chart content (extracted from CategoryAccordion)
+  const renderChartContent = (chart: ChartData[], index: number, title: string) => {
+    return (
+      <div key={index} className="border border-sm-border rounded-lg overflow-hidden bg-sm-surface p-4">
+        <div className="flex items-center gap-1.5 mb-3">
+          <h4 className="text-sm font-semibold text-sm-ink">{title}</h4>
+        </div>
+
+        {chart.length === 0 ? (
+          <div className="text-center py-2 text-xs text-sm-ink/40">No data</div>
+        ) : chart.length === 1 && chart[0].label.includes('Total') ? (
+          // Special display for totals
+          <div className="text-center py-2">
+            <p className="text-2xl font-bold text-sm-ink">
+              {formatNumber(chart[0].value)}
+            </p>
+            <p className="text-[10px] text-sm-ink/60 mt-0.5">{chart[0].label}</p>
+          </div>
+        ) : (
+          // Ultra-compact table layout
+          <div className="space-y-1.5">
+            {/* Column headers */}
+            <div className="flex items-center gap-2 text-xs pb-1 border-b border-sm-border">
+              <div className="flex-1 text-[9px] uppercase tracking-wide text-sm-ink/60 font-medium">
+                Category
+              </div>
+              <div className="w-12 text-right text-[9px] uppercase tracking-wide text-sm-ink/60 font-medium">
+                Count
+              </div>
+              <div className="w-10 text-right text-[9px] uppercase tracking-wide text-sm-ink/60 font-medium">
+                %
+              </div>
+              <div className="w-14 text-right text-[9px] uppercase tracking-wide text-sm-ink/60 font-medium">
+                vs UK
+              </div>
+            </div>
+
+            {/* Show all items for Age profile, limit to 10 for others */}
+            {(title === 'Age profile' ? chart : chart.slice(0, 10)).map((item: ChartData, idx) => {
+              const natAvg = item.nationalAverage ?? 0;
+              const showNationalComparison = item.nationalAverage !== undefined && item.nationalAverage > 0;
+
+              return (
+                <div key={idx} className="flex items-center gap-2 text-xs">
+                  <div className="flex-1 text-sm-ink/70 text-[11px]" title={item.label}>
+                    {item.label}
+                  </div>
+                  <div className="w-12 text-right font-medium text-sm-ink text-[11px]">
+                    {formatNumber(item.value)}
+                  </div>
+                  <div className="w-10 text-right text-sm-ink/60 text-[11px]">
+                    {formatPercentage(item.percentage)}
+                  </div>
+                  {showNationalComparison && (
+                    <div
+                      className={`w-14 text-right text-[10px] font-medium tabular-nums ${
+                        item.percentage > natAvg + 0.5
+                          ? 'text-emerald-600'
+                          : item.percentage < natAvg - 0.5
+                            ? 'text-rose-600'
+                            : 'text-sm-ink/40'
+                      }`}
+                      title={`${item.percentage > natAvg ? 'Above' : item.percentage < natAvg ? 'Below' : 'At'} UK average by ${Math.abs(item.percentage - natAvg).toFixed(1)}%`}
+                    >
+                      {item.percentage > natAvg + 0.5 ? (
+                        <>↑ {(item.percentage - natAvg).toFixed(1)}%</>
+                      ) : item.percentage < natAvg - 0.5 ? (
+                        <>↓ {(natAvg - item.percentage).toFixed(1)}%</>
+                      ) : (
+                        <>0%</>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {title !== 'Age profile' && chart.length > 10 && (
+              <p className="text-[10px] text-sm-ink/40 mt-2 text-center">
+                +{chart.length - 10} more
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Helper to determine if a category should be blurred for free tier
   const shouldBlurCategory = (category: CategoryType): boolean => {
@@ -399,7 +491,7 @@ export function ResultsPanel({
         </div>
       )}
 
-      {/* Sticky Summary Header */}
+      {/* Header */}
       <div className="sticky top-0 bg-sm-surface border-b border-sm-border pb-4 z-10 px-6 pt-6">
         <div className="space-y-3">
           <div>
@@ -420,66 +512,80 @@ export function ResultsPanel({
               </p>
             )}
           </div>
-
-          {/* Key Metrics Summary - Always visible cards */}
-          <div className="space-y-2">
-            <PopulationCard
-              totalPopulation={allCategoryData.population.totalPop}
-              totalHouseholds={allCategoryData.population.totalHouseholds}
-            />
-            <AffluenceCard
-              score={allCategoryData.affluence.score}
-              nationalAverages={nationalAverages}
-              onMethodologyClick={() => setMethodologyModalOpen(true)}
-            />
-          </div>
-
-          {/* Save Analysis Button */}
-          <Button
-            onClick={() => {
-              if (!hasProAccess) {
-                handleUpgradeClick();
-              } else {
-                setShowSaveModal(true);
-              }
-            }}
-            variant="primary"
-            size="sm"
-            className="w-full"
-            icon={<Save className="h-4 w-4" />}
-          >
-            {hasProAccess ? 'Save Analysis' : 'Save Analysis (Pro)'}
-          </Button>
         </div>
       </div>
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto px-6 py-4">
-        <div className="space-y-2">
+        <div className="space-y-3">
+          {/* Overview Section */}
+          {activeSection === 'overview' && (
+            <>
+              <PopulationCard
+                totalPopulation={allCategoryData.population.totalPop}
+                totalHouseholds={allCategoryData.population.totalHouseholds}
+              />
+              <AffluenceCard
+                score={allCategoryData.affluence.score}
+                nationalAverages={nationalAverages}
+                onMethodologyClick={() => setMethodologyModalOpen(true)}
+              />
+              {/* Save Analysis Button */}
+              <Button
+                onClick={() => {
+                  if (!hasProAccess) {
+                    handleUpgradeClick();
+                  } else {
+                    setShowSaveModal(true);
+                  }
+                }}
+                variant="primary"
+                size="sm"
+                className="w-full"
+                icon={<Save className="h-4 w-4" />}
+              >
+                {hasProAccess ? 'Save Analysis' : 'Save Analysis (Pro)'}
+              </Button>
+            </>
+          )}
+
+          {/* Individual Category Sections */}
+          {activeSection !== 'overview' && (() => {
+            const category = CATEGORIES.find(cat => cat.value === activeSection);
+            const categoryDataObj = category && allCategoryData[category.value];
+
+            if (!category || !categoryDataObj) return null;
+
+            const Icon = category.icon;
+            const shouldBlur = shouldBlurCategory(category.value);
+
+            const content = (
+              <div className="space-y-3">
+                {/* Category Header */}
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon className="w-5 h-5 text-sm-violet" />
+                  <h3 className="text-lg font-semibold text-sm-ink">{category.label}</h3>
+                </div>
+
+                {/* Charts */}
+                {categoryDataObj.charts.map((chart, index) =>
+                  renderChartContent(chart.data, index, chart.title)
+                )}
+              </div>
+            );
+
+            return shouldBlur ? (
+              <BlurOverlay onUpgradeClick={handleUpgradeClick} title="Detailed Demographics">
+                {content}
+              </BlurOverlay>
+            ) : content;
+          })()}
+
           {/* Affluence Methodology Modal */}
           <AffluenceMethodologyModal
             open={methodologyModalOpen}
             onOpenChange={setMethodologyModalOpen}
           />
-
-          {/* Category Accordions - Demographics onwards */}
-          {CATEGORIES.filter(cat => cat.value !== 'population' && cat.value !== 'affluence').map((category) => {
-            const categoryDataObj = allCategoryData[category.value];
-            if (!categoryDataObj) return null;
-
-            return (
-              <CategoryAccordion
-                key={category.value}
-                category={category}
-                categoryData={categoryDataObj}
-                isExpanded={expandedCategories.has(category.value)}
-                onToggle={() => toggleCategory(category.value)}
-                shouldBlur={shouldBlurCategory(category.value)}
-                onUpgradeClick={handleUpgradeClick}
-                nationalAverages={nationalAverages}
-              />
-            );
-          })}
         </div>
       </div>
 

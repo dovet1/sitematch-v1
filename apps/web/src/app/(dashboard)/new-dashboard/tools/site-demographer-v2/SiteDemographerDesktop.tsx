@@ -21,6 +21,9 @@ import { Button } from './components/primitives/Button'
 import { SaveAnalysisModal } from './components/modals/SaveAnalysisModal'
 import { SiteAnalyserUpgradeModal } from './components/modals/SiteAnalyserUpgradeModal'
 
+// Navigation section type
+type NavigationSection = 'overview' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health'
+
 // Conversion constants
 const WALK_SPEED_MPH = 3
 const DRIVE_SPEED_MPH = 35
@@ -95,6 +98,9 @@ export default function SiteDemographerDesktop() {
   const [analyzedLocation, setAnalyzedLocation] = useState<LocationResult | null>(null)
   const [analysisName, setAnalysisName] = useState<string | null>(null)
   const [analysisId, setAnalysisId] = useState<string | null>(null)
+
+  // Navigation state
+  const [activeSection, setActiveSection] = useState<NavigationSection>('overview')
 
   // Construct analysisData for save modal (lines 891-903 from DemographicsResults)
   const analysisData = selectedLocation && selectedLsoaCodes && rawDemographicsData ? {
@@ -270,6 +276,10 @@ export default function SiteDemographerDesktop() {
     }
   }
 
+  const handleNavigationClick = (section: NavigationSection) => {
+    setActiveSection(section)
+  }
+
   return (
     <div className="h-screen flex flex-col bg-sm-bg">
       {/* TopBar */}
@@ -321,7 +331,11 @@ export default function SiteDemographerDesktop() {
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* LeftRail */}
-        <LeftRail />
+        <LeftRail
+          activeSection={activeSection}
+          onNavigationClick={handleNavigationClick}
+          hasResults={!!rawDemographicsData}
+        />
 
         {/* LeftPanel with ResultsPanel */}
         <LeftPanel>
@@ -343,6 +357,7 @@ export default function SiteDemographerDesktop() {
               setShowUpgradeModal(true)
             }}
             onSave={handleSaveClick}
+            activeSection={activeSection}
           />
         </LeftPanel>
 
