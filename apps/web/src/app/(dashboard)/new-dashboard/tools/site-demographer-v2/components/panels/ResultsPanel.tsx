@@ -13,7 +13,7 @@ import type { CoverageStatus } from '@/lib/types/demographics';
 import { getCoverageMessages } from '@/lib/coverage-utils';
 import { PopulationCard } from '../cards/PopulationCard';
 import { AffluenceCard } from '../cards/AffluenceCard';
-import { BlurOverlay } from '@/components/demographics/BlurOverlay';
+import { PreviewOverlay } from '@/components/demographics/PreviewOverlay';
 
 type NavigationSection = 'overview' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health';
 
@@ -547,9 +547,9 @@ export function ResultsPanel({
             );
 
             return shouldBlur ? (
-              <BlurOverlay onUpgradeClick={onUpgradeClick || handleUpgradeClick} title="Detailed Demographics">
+              <PreviewOverlay onUpgradeClick={onUpgradeClick || handleUpgradeClick} title="Detailed Demographics">
                 {content}
-              </BlurOverlay>
+              </PreviewOverlay>
             ) : content;
           })()}
 
