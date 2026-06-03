@@ -32,8 +32,7 @@ export function Features() {
           videoNote="Map view zooming into a region; gaps highlighting"
           videoSrc="/gapfinder/homepage_gifs/gapfinder_gif.mp4"
           ctas={[
-            { label: "Find Gaps Now", style: "violet", requiresAuth: true },
-            { label: "Learn More", style: "ghost", href: "/gapfinder-landing" }
+            { label: "Find Gaps Now", style: "violet", requiresAuth: true }
           ]}
         />
 
