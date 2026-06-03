@@ -584,7 +584,7 @@ const A_Features = () => (
         name="SiteAnalyser"
         kicker="Catchment & demographics"
         headline="instant demographics for any UK postcode."
-        body="SiteAnalyser pulls population, affluence and household data for any catchment in seconds — no consultant report required."
+        body="SiteAnalyser pulls population, affluence and household data for any catchment in seconds."
         bullets={[
           "Drive-time and walk-time catchments",
           "Affluence, age, household composition",

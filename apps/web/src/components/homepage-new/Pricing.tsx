@@ -59,7 +59,7 @@ export function Pricing() {
 
         {/* Footer Note */}
         <div className="mt-6 font-normal text-[13px] text-sm-ink3">
-          All plans include the full SiteMatcher database. Cancel anytime. No card required for trial.
+          Cancel anytime. No card required for trial.
         </div>
       </section>
     </RevealWrapper>

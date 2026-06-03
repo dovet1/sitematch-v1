@@ -36,7 +36,6 @@ export function PricingCard({ tier, period, featured = false, onCtaClick, ctaEle
       {/* Header */}
       <div>
         <div className="font-semibold text-lg">{p.name}</div>
-        <div className={`text-sm mt-0.5 ${secondaryColor}`}>{p.audience}</div>
       </div>
 
       {/* Pricing */}

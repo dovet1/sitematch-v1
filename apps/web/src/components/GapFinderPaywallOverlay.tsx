@@ -43,13 +43,13 @@ export function GapFinderPaywallOverlay({
           <li className="flex items-start gap-3">
             <Check size={16} color="#7033FF" />
             <span className="text-[14px] text-[#171419] font-inter leading-[1.5]">
-              Every major UK retail brand, mapped
+              Commercial occupiers across all sectors, mapped
             </span>
           </li>
           <li className="flex items-start gap-3">
             <Check size={16} color="#7033FF" />
             <span className="text-[14px] text-[#171419] font-inter leading-[1.5]">
-              Filter by sector, fascia or population
+              Filter by brand presence, population, and traffic counts
             </span>
           </li>
           <li className="flex items-start gap-3">

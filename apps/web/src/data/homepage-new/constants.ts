@@ -72,7 +72,7 @@ export const PRICING = {
     ],
     callout: {
       title: "GapFinder included",
-      body: "Spot off-market opportunities your competitors miss",
+      body: "Spot opportunities your competitors miss",
     },
   },
 };
@@ -133,8 +133,8 @@ export const ACTIVE_PROMOTION = {
   discountPercent: 50,
   endDate: '2026-08-31', // ISO format for easy comparison
   displayEndDate: '31 August',
-  message: 'Summer Sale — 50% off',
-  fullMessage: 'Summer Sale — 50% off, ends 31 August',
+  message: 'Summer Sale - 50% off',
+  fullMessage: 'Summer Sale - 50% off',
 }
 
 // Helper to check if promotion is currently active

@@ -23,8 +23,8 @@ export function Features() {
           headline="see where every brand isn't yet."
           body="GapFinder maps brand presence across the UK so you can find the gaps before anyone else. Spot opportunities your competitors miss."
           bullets={[
-            "Every major UK retail brand, mapped",
-            "Filter by sector, fascia or population",
+            "Commercial occupiers across all sectors, mapped",
+            "Filter by brand presence, population, and traffic counts",
             "Assess an area's store presence and compare to another area",
             "Export shortlists to Excel",
           ]}
@@ -64,7 +64,7 @@ export function Features() {
           name="SiteAnalyser"
           kicker="Catchment & demographics"
           headline="instant demographics for any UK postcode."
-          body="SiteAnalyser pulls population, affluence and household data for any catchment in seconds - no consultant report required."
+          body="SiteAnalyser pulls population, affluence and household data for any catchment in seconds."
           bullets={[
             "Drive-time and walk-time catchments",
             "Affluence, age, household composition and more",
@@ -87,6 +87,7 @@ export function Features() {
             "Drag, draw and measure on any plot",
             "Toggle between 2D and 3D views",
             "Add parking spaces to the map",
+            "Import your own CAD or image files"
           ]}
           videoLabel="SiteSketcher"
           videoNote="Drawing a footprint on a plot, extruding to 3D"
