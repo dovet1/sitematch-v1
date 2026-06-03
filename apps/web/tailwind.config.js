@@ -22,6 +22,20 @@ module.exports = {
   			mono: ['var(--font-mono)']
   		},
   		colors: {
+  			// Homepage redesign colors
+  			'sm-bg': '#FBFAF7',
+  			'sm-surface': '#FFFFFF',
+  			'sm-ink': '#171419',
+  			'sm-ink2': '#4A4451',
+  			'sm-ink3': '#7C7588',
+  			'sm-border': '#E8E4DC',
+  			'sm-border-soft': '#EFEBE2',
+  			'sm-violet': '#7033FF',
+  			'sm-violet-deep': '#5421CC',
+  			'sm-violet-tint': '#EEE9FF',
+  			'sm-violet-tint-soft': '#F5F1FF',
+  			'sm-orange': '#F26B1F',
+  			// Existing colors
   			border: 'var(--border)',
   			input: 'var(--input)',
   			ring: 'var(--ring)',
@@ -76,7 +90,12 @@ module.exports = {
   			md: 'var(--radius-md)',
   			lg: 'var(--radius-lg)',
   			xl: 'var(--radius-xl)',
-  			DEFAULT: 'var(--radius)'
+  			DEFAULT: 'var(--radius)',
+  			// Homepage redesign radii
+  			'sm-btn': '10px',
+  			'sm-compact': '8px',
+  			'sm-card': '18px',
+  			'sm-menu': '14px'
   		},
   		spacing: {
   			0: 'var(--space-0)',
@@ -106,7 +125,13 @@ module.exports = {
   			xl: 'var(--text-xl)',
   			'2xl': 'var(--text-2xl)',
   			'3xl': 'var(--text-3xl)',
-  			'4xl': 'var(--text-4xl)'
+  			'4xl': 'var(--text-4xl)',
+  			// Homepage redesign fluid typography
+  			'hero-h1': 'clamp(38px, 5vw, 88px)',
+  			'section-h2': 'clamp(32px, 4vw, 56px)',
+  			'faq-h2': 'clamp(30px, 3.8vw, 48px)',
+  			'feature-title': 'clamp(28px, 3vw, 44px)',
+  			'quote': 'clamp(22px, 2.5vw, 36px)'
   		},
   		fontWeight: {
   			light: 'var(--font-weight-light)',

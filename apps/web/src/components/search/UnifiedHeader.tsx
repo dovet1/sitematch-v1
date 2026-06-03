@@ -20,10 +20,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LoginModal } from '@/components/auth/login-modal';
-import { SignUpModalEnhanced } from '@/components/auth/signup-modal-enhanced';
 import { UserMenu } from '@/components/auth/user-menu';
-import { UserStatusHeader } from '@/components/auth/user-status-header';
+import { UserStatusHeader, type SubscriptionTier } from '@/components/auth/user-status-header';
 import { useAuth } from '@/contexts/auth-context';
 import { SearchHeaderBar } from './SearchHeaderBar';
 import { Menu, X, Sparkles, LogOut, Shield, LayoutDashboard, CreditCard, Loader2, LogOutIcon, ChevronDown } from 'lucide-react';
@@ -50,6 +48,7 @@ function MobileUserSection({ onClose }: { onClose: () => void }) {
   const { user, profile, signOut, isAdmin } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [subscriptionStatus, setSubscriptionStatus] = useState<'trialing' | 'active' | 'past_due' | 'canceled' | null>(null)
+  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>('free')
   const [isLoadingPortal, setIsLoadingPortal] = useState(false)
   const [showSignoutAllDialog, setShowSignoutAllDialog] = useState(false)
   const [isSigningOutAll, setIsSigningOutAll] = useState(false)
@@ -59,6 +58,7 @@ function MobileUserSection({ onClose }: { onClose: () => void }) {
     const fetchSubscriptionStatus = async () => {
       if (!user?.id) {
         setSubscriptionStatus(null)
+        setSubscriptionTier('free')
         return
       }
 
@@ -67,6 +67,7 @@ function MobileUserSection({ onClose }: { onClose: () => void }) {
         if (response.ok) {
           const data = await response.json()
           setSubscriptionStatus(data.subscriptionStatus)
+          setSubscriptionTier(data.subscription_tier || 'free')
         }
       } catch (error) {
         console.error('Error fetching subscription status:', error)
@@ -150,6 +151,7 @@ function MobileUserSection({ onClose }: { onClose: () => void }) {
         <UserStatusHeader
           email={profile.email}
           subscriptionStatus={subscriptionStatus}
+          subscriptionTier={subscriptionTier}
           onUpgradeClick={handleUpgrade}
         />
 
@@ -305,7 +307,7 @@ export function UnifiedHeader({
       description: 'Sketch your ideal site location',
     },
     {
-      href: '/new-dashboard/tools/site-demographer',
+      href: '/siteanalyser',
       label: 'SiteAnalyser',
       description: 'Analyse demographics around any site',
     }
@@ -382,13 +384,13 @@ export function UnifiedHeader({
                   return null;
                 })}
 
-                {/* Free Tools Dropdown - Between Browse Requirements and Post Requirement */}
+                {/* Tools Dropdown - Between Browse Requirements and Post Requirement */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
                       className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch cursor-pointer text-gray-700 hover:text-violet-700 hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
                     >
-                      Free Tools
+                      Tools
                       <ChevronDown className="h-4 w-4" />
                     </button>
                   </DropdownMenuTrigger>
@@ -438,16 +440,16 @@ export function UnifiedHeader({
                 <UserMenu />
               ) : (
                 <div className="flex items-center space-x-2">
-                  <LoginModal>
+                  <Link href="/auth?mode=signin">
                     <Button variant="ghost" size="sm" className="font-bold rounded-full px-5 py-2 hover:bg-violet-50 hover:text-violet-700">
                       Sign In
                     </Button>
-                  </LoginModal>
-                  <SignUpModalEnhanced>
+                  </Link>
+                  <Link href="/auth?mode=signup">
                     <Button size="sm" className="font-bold shadow-lg hover:shadow-xl rounded-full px-5 py-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 transition-all duration-300">
                       Sign Up
                     </Button>
-                  </SignUpModalEnhanced>
+                  </Link>
                 </div>
               )}
             </div>
@@ -501,10 +503,10 @@ export function UnifiedHeader({
                   </Link>
                 ))}
 
-                {/* Free Tools Section */}
+                {/* Tools Section */}
                 <div className="space-y-2">
                   <div className="px-5 py-2 text-sm font-black text-violet-600 uppercase tracking-wide">
-                    Free Tools
+                    Tools
                   </div>
                   {freeToolsItems.map((tool) => (
                     <Link
@@ -544,16 +546,16 @@ export function UnifiedHeader({
                 <MobileUserSection onClose={closeMobileMenu} />
               ) : (
                 <div className="space-y-3">
-                  <LoginModal>
+                  <Link href="/auth?mode=signin" className="block">
                     <Button variant="ghost" className="w-full h-12 justify-center text-base font-bold violet-bloom-touch rounded-2xl hover:bg-violet-50 hover:text-violet-700">
                       Sign In
                     </Button>
-                  </LoginModal>
-                  <SignUpModalEnhanced>
+                  </Link>
+                  <Link href="/auth?mode=signup" className="block">
                     <Button className="w-full h-12 text-base font-black shadow-xl hover:shadow-2xl violet-bloom-touch rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 transition-all duration-300">
                       Sign Up
                     </Button>
-                  </SignUpModalEnhanced>
+                  </Link>
                 </div>
               )}
             </div>

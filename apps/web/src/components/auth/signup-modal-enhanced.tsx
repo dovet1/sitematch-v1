@@ -1,3 +1,20 @@
+/**
+ * @deprecated This modal component is deprecated. Use Link component to /auth page instead:
+ *
+ * Replace: <SignUpModalEnhanced><Button>Sign Up</Button></SignUpModalEnhanced>
+ * With: <Link href="/auth?mode=signup"><Button>Sign Up</Button></Link>
+ *
+ * Or with returnUrl:
+ * <Link href={`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`}>
+ *   <Button>Sign Up</Button>
+ * </Link>
+ *
+ * Note: Company name and user type fields have been removed from signup.
+ * OAuth buttons are now included in the new auth page.
+ *
+ * See: apps/web/src/app/auth/page.tsx
+ */
+
 'use client'
 
 import { useState } from 'react'
@@ -114,7 +131,7 @@ export function SignUpModalEnhanced({ children, redirectTo }: SignUpModalProps) 
     })
     
     try {
-      await signUp(data.email, data.password, data.companyName, redirectTo, data.newsletter, data.userType)
+      await signUp(data.email, data.password, redirectTo, data.newsletter)
       // User will be automatically signed in and redirected
       reset()
     } catch (err) {

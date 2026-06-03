@@ -1,3 +1,21 @@
+/**
+ * @deprecated This modal component is deprecated. Use Link component to /auth page instead:
+ *
+ * Replace:
+ * <AuthChoiceModal redirectTo="/some-path">
+ *   <Button>Action</Button>
+ * </AuthChoiceModal>
+ *
+ * With:
+ * <Link href={`/auth?mode=signin&returnUrl=${encodeURIComponent('/some-path')}`}>
+ *   <Button>Action</Button>
+ * </Link>
+ *
+ * The new /auth page handles both sign-in and sign-up with a tab switcher.
+ *
+ * See: apps/web/src/app/auth/page.tsx
+ */
+
 'use client';
 
 import { useState } from 'react';

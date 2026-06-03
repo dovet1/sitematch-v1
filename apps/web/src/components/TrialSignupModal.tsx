@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
+import { useRouter } from 'next/navigation'
 import { Mail, Loader2, UserPlus, X, Lock, Zap, Star, LogIn } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -21,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { UserType } from '@/types/auth'
+import { getModalPricing, getAnnualSavingsMessage } from '@/data/homepage-new/constants'
 
 interface TrialSignupFormData {
   companyName: string
@@ -32,9 +34,11 @@ interface TrialSignupFormData {
 
 interface TrialSignupModalProps {
   children: React.ReactNode
-  context: 'search' | 'sitesketcher' | 'agency' | 'general'
+  context: 'search' | 'sitesketcher' | 'agency' | 'gapfinder' | 'general'
   redirectPath?: string
   billingInterval?: 'month' | 'year'
+  tier?: 'pro' | 'plus'  // NEW: defaults to 'pro'
+  secondaryCTA?: { label: string; href: string }  // NEW
   testimonial?: {
     quote: string
     author: string
@@ -85,6 +89,16 @@ const contextConfig = {
       rating: 5
     }
   },
+  gapfinder: {
+    headline: 'Unlock GapFinder',
+    subtext: 'Find retail white space, compare markets and analyse operator coverage across the UK',
+    cta: 'Start Free Trial - Use GapFinder',
+    testimonial: {
+      quote: 'With SiteMatcher I can see the market in seconds. It is easily the fastest way I have found to spot real opportunities.',
+      author: 'Kerry Northfold, Director, Vedra Property',
+      rating: 5
+    }
+  },
   general: {
     headline: 'Find matches for your site',
     subtext: 'Access professional tools and thousands of opportunities',
@@ -97,7 +111,7 @@ const contextConfig = {
   }
 }
 
-export function TrialSignupModal({ children, context, redirectPath, billingInterval = 'year', testimonial, forceOpen, onClose, onLoadingChange }: TrialSignupModalProps) {
+export function TrialSignupModal({ children, context, redirectPath, billingInterval = 'year', tier = 'pro', secondaryCTA, testimonial, forceOpen, onClose, onLoadingChange }: TrialSignupModalProps) {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -106,6 +120,7 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
   const [selectedInterval, setSelectedInterval] = useState<'month' | 'year'>(billingInterval || 'year')
 
   const { signUp, signIn, user } = useAuth()
+  const router = useRouter()
   const config = contextConfig[context]
   const displayTestimonial = testimonial || config.testimonial
 
@@ -143,7 +158,8 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
       setLoadingStage('creating_account')
       if (mode === 'signup') {
         // Pass 'SKIP_REDIRECT' to prevent automatic dashboard redirect
-        await signUp(data.email, data.password, data.companyName, 'SKIP_REDIRECT', data.newsletterOptIn, data.userType)
+        // Note: companyName and userType removed from signUp signature (now nullable)
+        await signUp(data.email, data.password, 'SKIP_REDIRECT', data.newsletterOptIn)
       } else {
         // Pass 'SKIP_REDIRECT' to prevent automatic dashboard redirect
         await signIn(data.email, data.password, 'SKIP_REDIRECT')
@@ -161,9 +177,10 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          tier: tier,  // Pass tier
+          billingInterval: selectedInterval,
           userType: context,
-          redirectPath: redirectPath || '/search',
-          billingInterval: selectedInterval
+          redirectPath: redirectPath || '/search'
         }),
       })
 
@@ -311,7 +328,7 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
                     Annual
                   </button>
                   <span className="absolute -top-3 -right-2 bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap font-medium">
-                    Save 17%
+                    {getAnnualSavingsMessage(tier)}
                   </span>
                 </div>
               </div>
@@ -321,11 +338,11 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
             <div className="text-center mt-3 p-2 bg-white/10 backdrop-blur-sm rounded-lg">
               <div className="text-base font-semibold">
                 <span className="line-through text-white/70">
-                  {selectedInterval === 'year' ? '£975' : '£99'}
+                  {getModalPricing(tier, selectedInterval).originalFormatted}
                 </span>{' '}
                 <span className="text-white">
-                  {selectedInterval === 'year' ? '£487.50/year' : '£49/month'}
-                </span> - 30 days free
+                  {getModalPricing(tier, selectedInterval).display} - 30 days free
+                </span>
               </div>
               <div className="text-xs text-violet-100">Add payment method, cancel anytime</div>
             </div>
@@ -524,6 +541,20 @@ export function TrialSignupModal({ children, context, redirectPath, billingInter
                 )}
               </Button>
             </form>
+
+            {/* Secondary CTA (NEW) */}
+            {secondaryCTA && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  handleOpenChange(false)
+                  router.push(secondaryCTA.href)
+                }}
+                className="w-full h-10 mt-3"
+              >
+                {secondaryCTA.label}
+              </Button>
+            )}
 
             {/* Testimonial */}
             {displayTestimonial && (

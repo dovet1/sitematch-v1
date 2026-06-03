@@ -18,11 +18,12 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createServerClient();
 
-    // Fetch sketches ordered by most recently updated
+    // Fetch v1 sketches only (exclude v2) ordered by most recently updated
     const { data: sketches, error } = await supabase
       .from('site_sketches')
       .select('*')
       .eq('user_id', user.id)
+      .is('data->>version', null) // Exclude v2 sketches
       .order('updated_at', { ascending: false });
 
     if (error) {

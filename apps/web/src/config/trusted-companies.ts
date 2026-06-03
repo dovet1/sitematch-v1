@@ -14,8 +14,6 @@ export const TRUSTED_COMPANY_DOMAINS = [
   'knoops.com',
   'fastnedcharging.com',
   'travelodge.co.uk',
-  'flyingtiger.com',
-  'boxpark.co.uk',
   'costa.co.uk',
   // Add more company domains here as needed
 ];

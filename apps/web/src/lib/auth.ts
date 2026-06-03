@@ -126,7 +126,7 @@ export async function getCurrentUser(): Promise<any> {
           id: profile.id,
           email: profile.email,
           role: profile.role as UserRole,
-          user_type: profile.user_type as UserType,
+          user_type: profile.user_type as UserType | null,
           created_at: profile.created_at,
           updated_at: profile.updated_at
         }
@@ -141,7 +141,7 @@ export async function getCurrentUser(): Promise<any> {
       id: user.id,
       email: user.email,
       role: 'occupier' as UserRole, // Default role for fallback
-      user_type: 'occupier' as UserType,
+      user_type: null, // No user_type when profile doesn't exist
       created_at: user.created_at,
       updated_at: user.updated_at
     }

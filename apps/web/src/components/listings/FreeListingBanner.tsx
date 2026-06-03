@@ -2,9 +2,14 @@
 
 import { Button } from '@/components/ui/button';
 import { Sparkles, ArrowRight } from 'lucide-react';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 
 export function FreeListingBanner() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { hasProAccess } = useSubscriptionTier();
   return (
     <div className="mt-8 md:mt-16 pt-8 md:pt-12 border-t border-gray-200">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 md:py-8 text-center">
@@ -24,16 +29,23 @@ export function FreeListingBanner() {
         </p>
 
         {/* CTA - Mobile Optimized */}
-        <TrialSignupModal context="search" redirectPath="/search">
-          <Button
-            size="lg"
-            className="bg-violet-600 hover:bg-violet-700 text-white w-full sm:w-auto px-6 sm:px-8 py-5 md:py-6 text-base md:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-          >
-            <span className="hidden sm:inline">Start Free Trial - View All Requirements</span>
-            <span className="sm:hidden">Start Free Trial</span>
-            <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
-          </Button>
-        </TrialSignupModal>
+        <Button
+          onClick={() => {
+            if (!user) {
+              router.push('/auth?mode=signup&returnUrl=/pricing');
+            } else if (!hasProAccess) {
+              router.push('/pricing');
+            } else {
+              router.push('/search');
+            }
+          }}
+          size="lg"
+          className="bg-violet-600 hover:bg-violet-700 text-white w-full sm:w-auto px-6 sm:px-8 py-5 md:py-6 text-base md:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+        >
+          <span className="hidden sm:inline">Start Free Trial - View All Requirements</span>
+          <span className="sm:hidden">Start Free Trial</span>
+          <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
+        </Button>
 
         <p className="text-xs sm:text-sm text-gray-500 mt-3 md:mt-4">
           30-day free trial • Cancel anytime

@@ -79,7 +79,6 @@ import { SiteSizeModal } from '@/components/listings/modals/site-size-modal';
 // Import agents components
 import { MultipleAgentsDisplay } from '@/components/listings/multiple-agents-display';
 import { AgencyCreationModal } from '@/components/agencies/agency-creation-modal';
-import { PaywallModal } from '@/components/PaywallModal';
 
 // Import sharing components
 import { ShareButton } from '@/components/listings/ShareButton';
@@ -217,8 +216,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
     preview: false,
     companyProfile: false,
     addAgent: false,
-    createAgency: false,
-    paywall: false
+    createAgency: false
   });
 
   const [editingContactData, setEditingContactData] = useState<any>(null);
@@ -5241,7 +5239,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                               if (hasSubscription) {
                                 openModal('createAgency');
                               } else {
-                                openModal('paywall');
+                                router.push('/pricing');
                               }
                             }}
                             className="mt-4"
@@ -7388,7 +7386,7 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
                         if (hasSubscription) {
                           openModal('createAgency');
                         } else {
-                          openModal('paywall');
+                          router.push('/pricing');
                         }
                       }}
                     />
@@ -7833,13 +7831,6 @@ export function ListingDetailPage({ listingId, userId, showHeaderBar = true }: L
       <AgencyCreationModal
         isOpen={modalStates.createAgency}
         onClose={() => closeModal('createAgency')}
-      />
-
-      {/* Paywall Modal */}
-      <PaywallModal
-        context="agency"
-        isOpen={modalStates.paywall}
-        onClose={() => closeModal('paywall')}
       />
 
       {/* Video Player Modal */}

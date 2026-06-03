@@ -20,9 +20,12 @@ export type SubscriptionStatus =
   | 'expired'
   | null
 
+export type SubscriptionTier = 'free' | 'pro' | 'plus'
+
 interface UserSubscription {
   id: string
   subscription_status: SubscriptionStatus
+  subscription_tier?: SubscriptionTier  // NEW: User's subscription tier
   trial_start_date?: string
   trial_end_date?: string
   stripe_customer_id?: string
@@ -57,8 +60,19 @@ export async function checkSubscriptionAccess(userId: string): Promise<boolean> 
     }
   }
 
-  // Check if subscription is active
-  return user.subscription_status === 'active'
+  // Check if subscription is active or past_due (allow access during dunning)
+  // Only allow past_due if user has a real Stripe subscription
+  if (user.subscription_status === 'active') {
+    return true
+  }
+
+  if (user.subscription_status === 'past_due' && user.stripe_subscription_id) {
+    // Allow access during Stripe's dunning period
+    console.log(`User ${userId} has past_due subscription, allowing access during dunning`)
+    return true
+  }
+
+  return false
 }
 
 /**
@@ -80,6 +94,7 @@ export async function getUserSubscriptionStatus(userId: string): Promise<UserSub
     .select(`
       id,
       subscription_status,
+      subscription_tier,
       trial_start_date,
       trial_end_date,
       stripe_customer_id,
@@ -127,6 +142,7 @@ export async function updateUserSubscriptionStatus(
     stripe_subscription_id: string
     payment_method_added: boolean
     trial_will_convert: boolean
+    subscription_tier: SubscriptionTier  // NEW: Support tier updates
   }> = {}
 ): Promise<boolean> {
   // Use admin client to bypass RLS restrictions
@@ -176,21 +192,26 @@ export async function invalidateSubscriptionCache(userId: string): Promise<void>
 
 /**
  * Start trial for user after payment method collection
+ * @param tier - Subscription tier (pro or plus) - CRITICAL for tier attribution
  */
 export async function startUserTrial(
   userId: string,
   stripeCustomerId: string,
-  stripeSubscriptionId: string
+  stripeSubscriptionId: string,
+  tier: 'pro' | 'plus'  // NEW REQUIRED PARAMETER
 ): Promise<boolean> {
   const now = new Date()
   const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days
+
+  console.log(`Starting ${tier} tier trial for user ${userId}`)
 
   return updateUserSubscriptionStatus(userId, 'trialing', {
     trial_start_date: now.toISOString(),
     trial_end_date: trialEnd.toISOString(),
     stripe_subscription_id: stripeSubscriptionId,
     payment_method_added: true,
-    trial_will_convert: true
+    trial_will_convert: true,
+    subscription_tier: tier  // ← Set the tier!
   })
 }
 
@@ -238,4 +259,24 @@ export function getSubscriptionDisplayStatus(user: UserSubscription): {
     default:
       return { status: 'unknown', message: 'Unknown status' }
   }
+}
+
+/**
+ * Check if user has Plus tier access (for GapFinder and other Plus-only features)
+ * Requires BOTH active/trialing subscription AND Plus tier
+ */
+export async function checkPlusAccess(userId: string): Promise<boolean> {
+  if (!userId) return false
+
+  const user = await getUserSubscriptionStatus(userId)
+  if (!user) return false
+
+  // Allow active, trialing, or past_due (with Stripe subscription) during dunning
+  const validStatuses = ['active', 'trialing']
+  if (user.stripe_subscription_id && user.subscription_status === 'past_due') {
+    return user.subscription_tier === 'plus'
+  }
+
+  return (user.subscription_status === 'active' || user.subscription_status === 'trialing') &&
+         user.subscription_tier === 'plus'
 }

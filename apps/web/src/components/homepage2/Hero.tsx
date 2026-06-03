@@ -2,19 +2,17 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
-import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
-import { VideoLightbox } from '@/components/VideoLightbox';
 import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, PenTool, Mail } from 'lucide-react';
 
 export function Hero() {
   const { user, profile } = useAuth();
+  const router = useRouter();
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [showAlreadySubscribed, setShowAlreadySubscribed] = useState(false);
-  const [showVideoLightbox, setShowVideoLightbox] = useState(false);
 
   // YouTube video ID for demo
   const DEMO_VIDEO_ID = 'KBOKzYEdPm0';
@@ -80,26 +78,14 @@ export function Hero() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Left: Content */}
           <div className="text-center lg:text-left">
-            {/* Social proof badge - Bold */}
-            <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-violet-100 rounded-full border-2 border-violet-300 mb-4 md:mb-5 transform rotate-[-0.5deg] shadow-md">
-              <svg className="w-5 h-5 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              <span className="text-sm md:text-base font-bold text-violet-700 uppercase tracking-wide">Over 1,400 property professionals</span>
-            </div>
-
-            {/* Main headline - Bold with highlighted text */}
+            {/* Main headline */}
             <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-gray-900 mb-4 md:mb-5 leading-tight">
-              Connect your sites with verified companies{' '}
-              <span className="relative inline-block">
-                <span className="relative z-10 text-gray-900">actively seeking their next location</span>
-                <span className="absolute inset-0 bg-violet-200 transform skew-y-1 rotate-1"></span>
-              </span>
+              Connecting commercial property professionals across the UK
             </h1>
 
             {/* Subheadline - Bolder */}
             <p className="text-lg md:text-xl lg:text-2xl text-gray-700 font-semibold mb-5 md:mb-6 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-              Access a curated directory of verified property requirements. Match your sites with qualified companies ready to commit.
+              Identify expansion opportunities with GapFinder, browse a continually verified directory of live requirements, and connect directly with the people ready to act on them.
             </p>
 
             {/* CTAs - Bold gradient buttons */}
@@ -114,40 +100,22 @@ export function Hero() {
                     <Link href="/search">Explore requirements</Link>
                   </Button>
                 ) : (
-                  <>
-                    <Button
-                      asChild
-                      size="lg"
-                      className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-5 text-base md:text-lg font-black rounded-2xl shadow-2xl hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
-                    >
-                      <Link href="/pricing">Start Free Trial</Link>
-                    </Button>
-                    <Button
-                      onClick={() => setShowVideoLightbox(true)}
-                      size="lg"
-                      variant="outline"
-                      className="border-3 border-violet-300 hover:border-violet-400 hover:bg-violet-50 px-8 py-5 text-base md:text-lg font-black rounded-2xl hover:shadow-xl transition-all duration-300"
-                    >
-                      Watch Demo
-                    </Button>
-                  </>
+                  <Button
+                    asChild
+                    size="lg"
+                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-5 text-base md:text-lg font-black rounded-2xl shadow-2xl hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
+                  >
+                    <Link href="/pricing">Ready to find your next opportunity?</Link>
+                  </Button>
                 )
               ) : (
-                <>
-                  <TrialSignupModal context="search" redirectPath="/search">
-                    <Button size="lg" className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-5 text-base md:text-lg font-black rounded-2xl shadow-2xl hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300">
-                      Start Free Trial
-                    </Button>
-                  </TrialSignupModal>
-                  <Button
-                    onClick={() => setShowVideoLightbox(true)}
-                    size="lg"
-                    variant="outline"
-                    className="border-3 border-violet-300 hover:border-violet-400 hover:bg-violet-50 px-8 py-5 text-base md:text-lg font-black rounded-2xl hover:shadow-xl transition-all duration-300"
-                  >
-                    Watch Demo
-                  </Button>
-                </>
+                <Button
+                  onClick={() => router.push('/auth?mode=signup&returnUrl=/pricing')}
+                  size="lg"
+                  className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-5 text-base md:text-lg font-black rounded-2xl shadow-2xl hover:shadow-violet-500/50 hover:scale-105 transition-all duration-300"
+                >
+                  Ready to find your next opportunity?
+                </Button>
               )}
             </div>
 
@@ -169,18 +137,15 @@ export function Hero() {
                     </svg>
                   </Link>
                 ) : (
-                  <AuthChoiceModal
-                    redirectTo="/occupier/create-listing-quick"
-                    title="Sign in to post requirements"
-                    description="Access your account to create and manage property listings"
+                  <Link
+                    href="/auth?mode=signin&returnUrl=%2Foccupier%2Fcreate-listing-quick"
+                    className="text-sm md:text-base font-black text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1"
                   >
-                    <button className="text-sm md:text-base font-black text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1">
-                      Post for free
-                      <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </AuthChoiceModal>
+                    Post for free
+                    <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
                 )}
               </div>
             </div>
@@ -228,18 +193,15 @@ export function Hero() {
                           </svg>
                         </Link>
                       ) : (
-                        <AuthChoiceModal
-                          redirectTo="/occupier/create-listing-quick"
-                          title="Sign in to post requirements"
-                          description="Access your account to create and manage property listings"
+                        <Link
+                          href="/auth?mode=signin&returnUrl=%2Foccupier%2Fcreate-listing-quick"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-violet-600 hover:text-violet-700"
                         >
-                          <button className="inline-flex items-center gap-1 text-xs font-bold text-violet-600 hover:text-violet-700">
-                            Get started
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </button>
-                        </AuthChoiceModal>
+                          Get started
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </Link>
                       )}
                     </div>
                   </div>
@@ -280,39 +242,21 @@ export function Hero() {
             </div>
           </div>
 
-          {/* Right: Product screenshot/demo - Enhanced */}
-          <div className="relative mt-6 lg:mt-0">
-            {/* Decorative accent behind screenshot */}
+          {/* Right: Product demo video */}
+          <div className="relative mt-6 lg:mt-0 lg:-translate-y-24 xl:-translate-y-28">
+            {/* Decorative accent behind video */}
             <div className="absolute top-4 right-4 w-full h-full bg-gradient-to-br from-violet-200 to-purple-200 rounded-3xl transform rotate-3"></div>
 
             <div className="relative bg-white rounded-3xl shadow-2xl p-3 md:p-4 border-4 border-violet-200 transform hover:scale-[1.02] transition-transform duration-500">
-              <div className="aspect-[16/10] md:aspect-[4/3] rounded-2xl overflow-hidden bg-slate-50 ring-2 ring-violet-100">
-                <img
-                  src="/map-screenshot.png"
-                  alt="SiteMatcher requirement map showing distribution across UK and Ireland"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // Fallback if image fails to load
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    console.error('Failed to load map screenshot');
-                  }}
+              <div className="aspect-video rounded-2xl overflow-hidden bg-slate-950 ring-2 ring-violet-100">
+                <iframe
+                  src={`https://www.youtube.com/embed/${DEMO_VIDEO_ID}?rel=0&modestbranding=1`}
+                  title="SiteMatcher product demo"
+                  className="w-full h-full"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
                 />
-              </div>
-            </div>
-
-            {/* Floating stats cards - Enhanced and bold */}
-            <div className="hidden md:block absolute -bottom-8 -left-8 bg-white rounded-2xl shadow-2xl p-5 border-3 border-green-200 hover:scale-110 transition-transform duration-300">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
-                  <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-3xl font-black text-gray-900">3,500+</p>
-                  <p className="text-sm font-bold text-gray-600">Active Requirements</p>
-                </div>
               </div>
             </div>
           </div>
@@ -328,13 +272,6 @@ export function Hero() {
         />
       )}
 
-      {/* Video Demo Modal */}
-      <VideoLightbox
-        isOpen={showVideoLightbox}
-        onClose={() => setShowVideoLightbox(false)}
-        videoId={DEMO_VIDEO_ID}
-        title="Product Demo"
-      />
     </section>
   );
 }

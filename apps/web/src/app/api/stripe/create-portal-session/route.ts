@@ -31,49 +31,125 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user's Stripe customer ID using admin client
+    // Get user's Stripe customer ID and subscription ID using admin client
     const adminSupabase = createAdminClient()
     const { data: userData, error: userError } = await adminSupabase
       .from('users')
-      .select('stripe_customer_id, email')
+      .select('stripe_customer_id, stripe_subscription_id, email')
       .eq('id', user.id)
-      .single() as { data: { stripe_customer_id: string | null; email: string } | null; error: any }
+      .single() as { data: { stripe_customer_id: string | null; stripe_subscription_id: string | null; email: string } | null; error: any }
 
     if (userError || !userData) {
       console.error('Error fetching user data:', userError)
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // If no Stripe customer exists yet, create one
-    let customerId = userData.stripe_customer_id
-    if (!customerId) {
-      console.log('Creating Stripe customer for user:', user.id)
-      const customer = await stripe.customers.create({
-        email: userData.email,
-        metadata: {
-          user_id: user.id,
+    // Require Stripe subscription to access portal
+    if (!userData.stripe_subscription_id) {
+      return NextResponse.json(
+        {
+          error: 'No active subscription found',
+          message: 'You need an active Stripe subscription to access the customer portal.',
+          redirectUrl: '/pricing'
         },
-      })
-      customerId = customer.id
-
-      // Save customer ID to database
-      await (adminSupabase
-        .from('users') as any)
-        .update({ stripe_customer_id: customerId })
-        .eq('id', user.id)
+        { status: 400 }
+      )
     }
 
-    // Get base URL for return URL
-    const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    let customerId = userData.stripe_customer_id
 
-    // Create customer portal session
-    const session = await stripe.billingPortal.sessions.create({
+    // Get subscription from Stripe to validate ownership and repair IDs
+    try {
+      const subscription = await stripe.subscriptions.retrieve(userData.stripe_subscription_id)
+      const subscriptionCustomerId = subscription.customer as string
+      const subscriptionUserId = subscription.metadata?.user_id
+
+      // Require positive ownership match (not just absence of mismatch)
+      let ownershipVerified = false
+
+      // Check 1: metadata.user_id matches
+      if (subscriptionUserId === user.id) {
+        ownershipVerified = true
+        console.log('Ownership verified via subscription metadata.user_id')
+      }
+      // Check 2: customer ID matches stored value
+      else if (customerId && customerId === subscriptionCustomerId) {
+        ownershipVerified = true
+        console.log('Ownership verified via stored customer ID match')
+      }
+
+      // Reject if no positive ownership signal
+      if (!ownershipVerified) {
+        console.error('Subscription ownership cannot be verified:', {
+          user_id: user.id,
+          metadata_user_id: subscriptionUserId,
+          stored_customer_id: customerId,
+          subscription_customer_id: subscriptionCustomerId
+        })
+        // Clear both subscription and customer IDs - both are suspect
+        await (adminSupabase
+          .from('users') as any)
+          .update({
+            stripe_subscription_id: null,
+            stripe_customer_id: null,
+            subscription_status: 'canceled',
+            subscription_tier: 'free'
+          })
+          .eq('id', user.id)
+
+        return NextResponse.json(
+          {
+            error: 'Subscription verification failed',
+            message: 'Please visit the pricing page to subscribe.',
+            redirectUrl: '/pricing'
+          },
+          { status: 403 }
+        )
+      }
+
+      // Ownership verified - repair customer ID if needed
+      if (!customerId || customerId !== subscriptionCustomerId) {
+        console.log('Repairing customer ID from verified subscription:', subscriptionCustomerId)
+        customerId = subscriptionCustomerId
+        await (adminSupabase
+          .from('users') as any)
+          .update({ stripe_customer_id: subscriptionCustomerId })
+          .eq('id', user.id)
+      }
+    } catch (error: any) {
+      if (error.code === 'resource_missing') {
+        // Subscription doesn't exist in Stripe - clear IDs and redirect
+        console.error('Subscription not found in Stripe, clearing IDs')
+        await (adminSupabase
+          .from('users') as any)
+          .update({
+            stripe_customer_id: null,
+            stripe_subscription_id: null,
+            subscription_status: 'canceled',
+            subscription_tier: 'free'
+          })
+          .eq('id', user.id)
+
+        return NextResponse.json(
+          {
+            error: 'Subscription not found',
+            message: 'Your subscription was not found. Please visit the pricing page.',
+            redirectUrl: '/pricing'
+          },
+          { status: 400 }
+        )
+      }
+      throw error
+    }
+
+    // Create portal session with validated customer ID
+    const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${baseUrl}/occupier/dashboard`,
+      return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/pricing`,
     })
 
     return NextResponse.json({
-      url: session.url
+      url: portalSession.url
     })
 
   } catch (error) {

@@ -11,8 +11,8 @@ export function DatabaseDifferentiators() {
       emoji: '🎯',
       icon: CheckCircle,
       title: 'Bang up to date',
-      stat: '50% verified in last 90 days',
-      description: 'We continually verify our requirements. Half of our requirements were confirmed active within the last month. No more chasing dead leads.',
+      stat: 'Listings regularly verified',
+      description: 'We continually verify our requirements. No more chasing dead leads.',
       color: 'from-green-500 to-emerald-600'
     },
     {

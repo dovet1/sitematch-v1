@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { UnifiedHeader } from '@/components/search/UnifiedHeader';
 import { ListingGrid } from '@/components/listings/ListingGrid';
 import { ListingMap } from '@/components/listings/ListingMap';
@@ -11,19 +11,17 @@ import { useAuth } from '@/contexts/auth-context';
 import { AuthWall } from '@/components/auth/auth-wall';
 import { SearchContextToast } from '@/components/search/search-context-toast';
 import { UserTypeModal } from '@/components/auth/user-type-modal';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
-import { PaywallModal } from '@/components/PaywallModal';
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, profile, loading } = useAuth();
-  const [showTrialModal, setShowTrialModal] = useState(false);
-  const [showPaywallModal, setShowPaywallModal] = useState(false);
-  const [isSignupInProgress, setIsSignupInProgress] = useState(false);
+  const pathname = usePathname();
+  const { user, loading } = useAuth();
+  const { hasProAccess } = useSubscriptionTier();
 
-  // Check if user has active subscription directly from profile
-  const hasAccess = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
+  // Preserve full path with search filters
+  const currentPath = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '');
 
   // Parse URL parameters into SearchFilters
   const [searchFilters, setSearchFilters] = useState<SearchFilters>(() => {
@@ -143,36 +141,12 @@ function SearchPageContent() {
     }, 300);
   };
 
-  const handleTrialModalClose = () => {
-    setShowTrialModal(false);
-    // Redirect back to home page when user closes modal
-    router.push('/');
-  };
-
-  const handlePaywallModalClose = () => {
-    setShowPaywallModal(false);
-    // Redirect back to home page when user closes modal
-    router.push('/');
-  };
-
-  const handleSignupStarted = (loading: boolean) => {
-    // When signup starts (loading = true), immediately close the modal and prevent it from reappearing
-    if (loading) {
-      setShowTrialModal(false);
-      setIsSignupInProgress(true);
-    }
-  };
-
-  // Handle upgrade CTA click - show appropriate modal based on auth state
+  // Handle upgrade CTA click - redirect to auth or pricing
   const handleUpgradeClick = () => {
     if (!user) {
-      // Not logged in - show trial signup modal
-      setShowTrialModal(true);
-      setShowPaywallModal(false);
-    } else if (user && !hasAccess) {
-      // Logged in but no subscription - show paywall modal
-      setShowTrialModal(false);
-      setShowPaywallModal(true);
+      router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+    } else {
+      router.push('/pricing');
     }
   };
 
@@ -296,24 +270,6 @@ function SearchPageContent() {
         onClose={handleModalClose}
         searchState={searchFilters}
         scrollPosition={previousScrollPosition}
-      />
-
-      {/* Trial Modal for non-authenticated users */}
-      <TrialSignupModal
-        context="search"
-        forceOpen={showTrialModal && !isSignupInProgress}
-        onClose={handleTrialModalClose}
-        onLoadingChange={handleSignupStarted}
-      >
-        <div />
-      </TrialSignupModal>
-
-      {/* Paywall Modal for authenticated users without subscription */}
-      <PaywallModal
-        context="search"
-        isOpen={showPaywallModal}
-        onClose={handlePaywallModalClose}
-        redirectTo="/search"
       />
     </div>
   );

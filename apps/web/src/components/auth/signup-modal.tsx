@@ -47,7 +47,7 @@ export function SignUpModal({ children, redirectTo }: SignUpModalProps) {
     setError(null)
 
     try {
-      await signUp(data.email, data.password, data.companyName, redirectTo)
+      await signUp(data.email, data.password, redirectTo)
       // User will be automatically signed in and redirected
       reset()
     } catch (err) {

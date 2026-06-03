@@ -53,7 +53,7 @@ export function ToolsShowcase() {
         'Traffic heatmap (preview)',
         'Select custom areas'
       ],
-      href: '/new-dashboard/tools/site-demographer',
+      href: '/siteanalyser',
       screenshot: '/screenshots/siteanalyser-preview.png',
       color: 'violet'
     }

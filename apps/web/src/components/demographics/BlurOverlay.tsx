@@ -1,6 +1,6 @@
 'use client';
 
-import { Lock, Sparkles } from 'lucide-react';
+import { Lock } from 'lucide-react';
 
 interface BlurOverlayProps {
   children: React.ReactNode;
@@ -17,22 +17,23 @@ export function BlurOverlay({ children, onUpgradeClick, title = "Premium Feature
       </div>
 
       {/* Overlay with upgrade prompt - stretch to fill parent section */}
-      <div className="absolute flex items-center justify-center bg-gradient-to-br from-violet-50/95 via-purple-50/95 to-violet-50/95 backdrop-blur-sm" style={{ left: '-1rem', right: '-1rem', top: '-0.75rem', bottom: '-0.75rem' }}>
-        <button
-          onClick={onUpgradeClick}
-          className="group flex flex-col items-center gap-3 p-6 rounded-2xl bg-white/90 backdrop-blur-sm border-2 border-violet-200 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
-        >
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shadow-lg">
-            <Lock className="w-6 h-6 text-white" />
+      <div className="absolute flex items-center justify-center bg-[#F5F1FF]/95 border border-[rgba(112,51,255,0.2)] rounded-lg" style={{ left: '-1rem', right: '-1rem', top: '-0.75rem', bottom: '-0.75rem' }}>
+        <div className="p-3">
+          <div className="flex items-start gap-2">
+            <Lock className="w-4 h-4 text-[#7033FF] mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-xs text-[#171419] leading-relaxed">
+                <span className="font-[600]">{title}</span> requires Pro
+              </p>
+              <button
+                onClick={onUpgradeClick}
+                className="mt-2 text-xs font-[600] text-[#7033FF] hover:text-[#5421CC] transition-colors"
+              >
+                Upgrade to unlock →
+              </button>
+            </div>
           </div>
-          <div className="text-center space-y-1">
-            <h4 className="text-base font-bold text-gray-900">{title}</h4>
-            <p className="text-sm font-semibold text-violet-600 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4" />
-              Upgrade to unlock
-            </p>
-          </div>
-        </button>
+        </div>
       </div>
     </div>
   );

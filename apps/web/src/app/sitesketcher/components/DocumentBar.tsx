@@ -195,7 +195,6 @@ export function DocumentBar({
 
           <DropdownMenuItem
             onClick={onOpenSketch}
-            disabled={isFreeTier}
             title={isFreeTier ? 'Upgrade to Pro to load sketches' : undefined}
             className={isFreeTier ? 'opacity-60' : ''}
           >
@@ -212,7 +211,7 @@ export function DocumentBar({
 
           <DropdownMenuItem
             onClick={onSave}
-            disabled={!hasUnsavedChanges || isSaving || isFreeTier}
+            disabled={!hasUnsavedChanges || isSaving}
             title={isFreeTier ? 'Upgrade to Pro to save your work' : undefined}
             className={isFreeTier ? 'opacity-60' : ''}
           >
@@ -227,7 +226,6 @@ export function DocumentBar({
 
           <DropdownMenuItem
             onClick={onSaveAs}
-            disabled={isFreeTier}
             title={isFreeTier ? 'Upgrade to Pro to save your work' : undefined}
             className={isFreeTier ? 'opacity-60' : ''}
           >

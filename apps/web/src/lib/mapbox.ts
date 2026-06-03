@@ -52,7 +52,7 @@ export async function searchLocations(
     limit = 5,
     proximity,
     country = ['GB', 'IE'], // UK and Ireland by default
-    types = ['place', 'locality', 'neighborhood', 'address']
+    types = ['place', 'locality', 'neighborhood', 'address', 'postcode', 'poi', 'region']
   } = options;
 
   try {

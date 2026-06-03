@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Check, Loader2, Sparkles, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
-import { AuthChoiceModal } from '@/components/auth/auth-choice-modal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import { useAuth } from '@/contexts/auth-context';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
 export function Pricing() {
+  const router = useRouter();
   const { user } = useAuth();
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<'active' | 'trialing' | null>(null);
@@ -271,15 +271,14 @@ export function Pricing() {
                     <Link href="/occupier/create-listing-quick">{plan.cta}</Link>
                   </Button>
                 ) : (
-                  <AuthChoiceModal
-                    redirectTo="/occupier/create-listing-quick"
-                    title="Sign in to post requirements"
-                    description="Access your account to create and manage property listings"
+                  <Button
+                    asChild
+                    className="w-full mb-6 md:mb-8 py-6 md:py-7 text-lg md:text-xl font-black rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white hover:from-violet-700 hover:to-purple-700 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
                   >
-                    <Button className="w-full mb-6 md:mb-8 py-6 md:py-7 text-lg md:text-xl font-black rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white hover:from-violet-700 hover:to-purple-700 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300">
+                    <Link href={`/auth?mode=signin&returnUrl=${encodeURIComponent('/occupier/create-listing-quick')}`}>
                       {plan.cta}
-                    </Button>
-                  </AuthChoiceModal>
+                    </Link>
+                  </Button>
                 )
               ) : user ? (
                 subscriptionStatus === 'active' || subscriptionStatus === 'trialing' ? (
@@ -314,17 +313,16 @@ export function Pricing() {
                   </Button>
                 )
               ) : (
-                <TrialSignupModal context="search" redirectPath="/search" billingInterval={billingInterval}>
-                  <Button
-                    className={`w-full mb-6 md:mb-8 py-6 md:py-7 text-lg md:text-xl font-black rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ${
-                      plan.highlighted
-                        ? 'bg-white text-violet-700 hover:bg-violet-50'
-                        : 'bg-gradient-to-r from-violet-600 to-purple-600 text-white hover:from-violet-700 hover:to-purple-700'
-                    }`}
-                  >
-                    {plan.cta}
-                  </Button>
-                </TrialSignupModal>
+                <Button
+                  onClick={() => router.push('/auth?mode=signup&returnUrl=/pricing')}
+                  className={`w-full mb-6 md:mb-8 py-6 md:py-7 text-lg md:text-xl font-black rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ${
+                    plan.highlighted
+                      ? 'bg-white text-violet-700 hover:bg-violet-50'
+                      : 'bg-gradient-to-r from-violet-600 to-purple-600 text-white hover:from-violet-700 hover:to-purple-700'
+                  }`}
+                >
+                  {plan.cta}
+                </Button>
               )}
 
               {/* Features */}

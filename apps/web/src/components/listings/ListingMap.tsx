@@ -109,6 +109,13 @@ export function ListingMap({ filters, onListingClick }: ListingMapProps) {
         setGeoJsonData(data.geojson);
 
         console.log(`[DEBUG] Loaded ${data.total} listings for map clustering`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[DEBUG] Directory map requirement feature count', {
+            total: data.total,
+            geojsonFeatures: data.geojson?.features?.length || 0,
+            apiDebug: data.metadata?.debug
+          });
+        }
       } catch (err) {
         console.error('Error fetching map data:', err);
         setError('Failed to load map data');

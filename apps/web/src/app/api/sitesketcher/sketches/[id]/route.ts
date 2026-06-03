@@ -26,6 +26,7 @@ export async function GET(
       .select('*')
       .eq('id', (await params).id)
       .eq('user_id', user.id)
+      .is('data->>version', null) // Prevent fetching v2 sketches in v1
       .single();
 
     if (error) {
@@ -66,11 +67,17 @@ export async function PUT(
     const body = await request.json();
     const { name, description, data, thumbnail_url, location } = body;
 
+    // Strip any client-provided version field to prevent v1 → v2 conversion
+    const safeData = data ? (() => {
+      const { version, ...rest } = data;
+      return rest;
+    })() : undefined;
+
     // Build update object with only provided fields
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
-    if (data !== undefined) updateData.data = data;
+    if (safeData !== undefined) updateData.data = safeData;
     if (thumbnail_url !== undefined) updateData.thumbnail_url = thumbnail_url;
     if (location !== undefined) updateData.location = location;
 
@@ -79,6 +86,7 @@ export async function PUT(
       .update(updateData)
       .eq('id', (await params).id)
       .eq('user_id', user.id)
+      .is('data->>version', null) // Only update v1 sketches
       .select()
       .single();
 
@@ -117,17 +125,21 @@ export async function DELETE(
 
     const supabase = await createServerClient();
 
-    const { error } = await supabase
+    // Use .select() to verify row was deleted (prevents false success)
+    const { data, error } = await supabase
       .from('site_sketches')
       .delete()
       .eq('id', (await params).id)
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .is('data->>version', null) // Only delete v1 sketches
+      .select('id')
+      .single();
 
-    if (error) {
+    if (error || !data) {
       console.error('Error deleting sketch:', error);
       return NextResponse.json(
-        { error: 'Failed to delete sketch' },
-        { status: 500 }
+        { error: 'Sketch not found or delete failed' },
+        { status: 404 }
       );
     }
 

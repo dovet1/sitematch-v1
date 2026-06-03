@@ -8,10 +8,11 @@ import { useState, useMemo } from 'react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { AffluenceMethodologyModal } from '../AffluenceMethodologyModal';
 import { BlurOverlay } from '../BlurOverlay';
-import { UpgradeBanner } from '@/components/UpgradeBanner';
 import { SaveAnalysisModal } from '../SaveAnalysisModal';
 import { Button } from '@/components/ui/button';
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import type { CoverageStatus } from '@/lib/types/demographics';
 import { getCoverageMessages } from '@/lib/coverage-utils';
 
@@ -30,6 +31,7 @@ interface DemographicsResultsProps {
   isFreeTier?: boolean;
   isochroneGeometry?: any;
   linkedSiteId?: string | null;
+  onUpgradeClick?: (feature?: 'save' | 'traffic' | 'count' | 'demographics') => void;
 }
 
 type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health' | 'affluence';
@@ -73,8 +75,16 @@ export function DemographicsResults({
   isFreeTier = false,
   isochroneGeometry,
   linkedSiteId,
+  onUpgradeClick,
 }: DemographicsResultsProps) {
-  const { isPro } = useSubscriptionTier();
+  const { user } = useAuth();
+  const { hasProAccess } = useSubscriptionTier();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Preserve full path including query params
+  const currentPath = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '');
 
   // Default to first 3 categories expanded
   const [expandedCategories, setExpandedCategories] = useState<Set<CategoryType>>(
@@ -83,9 +93,6 @@ export function DemographicsResults({
 
   // State for methodology modal
   const [methodologyModalOpen, setMethodologyModalOpen] = useState(false);
-
-  // State for upgrade banner
-  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false);
 
   // State for save analysis modal
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -144,6 +151,16 @@ export function DemographicsResults({
 
     // Helper to find national average for a label
     const findNationalAverage = (label: string, field: string): number | undefined => {
+      // Special handling for disability rate
+      if (field === 'disability') {
+        if (label === 'Disabled') {
+          return nationalAverages['disabled_rate'];
+        } else if (label === 'Not disabled') {
+          const disabledRate = nationalAverages['disabled_rate'];
+          return disabledRate !== undefined ? 100 - disabledRate : undefined;
+        }
+      }
+
       // Try different component_id patterns
       const patterns: string[] = [];
 
@@ -291,8 +308,17 @@ export function DemographicsResults({
     return shouldBlurCategory(category);
   };
 
-  const handleUpgradeClick = () => {
-    setShowUpgradeBanner(true);
+  const handleUpgradeClick = (feature?: 'save' | 'traffic' | 'count' | 'demographics') => {
+    // Use parent's handler if provided, otherwise redirect directly
+    if (onUpgradeClick) {
+      onUpgradeClick(feature);
+    } else {
+      if (!user) {
+        router.push(`/auth?mode=signup&returnUrl=${encodeURIComponent(currentPath)}`);
+      } else {
+        router.push('/pricing');
+      }
+    }
   };
 
   // Empty State
@@ -307,7 +333,7 @@ export function DemographicsResults({
             No Data Yet
           </h3>
           <p className="text-sm text-gray-500 leading-relaxed">
-            Select a location and click "Analyse" to view demographics.
+            Search for a location and click "Analyse" to view demographics.
           </p>
         </div>
       </div>
@@ -471,12 +497,19 @@ export function DemographicsResults({
 
           {/* Save Analysis Button */}
           <Button
-            onClick={() => setShowSaveModal(true)}
+            onClick={() => {
+              if (!hasProAccess && onUpgradeClick) {
+                // Show upgrade modal for non-Pro users with 'save' feature
+                onUpgradeClick('save');
+              } else {
+                setShowSaveModal(true);
+              }
+            }}
             className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-bold rounded-xl text-sm"
             size="sm"
           >
             <Save className="h-4 w-4 mr-2" />
-            {isPro ? 'Save Analysis' : 'Save Analysis (Pro)'}
+            {hasProAccess ? 'Save Analysis' : 'Save Analysis (Pro)'}
           </Button>
         </div>
       </div>
@@ -639,7 +672,7 @@ export function DemographicsResults({
                             {/* Show all items for Age profile, limit to 10 for others */}
                             {(chart.title === 'Age profile' ? chart.data : chart.data.slice(0, 10)).map((item: ChartData, idx) => (
                               <div key={idx} className="flex items-center gap-2 text-xs">
-                                <div className="flex-1 text-gray-700 text-[11px]" title={item.label}>
+                                <div className="flex-1 text-gray-700 text-[11px] line-clamp-3" title={item.label}>
                                   {item.label}
                                 </div>
                                 <div className="w-12 text-right font-medium text-gray-900 text-[11px]">
@@ -805,7 +838,7 @@ export function DemographicsResults({
                               const showNationalComparison = typedItem.nationalAverage !== undefined && typedItem.nationalAverage > 0;
                               return (
                                 <div key={idx} className="flex items-center gap-2 text-xs">
-                                  <div className="flex-1 text-gray-700 text-[11px]" title={typedItem.label}>
+                                  <div className="flex-1 text-gray-700 text-[11px] line-clamp-3" title={typedItem.label}>
                                     {typedItem.label}
                                   </div>
                                   <div className="w-12 text-right font-medium text-gray-900 text-[11px]">
@@ -857,30 +890,6 @@ export function DemographicsResults({
           );
         })}
       </div>
-
-      {/* Upgrade Banner Modal */}
-      {showUpgradeBanner && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowUpgradeBanner(false)}
-        >
-          <div className="max-w-2xl w-full relative" onClick={(e) => e.stopPropagation()}>
-            <UpgradeBanner
-              title="Unlock Full Demographics"
-              features={[
-                'Age profile and demographic breakdowns',
-                'Employment and occupation data',
-                'Education qualification levels',
-                'Travel to work and mobility patterns',
-                'Health and disability statistics',
-                'Export comprehensive reports',
-              ]}
-              context="sitesketcher"
-              onDismiss={() => setShowUpgradeBanner(false)}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Save Analysis Modal */}
       <SaveAnalysisModal

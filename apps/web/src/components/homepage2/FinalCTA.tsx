@@ -1,10 +1,11 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export function FinalCTA() {
+  const router = useRouter();
   return (
     <section className="py-24 bg-gradient-to-br from-violet-600 via-purple-600 to-purple-700 relative overflow-hidden">
       {/* Background decoration */}
@@ -22,15 +23,14 @@ export function FinalCTA() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <TrialSignupModal context="search" redirectPath="/search">
-            <Button
-              size="lg"
-              className="bg-white text-violet-700 hover:bg-violet-50 px-10 py-7 text-lg font-semibold rounded-xl shadow-2xl hover:shadow-white/20 transition-all duration-300 hover:scale-105"
-            >
-              Start Free Trial
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </TrialSignupModal>
+          <Button
+            onClick={() => router.push('/auth?mode=signup&returnUrl=/pricing')}
+            size="lg"
+            className="bg-white text-violet-700 hover:bg-violet-50 px-10 py-7 text-lg font-semibold rounded-xl shadow-2xl hover:shadow-white/20 transition-all duration-300 hover:scale-105"
+          >
+            Start Free Trial
+            <ArrowRight className="w-5 h-5 ml-2" />
+          </Button>
         </div>
 
         {/* Stats */}

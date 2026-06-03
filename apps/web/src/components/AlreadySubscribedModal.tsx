@@ -14,7 +14,7 @@ import Link from 'next/link';
 interface AlreadySubscribedModalProps {
   open: boolean;
   onClose: () => void;
-  subscriptionStatus: 'trialing' | 'active';
+  subscriptionStatus: 'trialing' | 'active' | 'past_due';
 }
 
 export function AlreadySubscribedModal({

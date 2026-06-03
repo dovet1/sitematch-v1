@@ -1,3 +1,17 @@
+/**
+ * @deprecated This modal component is deprecated. Use Link component to /auth page instead:
+ *
+ * Replace: <LoginModal><Button>Sign In</Button></LoginModal>
+ * With: <Link href="/auth?mode=signin"><Button>Sign In</Button></Link>
+ *
+ * Or with returnUrl:
+ * <Link href={`/auth?mode=signin&returnUrl=${encodeURIComponent(currentPath)}`}>
+ *   <Button>Sign In</Button>
+ * </Link>
+ *
+ * See: apps/web/src/app/auth/page.tsx
+ */
+
 'use client'
 
 import { useState } from 'react'

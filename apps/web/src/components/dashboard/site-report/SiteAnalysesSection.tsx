@@ -67,11 +67,11 @@ export function SiteAnalysesSection({
       params.append('lng', siteLocation.lng.toString());
     }
 
-    router.push(`/new-dashboard/tools/site-demographer?${params.toString()}`);
+    router.push(`/siteanalyser?${params.toString()}`);
   };
 
   const handleViewAnalysis = (analysisId: string) => {
-    router.push(`/new-dashboard/tools/site-demographer?analysis=${analysisId}`);
+    router.push(`/siteanalyser?analysis=${analysisId}`);
   };
 
   const handleDelete = async () => {

@@ -12,6 +12,8 @@ const badgeVariants = cva(
           "border-transparent bg-primary text-primary-foreground hover:bg-primary-600 active:bg-primary-700 rounded-full",
         secondary:
           "border-transparent bg-primary-50 text-primary-700 hover:bg-primary-100 active:bg-primary-200 rounded-full",
+        compact:
+          "px-2 py-0.5 text-xs tracking-normal border-transparent bg-primary-50 text-primary-700 hover:bg-primary-100 active:bg-primary-200 rounded-full",
         destructive:
           "border-transparent bg-error text-white hover:bg-error/90 active:bg-error/80 rounded-full",
         outline: "text-primary border-primary hover:bg-primary hover:text-primary-foreground active:bg-primary-600 rounded-full",

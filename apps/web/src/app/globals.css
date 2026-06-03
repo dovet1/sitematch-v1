@@ -1001,4 +1001,114 @@
     background: transparent;
     color: #0ea5e9;
   }
+
+  /* Premium BUA Popup - Violet Bloom Design System */
+  .premium-bua-popup .mapboxgl-popup-content {
+    padding: 0;
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    font-family: var(--font-sans);
+    min-width: 280px;
+    max-width: 320px;
+    overflow: hidden;
+  }
+
+  .premium-bua-popup .mapboxgl-popup-tip {
+    border-top-color: white;
+  }
+
+  .premium-bua-popup .mapboxgl-popup-close-button {
+    font-size: 22px;
+    color: #9ca3af;
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+    right: 8px;
+    top: 8px;
+    background: white;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  .premium-bua-popup .mapboxgl-popup-close-button:hover {
+    background: #f3f4f6;
+    color: #6F5AFF;
+    transform: scale(1.1);
+  }
+
+  /* Premium Store Marker Popup - Violet Bloom Design System */
+  .premium-store-popup .mapboxgl-popup-content {
+    padding: 0;
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    font-family: var(--font-sans);
+    min-width: 240px;
+    max-width: 280px;
+    overflow: hidden;
+  }
+
+  .premium-store-popup .mapboxgl-popup-tip {
+    border-top-color: white;
+  }
+
+  .premium-store-popup .mapboxgl-popup-close-button {
+    font-size: 20px;
+    color: #9ca3af;
+    padding: 6px 10px;
+    transition: all 0.2s ease;
+    right: 6px;
+    top: 6px;
+    background: white;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  .premium-store-popup .mapboxgl-popup-close-button:hover {
+    background: #f3f4f6;
+    color: #6F5AFF;
+    transform: scale(1.1);
+  }
+
+  /* Responsive adjustments for mobile */
+  @media (max-width: 640px) {
+    .premium-bua-popup .mapboxgl-popup-content,
+    .premium-store-popup .mapboxgl-popup-content {
+      max-width: calc(100vw - 40px);
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .premium-bua-popup .mapboxgl-popup-close-button:hover,
+    .premium-store-popup .mapboxgl-popup-close-button:hover {
+      transform: none;
+    }
+  }
+
+  /* Traffic overlay popup styles - matches GapFinder paywall design system */
+  .traffic-popup .mapboxgl-popup-content {
+    padding: 0;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    border: 1px solid #E8E4DC;
+    font-family: var(--font-sans);
+    min-width: 220px;
+    background: #FFFFFF;
+    transition: opacity 0.2s ease;
+  }
+
+  .traffic-popup .mapboxgl-popup-tip {
+    border-top-color: #FFFFFF;
+  }
 }

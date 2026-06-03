@@ -48,7 +48,7 @@ export const createServerClient = async () => {
   try {
     const { cookies } = require('next/headers')
     const cookieStore = await cookies()
-    
+
     return createSSRServerClient(
       supabaseUrl,
       supabaseAnonKey,
@@ -58,7 +58,7 @@ export const createServerClient = async () => {
             try {
               return cookieStore.get(name)?.value
             } catch (error) {
-              console.warn('Error getting cookie:', name, error)
+              // Silently fail during build/static generation
               return undefined
             }
           },
@@ -66,22 +66,22 @@ export const createServerClient = async () => {
             try {
               cookieStore.set({ name, value, ...options })
             } catch (error) {
-              console.warn('Error setting cookie:', name, error)
+              // Silently fail during build/static generation
             }
           },
           remove(name: string, options: any) {
             try {
               cookieStore.set({ name, value: '', ...options })
             } catch (error) {
-              console.warn('Error removing cookie:', name, error)
+              // Silently fail during build/static generation
             }
           },
         },
       }
     )
   } catch (error) {
-    console.error('Error creating server client:', error)
-    // Fallback to regular client if server client fails
+    // Silently fall back to browser client during build/static generation
+    // This is expected when cookies() is called during static page generation
     return createBrowserClient(supabaseUrl, supabaseAnonKey)
   }
 }
@@ -106,12 +106,13 @@ export interface Database {
           id: string
           email: string
           role: 'occupier' | 'admin'
-          user_type: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
+          user_type: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Consultant' | 'Government' | 'Other' | null
           user_company_name: string | null
           org_id: string | null
           subscription_status: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          newsletter_opt_in: boolean | null
           hide_sitesketcher_tutorial: boolean | null
           created_at: string
           updated_at: string
@@ -120,12 +121,13 @@ export interface Database {
           id: string
           email: string
           role?: 'occupier' | 'admin'
-          user_type: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
+          user_type?: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Consultant' | 'Government' | 'Other' | null
           user_company_name?: string | null
           org_id?: string | null
           subscription_status?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          newsletter_opt_in?: boolean | null
           hide_sitesketcher_tutorial?: boolean | null
           created_at?: string
           updated_at?: string
@@ -134,12 +136,13 @@ export interface Database {
           id?: string
           email?: string
           role?: 'occupier' | 'admin'
-          user_type?: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Government' | 'Other'
+          user_type?: 'Commercial Occupier' | 'Landlord/developer' | 'Housebuilder' | 'Agent' | 'Consultant' | 'Government' | 'Other' | null
           user_company_name?: string | null
           org_id?: string | null
           subscription_status?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          newsletter_opt_in?: boolean | null
           hide_sitesketcher_tutorial?: boolean | null
           updated_at?: string
         }
@@ -369,6 +372,44 @@ export interface Database {
           reviewed_at?: string | null
           review_notes?: string | null
           updated_at?: string
+        }
+      }
+      built_up_areas: {
+        Row: {
+          gsscode: string
+          name: string
+          pop: number
+          pop_final: number | null
+          pop_official: number | null
+          name_clean: string | null
+          pop_band: string
+          centroid_lat: number
+          centroid_lon: number
+          centroid: string | null
+          created_at: string | null
+        }
+        Insert: {
+          gsscode: string
+          name: string
+          pop: number
+          pop_final?: number | null
+          pop_official?: number | null
+          name_clean?: string | null
+          pop_band: string
+          centroid_lat: number
+          centroid_lon: number
+          created_at?: string | null
+        }
+        Update: {
+          gsscode?: string
+          name?: string
+          pop?: number
+          pop_final?: number | null
+          pop_official?: number | null
+          name_clean?: string | null
+          pop_band?: string
+          centroid_lat?: number
+          centroid_lon?: number
         }
       }
     }

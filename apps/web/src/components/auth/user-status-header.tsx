@@ -1,19 +1,22 @@
 'use client';
 
 import { Sparkles, Crown, Gift } from 'lucide-react';
-import { TrialSignupModal } from '@/components/TrialSignupModal';
 import { AlreadySubscribedModal } from '@/components/AlreadySubscribedModal';
 import { useState } from 'react';
+
+export type SubscriptionTier = 'free' | 'pro' | 'plus';
 
 interface UserStatusHeaderProps {
   email: string;
   subscriptionStatus: 'trialing' | 'active' | 'past_due' | 'canceled' | null;
+  subscriptionTier?: SubscriptionTier;
   onUpgradeClick?: () => void;
 }
 
 export function UserStatusHeader({
   email,
   subscriptionStatus,
+  subscriptionTier = 'free',
   onUpgradeClick
 }: UserStatusHeaderProps) {
   const [showAlreadySubscribed, setShowAlreadySubscribed] = useState(false);
@@ -29,8 +32,8 @@ export function UserStatusHeader({
   };
 
   const isFree = !subscriptionStatus || subscriptionStatus === 'canceled';
-  const isPro = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
   const isPastDue = subscriptionStatus === 'past_due';
+  const tierLabel = subscriptionTier === 'plus' ? 'Plus' : 'Pro';
 
   return (
     <>
@@ -52,14 +55,14 @@ export function UserStatusHeader({
               {subscriptionStatus === 'trialing' && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">
                   <Gift className="w-3 h-3" />
-                  Pro Trial
+                  {tierLabel} Trial
                 </span>
               )}
 
               {subscriptionStatus === 'active' && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
                   <Crown className="w-3 h-3" />
-                  Pro Member
+                  {tierLabel} Member
                 </span>
               )}
 
