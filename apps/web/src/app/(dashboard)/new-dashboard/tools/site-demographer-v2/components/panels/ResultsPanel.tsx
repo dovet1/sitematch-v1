@@ -145,6 +145,16 @@ export function ResultsPanel({
 
     // Helper to find national average for a label
     const findNationalAverage = (label: string, field: string): number | undefined => {
+      // Special handling for disability rate
+      if (field === 'disability') {
+        if (label === 'Disabled') {
+          return nationalAverages['disabled_rate'];
+        } else if (label === 'Not disabled') {
+          const disabledRate = nationalAverages['disabled_rate'];
+          return disabledRate !== undefined ? 100 - disabledRate : undefined;
+        }
+      }
+
       // Try different component_id patterns
       const patterns: string[] = [];
 
@@ -314,7 +324,7 @@ export function ResultsPanel({
 
               return (
                 <div key={idx} className="flex items-center gap-2 text-xs">
-                  <div className="flex-1 text-sm-ink/70 text-[11px]" title={item.label}>
+                  <div className="flex-1 text-sm-ink/70 text-[11px] line-clamp-3" title={item.label}>
                     {item.label}
                   </div>
                   <div className="w-12 text-right font-medium text-sm-ink text-[11px]">

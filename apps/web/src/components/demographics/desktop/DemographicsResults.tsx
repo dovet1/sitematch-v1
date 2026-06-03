@@ -151,6 +151,16 @@ export function DemographicsResults({
 
     // Helper to find national average for a label
     const findNationalAverage = (label: string, field: string): number | undefined => {
+      // Special handling for disability rate
+      if (field === 'disability') {
+        if (label === 'Disabled') {
+          return nationalAverages['disabled_rate'];
+        } else if (label === 'Not disabled') {
+          const disabledRate = nationalAverages['disabled_rate'];
+          return disabledRate !== undefined ? 100 - disabledRate : undefined;
+        }
+      }
+
       // Try different component_id patterns
       const patterns: string[] = [];
 
@@ -662,7 +672,7 @@ export function DemographicsResults({
                             {/* Show all items for Age profile, limit to 10 for others */}
                             {(chart.title === 'Age profile' ? chart.data : chart.data.slice(0, 10)).map((item: ChartData, idx) => (
                               <div key={idx} className="flex items-center gap-2 text-xs">
-                                <div className="flex-1 text-gray-700 text-[11px]" title={item.label}>
+                                <div className="flex-1 text-gray-700 text-[11px] line-clamp-3" title={item.label}>
                                   {item.label}
                                 </div>
                                 <div className="w-12 text-right font-medium text-gray-900 text-[11px]">
@@ -828,7 +838,7 @@ export function DemographicsResults({
                               const showNationalComparison = typedItem.nationalAverage !== undefined && typedItem.nationalAverage > 0;
                               return (
                                 <div key={idx} className="flex items-center gap-2 text-xs">
-                                  <div className="flex-1 text-gray-700 text-[11px]" title={typedItem.label}>
+                                  <div className="flex-1 text-gray-700 text-[11px] line-clamp-3" title={typedItem.label}>
                                     {typedItem.label}
                                   </div>
                                   <div className="w-12 text-right font-medium text-gray-900 text-[11px]">

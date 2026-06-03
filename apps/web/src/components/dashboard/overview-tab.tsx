@@ -83,10 +83,10 @@ export function OverviewTab({ userId }: OverviewTabProps) {
                   <MapPinned className="h-10 w-10 text-violet-600" />
                 </div>
                 <h3 className="text-2xl font-black text-gray-900 mb-3">
-                  Find Suitable Areas
+                  GapFinder
                 </h3>
                 <p className="text-base text-gray-600">
-                  Rapidly find locations for a new site that meet your criteria
+                  Filter locations by brand presence, population, and traffic counts
                 </p>
               </div>
             </div>
