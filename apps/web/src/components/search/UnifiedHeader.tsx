@@ -384,13 +384,13 @@ export function UnifiedHeader({
                   return null;
                 })}
 
-                {/* Free Tools Dropdown - Between Browse Requirements and Post Requirement */}
+                {/* Tools Dropdown - Between Browse Requirements and Post Requirement */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
                       className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 violet-bloom-touch cursor-pointer text-gray-700 hover:text-violet-700 hover:bg-violet-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
                     >
-                      Free Tools
+                      Tools
                       <ChevronDown className="h-4 w-4" />
                     </button>
                   </DropdownMenuTrigger>
@@ -503,10 +503,10 @@ export function UnifiedHeader({
                   </Link>
                 ))}
 
-                {/* Free Tools Section */}
+                {/* Tools Section */}
                 <div className="space-y-2">
                   <div className="px-5 py-2 text-sm font-black text-violet-600 uppercase tracking-wide">
-                    Free Tools
+                    Tools
                   </div>
                   {freeToolsItems.map((tool) => (
                     <Link

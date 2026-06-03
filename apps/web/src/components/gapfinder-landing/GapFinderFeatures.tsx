@@ -19,6 +19,7 @@ export function GapFinderFeatures() {
           ]}
           videoLabel="Smart Filtering demo"
           videoNote="Filtering interface with population and brand controls"
+          videoSrc="/gapfinder/gf_landing_vids/brand_filter_and_export.mp4"
           ctas={[{ label: "Try GapFinder Now", style: "violet", requiresAuth: true }]}
         />
 

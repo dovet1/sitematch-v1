@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/send-saved-search-notifications",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/process-cache-rebuilds",
+      "schedule": "*/30 * * * *"
     }
   ],
   "functions": {
@@ -17,6 +21,9 @@
       "maxDuration": 300
     },
     "app/api/cron/send-saved-search-notifications/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/cron/process-cache-rebuilds/route.ts": {
       "maxDuration": 300
     }
   },

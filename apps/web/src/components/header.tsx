@@ -188,13 +188,13 @@ function HeaderContent() {
               return null;
             })}
 
-            {/* Free Tools Dropdown - Between Browse Requirements and Post Requirement */}
+            {/* Tools Dropdown - Between Browse Requirements and Post Requirement */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full font-medium text-[15px] transition-all duration-300 violet-bloom-touch cursor-pointer text-sm-ink hover:text-sm-violet hover:bg-sm-violet-tint-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-sm-violet focus-visible:outline-offset-2"
                 >
-                  Free Tools
+                  Tools
                   <ChevronDown className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -323,10 +323,10 @@ function HeaderContent() {
                 </Link>
               ))}
 
-              {/* Free Tools Section */}
+              {/* Tools Section */}
               <div className="space-y-2">
                 <div className="px-5 pt-[22px] pb-1.5 font-mono text-[11px] tracking-[1.4px] text-sm-violet-deep uppercase">
-                  Free Tools
+                  Tools
                 </div>
                 {freeToolsItems.filter((tool) => tool.showOnMobile !== false).map((tool) => (
                   <Link
