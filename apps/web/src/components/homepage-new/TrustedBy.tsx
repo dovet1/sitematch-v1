@@ -9,6 +9,10 @@ interface Company {
   logo: string;
 }
 
+const LOCAL_LOGO_OVERRIDES: Record<string, string> = {
+  'savills.co.uk': '/logos/trusted-by/savills.svg'
+};
+
 export function TrustedBy() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +22,7 @@ export function TrustedBy() {
     const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
     const companyData: Company[] = TRUSTED_COMPANY_DOMAINS.map(domain => ({
       domain,
-      logo: token ? `https://img.logo.dev/${domain}?token=${token}` : ''
+      logo: LOCAL_LOGO_OVERRIDES[domain] || (token ? `https://img.logo.dev/${domain}?token=${token}` : '')
     }));
     setCompanies(companyData);
     setLoading(false);
