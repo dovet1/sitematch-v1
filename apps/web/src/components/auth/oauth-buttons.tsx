@@ -8,12 +8,12 @@ interface OAuthButtonsProps {
   mode?: 'signin' | 'signup'
 }
 
-export function OAuthButtons({ redirectTo, mode = 'signup' }: OAuthButtonsProps) {
+export function OAuthButtons({ redirectTo }: OAuthButtonsProps) {
   const { signUpWithOAuth } = useAuth()
-  const [loadingProvider, setLoadingProvider] = useState<'google' | 'microsoft' | null>(null)
+  const [loadingProvider, setLoadingProvider] = useState<'google' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const handleOAuthSignIn = async (provider: 'google' | 'microsoft') => {
+  const handleOAuthSignIn = async (provider: 'google') => {
     try {
       setError(null)
       setLoadingProvider(provider)
@@ -33,8 +33,6 @@ export function OAuthButtons({ redirectTo, mode = 'signup' }: OAuthButtonsProps)
     }
   }
 
-  const actionText = mode === 'signin' ? 'Sign in' : 'Sign up'
-
   return (
     <div className="w-full">
       {/* Divider */}
@@ -50,7 +48,7 @@ export function OAuthButtons({ redirectTo, mode = 'signup' }: OAuthButtonsProps)
       </div>
 
       {/* OAuth Buttons */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         {/* Google Button */}
         <button
           type="button"
@@ -75,29 +73,6 @@ export function OAuthButtons({ redirectTo, mode = 'signup' }: OAuthButtonsProps)
           )}
         </button>
 
-        {/* Microsoft Button */}
-        <button
-          type="button"
-          onClick={() => handleOAuthSignIn('microsoft')}
-          disabled={loadingProvider !== null}
-          className="w-full h-[40px] flex items-center justify-center gap-2 px-3 bg-white border border-[#E8E4DC] rounded-[10px] hover:border-[#7033FF] hover:bg-[#FBFAF7] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loadingProvider === 'microsoft' ? (
-            <div className="w-5 h-5 border-2 border-[#7033FF] border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <>
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9.52381 9.52381H2V2H9.52381V9.52381Z" fill="#F25022"/>
-                <path d="M18 9.52381H10.4762V2H18V9.52381Z" fill="#7FBA00"/>
-                <path d="M9.52381 18H2V10.4762H9.52381V18Z" fill="#00A4EF"/>
-                <path d="M18 18H10.4762V10.4762H18V18Z" fill="#FFB900"/>
-              </svg>
-              <span className="text-[14px] font-[600] text-[#171419] font-inter">
-                Microsoft
-              </span>
-            </>
-          )}
-        </button>
       </div>
 
       {/* Error Display */}
