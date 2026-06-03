@@ -12,7 +12,7 @@ export function GapFinderFeatures() {
           headline="find the perfect location, faster"
           body="Filter locations by population, brand presence and brand proximity to identify the best opportunities for expansion."
           bullets={[
-            "Filter by population demographics and affluence",
+            "Filter by population",
             "See which brands are present or absent in any area",
             "Analyze brand proximity and competition density",
             "Export filtered results to Excel",
