@@ -47,7 +47,7 @@ export function Header() {
     return <GapFinderHeaderGate />
   }
 
-  return <HeaderContent />
+  return <SiteNavbar />
 }
 
 function GapFinderHeaderGate() {
@@ -55,7 +55,7 @@ function GapFinderHeaderGate() {
   const { hasAccess, loading } = useSubscriptionAccess()
 
   if (!user) {
-    return <HeaderContent />
+    return <SiteNavbar />
   }
 
   if (loading) {
@@ -66,10 +66,10 @@ function GapFinderHeaderGate() {
     return null
   }
 
-  return <HeaderContent />
+  return <SiteNavbar />
 }
 
-function HeaderContent() {
+export function SiteNavbar() {
   const { user, loading, isAdmin } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const router = useRouter()

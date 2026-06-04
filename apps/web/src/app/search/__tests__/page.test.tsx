@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import SearchPage from '../page';
 import '@testing-library/jest-dom';
 
@@ -7,15 +7,66 @@ import '@testing-library/jest-dom';
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
   useSearchParams: jest.fn(),
+  usePathname: jest.fn(),
 }));
 
 // Mock components
-jest.mock('@/components/search/LocationSearch', () => ({
-  LocationSearch: ({ value, onChange, onLocationSelect, placeholder }: any) => (
+jest.mock('next/link', () => {
+  return ({ href, children, ...props }: any) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  );
+});
+
+jest.mock('next/image', () => {
+  return function MockImage({ alt, priority: _priority, ...props }: any) {
+    return <img alt={alt} {...props} />;
+  };
+});
+
+jest.mock('@/contexts/auth-context', () => ({
+  useAuth: jest.fn(),
+}));
+
+jest.mock('@/hooks/useSubscriptionTier', () => ({
+  useSubscriptionTier: jest.fn(),
+}));
+
+jest.mock('@/components/auth/user-menu', () => ({
+  UserMenu: () => <div>User menu</div>,
+}));
+
+jest.mock('@/components/auth/user-status-header', () => ({
+  UserStatusHeader: () => <div>User status</div>,
+}));
+
+jest.mock('@/components/auth/user-type-modal', () => ({
+  UserTypeModal: () => null,
+}));
+
+jest.mock('@/components/search/search-context-toast', () => ({
+  SearchContextToast: () => null,
+}));
+
+jest.mock('@/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: any) => <>{children}</>,
+  DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuItem: ({ children }: any) => <div>{children}</div>,
+}));
+
+jest.mock('@/components/search/UnifiedSearch', () => ({
+  UnifiedSearch: ({ value, onChange, placeholder, onEnterKey, onFocus, onBlur }: any) => (
     <input
       data-testid="location-search"
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onEnterKey?.();
+      }}
+      onFocus={onFocus}
+      onBlur={onBlur}
       placeholder={placeholder}
     />
   ),
@@ -46,12 +97,23 @@ jest.mock('@/components/listings/ListingModal', () => ({
 describe('Search Page', () => {
   const mockPush = jest.fn();
   const mockReplace = jest.fn();
+  const { useAuth } = require('@/contexts/auth-context');
+  const { useSubscriptionTier } = require('@/hooks/useSubscriptionTier');
 
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue({
       push: mockPush,
       replace: mockReplace,
+    });
+    (usePathname as jest.Mock).mockReturnValue('/search');
+    (useAuth as jest.Mock).mockReturnValue({
+      user: null,
+      loading: false,
+      isAdmin: false,
+    });
+    (useSubscriptionTier as jest.Mock).mockReturnValue({
+      hasProAccess: false,
     });
   });
 
@@ -67,7 +129,7 @@ describe('Search Page', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('location-search')).toHaveValue('London');
-      expect(screen.getByText(/Requirements in London/i)).toBeInTheDocument();
+      expect(screen.getByText(/Search: "London"/i)).toBeInTheDocument();
     });
   });
 
@@ -80,7 +142,26 @@ describe('Search Page', () => {
     render(<SearchPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Nationwide Requirements/i)).toBeInTheDocument();
+      expect(screen.getByText(/Nationwide Only/i)).toBeInTheDocument();
+    });
+  });
+
+  it('renders the shared site navbar content on search', async () => {
+    (useSearchParams as jest.Mock).mockReturnValue(new URLSearchParams());
+
+    render(<SearchPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
+      expect(screen.getByText('Browse Requirements')).toBeInTheDocument();
+      expect(screen.getByText('Tools')).toBeInTheDocument();
+      expect(screen.getByText('SiteSketcher')).toBeInTheDocument();
+      expect(screen.getByText('SiteAnalyser')).toBeInTheDocument();
+      expect(screen.getByText('GapFinder')).toBeInTheDocument();
+      expect(screen.getByText('Articles')).toBeInTheDocument();
+      expect(screen.getByText('Post Requirement')).toBeInTheDocument();
+      expect(screen.getByText('Sign in')).toBeInTheDocument();
+      expect(screen.getByText('Create account')).toBeInTheDocument();
     });
   });
 
@@ -107,7 +188,7 @@ describe('Search Page', () => {
     });
 
     // Click map view button
-    const mapButton = screen.getByRole('button', { name: /map/i });
+    const mapButton = screen.getAllByRole('button', { name: /map/i })[0];
     fireEvent.click(mapButton);
 
     await waitFor(() => {
@@ -120,7 +201,7 @@ describe('Search Page', () => {
 
     render(<SearchPage />);
 
-    const filterButton = screen.getByRole('button', { name: /filters/i });
+    const filterButton = screen.getAllByRole('button', { name: /filters/i })[0];
     fireEvent.click(filterButton);
 
     await waitFor(() => {
@@ -138,8 +219,9 @@ describe('Search Page', () => {
     render(<SearchPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/2 Sectors/i)).toBeInTheDocument();
       expect(screen.getByText(/Company: Test Corp/i)).toBeInTheDocument();
+      expect(screen.getByText(/Sector: Retail/i)).toBeInTheDocument();
+      expect(screen.getByText(/Sector: Office/i)).toBeInTheDocument();
     });
   });
 

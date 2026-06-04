@@ -190,7 +190,7 @@ export function SearchHeaderBar({
       <div
         ref={headerRef}
         className={cn(
-          "sticky top-0 z-sticky transition-all duration-300 ease-in-out",
+          "sticky top-16 z-40 transition-all duration-300 ease-in-out",
           isScrolled
             ? "bg-gradient-to-br from-violet-50/95 via-purple-50/95 to-blue-50/95 backdrop-blur-md shadow-2xl border-b border-violet-200"
             : "bg-gradient-to-br from-violet-50/90 via-purple-50/90 to-blue-50/90 backdrop-blur-sm border-b border-violet-100",

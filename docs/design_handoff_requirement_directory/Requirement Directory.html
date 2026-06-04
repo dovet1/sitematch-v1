@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteMatcher · Requirement Directory — redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #1A1422; font-family: Inter, sans-serif; }
+  * { box-sizing: border-box; }
+  [data-reveal] { opacity: 0; transform: translateY(16px);
+    transition: opacity 600ms ease, transform 700ms cubic-bezier(0.22, 1, 0.36, 1); }
+  [data-reveal].is-visible { opacity: 1; transform: none; }
+  .artboard-root[data-loaded="false"] [data-reveal] { opacity: 1; transform: none; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="direction-a.jsx"></script>
+<script type="text/babel" src="directory.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useEffect, useRef } = React;
+
+const ArtboardMount = ({ Component }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const root = ref.current;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add("is-visible");
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: "0px 0px -10% 0px" });
+    setTimeout(() => {
+      root.setAttribute("data-loaded", "true");
+      root.querySelectorAll("[data-reveal]").forEach(el => io.observe(el));
+    }, 50);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className="artboard-root" data-loaded="false" style={{ width: "100%", height: "100%", overflow: "auto" }}>
+      <Component />
+    </div>
+  );
+};
+
+const App = () => (
+  <DesignCanvas title="Requirement Directory — Redesign">
+    <DCSection id="directory" title="Directory · Desktop 1440">
+      <DCArtboard id="list" label="List view" width={1440} height={1900}>
+        <ArtboardMount Component={DirectoryList} />
+      </DCArtboard>
+      <DCArtboard id="map" label="Map view" width={1440} height={1180}>
+        <ArtboardMount Component={DirectoryMap} />
+      </DCArtboard>
+      <DCArtboard id="filters" label="Filters open" width={1440} height={1900}>
+        <ArtboardMount Component={DirectoryFilters} />
+      </DCArtboard>
+    </DCSection>
+    <DCSection id="modal" title="Listing modal · 4 tabs">
+      <DCArtboard id="modal-overview" label="From {Brand}" width={1440} height={1080}>
+        <ArtboardMount Component={() => <DirectoryModal tab="overview" />} />
+      </DCArtboard>
+      <DCArtboard id="modal-requirements" label="Requirements" width={1440} height={1080}>
+        <ArtboardMount Component={() => <DirectoryModal tab="requirements" />} />
+      </DCArtboard>
+      <DCArtboard id="modal-locations" label="Target locations" width={1440} height={1080}>
+        <ArtboardMount Component={() => <DirectoryModal tab="locations" />} />
+      </DCArtboard>
+      <DCArtboard id="modal-contact" label="Contact" width={1440} height={1080}>
+        <ArtboardMount Component={() => <DirectoryModal tab="contact" />} />
+      </DCArtboard>
+    </DCSection>
+    <DCSection id="mobile" title="Mobile · 390">
+      <DCArtboard id="mobile-list" label="List view" width={390} height={2400}>
+        <ArtboardMount Component={DirectoryList} />
+      </DCArtboard>
+      <DCArtboard id="mobile-modal" label="Listing modal" width={390} height={1800}>
+        <ArtboardMount Component={() => <DirectoryModal tab="overview" />} />
+      </DCArtboard>
+    </DCSection>
+  </DesignCanvas>
+);
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
