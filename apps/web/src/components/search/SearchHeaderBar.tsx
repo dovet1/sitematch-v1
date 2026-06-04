@@ -212,7 +212,7 @@ export function SearchHeaderBar({
         )}
       >
         <div className={cn(
-          "px-10 transition-all duration-300",
+          "container mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-300",
           isCollapsed ? "py-3" : "py-5"
         )}>
           {/* Desktop Layout */}

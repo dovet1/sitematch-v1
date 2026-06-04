@@ -188,18 +188,20 @@ function SearchPageContent() {
         <div className={!isMapView ? "relative" : ""}>
         {/* Header Strip - Only show in list view */}
         {!isMapView && (
-          <div className="px-10 pt-10 pb-6">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-              <div className="flex-1">
-                {/* H1 */}
-                <h1 className="text-[44px] md:text-[44px] leading-tight font-semibold tracking-[-0.035em] mb-4">
-                  Live requirements
-                </h1>
+          <div className="pt-10 pb-6">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+                <div className="flex-1">
+                  {/* H1 */}
+                  <h1 className="text-[44px] md:text-[44px] leading-tight font-semibold tracking-[-0.035em] mb-4">
+                    Live requirements
+                  </h1>
 
-                {/* Lede paragraph */}
-                <p className="text-base text-[#4A4451] max-w-[580px] leading-relaxed">
-                  Browse verified property requirements from brands actively seeking their next location. Updated regularly with the latest opportunities across the UK.
-                </p>
+                  {/* Lede paragraph */}
+                  <p className="text-base text-[#4A4451] max-w-[580px] leading-relaxed">
+                    Browse verified property requirements from brands actively seeking their next location. Updated regularly with the latest opportunities across the UK.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
