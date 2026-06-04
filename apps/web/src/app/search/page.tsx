@@ -188,7 +188,7 @@ function SearchPageContent() {
         <div className={!isMapView ? "relative" : ""}>
         {/* Header Strip - Only show in list view */}
         {!isMapView && (
-          <div className="px-10 pt-10 pb-6 border-b border-[#EFEBE2]">
+          <div className="px-10 pt-10 pb-6">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
               <div className="flex-1">
                 {/* Eyebrow */}
