@@ -446,8 +446,7 @@
   
   .violet-bloom-input:focus {
     border-color: var(--primary);
-    outline: 2px solid var(--primary-300);
-    outline-offset: -1px;
+    outline: none;
   }
   
   .violet-bloom-button {

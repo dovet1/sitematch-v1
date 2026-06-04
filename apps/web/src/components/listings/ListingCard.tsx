@@ -273,12 +273,12 @@ export function ListingCard({ listing, onClick, searchCoordinates, index = 999 }
 
       {/* Data rows */}
       <div className="space-y-3 mb-5">
-        <div className="grid grid-cols-[64px_1fr] gap-3 items-start">
+        <div className="grid grid-cols-[64px_1fr] gap-3 items-baseline">
           <span className="text-data-key text-[#7C7588]">LOCATION</span>
           <span className="text-[14px] text-[#171419] line-clamp-1">{locationText}</span>
         </div>
         {siteSizeText && siteSizeText !== 'No site size preference' && (
-          <div className="grid grid-cols-[64px_1fr] gap-3 items-start">
+          <div className="grid grid-cols-[64px_1fr] gap-3 items-baseline">
             <span className="text-data-key text-[#7C7588]">SIZE</span>
             <span className="text-[14px] text-[#171419]">{siteSizeText}</span>
           </div>

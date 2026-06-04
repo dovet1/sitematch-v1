@@ -278,7 +278,7 @@ export const UnifiedSearch = forwardRef<HTMLInputElement, UnifiedSearchProps>(fu
             placeholder={placeholder}
             autoFocus={autoFocus}
             className={cn(
-              "pl-12 pr-10 violet-bloom-input",
+              "pl-12 pr-10",
               className
             )}
             aria-label="Unified search"

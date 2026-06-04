@@ -21,34 +21,34 @@ export function SimpleMobileBottomSheet({ peekContent, fullContent, onDismiss }:
 
   return (
     <div className={cn(
-      "fixed left-0 right-0 bg-white z-[10001] transition-all duration-500 ease-out flex flex-col",
+      "fixed left-0 right-0 bg-[#FBFAF7] z-[10001] transition-all duration-500 ease-out flex flex-col",
       "shadow-[0_-4px_20px_rgba(0,0,0,0.1)]",
       isExpanded ? "bottom-0 top-[10vh]" : "bottom-0 h-[88px]"
     )}>
       {/* Handle Area */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 bg-[#FBFAF7] border-b border-[#EFEBE2]">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
             "w-full py-4 px-6",
             "transition-all duration-200",
-            "hover:bg-gray-50/50",
+            "hover:bg-[#F5F1E8]",
             "group"
           )}
           aria-label={isExpanded ? 'Minimize bottom sheet' : 'Expand bottom sheet'}
         >
           <div className="flex flex-col items-center gap-2">
             {/* Handle bar */}
-            <div className="w-12 h-1 rounded-full bg-gray-300" />
+            <div className="w-12 h-1 rounded-full bg-[#E8E4DC]" />
             
             {/* Text with icon */}
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-[#4A4451]">
                 {isExpanded ? 'Tap to minimize' : 'Tap to see full requirements'}
               </span>
               <svg 
                 className={cn(
-                  "w-4 h-4 text-gray-500 transition-transform duration-300",
+                  "w-4 h-4 text-[#7C7588] transition-transform duration-300",
                   isExpanded ? "rotate-180" : "rotate-0"
                 )}
                 fill="none" 
@@ -72,7 +72,7 @@ export function SimpleMobileBottomSheet({ peekContent, fullContent, onDismiss }:
 
       {/* Content Area */}
       <div className={cn(
-        "flex-1 overflow-y-auto overflow-x-hidden bg-gray-50",
+        "flex-1 overflow-y-auto overflow-x-hidden bg-[#FBFAF7]",
         "-webkit-overflow-scrolling-touch",
         "overscroll-behavior-contain",
         isExpanded ? "opacity-100" : "opacity-0"

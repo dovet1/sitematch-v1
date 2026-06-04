@@ -772,7 +772,7 @@ export function ImmersiveListingModal({
                       />
 
                       {/* Tab Content */}
-                      <div className="flex-1">
+                      <div className="flex-1 px-4 pt-4 pb-8">
                         {renderTabContent()}
                       </div>
                     </>

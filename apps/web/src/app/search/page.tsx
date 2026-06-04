@@ -191,30 +191,15 @@ function SearchPageContent() {
           <div className="px-10 pt-10 pb-6">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
               <div className="flex-1">
-                {/* Eyebrow */}
-                <div className="text-eyebrow text-[#7C7588] mb-3">
-                  DIRECTORY · UPDATED DAILY
-                </div>
-
                 {/* H1 */}
                 <h1 className="text-[44px] md:text-[44px] leading-tight font-semibold tracking-[-0.035em] mb-4">
-                  Live requirements — <span className="italic text-[#5421CC] font-medium">verified, current.</span>
+                  Live requirements
                 </h1>
 
                 {/* Lede paragraph */}
                 <p className="text-base text-[#4A4451] max-w-[580px] leading-relaxed">
-                  Browse verified property requirements from brands actively seeking their next location. Updated daily with the latest opportunities across the UK.
+                  Browse verified property requirements from brands actively seeking their next location. Updated regularly with the latest opportunities across the UK.
                 </p>
-              </div>
-
-              {/* Live count */}
-              <div className="text-right">
-                <div className="text-eyebrow text-[#7C7588]">
-                  LIVE COUNT
-                </div>
-                <div className="text-2xl font-semibold text-[#171419] mt-1">
-                  {totalListings.toLocaleString()}
-                </div>
               </div>
             </div>
           </div>

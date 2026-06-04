@@ -250,7 +250,7 @@ export function SearchHeaderBar({
                   className={cn(
                     "flex items-center gap-2 bg-white rounded-[10px] border border-[#E8E4DC] h-12 transition-all duration-150",
                     isLocationFocused
-                      ? "border-[#7033FF] ring-2 ring-[#7033FF]/20"
+                      ? "border-[#7C7588]"
                       : "hover:border-[#7C7588]"
                   )}
                 >
@@ -279,8 +279,8 @@ export function SearchHeaderBar({
                           setTimeout(() => setForceExpanded(false), 1000);
                         }
                       }}
-                      placeholder="Search location, brand or sector"
-                      className="w-full border-0 outline-none bg-transparent text-[#171419] placeholder-[#A39CAD] text-[15px] pl-6 pr-4"
+                      placeholder="Search by location or brand"
+                      className="w-full !border-0 !outline-none !ring-0 !ring-offset-0 !shadow-none bg-transparent text-[#171419] placeholder-[#A39CAD] text-[15px] pl-6 pr-4 focus:!border-0 focus:!outline-none focus:!ring-0 focus:!ring-offset-0 focus:!shadow-none focus-visible:!border-0 focus-visible:!outline-none focus-visible:!ring-0 focus-visible:!ring-offset-0 focus-visible:!shadow-none"
                       hideIcon={true}
                     />
                   </div>
@@ -343,7 +343,7 @@ export function SearchHeaderBar({
                   className={cn(
                     "px-4 h-full rounded-[7px] font-medium text-[15px] transition-all duration-150",
                     !isMapView
-                      ? "bg-[#171419] text-white hover:bg-[#171419]"
+                      ? "bg-[#7033FF] text-white hover:bg-[#7033FF]"
                       : "text-[#4A4451] hover:text-[#171419] hover:bg-transparent"
                   )}
                 >
@@ -357,7 +357,7 @@ export function SearchHeaderBar({
                   className={cn(
                     "px-4 h-full rounded-[7px] font-medium text-[15px] transition-all duration-150",
                     isMapView
-                      ? "bg-[#171419] text-white hover:bg-[#171419]"
+                      ? "bg-[#7033FF] text-white hover:bg-[#7033FF]"
                       : "text-[#4A4451] hover:text-[#171419] hover:bg-transparent"
                   )}
                 >
