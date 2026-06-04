@@ -56,11 +56,6 @@ export function Pricing() {
           <PricingCard tier="pro" period={period} />
           <PricingCard tier="plus" period={period} featured />
         </div>
-
-        {/* Footer Note */}
-        <div className="mt-6 font-normal text-[13px] text-sm-ink3">
-          Cancel anytime. No card required for trial.
-        </div>
       </section>
     </RevealWrapper>
   );

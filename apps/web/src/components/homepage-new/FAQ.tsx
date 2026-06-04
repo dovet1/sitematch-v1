@@ -48,7 +48,7 @@ export function FAQ() {
               href="mailto:hello@sitematcher.co.uk"
               className="flex-shrink-0 px-5 py-[13px] rounded-sm-btn bg-sm-violet text-white font-medium text-[15px] border border-sm-violet tracking-[-0.1px] hover:bg-sm-violet-deep transition-colors no-underline max-md:w-full max-md:text-center"
             >
-              hello@sitematcher.co.uk
+              rob@sitematcher.co.uk
             </a>
           </div>
         </div>

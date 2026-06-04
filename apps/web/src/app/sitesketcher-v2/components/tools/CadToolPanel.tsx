@@ -450,7 +450,7 @@ export function CadToolPanel() {
       {/* Upload Dropzone */}
       <div className="space-y-3">
         <p className="text-xs leading-5 text-sm-ink/60">
-          Upload a CAD or site plan image (PNG/JPG) to overlay on the map. You&apos;ll
+          Upload any images such as building plans or access drawings. You&apos;ll
           calibrate the scale after upload.
         </p>
 
