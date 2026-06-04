@@ -84,6 +84,7 @@ function SearchPageContent() {
     searchParams?.get('listingId') || null
   );
   const [previousScrollPosition, setPreviousScrollPosition] = useState(0);
+  const [totalListings, setTotalListings] = useState(0);
 
   // Update selectedListingId when URL listingId parameter changes
   useEffect(() => {
@@ -182,65 +183,40 @@ function SearchPageContent() {
       />
 
       {/* Main Content - Show for all users (free tier gets limited listings) */}
-      <div className={isMapView ? "map-view-container" : "relative bg-gradient-to-br from-violet-100 via-purple-100 to-blue-100 overflow-hidden min-h-screen"}>
-        {/* BOLD Decorative elements - only in list view */}
+      <div className={isMapView ? "map-view-container" : "relative bg-[#FBFAF7] min-h-screen"}>
+
+        <div className={!isMapView ? "relative" : ""}>
+        {/* Header Strip - Only show in list view */}
         {!isMapView && (
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {/* Massive gradient orbs with stronger colors */}
-            <div className="absolute -top-20 -right-20 w-[800px] h-[800px] bg-gradient-to-br from-violet-500/50 to-purple-500/40 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '7s' }}></div>
-            <div className="absolute -bottom-20 -left-20 w-[800px] h-[800px] bg-gradient-to-tr from-purple-500/50 to-blue-500/40 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '9s' }}></div>
-            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-gradient-to-r from-blue-400/35 to-violet-400/35 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '11s' }}></div>
+          <div className="px-10 pt-10 pb-6 border-b border-[#EFEBE2]">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+              <div className="flex-1">
+                {/* Eyebrow */}
+                <div className="text-eyebrow text-[#7C7588] mb-3">
+                  DIRECTORY · UPDATED DAILY
+                </div>
 
-            {/* Bold accent orbs */}
-            <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-gradient-to-br from-violet-300/30 to-transparent rounded-full blur-2xl animate-pulse" style={{ animationDuration: '13s' }}></div>
-            <div className="absolute bottom-1/3 left-1/3 w-[450px] h-[450px] bg-gradient-to-tl from-purple-300/30 to-transparent rounded-full blur-2xl animate-pulse" style={{ animationDuration: '15s' }}></div>
+                {/* H1 */}
+                <h1 className="text-[44px] md:text-[44px] leading-tight font-semibold tracking-[-0.035em] mb-4">
+                  Live requirements — <span className="italic text-[#5421CC] font-medium">verified, current.</span>
+                </h1>
 
-            {/* Vibrant geometric accent shapes */}
-            <div className="absolute top-32 left-1/4 w-48 h-48 bg-gradient-to-br from-violet-400/20 to-purple-400/15 rounded-3xl rotate-12 blur-xl animate-pulse" style={{ animationDuration: '6s' }}></div>
-            <div className="absolute bottom-32 right-1/4 w-56 h-56 bg-gradient-to-tr from-purple-400/20 to-blue-400/15 rounded-3xl -rotate-12 blur-xl animate-pulse" style={{ animationDuration: '8s' }}></div>
-            <div className="absolute top-2/3 left-1/5 w-40 h-40 bg-gradient-to-r from-blue-400/15 to-violet-400/15 rounded-2xl rotate-45 blur-lg animate-pulse" style={{ animationDuration: '10s' }}></div>
+                {/* Lede paragraph */}
+                <p className="text-base text-[#4A4451] max-w-[580px] leading-relaxed">
+                  Browse verified property requirements from brands actively seeking their next location. Updated daily with the latest opportunities across the UK.
+                </p>
+              </div>
 
-            {/* Bold grid pattern overlay */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.08)_1px,transparent_1px)] bg-[size:64px_64px]"></div>
-
-            {/* Radial gradient overlay for vignette effect */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(139,92,246,0.1)_100%)]"></div>
-
-            {/* Animated light beams */}
-            <div className="absolute top-0 left-1/4 w-1 h-full bg-gradient-to-b from-transparent via-violet-300/30 to-transparent animate-pulse" style={{ animationDuration: '5s' }}></div>
-            <div className="absolute top-0 right-1/3 w-1 h-full bg-gradient-to-b from-transparent via-purple-300/30 to-transparent animate-pulse" style={{ animationDuration: '7s', animationDelay: '1s' }}></div>
-          </div>
-        )}
-
-        <div className={!isMapView ? "relative container mx-auto px-4 py-8 md:py-12" : ""}>
-        {/* Results Header - Only show in list view */}
-        {!isMapView && (
-          <div className="mb-8 md:mb-12 space-y-4">
-            {/* Search State Breadcrumb */}
-            <div className="flex items-center gap-2 text-base md:text-lg overflow-hidden">
-              {searchFilters.location || searchFilters.isNationwide ? (
-                <>
-                  <button
-                    onClick={() => handleFiltersChange({ ...searchFilters, location: '', coordinates: null, isNationwide: false })}
-                    className="text-violet-600 hover:text-violet-700 hover:underline transition-colors flex-shrink-0 font-black"
-                  >
-                    All Requirements
-                  </button>
-                  <span className="flex-shrink-0 text-violet-400 font-black">›</span>
-                  <span className="relative inline-block">
-                    <span className="relative z-10 text-gray-900 font-black truncate min-w-0">
-                      {searchFilters.isNationwide
-                        ? "Nationwide Only"
-                        : `Search: "${searchFilters.location}"`}
-                    </span>
-                    <span className="absolute inset-0 bg-violet-200 transform skew-y-1 rotate-1 -z-10"></span>
-                  </span>
-                </>
-              ) : (
-                <span className="text-gray-900 font-black text-xl">All Requirements</span>
-              )}
+              {/* Live count */}
+              <div className="text-right">
+                <div className="text-eyebrow text-[#7C7588]">
+                  LIVE COUNT
+                </div>
+                <div className="text-2xl font-semibold text-[#171419] mt-1">
+                  {totalListings.toLocaleString()}
+                </div>
+              </div>
             </div>
-
           </div>
         )}
 
@@ -257,6 +233,7 @@ function SearchPageContent() {
               onListingClick={handleListingClick}
               onFiltersChange={handleFiltersChange}
               onUpgradeClick={handleUpgradeClick}
+              onTotalCountChange={setTotalListings}
             />
           )}
         </div>

@@ -35,6 +35,7 @@ export function SearchHeaderBar({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [forceExpanded, setForceExpanded] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Track scroll position for styling changes and collapse behavior
   useEffect(() => {
@@ -67,6 +68,20 @@ export function SearchHeaderBar({
       clearTimeout(timeoutId);
     };
   }, [forceExpanded, isLocationFocused]);
+
+  // Keyboard shortcut: ⌘K or Ctrl+K to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        setForceExpanded(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Calculate active filters count
   const activeFiltersCount = [
@@ -191,15 +206,14 @@ export function SearchHeaderBar({
         ref={headerRef}
         className={cn(
           "sticky top-16 z-40 transition-all duration-300 ease-in-out",
-          isScrolled
-            ? "bg-gradient-to-br from-violet-50/95 via-purple-50/95 to-blue-50/95 backdrop-blur-md shadow-2xl border-b border-violet-200"
-            : "bg-gradient-to-br from-violet-50/90 via-purple-50/90 to-blue-50/90 backdrop-blur-sm border-b border-violet-100",
+          "bg-[#FBFAF7] border-b border-[#EFEBE2]",
+          isScrolled && "shadow-sm",
           className
         )}
       >
         <div className={cn(
-          "container mx-auto px-4 transition-all duration-300",
-          isCollapsed ? "py-1" : "py-2"
+          "px-10 transition-all duration-300",
+          isCollapsed ? "py-3" : "py-5"
         )}>
           {/* Desktop Layout */}
           <div className={cn(
@@ -234,24 +248,23 @@ export function SearchHeaderBar({
               <div className="flex-1 relative">
                 <div
                   className={cn(
-                    "flex items-center gap-4 bg-white rounded-full border-3 transition-all duration-300",
+                    "flex items-center gap-2 bg-white rounded-[10px] border border-[#E8E4DC] h-12 transition-all duration-150",
                     isLocationFocused
-                      ? "border-violet-400 shadow-2xl ring-4 ring-violet-200"
-                      : "border-violet-200 hover:border-violet-300 shadow-lg"
+                      ? "border-[#7033FF] ring-2 ring-[#7033FF]/20"
+                      : "hover:border-[#7C7588]"
                   )}
                 >
-                <div className="flex-1 px-4 py-3">
+                <div className="flex-1 px-4">
                   <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-violet-500" />
+                    <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-[#7C7588]" />
                     <UnifiedSearch
+                      ref={searchInputRef}
                       value={localSearchValue}
                       onChange={handleSearchChange}
                       onLocationSelect={handleLocationSelect}
                       onCompanySelect={handleCompanySelect}
                       onEnterKey={() => {
                         if (localSearchValue.trim()) {
-                          // Determine if it looks more like a location or company name
-                          // For now, treat as generic search and let the user select from suggestions
                           onFiltersChange({
                             ...searchFilters,
                             location: localSearchValue.trim(),
@@ -262,36 +275,23 @@ export function SearchHeaderBar({
                       onFocus={() => setIsLocationFocused(true)}
                       onBlur={() => {
                         setIsLocationFocused(false);
-                        // Allow normal collapse behavior after user finishes interaction
                         if (forceExpanded) {
                           setTimeout(() => setForceExpanded(false), 1000);
                         }
                       }}
-                      placeholder="Search location or company name"
-                      className="w-full border-0 outline-none bg-transparent text-gray-900 placeholder-gray-500 font-semibold text-base pl-12 pr-4"
+                      placeholder="Search location, brand or sector"
+                      className="w-full border-0 outline-none bg-transparent text-[#171419] placeholder-[#A39CAD] text-[15px] pl-6 pr-4"
                       hideIcon={true}
                     />
                   </div>
                 </div>
 
-                {/* Search Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (localSearchValue.trim()) {
-                      // Default to location search when user clicks search button
-                      onFiltersChange({
-                        ...searchFilters,
-                        location: localSearchValue.trim(),
-                        companyName: ''
-                      });
-                    }
-                  }}
-                  className="violet-bloom-touch flex items-center justify-center h-14 w-14 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 shrink-0 mr-2"
-                  aria-label="Search"
-                >
-                  <Search className="w-5 h-5 text-white" />
-                </button>
+                {/* Keyboard shortcut badge */}
+                <div className="pr-3 flex items-center">
+                  <span className="text-kbd text-[#7C7588] bg-[#F5F1E8] px-2 py-1 rounded">
+                    ⌘ K
+                  </span>
+                </div>
                 </div>
               </div>
             )}
@@ -315,18 +315,17 @@ export function SearchHeaderBar({
                 variant="outline"
                 onClick={() => setIsFilterDrawerOpen(true)}
                 className={cn(
-                  "px-6 py-3.5 h-auto rounded-full font-bold text-base transition-all duration-300 relative border-2",
-                  activeFiltersCount > 0
-                    ? "bg-violet-100 border-violet-300 text-violet-700 shadow-lg hover:shadow-xl hover:scale-105"
-                    : "border-violet-200 hover:border-violet-300 bg-white shadow-md hover:shadow-lg hover:scale-105"
+                  "h-12 px-4 rounded-[10px] font-medium text-[15px] transition-all duration-150 relative",
+                  "bg-white border border-[#E8E4DC] hover:border-[#7C7588]",
+                  activeFiltersCount > 0 && "bg-[#F5F1FF] border-[#7033FF]"
                 )}
               >
-                <Filter className="w-5 h-5 mr-2" />
+                <Filter className="w-4 h-4 mr-2" />
                 Filters
                 {activeFiltersCount > 0 && (
                   <Badge
                     variant="secondary"
-                    className="ml-2 bg-violet-200 text-violet-800 border border-violet-300 font-black px-2"
+                    className="ml-2 bg-[#7033FF] text-white rounded-full px-2 py-0.5 text-[11px] font-mono"
                   >
                     {activeFiltersCount}
                   </Badge>
@@ -336,16 +335,16 @@ export function SearchHeaderBar({
 
             {/* View Toggle */}
             {showViewToggle && onMapViewToggle && (
-              <div className="flex items-center bg-violet-100 rounded-full p-1.5 border-2 border-violet-200">
+              <div className="flex items-center bg-white rounded-[10px] border border-[#E8E4DC] h-12 p-1">
                 <Button
                   variant={!isMapView ? "default" : "ghost"}
                   size="sm"
                   onClick={() => onMapViewToggle(false)}
                   className={cn(
-                    "px-5 py-2.5 rounded-full font-bold transition-all duration-300",
+                    "px-4 h-full rounded-[7px] font-medium text-[15px] transition-all duration-150",
                     !isMapView
-                      ? "bg-white shadow-lg text-violet-700 hover:scale-105"
-                      : "text-violet-600 hover:text-violet-800 hover:bg-violet-50"
+                      ? "bg-[#171419] text-white hover:bg-[#171419]"
+                      : "text-[#4A4451] hover:text-[#171419] hover:bg-transparent"
                   )}
                 >
                   <List className="w-4 h-4 mr-2" />
@@ -356,10 +355,10 @@ export function SearchHeaderBar({
                   size="sm"
                   onClick={() => onMapViewToggle(true)}
                   className={cn(
-                    "px-5 py-2.5 rounded-full font-bold transition-all duration-300",
+                    "px-4 h-full rounded-[7px] font-medium text-[15px] transition-all duration-150",
                     isMapView
-                      ? "bg-white shadow-lg text-violet-700 hover:scale-105"
-                      : "text-violet-600 hover:text-violet-800 hover:bg-violet-50"
+                      ? "bg-[#171419] text-white hover:bg-[#171419]"
+                      : "text-[#4A4451] hover:text-[#171419] hover:bg-transparent"
                   )}
                 >
                   <MapPin className="w-4 h-4 mr-2" />
@@ -557,6 +556,7 @@ export function SearchHeaderBar({
             <div className="flex-1 p-4 space-y-4">
               <div className="space-y-3">
                 <UnifiedSearch
+                  ref={searchInputRef}
                   value={localSearchValue}
                   onChange={handleSearchChange}
                   onLocationSelect={(location) => {

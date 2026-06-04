@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, JetBrains_Mono } from 'next/font/google'
 import { Suspense } from 'react'
 import './globals.css'
 import { AuthProvider } from '@/contexts/auth-context'
@@ -12,6 +12,10 @@ import { PostHogProvider } from '@/components/analytics/PostHogProvider'
 import { Analytics } from '@vercel/analytics/react'
 
 const inter = Inter({ subsets: ['latin'] })
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono'
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.sitematcher.co.uk'),
@@ -110,7 +114,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
         />
       </head>
-      <body className={inter.className} suppressHydrationWarning>
+      <body className={`${inter.className} ${jetbrainsMono.variable}`} suppressHydrationWarning>
         <Hotjar />
         <AuthProvider>
           <PostHogProvider>

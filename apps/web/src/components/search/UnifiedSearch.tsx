@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { MapPin, Building2, X, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ interface UnifiedSearchProps {
   hideIcon?: boolean;
 }
 
-export function UnifiedSearch({
+export const UnifiedSearch = forwardRef<HTMLInputElement, UnifiedSearchProps>(function UnifiedSearch({
   value,
   onChange,
   onLocationSelect,
@@ -47,7 +47,7 @@ export function UnifiedSearch({
   className,
   autoFocus = false,
   hideIcon = false
-}: UnifiedSearchProps) {
+}, ref) {
   const [suggestions, setSuggestions] = useState<UnifiedSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +56,9 @@ export function UnifiedSearch({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const justSelectedRef = useRef(false);
+
+  // Expose the input element to parent via ref
+  useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
 
   useEffect(() => {
     const handleSearch = async () => {
@@ -477,4 +480,4 @@ export function UnifiedSearch({
       )}
     </div>
   );
-}
+});

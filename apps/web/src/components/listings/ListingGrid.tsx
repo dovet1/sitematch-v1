@@ -12,9 +12,10 @@ interface ListingGridProps {
   onListingClick: (listingId: string) => void;
   onFiltersChange?: (filters: SearchFilters) => void;
   onUpgradeClick?: () => void;
+  onTotalCountChange?: (count: number) => void;
 }
 
-export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgradeClick }: ListingGridProps) {
+export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgradeClick, onTotalCountChange }: ListingGridProps) {
   const [listings, setListings] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -132,6 +133,7 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
         // Update total count if provided
         if (data.total !== undefined) {
           setTotalCount(data.total);
+          onTotalCountChange?.(data.total);
         }
         
       } catch (err) {

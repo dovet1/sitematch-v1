@@ -215,14 +215,19 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
       {/* Drawer */}
       <div
         className={cn(
-          "fixed top-0 left-0 h-full w-full max-w-md bg-white shadow-xl z-modal overflow-y-auto transition-transform duration-300 ease-in-out",
+          "fixed top-0 left-0 h-full w-[420px] bg-white shadow-xl z-modal overflow-y-auto transition-transform duration-300 ease-in-out",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-border p-4">
+        <div className="sticky top-0 bg-white border-b border-[#EFEBE2] px-10 py-6">
           <div className="flex items-center justify-between">
-            <h2 className="heading-4 font-semibold">Filter Search</h2>
+            <div>
+              <div className="text-eyebrow text-[#7C7588] mb-2">
+                FILTER RESULTS
+              </div>
+              <h2 className="text-2xl font-semibold text-[#171419]">Refine Search</h2>
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -236,7 +241,7 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
         </div>
 
         {/* Filter Content */}
-        <div className="p-4 space-y-4">
+        <div className="px-10 py-6 space-y-6">
           {/* Company Name Search */}
           <CollapsibleSection
             title="Company Name"
@@ -332,29 +337,27 @@ export function FilterDrawer({ isOpen, onClose, filters, onFiltersChange }: Filt
             hasActiveFilters={localFilters.useClass.length > 0}
           >
             {localFilters.useClass.length > 1 && (
-              <p className="text-xs text-muted-foreground mb-2">Showing listings from any selected use class</p>
+              <p className="text-xs text-[#7C7588] mb-3">Showing listings from any selected use class</p>
             )}
-            <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
               {isLoadingData ? (
-                <div className="text-sm text-muted-foreground">Loading use classes...</div>
+                <div className="text-sm text-[#7C7588]">Loading use classes...</div>
               ) : useClasses.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No use classes available</div>
+                <div className="text-sm text-[#7C7588]">No use classes available</div>
               ) : (
                 useClasses.map((useClass) => (
-                <div key={useClass.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`use-class-${useClass.id}`}
-                    checked={localFilters.useClass.includes(useClass.value)}
-                    onCheckedChange={(checked) => handleUseClassChange(useClass.value, checked as boolean)}
-                    className="violet-bloom-checkbox"
-                  />
-                  <Label
-                    htmlFor={`use-class-${useClass.id}`}
-                    className="text-sm cursor-pointer flex-1"
-                  >
-                    <span>{useClass.label}</span>
-                  </Label>
-                </div>
+                <button
+                  key={useClass.id}
+                  onClick={() => handleUseClassChange(useClass.value, !localFilters.useClass.includes(useClass.value))}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 border",
+                    localFilters.useClass.includes(useClass.value)
+                      ? "bg-[#171419] text-white border-[#171419]"
+                      : "bg-white text-[#171419] border-[#E8E4DC] hover:border-[#7C7588]"
+                  )}
+                >
+                  {useClass.label}
+                </button>
               )))}
             </div>
           </CollapsibleSection>
