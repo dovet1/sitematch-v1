@@ -207,29 +207,29 @@ export function ImmersiveListingModal({
     if (!listing) return null;
 
     return (
-      <div className="p-6">
+      <div>
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Requirements In {makePossessive(listing?.company?.name || 'Company')} Own Words</h3>
+            <h3 className="text-lg font-semibold mb-4">Requirements In {makePossessive(listing?.company?.name || 'Company')} Own Words</h3>
 
             {/* Requirements Brochures */}
             {listing.files?.brochures && listing.files.brochures.length > 0 && (
-              <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+              <div className="p-5 rounded-lg bg-[#FBFAF7] border border-[#EFEBE2]">
                 <button
                   onClick={() => window.open(listing.files.brochures[0].url, '_blank')}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-white border border-blue-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group w-full"
+                  className="flex items-center gap-3 p-4 rounded-[10px] bg-white border border-[#E8E4DC] hover:border-[#7C7588] transition-all duration-150 group w-full"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
-                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="w-10 h-10 rounded-lg bg-[#F5F1E8] flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-[#171419]" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 2v8h8V6H6z" clipRule="evenodd" />
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-[#171419]">
                       {makePossessive(listing?.company?.name || 'Company')} Requirement Brochure
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 text-blue-600 group-hover:text-blue-700">
+                  <div className="flex items-center gap-2 text-[#7033FF]">
                     <span className="text-xs font-medium">Download</span>
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -241,32 +241,31 @@ export function ImmersiveListingModal({
 
             {/* Property Page Link */}
             {listing.company?.property_page_link && (
-              <div className="p-4 rounded-lg bg-violet-50 border border-violet-200">
-                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="text-violet-500">🔗</span>
-                  Property Page
+              <div className="p-5 rounded-lg bg-[#FBFAF7] border border-[#EFEBE2]">
+                <h4 className="text-data-key text-[#7C7588] mb-3">
+                  PROPERTY PAGE
                 </h4>
                 <a
                   href={listing.company?.property_page_link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-lg bg-white border border-violet-200 hover:border-violet-300 hover:bg-violet-50 transition-all duration-200 group"
+                  className="flex items-center gap-3 p-4 rounded-[10px] bg-white border border-[#E8E4DC] hover:border-[#7C7588] transition-all duration-150 group"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-200 transition-colors">
-                    <svg className="w-5 h-5 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="w-10 h-10 rounded-lg bg-[#F5F1E8] flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-[#171419]" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5a2 2 0 012.828 0z" clipRule="evenodd" />
                       <path fillRule="evenodd" d="M7.414 15.414a2 2 0 01-2.828-2.828l3-3a2 2 0 012.828 0 1 1 0 001.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 005.656 5.656l1.5-1.5a1 1 0 00-1.414-1.414l-1.5 1.5z" clipRule="evenodd" />
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-[#171419]">
                       View Requirement Details
                     </p>
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-xs text-[#7C7588] truncate">
                       {listing.company?.property_page_link}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 text-violet-600 group-hover:text-violet-700">
+                  <div className="flex items-center gap-2 text-[#7033FF]">
                     <span className="text-xs font-medium">Visit</span>
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -278,14 +277,14 @@ export function ImmersiveListingModal({
 
             {/* Verification Information */}
             {listing.verified_at && (
-              <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+              <div className="p-5 rounded-lg bg-[#F0FDF4] border border-[#BBF7D0]">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  <div className="w-10 h-10 rounded-lg bg-[#DCFCE7] flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-[#15803D]" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-medium text-gray-900 mb-1">Verified Listing</h4>
-                    <p className="text-sm text-gray-600">
+                    <h4 className="font-medium text-[#171419] mb-1">Verified Listing</h4>
+                    <p className="text-sm text-[#4A4451]">
                       Last verified on {formatVerificationDate(listing.verified_at)}
                     </p>
                   </div>
@@ -297,53 +296,49 @@ export function ImmersiveListingModal({
         )}
         {activeTab === 'requirements' && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Requirements</h3>
-            
+            <h3 className="text-lg font-semibold mb-4">Requirements</h3>
+
             {/* Site Size Requirements */}
             {listing.listing_type === 'commercial' && listing.company?.site_size && (
-              <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
-                <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
-                  <span className="text-violet-500">📐</span>
-                  Site Size
+              <div className="p-5 rounded-lg bg-[#FBFAF7] border border-[#EFEBE2]">
+                <h4 className="text-data-key text-[#7C7588] mb-2">
+                  SITE SIZE
                 </h4>
-                <p className="text-gray-700">{listing.company?.site_size}</p>
+                <p className="text-[#171419] text-base">{listing.company?.site_size}</p>
               </div>
             )}
 
             {/* Dwelling Count (for residential) */}
             {listing.listing_type === 'residential' && listing.company?.dwelling_count && (
-              <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
-                <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
-                  <span className="text-violet-500">🏠</span>
-                  Dwelling Count
+              <div className="p-5 rounded-lg bg-[#FBFAF7] border border-[#EFEBE2]">
+                <h4 className="text-data-key text-[#7C7588] mb-2">
+                  DWELLING COUNT
                 </h4>
-                <p className="text-gray-700">{listing.company?.dwelling_count}</p>
+                <p className="text-[#171419] text-base">{listing.company?.dwelling_count}</p>
               </div>
             )}
 
             {/* Site Acreage (for residential) */}
             {listing.listing_type === 'residential' && listing.company?.site_acreage && (
-              <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
-                <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
-                  <span className="text-violet-500">🌾</span>
-                  Site size (acres)
+              <div className="p-5 rounded-lg bg-[#FBFAF7] border border-[#EFEBE2]">
+                <h4 className="text-data-key text-[#7C7588] mb-2">
+                  SITE SIZE (ACRES)
                 </h4>
-                <p className="text-gray-700">{listing.company?.site_acreage}</p>
+                <p className="text-[#171419] text-base">{listing.company?.site_acreage}</p>
               </div>
             )}
 
             {/* Sectors */}
             {listing.listing_type === 'commercial' && listing.company?.sectors && listing.company.sectors.length > 0 && (
-              <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="text-blue-500">🏢</span>
-                  Sectors
+              <div className="p-5 rounded-lg bg-[#FBFAF7] border border-[#EFEBE2]">
+                <h4 className="text-data-key text-[#7C7588] mb-3">
+                  SECTORS
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {listing.company?.sectors?.map((sector, index) => (
                     <span
                       key={index}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                      className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-white text-[#171419] border border-[#E8E4DC]"
                     >
                       {sector}
                     </span>
@@ -354,16 +349,15 @@ export function ImmersiveListingModal({
 
             {/* Use Classes */}
             {listing.listing_type === 'commercial' && listing.company?.use_classes && listing.company.use_classes.length > 0 && (
-              <div className="p-4 rounded-lg bg-green-50 border border-green-200">
-                <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="text-green-500">🏗️</span>
-                  Use Classes
+              <div className="p-5 rounded-lg bg-[#FBFAF7] border border-[#EFEBE2]">
+                <h4 className="text-data-key text-[#7C7588] mb-3">
+                  USE CLASSES
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {listing.company?.use_classes?.map((useClass, index) => (
                     <span
                       key={index}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200"
+                      className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-white text-[#171419] border border-[#E8E4DC]"
                     >
                       {useClass}
                     </span>
@@ -398,23 +392,23 @@ export function ImmersiveListingModal({
         )}
         {activeTab === 'locations' && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Target Locations</h3>
+            <h3 className="text-lg font-semibold mb-4">Target Locations</h3>
             
             {listing.locations?.all && listing.locations.all.length > 0 ? (
               <div className="space-y-3">
                 {listing.locations.all.map((location, index) => (
-                  <div 
-                    key={index} 
-                    className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-200 transition-all duration-200"
+                  <div
+                    key={index}
+                    className="p-4 rounded-lg bg-white border border-[#E8E4DC] hover:border-[#7C7588] transition-all duration-150"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <div className="w-10 h-10 rounded-full bg-[#7033FF] flex items-center justify-center flex-shrink-0">
                         <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                         </svg>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 leading-snug">
+                        <h4 className="font-medium text-[#171419] leading-snug">
                           {location.place_name || 'Unknown location'}
                         </h4>
                       </div>
@@ -423,18 +417,18 @@ export function ImmersiveListingModal({
                 ))}
               </div>
             ) : (
-              <div className="p-6 rounded-lg bg-gradient-to-br from-violet-50 via-white to-blue-50/30 border border-violet-100 shadow-sm">
+              <div className="p-6 rounded-lg bg-[#FBFAF7] border border-[#EFEBE2]">
                 <div className="text-center">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center mx-auto mb-3 shadow-sm">
+                  <div className="w-12 h-12 rounded-full bg-[#7033FF] flex items-center justify-center mx-auto mb-3">
                     <span className="text-2xl">🌍</span>
                   </div>
-                  <h4 className="font-semibold text-gray-900 mb-1">All locations considered</h4>
-                  <p className="text-sm text-gray-600 mb-3">
+                  <h4 className="font-semibold text-[#171419] mb-1">All locations considered</h4>
+                  <p className="text-sm text-[#7C7588] mb-3">
                     No individual target locations have been specified.
                   </p>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-100 rounded-full">
-                    <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-medium text-violet-700">National Reach</span>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E8E4DC] rounded-full">
+                    <div className="w-2 h-2 bg-[#15803D] rounded-full"></div>
+                    <span className="text-xs font-medium text-[#171419]">National Reach</span>
                   </div>
                 </div>
               </div>
@@ -443,7 +437,7 @@ export function ImmersiveListingModal({
         )}
         {activeTab === 'contact' && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Contact</h3>
+            <h3 className="text-lg font-semibold mb-4">Contact</h3>
             
             {(listing.contacts?.primary || listing.contacts?.additional?.length > 0) ? (
               <div className="space-y-4">
@@ -452,9 +446,9 @@ export function ImmersiveListingModal({
                   ...(listing.contacts.primary ? [listing.contacts.primary] : []),
                   ...(listing.contacts.additional || [])
                 ].map((contact, index) => (
-                  <div 
-                    key={contact.id || index} 
-                    className="p-4 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md hover:border-violet-200 transition-all duration-200"
+                  <div
+                    key={contact.id || index}
+                    className="p-5 rounded-lg bg-white border border-[#E8E4DC] hover:border-[#7C7588] transition-all duration-150"
                   >
                     <div className="flex items-start gap-4">
                       {contact.headshot_url ? (
@@ -511,15 +505,15 @@ export function ImmersiveListingModal({
                 ))}
               </div>
             ) : (
-              <div className="p-8 rounded-lg bg-gray-50 text-center border border-gray-200">
-                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-violet-500" fill="currentColor" viewBox="0 0 20 20">
+              <div className="p-8 rounded-lg bg-[#FBFAF7] text-center border border-[#EFEBE2]">
+                <div className="w-16 h-16 bg-[#F5F1E8] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-[#7C7588]" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm3 1h6v4H7V5zm8 8v2a1 1 0 01-1 1H6a1 1 0 01-1-1v-2h8z" clipRule="evenodd"/>
                   </svg>
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Contact Team</h4>
-                <p className="text-gray-600 text-sm max-w-sm mx-auto">
-                  Our property specialists are preparing their contact information. 
+                <h4 className="font-semibold text-[#171419] mb-2">Contact Team</h4>
+                <p className="text-[#7C7588] text-sm max-w-sm mx-auto">
+                  Our property specialists are preparing their contact information.
                   <br />Please check back shortly or reach out via our general inquiry system.
                 </p>
               </div>
@@ -527,8 +521,8 @@ export function ImmersiveListingModal({
 
             {/* Appointed Agents Section - Only show if there are agents */}
             {(agencyLoading || listingAgents.length > 0) && (
-              <div className="mt-8 pt-8 border-t border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">{listingAgents.length === 1 ? 'Appointed Agent' : 'Appointed Agents'}</h3>
+              <div className="mt-8 pt-8 border-t border-[#EFEBE2]">
+                <h3 className="text-lg font-semibold text-[#171419] mb-4">{listingAgents.length === 1 ? 'Appointed Agent' : 'Appointed Agents'}</h3>
 
                 {agencyLoading ? (
                 <div className="p-6 space-y-4">
@@ -539,22 +533,18 @@ export function ImmersiveListingModal({
               ) : listingAgents.length > 0 ? (
                 <div className="space-y-4">
                   {listingAgents.map((agent) => (
-                    <div key={agent.id} className="bg-gradient-to-br from-white via-violet-50/30 to-white rounded-2xl border border-violet-200/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6 sm:p-8 ring-1 ring-violet-100/50 hover:ring-violet-200/70">
+                    <div key={agent.id} className="bg-white rounded-lg border border-[#E8E4DC] hover:border-[#7C7588] transition-all duration-150 p-6 sm:p-8">
                       {/* Mobile-optimized layout */}
                       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
                         {/* Agency Logo */}
                         <div className="flex-shrink-0">
                           {agent.agency.logo_url ? (
-                            <div className="relative group">
-                              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border-2 border-violet-100 p-3 flex items-center justify-center shadow-lg ring-2 ring-violet-50 group-hover:ring-violet-100 transition-all duration-300">
-                                <img
-                                  src={agent.agency.logo_url}
-                                  alt={`${agent.agency.name} logo`}
-                                  className="w-full h-full object-contain"
-                                />
-                              </div>
-                              {/* Enhanced glow effect */}
-                              <div className="absolute inset-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 -z-10 blur-sm group-hover:from-violet-500/30 group-hover:to-purple-500/30 transition-all duration-300"></div>
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-[#FBFAF7] border border-[#E8E4DC] p-3 flex items-center justify-center">
+                              <img
+                                src={agent.agency.logo_url}
+                                alt={`${agent.agency.name} logo`}
+                                className="w-full h-full object-contain"
+                              />
                             </div>
                           ) : (
                             <div className="relative group">
@@ -782,7 +772,7 @@ export function ImmersiveListingModal({
                       />
 
                       {/* Tab Content */}
-                      <div className="flex-1">
+                      <div className="flex-1 px-4 pt-4 pb-8">
                         {renderTabContent()}
                       </div>
                     </>
@@ -852,12 +842,19 @@ export function ImmersiveListingModal({
                   <div className="h-full flex flex-col">
                     {/* Company Hero Card */}
                     <div className={styles.companyHero}>
+                      {/* Eyebrow */}
+                      {listing.verified_at && (
+                        <div className="text-eyebrow text-[#7C7588] mb-4">
+                          Live requirement · verified {formatVerificationDate(listing.verified_at)}
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-4">
                         {listing.company?.logo_url ? (
                           <img
                             src={listing.company?.logo_url}
                             alt={`${listing.company?.name || 'Company'} logo`}
-                            className="w-12 h-12 object-contain"
+                            className="w-16 h-16 object-contain rounded-[14px]"
                             onError={(e) => {
                               // Hide broken image and show fallback
                               const target = e.target as HTMLImageElement;
@@ -867,8 +864,8 @@ export function ImmersiveListingModal({
                             }}
                           />
                         ) : null}
-                        <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center" style={{ display: listing.company?.logo_url ? 'none' : 'flex' }}>
-                          <span className="text-white font-semibold">
+                        <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-violet-600 rounded-[14px] flex items-center justify-center" style={{ display: listing.company?.logo_url ? 'none' : 'flex' }}>
+                          <span className="text-white font-semibold text-xl">
                             {listing.company?.name?.charAt(0).toUpperCase() || 'C'}
                           </span>
                         </div>

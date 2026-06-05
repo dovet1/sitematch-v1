@@ -80,7 +80,7 @@ export const PRICING = {
 export const FAQS = [
   {
     q: "How does the free trial work?",
-    a: "Start your 30-day free trial of Pro or Plus — no credit card required. Cancel anytime before the trial ends and you won't be charged. After 30 days, you'll move to your selected plan at your chosen price.",
+    a: "Start your 30-day free trial of Pro or Plus and if you cancel anytime before the trial ends you won't be charged. After 30 days, you'll move to your selected plan at your chosen price.",
   },
   {
     q: "How are requirements verified?",

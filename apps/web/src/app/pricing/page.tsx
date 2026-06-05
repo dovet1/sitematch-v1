@@ -121,7 +121,7 @@ export default function PricingPage() {
               {/* Sale Chip */}
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sm-violet-tint border border-sm-violet/20 mb-8">
                 <span className="text-sm font-medium text-sm-violet-deep">
-                  Summer Sale — 50% off, ends 31 August
+                  Summer Sale — 50% off
                 </span>
               </div>
 

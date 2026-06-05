@@ -1,6 +1,8 @@
 /* Tab Navigation Container */
 .container {
-  @apply relative bg-white border-b border-gray-200;
+  @apply relative border-b;
+  background: #FBFAF7;
+  border-color: #EFEBE2;
   @apply overflow-hidden;
 }
 
@@ -24,19 +26,26 @@
 .tab {
   @apply relative flex items-center gap-2;
   @apply px-4 py-3;
-  @apply text-gray-600 font-medium text-sm;
+  @apply font-medium text-sm;
   @apply whitespace-nowrap;
   @apply transition-all duration-200;
-  @apply focus:outline-none focus:bg-gray-50;
-  @apply hover:text-violet-600 hover:bg-gray-50;
+  @apply focus:outline-none;
+  color: #4A4451;
   min-width: fit-content;
   min-height: 44px; /* Smaller but still touch-friendly */
   scroll-snap-align: center;
 }
 
+.tab:hover,
+.tab:focus {
+  color: #7033FF;
+  background: #F5F1E8;
+}
+
 /* Active Tab */
 .tabActive {
-  @apply text-violet-600;
+  color: #7033FF;
+  background: #F5F1E8;
 }
 
 /* Tab Icon */
@@ -52,7 +61,8 @@
 /* Active Indicator */
 .activeIndicator {
   @apply absolute bottom-0 left-0 right-0;
-  @apply h-0.5 bg-violet-600;
+  @apply h-0.5;
+  background: #7033FF;
 }
 
 /* Gradient Indicators */
@@ -65,12 +75,12 @@
 
 .gradientLeft {
   @apply left-0;
-  background: linear-gradient(to right, white, transparent);
+  background: linear-gradient(to right, #FBFAF7, transparent);
 }
 
 .gradientRight {
   @apply right-0;
-  background: linear-gradient(to left, white, transparent);
+  background: linear-gradient(to left, #FBFAF7, transparent);
 }
 
 .gradientVisible {
@@ -80,13 +90,15 @@
 /* Touch feedback */
 @media (hover: none) {
   .tab:active {
-    @apply bg-gray-100 scale-95;
+    @apply scale-95;
+    background: #F5F1E8;
   }
 }
 
 /* Keyboard navigation */
 .tab:focus-visible {
-  @apply outline-2 outline-offset-2 outline-violet-600;
+  @apply outline-2 outline-offset-2;
+  outline-color: #7033FF;
 }
 
 /* Reduced motion */

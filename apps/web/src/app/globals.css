@@ -446,8 +446,7 @@
   
   .violet-bloom-input:focus {
     border-color: var(--primary);
-    outline: 2px solid var(--primary-300);
-    outline-offset: -1px;
+    outline: none;
   }
   
   .violet-bloom-button {
@@ -804,15 +803,35 @@
     .violet-bloom-switch {
       transition: none;
     }
-    
+
     .violet-bloom-interactive:hover,
     .violet-bloom-card-hover:hover {
       transform: none;
     }
-    
+
     .violet-bloom-loading::after {
       animation: none;
     }
+  }
+
+  /* Directory Design System - Typography utilities */
+  .text-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+  }
+
+  .text-data-key {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .text-kbd {
+    font-family: var(--font-mono);
+    font-size: 11px;
   }
 }
 

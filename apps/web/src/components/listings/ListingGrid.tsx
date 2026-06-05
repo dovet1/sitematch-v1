@@ -12,9 +12,10 @@ interface ListingGridProps {
   onListingClick: (listingId: string) => void;
   onFiltersChange?: (filters: SearchFilters) => void;
   onUpgradeClick?: () => void;
+  onTotalCountChange?: (count: number) => void;
 }
 
-export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgradeClick }: ListingGridProps) {
+export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgradeClick, onTotalCountChange }: ListingGridProps) {
   const [listings, setListings] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -132,6 +133,7 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
         // Update total count if provided
         if (data.total !== undefined) {
           setTotalCount(data.total);
+          onTotalCountChange?.(data.total);
         }
         
       } catch (err) {
@@ -281,53 +283,55 @@ export function ListingGrid({ filters, onListingClick, onFiltersChange, onUpgrad
   }
 
   return (
-    <div className="space-y-8">
-      {/* All Listings - single continuous grid */}
-      <div className="space-y-6">
-        <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-          {listings.map((listing, index) => (
-            <ListingCard
-              key={listing.id}
-              listing={listing}
-              onClick={() => onListingClick(listing.id)}
-              searchCoordinates={filters.coordinates}
-              index={index}
-            />
-          ))}
+    <div className="pt-10 space-y-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        {/* All Listings - single continuous grid */}
+        <div className="space-y-6">
+          <div className="listing-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+            {listings.map((listing, index) => (
+              <ListingCard
+                key={listing.id}
+                listing={listing}
+                onClick={() => onListingClick(listing.id)}
+                searchCoordinates={filters.coordinates}
+                index={index}
+              />
+            ))}
+          </div>
         </div>
+
+        {/* Upgrade CTA for Free Tier Users */}
+        {isFreeTier && listings.length > 0 && onUpgradeClick && (
+          <UpgradeCTA onUpgradeClick={onUpgradeClick} />
+        )}
+
+        {/* Loading More Indicator */}
+        {isLoadingMore && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={`skeleton-${i}`} className="animate-pulse">
+                <div className="bg-gray-200 rounded-lg h-64"></div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Load More Button (fallback for accessibility) */}
+        {hasMore && !isLoadingMore && !isFreeTier && (
+          <div className="flex justify-center py-10">
+            <button
+              onClick={loadMore}
+              className="px-8 py-4 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-black text-base shadow-xl hover:shadow-2xl hover:scale-105"
+            >
+              Load More Listings
+            </button>
+          </div>
+        )}
+
+
+        {/* Infinite Scroll Trigger - at the very bottom */}
+        {hasMore && !isFreeTier && <div ref={observerTarget} className="h-20 min-h-[5rem]" />}
       </div>
-
-      {/* Upgrade CTA for Free Tier Users */}
-      {isFreeTier && listings.length > 0 && onUpgradeClick && (
-        <UpgradeCTA onUpgradeClick={onUpgradeClick} />
-      )}
-
-      {/* Loading More Indicator */}
-      {isLoadingMore && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={`skeleton-${i}`} className="animate-pulse">
-              <div className="bg-gray-200 rounded-lg h-64"></div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Load More Button (fallback for accessibility) */}
-      {hasMore && !isLoadingMore && !isFreeTier && (
-        <div className="flex justify-center py-10">
-          <button
-            onClick={loadMore}
-            className="px-8 py-4 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all duration-300 font-black text-base shadow-xl hover:shadow-2xl hover:scale-105"
-          >
-            Load More Listings
-          </button>
-        </div>
-      )}
-
-
-      {/* Infinite Scroll Trigger - at the very bottom */}
-      {hasMore && !isFreeTier && <div ref={observerTarget} className="h-20 min-h-[5rem]" />}
     </div>
   );
 }

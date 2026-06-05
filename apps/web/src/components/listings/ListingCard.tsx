@@ -218,10 +218,9 @@ export function ListingCard({ listing, onClick, searchCoordinates, index = 999 }
     <article
       className={cn(
         "listing-card group relative",
-        "bg-white rounded-[2rem] p-7 md:p-8 border-3 border-violet-200",
-        "cursor-pointer transition-all duration-500",
-        "hover:shadow-2xl hover:border-violet-400 hover:-translate-y-3",
-        index % 4 === 1 ? 'md:mt-6' : index % 4 === 3 ? 'md:mt-8' : ''
+        "bg-white rounded-[14px] p-[22px] border border-[#E8E4DC]",
+        "cursor-pointer transition-all duration-150",
+        "hover:shadow-[0_8px_24px_-12px_rgba(20,10,40,0.12)] hover:border-[#7C7588]"
       )}
       onClick={onClick}
       role="button"
@@ -235,19 +234,16 @@ export function ListingCard({ listing, onClick, searchCoordinates, index = 999 }
       aria-label={`View ${listing.company_name} listing`}
       data-listing-id={listing.id}
     >
-      {/* Gradient accent corner */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-300/30 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
       {/* Logo/Company */}
-      <div className="relative flex items-center gap-4 mb-7">
+      <div className="relative flex items-center gap-4 mb-5">
         {logoUrl ? (
-          <div className="w-16 h-16 md:w-18 md:h-18 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+          <div className="w-[52px] h-[52px] rounded-[10px] overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center flex-shrink-0">
             <img
               src={logoUrl}
               alt={`${listing.company_name} logo`}
               className="w-full h-full object-contain p-1.5"
-              width={64}
-              height={64}
+              width={52}
+              height={52}
               loading={loadingStrategy}
               fetchPriority={fetchPriority as 'high' | 'low' | 'auto'}
               onLoad={() => setImageLoaded(true)}
@@ -255,54 +251,56 @@ export function ListingCard({ listing, onClick, searchCoordinates, index = 999 }
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
                 if (target.parentElement) {
-                  target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-500 to-purple-600 text-white font-bold text-lg">${getInitials(listing.company_name)}</div>`;
+                  target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-500 to-purple-600 text-white font-bold text-lg rounded-[10px]">${getInitials(listing.company_name)}</div>`;
                 }
               }}
             />
           </div>
         ) : (
-          <div className="w-16 h-16 md:w-18 md:h-18 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+          <div className="w-[52px] h-[52px] rounded-[10px] bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
             {getInitials(listing.company_name)}
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="relative font-black text-gray-900 text-base md:text-lg pb-2 break-words">
+          <h3 className="text-[17px] font-semibold tracking-[-0.3px] text-[#171419] break-words">
             {listing.company_name}
-            <span className="absolute bottom-0 left-0 w-16 h-1 bg-violet-300 group-hover:w-full transition-all duration-500 rounded-full"></span>
           </h3>
           {primarySector && (
-            <p className="text-sm text-violet-600 font-bold mt-1">{formatSectorName(primarySector)}</p>
+            <p className="text-eyebrow text-[#5421CC] mt-1">{formatSectorName(primarySector)}</p>
           )}
         </div>
       </div>
 
-      {/* Details with bold icons */}
-      <div className="space-y-3 text-base text-gray-700 font-semibold mb-5">
-        <div className="flex items-start gap-3">
-          <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0 text-violet-500" />
-          <span className="line-clamp-1">{locationText}</span>
+      {/* Data rows */}
+      <div className="space-y-3 mb-5">
+        <div className="grid grid-cols-[64px_1fr] gap-3 items-baseline">
+          <span className="text-data-key text-[#7C7588]">LOCATION</span>
+          <span className="text-[14px] text-[#171419] line-clamp-1">{locationText}</span>
         </div>
         {siteSizeText && siteSizeText !== 'No site size preference' && (
-          <div className="flex items-start gap-3">
-            <Building2 className="w-5 h-5 mt-0.5 flex-shrink-0 text-violet-500" />
-            <span>{siteSizeText}</span>
-          </div>
-        )}
-        {/* Verification badge */}
-        {listing.verified_at && (
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0 text-green-500" />
-            <span className="text-sm text-green-600">Verified {getRelativeVerificationTime(listing.verified_at)}</span>
+          <div className="grid grid-cols-[64px_1fr] gap-3 items-baseline">
+            <span className="text-data-key text-[#7C7588]">SIZE</span>
+            <span className="text-[14px] text-[#171419]">{siteSizeText}</span>
           </div>
         )}
       </div>
 
-      {/* Bold hover indicator */}
-      <div className="mt-5 pt-5 border-t-3 border-violet-100 group-hover:border-violet-300 transition-colors duration-300">
-        <span className="text-base text-violet-600 font-black flex items-center gap-2">
-          View details
-          <svg className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-4 border-t border-[#EFEBE2]">
+        {listing.verified_at ? (
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#15803D]"></div>
+            <span className="text-[12px] font-medium text-[#15803D]">
+              Verified {getRelativeVerificationTime(listing.verified_at)}
+            </span>
+          </div>
+        ) : (
+          <div></div>
+        )}
+        <span className="text-[14px] font-medium text-[#171419] flex items-center gap-1.5 group-hover:gap-2.5 transition-all duration-150">
+          View
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </span>
       </div>

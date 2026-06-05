@@ -87,7 +87,7 @@ export function Features() {
             "Drag, draw and measure on any plot",
             "Toggle between 2D and 3D views",
             "Add parking spaces to the map",
-            "Import your own CAD or image files"
+            "Upload your building plans or access drawings"
           ]}
           videoLabel="SiteSketcher"
           videoNote="Drawing a footprint on a plot, extruding to 3D"
