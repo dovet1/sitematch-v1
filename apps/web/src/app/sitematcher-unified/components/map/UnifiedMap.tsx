@@ -29,6 +29,25 @@ const RADIUS_LINE_LAYER = 'assess-radius-line'
 const STORES_SOURCE = 'assess-stores'
 const STORES_LAYER = 'assess-stores-dots'
 
+// LSOA catchment cells (Catchment tab) — reuses the SiteAnalyser tileset.
+const LSOA_TILESET_ID = 'dovet.3xo625k3'
+const LSOA_SOURCE_ID = 'catchment-lsoa'
+const LSOA_SOURCE_LAYER = 'Lower_layer_Super_Output_Area-4ntic5'
+const LSOA_CODE_PROP = 'LSOA21CD'
+const LSOA_FILL_SELECTED = 'lsoa-fill-selected'
+const LSOA_FILL_DESELECTED = 'lsoa-fill-deselected'
+const LSOA_OUTLINE_SELECTED = 'lsoa-outline-selected'
+const LSOA_OUTLINE_DESELECTED = 'lsoa-outline-deselected'
+const CATCH_SOURCE = 'catchment-boundary'
+const CATCH_LINE_LAYER = 'catchment-boundary-line'
+
+export interface LsoaLayerProps {
+  allCodes: string[]
+  selectedCodes: Set<string>
+  onToggle: (code: string) => void
+  boundaryGeometry: GeoJSON.Geometry | null
+}
+
 function buaFilter(codes: string[] | null, range: [number, number]) {
   const pop = ['coalesce', ['get', 'pop_final'], ['get', 'pop']] as const
   const conditions: any[] = ['all', ['>=', pop, range[0]], ['<=', pop, range[1]]]
@@ -45,8 +64,10 @@ function firstSymbolLayerId(map: mapboxgl.Map): string | undefined {
 }
 
 function applyMapCursor(map: mapboxgl.Map) {
+  const st = useWorkspaceStore.getState()
+  // Crosshair only for dropping an Assess pin — not while toggling catchment cells.
   map.getCanvas().style.cursor =
-    useWorkspaceStore.getState().view === 'assess' ? 'crosshair' : ''
+    st.view === 'assess' && st.tab !== 'catchment' ? 'crosshair' : ''
 }
 
 // A GeoJSON polygon approximating a circle of `radiusKm` around [lng, lat].
@@ -71,14 +92,25 @@ function circlePolygon(
   }
 }
 
-export function UnifiedMap({ storeDots = [] }: { storeDots?: NearbyStore[] }) {
+export function UnifiedMap({
+  storeDots = [],
+  lsoa,
+}: {
+  storeDots?: NearbyStore[]
+  lsoa?: LsoaLayerProps
+}) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const styleKeyRef = useRef<'satellite' | 'hybrid'>(selectMapStyleKey('assess'))
   const pinRef = useRef<mapboxgl.Marker | null>(null)
   const readyRef = useRef(false)
+  // Latest LSOA toggle handler, read inside the once-registered map click handler.
+  const lsoaToggleRef = useRef<((code: string) => void) | undefined>(undefined)
+  lsoaToggleRef.current = lsoa?.onToggle
 
   const view = useWorkspaceStore((s) => s.view)
+  const tab = useWorkspaceStore((s) => s.tab)
+  const showLsoa = useWorkspaceStore((s) => s.showLsoa)
   const area = useWorkspaceStore((s) => s.area)
   const gapGssCodes = useWorkspaceStore((s) => s.gapGssCodes)
   const populationRange = useWorkspaceStore((s) => s.populationRange)
@@ -189,7 +221,84 @@ export function UnifiedMap({ storeDots = [] }: { storeDots?: NearbyStore[] }) {
       })
     }
 
+    // LSOA catchment cells (Catchment tab).
+    if (!map.getSource(LSOA_SOURCE_ID)) {
+      map.addSource(LSOA_SOURCE_ID, {
+        type: 'vector',
+        url: `mapbox://${LSOA_TILESET_ID}`,
+      })
+    }
+    if (!map.getLayer(LSOA_FILL_DESELECTED)) {
+      map.addLayer(
+        {
+          id: LSOA_FILL_DESELECTED,
+          type: 'fill',
+          source: LSOA_SOURCE_ID,
+          'source-layer': LSOA_SOURCE_LAYER,
+          filter: ['in', ['get', LSOA_CODE_PROP], ['literal', []]],
+          paint: { 'fill-color': '#64748b', 'fill-opacity': 0.15 },
+        },
+        beforeId
+      )
+    }
+    if (!map.getLayer(LSOA_FILL_SELECTED)) {
+      map.addLayer(
+        {
+          id: LSOA_FILL_SELECTED,
+          type: 'fill',
+          source: LSOA_SOURCE_ID,
+          'source-layer': LSOA_SOURCE_LAYER,
+          filter: ['in', ['get', LSOA_CODE_PROP], ['literal', []]],
+          paint: { 'fill-color': '#7033FF', 'fill-opacity': 0.3 },
+        },
+        beforeId
+      )
+    }
+    if (!map.getLayer(LSOA_OUTLINE_DESELECTED)) {
+      map.addLayer(
+        {
+          id: LSOA_OUTLINE_DESELECTED,
+          type: 'line',
+          source: LSOA_SOURCE_ID,
+          'source-layer': LSOA_SOURCE_LAYER,
+          filter: ['in', ['get', LSOA_CODE_PROP], ['literal', []]],
+          paint: { 'line-color': '#ffffff', 'line-width': 1 },
+        },
+        beforeId
+      )
+    }
+    if (!map.getLayer(LSOA_OUTLINE_SELECTED)) {
+      map.addLayer(
+        {
+          id: LSOA_OUTLINE_SELECTED,
+          type: 'line',
+          source: LSOA_SOURCE_ID,
+          'source-layer': LSOA_SOURCE_LAYER,
+          filter: ['in', ['get', LSOA_CODE_PROP], ['literal', []]],
+          paint: { 'line-color': '#ffffff', 'line-width': 2 },
+        },
+        beforeId
+      )
+    }
+
+    if (!map.getSource(CATCH_SOURCE)) {
+      map.addSource(CATCH_SOURCE, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      })
+    }
+    if (!map.getLayer(CATCH_LINE_LAYER)) {
+      map.addLayer({
+        id: CATCH_LINE_LAYER,
+        type: 'line',
+        source: CATCH_SOURCE,
+        paint: { 'line-color': '#7033FF', 'line-width': 2, 'line-dasharray': [2, 2] },
+      })
+    }
+
     applyBuaFilter(map)
+    applyLsoaFilters(map)
+    applyCatchmentBoundary(map)
     applyVisibility(map)
     applyMapCursor(map)
     readyRef.current = true
@@ -219,18 +328,63 @@ export function UnifiedMap({ storeDots = [] }: { storeDots?: NearbyStore[] }) {
     map.setFilter(BUA_OUTLINE_LAYER, f)
   }
 
+  const applyLsoaFilters = (map: mapboxgl.Map) => {
+    if (!map.getLayer(LSOA_FILL_SELECTED)) return
+    const all = lsoa?.allCodes ?? []
+    const selected = lsoa?.selectedCodes ?? new Set<string>()
+    const selectedArr = Array.from(selected)
+    const deselectedArr = all.filter((c) => !selected.has(c))
+    const selFilter = ['in', ['get', LSOA_CODE_PROP], ['literal', selectedArr]] as any
+    const deselFilter = ['in', ['get', LSOA_CODE_PROP], ['literal', deselectedArr]] as any
+    map.setFilter(LSOA_FILL_SELECTED, selFilter)
+    map.setFilter(LSOA_OUTLINE_SELECTED, selFilter)
+    map.setFilter(LSOA_FILL_DESELECTED, deselFilter)
+    map.setFilter(LSOA_OUTLINE_DESELECTED, deselFilter)
+  }
+
+  const applyCatchmentBoundary = (map: mapboxgl.Map) => {
+    const src = map.getSource(CATCH_SOURCE) as mapboxgl.GeoJSONSource | undefined
+    if (!src) return
+    const geom = lsoa?.boundaryGeometry
+    src.setData(
+      geom
+        ? { type: 'Feature', geometry: geom, properties: {} }
+        : { type: 'FeatureCollection', features: [] }
+    )
+  }
+
   const applyVisibility = (map: mapboxgl.Map) => {
+    const catchmentActive = tab === 'catchment'
     const buaVisible = view === 'find'
     for (const id of [BUA_FILL_LAYER, BUA_OUTLINE_LAYER, BUA_SELECTED_LAYER]) {
       if (map.getLayer(id)) {
         map.setLayoutProperty(id, 'visibility', buaVisible ? 'visible' : 'none')
       }
     }
-    const assessVisible = view === 'assess'
+    // Assess radius/store dots hide while the Catchment tab owns the local view.
+    const assessVisible = view === 'assess' && !catchmentActive
     for (const id of [RADIUS_FILL_LAYER, RADIUS_LINE_LAYER, STORES_LAYER]) {
       if (map.getLayer(id)) {
         map.setLayoutProperty(id, 'visibility', assessVisible ? 'visible' : 'none')
       }
+    }
+    const lsoaVisible = catchmentActive && showLsoa
+    for (const id of [
+      LSOA_FILL_DESELECTED,
+      LSOA_FILL_SELECTED,
+      LSOA_OUTLINE_DESELECTED,
+      LSOA_OUTLINE_SELECTED,
+    ]) {
+      if (map.getLayer(id)) {
+        map.setLayoutProperty(id, 'visibility', lsoaVisible ? 'visible' : 'none')
+      }
+    }
+    if (map.getLayer(CATCH_LINE_LAYER)) {
+      map.setLayoutProperty(
+        CATCH_LINE_LAYER,
+        'visibility',
+        catchmentActive ? 'visible' : 'none'
+      )
     }
   }
 
@@ -257,8 +411,11 @@ export function UnifiedMap({ storeDots = [] }: { storeDots?: NearbyStore[] }) {
     map.on('style.load', onLoad)
 
     // Click BUA → select it; click empty map in Assess → drop a pin.
+    // The Catchment tab owns clicks (LSOA toggle) via its own layer handlers.
     map.on('click', (e) => {
-      if (useWorkspaceStore.getState().view === 'find') {
+      const st = useWorkspaceStore.getState()
+      if (st.tab === 'catchment') return
+      if (st.view === 'find') {
         const feats = map.queryRenderedFeatures(e.point, { layers: [BUA_FILL_LAYER] })
         const f = feats[0]
         if (f?.properties?.gsscode) {
@@ -272,7 +429,7 @@ export function UnifiedMap({ storeDots = [] }: { storeDots?: NearbyStore[] }) {
         }
         return
       }
-      if (useWorkspaceStore.getState().view === 'assess') {
+      if (st.view === 'assess') {
         setAssessPoint({ lat: e.lngLat.lat, lng: e.lngLat.lng })
       }
     })
@@ -285,6 +442,24 @@ export function UnifiedMap({ storeDots = [] }: { storeDots?: NearbyStore[] }) {
     map.on('mouseleave', BUA_FILL_LAYER, () => {
       applyMapCursor(map)
     })
+
+    // LSOA cell click → toggle it in/out of the catchment selection.
+    const lsoaClick = (
+      e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }
+    ) => {
+      if (useWorkspaceStore.getState().tab !== 'catchment') return
+      const code = e.features?.[0]?.properties?.[LSOA_CODE_PROP]
+      if (code) lsoaToggleRef.current?.(code)
+    }
+    for (const id of [LSOA_FILL_SELECTED, LSOA_FILL_DESELECTED]) {
+      map.on('click', id, lsoaClick)
+      map.on('mouseenter', id, () => {
+        if (useWorkspaceStore.getState().tab === 'catchment') {
+          map.getCanvas().style.cursor = 'pointer'
+        }
+      })
+      map.on('mouseleave', id, () => applyMapCursor(map))
+    }
 
     return () => {
       map.remove()
@@ -318,6 +493,30 @@ export function UnifiedMap({ storeDots = [] }: { storeDots?: NearbyStore[] }) {
     if (map && readyRef.current) applyBuaFilter(map)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gapGssCodes, populationRange])
+
+  // Re-evaluate layer visibility when the tab or LSOA overlay toggle changes.
+  useEffect(() => {
+    const map = mapRef.current
+    if (map && readyRef.current) {
+      applyVisibility(map)
+      applyMapCursor(map)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, showLsoa])
+
+  // Repaint LSOA selected/deselected cells as the catchment selection changes.
+  useEffect(() => {
+    const map = mapRef.current
+    if (map && readyRef.current) applyLsoaFilters(map)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lsoa?.allCodes, lsoa?.selectedCodes])
+
+  // Redraw the catchment outline (isochrone or radius circle).
+  useEffect(() => {
+    const map = mapRef.current
+    if (map && readyRef.current) applyCatchmentBoundary(map)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lsoa?.boundaryGeometry])
 
   // Highlight the selected BUA + fly to it.
   useEffect(() => {

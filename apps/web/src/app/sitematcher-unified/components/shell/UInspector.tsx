@@ -2,8 +2,10 @@
 
 import { MapPin, X, ChevronRight, Loader2 } from 'lucide-react'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
-import type { BUAResult, MissingFascia } from '../../types/unified-workspace'
+import type { BUAResult, MissingFascia, InspectorTab } from '../../types/unified-workspace'
 import type { NearbyStore } from '../../lib/services/gaps-service'
+import type { CatchmentData } from '../../lib/hooks/useCatchment'
+import { CatchmentTab } from './CatchmentTab'
 
 interface Landscape {
   stores: NearbyStore[]
@@ -170,20 +172,75 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   )
 }
 
+function SummaryBody({ landscape }: { landscape: Landscape }) {
+  const { stores, missing, loading } = landscape
+  return (
+    <>
+      {loading && (
+        <div className="flex items-center gap-2 px-[18px] py-4 text-[12.5px] text-sm-ink3">
+          <Loader2 size={13} className="animate-spin" /> Reading the landscape…
+        </div>
+      )}
+
+      <div className="px-[18px] pt-[18px]">
+        <div className="flex items-baseline justify-between">
+          <div className="text-[17px] font-semibold tracking-[-0.3px] text-sm-ink">
+            The gap · brands missing here
+          </div>
+          <span className="font-mono text-[12px] text-sm-ink2">{missing.length}</span>
+        </div>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-sm-ink3">
+          Established brands with no presence nearby that fit this location.
+        </p>
+      </div>
+      <div className="flex flex-col gap-2 px-[18px] pb-[18px] pt-2.5">
+        {!loading && missing.length === 0 && (
+          <div className="rounded-xl border border-dashed border-sm-border bg-sm-bg px-3 py-3.5 text-center text-[12.5px] text-sm-ink3">
+            No missing brands found for this radius.
+          </div>
+        )}
+        {missing.map((m) => (
+          <MissingRow key={m.fasciaId} m={m} />
+        ))}
+      </div>
+
+      <SectionHeader>Already trading here · {stores.length}</SectionHeader>
+      <div>
+        {!loading && stores.length === 0 && (
+          <div className="px-[18px] py-3 text-[12.5px] text-sm-ink3">
+            No stores found within this radius.
+          </div>
+        )}
+        {stores.slice(0, 40).map((s) => (
+          <TradingRow key={s.id} s={s} />
+        ))}
+      </div>
+    </>
+  )
+}
+
+const OPP_TABS: { id: InspectorTab; label: string }[] = [
+  { id: 'summary', label: 'Summary' },
+  { id: 'catchment', label: 'Catchment' },
+]
+
 function Opportunity({
   title,
   subtitle,
   population,
   landscape,
+  catchmentData,
   onClose,
 }: {
   title: string
   subtitle: string
   population?: number
   landscape: Landscape
+  catchmentData: CatchmentData
   onClose: () => void
 }) {
-  const { stores, missing, loading } = landscape
+  const tab = useWorkspaceStore((s) => s.tab)
+  const setTab = useWorkspaceStore((s) => s.setTab)
 
   return (
     <aside className="flex w-[404px] shrink-0 flex-col overflow-hidden border-l border-sm-border bg-sm-surface">
@@ -211,48 +268,30 @@ function Opportunity({
         </div>
       </div>
 
+      <div className="flex shrink-0 border-b border-sm-border">
+        {OPP_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={
+              'relative px-[18px] py-2.5 text-[13px] font-medium transition-colors ' +
+              (tab === t.id
+                ? 'text-sm-ink after:absolute after:inset-x-[18px] after:-bottom-px after:h-0.5 after:bg-sm-violet'
+                : 'text-sm-ink3 hover:text-sm-ink2')
+            }
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {loading && (
-          <div className="flex items-center gap-2 px-[18px] py-4 text-[12.5px] text-sm-ink3">
-            <Loader2 size={13} className="animate-spin" /> Reading the landscape…
-          </div>
+        {tab === 'catchment' ? (
+          <CatchmentTab data={catchmentData} />
+        ) : (
+          <SummaryBody landscape={landscape} />
         )}
-
-        <div className="px-[18px] pt-[18px]">
-          <div className="flex items-baseline justify-between">
-            <div className="text-[17px] font-semibold tracking-[-0.3px] text-sm-ink">
-              The gap · brands missing here
-            </div>
-            <span className="font-mono text-[12px] text-sm-ink2">
-              {missing.length}
-            </span>
-          </div>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-sm-ink3">
-            Established brands with no presence nearby that fit this location.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 px-[18px] pb-[18px] pt-2.5">
-          {!loading && missing.length === 0 && (
-            <div className="rounded-xl border border-dashed border-sm-border bg-sm-bg px-3 py-3.5 text-center text-[12.5px] text-sm-ink3">
-              No missing brands found for this radius.
-            </div>
-          )}
-          {missing.map((m) => (
-            <MissingRow key={m.fasciaId} m={m} />
-          ))}
-        </div>
-
-        <SectionHeader>Already trading here · {stores.length}</SectionHeader>
-        <div>
-          {!loading && stores.length === 0 && (
-            <div className="px-[18px] py-3 text-[12.5px] text-sm-ink3">
-              No stores found within this radius.
-            </div>
-          )}
-          {stores.slice(0, 40).map((s) => (
-            <TradingRow key={s.id} s={s} />
-          ))}
-        </div>
       </div>
     </aside>
   )
@@ -266,12 +305,14 @@ export function UInspector({
   findLoading,
   findError,
   landscape,
+  catchment,
 }: {
   findResults: BUAResult[]
   findTotal: number
   findLoading: boolean
   findError: string | null
   landscape: Landscape
+  catchment: CatchmentData
 }) {
   const view = useWorkspaceStore((s) => s.view)
   const area = useWorkspaceStore((s) => s.area)
@@ -287,6 +328,7 @@ export function UInspector({
         subtitle={area.region ? `Opportunity · ${area.region}` : 'Opportunity'}
         population={area.population}
         landscape={landscape}
+        catchmentData={catchment}
         onClose={() => selectArea(null)}
       />
     )
@@ -299,6 +341,7 @@ export function UInspector({
         title="Dropped point"
         subtitle={`${assessPoint.lat.toFixed(4)}, ${assessPoint.lng.toFixed(4)}`}
         landscape={landscape}
+        catchmentData={catchment}
         onClose={() => setAssessPoint(null)}
       />
     )

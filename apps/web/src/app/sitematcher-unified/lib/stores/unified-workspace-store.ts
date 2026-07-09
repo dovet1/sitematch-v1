@@ -27,6 +27,8 @@ interface WorkspaceState {
   gapRules: GapRule[]
   populationRange: [number, number]
   catchment: CatchmentDefinition
+  // Catchment tab: whether the LSOA cells are drawn on the map.
+  showLsoa: boolean
   compare: WorkspaceArea[]
 
   // Find-Gaps map filter — gsscodes matching the active rules (null = show all).
@@ -56,6 +58,7 @@ interface WorkspaceState {
   setAssessPoint: (point: { lat: number; lng: number } | null) => void
   setRadiusKm: (km: number) => void
   setCatchment: (catchment: CatchmentDefinition) => void
+  toggleShowLsoa: () => void
 
   addToCompare: (area: WorkspaceArea) => void
   removeFromCompare: (id: string) => void
@@ -74,7 +77,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   overlays: { traffic: false },
   gapRules: [],
   populationRange: [MIN_POPULATION, MAX_POPULATION],
-  catchment: { mode: 'distance', value: 10 },
+  catchment: { mode: 'distance', value: 5 },
+  showLsoa: true,
   compare: [],
 
   gapGssCodes: null,
@@ -99,8 +103,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   // Selecting an area resets the tab to Summary and clears sub-selection.
   selectArea: (area) => set({ area, tab: 'summary', selected: null }),
 
-  // Tab switching is only meaningful when an area is selected.
-  setTab: (tab) => set((s) => (s.area ? { tab } : {})),
+  // Tab switching is only meaningful when there's an active selection —
+  // a picked built-up area or an Assess dropped point.
+  setTab: (tab) => set((s) => (s.area || s.assessPoint ? { tab } : {})),
 
   setSelected: (selected) => set({ selected }),
 
@@ -131,6 +136,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setAssessPoint: (assessPoint) => set({ assessPoint }),
   setRadiusKm: (radiusKm) => set({ radiusKm }),
   setCatchment: (catchment) => set({ catchment }),
+  toggleShowLsoa: () => set((s) => ({ showLsoa: !s.showLsoa })),
 
   addToCompare: (area) =>
     set((s) => {

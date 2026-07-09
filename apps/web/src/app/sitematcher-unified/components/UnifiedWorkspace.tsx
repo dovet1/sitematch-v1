@@ -10,6 +10,8 @@ import { useWorkspaceStore } from '../lib/stores/unified-workspace-store'
 import { useReferenceData } from '../lib/hooks/useReferenceData'
 import { useFindGaps } from '../lib/hooks/useFindGaps'
 import { useAreaData } from '../lib/hooks/useAreaData'
+import { useCatchment } from '../lib/hooks/useCatchment'
+import type { WorkspaceArea } from '../types/unified-workspace'
 
 // Radius used when reading the landscape around a selected built-up area
 // (the Assess dropped-point radius comes from the store instead).
@@ -20,6 +22,8 @@ export function UnifiedWorkspace() {
   const area = useWorkspaceStore((s) => s.area)
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
   const radiusKm = useWorkspaceStore((s) => s.radiusKm)
+  const tab = useWorkspaceStore((s) => s.tab)
+  const catchment = useWorkspaceStore((s) => s.catchment)
 
   const { data: refData } = useReferenceData()
   const findGaps = useFindGaps(view === 'find')
@@ -36,6 +40,22 @@ export function UnifiedWorkspace() {
   const radiusMeters = (area ? BUA_RADIUS_KM : radiusKm) * 1000
   const landscape = useAreaData(center, radiusMeters)
 
+  // The catchment focus: a selected built-up area, or a synthesized pseudo-area
+  // around the Assess dropped pin. Keeps demographics keyed on a stable identity.
+  const focusArea = useMemo<WorkspaceArea | null>(() => {
+    if (area) return area
+    if (view === 'assess' && assessPoint)
+      return {
+        id: `point:${assessPoint.lat.toFixed(5)},${assessPoint.lng.toFixed(5)}`,
+        name: 'Dropped point',
+        center: [assessPoint.lng, assessPoint.lat],
+        kind: 'point',
+      }
+    return null
+  }, [area, view, assessPoint])
+
+  const catchmentData = useCatchment(focusArea, catchment, tab === 'catchment')
+
   const showInspector =
     Boolean(area) || view === 'find' || (view === 'assess' && Boolean(assessPoint))
 
@@ -47,7 +67,15 @@ export function UnifiedWorkspace() {
         <ULeftPanel refData={refData} />
 
         <main className="relative flex-1">
-          <UnifiedMap storeDots={landscape.stores} />
+          <UnifiedMap
+            storeDots={landscape.stores}
+            lsoa={{
+              allCodes: catchmentData.allLsoaCodes,
+              selectedCodes: catchmentData.selectedLsoaCodes,
+              onToggle: catchmentData.toggleLsoa,
+              boundaryGeometry: catchmentData.boundaryGeometry,
+            }}
+          />
         </main>
 
         {showInspector && (
@@ -57,6 +85,7 @@ export function UnifiedWorkspace() {
             findLoading={findGaps.loading}
             findError={findGaps.error}
             landscape={landscape}
+            catchment={catchmentData}
           />
         )}
       </div>
