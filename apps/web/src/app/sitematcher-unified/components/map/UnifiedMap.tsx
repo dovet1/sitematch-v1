@@ -495,11 +495,27 @@ export function UnifiedMap({
       return
     }
 
-    // Leaving sketch: force the discovery base style back; 'style.load' re-adds
-    // our layers (addLayers no longer early-returns now that view !== 'sketch').
+    // Leaving sketch: force the discovery base style back. The sketch shares the
+    // 'hybrid' base, so a default (diffed) setStyle would strip the layers the
+    // sketch overlaid *without* firing 'style.load' — leaving our discovery
+    // layers gone and readyRef stuck false (radius circle/pin never redraw).
+    // diff:false forces a full reload; cast because mapbox-gl v3's internal
+    // SetStyleOptions marks the font-family fields as required.
+    // Assess/Find are 2D-only, so flatten the map in case the sketch left it
+    // pitched/rotated in 3D (setStyle alone preserves camera pitch & bearing).
     if (prev === 'sketch') {
       readyRef.current = false
-      map.setStyle(MAP_STYLES.hybrid)
+      map.setStyle(MAP_STYLES.hybrid, { diff: false } as any)
+      map.easeTo({ pitch: 0, bearing: 0, duration: 400 })
+      // Re-add the discovery layers once the reloaded style settles. 'idle'
+      // fires reliably for both full and diffed swaps (unlike 'style.load'),
+      // and addLayers is idempotent — this restores readyRef + the radius/BUA
+      // sources so the next map click redraws them.
+      map.once('idle', () => {
+        addLayers(map)
+        applyVisibility(map)
+        applyMapCursor(map)
+      })
       applyMapCursor(map)
       return
     }

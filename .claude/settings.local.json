@@ -74,7 +74,8 @@
       "Bash([ -f \"$p/route.ts\" ])",
       "Bash(npx eslint *)",
       "Bash(echo \"=== exit: $? ===\")",
-      "Read(//private/tmp/**)"
+      "Read(//private/tmp/**)",
+      "Bash(echo \"EXIT: $?\")"
     ],
     "deny": []
   }

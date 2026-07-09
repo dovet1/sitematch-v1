@@ -65,8 +65,13 @@ export function UnifiedWorkspace() {
   }, [tierLoading, hasPlusAccess])
 
   // Reset to the launcher whenever we leave (and re-enter) Sketch mode.
+  // Assess/Find are 2D-only, so also drop the sketch view out of 3D — otherwise
+  // the shared map is left pitched with no controls to recover it.
   useEffect(() => {
-    if (!isSketch) setSketchActive(false)
+    if (!isSketch) {
+      setSketchActive(false)
+      useSketchStore.getState().setView('2d')
+    }
   }, [isSketch])
 
   // Sketch keyboard shortcuts (tool switching, undo/redo) — only while sketching.
