@@ -497,7 +497,7 @@ export function createAdminService() {
 
 export async function requireServerAdmin() {
   const supabase = await createServerClient()
-  
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     throw new Error('Not authenticated')
@@ -514,4 +514,16 @@ export async function requireServerAdmin() {
   }
 
   return { user, profile }
+}
+
+// Boolean admin check for a given user id (does not throw).
+export async function isServerAdmin(userId: string): Promise<boolean> {
+  const supabase = await createServerClient()
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single()
+
+  return profile?.role === 'admin'
 }

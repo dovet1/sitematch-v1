@@ -109,6 +109,7 @@ interface SketchState {
 
   // Actions - SavedCad Library
   loadSavedCads: () => Promise<void>;
+  loadSharedCads: () => Promise<void>;
   addSavedCad: (cad: SavedCad) => void;
   updateSavedCad: (id: string, updates: Partial<SavedCad>) => void;
   deleteSavedCad: (id: string) => void;
@@ -520,6 +521,34 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       });
     } catch (error) {
       console.error('Failed to load saved CADs:', error);
+      set({
+        savedCadsLoading: false,
+        savedCadsError: error instanceof Error ? error.message : 'Failed to load CAD library',
+      });
+    }
+  },
+
+  // Load the admin-maintained shared CAD library into savedCads. Used by the
+  // unified workspace instead of the per-user loadSavedCads(); populates the
+  // same array so CAD rendering/resolution by id works unchanged.
+  loadSharedCads: async () => {
+    set({ savedCadsLoading: true, savedCadsError: null });
+
+    try {
+      const response = await fetch('/api/sitesketcher-v2/shared-cads');
+
+      if (!response.ok) {
+        throw new Error(`Failed to load CAD library: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      set({
+        savedCads: data.cads || [],
+        savedCadsLoading: false,
+        savedCadsError: null,
+      });
+    } catch (error) {
+      console.error('Failed to load shared CADs:', error);
       set({
         savedCadsLoading: false,
         savedCadsError: error instanceof Error ? error.message : 'Failed to load CAD library',

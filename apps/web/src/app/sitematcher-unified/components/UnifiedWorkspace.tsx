@@ -9,17 +9,16 @@ import { ULeftPanel } from './shell/ULeftPanel'
 import { UInspector } from './shell/UInspector'
 import { UnifiedMap } from './map/UnifiedMap'
 import { SketchLayer } from './map/SketchLayer'
-import { SketchActionBar } from './shell/SketchActionBar'
 import { useWorkspaceStore } from '../lib/stores/unified-workspace-store'
 import { useReferenceData } from '../lib/hooks/useReferenceData'
 import { useFindGaps } from '../lib/hooks/useFindGaps'
 import { useAreaData } from '../lib/hooks/useAreaData'
 import { useCatchment } from '../lib/hooks/useCatchment'
 import type { WorkspaceArea } from '../types/unified-workspace'
-// Reused sketch shell (all depend only on the standalone sketch store).
-import { LeftRail } from '../../sitesketcher-v2/components/shell/LeftRail'
-import { LeftPanel } from '../../sitesketcher-v2/components/shell/LeftPanel'
-import { RightInspector } from '../../sitesketcher-v2/components/shell/RightInspector'
+// New SiteMatcher-styled sketch shell (all depend only on the standalone sketch store).
+import { USketchPanel } from './shell/USketchPanel'
+import { USketchLauncher } from './shell/USketchLauncher'
+import { USketchInspector } from './shell/USketchInspector'
 import { FloatingMapControls } from '../../sitesketcher-v2/components/shell/FloatingMapControls'
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier'
@@ -38,6 +37,8 @@ export function UnifiedWorkspace() {
   const catchment = useWorkspaceStore((s) => s.catchment)
 
   const [map, setMap] = useState<mapboxgl.Map | null>(null)
+  // Sketch mode shows a launcher until a session is started/opened.
+  const [sketchActive, setSketchActive] = useState(false)
 
   const { data: refData } = useReferenceData()
   const findGaps = useFindGaps(view === 'find')
@@ -56,12 +57,17 @@ export function UnifiedWorkspace() {
     useSketchStore.getState().setEffectiveAccess({ hasProAccess, hasPlusAccess, tierLimits })
   }, [hasProAccess, hasPlusAccess, tierLoading])
 
-  // Load the CAD library once Plus access is confirmed.
+  // Load the admin-maintained shared CAD library once Plus access is confirmed.
   useEffect(() => {
     if (!tierLoading && hasPlusAccess) {
-      useSketchStore.getState().loadSavedCads()
+      useSketchStore.getState().loadSharedCads()
     }
   }, [tierLoading, hasPlusAccess])
+
+  // Reset to the launcher whenever we leave (and re-enter) Sketch mode.
+  useEffect(() => {
+    if (!isSketch) setSketchActive(false)
+  }, [isSketch])
 
   // Sketch keyboard shortcuts (tool switching, undo/redo) — only while sketching.
   useEffect(() => {
@@ -162,10 +168,11 @@ export function UnifiedWorkspace() {
       <div className="flex flex-1 overflow-hidden">
         <URail />
         {isSketch ? (
-          <>
-            <LeftRail />
-            <LeftPanel />
-          </>
+          sketchActive ? (
+            <USketchPanel onExit={() => setSketchActive(false)} />
+          ) : (
+            <USketchLauncher onActivate={() => setSketchActive(true)} />
+          )
         ) : (
           <ULeftPanel refData={refData} />
         )}
@@ -186,11 +193,11 @@ export function UnifiedWorkspace() {
             <>
               <SketchLayer map={map} />
               <FloatingMapControls />
-              <RightInspector />
-              <SketchActionBar />
             </>
           )}
         </main>
+
+        {isSketch && sketchActive && <USketchInspector />}
 
         {showInspector && (
           <UInspector

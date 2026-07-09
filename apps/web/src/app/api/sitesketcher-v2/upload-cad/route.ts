@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasPlusAccess } from '@/lib/subscription-utils';
 import { getCurrentUser } from '@/lib/auth';
+import { isServerAdmin } from '@/lib/admin';
 import { createServerClient } from '@/lib/supabase';
 import sharp from 'sharp';
 
@@ -15,9 +16,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Pro check
-    const isPlusUser = await hasPlusAccess(user.id);
-    if (!isPlusUser) {
+    // 2. Plus check (admins bypass — they populate the shared library)
+    const allowed = (await hasPlusAccess(user.id)) || (await isServerAdmin(user.id));
+    if (!allowed) {
       return NextResponse.json({
         error: 'CAD uploads require Plus tier.',
       }, { status: 403 });

@@ -337,6 +337,67 @@ export interface Database {
           updated_at?: string
         }
       }
+      shared_cads: {
+        Row: {
+          id: string
+          created_by: string | null
+          name: string
+          file_name: string
+          url: string
+          storage_path: string
+          metres_per_pixel: number
+          image_width_px: number
+          image_height_px: number
+          calibration_points: any | null // JSONB
+          brand: string
+          format: string
+          source_store: string
+          survey_year: number
+          gia_sqm: number | null
+          dims_label: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          created_by?: string | null
+          name: string
+          file_name: string
+          url: string
+          storage_path: string
+          metres_per_pixel: number
+          image_width_px: number
+          image_height_px: number
+          calibration_points?: any | null
+          brand: string
+          format: string
+          source_store: string
+          survey_year: number
+          gia_sqm?: number | null
+          dims_label?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          created_by?: string | null
+          name?: string
+          file_name?: string
+          url?: string
+          storage_path?: string
+          metres_per_pixel?: number
+          image_width_px?: number
+          image_height_px?: number
+          calibration_points?: any | null
+          brand?: string
+          format?: string
+          source_store?: string
+          survey_year?: number
+          gia_sqm?: number | null
+          dims_label?: string | null
+          updated_at?: string
+        }
+      }
       listing_versions: {
         Row: {
           id: string

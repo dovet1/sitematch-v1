@@ -41,6 +41,13 @@ export interface SavedCad {
     b: { x: number; y: number };
     distance: number;
   };
+  // Provenance metadata — present only on admin-maintained shared-library CADs.
+  brand?: string;
+  format?: string;
+  sourceStore?: string;
+  surveyYear?: number;
+  gia?: number;
+  dims?: string;
   createdAt: string;
   updatedAt: string;
 }

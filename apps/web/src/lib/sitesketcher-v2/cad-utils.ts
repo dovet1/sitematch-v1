@@ -1,5 +1,132 @@
 import type { CadImage, CadInstance, SavedCad } from '@/types/sitesketcher-v2';
 
+const DEFAULT_BG_THRESHOLD = 245;
+const DEFAULT_CROP_PADDING = 20;
+
+interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const loadImage = (url: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Failed to load CAD image for cleanup'));
+    image.src = url;
+  });
+
+const calculateAutoCropBounds = (
+  imageData: ImageData,
+  width: number,
+  height: number,
+  padding: number
+): CropRect => {
+  let minX = width;
+  let maxX = 0;
+  let minY = height;
+  let maxY = 0;
+  let hasContent = false;
+  const data = imageData.data;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const alpha = data[(y * width + x) * 4 + 3];
+      if (alpha > 10) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+        hasContent = true;
+      }
+    }
+  }
+
+  if (!hasContent) return { x: 0, y: 0, width, height };
+
+  const cropX = Math.max(0, minX - padding);
+  const cropY = Math.max(0, minY - padding);
+  return {
+    x: cropX,
+    y: cropY,
+    width: Math.min(width - cropX, maxX - minX + padding * 2),
+    height: Math.min(height - cropY, maxY - minY + padding * 2),
+  };
+};
+
+/**
+ * Browser-only: knock out the white background and auto-crop a raster CAD image.
+ * Returns the processed PNG blob and its new pixel dimensions. Shared by the
+ * standalone uploader and the admin CAD-library uploader.
+ */
+export async function cleanAndCropCadImage(imageUrl: string): Promise<{
+  processedBlob: Blob;
+  newWidthPx: number;
+  newHeightPx: number;
+}> {
+  const image = await loadImage(imageUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Could not create canvas context');
+  context.drawImage(image, 0, 0);
+
+  const imageData = context.getImageData(0, 0, image.width, image.height);
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    if (
+      data[i] > DEFAULT_BG_THRESHOLD &&
+      data[i + 1] > DEFAULT_BG_THRESHOLD &&
+      data[i + 2] > DEFAULT_BG_THRESHOLD
+    ) {
+      data[i + 3] = 0;
+    }
+  }
+  context.putImageData(imageData, 0, 0);
+
+  const cropRect = calculateAutoCropBounds(
+    imageData,
+    image.width,
+    image.height,
+    DEFAULT_CROP_PADDING
+  );
+
+  const finalCanvas = document.createElement('canvas');
+  finalCanvas.width = cropRect.width;
+  finalCanvas.height = cropRect.height;
+  const finalContext = finalCanvas.getContext('2d');
+  if (!finalContext) throw new Error('Could not create final canvas context');
+  finalContext.drawImage(
+    canvas,
+    cropRect.x,
+    cropRect.y,
+    cropRect.width,
+    cropRect.height,
+    0,
+    0,
+    cropRect.width,
+    cropRect.height
+  );
+
+  const processedBlob = await new Promise<Blob>((resolve, reject) => {
+    finalCanvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Failed to create processed CAD image'));
+    }, 'image/png');
+  });
+
+  return {
+    processedBlob,
+    newWidthPx: cropRect.width,
+    newHeightPx: cropRect.height,
+  };
+}
+
 /**
  * Calculate the four corner coordinates for a CAD image on the map
  * Returns [topLeft, topRight, bottomRight, bottomLeft] in [lng, lat] format

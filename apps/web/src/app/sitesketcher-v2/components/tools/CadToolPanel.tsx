@@ -10,11 +10,10 @@ import { CadUpgradeModal } from '../modals/CadUpgradeModal';
 import type { CadImage, SavedCad } from '@/types/sitesketcher-v2';
 import { clsx } from 'clsx';
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier';
+import { cleanAndCropCadImage } from '@/lib/sitesketcher-v2/cad-utils';
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
-const DEFAULT_BG_THRESHOLD = 245;
-const DEFAULT_CROP_PADDING = 20;
 
 interface UploadResult {
   id: string;
@@ -24,132 +23,6 @@ interface UploadResult {
   imageWidthPx: number;
   imageHeightPx: number;
 }
-
-interface CropRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-const loadImage = (url: string) =>
-  new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.crossOrigin = 'anonymous';
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('Failed to load CAD image for cleanup'));
-    image.src = url;
-  });
-
-const calculateAutoCropBounds = (
-  imageData: ImageData,
-  width: number,
-  height: number,
-  padding: number
-): CropRect => {
-  let minX = width;
-  let maxX = 0;
-  let minY = height;
-  let maxY = 0;
-  let hasContent = false;
-
-  const data = imageData.data;
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const alpha = data[(y * width + x) * 4 + 3];
-      if (alpha > 10) {
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x);
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
-        hasContent = true;
-      }
-    }
-  }
-
-  if (!hasContent) {
-    return { x: 0, y: 0, width, height };
-  }
-
-  const cropX = Math.max(0, minX - padding);
-  const cropY = Math.max(0, minY - padding);
-  const cropWidth = Math.min(width - cropX, maxX - minX + padding * 2);
-  const cropHeight = Math.min(height - cropY, maxY - minY + padding * 2);
-
-  return {
-    x: cropX,
-    y: cropY,
-    width: cropWidth,
-    height: cropHeight,
-  };
-};
-
-const createDefaultCleanedCadBlob = async (imageUrl: string) => {
-  const image = await loadImage(imageUrl);
-  const canvas = document.createElement('canvas');
-  canvas.width = image.width;
-  canvas.height = image.height;
-
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Could not create canvas context');
-
-  context.drawImage(image, 0, 0);
-
-  const imageData = context.getImageData(0, 0, image.width, image.height);
-  const data = imageData.data;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-
-    if (r > DEFAULT_BG_THRESHOLD && g > DEFAULT_BG_THRESHOLD && b > DEFAULT_BG_THRESHOLD) {
-      data[i + 3] = 0;
-    }
-  }
-
-  context.putImageData(imageData, 0, 0);
-
-  const cropRect = calculateAutoCropBounds(
-    imageData,
-    image.width,
-    image.height,
-    DEFAULT_CROP_PADDING
-  );
-
-  const finalCanvas = document.createElement('canvas');
-  finalCanvas.width = cropRect.width;
-  finalCanvas.height = cropRect.height;
-
-  const finalContext = finalCanvas.getContext('2d');
-  if (!finalContext) throw new Error('Could not create final canvas context');
-
-  finalContext.drawImage(
-    canvas,
-    cropRect.x,
-    cropRect.y,
-    cropRect.width,
-    cropRect.height,
-    0,
-    0,
-    cropRect.width,
-    cropRect.height
-  );
-
-  const processedBlob = await new Promise<Blob>((resolve, reject) => {
-    finalCanvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error('Failed to create processed CAD image'));
-    }, 'image/png');
-  });
-
-  return {
-    processedBlob,
-    newWidthPx: cropRect.width,
-    newHeightPx: cropRect.height,
-  };
-};
 
 export function CadToolPanel() {
   const { hasProAccess, hasPlusAccess, billingInterval } = useSubscriptionTier();
@@ -297,7 +170,7 @@ export function CadToolPanel() {
 
   const processUploadedImage = async (image: UploadResult) => {
     try {
-      const result = await createDefaultCleanedCadBlob(image.url);
+      const result = await cleanAndCropCadImage(image.url);
       const formData = new FormData();
       const processedFileName = image.fileName.replace(/\.(jpg|jpeg|png|pdf)$/i, '.png');
       formData.append('file', result.processedBlob, processedFileName);
