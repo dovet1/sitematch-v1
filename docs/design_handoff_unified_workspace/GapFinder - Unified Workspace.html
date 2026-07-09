@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GapFinder — Unified Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #FBFAF7; font-family: Inter, sans-serif; }
+  * { box-sizing: border-box; }
+  #root { position: fixed; inset: 0; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- shared design-system primitives (tokens, icons, map, sketch, census) -->
+<script type="text/babel" src="sitesketcher-core.jsx"></script>
+<script type="text/babel" src="siteanalyser-core.jsx"></script>
+<script type="text/babel" src="siteanalyser-report.jsx"></script>
+<script type="text/babel" src="sitesketcher-chrome.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<!-- unified workspace -->
+<script type="text/babel" src="u-core.jsx"></script>
+<script type="text/babel" src="u-cadlib.jsx"></script>
+<script type="text/babel" src="u-sketch-session.jsx"></script>
+<script type="text/babel" src="u-map.jsx"></script>
+<script type="text/babel" src="u-panels.jsx"></script>
+<script type="text/babel" src="u-inspector.jsx"></script>
+<script type="text/babel" src="u-app.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#7033FF"/>
+    <g transform="translate(30 30) scale(0.62)" fill="#FBFAF7">
+      <path d="M2.61,37.02a1.46,1.46,0,0,1-.11-.55V4A1.5,1.5,0,0,1,4,2.5H15.77a1.5,1.5,0,0,1,1.06.44L27.18,13.29a1.5,1.5,0,0,1,0,2.12L5.06,37.53A1.51,1.51,0,0,1,2.61,37.02Z"/>
+      <path d="M61.5,4V15.77a1.8,1.8,0,0,1-.11.57,1.63,1.63,0,0,1-.33.49L50.71,27.18a1.51,1.51,0,0,1-2.12,0L26.47,5.06a1.52,1.52,0,0,1,.49-2.45,1.79,1.79,0,0,1,.57-.11L60,2.5A1.5,1.5,0,0,1,61.5,4Z"/>
+      <path d="M61.39,26.98a1.46,1.46,0,0,1,.11.55V60A1.5,1.5,0,0,1,60,61.5H48.23a1.51,1.51,0,0,1-1.06-.44L36.82,50.71a1.5,1.5,0,0,1,0-2.12L58.94,26.47A1.51,1.51,0,0,1,61.39,26.98Z"/>
+      <path d="M19.17,30.94,30.94,19.17a1.51,1.51,0,0,1,2.12,0L44.83,30.94a1.51,1.51,0,0,1,0,2.12L33.06,44.83a1.52,1.52,0,0,1-2.12,0L19.17,33.06A1.51,1.51,0,0,1,19.17,30.94Z"/>
+      <path d="M37.86,59.45a1.51,1.51,0,0,1-1.39,2.05L4,61.5A1.5,1.5,0,0,1,2.5,60V48.23a1.81,1.81,0,0,1,.11-.57,1.63,1.63,0,0,1,.33-.49L13.29,36.82a1.55,1.55,0,0,1,2.12,0L37.53,58.94A1.29,1.29,0,0,1,37.86,59.45Z"/>
+    </g>
+  </svg>
+</template>
+
+<script type="text/babel">
+  ReactDOM.createRoot(document.getElementById("root")).render(<Stage/>);
+</script>
+</body>
+</html>
