@@ -2,6 +2,7 @@
 
 import { MapPin, Search, PenTool, HelpCircle } from 'lucide-react'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
+import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
 import type { WorkspaceMode } from '../../types/unified-workspace'
 
 // Requirements mode is deferred in v1 (see plan) — three modes only.
@@ -15,6 +16,22 @@ export function URail() {
   const view = useWorkspaceStore((s) => s.view)
   const setMode = useWorkspaceStore((s) => s.setMode)
 
+  // Leaving a dirty sketch session prompts before discarding the work.
+  const handleModeClick = (id: WorkspaceMode) => {
+    if (id === view) return
+    if (view === 'sketch') {
+      const sketch = useSketchStore.getState()
+      if (sketch.isDirty) {
+        const ok = window.confirm(
+          'You have unsaved sketch changes. Leave and discard them?'
+        )
+        if (!ok) return
+      }
+      sketch.reset()
+    }
+    setMode(id)
+  }
+
   return (
     <nav className="flex h-full w-14 flex-col items-center gap-1 border-r border-sm-border bg-sm-surface py-3">
       {MODES.map(({ id, label, Icon }) => {
@@ -26,7 +43,7 @@ export function URail() {
             title={label}
             aria-label={label}
             aria-pressed={active}
-            onClick={() => setMode(id)}
+            onClick={() => handleModeClick(id)}
             className={
               'flex h-10 w-10 items-center justify-center rounded-lg transition-colors ' +
               (active

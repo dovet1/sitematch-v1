@@ -4,10 +4,7 @@ import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { MAP_STYLES, MAPBOX_TOKEN } from '@/lib/sitesketcher-v2/constants'
-import {
-  useWorkspaceStore,
-  selectMapStyleKey,
-} from '../../lib/stores/unified-workspace-store'
+import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import type { NearbyStore } from '../../lib/services/gaps-service'
 
 // UK-wide "national" starting view for discovery.
@@ -95,13 +92,15 @@ function circlePolygon(
 export function UnifiedMap({
   storeDots = [],
   lsoa,
+  onMap,
 }: {
   storeDots?: NearbyStore[]
   lsoa?: LsoaLayerProps
+  onMap?: (map: mapboxgl.Map | null) => void
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
-  const styleKeyRef = useRef<'satellite' | 'hybrid'>(selectMapStyleKey('assess'))
+  const prevViewRef = useRef(useWorkspaceStore.getState().view)
   const pinRef = useRef<mapboxgl.Marker | null>(null)
   const readyRef = useRef(false)
   // Latest LSOA toggle handler, read inside the once-registered map click handler.
@@ -122,6 +121,9 @@ export function UnifiedMap({
   // Add BUA + overlay layers to the current style. Safe to call repeatedly.
   const addLayers = (map: mapboxgl.Map) => {
     if (!map.isStyleLoaded()) return
+    // While sketching, the SketchLayer owns the style — don't re-add discovery
+    // layers on top of it (its setStyle calls also fire our 'style.load').
+    if (useWorkspaceStore.getState().view === 'sketch') return
 
     if (!map.getSource(BUA_SOURCE_ID)) {
       map.addSource(BUA_SOURCE_ID, { type: 'vector', url: `mapbox://${BUA_TILESET_ID}` })
@@ -398,12 +400,14 @@ export function UnifiedMap({
     mapboxgl.accessToken = MAPBOX_TOKEN
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: MAP_STYLES[selectMapStyleKey(view)],
+      // Discovery base style. The SketchLayer takes over the style in sketch mode.
+      style: MAP_STYLES.hybrid,
       center: NATIONAL_VIEWPORT.center,
       zoom: NATIONAL_VIEWPORT.zoom,
       antialias: true,
     })
     mapRef.current = map
+    onMap?.(map)
 
     const onLoad = () => addLayers(map)
     map.on('load', onLoad)
@@ -461,7 +465,13 @@ export function UnifiedMap({
       map.on('mouseleave', id, () => applyMapCursor(map))
     }
 
+    // Keep the map sized to its container as side panels open/close.
+    const resizeObserver = new ResizeObserver(() => map.resize())
+    resizeObserver.observe(containerRef.current)
+
     return () => {
+      resizeObserver.disconnect()
+      onMap?.(null)
       map.remove()
       mapRef.current = null
       readyRef.current = false
@@ -469,18 +479,32 @@ export function UnifiedMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Swap base style when the mode's required style changes (sketch only for now).
+  // React to mode changes, handing the base style off to (and reclaiming it
+  // from) the SketchLayer at the sketch boundary.
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
-    const nextKey = selectMapStyleKey(view)
-    if (nextKey !== styleKeyRef.current) {
-      styleKeyRef.current = nextKey
-      readyRef.current = false
-      map.setStyle(MAP_STYLES[nextKey])
+    const prev = prevViewRef.current
+    prevViewRef.current = view
+
+    // Entering sketch: the SketchLayer owns the style now. Hide discovery
+    // overlays so they don't show beneath the sketch.
+    if (view === 'sketch') {
+      if (readyRef.current) applyVisibility(map)
       applyMapCursor(map)
       return
     }
+
+    // Leaving sketch: force the discovery base style back; 'style.load' re-adds
+    // our layers (addLayers no longer early-returns now that view !== 'sketch').
+    if (prev === 'sketch') {
+      readyRef.current = false
+      map.setStyle(MAP_STYLES.hybrid)
+      applyMapCursor(map)
+      return
+    }
+
+    // Discovery mode change (assess <-> find): just re-evaluate visibility.
     if (readyRef.current) {
       applyVisibility(map)
       applyMapCursor(map)

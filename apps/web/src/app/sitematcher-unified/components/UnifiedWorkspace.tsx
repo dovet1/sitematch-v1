@@ -1,17 +1,29 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type mapboxgl from 'mapbox-gl'
+import { Toaster } from 'sonner'
 import { UChrome } from './shell/UChrome'
 import { URail } from './shell/URail'
 import { ULeftPanel } from './shell/ULeftPanel'
 import { UInspector } from './shell/UInspector'
 import { UnifiedMap } from './map/UnifiedMap'
+import { SketchLayer } from './map/SketchLayer'
+import { SketchActionBar } from './shell/SketchActionBar'
 import { useWorkspaceStore } from '../lib/stores/unified-workspace-store'
 import { useReferenceData } from '../lib/hooks/useReferenceData'
 import { useFindGaps } from '../lib/hooks/useFindGaps'
 import { useAreaData } from '../lib/hooks/useAreaData'
 import { useCatchment } from '../lib/hooks/useCatchment'
 import type { WorkspaceArea } from '../types/unified-workspace'
+// Reused sketch shell (all depend only on the standalone sketch store).
+import { LeftRail } from '../../sitesketcher-v2/components/shell/LeftRail'
+import { LeftPanel } from '../../sitesketcher-v2/components/shell/LeftPanel'
+import { RightInspector } from '../../sitesketcher-v2/components/shell/RightInspector'
+import { FloatingMapControls } from '../../sitesketcher-v2/components/shell/FloatingMapControls'
+import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
+import { useSubscriptionTier } from '@/hooks/useSubscriptionTier'
+import { TIER_FEATURES } from '@/lib/sitesketcher-v2/constants'
 
 // Radius used when reading the landscape around a selected built-up area
 // (the Assess dropped-point radius comes from the store instead).
@@ -25,8 +37,91 @@ export function UnifiedWorkspace() {
   const tab = useWorkspaceStore((s) => s.tab)
   const catchment = useWorkspaceStore((s) => s.catchment)
 
+  const [map, setMap] = useState<mapboxgl.Map | null>(null)
+
   const { data: refData } = useReferenceData()
   const findGaps = useFindGaps(view === 'find')
+
+  const isSketch = view === 'sketch'
+
+  // Keep the sketch store's tier access in sync so CAD interaction is unlocked.
+  const { hasProAccess, hasPlusAccess, loading: tierLoading } = useSubscriptionTier()
+  useEffect(() => {
+    if (tierLoading) return
+    const tierLimits = hasPlusAccess
+      ? TIER_FEATURES.plus
+      : hasProAccess
+        ? TIER_FEATURES.pro
+        : TIER_FEATURES.free
+    useSketchStore.getState().setEffectiveAccess({ hasProAccess, hasPlusAccess, tierLimits })
+  }, [hasProAccess, hasPlusAccess, tierLoading])
+
+  // Load the CAD library once Plus access is confirmed.
+  useEffect(() => {
+    if (!tierLoading && hasPlusAccess) {
+      useSketchStore.getState().loadSavedCads()
+    }
+  }, [tierLoading, hasPlusAccess])
+
+  // Sketch keyboard shortcuts (tool switching, undo/redo) — only while sketching.
+  useEffect(() => {
+    if (!isSketch) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+      const store = useSketchStore.getState()
+      switch (e.key.toLowerCase()) {
+        case 'v':
+          e.preventDefault()
+          store.setActiveTool('select')
+          break
+        case 'p':
+          e.preventDefault()
+          store.setActiveTool('polygon')
+          break
+        case 'k':
+          e.preventDefault()
+          store.setActiveTool('parking')
+          break
+        case 'c':
+          e.preventDefault()
+          store.setActiveTool('cad')
+          break
+        case 'm':
+          e.preventDefault()
+          store.setActiveTool('measure')
+          break
+        case 'escape':
+          store.setActiveTool('select')
+          store.cancelMeasurement()
+          break
+        case 'enter':
+          if (store.activeTool === 'measure' && store.measurementInProgress) {
+            e.preventDefault()
+            store.freezeMeasurement()
+          }
+          break
+        case 'z':
+          if (e.metaKey || e.ctrlKey) {
+            e.preventDefault()
+            if (e.shiftKey) store.redo()
+            else store.undo()
+          }
+          break
+        case 'delete':
+        case 'backspace':
+          if (store.selectedId) {
+            e.preventDefault()
+            if (store.selectedType === 'polygon') store.deletePolygon(store.selectedId)
+            else if (store.selectedType === 'parking') store.deleteParkingBlock(store.selectedId)
+            else if (store.selectedType === 'cad') store.deleteCadImage(store.selectedId)
+          }
+          break
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isSketch])
 
   // The landscape (nearby stores + missing brands) is read around whichever
   // point is active: a selected BUA's centroid or the Assess dropped pin.
@@ -57,17 +152,27 @@ export function UnifiedWorkspace() {
   const catchmentData = useCatchment(focusArea, catchment, tab === 'catchment')
 
   const showInspector =
-    Boolean(area) || view === 'find' || (view === 'assess' && Boolean(assessPoint))
+    !isSketch &&
+    (Boolean(area) || view === 'find' || (view === 'assess' && Boolean(assessPoint)))
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-sm-bg">
+      <Toaster position="top-center" richColors />
       <UChrome />
       <div className="flex flex-1 overflow-hidden">
         <URail />
-        <ULeftPanel refData={refData} />
+        {isSketch ? (
+          <>
+            <LeftRail />
+            <LeftPanel />
+          </>
+        ) : (
+          <ULeftPanel refData={refData} />
+        )}
 
         <main className="relative flex-1">
           <UnifiedMap
+            onMap={setMap}
             storeDots={landscape.stores}
             lsoa={{
               allCodes: catchmentData.allLsoaCodes,
@@ -76,6 +181,15 @@ export function UnifiedWorkspace() {
               boundaryGeometry: catchmentData.boundaryGeometry,
             }}
           />
+
+          {isSketch && map && (
+            <>
+              <SketchLayer map={map} />
+              <FloatingMapControls />
+              <RightInspector />
+              <SketchActionBar />
+            </>
+          )}
         </main>
 
         {showInspector && (
