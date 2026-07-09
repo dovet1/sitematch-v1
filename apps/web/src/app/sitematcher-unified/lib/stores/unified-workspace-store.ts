@@ -12,6 +12,9 @@ import type {
 
 const MAX_COMPARE = 3
 
+export const MIN_POPULATION = 5001
+export const MAX_POPULATION = 1200000
+
 interface WorkspaceState {
   // Cross-tool selection + navigation
   view: WorkspaceMode
@@ -22,8 +25,16 @@ interface WorkspaceState {
   // Overlays / filters
   overlays: WorkspaceOverlays
   gapRules: GapRule[]
+  populationRange: [number, number]
   catchment: CatchmentDefinition
   compare: WorkspaceArea[]
+
+  // Find-Gaps map filter — gsscodes matching the active rules (null = show all).
+  gapGssCodes: string[] | null
+
+  // Assess-Area dropped pin + radius (km).
+  assessPoint: { lat: number; lng: number } | null
+  radiusKm: number
 
   // Panel chrome
   leftHidden: boolean
@@ -39,6 +50,11 @@ interface WorkspaceState {
   setGapRules: (rules: GapRule[]) => void
   addGapRule: (rule: GapRule) => void
   removeGapRule: (id: string) => void
+  toggleGapRule: (id: string) => void
+  setPopulationRange: (range: [number, number]) => void
+  setGapGssCodes: (codes: string[] | null) => void
+  setAssessPoint: (point: { lat: number; lng: number } | null) => void
+  setRadiusKm: (km: number) => void
   setCatchment: (catchment: CatchmentDefinition) => void
 
   addToCompare: (area: WorkspaceArea) => void
@@ -57,8 +73,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
 
   overlays: { traffic: false },
   gapRules: [],
+  populationRange: [MIN_POPULATION, MAX_POPULATION],
   catchment: { mode: 'distance', value: 10 },
   compare: [],
+
+  gapGssCodes: null,
+
+  assessPoint: null,
+  radiusKm: 5,
 
   leftHidden: false,
   inspectorHidden: false,
@@ -66,7 +88,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   // Switching modes clears the selection and resets to Summary (per handoff).
   // The dirty-Sketch leave-guard is handled by the Sketch integration layer.
   setMode: (mode) =>
-    set({ view: mode, area: null, selected: null, tab: 'summary' }),
+    set({
+      view: mode,
+      area: null,
+      selected: null,
+      tab: 'summary',
+      assessPoint: null,
+    }),
 
   // Selecting an area resets the tab to Summary and clears sub-selection.
   selectArea: (area) => set({ area, tab: 'summary', selected: null }),
@@ -83,6 +111,25 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   addGapRule: (rule) => set((s) => ({ gapRules: [...s.gapRules, rule] })),
   removeGapRule: (id) =>
     set((s) => ({ gapRules: s.gapRules.filter((r) => r.id !== id) })),
+  toggleGapRule: (id) =>
+    set((s) => ({
+      gapRules: s.gapRules.map((r) => {
+        if (r.id !== id) return r
+        const op =
+          r.op === 'has'
+            ? 'lacks'
+            : r.op === 'lacks'
+              ? 'has'
+              : r.op === 'within'
+                ? 'beyond'
+                : 'within'
+        return { ...r, op }
+      }),
+    })),
+  setPopulationRange: (populationRange) => set({ populationRange }),
+  setGapGssCodes: (gapGssCodes) => set({ gapGssCodes }),
+  setAssessPoint: (assessPoint) => set({ assessPoint }),
+  setRadiusKm: (radiusKm) => set({ radiusKm }),
   setCatchment: (catchment) => set({ catchment }),
 
   addToCompare: (area) =>

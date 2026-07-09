@@ -1,16 +1,21 @@
 'use client'
 
+import Image from 'next/image'
 import { Search, Download, ChevronDown } from 'lucide-react'
 
 export function UChrome() {
   return (
     <header className="flex h-14 items-center gap-4 border-b border-sm-border bg-sm-surface px-4">
       {/* Logo / wordmark */}
-      <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sm-violet text-sm font-semibold text-white">
-          S
-        </div>
-        <span className="text-base font-semibold text-sm-ink">SiteMatcher</span>
+      <div className="flex items-center">
+        <Image
+          src="/logos/logo.svg"
+          alt="SiteMatcher"
+          width={200}
+          height={40}
+          className="h-9 w-auto"
+          priority
+        />
       </div>
 
       {/* Location search (wired to geocoding in a later phase) */}

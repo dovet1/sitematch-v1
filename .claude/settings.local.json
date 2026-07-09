@@ -70,7 +70,8 @@
       "Bash(/opt/homebrew/bin/node /opt/homebrew/bin/npm install sharp pdfjs-dist canvas image-size --workspace=apps/web)",
       "Bash(/opt/homebrew/bin/node /opt/homebrew/bin/npm install sharp pdfjs-dist image-size --workspace=apps/web)",
       "Bash(PATH=/opt/homebrew/bin:$PATH /opt/homebrew/bin/npm install:*)",
-      "Bash(timeout 60 npm run build)"
+      "Bash(timeout 60 npm run build)",
+      "Bash([ -f \"$p/route.ts\" ])"
     ],
     "deny": []
   }
