@@ -12,7 +12,19 @@ import {
   Ruler,
 } from 'lucide-react';
 
-export function FloatingMapControls() {
+interface FloatingMapControlsProps {
+  /**
+   * Shift the controls left when the inspector is open. Correct when the
+   * inspector overlays the map (sitesketcher-v2). Should be false when the
+   * inspector is a layout sibling that reflows the map (sitematcher-unified),
+   * otherwise the controls double-compensate and jump toward the middle.
+   */
+  offsetForInspector?: boolean;
+}
+
+export function FloatingMapControls({
+  offsetForInspector = true,
+}: FloatingMapControlsProps = {}) {
   const {
     view,
     setView,
@@ -23,7 +35,8 @@ export function FloatingMapControls() {
     selectedId,
     selectedType,
   } = useSketchStore();
-  const hasInspector = selectedId !== null && selectedType !== null;
+  const hasInspector =
+    offsetForInspector && selectedId !== null && selectedType !== null;
 
   const viewOptions: SegmentedOption<ViewMode>[] = [
     { value: '2d', label: '2D', icon: <Box className="w-3.5 h-3.5" /> },

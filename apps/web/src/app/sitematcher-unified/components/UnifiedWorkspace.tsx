@@ -196,7 +196,7 @@ export function UnifiedWorkspace() {
           {isSketch && map && (
             <>
               <SketchLayer map={map} />
-              <FloatingMapControls />
+              <FloatingMapControls offsetForInspector={false} />
             </>
           )}
         </main>
