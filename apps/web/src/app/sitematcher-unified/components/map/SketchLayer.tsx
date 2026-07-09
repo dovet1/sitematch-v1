@@ -29,6 +29,8 @@ import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import { toast } from 'sonner'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
+import '@/styles/sitesketcher-v2-tokens.css'
+import '@/styles/sitesketcher-v2.css'
 
 function isPointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
   const [lng, lat] = point

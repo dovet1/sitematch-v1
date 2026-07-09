@@ -17,7 +17,7 @@ import {
 import { toast } from 'sonner'
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
 import { POLYGON_COLORS, PARKING_DIMENSIONS } from '@/lib/sitesketcher-v2/constants'
-import { calculatePolygonArea } from '@/lib/sitesketcher-v2/polygon-utils'
+import { calculatePolygonArea, calculateDistance } from '@/lib/sitesketcher-v2/polygon-utils'
 import type { Tool } from '@/types/sitesketcher-v2'
 import { SaveModal } from '../../../sitesketcher-v2/components/modals/SaveModal'
 import { getSketchObjectCount } from '@/lib/sitesketcher-v2/object-count'
@@ -511,11 +511,71 @@ function ParkingPanel() {
 /* ---------- Measure ---------- */
 
 function MeasurePanel() {
+  const measurementInProgress = useSketchStore((s) => s.measurementInProgress)
+  const frozenMeasurement = useSketchStore((s) => s.frozenMeasurement)
+  const units = useSketchStore((s) => s.units)
+  const cancelMeasurement = useSketchStore((s) => s.cancelMeasurement)
+
+  const displayed = measurementInProgress ?? frozenMeasurement
+  const unitLabel = units === 'metric' ? 'm' : 'ft'
+
+  let total = 0
+  const segments: { distance: string; index: number }[] = []
+  if (displayed && displayed.points.length > 1) {
+    for (let i = 1; i < displayed.points.length; i++) {
+      const dist = calculateDistance(
+        displayed.points[i - 1].lngLat,
+        displayed.points[i].lngLat,
+        units,
+      )
+      total += parseFloat(dist.replace(/[^\d.]/g, ''))
+      segments.push({ distance: dist, index: i })
+    }
+  }
+
+  const hasPoints = !!displayed && displayed.points.length > 0
+
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="rounded-xl border border-dashed border-sm-border bg-sm-bg px-3 py-6 text-center text-[12.5px] leading-relaxed text-sm-ink3">
-        Click the map to start a measurement chain. Each click adds a point.
-      </div>
+      {hasPoints ? (
+        <>
+          <div className="rounded-xl border border-sm-border bg-sm-bg px-3 py-2.5">
+            <Kicker>Total distance</Kicker>
+            <div className="mt-1 font-mono text-[15px] font-semibold text-sm-violet">
+              {total.toFixed(1)} {unitLabel}
+            </div>
+          </div>
+
+          {segments.length > 0 && (
+            <div className="rounded-xl border border-sm-border bg-sm-bg p-3">
+              <div className="pb-2">
+                <Kicker>Segments</Kicker>
+              </div>
+              <dl className="flex flex-col gap-1.5">
+                {segments.map((segment) => (
+                  <div key={segment.index} className="flex items-center justify-between">
+                    <dt className="text-[12px] text-sm-ink3">Segment {segment.index}</dt>
+                    <dd className="font-mono text-[12px] text-sm-ink">{segment.distance}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={cancelMeasurement}
+            className="rounded-lg border border-sm-border bg-sm-surface px-3 py-2 text-[12.5px] font-medium text-sm-ink transition-colors hover:bg-sm-bg"
+          >
+            Clear measurement
+          </button>
+        </>
+      ) : (
+        <div className="rounded-xl border border-dashed border-sm-border bg-sm-bg px-3 py-6 text-center text-[12.5px] leading-relaxed text-sm-ink3">
+          Click the map to start a measurement chain. Each click adds a point.
+        </div>
+      )}
+
       <ShortcutList
         items={[
           ['Enter', 'Finish chain'],
