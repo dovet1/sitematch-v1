@@ -44,6 +44,11 @@ function firstSymbolLayerId(map: mapboxgl.Map): string | undefined {
   return layers.find((l) => l.type === 'symbol')?.id
 }
 
+function applyMapCursor(map: mapboxgl.Map) {
+  map.getCanvas().style.cursor =
+    useWorkspaceStore.getState().view === 'assess' ? 'crosshair' : ''
+}
+
 // A GeoJSON polygon approximating a circle of `radiusKm` around [lng, lat].
 function circlePolygon(
   lng: number,
@@ -186,6 +191,7 @@ export function UnifiedMap({ storeDots = [] }: { storeDots?: NearbyStore[] }) {
 
     applyBuaFilter(map)
     applyVisibility(map)
+    applyMapCursor(map)
     readyRef.current = true
 
     // Hydrate dynamic state in case it changed before the style finished loading.
@@ -277,7 +283,7 @@ export function UnifiedMap({ storeDots = [] }: { storeDots?: NearbyStore[] }) {
       }
     })
     map.on('mouseleave', BUA_FILL_LAYER, () => {
-      map.getCanvas().style.cursor = ''
+      applyMapCursor(map)
     })
 
     return () => {
@@ -297,9 +303,13 @@ export function UnifiedMap({ storeDots = [] }: { storeDots?: NearbyStore[] }) {
       styleKeyRef.current = nextKey
       readyRef.current = false
       map.setStyle(MAP_STYLES[nextKey])
+      applyMapCursor(map)
       return
     }
-    if (readyRef.current) applyVisibility(map)
+    if (readyRef.current) {
+      applyVisibility(map)
+      applyMapCursor(map)
+    }
   }, [view])
 
   // Re-apply the BUA filter when rules/population change.
