@@ -164,7 +164,11 @@ export function UnifiedWorkspace() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-sm-bg">
       <Toaster position="top-center" richColors />
-      <UChrome />
+      <UChrome
+        onSelectLocation={(center) =>
+          map?.flyTo({ center, zoom: 13, duration: 900 })
+        }
+      />
       <div className="flex flex-1 overflow-hidden">
         <URail />
         {isSketch ? (
