@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { fetchReferenceData } from '../services/gaps-service'
 import type { ReferenceData } from '../../types/unified-workspace'
 
-const EMPTY: ReferenceData = { categories: [], brands: [] }
+const EMPTY: ReferenceData = { categories: [], brands: [], fasciaCategoryMappings: [] }
 
 // Loads the category/brand/fascia taxonomy once for the rule builder.
 export function useReferenceData(): { data: ReferenceData; loading: boolean } {

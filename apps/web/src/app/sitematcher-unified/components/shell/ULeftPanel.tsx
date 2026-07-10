@@ -11,6 +11,7 @@ import type {
   GapRule,
   ReferenceData,
 } from '../../types/unified-workspace'
+import { CatchmentControl } from './CatchmentControl'
 
 type RuleType = 'category' | 'brand' | 'fascia'
 interface ValueOption {
@@ -439,7 +440,7 @@ function FindFilters({ refData }: { refData: ReferenceData }) {
 function AssessEmpty() {
   const steps = [
     ['1', 'Drop a pin', 'Click any point on the map'],
-    ['2', 'Set a radius', '1–20 km around the point'],
+    ['2', 'Set the catchment', 'Radius, drive time or walk time'],
     ['3', 'Read the landscape', 'Brands present + brands missing'],
   ]
   return (
@@ -476,12 +477,8 @@ function AssessEmpty() {
   )
 }
 
-const RADIUS_STEPS = [1, 3, 5, 10, 20]
-
 function AssessPoint() {
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
-  const radiusKm = useWorkspaceStore((s) => s.radiusKm)
-  const setRadiusKm = useWorkspaceStore((s) => s.setRadiusKm)
   const overlays = useWorkspaceStore((s) => s.overlays)
   const toggleTraffic = useWorkspaceStore((s) => s.toggleTraffic)
 
@@ -496,7 +493,7 @@ function AssessPoint() {
           This point
         </h2>
         <p className="mt-1 text-[12.5px] leading-snug text-sm-ink3">
-          Set the radius around the dropped pin — the landscape on the right updates.
+          Set the catchment around the dropped pin — the landscape on the right updates.
         </p>
       </div>
       <div className="px-[18px] py-[18px]">
@@ -512,25 +509,8 @@ function AssessPoint() {
           </div>
         </div>
 
-        <p className="mt-4 font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3">
-          Radius
-        </p>
-        <div className="mt-2 flex gap-1.5">
-          {RADIUS_STEPS.map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setRadiusKm(v)}
-              className={
-                'flex-1 rounded-md py-1.5 font-mono text-[11px] transition-colors ' +
-                (radiusKm === v
-                  ? 'bg-sm-ink text-white'
-                  : 'border border-sm-border-soft bg-sm-bg text-sm-ink2')
-              }
-            >
-              {v}
-            </button>
-          ))}
+        <div className="mt-4">
+          <CatchmentControl />
         </div>
       </div>
 

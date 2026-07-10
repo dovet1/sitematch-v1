@@ -2,16 +2,11 @@
 
 import { MapPin, X, ChevronRight, Loader2 } from 'lucide-react'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
-import type { BUAResult, MissingFascia, InspectorTab } from '../../types/unified-workspace'
+import type { BUAResult, InspectorTab, MissingFascia } from '../../types/unified-workspace'
 import type { NearbyStore } from '../../lib/services/gaps-service'
 import type { CatchmentData } from '../../lib/hooks/useCatchment'
+import type { Landscape } from '../../lib/hooks/useAreaData'
 import { CatchmentTab } from './CatchmentTab'
-
-interface Landscape {
-  stores: NearbyStore[]
-  missing: MissingFascia[]
-  loading: boolean
-}
 
 // Small circular initials avatar (no brand-logo asset pipeline in v1).
 function Avatar({ label, size = 36 }: { label: string; size?: number }) {
@@ -196,7 +191,7 @@ function SummaryBody({ landscape }: { landscape: Landscape }) {
       <div className="flex flex-col gap-2 px-[18px] pb-[18px] pt-2.5">
         {!loading && missing.length === 0 && (
           <div className="rounded-xl border border-dashed border-sm-border bg-sm-bg px-3 py-3.5 text-center text-[12.5px] text-sm-ink3">
-            No missing brands found for this radius.
+            No missing brands found for this catchment.
           </div>
         )}
         {missing.map((m) => (
@@ -208,7 +203,7 @@ function SummaryBody({ landscape }: { landscape: Landscape }) {
       <div>
         {!loading && stores.length === 0 && (
           <div className="px-[18px] py-3 text-[12.5px] text-sm-ink3">
-            No stores found within this radius.
+            No stores found within this catchment.
           </div>
         )}
         {stores.slice(0, 40).map((s) => (

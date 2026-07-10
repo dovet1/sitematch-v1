@@ -34,9 +34,8 @@ interface WorkspaceState {
   // Find-Gaps map filter — gsscodes matching the active rules (null = show all).
   gapGssCodes: string[] | null
 
-  // Assess-Area dropped pin + radius (km).
+  // Assess-Area dropped pin. Scope/radius now derives from `catchment`.
   assessPoint: { lat: number; lng: number } | null
-  radiusKm: number
 
   // Panel chrome
   leftHidden: boolean
@@ -56,7 +55,6 @@ interface WorkspaceState {
   setPopulationRange: (range: [number, number]) => void
   setGapGssCodes: (codes: string[] | null) => void
   setAssessPoint: (point: { lat: number; lng: number } | null) => void
-  setRadiusKm: (km: number) => void
   setCatchment: (catchment: CatchmentDefinition) => void
   toggleShowLsoa: () => void
 
@@ -84,7 +82,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   gapGssCodes: null,
 
   assessPoint: null,
-  radiusKm: 5,
 
   leftHidden: false,
   inspectorHidden: false,
@@ -134,7 +131,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setPopulationRange: (populationRange) => set({ populationRange }),
   setGapGssCodes: (gapGssCodes) => set({ gapGssCodes }),
   setAssessPoint: (assessPoint) => set({ assessPoint }),
-  setRadiusKm: (radiusKm) => set({ radiusKm }),
   setCatchment: (catchment) => set({ catchment }),
   toggleShowLsoa: () => set((s) => ({ showLsoa: !s.showLsoa })),
 

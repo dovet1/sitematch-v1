@@ -1,84 +1,31 @@
 'use client'
 
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
-import type { CatchmentMode } from '../../types/unified-workspace'
 import type { CatchmentData } from '../../lib/hooks/useCatchment'
 import { DemographicsResults } from '@/components/demographics/DemographicsResults'
-
-const MODE_OPTIONS: { value: CatchmentMode; label: string }[] = [
-  { value: 'distance', label: 'Radius' },
-  { value: 'drive', label: 'Drive' },
-  { value: 'walk', label: 'Walk' },
-]
-
-// Sensible per-mode range + default when the surveyor switches definition type.
-const MODE_RANGE: Record<CatchmentMode, { min: number; max: number; step: number; def: number; unit: string }> = {
-  distance: { min: 1, max: 20, step: 1, def: 5, unit: 'mi' },
-  drive: { min: 5, max: 30, step: 5, def: 10, unit: 'min' },
-  walk: { min: 5, max: 30, step: 5, def: 15, unit: 'min' },
-}
+import { CatchmentControl } from './CatchmentControl'
 
 export function CatchmentTab({ data }: { data: CatchmentData }) {
-  const catchment = useWorkspaceStore((s) => s.catchment)
-  const setCatchment = useWorkspaceStore((s) => s.setCatchment)
   const showLsoa = useWorkspaceStore((s) => s.showLsoa)
   const toggleShowLsoa = useWorkspaceStore((s) => s.toggleShowLsoa)
+  const view = useWorkspaceStore((s) => s.view)
+  const assessPoint = useWorkspaceStore((s) => s.assessPoint)
 
-  const range = MODE_RANGE[catchment.mode]
+  // In Assess mode the left panel owns the catchment control, so hide the
+  // duplicate here. For a selected BUA there's no left control, so keep it.
+  const showControl = !(view === 'assess' && assessPoint)
+
   const total = data.allLsoaCodes.length
   const selected = data.selectedLsoaCodes.size
   const pct = total > 0 ? Math.max(4, Math.round((selected / total) * 100)) : 0
 
   return (
     <div>
-      <div className="border-b border-sm-border-soft px-[18px] py-[18px]">
-        {/* Definition type */}
-        <p className="font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3">
-          Catchment
-        </p>
-        <div className="mt-1.5 flex gap-1 rounded-lg bg-sm-bg p-1">
-          {MODE_OPTIONS.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              onClick={() =>
-                setCatchment({ mode: o.value, value: MODE_RANGE[o.value].def })
-              }
-              className={
-                'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ' +
-                (catchment.mode === o.value
-                  ? 'bg-sm-ink text-white'
-                  : 'text-sm-ink2 hover:bg-sm-border-soft')
-              }
-            >
-              {o.label}
-            </button>
-          ))}
+      {showControl && (
+        <div className="border-b border-sm-border-soft px-[18px] py-[18px]">
+          <CatchmentControl />
         </div>
-
-        {/* Size slider */}
-        <div className="mt-3 flex items-center justify-between font-mono text-[11px] text-sm-ink2">
-          <span>
-            {catchment.mode === 'distance'
-              ? `${catchment.value} mile${catchment.value !== 1 ? 's' : ''}`
-              : `${catchment.value} min ${catchment.mode}`}
-          </span>
-          <span className="text-sm-ink4">
-            {range.min}–{range.max} {range.unit}
-          </span>
-        </div>
-        <input
-          type="range"
-          min={range.min}
-          max={range.max}
-          step={range.step}
-          value={catchment.value}
-          onChange={(e) =>
-            setCatchment({ mode: catchment.mode, value: Number(e.target.value) })
-          }
-          className="mt-2 w-full accent-sm-violet"
-        />
-      </div>
+      )}
 
       {/* LSOA overlay toggle + selection stats */}
       <div className="border-b border-sm-border-soft px-[18px] py-3">
@@ -139,6 +86,7 @@ export function CatchmentTab({ data }: { data: CatchmentData }) {
           selectedLsoaCodes={data.selectedLsoaCodes}
           nationalAverages={data.nationalAverages}
           isFreeTier={false}
+          distanceUnit="km"
         />
       </div>
     </div>

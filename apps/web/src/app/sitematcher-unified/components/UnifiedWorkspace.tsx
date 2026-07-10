@@ -14,6 +14,7 @@ import { useReferenceData } from '../lib/hooks/useReferenceData'
 import { useFindGaps } from '../lib/hooks/useFindGaps'
 import { useAreaData } from '../lib/hooks/useAreaData'
 import { useCatchment } from '../lib/hooks/useCatchment'
+import { computeIsochroneMissing } from '../lib/isochrone-missing'
 import type { WorkspaceArea } from '../types/unified-workspace'
 // New SiteMatcher-styled sketch shell (all depend only on the standalone sketch store).
 import { USketchPanel } from './shell/USketchPanel'
@@ -32,7 +33,6 @@ export function UnifiedWorkspace() {
   const view = useWorkspaceStore((s) => s.view)
   const area = useWorkspaceStore((s) => s.area)
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
-  const radiusKm = useWorkspaceStore((s) => s.radiusKm)
   const tab = useWorkspaceStore((s) => s.tab)
   const catchment = useWorkspaceStore((s) => s.catchment)
 
@@ -134,18 +134,6 @@ export function UnifiedWorkspace() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isSketch])
 
-  // The landscape (nearby stores + missing brands) is read around whichever
-  // point is active: a selected BUA's centroid or the Assess dropped pin.
-  const center = useMemo(() => {
-    if (area) return { lat: area.center[1], lon: area.center[0] }
-    if (view === 'assess' && assessPoint)
-      return { lat: assessPoint.lat, lon: assessPoint.lng }
-    return null
-  }, [area, view, assessPoint])
-
-  const radiusMeters = (area ? BUA_RADIUS_KM : radiusKm) * 1000
-  const landscape = useAreaData(center, radiusMeters)
-
   // The catchment focus: a selected built-up area, or a synthesized pseudo-area
   // around the Assess dropped pin. Keeps demographics keyed on a stable identity.
   const focusArea = useMemo<WorkspaceArea | null>(() => {
@@ -160,7 +148,56 @@ export function UnifiedWorkspace() {
     return null
   }, [area, view, assessPoint])
 
-  const catchmentData = useCatchment(focusArea, catchment, tab === 'catchment')
+  // Whether the catchment (isochrone/demographics) fetch should run. Distinct
+  // from "Catchment tab is open": a drive/walk Assess pin needs its isochrone on
+  // the Summary tab too, since the store landscape is scoped to that polygon.
+  const shouldFetchCatchment =
+    tab === 'catchment' ||
+    (view === 'assess' && !!assessPoint && catchment.mode !== 'distance')
+
+  const catchmentData = useCatchment(focusArea, catchment, shouldFetchCatchment)
+
+  // The landscape (nearby stores + missing brands) is read around whichever
+  // point is active: a selected BUA's centroid or the Assess dropped pin.
+  const center = useMemo(() => {
+    if (area) return { lat: area.center[1], lon: area.center[0] }
+    if (view === 'assess' && assessPoint)
+      return { lat: assessPoint.lat, lon: assessPoint.lng }
+    return null
+  }, [area, view, assessPoint])
+
+  // Under a drive/walk Assess catchment, scope the store landscape to the actual
+  // isochrone polygon; otherwise use a radius circle (Assess km value, or the
+  // fixed BUA radius when a built-up area is selected).
+  const useIsochrone =
+    view === 'assess' && !!assessPoint && catchment.mode !== 'distance'
+  const landscapeIsochrone = useIsochrone ? catchmentData.boundaryGeometry : null
+  const landscapeRadiusKm = area
+    ? BUA_RADIUS_KM
+    : catchment.mode === 'distance'
+      ? catchment.value
+      : BUA_RADIUS_KM
+  const rawLandscape = useAreaData(
+    center,
+    landscapeRadiusKm * 1000,
+    landscapeIsochrone
+  )
+
+  // For drive/walk, replace the server (radius-circle) missing-brands set with an
+  // isochrone-accurate recompute that adds brands trading in the ring but outside
+  // the blob. refData is already in scope here, so the low-level hook stays lean.
+  const landscape = useMemo(() => {
+    if (!useIsochrone || !landscapeIsochrone) return rawLandscape
+    return {
+      ...rawLandscape,
+      missing: computeIsochroneMissing(
+        rawLandscape.stores,
+        rawLandscape.allStores,
+        rawLandscape.missing,
+        refData
+      ),
+    }
+  }, [useIsochrone, landscapeIsochrone, rawLandscape, refData])
 
   const showInspector =
     !isSketch &&

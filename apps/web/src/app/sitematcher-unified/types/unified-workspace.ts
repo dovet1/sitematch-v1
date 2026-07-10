@@ -47,9 +47,16 @@ export interface RefBrand {
   name: string
   fascias: RefFascia[]
 }
+// Links a fascia to a category (a fascia may map to several categories).
+export interface FasciaCategoryMapping {
+  fascia_id: string
+  category_id: string
+  is_primary: boolean
+}
 export interface ReferenceData {
   categories: RefCategory[]
   brands: RefBrand[]
+  fasciaCategoryMappings: FasciaCategoryMapping[]
 }
 
 // A brand/fascia with no presence near the selected area (from missing-fascias).

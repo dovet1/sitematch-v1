@@ -20,9 +20,6 @@ const BUA_FILL_LAYER = 'bua-fill'
 const BUA_OUTLINE_LAYER = 'bua-outline'
 const BUA_SELECTED_LAYER = 'bua-selected'
 
-const RADIUS_SOURCE = 'assess-radius'
-const RADIUS_FILL_LAYER = 'assess-radius-fill'
-const RADIUS_LINE_LAYER = 'assess-radius-line'
 const STORES_SOURCE = 'assess-stores'
 const STORES_LAYER = 'assess-stores-dots'
 
@@ -67,28 +64,6 @@ function applyMapCursor(map: mapboxgl.Map) {
     st.view === 'assess' && st.tab !== 'catchment' ? 'crosshair' : ''
 }
 
-// A GeoJSON polygon approximating a circle of `radiusKm` around [lng, lat].
-function circlePolygon(
-  lng: number,
-  lat: number,
-  radiusKm: number,
-  steps = 64
-): GeoJSON.Feature<GeoJSON.Polygon> {
-  const coords: [number, number][] = []
-  const distanceX = radiusKm / (111.32 * Math.cos((lat * Math.PI) / 180))
-  const distanceY = radiusKm / 110.574
-  for (let i = 0; i < steps; i++) {
-    const theta = (i / steps) * (2 * Math.PI)
-    coords.push([lng + distanceX * Math.cos(theta), lat + distanceY * Math.sin(theta)])
-  }
-  coords.push(coords[0])
-  return {
-    type: 'Feature',
-    geometry: { type: 'Polygon', coordinates: [coords] },
-    properties: {},
-  }
-}
-
 export function UnifiedMap({
   storeDots = [],
   lsoa,
@@ -114,7 +89,6 @@ export function UnifiedMap({
   const gapGssCodes = useWorkspaceStore((s) => s.gapGssCodes)
   const populationRange = useWorkspaceStore((s) => s.populationRange)
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
-  const radiusKm = useWorkspaceStore((s) => s.radiusKm)
   const selectArea = useWorkspaceStore((s) => s.selectArea)
   const setAssessPoint = useWorkspaceStore((s) => s.setAssessPoint)
 
@@ -181,28 +155,6 @@ export function UnifiedMap({
       )
     }
 
-    if (!map.getSource(RADIUS_SOURCE)) {
-      map.addSource(RADIUS_SOURCE, {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      })
-    }
-    if (!map.getLayer(RADIUS_FILL_LAYER)) {
-      map.addLayer({
-        id: RADIUS_FILL_LAYER,
-        type: 'fill',
-        source: RADIUS_SOURCE,
-        paint: { 'fill-color': '#7033FF', 'fill-opacity': 0.08 },
-      })
-    }
-    if (!map.getLayer(RADIUS_LINE_LAYER)) {
-      map.addLayer({
-        id: RADIUS_LINE_LAYER,
-        type: 'line',
-        source: RADIUS_SOURCE,
-        paint: { 'line-color': '#7033FF', 'line-width': 1.5, 'line-dasharray': [2, 2] },
-      })
-    }
     if (!map.getSource(STORES_SOURCE)) {
       map.addSource(STORES_SOURCE, {
         type: 'geojson',
@@ -314,12 +266,12 @@ export function UnifiedMap({
         st.area?.kind === 'bua' ? st.area.id : '__none__',
       ] as any)
     }
-    const src = map.getSource(RADIUS_SOURCE) as mapboxgl.GeoJSONSource | undefined
+    // Place the Assess pin marker if a point was dropped before the style settled.
     if (st.assessPoint) {
-      src?.setData({
-        type: 'FeatureCollection',
-        features: [circlePolygon(st.assessPoint.lng, st.assessPoint.lat, st.radiusKm)],
-      })
+      if (!pinRef.current) {
+        pinRef.current = new mapboxgl.Marker({ color: '#7033FF' })
+      }
+      pinRef.current.setLngLat([st.assessPoint.lng, st.assessPoint.lat]).addTo(map)
     }
   }
 
@@ -363,12 +315,10 @@ export function UnifiedMap({
         map.setLayoutProperty(id, 'visibility', buaVisible ? 'visible' : 'none')
       }
     }
-    // Assess radius/store dots hide while the Catchment tab owns the local view.
+    // Assess store dots hide while the Catchment tab owns the local view.
     const assessVisible = view === 'assess' && !catchmentActive
-    for (const id of [RADIUS_FILL_LAYER, RADIUS_LINE_LAYER, STORES_LAYER]) {
-      if (map.getLayer(id)) {
-        map.setLayoutProperty(id, 'visibility', assessVisible ? 'visible' : 'none')
-      }
+    if (map.getLayer(STORES_LAYER)) {
+      map.setLayoutProperty(STORES_LAYER, 'visibility', assessVisible ? 'visible' : 'none')
     }
     const lsoaVisible = catchmentActive && showLsoa
     for (const id of [
@@ -381,11 +331,15 @@ export function UnifiedMap({
         map.setLayoutProperty(id, 'visibility', lsoaVisible ? 'visible' : 'none')
       }
     }
+    // The Assess boundary (circle for distance, isochrone for drive/walk) is the
+    // single dashed shape for a dropped pin — show it whenever a pin exists, not
+    // just on the Catchment tab. The BUA boundary stays scoped to the tab.
+    const boundaryVisible = catchmentActive || (view === 'assess' && !!assessPoint)
     if (map.getLayer(CATCH_LINE_LAYER)) {
       map.setLayoutProperty(
         CATCH_LINE_LAYER,
         'visibility',
-        catchmentActive ? 'visible' : 'none'
+        boundaryVisible ? 'visible' : 'none'
       )
     }
   }
@@ -574,25 +528,25 @@ export function UnifiedMap({
     }
   }, [area])
 
-  // Draw the Assess radius circle + fly to the dropped pin + place a DOM marker.
+  // Place the Assess pin marker + fly to it. The dashed boundary shape is drawn
+  // through the shared catchment path (applyCatchmentBoundary), so this effect no
+  // longer draws its own circle — it just re-evaluates boundary visibility.
   useEffect(() => {
     const map = mapRef.current
     if (!map || !readyRef.current) return
-    const src = map.getSource(RADIUS_SOURCE) as mapboxgl.GeoJSONSource | undefined
     if (assessPoint) {
-      const circle = circlePolygon(assessPoint.lng, assessPoint.lat, radiusKm)
-      src?.setData({ type: 'FeatureCollection', features: [circle] })
       if (!pinRef.current) {
         pinRef.current = new mapboxgl.Marker({ color: '#7033FF' })
       }
       pinRef.current.setLngLat([assessPoint.lng, assessPoint.lat]).addTo(map)
       map.flyTo({ center: [assessPoint.lng, assessPoint.lat], zoom: 11, duration: 900 })
     } else {
-      src?.setData({ type: 'FeatureCollection', features: [] })
       pinRef.current?.remove()
       pinRef.current = null
     }
-  }, [assessPoint, radiusKm])
+    applyVisibility(map)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assessPoint])
 
   // Feed nearby store dots into the Assess store layer.
   useEffect(() => {

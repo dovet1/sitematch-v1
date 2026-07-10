@@ -64,7 +64,11 @@ export async function fetchReferenceData(
   const res = await fetch('/api/public/gapfinder-reference-data', { signal })
   if (!res.ok) throw new Error(`reference-data failed (${res.status})`)
   const data = await res.json()
-  return { categories: data.categories ?? [], brands: data.brands ?? [] }
+  return {
+    categories: data.categories ?? [],
+    brands: data.brands ?? [],
+    fasciaCategoryMappings: data.fasciaCategoryMappings ?? [],
+  }
 }
 
 export async function findGaps(

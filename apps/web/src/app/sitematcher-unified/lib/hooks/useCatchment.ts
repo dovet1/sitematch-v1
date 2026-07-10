@@ -14,14 +14,16 @@ const MODE_MAP: Record<CatchmentDefinition['mode'], MeasurementMode> = {
   walk: 'walk_time',
 }
 
-// A GeoJSON circle (miles) around [lng, lat] — used to outline a distance catchment.
+const MILES_PER_KM = 0.621371
+
+// A GeoJSON circle (km) around [lng, lat] — used to outline a distance catchment.
 function circleGeometry(
   lng: number,
   lat: number,
-  radiusMiles: number,
+  radiusKm: number,
   steps = 72
 ): GeoJSON.Polygon {
-  const radiusMeters = radiusMiles * 1609.34
+  const radiusMeters = radiusKm * 1000
   const coords: [number, number][] = []
   for (let i = 0; i <= steps; i++) {
     const angle = (i / steps) * 2 * Math.PI
@@ -107,7 +109,11 @@ export function useCatchment(
 
     let cancelled = false
     resetSelection()
-    analyze(location, measurementMode, measurementValue).then((result) => {
+    // The demographics API takes distance in miles; our catchment value is km.
+    // Drive/walk are minutes and pass through unchanged.
+    const apiValue =
+      catchment.mode === 'distance' ? measurementValue * MILES_PER_KM : measurementValue
+    analyze(location, measurementMode, apiValue).then((result) => {
       if (cancelled) return
       if (result.success && result.lsoaCodes) {
         initializeSelection(result.lsoaCodes)
@@ -121,7 +127,10 @@ export function useCatchment(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, location, measurementMode, measurementValue])
 
-  // Clear everything when the tab closes or the focus is dropped.
+  // Clear everything only when catchment data is no longer needed (neither the
+  // Catchment tab nor the drive/walk landscape needs it) or the focus is dropped.
+  // `active` is the caller's shouldFetch, so switching Summary↔Catchment on a
+  // drive/walk pin keeps the isochrone the landscape depends on.
   useEffect(() => {
     if (active && focus) return
     resetData()

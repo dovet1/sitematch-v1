@@ -21,6 +21,8 @@ interface DemographicsResultsProps {
   selectedLsoaCodes?: Set<string>;
   nationalAverages?: Record<string, number>;
   isFreeTier?: boolean;
+  // Unit for the distance mode label. Defaults to miles for existing callers.
+  distanceUnit?: 'mi' | 'km';
 }
 
 type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health' | 'affluence';
@@ -53,6 +55,7 @@ export function DemographicsResults({
   selectedLsoaCodes,
   nationalAverages = {},
   isFreeTier = false,
+  distanceUnit = 'mi',
 }: DemographicsResultsProps) {
   // Default to first 3 categories expanded
   const [expandedCategories, setExpandedCategories] = useState<Set<CategoryType>>(
@@ -80,7 +83,9 @@ export function DemographicsResults({
   const getMeasurementDisplay = () => {
     switch (measurementMode) {
       case 'distance':
-        return `${measurementValue} mile${measurementValue !== 1 ? 's' : ''}`;
+        return distanceUnit === 'km'
+          ? `${measurementValue} km`
+          : `${measurementValue} mile${measurementValue !== 1 ? 's' : ''}`;
       case 'drive_time':
         return `${measurementValue} min drive`;
       case 'walk_time':
