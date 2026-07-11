@@ -6,6 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { MAP_STYLES, MAPBOX_TOKEN } from '@/lib/sitesketcher-v2/constants'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import type { NearbyStore } from '../../lib/services/gaps-service'
+import type { RequirementLocation } from '../../types/unified-workspace'
 
 // UK-wide "national" starting view for discovery.
 const NATIONAL_VIEWPORT = {
@@ -22,6 +23,10 @@ const BUA_SELECTED_LAYER = 'bua-selected'
 
 const STORES_SOURCE = 'assess-stores'
 const STORES_LAYER = 'assess-stores-dots'
+
+// Live occupier requirement pins (Assess-only, gated on the overlay toggle).
+const REQ_SOURCE = 'assess-requirements'
+const REQ_LAYER = 'assess-requirements-dots'
 
 // LSOA catchment cells (Catchment tab) — reuses the SiteAnalyser tileset.
 const LSOA_TILESET_ID = 'dovet.3xo625k3'
@@ -57,6 +62,22 @@ function firstSymbolLayerId(map: mapboxgl.Map): string | undefined {
   return layers.find((l) => l.type === 'symbol')?.id
 }
 
+function requirementsToGeoJSON(
+  reqs: RequirementLocation[]
+): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: reqs.map((r) => ({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [r.coordinates.lng, r.coordinates.lat],
+      },
+      properties: { listingId: r.listingId, companyName: r.companyName },
+    })),
+  }
+}
+
 function applyMapCursor(map: mapboxgl.Map) {
   const st = useWorkspaceStore.getState()
   // Crosshair only for dropping an Assess pin — not while toggling catchment cells.
@@ -66,10 +87,12 @@ function applyMapCursor(map: mapboxgl.Map) {
 
 export function UnifiedMap({
   storeDots = [],
+  requirements = [],
   lsoa,
   onMap,
 }: {
   storeDots?: NearbyStore[]
+  requirements?: RequirementLocation[]
   lsoa?: LsoaLayerProps
   onMap?: (map: mapboxgl.Map | null) => void
 }) {
@@ -81,6 +104,10 @@ export function UnifiedMap({
   // Latest LSOA toggle handler, read inside the once-registered map click handler.
   const lsoaToggleRef = useRef<((code: string) => void) | undefined>(undefined)
   lsoaToggleRef.current = lsoa?.onToggle
+  // Latest requirements, read by addLayers to re-hydrate the source after a
+  // style swap (mirrors how the Assess pin re-places from store state).
+  const requirementsRef = useRef<RequirementLocation[]>(requirements)
+  requirementsRef.current = requirements
 
   const view = useWorkspaceStore((s) => s.view)
   const tab = useWorkspaceStore((s) => s.tab)
@@ -89,8 +116,10 @@ export function UnifiedMap({
   const gapGssCodes = useWorkspaceStore((s) => s.gapGssCodes)
   const populationRange = useWorkspaceStore((s) => s.populationRange)
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
+  const overlaysRequirements = useWorkspaceStore((s) => s.overlays.requirements)
   const selectArea = useWorkspaceStore((s) => s.selectArea)
   const setAssessPoint = useWorkspaceStore((s) => s.setAssessPoint)
+  const setReqModal = useWorkspaceStore((s) => s.setReqModal)
 
   // Add BUA + overlay layers to the current style. Safe to call repeatedly.
   const addLayers = (map: mapboxgl.Map) => {
@@ -174,6 +203,30 @@ export function UnifiedMap({
         },
       })
     }
+
+    // Requirement pins — larger violet markers, styled distinctly from stores.
+    if (!map.getSource(REQ_SOURCE)) {
+      map.addSource(REQ_SOURCE, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      })
+    }
+    if (!map.getLayer(REQ_LAYER)) {
+      map.addLayer({
+        id: REQ_LAYER,
+        type: 'circle',
+        source: REQ_SOURCE,
+        paint: {
+          'circle-radius': 7,
+          'circle-color': '#7033FF',
+          'circle-stroke-color': '#fff',
+          'circle-stroke-width': 2,
+        },
+      })
+    }
+    // Re-hydrate the source (a style swap resets it to the empty seed above).
+    const reqSrc = map.getSource(REQ_SOURCE) as mapboxgl.GeoJSONSource | undefined
+    reqSrc?.setData(requirementsToGeoJSON(requirementsRef.current))
 
     // LSOA catchment cells (Catchment tab).
     if (!map.getSource(LSOA_SOURCE_ID)) {
@@ -320,6 +373,16 @@ export function UnifiedMap({
     if (map.getLayer(STORES_LAYER)) {
       map.setLayoutProperty(STORES_LAYER, 'visibility', assessVisible ? 'visible' : 'none')
     }
+    // Requirement pins: Assess-only, require an active dropped point, gated on
+    // the overlay toggle, and hidden while the Catchment tab owns the view.
+    const reqVisible =
+      view === 'assess' &&
+      !!assessPoint &&
+      !catchmentActive &&
+      useWorkspaceStore.getState().overlays.requirements
+    if (map.getLayer(REQ_LAYER)) {
+      map.setLayoutProperty(REQ_LAYER, 'visibility', reqVisible ? 'visible' : 'none')
+    }
     const lsoaVisible = catchmentActive && showLsoa
     for (const id of [
       LSOA_FILL_DESELECTED,
@@ -388,6 +451,16 @@ export function UnifiedMap({
         return
       }
       if (st.view === 'assess') {
+        // Clicking a requirement pin opens its modal instead of moving the pin.
+        // Guard getLayer — the layer is briefly absent during a style teardown.
+        if (st.overlays.requirements && map.getLayer(REQ_LAYER)) {
+          const hit = map.queryRenderedFeatures(e.point, { layers: [REQ_LAYER] })
+          const listingId = hit[0]?.properties?.listingId
+          if (listingId) {
+            setReqModal(listingId as string)
+            return
+          }
+        }
         setAssessPoint({ lat: e.lngLat.lat, lng: e.lngLat.lng })
       }
     })
@@ -400,6 +473,13 @@ export function UnifiedMap({
     map.on('mouseleave', BUA_FILL_LAYER, () => {
       applyMapCursor(map)
     })
+
+    map.on('mouseenter', REQ_LAYER, () => {
+      if (useWorkspaceStore.getState().overlays.requirements) {
+        map.getCanvas().style.cursor = 'pointer'
+      }
+    })
+    map.on('mouseleave', REQ_LAYER, () => applyMapCursor(map))
 
     // LSOA cell click → toggle it in/out of the catchment selection.
     const lsoaClick = (
@@ -562,6 +642,23 @@ export function UnifiedMap({
       })),
     })
   }, [storeDots])
+
+  // Feed requirement locations into the Assess requirements layer. The ref is
+  // updated on every render; this also covers post-style-load rehydration via
+  // addLayers reading requirementsRef.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current) return
+    const src = map.getSource(REQ_SOURCE) as mapboxgl.GeoJSONSource | undefined
+    src?.setData(requirementsToGeoJSON(requirements))
+  }, [requirements])
+
+  // Re-evaluate requirement-pin visibility when the overlay toggle flips.
+  useEffect(() => {
+    const map = mapRef.current
+    if (map && readyRef.current) applyVisibility(map)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overlaysRequirements])
 
   return <div ref={containerRef} className="absolute inset-0 h-full w-full" />
 }

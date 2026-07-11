@@ -2,14 +2,19 @@
 
 import { MapPin, X, ChevronRight, Loader2 } from 'lucide-react'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
-import type { BUAResult, InspectorTab, MissingFascia } from '../../types/unified-workspace'
+import type {
+  BUAResult,
+  InspectorTab,
+  MissingFascia,
+  RequirementLocation,
+} from '../../types/unified-workspace'
 import type { NearbyStore } from '../../lib/services/gaps-service'
 import type { CatchmentData } from '../../lib/hooks/useCatchment'
 import type { Landscape } from '../../lib/hooks/useAreaData'
 import { CatchmentTab } from './CatchmentTab'
 
 // Small circular initials avatar (no brand-logo asset pipeline in v1).
-function Avatar({ label, size = 36 }: { label: string; size?: number }) {
+export function Avatar({ label, size = 36 }: { label: string; size?: number }) {
   const initials = label.trim().slice(0, 2).toUpperCase()
   return (
     <span
@@ -21,7 +26,7 @@ function Avatar({ label, size = 36 }: { label: string; size?: number }) {
   )
 }
 
-function Kicker({ children }: { children: React.ReactNode }) {
+export function Kicker({ children }: { children: React.ReactNode }) {
   return (
     <span className="font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3">
       {children}
@@ -122,9 +127,19 @@ function FindResults({
 
 /* ---------- Opportunity: the landscape around an area / dropped point ---------- */
 
-function MissingRow({ m }: { m: MissingFascia }) {
+function MissingRow({
+  m,
+  onOpen,
+}: {
+  m: MissingFascia
+  onOpen: (m: MissingFascia) => void
+}) {
   return (
-    <div className="grid grid-cols-[36px_1fr] items-center gap-3 rounded-xl border border-sm-border bg-sm-surface p-3">
+    <button
+      type="button"
+      onClick={() => onOpen(m)}
+      className="grid grid-cols-[36px_1fr_auto] items-center gap-3 rounded-xl border border-sm-border bg-sm-surface p-3 text-left hover:bg-sm-bg"
+    >
       <Avatar label={m.brandName || m.fasciaName} />
       <div className="min-w-0">
         <div className="truncate text-[14px] font-semibold text-sm-ink">
@@ -140,7 +155,50 @@ function MissingRow({ m }: { m: MissingFascia }) {
           )}
         </div>
       </div>
-    </div>
+      <ChevronRight size={15} className="text-sm-ink4" />
+    </button>
+  )
+}
+
+// Promoted "wants to open here" row for an occupier with a live requirement
+// whose target location falls within the active catchment.
+function RequirementRow({
+  req,
+  onOpen,
+}: {
+  req: RequirementLocation
+  onOpen: (listingId: string) => void
+}) {
+  const sub = [req.listingType, req.title].filter(Boolean).join(' · ')
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(req.listingId)}
+      className="rounded-xl border border-sm-violet-tint bg-sm-violet-tint-soft p-3 text-left hover:brightness-[0.98]"
+    >
+      <div className="mb-2 flex items-center gap-1.5">
+        <span className="rounded-full bg-sm-violet px-2 py-[3px] font-mono text-[9.5px] font-semibold uppercase tracking-wider text-white">
+          Requirement
+        </span>
+        <span className="font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-violet-deep">
+          Wants to open here
+        </span>
+      </div>
+      <div className="grid grid-cols-[36px_1fr_auto] items-center gap-3">
+        <Avatar label={req.companyName} />
+        <div className="min-w-0">
+          <div className="truncate text-[14px] font-semibold text-sm-ink">
+            {req.companyName}
+          </div>
+          {sub && (
+            <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
+              {sub}
+            </div>
+          )}
+        </div>
+        <ChevronRight size={15} className="text-sm-violet-deep" />
+      </div>
+    </button>
   )
 }
 
@@ -167,8 +225,21 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   )
 }
 
-function SummaryBody({ landscape }: { landscape: Landscape }) {
+function SummaryBody({
+  landscape,
+  requirements,
+  areaName,
+  onOpenReq,
+  onOpenBrand,
+}: {
+  landscape: Landscape
+  requirements: RequirementLocation[]
+  areaName: string
+  onOpenReq: (listingId: string) => void
+  onOpenBrand: (m: MissingFascia) => void
+}) {
   const { stores, missing, loading } = landscape
+  const gapCount = requirements.length + missing.length
   return (
     <>
       {loading && (
@@ -182,20 +253,25 @@ function SummaryBody({ landscape }: { landscape: Landscape }) {
           <div className="text-[17px] font-semibold tracking-[-0.3px] text-sm-ink">
             The gap · brands missing here
           </div>
-          <span className="font-mono text-[12px] text-sm-ink2">{missing.length}</span>
+          <span className="font-mono text-[12px] text-sm-ink2">{gapCount}</span>
         </div>
         <p className="mt-1 text-[12.5px] leading-relaxed text-sm-ink3">
-          Established brands with no presence nearby that fit this location.
+          {requirements.length > 0
+            ? `Occupiers with a live requirement naming ${areaName} show first, then established brands with no presence here.`
+            : 'Established brands with no presence nearby that fit this location.'}
         </p>
       </div>
       <div className="flex flex-col gap-2 px-[18px] pb-[18px] pt-2.5">
-        {!loading && missing.length === 0 && (
+        {!loading && gapCount === 0 && (
           <div className="rounded-xl border border-dashed border-sm-border bg-sm-bg px-3 py-3.5 text-center text-[12.5px] text-sm-ink3">
             No missing brands found for this catchment.
           </div>
         )}
+        {requirements.map((r) => (
+          <RequirementRow key={r.id} req={r} onOpen={onOpenReq} />
+        ))}
         {missing.map((m) => (
-          <MissingRow key={m.fasciaId} m={m} />
+          <MissingRow key={m.fasciaId} m={m} onOpen={onOpenBrand} />
         ))}
       </div>
 
@@ -221,18 +297,26 @@ const OPP_TABS: { id: InspectorTab; label: string }[] = [
 
 function Opportunity({
   title,
+  areaName,
   subtitle,
   population,
   landscape,
+  requirements,
   catchmentData,
   onClose,
+  onOpenReq,
+  onOpenBrand,
 }: {
   title: string
+  areaName: string
   subtitle: string
   population?: number
   landscape: Landscape
+  requirements: RequirementLocation[]
   catchmentData: CatchmentData
   onClose: () => void
+  onOpenReq: (listingId: string) => void
+  onOpenBrand: (m: MissingFascia) => void
 }) {
   const tab = useWorkspaceStore((s) => s.tab)
   const setTab = useWorkspaceStore((s) => s.setTab)
@@ -285,7 +369,13 @@ function Opportunity({
         {tab === 'catchment' ? (
           <CatchmentTab data={catchmentData} />
         ) : (
-          <SummaryBody landscape={landscape} />
+          <SummaryBody
+            landscape={landscape}
+            requirements={requirements}
+            areaName={areaName}
+            onOpenReq={onOpenReq}
+            onOpenBrand={onOpenBrand}
+          />
         )}
       </div>
     </aside>
@@ -300,6 +390,7 @@ export function UInspector({
   findLoading,
   findError,
   landscape,
+  requirements,
   catchment,
 }: {
   findResults: BUAResult[]
@@ -307,6 +398,7 @@ export function UInspector({
   findLoading: boolean
   findError: string | null
   landscape: Landscape
+  requirements: RequirementLocation[]
   catchment: CatchmentData
 }) {
   const view = useWorkspaceStore((s) => s.view)
@@ -314,17 +406,23 @@ export function UInspector({
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
   const selectArea = useWorkspaceStore((s) => s.selectArea)
   const setAssessPoint = useWorkspaceStore((s) => s.setAssessPoint)
+  const setReqModal = useWorkspaceStore((s) => s.setReqModal)
+  const setBrandModal = useWorkspaceStore((s) => s.setBrandModal)
 
   // A selected BUA takes priority over everything.
   if (area) {
     return (
       <Opportunity
         title={area.name}
+        areaName={area.name}
         subtitle={area.region ? `Opportunity · ${area.region}` : 'Opportunity'}
         population={area.population}
         landscape={landscape}
+        requirements={requirements}
         catchmentData={catchment}
         onClose={() => selectArea(null)}
+        onOpenReq={setReqModal}
+        onOpenBrand={setBrandModal}
       />
     )
   }
@@ -334,10 +432,14 @@ export function UInspector({
     return (
       <Opportunity
         title="Dropped point"
+        areaName="this location"
         subtitle={`${assessPoint.lat.toFixed(4)}, ${assessPoint.lng.toFixed(4)}`}
         landscape={landscape}
+        requirements={requirements}
         catchmentData={catchment}
         onClose={() => setAssessPoint(null)}
+        onOpenReq={setReqModal}
+        onOpenBrand={setBrandModal}
       />
     )
   }

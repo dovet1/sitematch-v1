@@ -481,6 +481,7 @@ function AssessPoint() {
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
   const overlays = useWorkspaceStore((s) => s.overlays)
   const toggleTraffic = useWorkspaceStore((s) => s.toggleTraffic)
+  const toggleRequirements = useWorkspaceStore((s) => s.toggleRequirements)
 
   if (!assessPoint) return null
   return (
@@ -535,6 +536,33 @@ function AssessPoint() {
               className={
                 'absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow transition-all ' +
                 (overlays.traffic ? 'left-4' : 'left-0.5')
+              }
+            />
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={toggleRequirements}
+          className="flex w-full items-center justify-between py-2.5"
+        >
+          <div className="text-left">
+            <div className="text-[13px] font-medium text-sm-ink">
+              Requirement locations
+            </div>
+            <div className="text-[11.5px] text-sm-ink3">
+              Occupiers wanting to open here
+            </div>
+          </div>
+          <span
+            className={
+              'relative h-[18px] w-8 rounded-full transition-colors ' +
+              (overlays.requirements ? 'bg-sm-violet' : 'bg-[#DDD6CA]')
+            }
+          >
+            <span
+              className={
+                'absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow transition-all ' +
+                (overlays.requirements ? 'left-4' : 'left-0.5')
               }
             />
           </span>

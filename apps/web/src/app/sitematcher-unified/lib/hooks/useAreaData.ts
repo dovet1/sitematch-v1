@@ -7,26 +7,10 @@ import {
   type NearbyStore,
 } from '../services/gaps-service'
 import type { MissingFascia } from '../../types/unified-workspace'
+import { haversineMeters } from '../geo'
 
 // The store/missing endpoints cap radius at 20km.
 const MAX_FETCH_RADIUS_M = 20000
-
-function haversineMeters(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371000
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLon = ((lon2 - lon1) * Math.PI) / 180
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2
-  return 2 * R * Math.asin(Math.sqrt(a))
-}
 
 // Ray-casting test for a [lng,lat] point against a single ring.
 function pointInRing(lng: number, lat: number, ring: number[][]): boolean {

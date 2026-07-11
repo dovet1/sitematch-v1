@@ -5,6 +5,7 @@ import type {
   MapScale,
   WorkspaceArea,
   MapSubSelection,
+  MissingFascia,
   GapRule,
   CatchmentDefinition,
   WorkspaceOverlays,
@@ -21,6 +22,10 @@ interface WorkspaceState {
   area: WorkspaceArea | null
   tab: InspectorTab
   selected: MapSubSelection | null
+
+  // Detail modals: a requirement (by listingId) or a missing brand.
+  reqModal: string | null
+  brandModal: MissingFascia | null
 
   // Overlays / filters
   overlays: WorkspaceOverlays
@@ -46,8 +51,11 @@ interface WorkspaceState {
   selectArea: (area: WorkspaceArea | null) => void
   setTab: (tab: InspectorTab) => void
   setSelected: (selected: MapSubSelection | null) => void
+  setReqModal: (listingId: string | null) => void
+  setBrandModal: (missing: MissingFascia | null) => void
 
   toggleTraffic: () => void
+  toggleRequirements: () => void
   setGapRules: (rules: GapRule[]) => void
   addGapRule: (rule: GapRule) => void
   removeGapRule: (id: string) => void
@@ -71,8 +79,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   area: null,
   tab: 'summary',
   selected: null,
+  reqModal: null,
+  brandModal: null,
 
-  overlays: { traffic: false },
+  overlays: { traffic: false, requirements: false },
   gapRules: [],
   populationRange: [MIN_POPULATION, MAX_POPULATION],
   catchment: { mode: 'distance', value: 5 },
@@ -93,21 +103,30 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       view: mode,
       area: null,
       selected: null,
+      reqModal: null,
+      brandModal: null,
       tab: 'summary',
       assessPoint: null,
     }),
 
   // Selecting an area resets the tab to Summary and clears sub-selection.
-  selectArea: (area) => set({ area, tab: 'summary', selected: null }),
+  selectArea: (area) =>
+    set({ area, tab: 'summary', selected: null, reqModal: null, brandModal: null }),
 
   // Tab switching is only meaningful when there's an active selection —
   // a picked built-up area or an Assess dropped point.
   setTab: (tab) => set((s) => (s.area || s.assessPoint ? { tab } : {})),
 
   setSelected: (selected) => set({ selected }),
+  setReqModal: (reqModal) => set({ reqModal }),
+  setBrandModal: (brandModal) => set({ brandModal }),
 
   toggleTraffic: () =>
     set((s) => ({ overlays: { ...s.overlays, traffic: !s.overlays.traffic } })),
+  toggleRequirements: () =>
+    set((s) => ({
+      overlays: { ...s.overlays, requirements: !s.overlays.requirements },
+    })),
 
   setGapRules: (gapRules) => set({ gapRules }),
   addGapRule: (rule) => set((s) => ({ gapRules: [...s.gapRules, rule] })),
@@ -130,7 +149,18 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
     })),
   setPopulationRange: (populationRange) => set({ populationRange }),
   setGapGssCodes: (gapGssCodes) => set({ gapGssCodes }),
-  setAssessPoint: (assessPoint) => set({ assessPoint }),
+  // Dropping a new point or closing the dropped-point inspector (null) must not
+  // leave a stale modal open; closing also clears the requirements overlay so
+  // its pins (and now-hidden toggle) don't orphan in empty Assess mode.
+  setAssessPoint: (assessPoint) =>
+    set((s) => ({
+      assessPoint,
+      reqModal: null,
+      brandModal: null,
+      overlays: assessPoint
+        ? s.overlays
+        : { ...s.overlays, requirements: false },
+    })),
   setCatchment: (catchment) => set({ catchment }),
   toggleShowLsoa: () => set((s) => ({ showLsoa: !s.showLsoa })),
 

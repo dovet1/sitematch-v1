@@ -78,6 +78,49 @@ export interface MapSubSelection {
   id: string
 }
 
+// A live occupier requirement location, from /api/public/gapfinder/requirement-locations.
+export interface RequirementLocation {
+  id: string
+  listingId: string
+  companyName: string
+  title: string | null
+  listingType: string | null
+  placeName: string | null
+  formattedAddress: string | null
+  coordinates: { lng: number; lat: number }
+}
+
+// Subset of /api/public/listings/[id]/detailed the requirement modal renders.
+// Note: `id` and `listing_type` are top-level on the API response, not under `company`.
+export interface RequirementDetail {
+  id: string
+  listing_type: string | null
+  description: string | null
+  verified_at: string | null
+  company: {
+    name: string
+    logo_url: string | null
+    sector: string
+    use_class: string
+    sectors: string[]
+    use_classes: string[]
+    site_size: string
+    brochure_url: string | null
+  }
+  contacts: {
+    primary: {
+      name: string | null
+      title: string | null
+      email: string | null
+      phone: string | null
+    } | null
+  }
+  locations: {
+    all: { place_name?: string | null; formatted_address?: string | null }[]
+    is_nationwide: boolean
+  }
+}
+
 // Presence/proximity gap rule (mirrors GapFinder's filter rule shape).
 // `value` is the human label; `targetIds` are the resolved fascia/category UUIDs
 // sent to the API (a brand resolves to all of its fascia ids).
@@ -97,6 +140,7 @@ export interface CatchmentDefinition {
 }
 
 export interface WorkspaceOverlays {
-  // Requirements overlay is deferred in v1.
   traffic: boolean
+  // Requirement location pins (Assess-only, gated on an active dropped point).
+  requirements: boolean
 }

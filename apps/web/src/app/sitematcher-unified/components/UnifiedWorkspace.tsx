@@ -14,7 +14,9 @@ import { useReferenceData } from '../lib/hooks/useReferenceData'
 import { useFindGaps } from '../lib/hooks/useFindGaps'
 import { useAreaData } from '../lib/hooks/useAreaData'
 import { useCatchment } from '../lib/hooks/useCatchment'
+import { useRequirements } from '../lib/hooks/useRequirements'
 import { computeIsochroneMissing } from '../lib/isochrone-missing'
+import { URequirementModal, UBrandModal } from './shell/UDetailModals'
 import type { WorkspaceArea } from '../types/unified-workspace'
 // New SiteMatcher-styled sketch shell (all depend only on the standalone sketch store).
 import { USketchPanel } from './shell/USketchPanel'
@@ -35,6 +37,10 @@ export function UnifiedWorkspace() {
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
   const tab = useWorkspaceStore((s) => s.tab)
   const catchment = useWorkspaceStore((s) => s.catchment)
+  const reqModal = useWorkspaceStore((s) => s.reqModal)
+  const brandModal = useWorkspaceStore((s) => s.brandModal)
+  const setReqModal = useWorkspaceStore((s) => s.setReqModal)
+  const setBrandModal = useWorkspaceStore((s) => s.setBrandModal)
 
   const [map, setMap] = useState<mapboxgl.Map | null>(null)
   // Sketch mode shows a launcher until a session is started/opened.
@@ -199,6 +205,10 @@ export function UnifiedWorkspace() {
     }
   }, [useIsochrone, landscapeIsochrone, rawLandscape, refData])
 
+  // Live occupier requirements: all locations (map overlay) + those within the
+  // active landscape radius (Summary promoted rows) + a brand-name lookup.
+  const requirements = useRequirements(center, landscapeRadiusKm)
+
   const showInspector =
     !isSketch &&
     (Boolean(area) || view === 'find' || (view === 'assess' && Boolean(assessPoint)))
@@ -227,6 +237,7 @@ export function UnifiedWorkspace() {
           <UnifiedMap
             onMap={setMap}
             storeDots={landscape.stores}
+            requirements={requirements.all}
             lsoa={{
               allCodes: catchmentData.allLsoaCodes,
               selectedCodes: catchmentData.selectedLsoaCodes,
@@ -252,10 +263,26 @@ export function UnifiedWorkspace() {
             findLoading={findGaps.loading}
             findError={findGaps.error}
             landscape={landscape}
+            requirements={requirements.local}
             catchment={catchmentData}
           />
         )}
       </div>
+
+      {reqModal && (
+        <URequirementModal
+          listingId={reqModal}
+          onClose={() => setReqModal(null)}
+        />
+      )}
+      {brandModal && (
+        <UBrandModal
+          missing={brandModal}
+          areaName={area?.name ?? 'this location'}
+          liveRequirement={requirements.findByBrand(brandModal.brandName)}
+          onClose={() => setBrandModal(null)}
+        />
+      )}
     </div>
   )
 }
