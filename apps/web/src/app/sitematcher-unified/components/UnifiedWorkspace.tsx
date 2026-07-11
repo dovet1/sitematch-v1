@@ -207,7 +207,7 @@ export function UnifiedWorkspace() {
 
   // Live occupier requirements: all locations (map overlay) + those within the
   // active landscape radius (Summary promoted rows) + a brand-name lookup.
-  const requirements = useRequirements(center, landscapeRadiusKm)
+  const requirements = useRequirements(center, landscapeRadiusKm, landscapeIsochrone)
 
   const showInspector =
     !isSketch &&
@@ -237,7 +237,7 @@ export function UnifiedWorkspace() {
           <UnifiedMap
             onMap={setMap}
             storeDots={landscape.stores}
-            requirements={requirements.all}
+            requirements={requirements.withinCatchment}
             lsoa={{
               allCodes: catchmentData.allLsoaCodes,
               selectedCodes: catchmentData.selectedLsoaCodes,

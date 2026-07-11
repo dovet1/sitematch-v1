@@ -2,29 +2,37 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchRequirementLocations } from '../services/requirements-service'
-import { haversineMeters } from '../geo'
+import { haversineMeters, isInCatchment } from '../geo'
 import type { RequirementLocation } from '../../types/unified-workspace'
 
 export interface Requirements {
-  // All requirement locations (map overlay).
-  all: RequirementLocation[]
-  // Requirements whose target location falls within the active radius, deduped
-  // by listing (nearest location per listing). Powers the Summary promoted rows.
+  // Requirement locations inside the active catchment (isochrone polygon for
+  // drive/walk, radius circle for distance), non-deduped — the map overlay
+  // renders each site pin individually.
+  withinCatchment: RequirementLocation[]
+  // The deduped-per-listing counterpart (nearest location per listing) of
+  // withinCatchment. Powers the Summary promoted rows.
   local: RequirementLocation[]
-  // Case-insensitive companyName match — the brand modal's live-requirement block.
+  // Case-insensitive companyName match over the *whole UK* set — the brand
+  // modal's "is any occupier after this brand anywhere?" block. Intentionally
+  // NOT scoped to the catchment; do not narrow it to withinCatchment.
   findByBrand: (name: string) => RequirementLocation | undefined
   loading: boolean
 }
 
 // Requirement locations are not viewport-scoped, so fetch the whole set once
-// and derive proximity client-side. v1 classifies "local" by radius circle even
-// under a drive/walk isochrone — good enough for the promoted list.
+// and derive catchment membership client-side. Membership uses the drive/walk
+// isochrone when supplied, else a straight-line radius circle.
 export function useRequirements(
   center: { lat: number; lon: number } | null,
-  radiusKm: number
+  radiusKm: number,
+  isochrone?: GeoJSON.Geometry | null
 ): Requirements {
   const [all, setAll] = useState<RequirementLocation[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Stable signature so a fresh-but-equal isochrone object doesn't re-trigger.
+  const isochroneKey = isochrone ? JSON.stringify(isochrone) : null
 
   // Fetch the whole (non-viewport-scoped) requirement set once. No ref guard:
   // under React StrictMode the effect mounts/aborts/remounts, and a persistent
@@ -42,21 +50,46 @@ export function useRequirements(
     return () => controller.abort()
   }, [])
 
+  // Every location inside the catchment (non-deduped) — the map overlay.
+  const withinCatchment = useMemo(() => {
+    if (!center) return []
+    return all.filter((req) =>
+      isInCatchment(
+        center,
+        req.coordinates.lng,
+        req.coordinates.lat,
+        radiusKm,
+        isochrone ?? null
+      )
+    )
+    // isochroneKey captures isochrone changes; center/radius are primitives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [all, center?.lat, center?.lon, radiusKm, isochroneKey])
+
   const local = useMemo(() => {
     if (!center) return []
-    const radiusM = radiusKm * 1000
     const nearestByListing = new Map<
       string,
       { req: RequirementLocation; dist: number }
     >()
     for (const req of all) {
+      if (
+        !isInCatchment(
+          center,
+          req.coordinates.lng,
+          req.coordinates.lat,
+          radiusKm,
+          isochrone ?? null
+        )
+      )
+        continue
+      // Straight-line distance is fine for nearest-per-listing ordering.
       const dist = haversineMeters(
         center.lat,
         center.lon,
         req.coordinates.lat,
         req.coordinates.lng
       )
-      if (dist > radiusM) continue
       const existing = nearestByListing.get(req.listingId)
       if (!existing || dist < existing.dist) {
         nearestByListing.set(req.listingId, { req, dist })
@@ -65,7 +98,9 @@ export function useRequirements(
     return Array.from(nearestByListing.values())
       .sort((a, b) => a.dist - b.dist)
       .map((e) => e.req)
-  }, [all, center?.lat, center?.lon, radiusKm])
+    // isochroneKey captures isochrone changes; center/radius are primitives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [all, center?.lat, center?.lon, radiusKm, isochroneKey])
 
   const findByBrand = useCallback(
     (name: string) => {
@@ -75,5 +110,5 @@ export function useRequirements(
     [all]
   )
 
-  return { all, local, findByBrand, loading }
+  return { withinCatchment, local, findByBrand, loading }
 }

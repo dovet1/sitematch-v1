@@ -7,48 +7,10 @@ import {
   type NearbyStore,
 } from '../services/gaps-service'
 import type { MissingFascia } from '../../types/unified-workspace'
-import { haversineMeters } from '../geo'
+import { haversineMeters, pointInGeometry } from '../geo'
 
 // The store/missing endpoints cap radius at 20km.
 const MAX_FETCH_RADIUS_M = 20000
-
-// Ray-casting test for a [lng,lat] point against a single ring.
-function pointInRing(lng: number, lat: number, ring: number[][]): boolean {
-  let inside = false
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const xi = ring[i][0]
-    const yi = ring[i][1]
-    const xj = ring[j][0]
-    const yj = ring[j][1]
-    const intersect =
-      yi > lat !== yj > lat &&
-      lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi
-    if (intersect) inside = !inside
-  }
-  return inside
-}
-
-// A polygon = outer ring minus holes; test against outer, exclude holes.
-function pointInPolygonRings(lng: number, lat: number, rings: number[][][]): boolean {
-  if (rings.length === 0) return false
-  if (!pointInRing(lng, lat, rings[0])) return false
-  for (let h = 1; h < rings.length; h++) {
-    if (pointInRing(lng, lat, rings[h])) return false
-  }
-  return true
-}
-
-function pointInGeometry(lng: number, lat: number, geom: GeoJSON.Geometry): boolean {
-  if (geom.type === 'Polygon') {
-    return pointInPolygonRings(lng, lat, geom.coordinates as number[][][])
-  }
-  if (geom.type === 'MultiPolygon') {
-    return (geom.coordinates as number[][][][]).some((poly) =>
-      pointInPolygonRings(lng, lat, poly)
-    )
-  }
-  return false
-}
 
 // Farthest vertex distance from centre — the radius that bounds the geometry.
 function boundingRadiusMeters(
