@@ -240,6 +240,8 @@ export class StoreService {
     nearestStoreDistance?: number
     nearestStoreName?: string
     nearestStoreTown?: string
+    logoDomain: string | null
+    logoUrl: string | null
   }>> {
     const { data, error } = await this.supabase.rpc('get_missing_fascias_near_point', {
       p_lat: lat,
@@ -254,18 +256,49 @@ export class StoreService {
       throw new Error(`Failed to fetch missing fascias: ${error.message}`)
     }
 
+    const rows = data || []
+
+    // Best-effort brand-logo lookup: logos are decorative, so a failure here must
+    // not break the Assess Area sidebar. Enrich by brand ID (unbounded per-request,
+    // unlike the capped reference-data endpoint), mirroring the nearby-stores route.
+    const brandLogoById = new Map<string, { domain: string | null; logo_url: string | null }>()
+    const brandIds = Array.from(
+      new Set(rows.map((row: any) => row.brand_id).filter(Boolean))
+    )
+    if (brandIds.length > 0) {
+      const { data: brandRows, error: brandError } = await this.supabase
+        .from('brands')
+        .select('id, domain, logo_url')
+        .in('id', brandIds)
+      if (brandError) {
+        console.error('Failed to fetch brand logos for missing fascias:', brandError)
+      } else {
+        for (const brand of brandRows || []) {
+          brandLogoById.set(brand.id, {
+            domain: brand.domain ?? null,
+            logo_url: brand.logo_url ?? null,
+          })
+        }
+      }
+    }
+
     // Map snake_case to camelCase
-    return (data || []).map((row: any) => ({
-      fasciaId: row.fascia_id,
-      fasciaName: row.fascia_name,
-      brandId: row.brand_id,
-      brandName: row.brand_name,
-      categoryId: row.category_id,
-      categoryName: row.category_name,
-      nearestStoreDistance: row.nearest_store_distance,
-      nearestStoreName: row.nearest_store_name,
-      nearestStoreTown: row.nearest_store_town
-    }))
+    return rows.map((row: any) => {
+      const logo = brandLogoById.get(row.brand_id)
+      return {
+        fasciaId: row.fascia_id,
+        fasciaName: row.fascia_name,
+        brandId: row.brand_id,
+        brandName: row.brand_name,
+        categoryId: row.category_id,
+        categoryName: row.category_name,
+        nearestStoreDistance: row.nearest_store_distance,
+        nearestStoreName: row.nearest_store_name,
+        nearestStoreTown: row.nearest_store_town,
+        logoDomain: logo?.domain ?? null,
+        logoUrl: logo?.logo_url ?? null,
+      }
+    })
   }
 
   /**

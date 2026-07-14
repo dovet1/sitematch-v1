@@ -49,6 +49,8 @@ export function buildBrandLandscape(
           town: s.town,
           categoryIds: [],
           categoryName: null,
+          logoDomain: s.logo_domain ?? null,
+          logoUrl: s.logo_url ?? null,
         },
         categoryIds: new Set<string>(),
         fasciaCounts: new Map<string, number>(),
@@ -106,6 +108,8 @@ export function buildBrandLandscape(
           categoryIds: [],
           nearestStoreDistance: m.nearestStoreDistance,
           representative: m,
+          logoDomain: m.logoDomain,
+          logoUrl: m.logoUrl,
         },
         categoryIds: new Set<string>(),
       }
@@ -120,6 +124,10 @@ export function buildBrandLandscape(
       agg.brand.nearestStoreDistance = m.nearestStoreDistance
       agg.brand.representative = m
       agg.brand.categoryName = m.categoryName
+      // Logo comes from the brand, so it's the same across fascias — but keep it
+      // in sync with the representative for consistency.
+      agg.brand.logoDomain = m.logoDomain
+      agg.brand.logoUrl = m.logoUrl
     }
     if (m.categoryId) agg.categoryIds.add(m.categoryId)
   }

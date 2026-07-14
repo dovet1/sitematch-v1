@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { MapPin, X, ChevronRight, Loader2 } from 'lucide-react'
+import { getClearbitLogoUrl } from '@/lib/clearbit-logo'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import type {
   BUAResult,
@@ -15,7 +17,7 @@ import type { Landscape } from '../../lib/hooks/useAreaData'
 import { BrandFilterBar, type FilterOption } from './BrandFilterBar'
 import { CatchmentTab } from './CatchmentTab'
 
-// Small circular initials avatar (no brand-logo asset pipeline in v1).
+// Small circular initials avatar (fallback when no logo is available).
 export function Avatar({ label, size = 36 }: { label: string; size?: number }) {
   const initials = label.trim().slice(0, 2).toUpperCase()
   return (
@@ -25,6 +27,46 @@ export function Avatar({ label, size = 36 }: { label: string; size?: number }) {
     >
       {initials}
     </span>
+  )
+}
+
+// Brand/company logo with a logo.dev(domain) → uploaded logo_url → initials
+// fallback chain, mirroring the assess-area map pins. `logoUrl` must be an
+// uploaded-only URL (never a logo.dev URL) so the chain can't double-attempt.
+export function BrandLogo({
+  label,
+  domain,
+  logoUrl,
+  size = 36,
+}: {
+  label: string
+  domain?: string | null
+  logoUrl?: string | null
+  size?: number
+}) {
+  const sources: string[] = []
+  // getClearbitLogoUrl returns null when the token is missing or the domain is
+  // invalid — guard for that and continue down the fallback chain.
+  const dev = domain ? getClearbitLogoUrl(domain, 64) : null
+  if (dev) sources.push(dev)
+  if (logoUrl && logoUrl !== dev) sources.push(logoUrl)
+
+  const [idx, setIdx] = useState(0)
+  useEffect(() => {
+    setIdx(0)
+  }, [domain, logoUrl])
+
+  if (sources.length === 0 || idx >= sources.length) {
+    return <Avatar label={label} size={size} />
+  }
+  return (
+    <img
+      src={sources[idx]}
+      alt=""
+      onError={() => setIdx((i) => i + 1)}
+      className="shrink-0 rounded-lg border border-sm-border bg-white object-contain"
+      style={{ width: size, height: size }}
+    />
   )
 }
 
@@ -142,7 +184,7 @@ function MissingRow({
       onClick={() => onOpen(m.representative)}
       className="grid grid-cols-[36px_1fr_auto] items-center gap-3 rounded-xl border border-sm-border bg-sm-surface p-3 text-left hover:bg-sm-bg"
     >
-      <Avatar label={m.brandName} />
+      <BrandLogo label={m.brandName} domain={m.logoDomain} logoUrl={m.logoUrl} />
       <div className="min-w-0">
         <div className="truncate text-[14px] font-semibold text-sm-ink">
           {m.brandName}
@@ -190,7 +232,11 @@ function RequirementRow({
         </span>
       </div>
       <div className="grid grid-cols-[36px_1fr_auto] items-center gap-3">
-        <Avatar label={req.companyName} />
+        <BrandLogo
+          label={req.companyName}
+          domain={req.companyDomain}
+          logoUrl={req.logoUrl}
+        />
         <div className="min-w-0">
           <div className="truncate text-[14px] font-semibold text-sm-ink">
             {req.companyName}
@@ -249,7 +295,12 @@ function TradingRow({ b }: { b: PresentBrand }) {
       onMouseLeave={() => setHoveredBrandId(null)}
       className="grid w-full cursor-pointer grid-cols-[28px_1fr] items-center gap-3 border-b border-sm-border-soft px-[18px] py-2.5 text-left transition-colors hover:bg-sm-bg"
     >
-      <Avatar label={b.brandName} size={28} />
+      <BrandLogo
+        label={b.brandName}
+        domain={b.logoDomain}
+        logoUrl={b.logoUrl}
+        size={28}
+      />
       <div className="min-w-0">
         <div className="truncate text-[13px] font-medium text-sm-ink2">
           {b.brandName}

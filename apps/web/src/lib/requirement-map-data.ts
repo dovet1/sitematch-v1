@@ -31,6 +31,9 @@ export type RequirementMapFeature = {
     clearbit_logo: string | null
     company_domain: string | null
     logo_url: string | null
+    // Raw uploaded logo (never a logo.dev URL). Only the requirements builder
+    // populates this; used by /sitematcher-unified assess-area cards.
+    uploaded_logo_url?: string | null
     sector: string | null
     use_class: string | null
     site_size_min: number | null
@@ -433,6 +436,7 @@ export async function getRequirementMapFeaturesFromRequirements(
           clearbit_logo: null,
           company_domain: requirement.company_domain || null,
           logo_url: logoUrl,
+          uploaded_logo_url: requirement.logo_url || null,
           sector: primarySector,
           use_class: primaryUseClass,
           site_size_min: requirement.site_size_min ?? null,

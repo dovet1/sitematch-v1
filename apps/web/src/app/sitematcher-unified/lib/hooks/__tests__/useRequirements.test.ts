@@ -35,6 +35,8 @@ function loc(
     dwellingCountMax: null,
     placeName: null,
     formattedAddress: null,
+    companyDomain: null,
+    logoUrl: null,
     coordinates: { lng, lat },
   }
 }

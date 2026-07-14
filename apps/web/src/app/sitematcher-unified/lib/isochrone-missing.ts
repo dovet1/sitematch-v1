@@ -61,6 +61,8 @@ export function computeIsochroneMissing(
       brandName: meta?.brandName ?? s.fascia_name ?? s.name,
       categoryId: cat?.id ?? null,
       categoryName: cat?.name ?? null,
+      logoDomain: s.logo_domain ?? null,
+      logoUrl: s.logo_url ?? null,
     })
   }
 

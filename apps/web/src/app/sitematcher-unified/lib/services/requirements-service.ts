@@ -33,6 +33,8 @@ interface RequirementMapFeature {
     dwelling_count_max: number | null
     place_name: string | null
     formatted_address: string | null
+    company_domain: string | null
+    uploaded_logo_url: string | null
     brand_id: string | null
   }
 }
@@ -65,6 +67,8 @@ export async function fetchRequirementLocations(
     dwellingCountMax: f.properties.dwelling_count_max,
     placeName: f.properties.place_name,
     formattedAddress: f.properties.formatted_address,
+    companyDomain: f.properties.company_domain ?? null,
+    logoUrl: f.properties.uploaded_logo_url ?? null,
     coordinates: { lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] },
   }))
 }

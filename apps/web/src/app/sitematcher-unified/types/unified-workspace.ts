@@ -70,6 +70,8 @@ export interface MissingFascia {
   nearestStoreDistance?: number
   nearestStoreName?: string
   nearestStoreTown?: string
+  logoDomain: string | null
+  logoUrl: string | null
 }
 
 // A brand trading in the catchment, aggregated from the nearby-store landscape.
@@ -82,6 +84,8 @@ export interface PresentBrand {
   categoryIds: string[]
   // One category name for optional display; does not gate filtering.
   categoryName: string | null
+  logoDomain: string | null
+  logoUrl: string | null
 }
 
 // A brand with no presence in the catchment. Missing fascias are collapsed to
@@ -95,6 +99,8 @@ export interface MissingBrand {
   categoryIds: string[]
   nearestStoreDistance?: number
   representative: MissingFascia
+  logoDomain: string | null
+  logoUrl: string | null
 }
 
 // Map sub-selection (a store dot, etc.). Requirements are deferred in v1.
@@ -119,6 +125,8 @@ export interface RequirementLocation {
   dwellingCountMax: number | null
   placeName: string | null
   formattedAddress: string | null
+  companyDomain: string | null
+  logoUrl: string | null
   coordinates: { lng: number; lat: number }
 }
 
