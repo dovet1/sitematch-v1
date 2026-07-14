@@ -16,6 +16,7 @@ import { useAreaData } from '../lib/hooks/useAreaData'
 import { useCatchment } from '../lib/hooks/useCatchment'
 import { useRequirements } from '../lib/hooks/useRequirements'
 import { computeIsochroneMissing } from '../lib/isochrone-missing'
+import { buildBrandLandscape } from '../lib/brand-landscape'
 import { URequirementModal, UBrandModal, UBrandInfoModal } from './shell/UDetailModals'
 import type { WorkspaceArea } from '../types/unified-workspace'
 // New SiteMatcher-styled sketch shell (all depend only on the standalone sketch store).
@@ -43,6 +44,8 @@ export function UnifiedWorkspace() {
   const setReqModal = useWorkspaceStore((s) => s.setReqModal)
   const setBrandModal = useWorkspaceStore((s) => s.setBrandModal)
   const setBrandInfoId = useWorkspaceStore((s) => s.setBrandInfoId)
+  const brandFilterCategoryIds = useWorkspaceStore((s) => s.brandFilterCategoryIds)
+  const brandFilterBrandIds = useWorkspaceStore((s) => s.brandFilterBrandIds)
 
   const [map, setMap] = useState<mapboxgl.Map | null>(null)
   // Sketch mode shows a launcher until a session is started/opened.
@@ -211,6 +214,109 @@ export function UnifiedWorkspace() {
   // active landscape radius (Summary promoted rows) + a brand-name lookup.
   const requirements = useRequirements(center, landscapeRadiusKm, landscapeIsochrone)
 
+  // Brand-level landscape for the Assess tabs, computed once here and fed to both
+  // the inspector lists and the map pins so the two stay in sync under filtering.
+  const { present, missing } = useMemo(
+    () => buildBrandLandscape(landscape.stores, landscape.missing, refData),
+    [landscape.stores, landscape.missing, refData]
+  )
+
+  // Authoritative brand -> categoryIds from refData; covers requirement-only brands
+  // that aren't in the present/missing lists.
+  const brandCategoryIds = useMemo(() => {
+    const fasciaCats = new Map<string, string[]>()
+    for (const m of refData?.fasciaCategoryMappings ?? []) {
+      const list = fasciaCats.get(m.fascia_id)
+      if (list) list.push(m.category_id)
+      else fasciaCats.set(m.fascia_id, [m.category_id])
+    }
+    const byBrand = new Map<string, string[]>()
+    for (const b of refData?.brands ?? []) {
+      const set = new Set<string>()
+      for (const f of b.fascias)
+        for (const c of fasciaCats.get(f.id) ?? []) set.add(c)
+      byBrand.set(b.id, Array.from(set))
+    }
+    return byBrand
+  }, [refData])
+
+  const reqLocal = requirements.local
+
+  const categoryOptions = useMemo(() => {
+    const catName = new Map<string, string>()
+    for (const c of refData?.categories ?? []) catName.set(c.id, c.name)
+    const ids = new Set<string>()
+    for (const b of present) for (const c of b.categoryIds) ids.add(c)
+    for (const b of missing) for (const c of b.categoryIds) ids.add(c)
+    for (const r of reqLocal)
+      if (r.brandId)
+        for (const c of brandCategoryIds.get(r.brandId) ?? []) ids.add(c)
+    const opts: { id: string; name: string }[] = []
+    for (const id of Array.from(ids)) {
+      const name = catName.get(id)
+      if (name) opts.push({ id, name })
+    }
+    opts.sort((a, b) => a.name.localeCompare(b.name))
+    return opts
+  }, [present, missing, reqLocal, brandCategoryIds, refData])
+
+  const brandOptions = useMemo(() => {
+    const byId = new Map<string, string>()
+    for (const b of present) if (!byId.has(b.brandId)) byId.set(b.brandId, b.brandName)
+    for (const b of missing) if (!byId.has(b.brandId)) byId.set(b.brandId, b.brandName)
+    for (const r of reqLocal)
+      if (r.brandId && !byId.has(r.brandId)) byId.set(r.brandId, r.companyName)
+    const opts = Array.from(byId, ([id, name]) => ({ id, name }))
+    opts.sort((a, b) => a.name.localeCompare(b.name))
+    return opts
+  }, [present, missing, reqLocal])
+
+  const catSet = useMemo(
+    () => new Set(brandFilterCategoryIds),
+    [brandFilterCategoryIds]
+  )
+  const brandSet = useMemo(() => new Set(brandFilterBrandIds), [brandFilterBrandIds])
+
+  const filteredPresent = useMemo(
+    () =>
+      present.filter(
+        (b) =>
+          (catSet.size === 0 || b.categoryIds.some((c) => catSet.has(c))) &&
+          (brandSet.size === 0 || brandSet.has(b.brandId))
+      ),
+    [present, catSet, brandSet]
+  )
+
+  const filteredMissing = useMemo(
+    () =>
+      missing.filter(
+        (b) =>
+          (catSet.size === 0 || b.categoryIds.some((c) => catSet.has(c))) &&
+          (brandSet.size === 0 || brandSet.has(b.brandId))
+      ),
+    [missing, catSet, brandSet]
+  )
+
+  const filteredRequirements = useMemo(
+    () =>
+      reqLocal.filter((r) => {
+        if (catSet.size === 0 && brandSet.size === 0) return true
+        if (!r.brandId) return false
+        const cats = brandCategoryIds.get(r.brandId) ?? []
+        return (
+          (catSet.size === 0 || cats.some((c) => catSet.has(c))) &&
+          (brandSet.size === 0 || brandSet.has(r.brandId))
+        )
+      }),
+    [reqLocal, catSet, brandSet, brandCategoryIds]
+  )
+
+  // null = no filters active, so the map shows every present-brand pin.
+  const visiblePresentBrandIds = useMemo(() => {
+    if (catSet.size === 0 && brandSet.size === 0) return null
+    return new Set(filteredPresent.map((b) => b.brandId))
+  }, [filteredPresent, catSet, brandSet])
+
   const showInspector =
     !isSketch &&
     (Boolean(area) || view === 'find' || (view === 'assess' && Boolean(assessPoint)))
@@ -239,6 +345,7 @@ export function UnifiedWorkspace() {
           <UnifiedMap
             onMap={setMap}
             storeDots={landscape.stores}
+            visiblePresentBrandIds={visiblePresentBrandIds}
             requirements={requirements.withinCatchment}
             lsoa={{
               allCodes: catchmentData.allLsoaCodes,
@@ -265,9 +372,12 @@ export function UnifiedWorkspace() {
             findLoading={findGaps.loading}
             findError={findGaps.error}
             landscape={landscape}
-            requirements={requirements.local}
+            presentBrands={filteredPresent}
+            missingBrands={filteredMissing}
+            requirements={filteredRequirements}
             catchment={catchmentData}
-            refData={refData}
+            categoryOptions={categoryOptions}
+            brandOptions={brandOptions}
           />
         )}
       </div>

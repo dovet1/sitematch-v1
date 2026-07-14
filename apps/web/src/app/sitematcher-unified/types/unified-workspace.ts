@@ -78,6 +78,10 @@ export interface PresentBrand {
   brandName: string
   storeCount: number
   town: string | null
+  // Union of categories across the brand's trading fascias (for filtering).
+  categoryIds: string[]
+  // One category name for optional display; does not gate filtering.
+  categoryName: string | null
 }
 
 // A brand with no presence in the catchment. Missing fascias are collapsed to
@@ -87,6 +91,8 @@ export interface MissingBrand {
   brandId: string
   brandName: string
   categoryName: string | null
+  // Union of categories across the brand's missing fascias (for filtering).
+  categoryIds: string[]
   nearestStoreDistance?: number
   representative: MissingFascia
 }

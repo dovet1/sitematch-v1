@@ -1,6 +1,5 @@
 'use client'
 
-import { useMemo } from 'react'
 import { MapPin, X, ChevronRight, Loader2 } from 'lucide-react'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import type {
@@ -9,12 +8,11 @@ import type {
   MissingFascia,
   MissingBrand,
   PresentBrand,
-  ReferenceData,
   RequirementLocation,
 } from '../../types/unified-workspace'
 import type { CatchmentData } from '../../lib/hooks/useCatchment'
 import type { Landscape } from '../../lib/hooks/useAreaData'
-import { buildBrandLandscape } from '../../lib/brand-landscape'
+import { BrandFilterBar, type FilterOption } from './BrandFilterBar'
 import { CatchmentTab } from './CatchmentTab'
 
 // Small circular initials avatar (no brand-logo asset pipeline in v1).
@@ -235,25 +233,20 @@ function TradingRow({ b }: { b: PresentBrand }) {
 }
 
 function MissingBody({
-  landscape,
+  loading,
+  missing,
   requirements,
   areaName,
-  refData,
   onOpenReq,
   onOpenBrand,
 }: {
-  landscape: Landscape
+  loading: boolean
+  missing: MissingBrand[]
   requirements: RequirementLocation[]
   areaName: string
-  refData: ReferenceData | null
   onOpenReq: (requirementId: string) => void
   onOpenBrand: (m: MissingFascia) => void
 }) {
-  const { loading } = landscape
-  const { missing } = useMemo(
-    () => buildBrandLandscape(landscape.stores, landscape.missing, refData),
-    [landscape.stores, landscape.missing, refData]
-  )
   const gapCount = requirements.length + missing.length
   return (
     <>
@@ -294,17 +287,12 @@ function MissingBody({
 }
 
 function PresentBody({
-  landscape,
-  refData,
+  loading,
+  present,
 }: {
-  landscape: Landscape
-  refData: ReferenceData | null
+  loading: boolean
+  present: PresentBrand[]
 }) {
-  const { loading } = landscape
-  const { present } = useMemo(
-    () => buildBrandLandscape(landscape.stores, landscape.missing, refData),
-    [landscape.stores, landscape.missing, refData]
-  )
   return (
     <>
       {loading && (
@@ -352,9 +340,12 @@ function Opportunity({
   subtitle,
   population,
   landscape,
+  presentBrands,
+  missingBrands,
   requirements,
   catchmentData,
-  refData,
+  categoryOptions,
+  brandOptions,
   onClose,
   onOpenReq,
   onOpenBrand,
@@ -364,15 +355,25 @@ function Opportunity({
   subtitle: string
   population?: number
   landscape: Landscape
+  presentBrands: PresentBrand[]
+  missingBrands: MissingBrand[]
   requirements: RequirementLocation[]
   catchmentData: CatchmentData
-  refData: ReferenceData | null
+  categoryOptions: FilterOption[]
+  brandOptions: FilterOption[]
   onClose: () => void
   onOpenReq: (requirementId: string) => void
   onOpenBrand: (m: MissingFascia) => void
 }) {
   const tab = useWorkspaceStore((s) => s.tab)
   const setTab = useWorkspaceStore((s) => s.setTab)
+  const brandFilterCategoryIds = useWorkspaceStore((s) => s.brandFilterCategoryIds)
+  const brandFilterBrandIds = useWorkspaceStore((s) => s.brandFilterBrandIds)
+  const setBrandFilterCategoryIds = useWorkspaceStore(
+    (s) => s.setBrandFilterCategoryIds
+  )
+  const setBrandFilterBrandIds = useWorkspaceStore((s) => s.setBrandFilterBrandIds)
+  const clearBrandFilters = useWorkspaceStore((s) => s.clearBrandFilters)
 
   return (
     <aside className="flex w-[404px] shrink-0 flex-col overflow-hidden border-l border-sm-border bg-sm-surface">
@@ -418,17 +419,29 @@ function Opportunity({
         ))}
       </div>
 
+      {tab !== 'catchment' && (
+        <BrandFilterBar
+          categoryOptions={categoryOptions}
+          brandOptions={brandOptions}
+          selectedCategoryIds={brandFilterCategoryIds}
+          selectedBrandIds={brandFilterBrandIds}
+          onCategoryChange={setBrandFilterCategoryIds}
+          onBrandChange={setBrandFilterBrandIds}
+          onClear={clearBrandFilters}
+        />
+      )}
+
       <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === 'catchment' ? (
           <CatchmentTab data={catchmentData} />
         ) : tab === 'present' ? (
-          <PresentBody landscape={landscape} refData={refData} />
+          <PresentBody loading={landscape.loading} present={presentBrands} />
         ) : (
           <MissingBody
-            landscape={landscape}
+            loading={landscape.loading}
+            missing={missingBrands}
             requirements={requirements}
             areaName={areaName}
-            refData={refData}
             onOpenReq={onOpenReq}
             onOpenBrand={onOpenBrand}
           />
@@ -446,18 +459,24 @@ export function UInspector({
   findLoading,
   findError,
   landscape,
+  presentBrands,
+  missingBrands,
   requirements,
   catchment,
-  refData,
+  categoryOptions,
+  brandOptions,
 }: {
   findResults: BUAResult[]
   findTotal: number
   findLoading: boolean
   findError: string | null
   landscape: Landscape
+  presentBrands: PresentBrand[]
+  missingBrands: MissingBrand[]
   requirements: RequirementLocation[]
   catchment: CatchmentData
-  refData: ReferenceData | null
+  categoryOptions: FilterOption[]
+  brandOptions: FilterOption[]
 }) {
   const view = useWorkspaceStore((s) => s.view)
   const area = useWorkspaceStore((s) => s.area)
@@ -476,9 +495,12 @@ export function UInspector({
         subtitle={area.region ? `Opportunity · ${area.region}` : 'Opportunity'}
         population={area.population}
         landscape={landscape}
+        presentBrands={presentBrands}
+        missingBrands={missingBrands}
         requirements={requirements}
         catchmentData={catchment}
-        refData={refData}
+        categoryOptions={categoryOptions}
+        brandOptions={brandOptions}
         onClose={() => selectArea(null)}
         onOpenReq={setReqModal}
         onOpenBrand={setBrandModal}
@@ -494,9 +516,12 @@ export function UInspector({
         areaName="this location"
         subtitle={`${assessPoint.lat.toFixed(4)}, ${assessPoint.lng.toFixed(4)}`}
         landscape={landscape}
+        presentBrands={presentBrands}
+        missingBrands={missingBrands}
         requirements={requirements}
         catchmentData={catchment}
-        refData={refData}
+        categoryOptions={categoryOptions}
+        brandOptions={brandOptions}
         onClose={() => setAssessPoint(null)}
         onOpenReq={setReqModal}
         onOpenBrand={setBrandModal}

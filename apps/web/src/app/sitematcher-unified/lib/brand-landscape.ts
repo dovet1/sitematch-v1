@@ -18,46 +18,115 @@ export function buildBrandLandscape(
   const brandNameById = new Map<string, string>()
   for (const b of refData?.brands ?? []) brandNameById.set(b.id, b.name)
 
-  const presentMap = new Map<string, PresentBrand>()
-  for (const s of stores) {
-    const existing = presentMap.get(s.brand_id)
-    if (existing) {
-      existing.storeCount += 1
-    } else {
-      presentMap.set(s.brand_id, {
-        brandId: s.brand_id,
-        brandName: brandNameById.get(s.brand_id) ?? s.fascia_name ?? s.name,
-        storeCount: 1,
-        town: s.town,
-      })
-    }
+  // fascia -> its category ids (primary first), and category id -> name.
+  const fasciaCategoryIds = new Map<string, string[]>()
+  const primaryCategoryByFascia = new Map<string, string>()
+  const categoryNameById = new Map<string, string>()
+  for (const c of refData?.categories ?? []) categoryNameById.set(c.id, c.name)
+  for (const m of refData?.fasciaCategoryMappings ?? []) {
+    const list = fasciaCategoryIds.get(m.fascia_id)
+    if (list) list.push(m.category_id)
+    else fasciaCategoryIds.set(m.fascia_id, [m.category_id])
+    if (m.is_primary) primaryCategoryByFascia.set(m.fascia_id, m.category_id)
   }
-  const present = Array.from(presentMap.values()).sort(
-    (a, b) => b.storeCount - a.storeCount
-  )
 
-  const missingMap = new Map<string, MissingBrand>()
+  // Present brands: aggregate stores per brand, tracking the union of the
+  // trading fascias' categories plus the most common fascia (for a display name).
+  interface PresentAgg {
+    brand: PresentBrand
+    categoryIds: Set<string>
+    fasciaCounts: Map<string, number>
+  }
+  const presentMap = new Map<string, PresentAgg>()
+  for (const s of stores) {
+    let agg = presentMap.get(s.brand_id)
+    if (!agg) {
+      agg = {
+        brand: {
+          brandId: s.brand_id,
+          brandName: brandNameById.get(s.brand_id) ?? s.fascia_name ?? s.name,
+          storeCount: 0,
+          town: s.town,
+          categoryIds: [],
+          categoryName: null,
+        },
+        categoryIds: new Set<string>(),
+        fasciaCounts: new Map<string, number>(),
+      }
+      presentMap.set(s.brand_id, agg)
+    }
+    agg.brand.storeCount += 1
+    for (const cid of fasciaCategoryIds.get(s.fascia_id) ?? [])
+      agg.categoryIds.add(cid)
+    agg.fasciaCounts.set(
+      s.fascia_id,
+      (agg.fasciaCounts.get(s.fascia_id) ?? 0) + 1
+    )
+  }
+
+  const present: PresentBrand[] = []
+  for (const agg of Array.from(presentMap.values())) {
+    agg.brand.categoryIds = Array.from(agg.categoryIds)
+    // Display name: primary category of the brand's most common present fascia.
+    let topFascia: string | null = null
+    let topCount = -1
+    for (const [fasciaId, count] of Array.from(agg.fasciaCounts)) {
+      if (count > topCount) {
+        topCount = count
+        topFascia = fasciaId
+      }
+    }
+    const displayCat = topFascia ? primaryCategoryByFascia.get(topFascia) : null
+    agg.brand.categoryName = displayCat
+      ? (categoryNameById.get(displayCat) ?? null)
+      : null
+    present.push(agg.brand)
+  }
+  present.sort((a, b) => b.storeCount - a.storeCount)
+
+  // Missing brands: collapse missing fascias to their owning brand, excluding
+  // any brand already trading here. Accumulate categories across all of the
+  // brand's missing fascias; the representative is the closest missing fascia.
+  interface MissingAgg {
+    brand: MissingBrand
+    categoryIds: Set<string>
+  }
+  const missingMap = new Map<string, MissingAgg>()
   for (const m of missing) {
     if (presentMap.has(m.brandId)) continue
-    const existing = missingMap.get(m.brandId)
-    if (!existing) {
-      missingMap.set(m.brandId, {
-        brandId: m.brandId,
-        brandName: m.brandName,
-        categoryName: m.categoryName,
-        nearestStoreDistance: m.nearestStoreDistance,
-        representative: m,
-      })
+    let agg = missingMap.get(m.brandId)
+    if (!agg) {
+      agg = {
+        brand: {
+          brandId: m.brandId,
+          brandName: m.brandName,
+          categoryName: m.categoryName,
+          categoryIds: [],
+          nearestStoreDistance: m.nearestStoreDistance,
+          representative: m,
+        },
+        categoryIds: new Set<string>(),
+      }
+      missingMap.set(m.brandId, agg)
     } else if (
       m.nearestStoreDistance != null &&
-      (existing.nearestStoreDistance == null ||
-        m.nearestStoreDistance < existing.nearestStoreDistance)
+      (agg.brand.nearestStoreDistance == null ||
+        m.nearestStoreDistance < agg.brand.nearestStoreDistance)
     ) {
-      // Prefer the closest missing fascia as the brand's representative.
-      existing.nearestStoreDistance = m.nearestStoreDistance
-      existing.representative = m
+      // Prefer the closest missing fascia as the brand's representative; keep
+      // the display name in sync with it so display and filtering can't diverge.
+      agg.brand.nearestStoreDistance = m.nearestStoreDistance
+      agg.brand.representative = m
+      agg.brand.categoryName = m.categoryName
     }
+    if (m.categoryId) agg.categoryIds.add(m.categoryId)
   }
 
-  return { present, missing: Array.from(missingMap.values()) }
+  const missingList: MissingBrand[] = []
+  for (const agg of Array.from(missingMap.values())) {
+    agg.brand.categoryIds = Array.from(agg.categoryIds)
+    missingList.push(agg.brand)
+  }
+
+  return { present, missing: missingList }
 }

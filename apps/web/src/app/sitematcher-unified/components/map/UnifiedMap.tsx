@@ -158,11 +158,14 @@ function applyMapCursor(map: mapboxgl.Map) {
 
 export function UnifiedMap({
   storeDots = [],
+  visiblePresentBrandIds = null,
   requirements = [],
   lsoa,
   onMap,
 }: {
   storeDots?: NearbyStore[]
+  // Brand ids whose present-store pins should show; null = show all (no filter).
+  visiblePresentBrandIds?: Set<string> | null
   requirements?: RequirementLocation[]
   lsoa?: LsoaLayerProps
   onMap?: (map: mapboxgl.Map | null) => void
@@ -185,6 +188,10 @@ export function UnifiedMap({
   const storeSnapshotRef = useRef<Map<string, NearbyStore>>(new Map())
   const storeDotsRef = useRef<NearbyStore[]>(storeDots)
   storeDotsRef.current = storeDots
+  // Brand filter for the store pins, read inside syncStoreMarkers (which runs
+  // from stale style-load closures, so it must read the ref, not the prop).
+  const visibleBrandIdsRef = useRef<Set<string> | null>(visiblePresentBrandIds)
+  visibleBrandIdsRef.current = visiblePresentBrandIds
 
   const view = useWorkspaceStore((s) => s.view)
   const tab = useWorkspaceStore((s) => s.tab)
@@ -206,6 +213,7 @@ export function UnifiedMap({
   const syncStoreMarkers = (map: mapboxgl.Map) => {
     const st = useWorkspaceStore.getState()
     const assessVisible = st.view === 'assess' && st.tab !== 'catchment'
+    const filterSet = visibleBrandIdsRef.current
     const stores = storeDotsRef.current
     const markers = storeMarkersRef.current
     const snapshot = storeSnapshotRef.current
@@ -213,11 +221,13 @@ export function UnifiedMap({
 
     for (const store of stores) {
       seen.add(store.id)
+      const show =
+        assessVisible && (filterSet == null || filterSet.has(store.brand_id))
       const prev = snapshot.get(store.id)
       let marker = markers.get(store.id)
       if (!marker) {
         const el = buildStoreBadge(store)
-        el.style.display = assessVisible ? '' : 'none'
+        el.style.display = show ? '' : 'none'
         marker = new mapboxgl.Marker({ element: el })
           .setLngLat([store.lon, store.lat])
           .addTo(map)
@@ -229,7 +239,7 @@ export function UnifiedMap({
         if (!prev || storeVisualChanged(prev, store)) {
           populateStoreBadge(marker.getElement(), store)
         }
-        marker.getElement().style.display = assessVisible ? '' : 'none'
+        marker.getElement().style.display = show ? '' : 'none'
       }
       snapshot.set(store.id, store)
     }
@@ -787,6 +797,14 @@ export function UnifiedMap({
     applyStoreHighlight()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hoveredBrandId])
+
+  // Re-sync badge visibility when the brand/category filter changes.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current) return
+    syncStoreMarkers(map)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visiblePresentBrandIds])
 
   // Feed requirement locations into the Assess requirements layer. The ref is
   // updated on every render; this also covers post-style-load rehydration via

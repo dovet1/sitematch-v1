@@ -31,6 +31,10 @@ interface WorkspaceState {
   // Present-brand info modal, opened by brandId from the Present Brands list.
   brandInfoId: string | null
 
+  // Assess brand-list filters (shared across the Missing/Present tabs).
+  brandFilterCategoryIds: string[]
+  brandFilterBrandIds: string[]
+
   // Overlays / filters
   overlays: WorkspaceOverlays
   gapRules: GapRule[]
@@ -59,6 +63,9 @@ interface WorkspaceState {
   setReqModal: (requirementId: string | null) => void
   setBrandModal: (missing: MissingFascia | null) => void
   setBrandInfoId: (brandId: string | null) => void
+  setBrandFilterCategoryIds: (ids: string[]) => void
+  setBrandFilterBrandIds: (ids: string[]) => void
+  clearBrandFilters: () => void
 
   toggleTraffic: () => void
   toggleRequirements: () => void
@@ -90,6 +97,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   brandModal: null,
   brandInfoId: null,
 
+  brandFilterCategoryIds: [],
+  brandFilterBrandIds: [],
+
   overlays: { traffic: false, requirements: false },
   gapRules: [],
   populationRange: [MIN_POPULATION, MAX_POPULATION],
@@ -117,6 +127,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       brandInfoId: null,
       tab: 'missing',
       assessPoint: null,
+      brandFilterCategoryIds: [],
+      brandFilterBrandIds: [],
     }),
 
   // Selecting an area resets the tab to Missing Brands and clears sub-selection.
@@ -129,6 +141,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       reqModal: null,
       brandModal: null,
       brandInfoId: null,
+      brandFilterCategoryIds: [],
+      brandFilterBrandIds: [],
     }),
 
   // Tab switching is only meaningful when there's an active selection —
@@ -140,6 +154,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setReqModal: (reqModal) => set({ reqModal }),
   setBrandModal: (brandModal) => set({ brandModal }),
   setBrandInfoId: (brandInfoId) => set({ brandInfoId }),
+  setBrandFilterCategoryIds: (brandFilterCategoryIds) =>
+    set({ brandFilterCategoryIds }),
+  setBrandFilterBrandIds: (brandFilterBrandIds) => set({ brandFilterBrandIds }),
+  clearBrandFilters: () =>
+    set({ brandFilterCategoryIds: [], brandFilterBrandIds: [] }),
 
   toggleTraffic: () =>
     set((s) => ({ overlays: { ...s.overlays, traffic: !s.overlays.traffic } })),
@@ -178,6 +197,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       reqModal: null,
       brandModal: null,
       brandInfoId: null,
+      // A new point yields a fresh landscape, so clear brand-list filters.
+      brandFilterCategoryIds: [],
+      brandFilterBrandIds: [],
       overlays: assessPoint
         ? s.overlays
         : { ...s.overlays, requirements: false },
