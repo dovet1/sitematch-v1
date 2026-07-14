@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ImageUpload } from '@/components/ui/image-upload'
+import { normalizeDomain, validateDomain } from '@/lib/clearbit-logo'
 
 type Tab = 'details' | 'stores' | 'requirements' | 'contacts'
 
@@ -13,6 +14,7 @@ interface BrandData {
   id: string
   name: string
   logo_url: string | null
+  domain: string | null
   latest_store_name: string | null
   latest_store_town: string | null
   latest_store_opened_at: string | null
@@ -116,6 +118,7 @@ export function BrandDetail({ brandId }: { brandId: string }) {
 function DetailsSection({ brand, onSaved }: { brand: BrandData; onSaved: () => void }) {
   const [name, setName] = useState(brand.name)
   const [logoUrl, setLogoUrl] = useState(brand.logo_url ?? '')
+  const [domain, setDomain] = useState(brand.domain ?? '')
   const [storeName, setStoreName] = useState(brand.latest_store_name ?? '')
   const [storeTown, setStoreTown] = useState(brand.latest_store_town ?? '')
   const [openedAt, setOpenedAt] = useState(
@@ -142,6 +145,11 @@ function DetailsSection({ brand, onSaved }: { brand: BrandData; onSaved: () => v
   }
 
   async function save() {
+    const normalizedDomain = domain.trim() ? normalizeDomain(domain) : ''
+    if (normalizedDomain && !validateDomain(normalizedDomain)) {
+      setError('Enter a valid website domain (e.g. boots.com)')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -151,6 +159,7 @@ function DetailsSection({ brand, onSaved }: { brand: BrandData; onSaved: () => v
         body: JSON.stringify({
           name: name.trim(),
           logo_url: logoUrl || null,
+          domain: normalizedDomain || null,
           latest_store_name: storeName || null,
           latest_store_town: storeTown || null,
           latest_store_opened_at: openedAt || null,
@@ -177,8 +186,21 @@ function DetailsSection({ brand, onSaved }: { brand: BrandData; onSaved: () => v
         <Input value={name} onChange={(e) => setName(e.target.value)} />
       </div>
 
+      <div>
+        <Label>Website domain</Label>
+        <Input
+          value={domain}
+          onChange={(e) => setDomain(e.target.value)}
+          placeholder="e.g. boots.com"
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          Primary logo source — drives the logo.dev logo on the assess-area map. The uploaded
+          logo below is used as a fallback.
+        </p>
+      </div>
+
       <div className="space-y-2">
-        <Label>Logo</Label>
+        <Label>Logo (fallback)</Label>
         <ImageUpload
           value={logoUrl || undefined}
           onChange={handleLogo}

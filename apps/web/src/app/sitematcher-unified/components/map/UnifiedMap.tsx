@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { MAP_STYLES, MAPBOX_TOKEN } from '@/lib/sitesketcher-v2/constants'
+import { getClearbitLogoUrl } from '@/lib/clearbit-logo'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import type { NearbyStore } from '../../lib/services/gaps-service'
 import type { RequirementLocation } from '../../types/unified-workspace'
@@ -21,8 +22,8 @@ const BUA_FILL_LAYER = 'bua-fill'
 const BUA_OUTLINE_LAYER = 'bua-outline'
 const BUA_SELECTED_LAYER = 'bua-selected'
 
-const STORES_SOURCE = 'assess-stores'
-const STORES_LAYER = 'assess-stores-dots'
+// Assess store pins are HTML markers (brand logo badges), not a GeoJSON layer.
+const STORE_BADGE_SIZE = 36
 
 // Live occupier requirement pins (Assess-only, gated on the overlay toggle).
 const REQ_SOURCE = 'assess-requirements'
@@ -78,6 +79,73 @@ function requirementsToGeoJSON(
   }
 }
 
+// ---- Assess store logo badges (HTML markers) ------------------------------
+
+function storeInitial(store: NearbyStore): string {
+  const src = store.brand_name || store.name || '?'
+  return src.trim().charAt(0).toUpperCase() || '?'
+}
+
+// Renders the brand-initial fallback badge into an existing badge element.
+function renderInitialBadge(el: HTMLElement, store: NearbyStore) {
+  const span = document.createElement('span')
+  span.textContent = storeInitial(store)
+  span.style.cssText =
+    'display:flex;align-items:center;justify-content:center;width:100%;height:100%;' +
+    'background:#2A6FDB;color:#fff;font-weight:600;font-size:15px;'
+  el.replaceChildren(span)
+}
+
+// Renders an <img> that walks the source list on error (logo.dev → logo_url),
+// falling back to the initial badge once every source has failed to load.
+function renderLogoImg(el: HTMLElement, store: NearbyStore, sources: string[]) {
+  let idx = 0
+  const img = document.createElement('img')
+  img.alt = ''
+  img.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#fff;'
+  img.onerror = () => {
+    idx += 1
+    if (idx < sources.length) img.src = sources[idx]
+    else renderInitialBadge(el, store)
+  }
+  img.src = sources[0]
+  el.replaceChildren(img)
+}
+
+// Populates a badge element with the store's logo, by priority:
+// logo.dev (from brand domain) → uploaded logo_url → brand-initial badge.
+function populateStoreBadge(el: HTMLElement, store: NearbyStore) {
+  const sources: string[] = []
+  // getClearbitLogoUrl returns null when the token is missing or the domain is
+  // invalid — guard for that and continue down the fallback chain.
+  const logoDev = store.logo_domain ? getClearbitLogoUrl(store.logo_domain, 64) : null
+  if (logoDev) sources.push(logoDev)
+  if (store.logo_url) sources.push(store.logo_url)
+  if (sources.length > 0) renderLogoImg(el, store, sources)
+  else renderInitialBadge(el, store)
+}
+
+function buildStoreBadge(store: NearbyStore): HTMLDivElement {
+  const el = document.createElement('div')
+  el.style.cssText =
+    `width:${STORE_BADGE_SIZE}px;height:${STORE_BADGE_SIZE}px;border-radius:50%;` +
+    'overflow:hidden;background:#fff;box-shadow:0 0 0 2px #2A6FDB,0 1px 3px rgba(0,0,0,0.3);' +
+    // pointer-events:none so clicks pass through to the map (drop an Assess pin).
+    'pointer-events:none;'
+  populateStoreBadge(el, store)
+  return el
+}
+
+// Whether the visual inputs of a store changed (needs a badge rebuild).
+function storeVisualChanged(a: NearbyStore, b: NearbyStore): boolean {
+  return (
+    a.logo_domain !== b.logo_domain ||
+    a.logo_url !== b.logo_url ||
+    a.brand_name !== b.brand_name ||
+    a.name !== b.name
+  )
+}
+
 function applyMapCursor(map: mapboxgl.Map) {
   const st = useWorkspaceStore.getState()
   // Crosshair only for dropping an Assess pin — not while toggling catchment cells.
@@ -108,6 +176,12 @@ export function UnifiedMap({
   // style swap (mirrors how the Assess pin re-places from store state).
   const requirementsRef = useRef<RequirementLocation[]>(requirements)
   requirementsRef.current = requirements
+  // Assess store logo-badge markers, keyed by store id, plus the last-rendered
+  // store snapshot used to detect position/visual changes on re-sync.
+  const storeMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map())
+  const storeSnapshotRef = useRef<Map<string, NearbyStore>>(new Map())
+  const storeDotsRef = useRef<NearbyStore[]>(storeDots)
+  storeDotsRef.current = storeDots
 
   const view = useWorkspaceStore((s) => s.view)
   const tab = useWorkspaceStore((s) => s.tab)
@@ -120,6 +194,50 @@ export function UnifiedMap({
   const selectArea = useWorkspaceStore((s) => s.selectArea)
   const setAssessPoint = useWorkspaceStore((s) => s.setAssessPoint)
   const setReqModal = useWorkspaceStore((s) => s.setReqModal)
+
+  // Reconcile the Assess store logo-badge markers against the latest storeDots.
+  // Creates/removes markers by id, updates position + badge content in place,
+  // and toggles visibility to match the old circle-layer rule. Reads live store
+  // state so it stays correct when called from a stale style-load closure.
+  const syncStoreMarkers = (map: mapboxgl.Map) => {
+    const st = useWorkspaceStore.getState()
+    const assessVisible = st.view === 'assess' && st.tab !== 'catchment'
+    const stores = storeDotsRef.current
+    const markers = storeMarkersRef.current
+    const snapshot = storeSnapshotRef.current
+    const seen = new Set<string>()
+
+    for (const store of stores) {
+      seen.add(store.id)
+      const prev = snapshot.get(store.id)
+      let marker = markers.get(store.id)
+      if (!marker) {
+        const el = buildStoreBadge(store)
+        el.style.display = assessVisible ? '' : 'none'
+        marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([store.lon, store.lat])
+          .addTo(map)
+        markers.set(store.id, marker)
+      } else {
+        if (!prev || prev.lat !== store.lat || prev.lon !== store.lon) {
+          marker.setLngLat([store.lon, store.lat])
+        }
+        if (!prev || storeVisualChanged(prev, store)) {
+          populateStoreBadge(marker.getElement(), store)
+        }
+        marker.getElement().style.display = assessVisible ? '' : 'none'
+      }
+      snapshot.set(store.id, store)
+    }
+
+    markers.forEach((marker, id) => {
+      if (!seen.has(id)) {
+        marker.remove()
+        markers.delete(id)
+        snapshot.delete(id)
+      }
+    })
+  }
 
   // Add BUA + overlay layers to the current style. Safe to call repeatedly.
   const addLayers = (map: mapboxgl.Map) => {
@@ -182,26 +300,6 @@ export function UnifiedMap({
         },
         beforeId
       )
-    }
-
-    if (!map.getSource(STORES_SOURCE)) {
-      map.addSource(STORES_SOURCE, {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      })
-    }
-    if (!map.getLayer(STORES_LAYER)) {
-      map.addLayer({
-        id: STORES_LAYER,
-        type: 'circle',
-        source: STORES_SOURCE,
-        paint: {
-          'circle-radius': 5,
-          'circle-color': '#2A6FDB',
-          'circle-stroke-color': '#fff',
-          'circle-stroke-width': 1.5,
-        },
-      })
     }
 
     // Requirement pins — larger violet markers, styled distinctly from stores.
@@ -309,6 +407,9 @@ export function UnifiedMap({
     applyVisibility(map)
     applyMapCursor(map)
     readyRef.current = true
+    // Re-attach store logo badges now the style is ready — covers storeDots that
+    // arrived before the style loaded (the storeDots effect early-returns then).
+    syncStoreMarkers(map)
 
     // Hydrate dynamic state in case it changed before the style finished loading.
     const st = useWorkspaceStore.getState()
@@ -368,11 +469,8 @@ export function UnifiedMap({
         map.setLayoutProperty(id, 'visibility', buaVisible ? 'visible' : 'none')
       }
     }
-    // Assess store dots hide while the Catchment tab owns the local view.
-    const assessVisible = view === 'assess' && !catchmentActive
-    if (map.getLayer(STORES_LAYER)) {
-      map.setLayoutProperty(STORES_LAYER, 'visibility', assessVisible ? 'visible' : 'none')
-    }
+    // Assess store logo badges are HTML markers; their visibility is handled by
+    // syncStoreMarkers (called from the same effects as applyVisibility).
     // Requirement pins: Assess-only, require an active dropped point, gated on
     // the overlay toggle, and hidden while the Catchment tab owns the view.
     const reqVisible =
@@ -425,6 +523,9 @@ export function UnifiedMap({
     })
     mapRef.current = map
     onMap?.(map)
+    // Capture the marker maps (stable useRef identities) for the cleanup below.
+    const storeMarkers = storeMarkersRef.current
+    const storeSnapshot = storeSnapshotRef.current
 
     const onLoad = () => addLayers(map)
     map.on('load', onLoad)
@@ -506,6 +607,9 @@ export function UnifiedMap({
     return () => {
       resizeObserver.disconnect()
       onMap?.(null)
+      storeMarkers.forEach((marker) => marker.remove())
+      storeMarkers.clear()
+      storeSnapshot.clear()
       map.remove()
       mapRef.current = null
       readyRef.current = false
@@ -524,7 +628,10 @@ export function UnifiedMap({
     // Entering sketch: the SketchLayer owns the style now. Hide discovery
     // overlays so they don't show beneath the sketch.
     if (view === 'sketch') {
-      if (readyRef.current) applyVisibility(map)
+      if (readyRef.current) {
+        applyVisibility(map)
+        syncStoreMarkers(map)
+      }
       applyMapCursor(map)
       return
     }
@@ -557,6 +664,7 @@ export function UnifiedMap({
     // Discovery mode change (assess <-> find): just re-evaluate visibility.
     if (readyRef.current) {
       applyVisibility(map)
+      syncStoreMarkers(map)
       applyMapCursor(map)
     }
   }, [view])
@@ -573,6 +681,7 @@ export function UnifiedMap({
     const map = mapRef.current
     if (map && readyRef.current) {
       applyVisibility(map)
+      syncStoreMarkers(map)
       applyMapCursor(map)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -628,19 +737,12 @@ export function UnifiedMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessPoint])
 
-  // Feed nearby store dots into the Assess store layer.
+  // Reconcile the Assess store logo-badge markers when the nearby stores change.
   useEffect(() => {
     const map = mapRef.current
     if (!map || !readyRef.current) return
-    const src = map.getSource(STORES_SOURCE) as mapboxgl.GeoJSONSource | undefined
-    src?.setData({
-      type: 'FeatureCollection',
-      features: storeDots.map((s) => ({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
-        properties: { id: s.id },
-      })),
-    })
+    syncStoreMarkers(map)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeDots])
 
   // Feed requirement locations into the Assess requirements layer. The ref is

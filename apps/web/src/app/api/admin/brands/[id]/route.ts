@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getCurrentUser } from '@/lib/auth';
 import { fetchBrandCategory } from '@/lib/brand-estate';
+import { normalizeDomain, validateDomain } from '@/lib/clearbit-logo';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,7 @@ export async function GET(
     const { data: brand, error } = await supabase
       .from('brands')
       .select(
-        'id, name, logo_url, latest_store_name, latest_store_town, latest_store_opened_at, stores(count), requirements(count), brand_contacts(count)'
+        'id, name, logo_url, domain, latest_store_name, latest_store_town, latest_store_opened_at, stores(count), requirements(count), brand_contacts(count)'
       )
       .eq('id', id)
       .single();
@@ -52,6 +53,7 @@ export async function GET(
         id: brand.id,
         name: brand.name,
         logo_url: brand.logo_url ?? null,
+        domain: brand.domain ?? null,
         latest_store_name: brand.latest_store_name ?? null,
         latest_store_town: brand.latest_store_town ?? null,
         latest_store_opened_at: brand.latest_store_opened_at ?? null,
@@ -89,6 +91,13 @@ export async function PATCH(
       update.name = name;
     }
     if ('logo_url' in body) update.logo_url = body.logo_url || null;
+    if ('domain' in body) {
+      const d = body.domain ? normalizeDomain(body.domain) : '';
+      if (d && !validateDomain(d)) {
+        return NextResponse.json({ error: 'Invalid domain' }, { status: 400 });
+      }
+      update.domain = d || null;
+    }
     if ('latest_store_name' in body) update.latest_store_name = body.latest_store_name || null;
     if ('latest_store_town' in body) update.latest_store_town = body.latest_store_town || null;
     if ('latest_store_opened_at' in body) update.latest_store_opened_at = body.latest_store_opened_at || null;
@@ -102,7 +111,7 @@ export async function PATCH(
       .from('brands')
       .update(update)
       .eq('id', id)
-      .select('id, name, logo_url, latest_store_name, latest_store_town, latest_store_opened_at')
+      .select('id, name, logo_url, domain, latest_store_name, latest_store_town, latest_store_opened_at')
       .single();
     if (error) throw error;
 

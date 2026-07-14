@@ -631,6 +631,7 @@ export interface Database {
           id: string
           name: string
           logo_url: string | null
+          domain: string | null
           latest_store_name: string | null
           latest_store_town: string | null
           latest_store_opened_at: string | null
@@ -640,6 +641,7 @@ export interface Database {
           id?: string
           name: string
           logo_url?: string | null
+          domain?: string | null
           latest_store_name?: string | null
           latest_store_town?: string | null
           latest_store_opened_at?: string | null
@@ -649,6 +651,7 @@ export interface Database {
           id?: string
           name?: string
           logo_url?: string | null
+          domain?: string | null
           latest_store_name?: string | null
           latest_store_town?: string | null
           latest_store_opened_at?: string | null

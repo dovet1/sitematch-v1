@@ -37,6 +37,9 @@ export interface Store {
   brand_id: string  // UUID in database
   fascia_id: string  // UUID in database
   fascia_name?: string | null
+  brand_name?: string | null
+  logo_domain?: string | null
+  logo_url?: string | null
   name: string
   lon: number
   lat: number

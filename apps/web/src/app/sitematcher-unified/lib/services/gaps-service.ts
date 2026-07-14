@@ -122,6 +122,9 @@ export interface NearbyStore {
   brand_id: string
   fascia_id: string
   fascia_name?: string | null
+  brand_name?: string | null
+  logo_domain?: string | null
+  logo_url?: string | null
   lat: number
   lon: number
   town: string | null
