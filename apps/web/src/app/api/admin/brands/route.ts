@@ -12,6 +12,41 @@ function adminClient() {
   );
 }
 
+// List brands with store / requirement / contact counts for the admin brand hub.
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (user.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    const supabase = adminClient();
+    const { data, error } = await supabase
+      .from('brands')
+      .select('id, name, logo_url, stores(count), requirements(count), brand_contacts(count)')
+      .order('name', { ascending: true });
+    if (error) throw error;
+
+    const brands = (data || []).map((b: any) => ({
+      id: b.id,
+      name: b.name,
+      logo_url: b.logo_url ?? null,
+      storeCount: b.stores?.[0]?.count ?? 0,
+      requirementCount: b.requirements?.[0]?.count ?? 0,
+      contactCount: b.brand_contacts?.[0]?.count ?? 0,
+    }));
+
+    return NextResponse.json({ brands });
+  } catch (error) {
+    console.error('Error listing brands:', error);
+    return NextResponse.json(
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown' },
+      { status: 500 }
+    );
+  }
+}
+
 // Create a brand (used by the requirements admin to link an occupier to its store estate).
 export async function POST(request: NextRequest) {
   try {

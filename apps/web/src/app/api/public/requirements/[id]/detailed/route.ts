@@ -28,13 +28,15 @@ export async function GET(
         company_name,
         company_domain,
         clearbit_logo,
+        logo_url,
         brochure_url,
         site_size_min,
         site_size_max,
         requirement_locations(place_name, formatted_address),
         requirement_contacts(contact_name, contact_title, contact_email, contact_phone, contact_org, contact_kind, is_primary_contact),
         requirement_sectors(sector:sectors(name)),
-        requirement_use_classes(use_class:use_classes(name, code))
+        requirement_use_classes(use_class:use_classes(name, code)),
+        brand:brands(id, name, brand_contacts(contact_name, contact_title, contact_email, contact_phone, contact_org, contact_kind, is_primary_contact))
       `)
       .eq('id', id)
       .eq('status', 'active')

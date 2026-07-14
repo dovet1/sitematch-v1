@@ -41,6 +41,7 @@ export type RequirementMapFeature = {
     dwelling_count_max: number | null
     place_name: string | null
     formatted_address: string | null
+    brand_id: string | null
   }
 }
 
@@ -166,7 +167,8 @@ export async function getRequirementMapFeatures(
           dwelling_count_min: listing.dwelling_count_min ?? null,
           dwelling_count_max: listing.dwelling_count_max ?? null,
           place_name: location.place_name || null,
-          formatted_address: location.formatted_address || null
+          formatted_address: location.formatted_address || null,
+          brand_id: null
         }
       }]
     })
@@ -364,11 +366,13 @@ type RequirementLocationRow = {
 
 type RequirementRow = {
   id: string
+  brand_id?: string | null
   company_name?: string | null
   title?: string | null
   listing_type?: string | null
   company_domain?: string | null
   clearbit_logo?: boolean | null
+  logo_url?: string | null
   site_size_min?: number | null
   site_size_max?: number | null
   site_acreage_min?: number | null
@@ -381,6 +385,7 @@ type RequirementRow = {
 }
 
 function requirementLogoUrl(row: RequirementRow): string | null {
+  if (row.logo_url) return row.logo_url
   if (!row.clearbit_logo || !row.company_domain) return null
   const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN
   return token ? `https://img.logo.dev/${row.company_domain}?token=${token}` : null
@@ -438,6 +443,7 @@ export async function getRequirementMapFeaturesFromRequirements(
           dwelling_count_max: requirement.dwelling_count_max ?? null,
           place_name: location.place_name || null,
           formatted_address: location.formatted_address || null,
+          brand_id: requirement.brand_id || null,
         },
       }]
     })
@@ -500,11 +506,13 @@ async function fetchRequirements(
       .from('requirements')
       .select(`
         id,
+        brand_id,
         company_name,
         title,
         listing_type,
         company_domain,
         clearbit_logo,
+        logo_url,
         site_size_min,
         site_size_max,
         site_acreage_min,

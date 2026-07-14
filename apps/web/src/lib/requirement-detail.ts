@@ -27,6 +27,11 @@ interface JoinedLocation {
   place_name: string | null
   formatted_address: string | null
 }
+interface JoinedBrand {
+  id: string | null
+  name: string | null
+  brand_contacts?: JoinedContact[] | null
+}
 
 export interface RequirementDetailRow {
   id: string
@@ -36,6 +41,7 @@ export interface RequirementDetailRow {
   company_name: string | null
   company_domain: string | null
   clearbit_logo: boolean | null
+  logo_url: string | null
   brochure_url: string | null
   site_size_min: number | null
   site_size_max: number | null
@@ -43,6 +49,7 @@ export interface RequirementDetailRow {
   requirement_contacts?: JoinedContact[] | null
   requirement_sectors?: JoinedSector[] | null
   requirement_use_classes?: JoinedUseClass[] | null
+  brand?: JoinedBrand | null
 }
 
 function logoDevUrl(domain: string | null, clearbitLogo: boolean | null): string | null {
@@ -79,7 +86,7 @@ export function requirementRowToDetail(row: RequirementDetailRow): RequirementDe
   const orderedContacts = [...rawContacts].sort(
     (a, b) => Number(Boolean(b.is_primary_contact)) - Number(Boolean(a.is_primary_contact))
   )
-  const allContacts: RequirementContact[] = orderedContacts.map((c) => ({
+  const toContact = (c: JoinedContact): RequirementContact => ({
     name: c.contact_name,
     title: c.contact_title,
     org: c.contact_org,
@@ -89,7 +96,22 @@ export function requirementRowToDetail(row: RequirementDetailRow): RequirementDe
       c.contact_kind === 'in-house' || c.contact_kind === 'agency'
         ? c.contact_kind
         : null,
-  }))
+  })
+  // Requirement contacts stay first (primary first); brand in-house contacts are appended.
+  // De-dupe by email so a person listed on both a requirement and the brand appears once.
+  const seenEmails = new Set(
+    orderedContacts.map((c) => c.contact_email?.trim().toLowerCase()).filter(Boolean) as string[]
+  )
+  const brandContacts = (row.brand?.brand_contacts ?? []).filter((c) => {
+    const email = c.contact_email?.trim().toLowerCase()
+    if (email && seenEmails.has(email)) return false
+    if (email) seenEmails.add(email)
+    return true
+  })
+  const allContacts: RequirementContact[] = [
+    ...orderedContacts.map(toContact),
+    ...brandContacts.map(toContact),
+  ]
   const primaryRaw = orderedContacts[0] ?? null
   const primary = primaryRaw
     ? {
@@ -112,7 +134,7 @@ export function requirementRowToDetail(row: RequirementDetailRow): RequirementDe
     verified_at: row.verified_at,
     company: {
       name: row.company_name || 'Unnamed Company',
-      logo_url: logoDevUrl(row.company_domain, row.clearbit_logo),
+      logo_url: row.logo_url ?? logoDevUrl(row.company_domain, row.clearbit_logo),
       sector: sectors[0] || '',
       use_class: useClasses[0] || '',
       sectors,

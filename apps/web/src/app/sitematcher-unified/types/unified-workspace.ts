@@ -82,6 +82,7 @@ export interface MapSubSelection {
 export interface RequirementLocation {
   id: string
   requirementId: string
+  brandId: string | null
   companyName: string
   title: string | null
   listingType: string | null
@@ -131,6 +132,24 @@ export interface RequirementDetail {
     all: { place_name?: string | null; formatted_address?: string | null }[]
     is_nationwide: boolean
   }
+}
+
+// Payload for the brand info modal (no active requirement), from
+// /api/public/brands/[id]/detailed. `activeRequirementId` is resolved server-side with the
+// same visibility rules as the requirement map — when non-null the caller opens the
+// requirement modal instead of this brand-info view.
+export interface BrandInfo {
+  activeRequirementId: string | null
+  brand: {
+    id: string
+    name: string
+    logo_url: string | null
+    category: string | null
+    storeCount: number
+    latestStore: { name: string | null; town: string | null; openedDate: string | null } | null
+    locations: { lat: number; lon: number }[]
+  }
+  contacts: RequirementContact[]
 }
 
 // The brand's store estate for a requirement, from

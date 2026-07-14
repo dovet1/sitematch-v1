@@ -491,6 +491,7 @@ export interface Database {
           property_page_link: string | null
           company_domain: string | null
           clearbit_logo: boolean
+          logo_url: string | null
           is_featured_free: boolean
           verified_at: string | null
           status: string
@@ -516,6 +517,7 @@ export interface Database {
           property_page_link?: string | null
           company_domain?: string | null
           clearbit_logo?: boolean
+          logo_url?: string | null
           is_featured_free?: boolean
           verified_at?: string | null
           status?: string
@@ -541,6 +543,7 @@ export interface Database {
           property_page_link?: string | null
           company_domain?: string | null
           clearbit_logo?: boolean
+          logo_url?: string | null
           is_featured_free?: boolean
           verified_at?: string | null
           status?: string
@@ -591,6 +594,8 @@ export interface Database {
           contact_area: string | null
           headshot_url: string | null
           is_primary_contact: boolean
+          contact_kind: 'in-house' | 'agency' | null
+          contact_org: string | null
           created_at: string
         }
         Insert: {
@@ -603,6 +608,8 @@ export interface Database {
           contact_area?: string | null
           headshot_url?: string | null
           is_primary_contact?: boolean
+          contact_kind?: 'in-house' | 'agency' | null
+          contact_org?: string | null
           created_at?: string
         }
         Update: {
@@ -615,6 +622,79 @@ export interface Database {
           contact_area?: string | null
           headshot_url?: string | null
           is_primary_contact?: boolean
+          contact_kind?: 'in-house' | 'agency' | null
+          contact_org?: string | null
+        }
+      }
+      brands: {
+        Row: {
+          id: string
+          name: string
+          logo_url: string | null
+          latest_store_name: string | null
+          latest_store_town: string | null
+          latest_store_opened_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          logo_url?: string | null
+          latest_store_name?: string | null
+          latest_store_town?: string | null
+          latest_store_opened_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          logo_url?: string | null
+          latest_store_name?: string | null
+          latest_store_town?: string | null
+          latest_store_opened_at?: string | null
+        }
+      }
+      brand_contacts: {
+        Row: {
+          id: string
+          brand_id: string
+          contact_name: string | null
+          contact_title: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          contact_area: string | null
+          headshot_url: string | null
+          is_primary_contact: boolean
+          contact_kind: 'in-house' | 'agency' | null
+          contact_org: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          brand_id: string
+          contact_name?: string | null
+          contact_title?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_area?: string | null
+          headshot_url?: string | null
+          is_primary_contact?: boolean
+          contact_kind?: 'in-house' | 'agency' | null
+          contact_org?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          brand_id?: string
+          contact_name?: string | null
+          contact_title?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_area?: string | null
+          headshot_url?: string | null
+          is_primary_contact?: boolean
+          contact_kind?: 'in-house' | 'agency' | null
+          contact_org?: string | null
         }
       }
       requirement_sectors: {

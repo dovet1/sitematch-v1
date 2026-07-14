@@ -16,7 +16,7 @@ import { useAreaData } from '../lib/hooks/useAreaData'
 import { useCatchment } from '../lib/hooks/useCatchment'
 import { useRequirements } from '../lib/hooks/useRequirements'
 import { computeIsochroneMissing } from '../lib/isochrone-missing'
-import { URequirementModal, UBrandModal } from './shell/UDetailModals'
+import { URequirementModal, UBrandModal, UBrandInfoModal } from './shell/UDetailModals'
 import type { WorkspaceArea } from '../types/unified-workspace'
 // New SiteMatcher-styled sketch shell (all depend only on the standalone sketch store).
 import { USketchPanel } from './shell/USketchPanel'
@@ -275,14 +275,29 @@ export function UnifiedWorkspace() {
           onClose={() => setReqModal(null)}
         />
       )}
-      {brandModal && (
-        <UBrandModal
-          missing={brandModal}
-          areaName={area?.name ?? 'this location'}
-          liveRequirement={requirements.findByBrand(brandModal.brandName)}
-          onClose={() => setBrandModal(null)}
-        />
-      )}
+      {brandModal &&
+        (() => {
+          const liveReq = requirements.findActiveRequirementByBrandId(
+            brandModal.brandId
+          )
+          return liveReq ? (
+            <UBrandModal
+              missing={brandModal}
+              areaName={area?.name ?? 'this location'}
+              liveRequirement={liveReq}
+              onClose={() => setBrandModal(null)}
+            />
+          ) : (
+            <UBrandInfoModal
+              brandId={brandModal.brandId}
+              onClose={() => setBrandModal(null)}
+              onActiveRequirement={(id) => {
+                setBrandModal(null)
+                setReqModal(id)
+              }}
+            />
+          )
+        })()}
     </div>
   )
 }

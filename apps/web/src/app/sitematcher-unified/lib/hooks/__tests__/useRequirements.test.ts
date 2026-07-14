@@ -17,11 +17,13 @@ function loc(
   requirementId: string,
   companyName: string,
   lat: number,
-  lng: number
+  lng: number,
+  brandId: string | null = null
 ): RequirementLocation {
   return {
     id,
     requirementId,
+    brandId,
     companyName,
     title: null,
     listingType: null,
@@ -33,10 +35,10 @@ function loc(
 
 // A: ~0.55km (listing L1), B: ~1.1km (same listing L1, farther),
 // D: ~2.2km (listing L3), C: ~111km away (listing L2) — outside the catchment.
-const A = loc('a', 'L1', 'BrandOne', 51.505, -0.12)
-const B = loc('b', 'L1', 'BrandOne', 51.51, -0.12)
-const D = loc('d', 'L3', 'BrandThree', 51.52, -0.12)
-const C = loc('c', 'L2', 'FarBrand', 52.5, -0.12)
+const A = loc('a', 'L1', 'BrandOne', 51.505, -0.12, 'brand-1')
+const B = loc('b', 'L1', 'BrandOne', 51.51, -0.12, 'brand-1')
+const D = loc('d', 'L3', 'BrandThree', 51.52, -0.12, 'brand-3')
+const C = loc('c', 'L2', 'FarBrand', 52.5, -0.12, 'brand-far')
 
 const FIXTURES = [A, B, D, C]
 
@@ -87,13 +89,20 @@ describe('useRequirements — drive/walk mode (isochrone supplied)', () => {
   })
 })
 
-describe('useRequirements — findByBrand stays UK-wide', () => {
-  it('matches a company whose only location is outside the catchment', async () => {
+describe('useRequirements — findActiveRequirementByBrandId stays UK-wide', () => {
+  it('matches a brand whose only location is outside the catchment', async () => {
     const { result } = renderHook(() => useRequirements(center, 5))
     await waitFor(() => expect(result.current.withinCatchment).toHaveLength(3))
     // FarBrand (C) is ~111km away — excluded from the catchment lists…
     expect(result.current.withinCatchment.some((r) => r.id === 'c')).toBe(false)
-    // …but findByBrand still resolves it from the whole-UK set.
-    expect(result.current.findByBrand('FarBrand')?.id).toBe('c')
+    // …but findActiveRequirementByBrandId still resolves it by brand_id from the whole-UK set.
+    expect(result.current.findActiveRequirementByBrandId('brand-far')?.id).toBe('c')
+  })
+
+  it('returns undefined for a null/unknown brand id', async () => {
+    const { result } = renderHook(() => useRequirements(center, 5))
+    await waitFor(() => expect(result.current.withinCatchment).toHaveLength(3))
+    expect(result.current.findActiveRequirementByBrandId(null)).toBeUndefined()
+    expect(result.current.findActiveRequirementByBrandId('nope')).toBeUndefined()
   })
 })

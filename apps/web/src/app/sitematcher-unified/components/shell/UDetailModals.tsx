@@ -18,8 +18,10 @@ import {
 import {
   fetchRequirementDetail,
   fetchStoreEstate,
+  fetchBrandInfo,
 } from '../../lib/services/requirements-service'
 import type {
+  BrandInfo,
   MissingFascia,
   RequirementContact,
   RequirementDetail,
@@ -825,5 +827,269 @@ export function UBrandModal({
         </div>
       )}
     </Overlay>
+  )
+}
+
+/* ============================================================================
+ * Brand info modal — the "no active requirement" sibling of the requirement modal
+ * (design_handoff_brand_info_modal). Same two-column shell; left = brand identity +
+ * category + store estate + map, right = in-house contacts only.
+ * ==========================================================================*/
+
+function useBrandInfo(brandId: string | null) {
+  const [data, setData] = useState<BrandInfo | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!brandId) {
+      setData(null)
+      return
+    }
+    const controller = new AbortController()
+    setLoading(true)
+    setError(null)
+    fetchBrandInfo(brandId, controller.signal)
+      .then(setData)
+      .catch((err) => {
+        if (err?.name !== 'AbortError') setError('Could not load this brand.')
+      })
+      .finally(() => setLoading(false))
+    return () => controller.abort()
+  }, [brandId])
+
+  return { data, loading, error }
+}
+
+// Left column: brand identity, category kicker, estate stats, and a full-bleed store map.
+function BrandEstateColumn({ brand }: { brand: BrandInfo['brand'] }) {
+  const latest = brand.latestStore
+  const latestUnit =
+    latest && (latest.name || latest.town)
+      ? [latest.name, latest.town].filter(Boolean).join(' · ')
+      : '—'
+  const openedDate = latest ? formatFullDate(latest.openedDate) : null
+
+  // The map component expects StoreEstateStore[]; brand locations carry only coordinates.
+  const mapStores = brand.locations.map((l, i) => ({
+    id: String(i),
+    name: null,
+    town: null,
+    lat: l.lat,
+    lon: l.lon,
+  }))
+
+  return (
+    <div className="flex min-h-0 flex-col border-b border-sm-border-soft bg-sm-bg md:border-b-0 md:border-r">
+      {/* Brand identity */}
+      <div className="px-[26px] pb-[18px] pt-[26px]">
+        <div className="flex items-center gap-3">
+          {brand.logo_url ? (
+            <img
+              src={brand.logo_url}
+              alt=""
+              className="h-[52px] w-[52px] shrink-0 rounded-[13px] border border-sm-violet-tint object-contain"
+            />
+          ) : (
+            <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[13px] bg-sm-violet-tint text-[19px] font-bold tracking-[-0.5px] text-sm-violet-deep">
+              {initialsOf(brand.name)}
+            </span>
+          )}
+          <div className="min-w-0">
+            <div className="text-[22px] font-bold leading-tight tracking-[-0.5px] text-sm-ink">
+              {brand.name}
+            </div>
+            {brand.category && (
+              <div className="mt-[5px]"><Kicker>{brand.category}</Kicker></div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-[22px] flex items-center gap-1.5">
+          <Store size={15} className="text-sm-violet-deep" strokeWidth={1.5} />
+          <span className="font-mono text-[10.5px] font-semibold uppercase tracking-wider text-sm-violet-deep">
+            Store estate
+          </span>
+        </div>
+      </div>
+
+      {/* Estate stats */}
+      <div className="grid grid-cols-[auto_1fr] gap-x-[22px] gap-y-1 px-[26px] pb-[18px] pt-0">
+        <div>
+          <Kicker>UK stores</Kicker>
+          <div className="mt-1 text-[17px] font-semibold text-sm-ink">
+            {brand.storeCount.toLocaleString()}
+          </div>
+        </div>
+        <div className="min-w-0">
+          <Kicker>Latest store</Kicker>
+          <div className="mt-1 truncate text-[14.5px] font-medium text-sm-ink">
+            {latestUnit}
+          </div>
+          {openedDate && (
+            <div className="mt-1 font-mono text-[10.5px] text-sm-ink3">
+              Opened {openedDate}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Full-bleed map */}
+      <div className="min-h-[200px] flex-1">
+        <UStoreEstateMap stores={mapStores} count={brand.storeCount} />
+      </div>
+    </div>
+  )
+}
+
+// Right column: in-house contacts only, with the balancing rule and empty state.
+function BrandContactColumn({
+  contacts,
+  onClose,
+}: {
+  contacts: RequirementContact[]
+  onClose: () => void
+}) {
+  const [chooserOpen, setChooserOpen] = useState(false)
+  const [centered, setCentered] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const empty = contacts.length === 0
+  const multi = contacts.length > 1
+
+  // Balancing rule: if the scroll body doesn't overflow, vertically centre it so a short
+  // list balances the dense left column. Empty state is always centred. Re-check via rAF.
+  useEffect(() => {
+    if (empty) {
+      setCentered(true)
+      return
+    }
+    const raf = requestAnimationFrame(() => {
+      const el = scrollRef.current
+      if (el) setCentered(el.scrollHeight <= el.clientHeight)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [contacts, empty])
+
+  return (
+    <div className="relative flex min-h-0 flex-col">
+      <button
+        type="button"
+        onClick={onClose}
+        title="Close"
+        className="absolute right-5 top-5 z-10 flex h-[34px] w-[34px] items-center justify-center rounded-full border border-sm-border bg-sm-surface text-sm-ink3 hover:border-sm-border-hard hover:bg-sm-bg hover:text-sm-ink"
+      >
+        <X size={15} />
+      </button>
+
+      <div
+        ref={scrollRef}
+        className={`flex min-h-0 flex-1 flex-col overflow-auto px-[30px] pb-5 pt-[26px] ${
+          centered ? 'justify-center' : ''
+        }`}
+      >
+        {empty ? (
+          <div className="flex flex-col items-center gap-3 py-10 text-center">
+            <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[13px] border border-sm-border-soft bg-sm-bg text-sm-ink4">
+              <Users size={22} />
+            </span>
+            <div className="text-[15.5px] font-semibold text-sm-ink">No contacts listed</div>
+            <p className="max-w-[260px] text-[13px] leading-[1.55] text-sm-ink3">
+              This brand hasn&apos;t shared in-house property contacts yet.
+            </p>
+          </div>
+        ) : (
+          <div>
+            <div className="mb-2.5 flex items-center gap-2">
+              <Kicker>{multi ? 'In-house contacts' : 'In-house contact'}</Kicker>
+              {multi && (
+                <span className="rounded-full border border-sm-border-soft bg-sm-bg px-[9px] py-[3px] font-mono text-[10.5px] font-medium text-sm-ink2">
+                  {contacts.length}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-2.5">
+              {contacts.map((c, i) => (
+                <ContactRow key={i} contact={c} showChip={multi} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="flex gap-3 border-t border-sm-border-soft bg-sm-surface px-[30px] py-4">
+        <button
+          type="button"
+          disabled={empty}
+          onClick={() => setChooserOpen((o) => !o)}
+          className="inline-flex h-[50px] flex-1 items-center justify-center gap-2.5 rounded-[13px] border border-sm-violet bg-sm-violet text-[15px] font-semibold text-white shadow-[0_8px_22px_-8px_rgba(112,51,255,0.6)] hover:bg-sm-violet-deep disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Users size={16} />
+          {empty ? 'No contacts' : multi ? `Contact (${contacts.length})` : 'Contact'}
+        </button>
+      </div>
+
+      {chooserOpen && !empty && (
+        <ContactChooser contacts={contacts} onClose={() => setChooserOpen(false)} />
+      )}
+    </div>
+  )
+}
+
+export function UBrandInfoModal({
+  brandId,
+  onClose,
+  onActiveRequirement,
+}: {
+  brandId: string
+  onClose: () => void
+  // Server-resolved: if this brand actually has a visible active requirement, defer to the
+  // requirement modal instead of showing brand info (covers requirements with no map pin).
+  onActiveRequirement: (requirementId: string) => void
+}) {
+  const { data, loading, error } = useBrandInfo(brandId)
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  useEffect(() => {
+    if (data?.activeRequirementId) onActiveRequirement(data.activeRequirementId)
+  }, [data?.activeRequirementId, onActiveRequirement])
+
+  const showBrand = data && !data.activeRequirementId
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[200] flex items-center justify-center p-6 [background:radial-gradient(120%_90%_at_50%_0%,rgba(112,51,255,0.10),transparent_60%),rgba(23,20,25,0.55)] [backdrop-filter:blur(2px)]"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="flex max-h-[90vh] w-[min(960px,100%)] flex-col overflow-hidden rounded-[22px] bg-sm-surface shadow-[0_40px_120px_-30px_rgba(20,10,40,0.65)] md:h-[632px] md:max-h-[90vh]"
+      >
+        {(loading || (data && data.activeRequirementId)) && (
+          <div className="flex flex-1 items-center justify-center gap-2 py-20 text-[13px] text-sm-ink3">
+            <Loader2 size={16} className="animate-spin" /> Loading…
+          </div>
+        )}
+        {error && !loading && (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 py-20">
+            <div className="text-[13px] text-[#B23A2C]">{error}</div>
+            <CloseButton onClose={onClose} />
+          </div>
+        )}
+        {showBrand && (
+          <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[372px_1fr]">
+            <BrandEstateColumn brand={data.brand} />
+            <BrandContactColumn contacts={data.contacts} onClose={onClose} />
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

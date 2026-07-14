@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const status = searchParams.get('status'); // 'active' | 'archived' | null (all)
     const needsBrand = searchParams.get('needsBrand') === 'true';
+    const brandId = searchParams.get('brandId'); // filter to a single brand (hub view)
 
     const supabase = adminClient();
     let query = supabase
@@ -37,6 +38,9 @@ export async function GET(request: NextRequest) {
     }
     if (needsBrand) {
       query = query.is('brand_id', null);
+    }
+    if (brandId) {
+      query = query.eq('brand_id', brandId);
     }
 
     const { data, error } = await query;

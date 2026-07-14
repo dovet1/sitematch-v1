@@ -8,6 +8,7 @@ import type {
   RequirementLocation,
   RequirementDetail,
   StoreEstate,
+  BrandInfo,
 } from '../../types/unified-workspace'
 
 // UK-wide bounds. The requirement map endpoint returns the whole eligible set
@@ -26,6 +27,7 @@ interface RequirementMapFeature {
     listing_type: string | null
     place_name: string | null
     formatted_address: string | null
+    brand_id: string | null
   }
 }
 
@@ -45,6 +47,7 @@ export async function fetchRequirementLocations(
   return features.map((f) => ({
     id: f.properties.location_id,
     requirementId: f.properties.id,
+    brandId: f.properties.brand_id ?? null,
     companyName: f.properties.company_name,
     title: f.properties.title,
     listingType: f.properties.listing_type,
@@ -63,6 +66,15 @@ export async function fetchRequirementDetail(
   })
   if (!res.ok) throw new Error(`requirement detail failed (${res.status})`)
   return (await res.json()) as RequirementDetail
+}
+
+export async function fetchBrandInfo(
+  brandId: string,
+  signal?: AbortSignal
+): Promise<BrandInfo> {
+  const res = await fetch(`/api/public/brands/${brandId}/detailed`, { signal })
+  if (!res.ok) throw new Error(`brand detail failed (${res.status})`)
+  return (await res.json()) as BrandInfo
 }
 
 export async function fetchStoreEstate(

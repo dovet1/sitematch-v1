@@ -1,12 +1,31 @@
 import { requireAdmin } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { RequirementForm } from '../components/RequirementForm'
 
 export const dynamic = 'force-dynamic'
 
-export default async function NewRequirementPage() {
+export default async function NewRequirementPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ brand?: string; brandName?: string }>
+}) {
   await requireAdmin()
+  const { brand } = await searchParams
+
+  // Validate the preselected brand exists so a stale link can't inject a bad FK.
+  let initialBrandId: string | undefined
+  let initialBrandName: string | undefined
+  if (brand) {
+    const supabase = createAdminClient()
+    const { data } = await supabase.from('brands').select('id, name').eq('id', brand).maybeSingle()
+    const row = data as { id: string; name: string } | null
+    if (row) {
+      initialBrandId = row.id
+      initialBrandName = row.name
+    }
+  }
 
   return (
     <div className="container mx-auto max-w-3xl space-y-6 p-6">
@@ -22,7 +41,7 @@ export default async function NewRequirementPage() {
         </Button>
       </div>
 
-      <RequirementForm />
+      <RequirementForm initialBrandId={initialBrandId} initialBrandName={initialBrandName} />
     </div>
   )
 }

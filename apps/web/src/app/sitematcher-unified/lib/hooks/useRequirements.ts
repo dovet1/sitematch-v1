@@ -13,10 +13,15 @@ export interface Requirements {
   // The deduped-per-listing counterpart (nearest location per listing) of
   // withinCatchment. Powers the Summary promoted rows.
   local: RequirementLocation[]
-  // Case-insensitive companyName match over the *whole UK* set — the brand
-  // modal's "is any occupier after this brand anywhere?" block. Intentionally
-  // NOT scoped to the catchment; do not narrow it to withinCatchment.
-  findByBrand: (name: string) => RequirementLocation | undefined
+  // brand_id match over the *whole UK* set — the brand modal's "is any occupier
+  // after this brand anywhere?" resolution. Matching on brand_id (not company_name)
+  // avoids misses when a requirement's company_name differs from brands.name and
+  // false-matches between same-named brands. The set is already free-tier gated
+  // (it comes from /api/public/requirements/map), so a free user only ever resolves
+  // requirements they're allowed to see. Intentionally NOT scoped to the catchment.
+  findActiveRequirementByBrandId: (
+    brandId: string | null | undefined
+  ) => RequirementLocation | undefined
   loading: boolean
 }
 
@@ -102,13 +107,13 @@ export function useRequirements(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [all, center?.lat, center?.lon, radiusKm, isochroneKey])
 
-  const findByBrand = useCallback(
-    (name: string) => {
-      const target = name.trim().toLowerCase()
-      return all.find((r) => r.companyName.trim().toLowerCase() === target)
+  const findActiveRequirementByBrandId = useCallback(
+    (brandId: string | null | undefined) => {
+      if (!brandId) return undefined
+      return all.find((r) => r.brandId === brandId)
     },
     [all]
   )
 
-  return { withinCatchment, local, findByBrand, loading }
+  return { withinCatchment, local, findActiveRequirementByBrandId, loading }
 }

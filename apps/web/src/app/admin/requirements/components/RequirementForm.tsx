@@ -5,11 +5,14 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { ImageUpload } from '@/components/ui/image-upload'
+import { LocationSearch } from '@/components/listings/location-search'
+import { fetchCompanyLogo, getClearbitLogoUrl } from '@/lib/clearbit-logo'
+import type { LocationSelection } from '@/types/locations'
 
 interface RefItem {
   id: string
-  name: string
+  label: string
   code?: string
 }
 interface BrandOption {
@@ -17,12 +20,6 @@ interface BrandOption {
   name: string
 }
 
-interface LocationDraft {
-  place_name: string
-  formatted_address: string
-  lng: string
-  lat: string
-}
 interface ContactDraft {
   contact_name: string
   contact_title: string
@@ -37,25 +34,18 @@ interface FormState {
   company_name: string
   brand_id: string | null
   brand_name: string
-  listing_type: string
-  title: string
-  description: string
   site_size_min: string
   site_size_max: string
-  site_acreage_min: string
-  site_acreage_max: string
-  dwelling_count_min: string
-  dwelling_count_max: string
   brochure_url: string
   property_page_link: string
   company_domain: string
   clearbit_logo: boolean
-  is_featured_free: boolean
+  logo_url: string
   verified_at: string
   status: string
   sectors: string[]
   use_classes: string[]
-  locations: LocationDraft[]
+  locations: LocationSelection[]
   contacts: ContactDraft[]
 }
 
@@ -63,20 +53,13 @@ const EMPTY: FormState = {
   company_name: '',
   brand_id: null,
   brand_name: '',
-  listing_type: 'commercial',
-  title: '',
-  description: '',
   site_size_min: '',
   site_size_max: '',
-  site_acreage_min: '',
-  site_acreage_max: '',
-  dwelling_count_min: '',
-  dwelling_count_max: '',
   brochure_url: '',
   property_page_link: '',
   company_domain: '',
   clearbit_logo: false,
-  is_featured_free: false,
+  logo_url: '',
   verified_at: '',
   status: 'active',
   sectors: [],
@@ -85,16 +68,40 @@ const EMPTY: FormState = {
   contacts: [],
 }
 
+type LogoMethod = 'domain' | 'upload'
+
 function num(v: string): number | null {
   const n = Number(v)
   return v.trim() === '' || Number.isNaN(n) ? null : n
 }
 
-export function RequirementForm({ requirementId }: { requirementId?: string }) {
+async function uploadFile(file: File, type: 'logo' | 'brochure'): Promise<string> {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('type', type)
+  const res = await fetch('/api/upload', { method: 'POST', body: fd })
+  const d = await res.json().catch(() => ({}))
+  if (!res.ok || !d.file?.url) throw new Error(d.error || `Upload failed (${res.status})`)
+  return d.file.url as string
+}
+
+export function RequirementForm({
+  requirementId,
+  initialBrandId,
+  initialBrandName,
+}: {
+  requirementId?: string
+  initialBrandId?: string
+  initialBrandName?: string
+}) {
   const router = useRouter()
   const isEdit = Boolean(requirementId)
 
-  const [form, setForm] = useState<FormState>(EMPTY)
+  const [form, setForm] = useState<FormState>(() =>
+    initialBrandId
+      ? { ...EMPTY, brand_id: initialBrandId, brand_name: initialBrandName ?? '' }
+      : EMPTY
+  )
   const [sectorsRef, setSectorsRef] = useState<RefItem[]>([])
   const [useClassesRef, setUseClassesRef] = useState<RefItem[]>([])
   const [brandQuery, setBrandQuery] = useState('')
@@ -103,6 +110,14 @@ export function RequirementForm({ requirementId }: { requirementId?: string }) {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [logoMethod, setLogoMethod] = useState<LogoMethod>('domain')
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [logoLoading, setLogoLoading] = useState(false)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoError, setLogoError] = useState<string | null>(null)
+  const [brochureUploading, setBrochureUploading] = useState(false)
+  const [brochureError, setBrochureError] = useState<string | null>(null)
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }))
@@ -128,29 +143,27 @@ export function RequirementForm({ requirementId }: { requirementId?: string }) {
           company_name: req.company_name ?? '',
           brand_id: req.brand_id ?? null,
           brand_name: req.brands?.name ?? '',
-          listing_type: req.listing_type ?? 'commercial',
-          title: req.title ?? '',
-          description: req.description ?? '',
           site_size_min: req.site_size_min?.toString() ?? '',
           site_size_max: req.site_size_max?.toString() ?? '',
-          site_acreage_min: req.site_acreage_min?.toString() ?? '',
-          site_acreage_max: req.site_acreage_max?.toString() ?? '',
-          dwelling_count_min: req.dwelling_count_min?.toString() ?? '',
-          dwelling_count_max: req.dwelling_count_max?.toString() ?? '',
           brochure_url: req.brochure_url ?? '',
           property_page_link: req.property_page_link ?? '',
           company_domain: req.company_domain ?? '',
           clearbit_logo: Boolean(req.clearbit_logo),
-          is_featured_free: Boolean(req.is_featured_free),
+          logo_url: req.logo_url ?? '',
           verified_at: req.verified_at ? req.verified_at.slice(0, 10) : '',
           status: req.status ?? 'active',
           sectors: (req.requirement_sectors || []).map((s: any) => s.sector_id),
           use_classes: (req.requirement_use_classes || []).map((u: any) => u.use_class_id),
-          locations: (req.requirement_locations || []).map((l: any) => ({
+          locations: (req.requirement_locations || []).map((l: any, i: number) => ({
+            id: l.id || `loc-${i}`,
             place_name: l.place_name ?? '',
-            formatted_address: l.formatted_address ?? '',
-            lng: Array.isArray(l.coordinates) ? String(l.coordinates[0] ?? '') : '',
-            lat: Array.isArray(l.coordinates) ? String(l.coordinates[1] ?? '') : '',
+            coordinates: Array.isArray(l.coordinates)
+              ? [Number(l.coordinates[0]), Number(l.coordinates[1])]
+              : [0, 0],
+            type: 'preferred',
+            formatted_address: l.formatted_address ?? l.place_name ?? '',
+            region: l.region ?? undefined,
+            country: l.country ?? undefined,
           })),
           contacts: (req.requirement_contacts || []).map((c: any) => ({
             contact_name: c.contact_name ?? '',
@@ -162,6 +175,14 @@ export function RequirementForm({ requirementId }: { requirementId?: string }) {
             is_primary_contact: Boolean(c.is_primary_contact),
           })),
         })
+
+        if (req.logo_url) {
+          setLogoMethod('upload')
+          setLogoPreview(req.logo_url)
+        } else if (req.clearbit_logo && req.company_domain) {
+          setLogoMethod('domain')
+          setLogoPreview(getClearbitLogoUrl(req.company_domain))
+        }
       })
       .catch(() => setError('Could not load requirement'))
       .finally(() => setLoading(false))
@@ -184,6 +205,89 @@ export function RequirementForm({ requirementId }: { requirementId?: string }) {
       clearTimeout(t)
     }
   }, [brandQuery])
+
+  // Debounced logo.dev lookup when using the domain method.
+  useEffect(() => {
+    if (logoMethod !== 'domain') return
+    const domain = form.company_domain.trim()
+    if (!domain) {
+      setLogoPreview(null)
+      setLogoError(null)
+      set('clearbit_logo', false)
+      return
+    }
+    const t = setTimeout(async () => {
+      setLogoLoading(true)
+      setLogoError(null)
+      try {
+        const url = await fetchCompanyLogo(domain)
+        if (url) {
+          setLogoPreview(url)
+          set('clearbit_logo', true)
+        } else {
+          setLogoPreview(null)
+          set('clearbit_logo', false)
+          setLogoError('No logo found')
+        }
+      } catch (err) {
+        setLogoPreview(null)
+        set('clearbit_logo', false)
+        setLogoError(err instanceof Error ? err.message : 'No logo found')
+      } finally {
+        setLogoLoading(false)
+      }
+    }, 800)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.company_domain, logoMethod])
+
+  function switchLogoMethod(m: LogoMethod) {
+    setLogoMethod(m)
+    setLogoError(null)
+    if (m === 'domain') {
+      set('logo_url', '')
+      setLogoPreview(null)
+    } else {
+      set('clearbit_logo', false)
+      setLogoPreview(form.logo_url || null)
+    }
+  }
+
+  async function handleLogoFile(file: File | null) {
+    if (!file) {
+      set('logo_url', '')
+      setLogoPreview(null)
+      return
+    }
+    setLogoUploading(true)
+    setLogoError(null)
+    try {
+      const url = await uploadFile(file, 'logo')
+      set('logo_url', url)
+      set('clearbit_logo', false)
+      setLogoPreview(url)
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setLogoUploading(false)
+    }
+  }
+
+  async function handleBrochureFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBrochureUploading(true)
+    setBrochureError(null)
+    try {
+      const url = await uploadFile(file, 'brochure')
+      set('brochure_url', url)
+    } catch (err) {
+      setBrochureError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setBrochureUploading(false)
+      e.target.value = ''
+    }
+  }
 
   function toggleId(list: string[], id: string): string[] {
     return list.includes(id) ? list.filter((x) => x !== id) : [...list, id]
@@ -225,20 +329,21 @@ export function RequirementForm({ requirementId }: { requirementId?: string }) {
     const payload = {
       company_name: form.company_name.trim(),
       brand_id: form.brand_id,
-      listing_type: form.listing_type || null,
-      title: form.title || null,
-      description: form.description || null,
+      listing_type: 'commercial',
+      title: null,
+      description: null,
       site_size_min: num(form.site_size_min),
       site_size_max: num(form.site_size_max),
-      site_acreage_min: num(form.site_acreage_min),
-      site_acreage_max: num(form.site_acreage_max),
-      dwelling_count_min: num(form.dwelling_count_min),
-      dwelling_count_max: num(form.dwelling_count_max),
+      site_acreage_min: null,
+      site_acreage_max: null,
+      dwelling_count_min: null,
+      dwelling_count_max: null,
       brochure_url: form.brochure_url || null,
       property_page_link: form.property_page_link || null,
       company_domain: form.company_domain || null,
       clearbit_logo: form.clearbit_logo,
-      is_featured_free: form.is_featured_free,
+      logo_url: form.logo_url || null,
+      is_featured_free: false,
       verified_at: form.verified_at || null,
       status: form.status,
       sectors: form.sectors,
@@ -246,8 +351,9 @@ export function RequirementForm({ requirementId }: { requirementId?: string }) {
       locations: form.locations.map((l) => ({
         place_name: l.place_name || null,
         formatted_address: l.formatted_address || null,
-        coordinates:
-          l.lng.trim() !== '' && l.lat.trim() !== '' ? [Number(l.lng), Number(l.lat)] : null,
+        coordinates: Array.isArray(l.coordinates) ? [l.coordinates[0], l.coordinates[1]] : null,
+        region: l.region || null,
+        country: l.country || null,
       })),
       contacts: form.contacts.map((c) => ({
         contact_name: c.contact_name || null,
@@ -343,17 +449,6 @@ export function RequirementForm({ requirementId }: { requirementId?: string }) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label>Listing type</Label>
-            <select
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              value={form.listing_type}
-              onChange={(e) => set('listing_type', e.target.value)}
-            >
-              <option value="commercial">commercial</option>
-              <option value="residential">residential</option>
-            </select>
-          </div>
-          <div>
             <Label>Status</Label>
             <select
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
@@ -364,32 +459,63 @@ export function RequirementForm({ requirementId }: { requirementId?: string }) {
               <option value="archived">archived</option>
             </select>
           </div>
+          <div>
+            <Label>Verified at</Label>
+            <Input type="date" value={form.verified_at} onChange={(e) => set('verified_at', e.target.value)} />
+          </div>
         </div>
+      </section>
 
-        <div>
-          <Label>Title</Label>
-          <Input value={form.title} onChange={(e) => set('title', e.target.value)} />
-        </div>
-        <div>
-          <Label>Description</Label>
-          <Textarea value={form.description} onChange={(e) => set('description', e.target.value)} />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div><Label>Company domain</Label><Input value={form.company_domain} onChange={(e) => set('company_domain', e.target.value)} placeholder="example.com" /></div>
-          <div><Label>Verified at</Label><Input type="date" value={form.verified_at} onChange={(e) => set('verified_at', e.target.value)} /></div>
-        </div>
-
-        <div className="flex gap-6">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.clearbit_logo} onChange={(e) => set('clearbit_logo', e.target.checked)} />
-            Use logo.dev logo (needs domain)
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Logo</h2>
+        <div className="flex gap-6 text-sm">
+          <label className="flex items-center gap-2">
+            <input type="radio" checked={logoMethod === 'domain'} onChange={() => switchLogoMethod('domain')} />
+            Find via company domain
           </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.is_featured_free} onChange={(e) => set('is_featured_free', e.target.checked)} />
-            Featured for free tier
+          <label className="flex items-center gap-2">
+            <input type="radio" checked={logoMethod === 'upload'} onChange={() => switchLogoMethod('upload')} />
+            Upload a logo
           </label>
         </div>
+
+        {logoMethod === 'domain' ? (
+          <div className="space-y-2">
+            <Label>Company domain</Label>
+            <Input
+              value={form.company_domain}
+              onChange={(e) => set('company_domain', e.target.value)}
+              placeholder="example.com"
+            />
+            {logoLoading && (
+              <p className="flex items-center gap-2 text-sm text-blue-600">
+                <span className="h-3 w-3 animate-spin rounded-full border border-blue-500 border-t-transparent" />
+                Looking for logo…
+              </p>
+            )}
+            {logoError && (
+              <p className="text-sm text-red-600">{logoError} — try uploading a logo instead.</p>
+            )}
+            {logoPreview && form.clearbit_logo && (
+              <div className="flex items-center gap-3 rounded-md border border-green-200 bg-green-50 p-3">
+                <img src={logoPreview} alt="Company logo" className="h-12 w-12 object-contain" />
+                <p className="text-sm text-green-700">Logo found from {form.company_domain}</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <ImageUpload
+              value={form.logo_url || logoPreview || undefined}
+              onChange={handleLogoFile}
+              placeholder="Upload company logo"
+              maxSize={2 * 1024 * 1024}
+              acceptedTypes={['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml']}
+            />
+            {logoUploading && <p className="text-xs text-gray-500">Uploading…</p>}
+            {logoError && <p className="text-xs text-red-600">{logoError}</p>}
+          </div>
+        )}
       </section>
 
       <section className="space-y-4">
@@ -397,16 +523,32 @@ export function RequirementForm({ requirementId }: { requirementId?: string }) {
         <div className="grid grid-cols-2 gap-4">
           <div><Label>Site size min (sq ft)</Label><Input type="number" value={form.site_size_min} onChange={(e) => set('site_size_min', e.target.value)} /></div>
           <div><Label>Site size max (sq ft)</Label><Input type="number" value={form.site_size_max} onChange={(e) => set('site_size_max', e.target.value)} /></div>
-          <div><Label>Acreage min</Label><Input type="number" value={form.site_acreage_min} onChange={(e) => set('site_acreage_min', e.target.value)} /></div>
-          <div><Label>Acreage max</Label><Input type="number" value={form.site_acreage_max} onChange={(e) => set('site_acreage_max', e.target.value)} /></div>
-          <div><Label>Dwellings min</Label><Input type="number" value={form.dwelling_count_min} onChange={(e) => set('dwelling_count_min', e.target.value)} /></div>
-          <div><Label>Dwellings max</Label><Input type="number" value={form.dwelling_count_max} onChange={(e) => set('dwelling_count_max', e.target.value)} /></div>
         </div>
       </section>
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Links</h2>
-        <div><Label>Brochure URL</Label><Input value={form.brochure_url} onChange={(e) => set('brochure_url', e.target.value)} placeholder="https://…" /></div>
+        <div className="space-y-2">
+          <Label>Requirements brochure</Label>
+          {form.brochure_url ? (
+            <div className="flex items-center gap-3">
+              <a href={form.brochure_url} target="_blank" rel="noreferrer" className="max-w-xs truncate text-sm text-violet-700 underline">
+                {form.brochure_url.split('/').pop() || form.brochure_url}
+              </a>
+              <Button type="button" size="sm" variant="outline" onClick={() => set('brochure_url', '')}>Remove</Button>
+            </div>
+          ) : (
+            <input
+              type="file"
+              accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              disabled={brochureUploading}
+              onChange={handleBrochureFile}
+              className="block text-sm"
+            />
+          )}
+          {brochureUploading && <p className="text-xs text-gray-500">Uploading…</p>}
+          {brochureError && <p className="text-xs text-red-600">{brochureError}</p>}
+        </div>
         <div><Label>Property page link</Label><Input value={form.property_page_link} onChange={(e) => set('property_page_link', e.target.value)} placeholder="https://…" /></div>
       </section>
 
@@ -416,7 +558,7 @@ export function RequirementForm({ requirementId }: { requirementId?: string }) {
           {sectorsRef.map((s) => (
             <label key={s.id} className={`cursor-pointer rounded-md border px-2.5 py-1 text-sm ${form.sectors.includes(s.id) ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-gray-200'}`}>
               <input type="checkbox" className="hidden" checked={form.sectors.includes(s.id)} onChange={() => set('sectors', toggleId(form.sectors, s.id))} />
-              {s.name}
+              {s.label}
             </label>
           ))}
         </div>
@@ -428,28 +570,19 @@ export function RequirementForm({ requirementId }: { requirementId?: string }) {
           {useClassesRef.map((u) => (
             <label key={u.id} className={`cursor-pointer rounded-md border px-2.5 py-1 text-sm ${form.use_classes.includes(u.id) ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-gray-200'}`}>
               <input type="checkbox" className="hidden" checked={form.use_classes.includes(u.id)} onChange={() => set('use_classes', toggleId(form.use_classes, u.id))} />
-              {u.code ? `${u.code} - ${u.name}` : u.name}
+              {u.label}
             </label>
           ))}
         </div>
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Locations</h2>
-          <Button type="button" size="sm" variant="outline" onClick={() => set('locations', [...form.locations, { place_name: '', formatted_address: '', lng: '', lat: '' }])}>
-            + Add location
-          </Button>
-        </div>
-        {form.locations.map((loc, i) => (
-          <div key={i} className="grid grid-cols-[1fr_1fr_100px_100px_auto] items-end gap-2 rounded-md border border-gray-200 p-3">
-            <div><Label>Place name</Label><Input value={loc.place_name} onChange={(e) => set('locations', form.locations.map((l, j) => j === i ? { ...l, place_name: e.target.value } : l))} /></div>
-            <div><Label>Address</Label><Input value={loc.formatted_address} onChange={(e) => set('locations', form.locations.map((l, j) => j === i ? { ...l, formatted_address: e.target.value } : l))} /></div>
-            <div><Label>Lng</Label><Input value={loc.lng} onChange={(e) => set('locations', form.locations.map((l, j) => j === i ? { ...l, lng: e.target.value } : l))} /></div>
-            <div><Label>Lat</Label><Input value={loc.lat} onChange={(e) => set('locations', form.locations.map((l, j) => j === i ? { ...l, lat: e.target.value } : l))} /></div>
-            <Button type="button" size="sm" variant="outline" onClick={() => set('locations', form.locations.filter((_, j) => j !== i))}>Remove</Button>
-          </div>
-        ))}
+        <h2 className="text-lg font-semibold">Locations</h2>
+        <LocationSearch
+          value={form.locations}
+          onChange={(locs) => set('locations', locs)}
+          placeholder="Search for UK/Ireland locations…"
+        />
       </section>
 
       <section className="space-y-3">
