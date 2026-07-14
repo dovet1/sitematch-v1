@@ -24,6 +24,8 @@ const BUA_SELECTED_LAYER = 'bua-selected'
 
 // Assess store pins are HTML markers (brand logo badges), not a GeoJSON layer.
 const STORE_BADGE_SIZE = 36
+const STORE_BADGE_SHADOW = '0 0 0 2px #2A6FDB,0 1px 3px rgba(0,0,0,0.3)'
+const STORE_BADGE_SHADOW_HL = '0 0 0 3px #7033FF,0 2px 8px rgba(0,0,0,0.45)'
 
 // Live occupier requirement pins (Assess-only, gated on the overlay toggle).
 const REQ_SOURCE = 'assess-requirements'
@@ -129,7 +131,8 @@ function buildStoreBadge(store: NearbyStore): HTMLDivElement {
   const el = document.createElement('div')
   el.style.cssText =
     `width:${STORE_BADGE_SIZE}px;height:${STORE_BADGE_SIZE}px;border-radius:50%;` +
-    'overflow:hidden;background:#fff;box-shadow:0 0 0 2px #2A6FDB,0 1px 3px rgba(0,0,0,0.3);' +
+    `overflow:hidden;background:#fff;box-shadow:${STORE_BADGE_SHADOW};` +
+    'transition:opacity 120ms ease,box-shadow 120ms ease;' +
     // pointer-events:none so clicks pass through to the map (drop an Assess pin).
     'pointer-events:none;'
   populateStoreBadge(el, store)
@@ -190,6 +193,7 @@ export function UnifiedMap({
   const gapGssCodes = useWorkspaceStore((s) => s.gapGssCodes)
   const populationRange = useWorkspaceStore((s) => s.populationRange)
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
+  const hoveredBrandId = useWorkspaceStore((s) => s.hoveredBrandId)
   const overlaysRequirements = useWorkspaceStore((s) => s.overlays.requirements)
   const selectArea = useWorkspaceStore((s) => s.selectArea)
   const setAssessPoint = useWorkspaceStore((s) => s.setAssessPoint)
@@ -235,6 +239,37 @@ export function UnifiedMap({
         marker.remove()
         markers.delete(id)
         snapshot.delete(id)
+      }
+    })
+
+    // Re-apply hover highlighting so markers created/updated during an active
+    // brand hover pick up the correct emphasis/dimming.
+    applyStoreHighlight()
+  }
+
+  // Emphasize the hovered brand's store badges and dim the rest. Never touches
+  // el.style.transform — Mapbox owns that for marker positioning.
+  const applyStoreHighlight = () => {
+    const hovered = useWorkspaceStore.getState().hoveredBrandId
+    const markers = storeMarkersRef.current
+    const snapshot = storeSnapshotRef.current
+    markers.forEach((marker, id) => {
+      const el = marker.getElement()
+      if (!hovered) {
+        el.style.opacity = '1'
+        el.style.boxShadow = STORE_BADGE_SHADOW
+        el.style.zIndex = ''
+        return
+      }
+      const store = snapshot.get(id)
+      if (store?.brand_id === hovered) {
+        el.style.opacity = '1'
+        el.style.boxShadow = STORE_BADGE_SHADOW_HL
+        el.style.zIndex = '2'
+      } else {
+        el.style.opacity = '0.35'
+        el.style.boxShadow = STORE_BADGE_SHADOW
+        el.style.zIndex = ''
       }
     })
   }
@@ -744,6 +779,14 @@ export function UnifiedMap({
     syncStoreMarkers(map)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeDots])
+
+  // Restyle store badges when the hovered present-brand changes.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current) return
+    applyStoreHighlight()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hoveredBrandId])
 
   // Feed requirement locations into the Assess requirements layer. The ref is
   // updated on every render; this also covers post-style-load rehydration via

@@ -211,8 +211,16 @@ function RequirementRow({
 
 function TradingRow({ b }: { b: PresentBrand }) {
   const count = `${b.storeCount} ${b.storeCount === 1 ? 'store' : 'stores'}`
+  const setHoveredBrandId = useWorkspaceStore((s) => s.setHoveredBrandId)
+  const setBrandInfoId = useWorkspaceStore((s) => s.setBrandInfoId)
   return (
-    <div className="grid grid-cols-[28px_1fr] items-center gap-3 border-b border-sm-border-soft px-[18px] py-2.5">
+    <button
+      type="button"
+      onClick={() => setBrandInfoId(b.brandId)}
+      onMouseEnter={() => setHoveredBrandId(b.brandId)}
+      onMouseLeave={() => setHoveredBrandId(null)}
+      className="grid w-full cursor-pointer grid-cols-[28px_1fr] items-center gap-3 border-b border-sm-border-soft px-[18px] py-2.5 text-left transition-colors hover:bg-sm-bg"
+    >
       <Avatar label={b.brandName} size={28} />
       <div className="min-w-0">
         <div className="truncate text-[13px] font-medium text-sm-ink2">
@@ -222,7 +230,7 @@ function TradingRow({ b }: { b: PresentBrand }) {
           {b.town ? `${count} · ${b.town}` : count}
         </div>
       </div>
-    </div>
+    </button>
   )
 }
 

@@ -39,8 +39,10 @@ export function UnifiedWorkspace() {
   const catchment = useWorkspaceStore((s) => s.catchment)
   const reqModal = useWorkspaceStore((s) => s.reqModal)
   const brandModal = useWorkspaceStore((s) => s.brandModal)
+  const brandInfoId = useWorkspaceStore((s) => s.brandInfoId)
   const setReqModal = useWorkspaceStore((s) => s.setReqModal)
   const setBrandModal = useWorkspaceStore((s) => s.setBrandModal)
+  const setBrandInfoId = useWorkspaceStore((s) => s.setBrandInfoId)
 
   const [map, setMap] = useState<mapboxgl.Map | null>(null)
   // Sketch mode shows a launcher until a session is started/opened.
@@ -299,6 +301,16 @@ export function UnifiedWorkspace() {
             />
           )
         })()}
+      {brandInfoId && (
+        <UBrandInfoModal
+          brandId={brandInfoId}
+          onClose={() => setBrandInfoId(null)}
+          onActiveRequirement={(id) => {
+            setBrandInfoId(null)
+            setReqModal(id)
+          }}
+        />
+      )}
     </div>
   )
 }

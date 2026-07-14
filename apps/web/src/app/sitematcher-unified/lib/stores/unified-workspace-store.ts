@@ -22,10 +22,14 @@ interface WorkspaceState {
   area: WorkspaceArea | null
   tab: InspectorTab
   selected: MapSubSelection | null
+  // Transient: brand hovered in the Present Brands list, highlighting its pins.
+  hoveredBrandId: string | null
 
   // Detail modals: a requirement (by requirementId) or a missing brand.
   reqModal: string | null
   brandModal: MissingFascia | null
+  // Present-brand info modal, opened by brandId from the Present Brands list.
+  brandInfoId: string | null
 
   // Overlays / filters
   overlays: WorkspaceOverlays
@@ -51,8 +55,10 @@ interface WorkspaceState {
   selectArea: (area: WorkspaceArea | null) => void
   setTab: (tab: InspectorTab) => void
   setSelected: (selected: MapSubSelection | null) => void
+  setHoveredBrandId: (id: string | null) => void
   setReqModal: (requirementId: string | null) => void
   setBrandModal: (missing: MissingFascia | null) => void
+  setBrandInfoId: (brandId: string | null) => void
 
   toggleTraffic: () => void
   toggleRequirements: () => void
@@ -79,8 +85,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   area: null,
   tab: 'missing',
   selected: null,
+  hoveredBrandId: null,
   reqModal: null,
   brandModal: null,
+  brandInfoId: null,
 
   overlays: { traffic: false, requirements: false },
   gapRules: [],
@@ -103,23 +111,35 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       view: mode,
       area: null,
       selected: null,
+      hoveredBrandId: null,
       reqModal: null,
       brandModal: null,
+      brandInfoId: null,
       tab: 'missing',
       assessPoint: null,
     }),
 
   // Selecting an area resets the tab to Missing Brands and clears sub-selection.
   selectArea: (area) =>
-    set({ area, tab: 'missing', selected: null, reqModal: null, brandModal: null }),
+    set({
+      area,
+      tab: 'missing',
+      selected: null,
+      hoveredBrandId: null,
+      reqModal: null,
+      brandModal: null,
+      brandInfoId: null,
+    }),
 
   // Tab switching is only meaningful when there's an active selection —
   // a picked built-up area or an Assess dropped point.
   setTab: (tab) => set((s) => (s.area || s.assessPoint ? { tab } : {})),
 
   setSelected: (selected) => set({ selected }),
+  setHoveredBrandId: (hoveredBrandId) => set({ hoveredBrandId }),
   setReqModal: (reqModal) => set({ reqModal }),
   setBrandModal: (brandModal) => set({ brandModal }),
+  setBrandInfoId: (brandInfoId) => set({ brandInfoId }),
 
   toggleTraffic: () =>
     set((s) => ({ overlays: { ...s.overlays, traffic: !s.overlays.traffic } })),
@@ -157,6 +177,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       assessPoint,
       reqModal: null,
       brandModal: null,
+      brandInfoId: null,
       overlays: assessPoint
         ? s.overlays
         : { ...s.overlays, requirements: false },
