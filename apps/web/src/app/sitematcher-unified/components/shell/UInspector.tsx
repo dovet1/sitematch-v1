@@ -226,15 +226,7 @@ function TradingRow({ b }: { b: PresentBrand }) {
   )
 }
 
-function SectionHeader({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="border-y border-sm-border-soft bg-sm-bg px-[18px] py-2.5">
-      <Kicker>{children}</Kicker>
-    </div>
-  )
-}
-
-function SummaryBody({
+function MissingBody({
   landscape,
   requirements,
   areaName,
@@ -250,7 +242,7 @@ function SummaryBody({
   onOpenBrand: (m: MissingFascia) => void
 }) {
   const { loading } = landscape
-  const { present, missing } = useMemo(
+  const { missing } = useMemo(
     () => buildBrandLandscape(landscape.stores, landscape.missing, refData),
     [landscape.stores, landscape.missing, refData]
   )
@@ -289,15 +281,50 @@ function SummaryBody({
           <MissingRow key={m.brandId} m={m} onOpen={onOpenBrand} />
         ))}
       </div>
+    </>
+  )
+}
 
-      <SectionHeader>Already trading here · {present.length}</SectionHeader>
-      <div>
+function PresentBody({
+  landscape,
+  refData,
+}: {
+  landscape: Landscape
+  refData: ReferenceData | null
+}) {
+  const { loading } = landscape
+  const { present } = useMemo(
+    () => buildBrandLandscape(landscape.stores, landscape.missing, refData),
+    [landscape.stores, landscape.missing, refData]
+  )
+  return (
+    <>
+      {loading && (
+        <div className="flex items-center gap-2 px-[18px] py-4 text-[12.5px] text-sm-ink3">
+          <Loader2 size={13} className="animate-spin" /> Reading the landscape…
+        </div>
+      )}
+
+      <div className="px-[18px] pt-[18px]">
+        <div className="flex items-baseline justify-between">
+          <div className="text-[17px] font-semibold tracking-[-0.3px] text-sm-ink">
+            Already trading here
+          </div>
+          <span className="font-mono text-[12px] text-sm-ink2">
+            {present.length}
+          </span>
+        </div>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-sm-ink3">
+          Brands with an established presence within this catchment.
+        </p>
+      </div>
+      <div className="pt-2.5">
         {!loading && present.length === 0 && (
           <div className="px-[18px] py-3 text-[12.5px] text-sm-ink3">
             No brands trading within this catchment.
           </div>
         )}
-        {present.slice(0, 40).map((b) => (
+        {present.map((b) => (
           <TradingRow key={b.brandId} b={b} />
         ))}
       </div>
@@ -306,7 +333,8 @@ function SummaryBody({
 }
 
 const OPP_TABS: { id: InspectorTab; label: string }[] = [
-  { id: 'summary', label: 'Summary' },
+  { id: 'missing', label: 'Missing Brands' },
+  { id: 'present', label: 'Present Brands' },
   { id: 'catchment', label: 'Catchment' },
 ]
 
@@ -385,8 +413,10 @@ function Opportunity({
       <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === 'catchment' ? (
           <CatchmentTab data={catchmentData} />
+        ) : tab === 'present' ? (
+          <PresentBody landscape={landscape} refData={refData} />
         ) : (
-          <SummaryBody
+          <MissingBody
             landscape={landscape}
             requirements={requirements}
             areaName={areaName}

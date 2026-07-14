@@ -3,7 +3,7 @@
 
 export type WorkspaceMode = 'assess' | 'find' | 'sketch'
 
-export type InspectorTab = 'summary' | 'catchment' | 'sketch'
+export type InspectorTab = 'missing' | 'present' | 'catchment' | 'sketch'
 
 export type MapScale = 'national' | 'local'
 

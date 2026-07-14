@@ -77,7 +77,7 @@ interface WorkspaceState {
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   view: 'assess',
   area: null,
-  tab: 'summary',
+  tab: 'missing',
   selected: null,
   reqModal: null,
   brandModal: null,
@@ -96,7 +96,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   leftHidden: false,
   inspectorHidden: false,
 
-  // Switching modes clears the selection and resets to Summary (per handoff).
+  // Switching modes clears the selection and resets to Missing Brands (per handoff).
   // The dirty-Sketch leave-guard is handled by the Sketch integration layer.
   setMode: (mode) =>
     set({
@@ -105,13 +105,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       selected: null,
       reqModal: null,
       brandModal: null,
-      tab: 'summary',
+      tab: 'missing',
       assessPoint: null,
     }),
 
-  // Selecting an area resets the tab to Summary and clears sub-selection.
+  // Selecting an area resets the tab to Missing Brands and clears sub-selection.
   selectArea: (area) =>
-    set({ area, tab: 'summary', selected: null, reqModal: null, brandModal: null }),
+    set({ area, tab: 'missing', selected: null, reqModal: null, brandModal: null }),
 
   // Tab switching is only meaningful when there's an active selection —
   // a picked built-up area or an Assess dropped point.
