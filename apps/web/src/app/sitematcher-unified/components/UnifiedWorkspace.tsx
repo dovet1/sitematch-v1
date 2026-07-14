@@ -265,6 +265,7 @@ export function UnifiedWorkspace() {
             landscape={landscape}
             requirements={requirements.local}
             catchment={catchmentData}
+            refData={refData}
           />
         )}
       </div>

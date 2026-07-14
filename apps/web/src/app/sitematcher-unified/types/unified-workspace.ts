@@ -72,6 +72,25 @@ export interface MissingFascia {
   nearestStoreTown?: string
 }
 
+// A brand trading in the catchment, aggregated from the nearby-store landscape.
+export interface PresentBrand {
+  brandId: string
+  brandName: string
+  storeCount: number
+  town: string | null
+}
+
+// A brand with no presence in the catchment. Missing fascias are collapsed to
+// their owning brand; a brand with any present fascia is excluded (counts as
+// present). `representative` is the fascia used to open the brand detail modal.
+export interface MissingBrand {
+  brandId: string
+  brandName: string
+  categoryName: string | null
+  nearestStoreDistance?: number
+  representative: MissingFascia
+}
+
 // Map sub-selection (a store dot, etc.). Requirements are deferred in v1.
 export interface MapSubSelection {
   type: 'store'

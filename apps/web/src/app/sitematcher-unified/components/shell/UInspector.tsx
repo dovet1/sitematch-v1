@@ -1,16 +1,20 @@
 'use client'
 
+import { useMemo } from 'react'
 import { MapPin, X, ChevronRight, Loader2 } from 'lucide-react'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import type {
   BUAResult,
   InspectorTab,
   MissingFascia,
+  MissingBrand,
+  PresentBrand,
+  ReferenceData,
   RequirementLocation,
 } from '../../types/unified-workspace'
-import type { NearbyStore } from '../../lib/services/gaps-service'
 import type { CatchmentData } from '../../lib/hooks/useCatchment'
 import type { Landscape } from '../../lib/hooks/useAreaData'
+import { buildBrandLandscape } from '../../lib/brand-landscape'
 import { CatchmentTab } from './CatchmentTab'
 
 // Small circular initials avatar (no brand-logo asset pipeline in v1).
@@ -131,29 +135,32 @@ function MissingRow({
   m,
   onOpen,
 }: {
-  m: MissingFascia
+  m: MissingBrand
   onOpen: (m: MissingFascia) => void
 }) {
   return (
     <button
       type="button"
-      onClick={() => onOpen(m)}
+      onClick={() => onOpen(m.representative)}
       className="grid grid-cols-[36px_1fr_auto] items-center gap-3 rounded-xl border border-sm-border bg-sm-surface p-3 text-left hover:bg-sm-bg"
     >
-      <Avatar label={m.brandName || m.fasciaName} />
+      <Avatar label={m.brandName} />
       <div className="min-w-0">
         <div className="truncate text-[14px] font-semibold text-sm-ink">
           {m.brandName}
         </div>
-        <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
-          {m.categoryName ?? m.fasciaName}
-          {m.nearestStoreDistance != null && (
-            <>
-              {' · nearest '}
-              {(m.nearestStoreDistance / 1000).toFixed(1)} km
-            </>
-          )}
-        </div>
+        {(m.categoryName || m.nearestStoreDistance != null) && (
+          <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
+            {m.categoryName}
+            {m.nearestStoreDistance != null && (
+              <>
+                {m.categoryName ? ' · ' : ''}
+                {'nearest '}
+                {(m.nearestStoreDistance / 1000).toFixed(1)} km
+              </>
+            )}
+          </div>
+        )}
       </div>
       <ChevronRight size={15} className="text-sm-ink4" />
     </button>
@@ -202,15 +209,17 @@ function RequirementRow({
   )
 }
 
-function TradingRow({ s }: { s: NearbyStore }) {
-  const label = s.fascia_name || s.name
+function TradingRow({ b }: { b: PresentBrand }) {
+  const count = `${b.storeCount} ${b.storeCount === 1 ? 'store' : 'stores'}`
   return (
     <div className="grid grid-cols-[28px_1fr] items-center gap-3 border-b border-sm-border-soft px-[18px] py-2.5">
-      <Avatar label={label} size={28} />
+      <Avatar label={b.brandName} size={28} />
       <div className="min-w-0">
-        <div className="truncate text-[13px] font-medium text-sm-ink2">{label}</div>
+        <div className="truncate text-[13px] font-medium text-sm-ink2">
+          {b.brandName}
+        </div>
         <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
-          {[s.town, s.postcode].filter(Boolean).join(' · ') || 'Nearby'}
+          {b.town ? `${count} · ${b.town}` : count}
         </div>
       </div>
     </div>
@@ -229,16 +238,22 @@ function SummaryBody({
   landscape,
   requirements,
   areaName,
+  refData,
   onOpenReq,
   onOpenBrand,
 }: {
   landscape: Landscape
   requirements: RequirementLocation[]
   areaName: string
+  refData: ReferenceData | null
   onOpenReq: (requirementId: string) => void
   onOpenBrand: (m: MissingFascia) => void
 }) {
-  const { stores, missing, loading } = landscape
+  const { loading } = landscape
+  const { present, missing } = useMemo(
+    () => buildBrandLandscape(landscape.stores, landscape.missing, refData),
+    [landscape.stores, landscape.missing, refData]
+  )
   const gapCount = requirements.length + missing.length
   return (
     <>
@@ -271,19 +286,19 @@ function SummaryBody({
           <RequirementRow key={r.id} req={r} onOpen={onOpenReq} />
         ))}
         {missing.map((m) => (
-          <MissingRow key={m.fasciaId} m={m} onOpen={onOpenBrand} />
+          <MissingRow key={m.brandId} m={m} onOpen={onOpenBrand} />
         ))}
       </div>
 
-      <SectionHeader>Already trading here · {stores.length}</SectionHeader>
+      <SectionHeader>Already trading here · {present.length}</SectionHeader>
       <div>
-        {!loading && stores.length === 0 && (
+        {!loading && present.length === 0 && (
           <div className="px-[18px] py-3 text-[12.5px] text-sm-ink3">
-            No stores found within this catchment.
+            No brands trading within this catchment.
           </div>
         )}
-        {stores.slice(0, 40).map((s) => (
-          <TradingRow key={s.id} s={s} />
+        {present.slice(0, 40).map((b) => (
+          <TradingRow key={b.brandId} b={b} />
         ))}
       </div>
     </>
@@ -303,6 +318,7 @@ function Opportunity({
   landscape,
   requirements,
   catchmentData,
+  refData,
   onClose,
   onOpenReq,
   onOpenBrand,
@@ -314,6 +330,7 @@ function Opportunity({
   landscape: Landscape
   requirements: RequirementLocation[]
   catchmentData: CatchmentData
+  refData: ReferenceData | null
   onClose: () => void
   onOpenReq: (requirementId: string) => void
   onOpenBrand: (m: MissingFascia) => void
@@ -373,6 +390,7 @@ function Opportunity({
             landscape={landscape}
             requirements={requirements}
             areaName={areaName}
+            refData={refData}
             onOpenReq={onOpenReq}
             onOpenBrand={onOpenBrand}
           />
@@ -392,6 +410,7 @@ export function UInspector({
   landscape,
   requirements,
   catchment,
+  refData,
 }: {
   findResults: BUAResult[]
   findTotal: number
@@ -400,6 +419,7 @@ export function UInspector({
   landscape: Landscape
   requirements: RequirementLocation[]
   catchment: CatchmentData
+  refData: ReferenceData | null
 }) {
   const view = useWorkspaceStore((s) => s.view)
   const area = useWorkspaceStore((s) => s.area)
@@ -420,6 +440,7 @@ export function UInspector({
         landscape={landscape}
         requirements={requirements}
         catchmentData={catchment}
+        refData={refData}
         onClose={() => selectArea(null)}
         onOpenReq={setReqModal}
         onOpenBrand={setBrandModal}
@@ -437,6 +458,7 @@ export function UInspector({
         landscape={landscape}
         requirements={requirements}
         catchmentData={catchment}
+        refData={refData}
         onClose={() => setAssessPoint(null)}
         onOpenReq={setReqModal}
         onOpenBrand={setBrandModal}
