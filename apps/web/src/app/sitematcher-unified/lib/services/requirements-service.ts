@@ -25,6 +25,12 @@ interface RequirementMapFeature {
     company_name: string
     title: string | null
     listing_type: string | null
+    site_size_min: number | null
+    site_size_max: number | null
+    site_acreage_min: number | null
+    site_acreage_max: number | null
+    dwelling_count_min: number | null
+    dwelling_count_max: number | null
     place_name: string | null
     formatted_address: string | null
     brand_id: string | null
@@ -51,6 +57,12 @@ export async function fetchRequirementLocations(
     companyName: f.properties.company_name,
     title: f.properties.title,
     listingType: f.properties.listing_type,
+    siteSizeMin: f.properties.site_size_min,
+    siteSizeMax: f.properties.site_size_max,
+    siteAcreageMin: f.properties.site_acreage_min,
+    siteAcreageMax: f.properties.site_acreage_max,
+    dwellingCountMin: f.properties.dwelling_count_min,
+    dwellingCountMax: f.properties.dwelling_count_max,
     placeName: f.properties.place_name,
     formattedAddress: f.properties.formatted_address,
     coordinates: { lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] },

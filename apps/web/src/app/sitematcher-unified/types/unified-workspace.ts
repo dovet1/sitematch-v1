@@ -111,6 +111,12 @@ export interface RequirementLocation {
   companyName: string
   title: string | null
   listingType: string | null
+  siteSizeMin: number | null
+  siteSizeMax: number | null
+  siteAcreageMin: number | null
+  siteAcreageMax: number | null
+  dwellingCountMin: number | null
+  dwellingCountMax: number | null
   placeName: string | null
   formattedAddress: string | null
   coordinates: { lng: number; lat: number }

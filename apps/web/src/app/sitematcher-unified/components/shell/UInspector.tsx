@@ -174,7 +174,7 @@ function RequirementRow({
   req: RequirementLocation
   onOpen: (requirementId: string) => void
 }) {
-  const sub = [req.listingType, req.title].filter(Boolean).join(' · ')
+  const sizeRange = formatRequirementSizeRange(req)
   return (
     <button
       type="button"
@@ -195,9 +195,9 @@ function RequirementRow({
           <div className="truncate text-[14px] font-semibold text-sm-ink">
             {req.companyName}
           </div>
-          {sub && (
+          {sizeRange && (
             <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
-              {sub}
+              {sizeRange}
             </div>
           )}
         </div>
@@ -205,6 +205,36 @@ function RequirementRow({
       </div>
     </button>
   )
+}
+
+function formatRequirementSizeRange(req: RequirementLocation): string | null {
+  if (req.siteSizeMin != null || req.siteSizeMax != null) {
+    return formatRange(req.siteSizeMin, req.siteSizeMax, 'sq ft')
+  }
+  if (req.siteAcreageMin != null || req.siteAcreageMax != null) {
+    return formatRange(req.siteAcreageMin, req.siteAcreageMax, 'acres', 2)
+  }
+  if (req.dwellingCountMin != null || req.dwellingCountMax != null) {
+    return formatRange(req.dwellingCountMin, req.dwellingCountMax, 'dwellings')
+  }
+  return null
+}
+
+function formatRange(
+  min: number | null,
+  max: number | null,
+  unit: string,
+  maximumFractionDigits = 0
+): string {
+  const format = (value: number) =>
+    value.toLocaleString('en-GB', { maximumFractionDigits })
+
+  if (min != null && max != null) {
+    if (min === max) return `${format(min)} ${unit}`
+    return `${format(min)}-${format(max)} ${unit}`
+  }
+  if (min != null) return `From ${format(min)} ${unit}`
+  return `Up to ${format(max ?? 0)} ${unit}`
 }
 
 function TradingRow({ b }: { b: PresentBrand }) {
