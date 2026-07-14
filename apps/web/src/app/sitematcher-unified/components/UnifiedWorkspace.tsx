@@ -162,7 +162,10 @@ export function UnifiedWorkspace() {
   // Whether the catchment (isochrone/demographics) fetch should run. Distinct
   // from "Catchment tab is open": a drive/walk Assess pin needs its isochrone on
   // the Summary tab too, since the store landscape is scoped to that polygon.
+  // Fetch whenever there's a focus so the sidebar header's Population + Affluence
+  // metrics stay populated on every tab, not just the Catchment tab.
   const shouldFetchCatchment =
+    !!focusArea ||
     tab === 'catchment' ||
     (view === 'assess' && !!assessPoint && catchment.mode !== 'distance')
 

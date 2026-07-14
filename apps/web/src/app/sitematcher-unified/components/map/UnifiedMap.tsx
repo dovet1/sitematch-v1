@@ -133,8 +133,13 @@ function buildStoreBadge(store: NearbyStore): HTMLDivElement {
     `width:${STORE_BADGE_SIZE}px;height:${STORE_BADGE_SIZE}px;border-radius:50%;` +
     `overflow:hidden;background:#fff;box-shadow:${STORE_BADGE_SHADOW};` +
     'transition:opacity 120ms ease,box-shadow 120ms ease;' +
-    // pointer-events:none so clicks pass through to the map (drop an Assess pin).
-    'pointer-events:none;'
+    'pointer-events:auto;cursor:pointer;'
+  // Clicking a store pin opens the present-brand detail modal. Stop propagation
+  // so it doesn't fall through to the map's Assess-pin drop handler.
+  el.addEventListener('click', (e) => {
+    e.stopPropagation()
+    useWorkspaceStore.getState().setBrandInfoId(store.brand_id)
+  })
   populateStoreBadge(el, store)
   return el
 }

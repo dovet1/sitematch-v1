@@ -338,7 +338,6 @@ function Opportunity({
   title,
   areaName,
   subtitle,
-  population,
   landscape,
   presentBrands,
   missingBrands,
@@ -353,7 +352,6 @@ function Opportunity({
   title: string
   areaName: string
   subtitle: string
-  population?: number
   landscape: Landscape
   presentBrands: PresentBrand[]
   missingBrands: MissingBrand[]
@@ -375,6 +373,18 @@ function Opportunity({
   const setBrandFilterBrandIds = useWorkspaceStore((s) => s.setBrandFilterBrandIds)
   const clearBrandFilters = useWorkspaceStore((s) => s.clearBrandFilters)
 
+  const agg = catchmentData.rawData?.aggregated as
+    | { population_total?: number; affluence?: { avg_raw_score?: number } }
+    | undefined
+  const hasMetrics = !catchmentData.error && agg != null
+  const popLabel = hasMetrics && agg?.population_total != null
+    ? agg.population_total.toLocaleString()
+    : '—'
+  const affluenceLabel = hasMetrics && agg?.affluence?.avg_raw_score != null
+    ? agg.affluence.avg_raw_score.toFixed(1)
+    : '—'
+  const metricsDimmed = hasMetrics && catchmentData.loading
+
   return (
     <aside className="flex w-[404px] shrink-0 flex-col overflow-hidden border-l border-sm-border bg-sm-surface">
       <div className="border-b border-sm-border-soft px-[18px] py-[18px]">
@@ -384,11 +394,29 @@ function Opportunity({
             <div className="mt-1 truncate text-[24px] font-semibold tracking-[-0.5px] text-sm-ink">
               {title}
             </div>
-            {population != null && (
-              <div className="mt-2 font-mono text-[10.5px] text-sm-ink3">
-                Pop {population.toLocaleString()}
+            <div
+              className={
+                'mt-3 grid grid-cols-2 gap-2 transition-opacity ' +
+                (metricsDimmed ? 'opacity-50' : 'opacity-100')
+              }
+            >
+              <div className="rounded-lg border border-sm-border-soft bg-sm-violet/[0.06] px-2.5 py-1.5">
+                <div className="text-[9.5px] font-medium uppercase tracking-wide text-sm-ink3">
+                  Population
+                </div>
+                <div className="mt-0.5 text-[17px] font-semibold leading-none text-sm-ink">
+                  {popLabel}
+                </div>
               </div>
-            )}
+              <div className="rounded-lg border border-sm-border-soft bg-emerald-500/[0.07] px-2.5 py-1.5">
+                <div className="text-[9.5px] font-medium uppercase tracking-wide text-sm-ink3">
+                  Affluence
+                </div>
+                <div className="mt-0.5 text-[17px] font-semibold leading-none text-sm-ink">
+                  {affluenceLabel}
+                </div>
+              </div>
+            </div>
           </div>
           <button
             type="button"
@@ -493,7 +521,6 @@ export function UInspector({
         title={area.name}
         areaName={area.name}
         subtitle={area.region ? `Opportunity · ${area.region}` : 'Opportunity'}
-        population={area.population}
         landscape={landscape}
         presentBrands={presentBrands}
         missingBrands={missingBrands}

@@ -82,7 +82,9 @@ export function buildBrandLandscape(
       : null
     present.push(agg.brand)
   }
-  present.sort((a, b) => b.storeCount - a.storeCount)
+  present.sort((a, b) =>
+    a.brandName.localeCompare(b.brandName, undefined, { sensitivity: 'base' })
+  )
 
   // Missing brands: collapse missing fascias to their owning brand, excluding
   // any brand already trading here. Accumulate categories across all of the
