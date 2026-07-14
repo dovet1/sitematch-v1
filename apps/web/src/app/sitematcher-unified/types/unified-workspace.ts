@@ -81,13 +81,24 @@ export interface MapSubSelection {
 // A live occupier requirement location, from /api/public/gapfinder/requirement-locations.
 export interface RequirementLocation {
   id: string
-  listingId: string
+  requirementId: string
   companyName: string
   title: string | null
   listingType: string | null
   placeName: string | null
   formattedAddress: string | null
   coordinates: { lng: number; lat: number }
+}
+
+// A single acquiring contact on a requirement. `kind` distinguishes the retailer's own
+// team ('in-house') from an appointed agent ('agency'); null when unspecified.
+export interface RequirementContact {
+  name: string | null
+  title: string | null
+  org: string | null
+  email: string | null
+  phone: string | null
+  kind: 'in-house' | 'agency' | null
 }
 
 // Subset of /api/public/listings/[id]/detailed the requirement modal renders.
@@ -114,11 +125,33 @@ export interface RequirementDetail {
       email: string | null
       phone: string | null
     } | null
+    all: RequirementContact[]
   }
   locations: {
     all: { place_name?: string | null; formatted_address?: string | null }[]
     is_nationwide: boolean
   }
+}
+
+// The brand's store estate for a requirement, from
+// /api/public/requirements/[id]/store-estate. `dateIsProxy` is true when `date` is a
+// store's created_at (import date) rather than a real open_date.
+export interface StoreEstateStore {
+  id: string
+  name: string | null
+  town: string | null
+  lat: number
+  lon: number
+}
+export interface StoreEstate {
+  storeCount: number
+  latestStore: {
+    name: string | null
+    town: string | null
+    date: string | null
+    dateIsProxy: boolean
+  } | null
+  stores: StoreEstateStore[]
 }
 
 // Presence/proximity gap rule (mirrors GapFinder's filter rule shape).

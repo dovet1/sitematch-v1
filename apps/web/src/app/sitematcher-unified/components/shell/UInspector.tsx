@@ -167,13 +167,13 @@ function RequirementRow({
   onOpen,
 }: {
   req: RequirementLocation
-  onOpen: (listingId: string) => void
+  onOpen: (requirementId: string) => void
 }) {
   const sub = [req.listingType, req.title].filter(Boolean).join(' · ')
   return (
     <button
       type="button"
-      onClick={() => onOpen(req.listingId)}
+      onClick={() => onOpen(req.requirementId)}
       className="rounded-xl border border-sm-violet-tint bg-sm-violet-tint-soft p-3 text-left hover:brightness-[0.98]"
     >
       <div className="mb-2 flex items-center gap-1.5">
@@ -235,7 +235,7 @@ function SummaryBody({
   landscape: Landscape
   requirements: RequirementLocation[]
   areaName: string
-  onOpenReq: (listingId: string) => void
+  onOpenReq: (requirementId: string) => void
   onOpenBrand: (m: MissingFascia) => void
 }) {
   const { stores, missing, loading } = landscape
@@ -315,7 +315,7 @@ function Opportunity({
   requirements: RequirementLocation[]
   catchmentData: CatchmentData
   onClose: () => void
-  onOpenReq: (listingId: string) => void
+  onOpenReq: (requirementId: string) => void
   onOpenBrand: (m: MissingFascia) => void
 }) {
   const tab = useWorkspaceStore((s) => s.tab)

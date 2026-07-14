@@ -23,7 +23,7 @@ interface WorkspaceState {
   tab: InspectorTab
   selected: MapSubSelection | null
 
-  // Detail modals: a requirement (by listingId) or a missing brand.
+  // Detail modals: a requirement (by requirementId) or a missing brand.
   reqModal: string | null
   brandModal: MissingFascia | null
 
@@ -51,7 +51,7 @@ interface WorkspaceState {
   selectArea: (area: WorkspaceArea | null) => void
   setTab: (tab: InspectorTab) => void
   setSelected: (selected: MapSubSelection | null) => void
-  setReqModal: (listingId: string | null) => void
+  setReqModal: (requirementId: string | null) => void
   setBrandModal: (missing: MissingFascia | null) => void
 
   toggleTraffic: () => void

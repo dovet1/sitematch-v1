@@ -271,7 +271,7 @@ export function UnifiedWorkspace() {
 
       {reqModal && (
         <URequirementModal
-          listingId={reqModal}
+          requirementId={reqModal}
           onClose={() => setReqModal(null)}
         />
       )}

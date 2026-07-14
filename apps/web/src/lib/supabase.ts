@@ -473,6 +473,188 @@ export interface Database {
           centroid_lon?: number
         }
       }
+      requirements: {
+        Row: {
+          id: string
+          brand_id: string | null
+          company_name: string
+          title: string | null
+          description: string | null
+          listing_type: string | null
+          site_size_min: number | null
+          site_size_max: number | null
+          site_acreage_min: number | null
+          site_acreage_max: number | null
+          dwelling_count_min: number | null
+          dwelling_count_max: number | null
+          brochure_url: string | null
+          property_page_link: string | null
+          company_domain: string | null
+          clearbit_logo: boolean
+          is_featured_free: boolean
+          verified_at: string | null
+          status: string
+          source_listing_id: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          brand_id?: string | null
+          company_name: string
+          title?: string | null
+          description?: string | null
+          listing_type?: string | null
+          site_size_min?: number | null
+          site_size_max?: number | null
+          site_acreage_min?: number | null
+          site_acreage_max?: number | null
+          dwelling_count_min?: number | null
+          dwelling_count_max?: number | null
+          brochure_url?: string | null
+          property_page_link?: string | null
+          company_domain?: string | null
+          clearbit_logo?: boolean
+          is_featured_free?: boolean
+          verified_at?: string | null
+          status?: string
+          source_listing_id?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          brand_id?: string | null
+          company_name?: string
+          title?: string | null
+          description?: string | null
+          listing_type?: string | null
+          site_size_min?: number | null
+          site_size_max?: number | null
+          site_acreage_min?: number | null
+          site_acreage_max?: number | null
+          dwelling_count_min?: number | null
+          dwelling_count_max?: number | null
+          brochure_url?: string | null
+          property_page_link?: string | null
+          company_domain?: string | null
+          clearbit_logo?: boolean
+          is_featured_free?: boolean
+          verified_at?: string | null
+          status?: string
+          source_listing_id?: string | null
+          created_by?: string | null
+          updated_at?: string
+        }
+      }
+      requirement_locations: {
+        Row: {
+          id: string
+          requirement_id: string
+          place_name: string | null
+          formatted_address: string | null
+          coordinates: any | null
+          region: string | null
+          country: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          requirement_id: string
+          place_name?: string | null
+          formatted_address?: string | null
+          coordinates?: any | null
+          region?: string | null
+          country?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          requirement_id?: string
+          place_name?: string | null
+          formatted_address?: string | null
+          coordinates?: any | null
+          region?: string | null
+          country?: string | null
+        }
+      }
+      requirement_contacts: {
+        Row: {
+          id: string
+          requirement_id: string
+          contact_name: string | null
+          contact_title: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          contact_area: string | null
+          headshot_url: string | null
+          is_primary_contact: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          requirement_id: string
+          contact_name?: string | null
+          contact_title?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_area?: string | null
+          headshot_url?: string | null
+          is_primary_contact?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          requirement_id?: string
+          contact_name?: string | null
+          contact_title?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_area?: string | null
+          headshot_url?: string | null
+          is_primary_contact?: boolean
+        }
+      }
+      requirement_sectors: {
+        Row: {
+          id: string
+          requirement_id: string
+          sector_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          requirement_id: string
+          sector_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          requirement_id?: string
+          sector_id?: string
+        }
+      }
+      requirement_use_classes: {
+        Row: {
+          id: string
+          requirement_id: string
+          use_class_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          requirement_id: string
+          use_class_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          requirement_id?: string
+          use_class_id?: string
+        }
+      }
     }
   }
 }

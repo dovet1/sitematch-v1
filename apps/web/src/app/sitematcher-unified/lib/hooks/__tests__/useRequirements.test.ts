@@ -14,14 +14,14 @@ const center = { lat: 51.5, lon: -0.12 }
 
 function loc(
   id: string,
-  listingId: string,
+  requirementId: string,
   companyName: string,
   lat: number,
   lng: number
 ): RequirementLocation {
   return {
     id,
-    listingId,
+    requirementId,
     companyName,
     title: null,
     listingType: null,

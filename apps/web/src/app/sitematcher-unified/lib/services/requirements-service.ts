@@ -7,6 +7,7 @@
 import type {
   RequirementLocation,
   RequirementDetail,
+  StoreEstate,
 } from '../../types/unified-workspace'
 
 // UK-wide bounds. The requirement map endpoint returns the whole eligible set
@@ -32,10 +33,9 @@ export async function fetchRequirementLocations(
   signal?: AbortSignal
 ): Promise<RequirementLocation[]> {
   const { north, south, east, west } = UK_BOUNDS
-  // Use the same public directory-map route as the browse-requirements page so
-  // the workspace shows the same requirements (rather than the Plus-gated
-  // gapfinder route, which 403s for non-Plus sessions).
-  const url = `/api/public/listings/map?north=${north}&south=${south}&east=${east}&west=${west}&clustering=false`
+  // Admin-curated requirements for /sitematcher-unified (the `requirements` table),
+  // not the public `listings` directory map.
+  const url = `/api/public/requirements/map?north=${north}&south=${south}&east=${east}&west=${west}&clustering=false`
   const res = await fetch(url, { signal })
   if (!res.ok) throw new Error(`requirement map failed (${res.status})`)
   // The route returns { geojson: { features }, ... }; the mock fallback returns
@@ -44,7 +44,7 @@ export async function fetchRequirementLocations(
   const features = (data.geojson?.features ?? []) as RequirementMapFeature[]
   return features.map((f) => ({
     id: f.properties.location_id,
-    listingId: f.properties.id,
+    requirementId: f.properties.id,
     companyName: f.properties.company_name,
     title: f.properties.title,
     listingType: f.properties.listing_type,
@@ -55,12 +55,23 @@ export async function fetchRequirementLocations(
 }
 
 export async function fetchRequirementDetail(
-  listingId: string,
+  requirementId: string,
   signal?: AbortSignal
 ): Promise<RequirementDetail> {
-  const res = await fetch(`/api/public/listings/${listingId}/detailed`, {
+  const res = await fetch(`/api/public/requirements/${requirementId}/detailed`, {
     signal,
   })
-  if (!res.ok) throw new Error(`listing detail failed (${res.status})`)
+  if (!res.ok) throw new Error(`requirement detail failed (${res.status})`)
   return (await res.json()) as RequirementDetail
+}
+
+export async function fetchStoreEstate(
+  requirementId: string,
+  signal?: AbortSignal
+): Promise<StoreEstate> {
+  const res = await fetch(`/api/public/requirements/${requirementId}/store-estate`, {
+    signal,
+  })
+  if (!res.ok) throw new Error(`store estate failed (${res.status})`)
+  return (await res.json()) as StoreEstate
 }

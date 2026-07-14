@@ -90,9 +90,9 @@ export function useRequirements(
         req.coordinates.lat,
         req.coordinates.lng
       )
-      const existing = nearestByListing.get(req.listingId)
+      const existing = nearestByListing.get(req.requirementId)
       if (!existing || dist < existing.dist) {
-        nearestByListing.set(req.listingId, { req, dist })
+        nearestByListing.set(req.requirementId, { req, dist })
       }
     }
     return Array.from(nearestByListing.values())

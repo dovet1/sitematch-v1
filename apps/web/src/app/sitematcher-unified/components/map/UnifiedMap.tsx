@@ -73,7 +73,7 @@ function requirementsToGeoJSON(
         type: 'Point',
         coordinates: [r.coordinates.lng, r.coordinates.lat],
       },
-      properties: { listingId: r.listingId, companyName: r.companyName },
+      properties: { requirementId: r.requirementId, companyName: r.companyName },
     })),
   }
 }
@@ -455,9 +455,9 @@ export function UnifiedMap({
         // Guard getLayer — the layer is briefly absent during a style teardown.
         if (st.overlays.requirements && map.getLayer(REQ_LAYER)) {
           const hit = map.queryRenderedFeatures(e.point, { layers: [REQ_LAYER] })
-          const listingId = hit[0]?.properties?.listingId
-          if (listingId) {
-            setReqModal(listingId as string)
+          const requirementId = hit[0]?.properties?.requirementId
+          if (requirementId) {
+            setReqModal(requirementId as string)
             return
           }
         }
