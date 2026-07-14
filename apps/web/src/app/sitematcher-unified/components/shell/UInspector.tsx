@@ -1,7 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MapPin, X, ChevronRight, Loader2 } from 'lucide-react'
+import {
+  MapPin,
+  X,
+  ChevronRight,
+  Loader2,
+  PanelRightClose,
+  PanelRightOpen,
+} from 'lucide-react'
 import { getClearbitLogoUrl } from '@/lib/clearbit-logo'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import type {
@@ -85,18 +92,29 @@ function FindResults({
   total,
   loading,
   error,
+  onCollapse,
 }: {
   results: BUAResult[]
   total: number
   loading: boolean
   error: string | null
+  onCollapse: () => void
 }) {
   const selectArea = useWorkspaceStore((s) => s.selectArea)
   const pct = total > 0 ? Math.max(4, Math.round((results.length / total) * 100)) : 0
 
   return (
     <aside className="flex w-[404px] shrink-0 flex-col overflow-hidden border-l border-sm-border bg-sm-surface">
-      <div className="border-b border-sm-border-soft px-[18px] py-[18px]">
+      <div className="relative border-b border-sm-border-soft px-[18px] py-[18px]">
+        <button
+          type="button"
+          onClick={onCollapse}
+          aria-label="Hide right panel"
+          title="Hide right panel"
+          className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-sm-ink3 hover:bg-sm-bg hover:text-sm-ink"
+        >
+          <PanelRightClose size={16} />
+        </button>
         <Kicker>Find Gaps · live</Kicker>
         <h2 className="mt-1.5 text-[20px] font-semibold tracking-[-0.3px] text-sm-ink">
           Gap opportunities
@@ -427,6 +445,7 @@ function Opportunity({
   categoryOptions,
   brandOptions,
   onClose,
+  onCollapse,
   onOpenReq,
   onOpenBrand,
 }: {
@@ -441,6 +460,7 @@ function Opportunity({
   categoryOptions: FilterOption[]
   brandOptions: FilterOption[]
   onClose: () => void
+  onCollapse: () => void
   onOpenReq: (requirementId: string) => void
   onOpenBrand: (m: MissingFascia) => void
 }) {
@@ -499,14 +519,25 @@ function Opportunity({
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            title="Close"
-            className="shrink-0 rounded-lg border border-sm-border bg-sm-surface p-1.5 text-sm-ink3 hover:text-sm-ink2"
-          >
-            <X size={13} />
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onCollapse}
+              aria-label="Hide right panel"
+              title="Hide right panel"
+              className="rounded-lg border border-sm-border bg-sm-surface p-1.5 text-sm-ink3 hover:text-sm-ink2"
+            >
+              <PanelRightClose size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              title="Close"
+              className="rounded-lg border border-sm-border bg-sm-surface p-1.5 text-sm-ink3 hover:text-sm-ink2"
+            >
+              <X size={13} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -563,6 +594,8 @@ function Opportunity({
 /* ---------- Router: decide which inspector to render ---------- */
 
 export function UInspector({
+  hidden,
+  onToggle,
   findResults,
   findTotal,
   findLoading,
@@ -575,6 +608,8 @@ export function UInspector({
   categoryOptions,
   brandOptions,
 }: {
+  hidden: boolean
+  onToggle: () => void
   findResults: BUAResult[]
   findTotal: number
   findLoading: boolean
@@ -595,6 +630,22 @@ export function UInspector({
   const setReqModal = useWorkspaceStore((s) => s.setReqModal)
   const setBrandModal = useWorkspaceStore((s) => s.setBrandModal)
 
+  if (hidden) {
+    return (
+      <aside className="flex w-11 shrink-0 flex-col items-center border-l border-sm-border bg-sm-surface pt-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label="Show right panel"
+          title="Show right panel"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-sm-ink3 hover:bg-sm-bg hover:text-sm-ink"
+        >
+          <PanelRightOpen size={16} />
+        </button>
+      </aside>
+    )
+  }
+
   // A selected BUA takes priority over everything.
   if (area) {
     return (
@@ -610,6 +661,7 @@ export function UInspector({
         categoryOptions={categoryOptions}
         brandOptions={brandOptions}
         onClose={() => selectArea(null)}
+        onCollapse={onToggle}
         onOpenReq={setReqModal}
         onOpenBrand={setBrandModal}
       />
@@ -631,6 +683,7 @@ export function UInspector({
         categoryOptions={categoryOptions}
         brandOptions={brandOptions}
         onClose={() => setAssessPoint(null)}
+        onCollapse={onToggle}
         onOpenReq={setReqModal}
         onOpenBrand={setBrandModal}
       />
@@ -645,6 +698,7 @@ export function UInspector({
         total={findTotal}
         loading={findLoading}
         error={findError}
+        onCollapse={onToggle}
       />
     )
   }

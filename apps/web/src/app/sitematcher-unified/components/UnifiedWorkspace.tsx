@@ -46,6 +46,10 @@ export function UnifiedWorkspace() {
   const setBrandInfoId = useWorkspaceStore((s) => s.setBrandInfoId)
   const brandFilterCategoryIds = useWorkspaceStore((s) => s.brandFilterCategoryIds)
   const brandFilterBrandIds = useWorkspaceStore((s) => s.brandFilterBrandIds)
+  const leftHidden = useWorkspaceStore((s) => s.leftHidden)
+  const inspectorHidden = useWorkspaceStore((s) => s.inspectorHidden)
+  const toggleLeft = useWorkspaceStore((s) => s.toggleLeft)
+  const toggleInspector = useWorkspaceStore((s) => s.toggleInspector)
 
   const [map, setMap] = useState<mapboxgl.Map | null>(null)
   // Sketch mode shows a launcher until a session is started/opened.
@@ -320,7 +324,9 @@ export function UnifiedWorkspace() {
     return new Set(filteredPresent.map((b) => b.brandId))
   }, [filteredPresent, catSet, brandSet])
 
-  const showInspector =
+  // The inspector has content to show in these states; `inspectorHidden`
+  // then decides whether it's actually rendered or collapsed to an edge tab.
+  const inspectorAvailable =
     !isSketch &&
     (Boolean(area) || view === 'find' || (view === 'assess' && Boolean(assessPoint)))
 
@@ -341,7 +347,11 @@ export function UnifiedWorkspace() {
             <USketchLauncher onActivate={() => setSketchActive(true)} />
           )
         ) : (
-          <ULeftPanel refData={refData} />
+          <ULeftPanel
+            refData={refData}
+            hidden={leftHidden}
+            onToggle={toggleLeft}
+          />
         )}
 
         <main className="relative flex-1">
@@ -368,8 +378,10 @@ export function UnifiedWorkspace() {
 
         {isSketch && sketchActive && <USketchInspector />}
 
-        {showInspector && (
+        {inspectorAvailable && (
           <UInspector
+            hidden={inspectorHidden}
+            onToggle={toggleInspector}
             findResults={findGaps.results}
             findTotal={findGaps.total}
             findLoading={findGaps.loading}

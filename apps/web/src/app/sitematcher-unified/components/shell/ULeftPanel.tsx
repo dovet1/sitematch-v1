@@ -1,7 +1,17 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Plus, X, Check, Target, RotateCcw, MapPin, Search } from 'lucide-react'
+import {
+  Plus,
+  X,
+  Check,
+  Target,
+  RotateCcw,
+  MapPin,
+  Search,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from 'lucide-react'
 import {
   useWorkspaceStore,
   MIN_POPULATION,
@@ -575,25 +585,60 @@ function AssessPoint() {
   )
 }
 
-export function ULeftPanel({ refData }: { refData: ReferenceData }) {
+export function ULeftPanel({
+  refData,
+  hidden,
+  onToggle,
+}: {
+  refData: ReferenceData
+  hidden: boolean
+  onToggle: () => void
+}) {
   const view = useWorkspaceStore((s) => s.view)
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
 
+  if (hidden) {
+    return (
+      <aside className="flex w-11 shrink-0 flex-col items-center border-r border-sm-border bg-sm-surface pt-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label="Show left panel"
+          title="Show left panel"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-sm-ink3 hover:bg-sm-bg hover:text-sm-ink"
+        >
+          <PanelLeftOpen size={16} />
+        </button>
+      </aside>
+    )
+  }
+
   return (
-    <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-r border-sm-border bg-sm-surface">
-      {view === 'find' && <FindFilters refData={refData} />}
-      {view === 'assess' && !assessPoint && <AssessEmpty />}
-      {view === 'assess' && assessPoint && <AssessPoint />}
-      {view === 'sketch' && (
-        <div className="px-[18px] py-[18px]">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-sm-violet-deep">
-            Sketch Site
-          </p>
-          <p className="mt-2 text-sm text-sm-ink3">
-            Start a new sketch or open a saved one.
-          </p>
-        </div>
-      )}
+    <aside className="relative flex w-80 shrink-0 flex-col border-r border-sm-border bg-sm-surface">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label="Hide left panel"
+        title="Hide left panel"
+        className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-sm-ink3 hover:bg-sm-bg hover:text-sm-ink"
+      >
+        <PanelLeftClose size={16} />
+      </button>
+      <div className="flex-1 overflow-y-auto">
+        {view === 'find' && <FindFilters refData={refData} />}
+        {view === 'assess' && !assessPoint && <AssessEmpty />}
+        {view === 'assess' && assessPoint && <AssessPoint />}
+        {view === 'sketch' && (
+          <div className="px-[18px] py-[18px]">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-sm-violet-deep">
+              Sketch Site
+            </p>
+            <p className="mt-2 text-sm text-sm-ink3">
+              Start a new sketch or open a saved one.
+            </p>
+          </div>
+        )}
+      </div>
     </aside>
   )
 }
