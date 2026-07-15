@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const supabase = adminClient();
     const { data, error } = await supabase
       .from('brands')
-      .select('id, name, logo_url, stores(count), requirements(count), brand_contacts(count)')
+      .select('id, name, logo_url, domain, stores(count), requirements(count), brand_contacts(count)')
       .order('name', { ascending: true });
     if (error) throw error;
 
@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
       id: b.id,
       name: b.name,
       logo_url: b.logo_url ?? null,
+      domain: b.domain ?? null,
       storeCount: b.stores?.[0]?.count ?? 0,
       requirementCount: b.requirements?.[0]?.count ?? 0,
       contactCount: b.brand_contacts?.[0]?.count ?? 0,

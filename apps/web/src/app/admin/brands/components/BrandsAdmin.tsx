@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getClearbitLogoUrl } from '@/lib/clearbit-logo'
 
 interface BrandRow {
   id: string
   name: string
   logo_url: string | null
+  domain: string | null
   storeCount: number
   requirementCount: number
   contactCount: number
@@ -70,13 +72,15 @@ export function BrandsAdmin() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map((b) => (
+              {filtered.map((b) => {
+                const logoSrc = (b.domain && getClearbitLogoUrl(b.domain, 64)) || b.logo_url
+                return (
                 <tr key={b.id} className="hover:bg-gray-50">
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-3">
-                      {b.logo_url ? (
+                      {logoSrc ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={b.logo_url} alt="" className="h-8 w-8 rounded object-contain" />
+                        <img src={logoSrc} alt="" className="h-8 w-8 rounded object-contain" />
                       ) : (
                         <div className="flex h-8 w-8 items-center justify-center rounded bg-gray-100 text-xs font-semibold text-gray-500">
                           {b.name.charAt(0).toUpperCase()}
@@ -94,7 +98,8 @@ export function BrandsAdmin() {
                     </Button>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>

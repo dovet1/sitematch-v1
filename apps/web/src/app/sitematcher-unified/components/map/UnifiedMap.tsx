@@ -23,7 +23,7 @@ const BUA_OUTLINE_LAYER = 'bua-outline'
 const BUA_SELECTED_LAYER = 'bua-selected'
 
 // Assess store pins are HTML markers (brand logo badges), not a GeoJSON layer.
-const STORE_BADGE_SIZE = 36
+const STORE_BADGE_SIZE = 32
 const STORE_BADGE_SHADOW = '0 0 0 2px #2A6FDB,0 1px 3px rgba(0,0,0,0.3)'
 const STORE_BADGE_SHADOW_HL = '0 0 0 3px #7033FF,0 2px 8px rgba(0,0,0,0.45)'
 
@@ -94,7 +94,7 @@ function renderInitialBadge(el: HTMLElement, store: NearbyStore) {
   span.textContent = storeInitial(store)
   span.style.cssText =
     'display:flex;align-items:center;justify-content:center;width:100%;height:100%;' +
-    'background:#2A6FDB;color:#fff;font-weight:600;font-size:15px;'
+    'background:#2A6FDB;color:#fff;font-weight:600;font-size:13px;'
   el.replaceChildren(span)
 }
 
