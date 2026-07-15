@@ -60,6 +60,20 @@ describe('buildBrandLandscape', () => {
     expect(present[0].logoUrl).toBeNull()
   })
 
+  it('counts every supplied store for a present brand', () => {
+    const stores = [
+      store({ id: 'inside-bua-1', brand_id: 'brand-2', fascia_id: 'fascia-2' }),
+      store({ id: 'inside-bua-2', brand_id: 'brand-2', fascia_id: 'fascia-2' }),
+      store({ id: 'inside-bua-3', brand_id: 'brand-2', fascia_id: 'fascia-3' }),
+    ]
+
+    const { present } = buildBrandLandscape(stores, [], refData)
+
+    expect(present).toHaveLength(1)
+    expect(present[0].brandId).toBe('brand-2')
+    expect(present[0].storeCount).toBe(3)
+  })
+
   it('carries logoDomain/logoUrl onto missing rows from the representative fascia', () => {
     const m = [
       missing({

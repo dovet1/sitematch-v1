@@ -18,6 +18,8 @@ import { useRequirements } from '../lib/hooks/useRequirements'
 import { useFindGapsStorePins } from '../lib/hooks/useFindGapsStorePins'
 import { computeIsochroneMissing } from '../lib/isochrone-missing'
 import { buildBrandLandscape } from '../lib/brand-landscape'
+import { selectPresentStoreSource } from '../lib/present-store-source'
+import { filterGapStorePins } from '../lib/store-pin-filter'
 import { URequirementModal, UBrandModal, UBrandInfoModal } from './shell/UDetailModals'
 import type { WorkspaceArea } from '../types/unified-workspace'
 // New SiteMatcher-styled sketch shell (all depend only on the standalone sketch store).
@@ -222,31 +224,51 @@ export function UnifiedWorkspace() {
   // active landscape radius (Summary promoted rows) + a brand-name lookup.
   const requirements = useRequirements(center, landscapeRadiusKm, landscapeIsochrone)
 
-  // Brand-level landscape for the Assess tabs, computed once here and fed to both
-  // the inspector lists and the map pins so the two stay in sync under filtering.
-  const { present, missing } = useMemo(
+  // Find-gaps store pins: a separate map-pin stream (scenario 1: all stores in a
+  // selected BUA polygon; scenario 2: brand/category pins in the viewport). Kept
+  // decoupled from the inspector's radius-based landscape.stores above.
+  const gapPins = useFindGapsStorePins(map)
+
+  const presentStoreSource = useMemo(
+    () => selectPresentStoreSource(area, landscape.stores, gapPins.pins),
+    [area, landscape.stores, gapPins.pins]
+  )
+
+  // Present cards should count polygon stores for a selected BUA, while missing
+  // brands stay on the existing landscape/missing-fascia catchment calculation.
+  const { present } = useMemo(
+    () => buildBrandLandscape(presentStoreSource, [], refData),
+    [presentStoreSource, refData]
+  )
+  const { missing } = useMemo(
     () => buildBrandLandscape(landscape.stores, landscape.missing, refData),
     [landscape.stores, landscape.missing, refData]
   )
 
-  // Authoritative brand -> categoryIds from refData; covers requirement-only brands
-  // that aren't in the present/missing lists.
-  const brandCategoryIds = useMemo(() => {
+  // fascia -> its category ids, the single source of truth for both the brand-level
+  // rollup below and the map-pin filter (which matches on a store's own fascia).
+  const fasciaCategoryIds = useMemo(() => {
     const fasciaCats = new Map<string, string[]>()
     for (const m of refData?.fasciaCategoryMappings ?? []) {
       const list = fasciaCats.get(m.fascia_id)
       if (list) list.push(m.category_id)
       else fasciaCats.set(m.fascia_id, [m.category_id])
     }
+    return fasciaCats
+  }, [refData])
+
+  // Authoritative brand -> categoryIds from refData; covers requirement-only brands
+  // that aren't in the present/missing lists.
+  const brandCategoryIds = useMemo(() => {
     const byBrand = new Map<string, string[]>()
     for (const b of refData?.brands ?? []) {
       const set = new Set<string>()
       for (const f of b.fascias)
-        for (const c of fasciaCats.get(f.id) ?? []) set.add(c)
+        for (const c of fasciaCategoryIds.get(f.id) ?? []) set.add(c)
       byBrand.set(b.id, Array.from(set))
     }
     return byBrand
-  }, [refData])
+  }, [refData, fasciaCategoryIds])
 
   const reqLocal = requirements.local
 
@@ -325,10 +347,13 @@ export function UnifiedWorkspace() {
     return new Set(filteredPresent.map((b) => b.brandId))
   }, [filteredPresent, catSet, brandSet])
 
-  // Find-gaps store pins: a separate map-pin stream (scenario 1: all stores in a
-  // selected BUA polygon; scenario 2: brand/category pins in the viewport). Kept
-  // decoupled from the inspector's radius-based landscape.stores above.
-  const gapPins = useFindGapsStorePins(map)
+  // Apply the sidebar's brand/category filters to the map pins so they track the
+  // filtered cards. Category matching is by each store's own fascia to mirror the
+  // present-brand rollup in buildBrandLandscape.
+  const filteredGapPins = useMemo(
+    () => filterGapStorePins(gapPins.pins, catSet, brandSet, fasciaCategoryIds),
+    [gapPins.pins, catSet, brandSet, fasciaCategoryIds]
+  )
 
   // The inspector has content to show in these states; `inspectorHidden`
   // then decides whether it's actually rendered or collapsed to an edge tab.
@@ -364,7 +389,7 @@ export function UnifiedWorkspace() {
           <UnifiedMap
             onMap={setMap}
             storeDots={landscape.stores}
-            gapStorePins={gapPins.pins}
+            gapStorePins={filteredGapPins}
             gapPinsStatus={gapPins.status}
             visiblePresentBrandIds={visiblePresentBrandIds}
             requirements={requirements.withinCatchment}
