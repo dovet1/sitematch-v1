@@ -1,62 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createStoreService } from '@/lib/stores-service'
-import { createServerClient } from '@/lib/supabase'
-import type { Store } from '@/lib/stores'
+import { enrichStores } from '@/lib/store-enrichment'
 
 export const dynamic = 'force-dynamic'
-
-async function addFasciaNames(stores: Store[]): Promise<Store[]> {
-  if (stores.length === 0) {
-    return stores
-  }
-
-  const fasciaIds = Array.from(new Set(stores.map(store => store.fascia_id).filter(Boolean)))
-  if (fasciaIds.length === 0) {
-    return stores
-  }
-
-  const supabase = await createServerClient()
-  const { data } = await supabase
-    .from('fascias')
-    .select('id, name')
-    .in('id', fasciaIds)
-
-  const fasciaNameById = new Map((data || []).map((fascia: any) => [fascia.id, fascia.name]))
-
-  return stores.map(store => ({
-    ...store,
-    fascia_name: fasciaNameById.get(store.fascia_id) ?? store.fascia_name ?? null
-  }))
-}
-
-async function addBrandInfo(stores: Store[]): Promise<Store[]> {
-  if (stores.length === 0) {
-    return stores
-  }
-
-  const brandIds = Array.from(new Set(stores.map(store => store.brand_id).filter(Boolean)))
-  if (brandIds.length === 0) {
-    return stores
-  }
-
-  const supabase = await createServerClient()
-  const { data } = await supabase
-    .from('brands')
-    .select('id, name, domain, logo_url')
-    .in('id', brandIds)
-
-  const brandById = new Map((data || []).map((brand: any) => [brand.id, brand]))
-
-  return stores.map(store => {
-    const brand = brandById.get(store.brand_id)
-    return {
-      ...store,
-      brand_name: brand?.name ?? store.brand_name ?? null,
-      logo_domain: brand?.domain ?? null,
-      logo_url: brand?.logo_url ?? null,
-    }
-  })
-}
 
 /**
  * Get stores near a point - used for Assess Area mode
@@ -107,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     const service = await createStoreService()
     const stores = await service.getStoresNearPoint(lat, lon, radius, fasciaIds, categoryIds, brandIds)
-    const enrichedStores = await addBrandInfo(await addFasciaNames(stores))
+    const enrichedStores = await enrichStores(stores)
 
     return NextResponse.json({ stores: enrichedStores, total: enrichedStores.length })
   } catch (error) {

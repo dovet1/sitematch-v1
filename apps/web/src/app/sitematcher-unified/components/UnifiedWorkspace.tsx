@@ -15,6 +15,7 @@ import { useFindGaps } from '../lib/hooks/useFindGaps'
 import { useAreaData } from '../lib/hooks/useAreaData'
 import { useCatchment } from '../lib/hooks/useCatchment'
 import { useRequirements } from '../lib/hooks/useRequirements'
+import { useFindGapsStorePins } from '../lib/hooks/useFindGapsStorePins'
 import { computeIsochroneMissing } from '../lib/isochrone-missing'
 import { buildBrandLandscape } from '../lib/brand-landscape'
 import { URequirementModal, UBrandModal, UBrandInfoModal } from './shell/UDetailModals'
@@ -324,6 +325,11 @@ export function UnifiedWorkspace() {
     return new Set(filteredPresent.map((b) => b.brandId))
   }, [filteredPresent, catSet, brandSet])
 
+  // Find-gaps store pins: a separate map-pin stream (scenario 1: all stores in a
+  // selected BUA polygon; scenario 2: brand/category pins in the viewport). Kept
+  // decoupled from the inspector's radius-based landscape.stores above.
+  const gapPins = useFindGapsStorePins(map)
+
   // The inspector has content to show in these states; `inspectorHidden`
   // then decides whether it's actually rendered or collapsed to an edge tab.
   const inspectorAvailable =
@@ -358,6 +364,8 @@ export function UnifiedWorkspace() {
           <UnifiedMap
             onMap={setMap}
             storeDots={landscape.stores}
+            gapStorePins={gapPins.pins}
+            gapPinsStatus={gapPins.status}
             visiblePresentBrandIds={visiblePresentBrandIds}
             requirements={requirements.withinCatchment}
             lsoa={{

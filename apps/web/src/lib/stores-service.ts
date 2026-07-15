@@ -358,6 +358,79 @@ export class StoreService {
   }
 
   /**
+   * Get every store inside a built-up area polygon (find-gaps selected location).
+   * Uses the BUA's true geometry (ST_Contains), not a radius. No filtering: the
+   * scenario shows all stores in the boundary regardless of gap rules.
+   * @param gsscode Built-up area gsscode
+   * @returns All stores whose location falls inside the polygon
+   */
+  async getStoresInBua(gsscode: string): Promise<Store[]> {
+    const { data, error } = await this.supabase.rpc('get_stores_in_bua', {
+      p_gsscode: gsscode,
+    })
+
+    if (error) {
+      console.error('Failed to fetch stores in BUA:', error)
+      throw new Error(`Failed to fetch stores in BUA: ${error.message}`)
+    }
+
+    return data || []
+  }
+
+  /**
+   * Get stores within a viewport envelope, optionally filtered to a set of
+   * fascia/category ids (find-gaps brand context). Filtering is pushed into the
+   * RPC so its LIMIT can never drop matching pins ahead of filtering.
+   * @param bbox [minLon, minLat, maxLon, maxLat]
+   * @param fasciaIds Optional fascia ID filters
+   * @param categoryIds Optional category ID filters (resolved to fascia ids)
+   * @returns { stores, truncated } — truncated when the safety cap (5000) was hit
+   */
+  async getStoresInBbox(
+    bbox: [number, number, number, number],
+    fasciaIds?: string[],
+    categoryIds?: string[]
+  ): Promise<{ stores: Store[]; truncated: boolean }> {
+    const hasFilterParams =
+      (fasciaIds && fasciaIds.length > 0) || (categoryIds && categoryIds.length > 0)
+
+    const selectedFasciaIds = new Set(fasciaIds || [])
+
+    if (categoryIds && categoryIds.length > 0) {
+      const { data: categoryFascias } = await this.supabase
+        .from('fascia_categories')
+        .select('fascia_id')
+        .in('category_id', categoryIds)
+
+      categoryFascias?.forEach((f: any) => selectedFasciaIds.add(f.fascia_id))
+    }
+
+    // Filter params were supplied but resolve to no fascias -> match nothing.
+    // Never pass null in this case, which would fetch every store in the viewport.
+    if (hasFilterParams && selectedFasciaIds.size === 0) {
+      return { stores: [], truncated: false }
+    }
+
+    const [minLon, minLat, maxLon, maxLat] = bbox
+    const { data, error } = await this.supabase.rpc('get_stores_in_bbox', {
+      p_min_lon: minLon,
+      p_min_lat: minLat,
+      p_max_lon: maxLon,
+      p_max_lat: maxLat,
+      p_fascia_ids: selectedFasciaIds.size > 0 ? Array.from(selectedFasciaIds) : null,
+    })
+
+    if (error) {
+      console.error('Failed to fetch stores in bbox:', error)
+      throw new Error(`Failed to fetch stores in bbox: ${error.message}`)
+    }
+
+    const rows: Store[] = data || []
+    const truncated = rows.length > 5000
+    return { stores: truncated ? rows.slice(0, 5000) : rows, truncated }
+  }
+
+  /**
    * Get filtered gsscodes using the new expression-based database function
    * This function properly evaluates AND/OR connectors between rules
    * @param filterSet FilterSet with rules and connectors

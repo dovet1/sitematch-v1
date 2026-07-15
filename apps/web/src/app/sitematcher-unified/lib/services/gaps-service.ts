@@ -143,3 +143,38 @@ export async function fetchNearbyStores(
   const data = await res.json()
   return data.stores ?? []
 }
+
+// Every store inside a BUA polygon (find-gaps selected location, scenario 1).
+export async function fetchStoresInBua(
+  gsscode: string,
+  signal?: AbortSignal
+): Promise<NearbyStore[]> {
+  const url = `/api/public/stores/in-bua?gsscode=${encodeURIComponent(gsscode)}`
+  const res = await fetch(url, { signal })
+  if (!res.ok) throw new Error(`in-bua failed (${res.status})`)
+  const data = await res.json()
+  return data.stores ?? []
+}
+
+// Viewport-scoped, fascia/category-filtered store pins (find-gaps brand context,
+// scenario 2). Returns a truncation flag so the caller can surface an honest hint.
+export async function fetchStoresInViewport(
+  bbox: [number, number, number, number],
+  filters: { fasciaIds?: string[]; categoryIds?: string[] },
+  signal?: AbortSignal
+): Promise<{ stores: NearbyStore[]; truncated: boolean }> {
+  const [minLon, minLat, maxLon, maxLat] = bbox
+  const params = new URLSearchParams({
+    minLon: String(minLon),
+    minLat: String(minLat),
+    maxLon: String(maxLon),
+    maxLat: String(maxLat),
+  })
+  if (filters.fasciaIds?.length) params.set('fasciaIds', filters.fasciaIds.join(','))
+  if (filters.categoryIds?.length) params.set('categoryIds', filters.categoryIds.join(','))
+
+  const res = await fetch(`/api/public/stores/in-bbox?${params.toString()}`, { signal })
+  if (!res.ok) throw new Error(`in-bbox failed (${res.status})`)
+  const data = await res.json()
+  return { stores: data.stores ?? [], truncated: Boolean(data.truncated) }
+}

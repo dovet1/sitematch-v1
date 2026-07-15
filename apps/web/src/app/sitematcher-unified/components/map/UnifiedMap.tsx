@@ -4,10 +4,18 @@ import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { MAP_STYLES, MAPBOX_TOKEN } from '@/lib/sitesketcher-v2/constants'
-import { getClearbitLogoUrl } from '@/lib/clearbit-logo'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import type { NearbyStore } from '../../lib/services/gaps-service'
 import type { RequirementLocation } from '../../types/unified-workspace'
+import {
+  STORE_BADGE_SHADOW,
+  STORE_BADGE_SHADOW_HL,
+  buildStoreBadge,
+  populateStoreBadge,
+  storeVisualChanged,
+} from './store-badges'
+import { StorePinCluster } from './StorePinCluster'
+import type { GapPinsStatus } from '../../lib/hooks/useFindGapsStorePins'
 
 // UK-wide "national" starting view for discovery.
 const NATIONAL_VIEWPORT = {
@@ -21,11 +29,6 @@ const BUA_SOURCE_LAYER = 'bua'
 const BUA_FILL_LAYER = 'bua-fill'
 const BUA_OUTLINE_LAYER = 'bua-outline'
 const BUA_SELECTED_LAYER = 'bua-selected'
-
-// Assess store pins are HTML markers (brand logo badges), not a GeoJSON layer.
-const STORE_BADGE_SIZE = 32
-const STORE_BADGE_SHADOW = '0 0 0 2px #2A6FDB,0 1px 3px rgba(0,0,0,0.3)'
-const STORE_BADGE_SHADOW_HL = '0 0 0 3px #7033FF,0 2px 8px rgba(0,0,0,0.45)'
 
 // Live occupier requirement pins (Assess-only, gated on the overlay toggle).
 const REQ_SOURCE = 'assess-requirements'
@@ -128,79 +131,6 @@ function buildRoadPopup(props: Record<string, unknown>): HTMLDivElement {
   return root
 }
 
-// ---- Assess store logo badges (HTML markers) ------------------------------
-
-function storeInitial(store: NearbyStore): string {
-  const src = store.brand_name || store.name || '?'
-  return src.trim().charAt(0).toUpperCase() || '?'
-}
-
-// Renders the brand-initial fallback badge into an existing badge element.
-function renderInitialBadge(el: HTMLElement, store: NearbyStore) {
-  const span = document.createElement('span')
-  span.textContent = storeInitial(store)
-  span.style.cssText =
-    'display:flex;align-items:center;justify-content:center;width:100%;height:100%;' +
-    'background:#2A6FDB;color:#fff;font-weight:600;font-size:13px;'
-  el.replaceChildren(span)
-}
-
-// Renders an <img> that walks the source list on error (logo.dev → logo_url),
-// falling back to the initial badge once every source has failed to load.
-function renderLogoImg(el: HTMLElement, store: NearbyStore, sources: string[]) {
-  let idx = 0
-  const img = document.createElement('img')
-  img.alt = ''
-  img.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#fff;'
-  img.onerror = () => {
-    idx += 1
-    if (idx < sources.length) img.src = sources[idx]
-    else renderInitialBadge(el, store)
-  }
-  img.src = sources[0]
-  el.replaceChildren(img)
-}
-
-// Populates a badge element with the store's logo, by priority:
-// logo.dev (from brand domain) → uploaded logo_url → brand-initial badge.
-function populateStoreBadge(el: HTMLElement, store: NearbyStore) {
-  const sources: string[] = []
-  // getClearbitLogoUrl returns null when the token is missing or the domain is
-  // invalid — guard for that and continue down the fallback chain.
-  const logoDev = store.logo_domain ? getClearbitLogoUrl(store.logo_domain, 64) : null
-  if (logoDev) sources.push(logoDev)
-  if (store.logo_url) sources.push(store.logo_url)
-  if (sources.length > 0) renderLogoImg(el, store, sources)
-  else renderInitialBadge(el, store)
-}
-
-function buildStoreBadge(store: NearbyStore): HTMLDivElement {
-  const el = document.createElement('div')
-  el.style.cssText =
-    `width:${STORE_BADGE_SIZE}px;height:${STORE_BADGE_SIZE}px;border-radius:50%;` +
-    `overflow:hidden;background:#fff;box-shadow:${STORE_BADGE_SHADOW};` +
-    'transition:opacity 120ms ease,box-shadow 120ms ease;' +
-    'pointer-events:auto;cursor:pointer;'
-  // Clicking a store pin opens the present-brand detail modal. Stop propagation
-  // so it doesn't fall through to the map's Assess-pin drop handler.
-  el.addEventListener('click', (e) => {
-    e.stopPropagation()
-    useWorkspaceStore.getState().setBrandInfoId(store.brand_id)
-  })
-  populateStoreBadge(el, store)
-  return el
-}
-
-// Whether the visual inputs of a store changed (needs a badge rebuild).
-function storeVisualChanged(a: NearbyStore, b: NearbyStore): boolean {
-  return (
-    a.logo_domain !== b.logo_domain ||
-    a.logo_url !== b.logo_url ||
-    a.brand_name !== b.brand_name ||
-    a.name !== b.name
-  )
-}
-
 function applyMapCursor(map: mapboxgl.Map) {
   const st = useWorkspaceStore.getState()
   // Crosshair only for dropping an Assess pin — not while toggling catchment cells.
@@ -214,6 +144,8 @@ export function UnifiedMap({
   requirements = [],
   lsoa,
   onMap,
+  gapStorePins = [],
+  gapPinsStatus = 'idle',
 }: {
   storeDots?: NearbyStore[]
   // Brand ids whose present-store pins should show; null = show all (no filter).
@@ -221,6 +153,9 @@ export function UnifiedMap({
   requirements?: RequirementLocation[]
   lsoa?: LsoaLayerProps
   onMap?: (map: mapboxgl.Map | null) => void
+  // Find-gaps clustered store pins + their fetch status (drives the map hint).
+  gapStorePins?: NearbyStore[]
+  gapPinsStatus?: GapPinsStatus
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -244,6 +179,11 @@ export function UnifiedMap({
   // from stale style-load closures, so it must read the ref, not the prop).
   const visibleBrandIdsRef = useRef<Set<string> | null>(visiblePresentBrandIds)
   visibleBrandIdsRef.current = visiblePresentBrandIds
+  // Find-gaps clustered store pins: a supercluster-backed controller plus a ref of
+  // the latest pin set, so post-style-load rehydration can re-feed it.
+  const clusterRef = useRef<StorePinCluster | null>(null)
+  const gapStorePinsRef = useRef<NearbyStore[]>(gapStorePins)
+  gapStorePinsRef.current = gapStorePins
 
   const view = useWorkspaceStore((s) => s.view)
   const tab = useWorkspaceStore((s) => s.tab)
@@ -310,6 +250,14 @@ export function UnifiedMap({
     // Re-apply hover highlighting so markers created/updated during an active
     // brand hover pick up the correct emphasis/dimming.
     applyStoreHighlight()
+  }
+
+  // Feed the latest find-gaps pin set into the supercluster controller, creating
+  // it on first use. Markers are HTML (no style layers), so this only needs the
+  // map instance — safe to call from the style-load path and prop effects alike.
+  const syncClusterPins = (map: mapboxgl.Map) => {
+    if (!clusterRef.current) clusterRef.current = new StorePinCluster(map)
+    clusterRef.current.setPins(gapStorePinsRef.current)
   }
 
   // Emphasize the hovered brand's store badges and dim the rest. Never touches
@@ -611,6 +559,7 @@ export function UnifiedMap({
     // Re-attach store logo badges now the style is ready — covers storeDots that
     // arrived before the style loaded (the storeDots effect early-returns then).
     syncStoreMarkers(map)
+    syncClusterPins(map)
 
     // Hydrate dynamic state in case it changed before the style finished loading.
     const st = useWorkspaceStore.getState()
@@ -864,6 +813,8 @@ export function UnifiedMap({
       storeMarkers.forEach((marker) => marker.remove())
       storeMarkers.clear()
       storeSnapshot.clear()
+      clusterRef.current?.destroy()
+      clusterRef.current = null
       map.remove()
       mapRef.current = null
       readyRef.current = false
@@ -999,6 +950,14 @@ export function UnifiedMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeDots])
 
+  // Feed the find-gaps clustered pins into the controller when they change.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current) return
+    syncClusterPins(map)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gapStorePins])
+
   // Restyle store badges when the hovered present-brand changes.
   useEffect(() => {
     const map = mapRef.current
@@ -1032,5 +991,22 @@ export function UnifiedMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overlaysRequirements, overlaysRoadTraffic, overlaysTrafficHeatmap])
 
-  return <div ref={containerRef} className="absolute inset-0 h-full w-full" />
+  const pinHint =
+    gapPinsStatus === 'zoom_gated'
+      ? 'Zoom in to see stores'
+      : gapPinsStatus === 'truncated'
+        ? 'Too many stores — zoom in'
+        : null
+
+  return (
+    <div ref={containerRef} className="absolute inset-0 h-full w-full">
+      {pinHint && (
+        <div className="pointer-events-none absolute left-1/2 top-3.5 z-10 -translate-x-1/2 rounded-full border border-sm-border bg-sm-surface px-3 py-1.5 shadow-[0_4px_14px_-6px_rgba(20,10,40,0.3)]">
+          <span className="font-mono text-[11px] font-medium text-sm-ink2">
+            {pinHint}
+          </span>
+        </div>
+      )}
+    </div>
+  )
 }
