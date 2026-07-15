@@ -43,6 +43,19 @@ const LSOA_OUTLINE_DESELECTED = 'lsoa-outline-deselected'
 const CATCH_SOURCE = 'catchment-boundary'
 const CATCH_LINE_LAYER = 'catchment-boundary-line'
 
+// Traffic overlays (available everywhere except sketch). Two independent toggles:
+// road AADT line-shading and a count-point intensity heatmap. Tilesets ported
+// from the SiteAnalyser tool.
+const TRAFFIC_ROADS_TILESET = 'dovet.a4p7c0q8'
+const TRAFFIC_ROADS_SOURCE = 'traffic-roads'
+const TRAFFIC_ROADS_LAYER = 'traffic-roads-line'
+const TRAFFIC_ROADS_SRC_LAYER = 'traffic_roads'
+
+const TRAFFIC_COUNTS_TILESET = 'dovet.b44k9tis'
+const TRAFFIC_COUNTS_SOURCE = 'traffic-counts'
+const TRAFFIC_HEAT_LAYER = 'traffic-counts-heat'
+const TRAFFIC_COUNTS_SRC_LAYER = 'traffic_counts'
+
 export interface LsoaLayerProps {
   allCodes: string[]
   selectedCodes: Set<string>
@@ -79,6 +92,40 @@ function requirementsToGeoJSON(
       properties: { requirementId: r.requirementId, companyName: r.companyName },
     })),
   }
+}
+
+// Build the traffic-road popup as DOM nodes (textContent, not interpolated HTML)
+// so untrusted tileset property values can't inject markup.
+function buildRoadPopup(props: Record<string, unknown>): HTMLDivElement {
+  const root = document.createElement('div')
+  root.style.cssText = 'min-width:180px;font-family:inherit;'
+
+  const roadNumber = String(props.road_number ?? '').trim()
+  const classification = String(props.road_classification ?? '').trim()
+  const aadtRaw = Number(props.aadt)
+
+  const title = document.createElement('div')
+  title.style.cssText =
+    'font-size:14px;font-weight:600;color:#0f172a;margin-bottom:6px;'
+  title.textContent = roadNumber || 'Road'
+  root.appendChild(title)
+
+  if (classification) {
+    const type = document.createElement('div')
+    type.style.cssText = 'font-size:12px;color:#64748b;margin-bottom:2px;'
+    type.textContent = `Type: ${classification}`
+    root.appendChild(type)
+  }
+
+  const traffic = document.createElement('div')
+  traffic.style.cssText = 'font-size:12px;color:#334155;'
+  const aadtText = Number.isFinite(aadtRaw)
+    ? `${Math.round(aadtRaw).toLocaleString('en-GB')} vehicles/day`
+    : 'No data'
+  traffic.textContent = `Traffic: ${aadtText}`
+  root.appendChild(traffic)
+
+  return root
 }
 
 // ---- Assess store logo badges (HTML markers) ------------------------------
@@ -207,6 +254,8 @@ export function UnifiedMap({
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
   const hoveredBrandId = useWorkspaceStore((s) => s.hoveredBrandId)
   const overlaysRequirements = useWorkspaceStore((s) => s.overlays.requirements)
+  const overlaysRoadTraffic = useWorkspaceStore((s) => s.overlays.roadTraffic)
+  const overlaysTrafficHeatmap = useWorkspaceStore((s) => s.overlays.trafficHeatmap)
   const selectArea = useWorkspaceStore((s) => s.selectArea)
   const setAssessPoint = useWorkspaceStore((s) => s.setAssessPoint)
   const setReqModal = useWorkspaceStore((s) => s.setReqModal)
@@ -451,6 +500,107 @@ export function UnifiedMap({
       })
     }
 
+    // Traffic heatmap (count-point intensity). Added before the road line so the
+    // crisp road shading renders on top of the softer heatmap bloom.
+    if (!map.getSource(TRAFFIC_COUNTS_SOURCE)) {
+      map.addSource(TRAFFIC_COUNTS_SOURCE, {
+        type: 'vector',
+        url: `mapbox://${TRAFFIC_COUNTS_TILESET}`,
+      })
+    }
+    if (!map.getLayer(TRAFFIC_HEAT_LAYER)) {
+      map.addLayer(
+        {
+          id: TRAFFIC_HEAT_LAYER,
+          type: 'heatmap',
+          source: TRAFFIC_COUNTS_SOURCE,
+          'source-layer': TRAFFIC_COUNTS_SRC_LAYER,
+          layout: { visibility: 'none' },
+          paint: {
+            'heatmap-weight': [
+              'interpolate',
+              ['linear'],
+              ['get', 'aadt'],
+              0, 0,
+              50000, 1,
+            ],
+            'heatmap-intensity': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              6, 0.6,
+              14, 1.2,
+            ],
+            'heatmap-radius': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              6, 8,
+              12, 25,
+              16, 40,
+            ],
+            'heatmap-color': [
+              'interpolate',
+              ['linear'],
+              ['heatmap-density'],
+              0, 'rgba(0,0,0,0)',
+              0.2, '#fde68a',
+              0.4, '#fbbf24',
+              0.6, '#f97316',
+              0.8, '#dc2626',
+              1, '#991b1b',
+            ],
+            'heatmap-opacity': 0.7,
+          },
+        },
+        beforeId
+      )
+    }
+
+    // Road AADT line-shading (grey → dark red), width scales with zoom.
+    if (!map.getSource(TRAFFIC_ROADS_SOURCE)) {
+      map.addSource(TRAFFIC_ROADS_SOURCE, {
+        type: 'vector',
+        url: `mapbox://${TRAFFIC_ROADS_TILESET}`,
+      })
+    }
+    if (!map.getLayer(TRAFFIC_ROADS_LAYER)) {
+      map.addLayer(
+        {
+          id: TRAFFIC_ROADS_LAYER,
+          type: 'line',
+          source: TRAFFIC_ROADS_SOURCE,
+          'source-layer': TRAFFIC_ROADS_SRC_LAYER,
+          layout: { visibility: 'none' },
+          paint: {
+            'line-color': [
+              'interpolate',
+              ['linear'],
+              ['get', 'aadt'],
+              0, '#e5e7eb',
+              5000, '#fde68a',
+              10000, '#fbbf24',
+              20000, '#f97316',
+              35000, '#dc2626',
+              50000, '#991b1b',
+            ],
+            'line-width': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              8, 1,
+              10, 1.5,
+              12, 2.5,
+              14, 4,
+              16, 6,
+            ],
+            'line-opacity': 0.75,
+          },
+        },
+        beforeId
+      )
+    }
+
     applyBuaFilter(map)
     applyLsoaFilters(map)
     applyCatchmentBoundary(map)
@@ -553,6 +703,27 @@ export function UnifiedMap({
         boundaryVisible ? 'visible' : 'none'
       )
     }
+
+    // Traffic overlays: available everywhere except sketch, each on its own toggle.
+    // Read live store state (not the closure) so this stays correct when called
+    // from stale style-load closures. addLayers early-returns in sketch, so the
+    // notSketch guard is belt-and-braces.
+    const st = useWorkspaceStore.getState()
+    const notSketch = st.view !== 'sketch'
+    if (map.getLayer(TRAFFIC_HEAT_LAYER)) {
+      map.setLayoutProperty(
+        TRAFFIC_HEAT_LAYER,
+        'visibility',
+        notSketch && st.overlays.trafficHeatmap ? 'visible' : 'none'
+      )
+    }
+    if (map.getLayer(TRAFFIC_ROADS_LAYER)) {
+      map.setLayoutProperty(
+        TRAFFIC_ROADS_LAYER,
+        'visibility',
+        notSketch && st.overlays.roadTraffic ? 'visible' : 'none'
+      )
+    }
   }
 
   // Initialize the single shared map instance once.
@@ -587,6 +758,25 @@ export function UnifiedMap({
     map.on('click', (e) => {
       const st = useWorkspaceStore.getState()
       if (st.tab === 'catchment') return
+      // Road-shading popup: consume the click before the Assess pin-drop path so
+      // clicking a road never relocates the dropped pin. Placed after the
+      // catchment guard so LSOA cell-toggling still owns clicks on that tab.
+      if (
+        st.view !== 'sketch' &&
+        st.overlays.roadTraffic &&
+        map.getLayer(TRAFFIC_ROADS_LAYER)
+      ) {
+        const hit = map.queryRenderedFeatures(e.point, {
+          layers: [TRAFFIC_ROADS_LAYER],
+        })
+        if (hit[0]?.properties) {
+          new mapboxgl.Popup({ closeButton: true, closeOnClick: false })
+            .setLngLat(e.lngLat)
+            .setDOMContent(buildRoadPopup(hit[0].properties))
+            .addTo(map)
+          return
+        }
+      }
       if (st.view === 'find') {
         const feats = map.queryRenderedFeatures(e.point, { layers: [BUA_FILL_LAYER] })
         const f = feats[0]
@@ -631,6 +821,15 @@ export function UnifiedMap({
       }
     })
     map.on('mouseleave', REQ_LAYER, () => applyMapCursor(map))
+
+    // Road-shading hover: pointer cursor when the overlay is on (outside catchment).
+    map.on('mouseenter', TRAFFIC_ROADS_LAYER, () => {
+      const st = useWorkspaceStore.getState()
+      if (st.overlays.roadTraffic && st.tab !== 'catchment') {
+        map.getCanvas().style.cursor = 'pointer'
+      }
+    })
+    map.on('mouseleave', TRAFFIC_ROADS_LAYER, () => applyMapCursor(map))
 
     // LSOA cell click → toggle it in/out of the catchment selection.
     const lsoaClick = (
@@ -821,12 +1020,12 @@ export function UnifiedMap({
     src?.setData(requirementsToGeoJSON(requirements))
   }, [requirements])
 
-  // Re-evaluate requirement-pin visibility when the overlay toggle flips.
+  // Re-evaluate overlay-layer visibility when any overlay toggle flips.
   useEffect(() => {
     const map = mapRef.current
     if (map && readyRef.current) applyVisibility(map)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overlaysRequirements])
+  }, [overlaysRequirements, overlaysRoadTraffic, overlaysTrafficHeatmap])
 
   return <div ref={containerRef} className="absolute inset-0 h-full w-full" />
 }

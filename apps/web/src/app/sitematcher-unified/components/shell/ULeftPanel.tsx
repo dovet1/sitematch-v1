@@ -489,9 +489,6 @@ function AssessEmpty() {
 
 function AssessPoint() {
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
-  const overlays = useWorkspaceStore((s) => s.overlays)
-  const toggleTraffic = useWorkspaceStore((s) => s.toggleTraffic)
-  const toggleRequirements = useWorkspaceStore((s) => s.toggleRequirements)
 
   if (!assessPoint) return null
   return (
@@ -525,61 +522,93 @@ function AssessPoint() {
         </div>
       </div>
 
-      <SectionLabel>Overlays</SectionLabel>
-      <div className="px-[18px] py-1">
-        <button
-          type="button"
-          onClick={toggleTraffic}
-          className="flex w-full items-center justify-between py-2.5"
-        >
-          <div className="text-left">
-            <div className="text-[13px] font-medium text-sm-ink">Traffic heatmap</div>
-            <div className="text-[11.5px] text-sm-ink3">Count-point intensity</div>
-          </div>
-          <span
-            className={
-              'relative h-[18px] w-8 rounded-full transition-colors ' +
-              (overlays.traffic ? 'bg-sm-orange' : 'bg-[#DDD6CA]')
-            }
-          >
-            <span
-              className={
-                'absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow transition-all ' +
-                (overlays.traffic ? 'left-4' : 'left-0.5')
-              }
-            />
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={toggleRequirements}
-          className="flex w-full items-center justify-between py-2.5"
-        >
-          <div className="text-left">
-            <div className="text-[13px] font-medium text-sm-ink">
-              Requirement locations
-            </div>
-            <div className="text-[11.5px] text-sm-ink3">
-              Occupiers wanting to open here
-            </div>
-          </div>
-          <span
-            className={
-              'relative h-[18px] w-8 rounded-full transition-colors ' +
-              (overlays.requirements ? 'bg-sm-violet' : 'bg-[#DDD6CA]')
-            }
-          >
-            <span
-              className={
-                'absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow transition-all ' +
-                (overlays.requirements ? 'left-4' : 'left-0.5')
-              }
-            />
-          </span>
-        </button>
-      </div>
       <div className="px-[18px] py-3 text-[11.5px] leading-snug text-sm-ink3">
         Drop a different pin anywhere on the map to assess another point.
+      </div>
+    </>
+  )
+}
+
+// A single overlay pill-toggle row.
+function OverlayToggle({
+  title,
+  subtitle,
+  on,
+  onColor,
+  onClick,
+}: {
+  title: string
+  subtitle: string
+  on: boolean
+  onColor: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center justify-between py-2.5"
+    >
+      <div className="text-left">
+        <div className="text-[13px] font-medium text-sm-ink">{title}</div>
+        <div className="text-[11.5px] text-sm-ink3">{subtitle}</div>
+      </div>
+      <span
+        className={
+          'relative h-[18px] w-8 rounded-full transition-colors ' +
+          (on ? onColor : 'bg-[#DDD6CA]')
+        }
+      >
+        <span
+          className={
+            'absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow transition-all ' +
+            (on ? 'left-4' : 'left-0.5')
+          }
+        />
+      </span>
+    </button>
+  )
+}
+
+// Shared overlays panel: the two traffic toggles are available in every mode
+// except sketch; the requirement-locations toggle only appears with a dropped pin.
+function OverlaySection() {
+  const overlays = useWorkspaceStore((s) => s.overlays)
+  const assessPoint = useWorkspaceStore((s) => s.assessPoint)
+  const view = useWorkspaceStore((s) => s.view)
+  const toggleRoadTraffic = useWorkspaceStore((s) => s.toggleRoadTraffic)
+  const toggleTrafficHeatmap = useWorkspaceStore((s) => s.toggleTrafficHeatmap)
+  const toggleRequirements = useWorkspaceStore((s) => s.toggleRequirements)
+
+  const showRequirements = view === 'assess' && !!assessPoint
+
+  return (
+    <>
+      <SectionLabel>Overlays</SectionLabel>
+      <div className="px-[18px] py-1">
+        <OverlayToggle
+          title="Road traffic"
+          subtitle="Roads shaded by volume"
+          on={overlays.roadTraffic}
+          onColor="bg-sm-orange"
+          onClick={toggleRoadTraffic}
+        />
+        <OverlayToggle
+          title="Traffic heatmap"
+          subtitle="Count-point intensity"
+          on={overlays.trafficHeatmap}
+          onColor="bg-sm-orange"
+          onClick={toggleTrafficHeatmap}
+        />
+        {showRequirements && (
+          <OverlayToggle
+            title="Requirement locations"
+            subtitle="Occupiers wanting to open here"
+            on={overlays.requirements}
+            onColor="bg-sm-violet"
+            onClick={toggleRequirements}
+          />
+        )}
       </div>
     </>
   )
@@ -628,6 +657,7 @@ export function ULeftPanel({
         {view === 'find' && <FindFilters refData={refData} />}
         {view === 'assess' && !assessPoint && <AssessEmpty />}
         {view === 'assess' && assessPoint && <AssessPoint />}
+        {view !== 'sketch' && <OverlaySection />}
         {view === 'sketch' && (
           <div className="px-[18px] py-[18px]">
             <p className="font-mono text-[10px] uppercase tracking-wider text-sm-violet-deep">

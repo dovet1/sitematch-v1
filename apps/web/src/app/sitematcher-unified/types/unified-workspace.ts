@@ -231,7 +231,10 @@ export interface CatchmentDefinition {
 }
 
 export interface WorkspaceOverlays {
-  traffic: boolean
+  // Road AADT line-shading (available everywhere except sketch).
+  roadTraffic: boolean
+  // Count-point intensity heatmap (available everywhere except sketch).
+  trafficHeatmap: boolean
   // Requirement location pins (Assess-only, gated on an active dropped point).
   requirements: boolean
 }

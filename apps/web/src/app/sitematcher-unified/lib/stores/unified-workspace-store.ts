@@ -67,7 +67,8 @@ interface WorkspaceState {
   setBrandFilterBrandIds: (ids: string[]) => void
   clearBrandFilters: () => void
 
-  toggleTraffic: () => void
+  toggleRoadTraffic: () => void
+  toggleTrafficHeatmap: () => void
   toggleRequirements: () => void
   setGapRules: (rules: GapRule[]) => void
   addGapRule: (rule: GapRule) => void
@@ -100,7 +101,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   brandFilterCategoryIds: [],
   brandFilterBrandIds: [],
 
-  overlays: { traffic: false, requirements: false },
+  overlays: { roadTraffic: false, trafficHeatmap: false, requirements: false },
   gapRules: [],
   populationRange: [MIN_POPULATION, MAX_POPULATION],
   catchment: { mode: 'distance', value: 5 },
@@ -117,7 +118,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   // Switching modes clears the selection and resets to Missing Brands (per handoff).
   // The dirty-Sketch leave-guard is handled by the Sketch integration layer.
   setMode: (mode) =>
-    set({
+    set((s) => ({
       view: mode,
       area: null,
       selected: null,
@@ -129,7 +130,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       assessPoint: null,
       brandFilterCategoryIds: [],
       brandFilterBrandIds: [],
-    }),
+      // The requirements overlay is pin-gated; don't let it leak across a mode
+      // switch and auto-re-enable when a new pin is dropped. Traffic flags persist.
+      overlays: { ...s.overlays, requirements: false },
+    })),
 
   // Selecting an area resets the tab to Missing Brands and clears sub-selection.
   selectArea: (area) =>
@@ -160,8 +164,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   clearBrandFilters: () =>
     set({ brandFilterCategoryIds: [], brandFilterBrandIds: [] }),
 
-  toggleTraffic: () =>
-    set((s) => ({ overlays: { ...s.overlays, traffic: !s.overlays.traffic } })),
+  toggleRoadTraffic: () =>
+    set((s) => ({
+      overlays: { ...s.overlays, roadTraffic: !s.overlays.roadTraffic },
+    })),
+  toggleTrafficHeatmap: () =>
+    set((s) => ({
+      overlays: { ...s.overlays, trafficHeatmap: !s.overlays.trafficHeatmap },
+    })),
   toggleRequirements: () =>
     set((s) => ({
       overlays: { ...s.overlays, requirements: !s.overlays.requirements },
