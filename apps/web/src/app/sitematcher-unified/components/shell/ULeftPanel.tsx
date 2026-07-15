@@ -12,6 +12,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
+import * as SliderPrimitive from '@radix-ui/react-slider'
 import {
   useWorkspaceStore,
   MIN_POPULATION,
@@ -21,6 +22,7 @@ import type {
   GapRule,
   ReferenceData,
 } from '../../types/unified-workspace'
+import { Checkbox } from '@/components/ui/checkbox'
 import { CatchmentControl } from './CatchmentControl'
 
 type RuleType = 'category' | 'brand' | 'fascia'
@@ -354,6 +356,8 @@ function FindFilters({ refData }: { refData: ReferenceData }) {
   const toggleGapRule = useWorkspaceStore((s) => s.toggleGapRule)
   const populationRange = useWorkspaceStore((s) => s.populationRange)
   const setPopulationRange = useWorkspaceStore((s) => s.setPopulationRange)
+  const showSubFiveK = useWorkspaceStore((s) => s.showSubFiveK)
+  const setShowSubFiveK = useWorkspaceStore((s) => s.setShowSubFiveK)
   const [building, setBuilding] = useState(false)
 
   return (
@@ -410,38 +414,38 @@ function FindFilters({ refData }: { refData: ReferenceData }) {
           <span>{populationRange[0].toLocaleString()}</span>
           <span>{populationRange[1].toLocaleString()}</span>
         </div>
-        <input
-          type="range"
+        <SliderPrimitive.Root
+          className="relative mt-3 flex w-full touch-none select-none items-center"
           min={MIN_POPULATION}
           max={MAX_POPULATION}
           step={1000}
-          value={populationRange[0]}
-          onChange={(e) =>
-            setPopulationRange([
-              Math.min(Number(e.target.value), populationRange[1] - 1000),
-              populationRange[1],
-            ])
-          }
-          className="mt-2 w-full accent-sm-violet"
-        />
-        <input
-          type="range"
-          min={MIN_POPULATION}
-          max={MAX_POPULATION}
-          step={1000}
-          value={populationRange[1]}
-          onChange={(e) =>
-            setPopulationRange([
-              populationRange[0],
-              Math.max(Number(e.target.value), populationRange[0] + 1000),
-            ])
-          }
-          className="mt-1.5 w-full accent-sm-violet"
-        />
-        <div className="mt-1 flex justify-between font-mono text-[10px] text-sm-ink4">
+          minStepsBetweenThumbs={1}
+          value={populationRange}
+          onValueChange={(v) => setPopulationRange(v as [number, number])}
+        >
+          <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-sm-border-soft">
+            <SliderPrimitive.Range className="absolute h-full bg-sm-violet" />
+          </SliderPrimitive.Track>
+          <SliderPrimitive.Thumb
+            aria-label="Minimum population"
+            className="block h-4 w-4 rounded-full border-[1.5px] border-sm-violet bg-white shadow-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sm-violet focus-visible:ring-offset-2"
+          />
+          <SliderPrimitive.Thumb
+            aria-label="Maximum population"
+            className="block h-4 w-4 rounded-full border-[1.5px] border-sm-violet bg-white shadow-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sm-violet focus-visible:ring-offset-2"
+          />
+        </SliderPrimitive.Root>
+        <div className="mt-2 flex justify-between font-mono text-[10px] text-sm-ink4">
           <span>Min population</span>
           <span>Max population</span>
         </div>
+        <label className="mt-3 flex items-center gap-2 text-[11.5px] leading-snug text-sm-ink3">
+          <Checkbox
+            checked={showSubFiveK}
+            onCheckedChange={(c) => setShowSubFiveK(c === true)}
+          />
+          Show locations with a population of less than 5k
+        </label>
       </div>
     </>
   )
@@ -571,16 +575,11 @@ function OverlayToggle({
 }
 
 // Shared overlays panel: the two traffic toggles are available in every mode
-// except sketch; the requirement-locations toggle only appears with a dropped pin.
+// except sketch.
 function OverlaySection() {
   const overlays = useWorkspaceStore((s) => s.overlays)
-  const assessPoint = useWorkspaceStore((s) => s.assessPoint)
-  const view = useWorkspaceStore((s) => s.view)
   const toggleRoadTraffic = useWorkspaceStore((s) => s.toggleRoadTraffic)
   const toggleTrafficHeatmap = useWorkspaceStore((s) => s.toggleTrafficHeatmap)
-  const toggleRequirements = useWorkspaceStore((s) => s.toggleRequirements)
-
-  const showRequirements = view === 'assess' && !!assessPoint
 
   return (
     <>
@@ -600,15 +599,6 @@ function OverlaySection() {
           onColor="bg-sm-orange"
           onClick={toggleTrafficHeatmap}
         />
-        {showRequirements && (
-          <OverlayToggle
-            title="Requirement locations"
-            subtitle="Occupiers wanting to open here"
-            on={overlays.requirements}
-            onColor="bg-sm-violet"
-            onClick={toggleRequirements}
-          />
-        )}
       </div>
     </>
   )

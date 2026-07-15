@@ -251,6 +251,7 @@ export function UnifiedMap({
   const area = useWorkspaceStore((s) => s.area)
   const gapGssCodes = useWorkspaceStore((s) => s.gapGssCodes)
   const populationRange = useWorkspaceStore((s) => s.populationRange)
+  const showSubFiveK = useWorkspaceStore((s) => s.showSubFiveK)
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
   const hoveredBrandId = useWorkspaceStore((s) => s.hoveredBrandId)
   const overlaysRequirements = useWorkspaceStore((s) => s.overlays.requirements)
@@ -631,7 +632,11 @@ export function UnifiedMap({
 
   const applyBuaFilter = (map: mapboxgl.Map) => {
     if (!map.getLayer(BUA_FILL_LAYER)) return
-    const f = buaFilter(gapGssCodes, populationRange) as any
+    const effRange: [number, number] = [
+      showSubFiveK ? 0 : populationRange[0],
+      populationRange[1],
+    ]
+    const f = buaFilter(gapGssCodes, effRange) as any
     map.setFilter(BUA_FILL_LAYER, f)
     map.setFilter(BUA_OUTLINE_LAYER, f)
   }
@@ -923,7 +928,7 @@ export function UnifiedMap({
     const map = mapRef.current
     if (map && readyRef.current) applyBuaFilter(map)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gapGssCodes, populationRange])
+  }, [gapGssCodes, populationRange, showSubFiveK])
 
   // Re-evaluate layer visibility when the tab or LSOA overlay toggle changes.
   useEffect(() => {

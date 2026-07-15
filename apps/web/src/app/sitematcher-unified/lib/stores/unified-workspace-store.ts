@@ -39,6 +39,7 @@ interface WorkspaceState {
   overlays: WorkspaceOverlays
   gapRules: GapRule[]
   populationRange: [number, number]
+  showSubFiveK: boolean
   catchment: CatchmentDefinition
   // Catchment tab: whether the LSOA cells are drawn on the map.
   showLsoa: boolean
@@ -69,12 +70,12 @@ interface WorkspaceState {
 
   toggleRoadTraffic: () => void
   toggleTrafficHeatmap: () => void
-  toggleRequirements: () => void
   setGapRules: (rules: GapRule[]) => void
   addGapRule: (rule: GapRule) => void
   removeGapRule: (id: string) => void
   toggleGapRule: (id: string) => void
   setPopulationRange: (range: [number, number]) => void
+  setShowSubFiveK: (v: boolean) => void
   setGapGssCodes: (codes: string[] | null) => void
   setAssessPoint: (point: { lat: number; lng: number } | null) => void
   setCatchment: (catchment: CatchmentDefinition) => void
@@ -104,6 +105,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   overlays: { roadTraffic: false, trafficHeatmap: false, requirements: false },
   gapRules: [],
   populationRange: [MIN_POPULATION, MAX_POPULATION],
+  showSubFiveK: false,
   catchment: { mode: 'distance', value: 5 },
   showLsoa: true,
   compare: [],
@@ -172,10 +174,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
     set((s) => ({
       overlays: { ...s.overlays, trafficHeatmap: !s.overlays.trafficHeatmap },
     })),
-  toggleRequirements: () =>
-    set((s) => ({
-      overlays: { ...s.overlays, requirements: !s.overlays.requirements },
-    })),
 
   setGapRules: (gapRules) => set({ gapRules }),
   addGapRule: (rule) => set((s) => ({ gapRules: [...s.gapRules, rule] })),
@@ -197,6 +195,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       }),
     })),
   setPopulationRange: (populationRange) => set({ populationRange }),
+  setShowSubFiveK: (showSubFiveK) => set({ showSubFiveK }),
   setGapGssCodes: (gapGssCodes) => set({ gapGssCodes }),
   // Dropping a new point or closing the dropped-point inspector (null) must not
   // leave a stale modal open; closing also clears the requirements overlay so

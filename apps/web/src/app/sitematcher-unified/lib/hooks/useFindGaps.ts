@@ -11,6 +11,7 @@ import type { BUAResult } from '../../types/unified-workspace'
 export function useFindGaps(enabled: boolean) {
   const gapRules = useWorkspaceStore((s) => s.gapRules)
   const populationRange = useWorkspaceStore((s) => s.populationRange)
+  const showSubFiveK = useWorkspaceStore((s) => s.showSubFiveK)
   const setGapGssCodes = useWorkspaceStore((s) => s.setGapGssCodes)
 
   const [results, setResults] = useState<BUAResult[]>([])
@@ -24,11 +25,15 @@ export function useFindGaps(enabled: boolean) {
     const id = ++reqId.current
     setLoading(true)
     setError(null)
+    const effRange: [number, number] = [
+      showSubFiveK ? 0 : populationRange[0],
+      populationRange[1],
+    ]
     const timer = setTimeout(async () => {
       try {
         const [find, codes] = await Promise.all([
-          findGaps(gapRules, populationRange),
-          filterGssCodes(gapRules, populationRange),
+          findGaps(gapRules, effRange),
+          filterGssCodes(gapRules, effRange),
         ])
         if (id !== reqId.current) return
         setResults(find.results)
@@ -43,7 +48,7 @@ export function useFindGaps(enabled: boolean) {
       }
     }, 400)
     return () => clearTimeout(timer)
-  }, [enabled, gapRules, populationRange, setGapGssCodes])
+  }, [enabled, gapRules, populationRange, showSubFiveK, setGapGssCodes])
 
   return { results, total, loading, error }
 }
