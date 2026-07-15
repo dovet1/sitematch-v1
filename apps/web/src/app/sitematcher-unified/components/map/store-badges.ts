@@ -69,6 +69,28 @@ export function buildStoreBadge(store: NearbyStore): HTMLDivElement {
   return el
 }
 
+export function applyStoreBadgeHighlight(
+  el: HTMLElement,
+  store: NearbyStore | undefined,
+  hoveredBrandId: string | null
+) {
+  if (!hoveredBrandId) {
+    el.style.opacity = '1'
+    el.style.boxShadow = STORE_BADGE_SHADOW
+    el.style.zIndex = ''
+    return
+  }
+  if (store?.brand_id === hoveredBrandId) {
+    el.style.opacity = '1'
+    el.style.boxShadow = STORE_BADGE_SHADOW_HL
+    el.style.zIndex = '2'
+  } else {
+    el.style.opacity = '0.35'
+    el.style.boxShadow = STORE_BADGE_SHADOW
+    el.style.zIndex = ''
+  }
+}
+
 // Whether the visual inputs of a store changed (needs a badge rebuild).
 export function storeVisualChanged(a: NearbyStore, b: NearbyStore): boolean {
   return (

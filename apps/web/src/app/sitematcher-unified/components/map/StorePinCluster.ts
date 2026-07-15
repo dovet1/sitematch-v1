@@ -1,9 +1,12 @@
 import mapboxgl from 'mapbox-gl'
 import Supercluster from 'supercluster'
 import type { NearbyStore } from '../../lib/services/gaps-service'
-import { buildStoreBadge } from './store-badges'
+import { applyStoreBadgeHighlight, buildStoreBadge } from './store-badges'
 
 type LeafProps = { store: NearbyStore }
+
+const CLUSTER_RADIUS_PX = 40
+const CLUSTER_MAX_ZOOM = 14
 
 // Builds the count-bubble element shown for an aggregated cluster.
 function buildClusterBubble(count: number): HTMLDivElement {
@@ -27,6 +30,9 @@ export class StorePinCluster {
   private map: mapboxgl.Map
   private index: Supercluster<LeafProps> | null = null
   private markers = new Map<string | number, mapboxgl.Marker>()
+  private markerStores = new Map<string | number, NearbyStore>()
+  private markerClusterIds = new Map<string | number, number>()
+  private hoveredBrandId: string | null = null
   private boundRender = () => this.render()
 
   constructor(map: mapboxgl.Map) {
@@ -43,8 +49,8 @@ export class StorePinCluster {
       return
     }
     this.index = new Supercluster<LeafProps>({
-      radius: 48,
-      maxZoom: 16,
+      radius: CLUSTER_RADIUS_PX,
+      maxZoom: CLUSTER_MAX_ZOOM,
     })
     this.index.load(
       pins
@@ -91,6 +97,7 @@ export class StorePinCluster {
       if (this.markers.has(key)) continue
 
       let el: HTMLElement
+      let store: NearbyStore | undefined
       if (isCluster) {
         const clusterProps = props as Supercluster.ClusterProperties
         el = buildClusterBubble(clusterProps.point_count)
@@ -102,26 +109,62 @@ export class StorePinCluster {
           }
         })
       } else {
-        el = buildStoreBadge((props as LeafProps).store)
+        store = (props as LeafProps).store
+        el = buildStoreBadge(store)
+        applyStoreBadgeHighlight(el, store, this.hoveredBrandId)
       }
 
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([lon, lat])
         .addTo(this.map)
       this.markers.set(key, marker)
+      if (store) this.markerStores.set(key, store)
+      else if (isCluster) {
+        this.markerClusterIds.set(
+          key,
+          (props as Supercluster.ClusterProperties).cluster_id
+        )
+      }
     }
 
     this.markers.forEach((marker, key) => {
       if (!seen.has(key)) {
         marker.remove()
         this.markers.delete(key)
+        this.markerStores.delete(key)
+        this.markerClusterIds.delete(key)
       }
+    })
+  }
+
+  applyBrandHighlight(hoveredBrandId: string | null) {
+    this.hoveredBrandId = hoveredBrandId
+    this.markers.forEach((marker, key) => {
+      const store = this.markerStores.get(key)
+      if (store) {
+        applyStoreBadgeHighlight(marker.getElement(), store, hoveredBrandId)
+        return
+      }
+      const clusterId = this.markerClusterIds.get(key)
+      const el = marker.getElement()
+      if (!hoveredBrandId || !this.index || clusterId == null) {
+        el.style.opacity = '1'
+        el.style.zIndex = ''
+        return
+      }
+      const hasHoveredBrand = this.index
+        .getLeaves(clusterId, Number.MAX_SAFE_INTEGER)
+        .some((leaf) => leaf.properties.store.brand_id === hoveredBrandId)
+      el.style.opacity = hasHoveredBrand ? '1' : '0.35'
+      el.style.zIndex = hasHoveredBrand ? '2' : ''
     })
   }
 
   private clearMarkers() {
     this.markers.forEach((marker) => marker.remove())
     this.markers.clear()
+    this.markerStores.clear()
+    this.markerClusterIds.clear()
   }
 
   destroy() {

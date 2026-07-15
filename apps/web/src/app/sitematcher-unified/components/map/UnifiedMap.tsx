@@ -8,8 +8,7 @@ import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import type { NearbyStore } from '../../lib/services/gaps-service'
 import type { RequirementLocation } from '../../types/unified-workspace'
 import {
-  STORE_BADGE_SHADOW,
-  STORE_BADGE_SHADOW_HL,
+  applyStoreBadgeHighlight,
   buildStoreBadge,
   populateStoreBadge,
   storeVisualChanged,
@@ -258,6 +257,7 @@ export function UnifiedMap({
   const syncClusterPins = (map: mapboxgl.Map) => {
     if (!clusterRef.current) clusterRef.current = new StorePinCluster(map)
     clusterRef.current.setPins(gapStorePinsRef.current)
+    clusterRef.current.applyBrandHighlight(useWorkspaceStore.getState().hoveredBrandId)
   }
 
   // Emphasize the hovered brand's store badges and dim the rest. Never touches
@@ -267,24 +267,9 @@ export function UnifiedMap({
     const markers = storeMarkersRef.current
     const snapshot = storeSnapshotRef.current
     markers.forEach((marker, id) => {
-      const el = marker.getElement()
-      if (!hovered) {
-        el.style.opacity = '1'
-        el.style.boxShadow = STORE_BADGE_SHADOW
-        el.style.zIndex = ''
-        return
-      }
-      const store = snapshot.get(id)
-      if (store?.brand_id === hovered) {
-        el.style.opacity = '1'
-        el.style.boxShadow = STORE_BADGE_SHADOW_HL
-        el.style.zIndex = '2'
-      } else {
-        el.style.opacity = '0.35'
-        el.style.boxShadow = STORE_BADGE_SHADOW
-        el.style.zIndex = ''
-      }
+      applyStoreBadgeHighlight(marker.getElement(), snapshot.get(id), hovered)
     })
+    clusterRef.current?.applyBrandHighlight(hovered)
   }
 
   // Add BUA + overlay layers to the current style. Safe to call repeatedly.
