@@ -74,3 +74,45 @@ export async function getLSOACodesInIsochrone(
 
   return lsoaCodes;
 }
+
+/**
+ * Get LSOA codes that intersect a built-up area polygon.
+ * Uses raw ST_Intersects via RPC, with no minimum overlap threshold.
+ */
+export async function getLSOACodesForBUA(gsscode: string): Promise<string[]> {
+  console.log(`[PostGIS] Finding LSOAs intersecting BUA ${gsscode}...`);
+
+  const { data, error } = await supabase.rpc('get_lsoas_for_bua', {
+    bua_gsscode: gsscode,
+  });
+
+  if (error) {
+    console.error('[PostGIS] Error querying BUA LSOAs:', error);
+    throw new Error(`Failed to query BUA LSOAs: ${error.message}`);
+  }
+
+  const lsoaCodes = data?.map((row: any) => row.lsoa_code) || [];
+  console.log(`[PostGIS] Found ${lsoaCodes.length} LSOAs intersecting BUA ${gsscode}`);
+
+  return lsoaCodes;
+}
+
+/**
+ * Get the built-up area polygon as GeoJSON for catchment outline rendering.
+ */
+export async function getBUABoundaryGeometry(
+  gsscode: string
+): Promise<GeoJSON.Geometry | null> {
+  console.log(`[PostGIS] Fetching BUA boundary geometry for ${gsscode}...`);
+
+  const { data, error } = await supabase.rpc('get_bua_boundary_geojson', {
+    bua_gsscode: gsscode,
+  });
+
+  if (error) {
+    console.error('[PostGIS] Error querying BUA boundary:', error);
+    throw new Error(`Failed to query BUA boundary: ${error.message}`);
+  }
+
+  return (data as GeoJSON.Geometry | null) ?? null;
+}

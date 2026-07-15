@@ -68,6 +68,7 @@ export function useCatchment(
     loading,
     error,
     analyze,
+    analyzeBua,
     reset: resetData,
     updateData,
   } = useDemographicsData()
@@ -103,12 +104,27 @@ export function useCatchment(
       lastRun.current = null
       return
     }
-    const signature = `${location.id}|${measurementMode}|${measurementValue}`
+    const signature =
+      focus?.kind === 'bua'
+        ? `${location.id}|bua`
+        : `${location.id}|${measurementMode}|${measurementValue}`
     if (lastRun.current === signature) return
     lastRun.current = signature
 
     let cancelled = false
     resetSelection()
+    if (focus?.kind === 'bua') {
+      analyzeBua(focus.id).then((result) => {
+        if (cancelled) return
+        if (result.success && result.lsoaCodes) {
+          initializeSelection(result.lsoaCodes)
+        }
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+
     // The demographics API takes distance in miles; our catchment value is km.
     // Drive/walk are minutes and pass through unchanged.
     const apiValue =
@@ -122,10 +138,10 @@ export function useCatchment(
     return () => {
       cancelled = true
     }
-    // analyze/initializeSelection/resetSelection are stable enough; keying on the
-    // primitive inputs avoids re-fetch loops.
+    // analyze/analyzeBua/initializeSelection/resetSelection are stable enough;
+    // keying on the primitive inputs avoids re-fetch loops.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, location, measurementMode, measurementValue])
+  }, [active, location, focus?.kind, measurementMode, measurementValue])
 
   // Clear everything only when catchment data is no longer needed (neither the
   // Catchment tab nor the drive/walk landscape needs it) or the focus is dropped.
@@ -170,6 +186,7 @@ export function useCatchment(
   const boundaryGeometry = useMemo<GeoJSON.Geometry | null>(() => {
     if (!focus) return null
     if (isochroneGeometry) return isochroneGeometry as GeoJSON.Geometry
+    if (focus.kind === 'bua') return null
     if (catchment.mode === 'distance') {
       return circleGeometry(focus.center[0], focus.center[1], measurementValue)
     }

@@ -22,6 +22,42 @@ export function useDemographicsData() {
   const [coverageStatus, setCoverageStatus] = useState<CoverageStatus | null>(null);
   const initialLoadComplete = useRef(false);
 
+  const fetchDemographicsForLsoas = async (lsoaCodes: string[]) => {
+    const [dataResponse, tooltipResponse] = await Promise.all([
+      fetch('/api/demographics/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          geography_codes: lsoaCodes,
+        }),
+      }),
+      fetch('/api/demographics/tooltip-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          geography_codes: lsoaCodes,
+        }),
+      }),
+    ]);
+
+    if (!dataResponse.ok) {
+      throw new Error('Failed to fetch demographics data');
+    }
+
+    const demographicsData = await dataResponse.json();
+    const tooltipData = await tooltipResponse.json();
+
+    setRawDemographicsData(demographicsData.by_lsoa);
+    setLsoaTooltipData(tooltipData.tooltip_data || {});
+
+    if (demographicsData.national_averages) {
+      setNationalAverages(demographicsData.national_averages);
+      console.log('[useDemographicsData] Loaded', Object.keys(demographicsData.national_averages).length, 'national averages');
+    }
+
+    return { demographicsData, tooltipData };
+  };
+
   const analyze = async (
     location: LocationResult,
     measurementMode: MeasurementMode,
@@ -107,40 +143,7 @@ export function useDemographicsData() {
       const boundariesData = await boundariesResponse.json();
       const lsoaCodes = boundariesData.lsoa_codes;
 
-      // Get demographics data and tooltip data in parallel
-      const [dataResponse, tooltipResponse] = await Promise.all([
-        fetch('/api/demographics/data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            geography_codes: lsoaCodes,
-          }),
-        }),
-        fetch('/api/demographics/tooltip-data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            geography_codes: lsoaCodes,
-          }),
-        }),
-      ]);
-
-      if (!dataResponse.ok) {
-        throw new Error('Failed to fetch demographics data');
-      }
-
-      const demographicsData = await dataResponse.json();
-      const tooltipData = await tooltipResponse.json();
-
-      // Store data
-      setRawDemographicsData(demographicsData.by_lsoa);
-      setLsoaTooltipData(tooltipData.tooltip_data || {});
-
-      // Store national averages
-      if (demographicsData.national_averages) {
-        setNationalAverages(demographicsData.national_averages);
-        console.log('[useDemographicsData] Loaded', Object.keys(demographicsData.national_averages).length, 'national averages');
-      }
+      await fetchDemographicsForLsoas(lsoaCodes);
 
       // Store isochrone geometry
       console.log('[useDemographicsData] Received LSOA codes:', lsoaCodes.length);
@@ -155,6 +158,74 @@ export function useDemographicsData() {
       };
     } catch (err) {
       console.error('Error analyzing demographics:', err);
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
+      return {
+        lsoaCodes: [],
+        success: false,
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const analyzeBua = async (gsscode: string) => {
+    if (!gsscode || typeof gsscode !== 'string') {
+      setError('Invalid built-up area');
+      return { success: false, error: 'Invalid built-up area' };
+    }
+
+    setLoading(true);
+    setError(null);
+    setErrorType(null);
+    setCoverageStatus(null);
+
+    try {
+      const boundariesResponse = await fetch('/api/demographics/bua-boundaries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gsscode }),
+      });
+
+      if (!boundariesResponse.ok) {
+        const errorData = await boundariesResponse.json().catch(() => ({}));
+        console.error('[useDemographicsData] BUA boundaries API error:', {
+          status: boundariesResponse.status,
+          statusText: boundariesResponse.statusText,
+          errorData,
+        });
+
+        if (errorData.error_type === 'coverage') {
+          setError('No LSOA coverage is available for this built-up area');
+          setErrorType('coverage');
+          return {
+            lsoaCodes: [],
+            success: false,
+            error: 'No LSOA coverage is available for this built-up area',
+            errorType: 'coverage' as const,
+          };
+        }
+
+        throw new Error(errorData.error || errorData.details || 'Failed to resolve built-up area catchment');
+      }
+
+      const boundariesData = await boundariesResponse.json();
+      const lsoaCodes = boundariesData.lsoa_codes || [];
+
+      await fetchDemographicsForLsoas(lsoaCodes);
+
+      console.log('[useDemographicsData] Received BUA LSOA codes:', lsoaCodes.length);
+      setIsochroneGeometry(boundariesData.boundary_geometry ?? null);
+
+      initialLoadComplete.current = true;
+
+      return {
+        lsoaCodes,
+        boundaryGeometry: boundariesData.boundary_geometry ?? null,
+        success: true,
+      };
+    } catch (err) {
+      console.error('Error analyzing BUA demographics:', err);
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
       return {
@@ -204,6 +275,7 @@ export function useDemographicsData() {
     coverageStatus,
     initialLoadComplete: initialLoadComplete.current,
     analyze,
+    analyzeBua,
     reset,
     updateData,
     loadSavedAnalysis,
