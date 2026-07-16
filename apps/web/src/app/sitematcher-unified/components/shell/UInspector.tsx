@@ -117,7 +117,7 @@ function FindResults({
         </button>
         <Kicker>Find Gaps · live</Kicker>
         <h2 className="mt-1.5 text-[20px] font-semibold tracking-[-0.3px] text-sm-ink">
-          Gap opportunities
+          Locations matching filters
         </h2>
         <div className="mt-3 flex items-baseline gap-2">
           <span className="text-[24px] font-semibold tracking-[-0.5px] text-sm-ink">
@@ -174,8 +174,7 @@ function FindResults({
                   </span>
                 </div>
                 <div className="ml-6 mt-1 font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
-                  {b.pop_band ? `${b.pop_band} · ` : ''}Pop{' '}
-                  {(pop ?? 0).toLocaleString()}
+                  Pop {(pop ?? 0).toLocaleString()}
                 </div>
               </div>
               <ChevronRight size={14} className="text-sm-ink4" />
