@@ -171,11 +171,15 @@ export class StoreService {
         .select('*')
         .order('name'),
 
-      // Fetch brands with nested fascias using Supabase JOIN
+      // Fetch brands with nested fascias using Supabase JOIN.
+      // stores!inner restricts to brands that have at least one store; the nested
+      // stores select is capped at one row purely to satisfy the inner join without
+      // pulling every store. The stores field is stripped from the result below.
       this.supabase
         .from('brands')
-        .select('id, name, fascias(id, name, brand_id, definition, created_at)')
+        .select('id, name, fascias(id, name, brand_id, definition, created_at), stores!inner(id)')
         .order('name')
+        .limit(1, { referencedTable: 'stores' })
         .limit(Math.min(limit, 2000)),
 
       // Fetch fascia-category mappings
@@ -199,13 +203,17 @@ export class StoreService {
       throw new Error(`Failed to fetch mappings: ${mappingsResult.error.message}`)
     }
 
-    // Sort fascias within each brand by name (Supabase doesn't support ordering nested relations easily)
-    const brands = (brandsResult.data || []).map((brand: any) => ({
-      ...brand,
-      fascias: (brand.fascias || []).sort((a: Fascia, b: Fascia) =>
-        a.name.localeCompare(b.name)
-      )
-    }))
+    // Sort fascias within each brand by name (Supabase doesn't support ordering nested relations easily).
+    // Drop the `stores` field used only to inner-join out storeless brands.
+    const brands = (brandsResult.data || []).map((brand: any) => {
+      const { stores: _stores, ...rest } = brand
+      return {
+        ...rest,
+        fascias: (rest.fascias || []).sort((a: Fascia, b: Fascia) =>
+          a.name.localeCompare(b.name)
+        )
+      }
+    })
 
     return {
       categories: categoriesResult.data || [],

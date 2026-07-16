@@ -25,7 +25,7 @@ import type {
 import { Checkbox } from '@/components/ui/checkbox'
 import { CatchmentControl } from './CatchmentControl'
 
-type RuleType = 'category' | 'brand' | 'fascia'
+type RuleType = 'category' | 'brand'
 interface ValueOption {
   id: string
   label: string
@@ -36,23 +36,16 @@ function optionsFor(type: RuleType, ref: ReferenceData): ValueOption[] {
   if (type === 'category') {
     return ref.categories.map((c) => ({ id: c.id, label: c.name, targetIds: [c.id] }))
   }
-  if (type === 'brand') {
-    return ref.brands.map((b) => ({
-      id: b.id,
-      label: b.name,
-      targetIds: b.fascias.map((f) => f.id),
-    }))
-  }
-  return ref.brands
-    .flatMap((b) => b.fascias.map((f) => ({ brand: b.name, ...f })))
-    .map((f) => ({ id: f.id, label: f.name, targetIds: [f.id] }))
-    .sort((a, b) => a.label.localeCompare(b.label))
+  return ref.brands.map((b) => ({
+    id: b.id,
+    label: b.name,
+    targetIds: b.fascias.map((f) => f.id),
+  }))
 }
 
 const RULE_TYPES: { value: RuleType; label: string }[] = [
   { value: 'category', label: 'Category' },
   { value: 'brand', label: 'Brand' },
-  { value: 'fascia', label: 'Fascia' },
 ]
 const KM_STEPS = [1, 3, 5, 10]
 
@@ -378,7 +371,7 @@ function FindFilters({ refData }: { refData: ReferenceData }) {
       <div className="px-[18px] pb-[18px] pt-3">
         <p className="mb-2.5 text-[11.5px] leading-snug text-sm-ink3">
           Surface towns by what they contain — or don&apos;t — and by distance to any
-          category, brand or fascia.
+          category or brand.
         </p>
         {gapRules.map((r) => (
           <RuleRow key={r.id} rule={r} onToggle={toggleGapRule} onRemove={removeGapRule} />
