@@ -23,6 +23,8 @@ interface DemographicsResultsProps {
   isFreeTier?: boolean;
   // Unit for the distance mode label. Defaults to miles for existing callers.
   distanceUnit?: 'mi' | 'km';
+  hideSummaryMeta?: boolean;
+  hideMeasurementDisplay?: boolean;
 }
 
 type CategoryType = 'population' | 'demographics' | 'employment' | 'education' | 'mobility' | 'health' | 'affluence';
@@ -56,6 +58,8 @@ export function DemographicsResults({
   nationalAverages = {},
   isFreeTier = false,
   distanceUnit = 'mi',
+  hideSummaryMeta = false,
+  hideMeasurementDisplay = false,
 }: DemographicsResultsProps) {
   // Default to first 3 categories expanded
   const [expandedCategories, setExpandedCategories] = useState<Set<CategoryType>>(
@@ -324,9 +328,11 @@ export function DemographicsResults({
         <div className="space-y-3">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Demographics Report</h2>
-            {location && (
+            {location && !hideSummaryMeta && (
               <p className="text-xs text-gray-500 mt-1">
-                {formatLocationDisplay(location)} • {getMeasurementDisplay()} •{' '}
+                {formatLocationDisplay(location)}
+                {!hideMeasurementDisplay && <> • {getMeasurementDisplay()}</>}
+                {' • '}
                 {totalLsoaCount && totalLsoaCount > selectedCount ? (
                   <>
                     <span className="font-medium text-violet-600">

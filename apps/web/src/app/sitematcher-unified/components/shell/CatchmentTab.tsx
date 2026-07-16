@@ -3,17 +3,10 @@
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import type { CatchmentData } from '../../lib/hooks/useCatchment'
 import { DemographicsResults } from '@/components/demographics/DemographicsResults'
-import { CatchmentControl } from './CatchmentControl'
 
 export function CatchmentTab({ data }: { data: CatchmentData }) {
   const showLsoa = useWorkspaceStore((s) => s.showLsoa)
   const toggleShowLsoa = useWorkspaceStore((s) => s.toggleShowLsoa)
-  const view = useWorkspaceStore((s) => s.view)
-  const assessPoint = useWorkspaceStore((s) => s.assessPoint)
-
-  // In Assess mode the left panel owns the catchment control, so hide the
-  // duplicate here. For a selected BUA there's no left control, so keep it.
-  const showControl = !(view === 'assess' && assessPoint)
 
   const total = data.allLsoaCodes.length
   const selected = data.selectedLsoaCodes.size
@@ -21,12 +14,6 @@ export function CatchmentTab({ data }: { data: CatchmentData }) {
 
   return (
     <div>
-      {showControl && (
-        <div className="border-b border-sm-border-soft px-[18px] py-[18px]">
-          <CatchmentControl />
-        </div>
-      )}
-
       {/* LSOA overlay toggle + selection stats */}
       <div className="border-b border-sm-border-soft px-[18px] py-3">
         <button
@@ -87,6 +74,8 @@ export function CatchmentTab({ data }: { data: CatchmentData }) {
           nationalAverages={data.nationalAverages}
           isFreeTier={false}
           distanceUnit="km"
+          hideSummaryMeta
+          hideMeasurementDisplay
         />
       </div>
     </div>
