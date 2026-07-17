@@ -403,34 +403,35 @@ export function UPointCompareTray({
   onClear,
 }: UPointCompareTrayProps) {
   return (
-    <div className="pointer-events-auto absolute bottom-[18px] left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-full border border-sm-border bg-sm-surface py-2 pl-4 pr-2 shadow-[0_10px_30px_-10px_rgba(20,10,40,0.35)]">
+    <div className="pointer-events-auto absolute bottom-[18px] left-1/2 z-20 flex max-w-[calc(100vw-48px)] -translate-x-1/2 items-center gap-4 overflow-x-auto whitespace-nowrap rounded-full border border-sm-border bg-sm-surface py-2.5 pl-5 pr-2.5 shadow-[0_10px_30px_-10px_rgba(20,10,40,0.35)]">
       <Kicker>Comparing</Kicker>
-      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-sm-ink">
+      <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-sm-bg px-2.5 py-1 text-[13px] font-medium text-sm-ink">
         <PtBadge label="A" color="#7033FF" /> Pin A
       </span>
-      <span className="font-mono text-[11px] text-sm-ink4">vs</span>
-      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-sm-ink">
+      <span className="shrink-0 font-mono text-[11px] text-sm-ink4">vs</span>
+      <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-sm-bg px-2.5 py-1 text-[13px] font-medium text-sm-ink">
         <PtBadge label="B" color={PT_B} /> Pin B
       </span>
       {error && (
         <span
-          className="font-mono text-[10px] font-semibold uppercase tracking-wide"
+          className="shrink-0 font-mono text-[10px] font-semibold uppercase tracking-wide"
           style={{ color: DELTA_BAD }}
           title={error}
         >
           Error
         </span>
       )}
-      <span
+      <button
+        type="button"
         onClick={onClear}
-        className="cursor-pointer text-[12.5px] text-sm-ink3 underline underline-offset-2"
+        className="shrink-0 rounded-full px-2 py-1 text-[12.5px] font-medium text-sm-ink3 underline underline-offset-2 hover:bg-sm-bg hover:text-sm-ink2"
       >
         Clear
-      </span>
+      </button>
       <button
         type="button"
         onClick={onOpen}
-        className="flex items-center gap-1.5 rounded-full bg-sm-violet px-3.5 py-1.5 text-[13px] font-semibold text-white hover:bg-sm-violet-deep"
+        className="flex shrink-0 items-center gap-2 rounded-full bg-sm-violet px-5 py-2 text-[13px] font-semibold text-white hover:bg-sm-violet-deep"
       >
         <GitCompareArrows size={13} /> View comparison
       </button>
