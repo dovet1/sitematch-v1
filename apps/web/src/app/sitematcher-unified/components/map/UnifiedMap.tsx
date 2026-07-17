@@ -137,6 +137,24 @@ function applyMapCursor(map: mapboxgl.Map) {
     st.view === 'assess' && st.tab !== 'catchment' ? 'crosshair' : ''
 }
 
+// A labelled map pin (teardrop) carrying a single letter — used for the A/B
+// compare pins. `anchor: 'bottom'` on the Marker points the tip at the coord.
+function buildLabeledPin(color: string, letter: string): HTMLElement {
+  const el = document.createElement('div')
+  el.style.cssText =
+    'width:26px;height:26px;border-radius:50% 50% 50% 0;' +
+    `background:${color};transform:rotate(-45deg);` +
+    'border:2px solid #fff;box-shadow:0 2px 6px rgba(20,10,40,0.35);' +
+    'display:flex;align-items:center;justify-content:center;cursor:pointer;'
+  const label = document.createElement('span')
+  label.textContent = letter
+  label.style.cssText =
+    'transform:rotate(45deg);color:#fff;font-weight:700;font-size:13px;' +
+    'line-height:1;font-family:inherit;'
+  el.appendChild(label)
+  return el
+}
+
 export function UnifiedMap({
   storeDots = [],
   visiblePresentBrandIds = null,
@@ -160,6 +178,11 @@ export function UnifiedMap({
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const prevViewRef = useRef(useWorkspaceStore.getState().view)
   const pinRef = useRef<mapboxgl.Marker | null>(null)
+  // Labelled A/B compare pins (mutually exclusive with the plain pinRef above).
+  const compareMarkersRef = useRef<{
+    a: mapboxgl.Marker | null
+    b: mapboxgl.Marker | null
+  }>({ a: null, b: null })
   const readyRef = useRef(false)
   // Latest LSOA toggle handler, read inside the once-registered map click handler.
   const lsoaToggleRef = useRef<((code: string) => void) | undefined>(undefined)
@@ -192,6 +215,8 @@ export function UnifiedMap({
   const populationRange = useWorkspaceStore((s) => s.populationRange)
   const showSubFiveK = useWorkspaceStore((s) => s.showSubFiveK)
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
+  const compareArm = useWorkspaceStore((s) => s.compareArm)
+  const comparePair = useWorkspaceStore((s) => s.comparePair)
   const hoveredBrandId = useWorkspaceStore((s) => s.hoveredBrandId)
   const overlaysRequirements = useWorkspaceStore((s) => s.overlays.requirements)
   const overlaysRoadTraffic = useWorkspaceStore((s) => s.overlays.roadTraffic)
@@ -270,6 +295,65 @@ export function UnifiedMap({
       applyStoreBadgeHighlight(marker.getElement(), snapshot.get(id), hovered)
     })
     clusterRef.current?.applyBrandHighlight(hovered)
+  }
+
+  // Single source of truth for the Assess pin(s). Reads live store state and
+  // reconciles the plain violet pin against the labelled A/B compare pins so no
+  // stale marker survives a style reload or a state change:
+  //   • no compare  → one plain violet pin at assessPoint
+  //   • armed (no pair) → violet "A" pin at assessPoint
+  //   • paired      → "A" (violet) at a, "B" (orange) at b; no plain pin
+  const syncAssessPins = (map: mapboxgl.Map) => {
+    const st = useWorkspaceStore.getState()
+    const markers = compareMarkersRef.current
+
+    const removePlain = () => {
+      pinRef.current?.remove()
+      pinRef.current = null
+    }
+    const removeLabeled = () => {
+      markers.a?.remove()
+      markers.a = null
+      markers.b?.remove()
+      markers.b = null
+    }
+
+    if (st.view !== 'assess' || !st.assessPoint) {
+      removePlain()
+      removeLabeled()
+      return
+    }
+
+    if (st.comparePair) {
+      removePlain()
+      if (!markers.a) markers.a = new mapboxgl.Marker({
+        element: buildLabeledPin('#7033FF', 'A'),
+        anchor: 'bottom',
+      })
+      markers.a.setLngLat([st.comparePair.a.lng, st.comparePair.a.lat]).addTo(map)
+      if (!markers.b) markers.b = new mapboxgl.Marker({
+        element: buildLabeledPin('#E8622C', 'B'),
+        anchor: 'bottom',
+      })
+      markers.b.setLngLat([st.comparePair.b.lng, st.comparePair.b.lat]).addTo(map)
+      return
+    }
+
+    if (st.compareArm) {
+      removePlain()
+      markers.b?.remove()
+      markers.b = null
+      if (!markers.a) markers.a = new mapboxgl.Marker({
+        element: buildLabeledPin('#7033FF', 'A'),
+        anchor: 'bottom',
+      })
+      markers.a.setLngLat([st.assessPoint.lng, st.assessPoint.lat]).addTo(map)
+      return
+    }
+
+    removeLabeled()
+    if (!pinRef.current) pinRef.current = new mapboxgl.Marker({ color: '#7033FF' })
+    pinRef.current.setLngLat([st.assessPoint.lng, st.assessPoint.lat]).addTo(map)
   }
 
   // Add BUA + overlay layers to the current style. Safe to call repeatedly.
@@ -555,13 +639,8 @@ export function UnifiedMap({
         st.area?.kind === 'bua' ? st.area.id : '__none__',
       ] as any)
     }
-    // Place the Assess pin marker if a point was dropped before the style settled.
-    if (st.assessPoint) {
-      if (!pinRef.current) {
-        pinRef.current = new mapboxgl.Marker({ color: '#7033FF' })
-      }
-      pinRef.current.setLngLat([st.assessPoint.lng, st.assessPoint.lat]).addTo(map)
-    }
+    // Re-place the Assess pin(s) if they were set before the style settled.
+    syncAssessPins(map)
   }
 
   const applyBuaFilter = (map: mapboxgl.Map) => {
@@ -731,6 +810,13 @@ export function UnifiedMap({
         return
       }
       if (st.view === 'assess') {
+        // Compare flow: armed → this click drops pin B; already paired → ignore
+        // (block relocating pin A until the comparison is cleared).
+        if (st.compareArm) {
+          st.dropComparePoint({ lat: e.lngLat.lat, lng: e.lngLat.lng })
+          return
+        }
+        if (st.comparePair) return
         // Clicking a requirement pin opens its modal instead of moving the pin.
         // Guard getLayer — the layer is briefly absent during a style teardown.
         if (st.overlays.requirements && map.getLayer(REQ_LAYER)) {
@@ -798,6 +884,11 @@ export function UnifiedMap({
       storeMarkers.forEach((marker) => marker.remove())
       storeMarkers.clear()
       storeSnapshot.clear()
+      pinRef.current?.remove()
+      pinRef.current = null
+      compareMarkersRef.current.a?.remove()
+      compareMarkersRef.current.b?.remove()
+      compareMarkersRef.current = { a: null, b: null }
       clusterRef.current?.destroy()
       clusterRef.current = null
       map.remove()
@@ -913,19 +1004,34 @@ export function UnifiedMap({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !readyRef.current) return
-    if (assessPoint) {
-      if (!pinRef.current) {
-        pinRef.current = new mapboxgl.Marker({ color: '#7033FF' })
-      }
-      pinRef.current.setLngLat([assessPoint.lng, assessPoint.lat]).addTo(map)
+    syncAssessPins(map)
+    // Only fly to a freshly dropped single point — never fight the compare
+    // camera (national on arm, fitBounds on pair) while a comparison is active.
+    if (assessPoint && !comparePair) {
       map.flyTo({ center: [assessPoint.lng, assessPoint.lat], zoom: 11, duration: 900 })
-    } else {
-      pinRef.current?.remove()
-      pinRef.current = null
     }
     applyVisibility(map)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessPoint])
+
+  // Compare flow: re-sync the A/B pins and move the camera. Arming opens up the
+  // whole UK as a drop target; a completed pair frames both pins.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current) return
+    syncAssessPins(map)
+    if (comparePair) {
+      const bounds = new mapboxgl.LngLatBounds(
+        [comparePair.a.lng, comparePair.a.lat],
+        [comparePair.a.lng, comparePair.a.lat]
+      )
+      bounds.extend([comparePair.b.lng, comparePair.b.lat])
+      map.fitBounds(bounds, { padding: 140, maxZoom: 12, duration: 900 })
+    } else if (compareArm) {
+      map.flyTo({ ...NATIONAL_VIEWPORT, duration: 900 })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compareArm, comparePair])
 
   // Reconcile the Assess store logo-badge markers when the nearby stores change.
   useEffect(() => {

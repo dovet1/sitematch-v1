@@ -6,15 +6,7 @@ import type { MeasurementMode } from '@/components/demographics/shared/types/dem
 import { useDemographicsData } from '@/components/demographics/shared/hooks/useDemographicsData'
 import { useLsoaSelection } from '@/components/demographics/shared/hooks/useLsoaSelection'
 import type { WorkspaceArea, CatchmentDefinition } from '../../types/unified-workspace'
-
-// Map the workspace catchment mode onto the demographics engine's mode enum.
-const MODE_MAP: Record<CatchmentDefinition['mode'], MeasurementMode> = {
-  distance: 'distance',
-  drive: 'drive_time',
-  walk: 'walk_time',
-}
-
-const MILES_PER_KM = 0.621371
+import { MODE_MAP, MILES_PER_KM } from '../catchment-request'
 
 // A GeoJSON circle (km) around [lng, lat] — used to outline a distance catchment.
 function circleGeometry(

@@ -9,6 +9,8 @@ import type {
   GapRule,
   CatchmentDefinition,
   WorkspaceOverlays,
+  ComparePair,
+  ComparePoint,
 } from '../../types/unified-workspace'
 
 const MAX_COMPARE = 3
@@ -51,6 +53,12 @@ interface WorkspaceState {
   // Assess-Area dropped pin. Scope/radius now derives from `catchment`.
   assessPoint: { lat: number; lng: number } | null
 
+  // Compare two locations (Assess only). `compareArm` = waiting for pin B;
+  // `comparePair` = the two dropped points; `pointCompareOpen` = modal visible.
+  compareArm: boolean
+  comparePair: ComparePair | null
+  pointCompareOpen: boolean
+
   // Panel chrome
   leftHidden: boolean
   inspectorHidden: boolean
@@ -80,6 +88,11 @@ interface WorkspaceState {
   setAssessPoint: (point: { lat: number; lng: number } | null) => void
   setCatchment: (catchment: CatchmentDefinition) => void
   toggleShowLsoa: () => void
+
+  armPointCompare: () => void
+  dropComparePoint: (b: ComparePoint) => void
+  setPointCompareOpen: (open: boolean) => void
+  clearPointCompare: () => void
 
   addToCompare: (area: WorkspaceArea) => void
   removeFromCompare: (id: string) => void
@@ -114,6 +127,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
 
   assessPoint: null,
 
+  compareArm: false,
+  comparePair: null,
+  pointCompareOpen: false,
+
   leftHidden: false,
   inspectorHidden: false,
 
@@ -132,6 +149,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       assessPoint: null,
       brandFilterCategoryIds: [],
       brandFilterBrandIds: [],
+      // Leaving/switching mode tears down any in-flight point comparison.
+      compareArm: false,
+      comparePair: null,
+      pointCompareOpen: false,
       // The requirements overlay is pin-gated; don't let it leak across a mode
       // switch and auto-re-enable when a new pin is dropped. Traffic flags persist.
       overlays: { ...s.overlays, requirements: false },
@@ -209,12 +230,37 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       // A new point yields a fresh landscape, so clear brand-list filters.
       brandFilterCategoryIds: [],
       brandFilterBrandIds: [],
+      // Clearing the point (null) also tears down any active comparison so its
+      // pins/tray don't orphan in empty Assess mode.
+      ...(assessPoint
+        ? {}
+        : { compareArm: false, comparePair: null, pointCompareOpen: false }),
       overlays: assessPoint
         ? s.overlays
         : { ...s.overlays, requirements: false },
     })),
   setCatchment: (catchment) => set({ catchment }),
   toggleShowLsoa: () => set((s) => ({ showLsoa: !s.showLsoa })),
+
+  // Arm the compare flow: only meaningful with a dropped point and no pair yet.
+  armPointCompare: () =>
+    set((s) =>
+      s.assessPoint && !s.comparePair ? { compareArm: true } : {}
+    ),
+  // Drop pin B: pair it with the current Assess pin (pin A) and open the modal.
+  dropComparePoint: (b) =>
+    set((s) =>
+      s.assessPoint
+        ? {
+            comparePair: { a: { ...s.assessPoint }, b },
+            compareArm: false,
+            pointCompareOpen: true,
+          }
+        : {}
+    ),
+  setPointCompareOpen: (pointCompareOpen) => set({ pointCompareOpen }),
+  clearPointCompare: () =>
+    set({ compareArm: false, comparePair: null, pointCompareOpen: false }),
 
   addToCompare: (area) =>
     set((s) => {

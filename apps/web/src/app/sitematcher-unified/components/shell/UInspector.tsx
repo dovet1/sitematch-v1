@@ -8,6 +8,7 @@ import {
   Loader2,
   PanelRightClose,
   PanelRightOpen,
+  GitCompareArrows,
 } from 'lucide-react'
 import { getClearbitLogoUrl } from '@/lib/clearbit-logo'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
@@ -465,6 +466,12 @@ function Opportunity({
 }) {
   const tab = useWorkspaceStore((s) => s.tab)
   const setTab = useWorkspaceStore((s) => s.setTab)
+  const view = useWorkspaceStore((s) => s.view)
+  const area = useWorkspaceStore((s) => s.area)
+  const assessPoint = useWorkspaceStore((s) => s.assessPoint)
+  const compareArm = useWorkspaceStore((s) => s.compareArm)
+  const comparePair = useWorkspaceStore((s) => s.comparePair)
+  const armPointCompare = useWorkspaceStore((s) => s.armPointCompare)
   const brandFilterCategoryIds = useWorkspaceStore((s) => s.brandFilterCategoryIds)
   const brandFilterBrandIds = useWorkspaceStore((s) => s.brandFilterBrandIds)
   const setBrandFilterCategoryIds = useWorkspaceStore(
@@ -539,6 +546,27 @@ function Opportunity({
           </div>
         </div>
       </div>
+
+      {view === 'assess' && !area && !!assessPoint && !comparePair && (
+        <div className="border-b border-sm-border-soft px-[18px] py-3">
+          {compareArm ? (
+            <div className="flex items-center gap-1.5 rounded-lg border border-sm-orange-tint bg-sm-orange-tint-soft px-3 py-2 text-[12.5px] font-medium text-sm-ink">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sm-orange text-[9px] font-bold text-white">
+                B
+              </span>
+              Click the map to drop pin B…
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={armPointCompare}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-sm-violet py-2.5 text-[13px] font-semibold text-white hover:bg-sm-violet-deep"
+            >
+              <GitCompareArrows size={14} /> Compare with another location
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex shrink-0 border-b border-sm-border">
         {OPP_TABS.map((t) => (

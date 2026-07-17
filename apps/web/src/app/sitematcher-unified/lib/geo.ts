@@ -18,6 +18,29 @@ export function haversineMeters(
   return 2 * R * Math.asin(Math.sqrt(a))
 }
 
+// Farthest vertex distance from centre — the radius (metres) that bounds the
+// geometry. Used to pick a fetch radius for the store/missing RPCs before
+// filtering the results down to the actual isochrone polygon.
+export function boundingRadiusMeters(
+  lat: number,
+  lon: number,
+  geom: GeoJSON.Geometry
+): number {
+  let max = 0
+  const visit = (ring: number[][]) => {
+    for (const [vlng, vlat] of ring) {
+      const d = haversineMeters(lat, lon, vlat, vlng)
+      if (d > max) max = d
+    }
+  }
+  if (geom.type === 'Polygon') {
+    ;(geom.coordinates as number[][][]).forEach(visit)
+  } else if (geom.type === 'MultiPolygon') {
+    ;(geom.coordinates as number[][][][]).forEach((poly) => poly.forEach(visit))
+  }
+  return max
+}
+
 // Ray-casting test for a [lng,lat] point against a single ring.
 function pointInRing(lng: number, lat: number, ring: number[][]): boolean {
   let inside = false

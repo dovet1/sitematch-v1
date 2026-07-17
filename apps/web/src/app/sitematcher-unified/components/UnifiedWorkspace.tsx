@@ -21,6 +21,8 @@ import { buildBrandLandscape } from '../lib/brand-landscape'
 import { selectPresentStoreSource } from '../lib/present-store-source'
 import { filterGapStorePins } from '../lib/store-pin-filter'
 import { URequirementModal, UBrandModal, UBrandInfoModal } from './shell/UDetailModals'
+import { UPointCompare, UPointCompareTray } from './shell/UPointCompare'
+import { usePointComparison } from '../lib/hooks/usePointComparison'
 import type { WorkspaceArea } from '../types/unified-workspace'
 // New SiteMatcher-styled sketch shell (all depend only on the standalone sketch store).
 import { USketchPanel } from './shell/USketchPanel'
@@ -53,6 +55,11 @@ export function UnifiedWorkspace() {
   const inspectorHidden = useWorkspaceStore((s) => s.inspectorHidden)
   const toggleLeft = useWorkspaceStore((s) => s.toggleLeft)
   const toggleInspector = useWorkspaceStore((s) => s.toggleInspector)
+  const compareArm = useWorkspaceStore((s) => s.compareArm)
+  const comparePair = useWorkspaceStore((s) => s.comparePair)
+  const pointCompareOpen = useWorkspaceStore((s) => s.pointCompareOpen)
+  const setPointCompareOpen = useWorkspaceStore((s) => s.setPointCompareOpen)
+  const clearPointCompare = useWorkspaceStore((s) => s.clearPointCompare)
 
   const [map, setMap] = useState<mapboxgl.Map | null>(null)
   // Sketch mode shows a launcher until a session is started/opened.
@@ -177,6 +184,10 @@ export function UnifiedWorkspace() {
     (view === 'assess' && !!assessPoint && catchment.mode !== 'distance')
 
   const catchmentData = useCatchment(focusArea, catchment, shouldFetchCatchment)
+
+  // Two-location comparison: fetches + diffs the landscape/demographics for both
+  // dropped pins whenever a pair exists (drives both the tray and the modal).
+  const comparison = usePointComparison(comparePair, catchment, refData ?? null)
 
   // The landscape (nearby stores + missing brands) is read around whichever
   // point is active: a selected BUA's centroid or the Assess dropped pin.
@@ -407,6 +418,26 @@ export function UnifiedWorkspace() {
               <FloatingMapControls offsetForInspector={false} />
             </>
           )}
+
+          {/* Compare flow: drop-hint while arming, then the persistent tray. */}
+          {compareArm && !comparePair && (
+            <div className="pointer-events-none absolute left-1/2 top-3.5 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-sm-orange-tint bg-sm-surface px-4 py-2 shadow-[0_4px_14px_-6px_rgba(20,10,40,0.3)]">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sm-orange text-[9px] font-bold text-white">
+                B
+              </span>
+              <span className="text-[12.5px] font-medium text-sm-ink">
+                Click a second location to drop pin B and compare
+              </span>
+            </div>
+          )}
+          {comparePair && !pointCompareOpen && (
+            <UPointCompareTray
+              pair={comparePair}
+              error={comparison.error}
+              onOpen={() => setPointCompareOpen(true)}
+              onClear={clearPointCompare}
+            />
+          )}
         </main>
 
         {isSketch && sketchActive && <USketchInspector />}
@@ -467,6 +498,16 @@ export function UnifiedWorkspace() {
             setBrandInfoId(null)
             setReqModal(id)
           }}
+        />
+      )}
+
+      {comparePair && pointCompareOpen && (
+        <UPointCompare
+          pair={comparePair}
+          catchment={catchment}
+          comparison={comparison}
+          onClose={() => setPointCompareOpen(false)}
+          onClear={clearPointCompare}
         />
       )}
     </div>

@@ -7,31 +7,10 @@ import {
   type NearbyStore,
 } from '../services/gaps-service'
 import type { MissingFascia } from '../../types/unified-workspace'
-import { haversineMeters, pointInGeometry } from '../geo'
+import { boundingRadiusMeters, pointInGeometry } from '../geo'
 
 // The store/missing endpoints cap radius at 20km.
 const MAX_FETCH_RADIUS_M = 20000
-
-// Farthest vertex distance from centre — the radius that bounds the geometry.
-function boundingRadiusMeters(
-  lat: number,
-  lon: number,
-  geom: GeoJSON.Geometry
-): number {
-  let max = 0
-  const visit = (ring: number[][]) => {
-    for (const [vlng, vlat] of ring) {
-      const d = haversineMeters(lat, lon, vlat, vlng)
-      if (d > max) max = d
-    }
-  }
-  if (geom.type === 'Polygon') {
-    ;(geom.coordinates as number[][][]).forEach(visit)
-  } else if (geom.type === 'MultiPolygon') {
-    ;(geom.coordinates as number[][][][]).forEach((poly) => poly.forEach(visit))
-  }
-  return max
-}
 
 export interface Landscape {
   // Stores inside the catchment (polygon-filtered for drive/walk, else the fetched set).

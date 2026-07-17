@@ -230,6 +230,48 @@ export interface CatchmentDefinition {
   value: number
 }
 
+// --- Compare two locations (Assess Area) ---
+
+// A dropped map point in the compare flow.
+export interface ComparePoint {
+  lat: number
+  lng: number
+}
+
+// The armed pair: A is the original Assess pin, B the second dropped point.
+export interface ComparePair {
+  a: ComparePoint
+  b: ComparePoint
+}
+
+// Aggregated catchment demographics for one compared point.
+export interface CompareStats {
+  population: number | null
+  households: number | null
+  affluence: number | null
+}
+
+// The per-point comparison result (brands + demographics for one catchment).
+export interface ComparePointResult {
+  present: PresentBrand[]
+  missing: MissingBrand[]
+  stats: CompareStats
+}
+
+// One row of the catchment-stats delta table (Pin A · Pin B · Δ B−A).
+export interface CompareStatRow {
+  key: string
+  label: string
+  a: number | null
+  b: number | null
+  delta: number | null
+  pct: number | null
+  // 'up' = higher is good for this metric, 'down' = lower is good.
+  better: 'up' | 'down'
+  // Whole numbers vs one-decimal (affluence) formatting.
+  decimals: number
+}
+
 export interface WorkspaceOverlays {
   // Road AADT line-shading (available everywhere except sketch).
   roadTraffic: boolean

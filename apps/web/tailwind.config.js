@@ -37,6 +37,9 @@ module.exports = {
   			'sm-violet-tint': '#EEE9FF',
   			'sm-violet-tint-soft': '#F5F1FF',
   			'sm-orange': '#F26B1F',
+  			'sm-orange-deep': '#C2410C',
+  			'sm-orange-tint': '#FBDDCF',
+  			'sm-orange-tint-soft': '#FDEEE6',
   			// Existing colors
   			border: 'var(--border)',
   			input: 'var(--input)',

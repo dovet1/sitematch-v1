@@ -11,6 +11,7 @@ import {
   Search,
   PanelLeftClose,
   PanelLeftOpen,
+  GitCompareArrows,
 } from 'lucide-react'
 import * as SliderPrimitive from '@radix-ui/react-slider'
 import {
@@ -484,6 +485,51 @@ function AssessEmpty() {
   )
 }
 
+function CompareSection() {
+  const compareArm = useWorkspaceStore((s) => s.compareArm)
+  const comparePair = useWorkspaceStore((s) => s.comparePair)
+  const armPointCompare = useWorkspaceStore((s) => s.armPointCompare)
+
+  return (
+    <>
+      <SectionLabel>Compare</SectionLabel>
+      <div className="px-[18px] py-[18px]">
+        {comparePair ? (
+          <div className="rounded-lg border border-sm-violet-tint bg-sm-violet-tint-soft p-3">
+            <div className="text-[13px] font-semibold text-sm-ink">
+              Comparison active
+            </div>
+            <p className="mt-0.5 text-[11.5px] leading-snug text-sm-ink3">
+              Use the tray at the bottom of the map to view or clear the
+              comparison.
+            </p>
+          </div>
+        ) : compareArm ? (
+          <div className="rounded-lg border border-sm-orange-tint bg-sm-orange-tint-soft p-3">
+            <div className="flex items-center gap-1.5 text-[13px] font-semibold text-sm-ink">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sm-orange text-[9px] font-bold text-white">
+                B
+              </span>
+              Drop pin B on the map…
+            </div>
+            <p className="mt-0.5 text-[11.5px] leading-snug text-sm-ink3">
+              Click anywhere on the map to drop the second pin.
+            </p>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={armPointCompare}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-sm-border bg-sm-surface py-2.5 text-[12.5px] font-medium text-sm-ink hover:bg-sm-bg"
+          >
+            <GitCompareArrows size={14} /> Compare with another location
+          </button>
+        )}
+      </div>
+    </>
+  )
+}
+
 function AssessPoint() {
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
 
@@ -519,9 +565,7 @@ function AssessPoint() {
         </div>
       </div>
 
-      <div className="px-[18px] py-3 text-[11.5px] leading-snug text-sm-ink3">
-        Drop a different pin anywhere on the map to assess another point.
-      </div>
+      <CompareSection />
     </>
   )
 }
