@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   MapPin,
   X,
@@ -8,11 +8,17 @@ import {
   Loader2,
   PanelRightClose,
   PanelRightOpen,
+  Target,
+  Download,
+  Check,
 } from 'lucide-react'
 import { getClearbitLogoUrl } from '@/lib/clearbit-logo'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
+import { toFilterSet } from '../../lib/services/gaps-service'
+import { exportBUAsToCSV } from '@/lib/buas/export-utils'
 import type {
   BUAResult,
+  GapItem,
   InspectorTab,
   MissingFascia,
   MissingBrand,
@@ -87,6 +93,61 @@ export function Kicker({ children }: { children: React.ReactNode }) {
 
 /* ---------- Find Gaps: ranked results list ---------- */
 
+const TEAL = '#0E7C86'
+
+function popShort(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}m`
+  if (n >= 1000) return `${Math.round(n / 1000)}k`
+  return String(n)
+}
+
+function joinLabels(items: GapItem[]): string {
+  const labels = items.map((i) => i.label)
+  if (labels.length <= 1) return labels[0] ?? ''
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`
+  return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`
+}
+
+function radiusPhrase(km: number): string {
+  return km === 0 ? 'in the town' : `within ${km} km`
+}
+
+// "Two boxes, one list" onboarding shown before any filter is added.
+function FindEmpty() {
+  const points = [
+    ['Box 1', 'the brands/categories a town is missing'],
+    ['Box 2', 'the brands/categories it must already have'],
+    ['Both must be true', 'results match every box (AND)'],
+    ['Export as CSV', 'take the shortlist away with you'],
+  ]
+  return (
+    <div className="px-[18px] py-8">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sm-violet-tint-soft text-sm-violet">
+        <Target size={20} />
+      </span>
+      <h3 className="mt-4 text-[19px] font-bold tracking-[-0.3px] text-sm-ink">
+        Two boxes, one list
+      </h3>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-sm-ink3">
+        Fill the two boxes on the left to build a location strategy. We&apos;ll show every UK
+        town that matches — your white space, ready to work.
+      </p>
+      <ul className="mt-4 space-y-2.5">
+        {points.map(([k, v]) => (
+          <li key={k} className="flex items-start gap-2.5">
+            <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-sm-violet text-white">
+              <Check size={10} />
+            </span>
+            <span className="text-[12.5px] leading-snug text-sm-ink2">
+              <b className="font-semibold text-sm-ink">{k}</b> — {v}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function FindResults({
   results,
   total,
@@ -101,7 +162,55 @@ function FindResults({
   onCollapse: () => void
 }) {
   const selectArea = useWorkspaceStore((s) => s.selectArea)
+  const missingItems = useWorkspaceStore((s) => s.missingItems)
+  const haveItems = useWorkspaceStore((s) => s.haveItems)
+  const missingRadius = useWorkspaceStore((s) => s.missingRadius)
+  const haveRadius = useWorkspaceStore((s) => s.haveRadius)
+  const gapSort = useWorkspaceStore((s) => s.gapSort)
+  const setGapSort = useWorkspaceStore((s) => s.setGapSort)
+  const gapRules = useWorkspaceStore((s) => s.gapRules)
+  const populationRange = useWorkspaceStore((s) => s.populationRange)
+  const showSubFiveK = useWorkspaceStore((s) => s.showSubFiveK)
+  const [exporting, setExporting] = useState(false)
+
+  const hasQuery = missingItems.length > 0 || haveItems.length > 0
   const pct = total > 0 ? Math.max(4, Math.round((results.length / total) * 100)) : 0
+
+  const sorted = useMemo(() => {
+    const arr = [...results]
+    if (gapSort === 'az') {
+      arr.sort((a, b) => a.name.localeCompare(b.name))
+    } else {
+      arr.sort((a, b) => (b.pop_final ?? b.pop) - (a.pop_final ?? a.pop))
+    }
+    return arr
+  }, [results, gapSort])
+
+  const missingTag = missingItems.map((i) => i.label).join(', ')
+  const haveTag = haveItems.map((i) => i.label).join(', ')
+
+  const handleExport = async () => {
+    if (!hasQuery || exporting) return
+    setExporting(true)
+    try {
+      const targetNames: Record<string, string> = {}
+      for (const item of [...missingItems, ...haveItems]) {
+        for (const tid of item.targetIds) targetNames[tid] = item.label
+      }
+      await exportBUAsToCSV(
+        {
+          minPop: showSubFiveK ? 0 : populationRange[0],
+          maxPop: populationRange[1],
+          filterSet: toFilterSet(gapRules),
+        },
+        targetNames
+      )
+    } catch (e) {
+      console.error('Export failed', e)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <aside className="flex w-[404px] shrink-0 flex-col overflow-hidden border-l border-sm-border bg-sm-surface">
@@ -115,72 +224,156 @@ function FindResults({
         >
           <PanelRightClose size={16} />
         </button>
-        <Kicker>Find Gaps · live</Kicker>
-        <h2 className="mt-1.5 text-[20px] font-semibold tracking-[-0.3px] text-sm-ink">
-          Locations matching filters
-        </h2>
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="text-[24px] font-semibold tracking-[-0.5px] text-sm-ink">
-            {results.length.toLocaleString()}
-          </span>
-          <Kicker>of {total.toLocaleString()}</Kicker>
-          <span className="h-[3px] flex-1 overflow-hidden rounded-full bg-sm-border-soft">
-            <span
-              className="block h-full bg-sm-violet transition-all"
-              style={{ width: `${pct}%` }}
-            />
-          </span>
-        </div>
-        <div className="mt-3 flex items-center gap-1.5">
-          {loading && <Loader2 size={11} className="animate-spin text-sm-ink3" />}
-          <Kicker>{loading ? 'Updating…' : 'Sorted · population'}</Kicker>
-        </div>
+
+        {hasQuery ? (
+          <>
+            <Kicker>You&apos;re looking for</Kicker>
+            <div className="mt-2 rounded-[12px] bg-[#f6f4ef] px-3.5 py-3 text-[13px] leading-relaxed text-sm-ink2">
+              Towns{' '}
+              {missingItems.length > 0 && (
+                <>
+                  missing <b className="font-semibold text-sm-ink">{joinLabels(missingItems)}</b>
+                  {missingRadius > 0 && <> {radiusPhrase(missingRadius)}</>}
+                </>
+              )}
+              {missingItems.length > 0 && haveItems.length > 0 && ', '}
+              {haveItems.length > 0 && (
+                <>
+                  that have <b className="font-semibold text-sm-ink">{joinLabels(haveItems)}</b>{' '}
+                  {radiusPhrase(haveRadius)}
+                </>
+              )}
+              , with a population of{' '}
+              <b className="font-semibold text-sm-ink">
+                {popShort(showSubFiveK ? 0 : populationRange[0])}–{popShort(populationRange[1])}
+              </b>
+              .
+            </div>
+
+            <div className="mt-4 flex items-center justify-between">
+              <div>
+                <Kicker>Matching towns</Kicker>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="text-[24px] font-semibold tracking-[-0.5px] text-sm-ink">
+                    {results.length.toLocaleString()}
+                  </span>
+                  <Kicker>of {total.toLocaleString()}</Kicker>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={exporting || results.length === 0}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-sm-ink px-3 py-2 text-[12.5px] font-semibold text-white disabled:opacity-50"
+              >
+                {exporting ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Download size={13} />
+                )}
+                Export CSV
+              </button>
+            </div>
+            <span className="mt-2 block h-[3px] w-full overflow-hidden rounded-full bg-sm-border-soft">
+              <span
+                className="block h-full bg-sm-violet transition-all"
+                style={{ width: `${pct}%` }}
+              />
+            </span>
+
+            <div className="mt-3 flex items-center gap-2">
+              <Kicker>Sort</Kicker>
+              {(['pop', 'az'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setGapSort(s)}
+                  className={
+                    'rounded-full px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide transition-colors ' +
+                    (gapSort === s
+                      ? 'bg-sm-ink text-white'
+                      : 'border border-sm-border-soft text-sm-ink3 hover:text-sm-ink')
+                  }
+                >
+                  {s === 'pop' ? 'Population ↓' : 'A–Z'}
+                </button>
+              ))}
+              {loading && <Loader2 size={11} className="ml-auto animate-spin text-sm-ink3" />}
+            </div>
+          </>
+        ) : (
+          <>
+            <Kicker>Find Gaps</Kicker>
+            <h2 className="mt-1.5 text-[20px] font-semibold tracking-[-0.3px] text-sm-ink">
+              Your shortlist
+            </h2>
+          </>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {error && (
+        {!hasQuery && <FindEmpty />}
+        {hasQuery && error && (
           <div className="px-[18px] py-6 text-center text-[12.5px] text-[#B23A2C]">
             {error}
           </div>
         )}
-        {!error && results.length === 0 && !loading && (
+        {hasQuery && !error && results.length === 0 && !loading && (
           <div className="px-[18px] py-8 text-center text-[12.5px] text-sm-ink3">
             No built-up areas match these filters. Loosen a rule or widen the
             population range.
           </div>
         )}
-        {results.map((b) => {
-          const pop = b.pop_final ?? b.pop
-          return (
-            <button
-              key={b.gsscode}
-              type="button"
-              onClick={() =>
-                selectArea({
-                  id: b.gsscode,
-                  name: b.name,
-                  center: [b.centroid_lon, b.centroid_lat],
-                  population: pop ?? undefined,
-                  kind: 'bua',
-                })
-              }
-              className="grid w-full grid-cols-[1fr_auto] items-center gap-3 border-b border-sm-border-soft px-[18px] py-[13px] text-left hover:bg-sm-bg"
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <MapPin size={16} className="shrink-0 text-sm-violet" />
-                  <span className="truncate text-[15px] font-medium text-sm-ink">
-                    {b.name}
-                  </span>
+        {hasQuery &&
+          sorted.map((b) => {
+            const pop = b.pop_final ?? b.pop
+            return (
+              <button
+                key={b.gsscode}
+                type="button"
+                onClick={() =>
+                  selectArea({
+                    id: b.gsscode,
+                    name: b.name,
+                    center: [b.centroid_lon, b.centroid_lat],
+                    population: pop ?? undefined,
+                    kind: 'bua',
+                  })
+                }
+                className="grid w-full grid-cols-[1fr_auto] items-center gap-3 border-b border-sm-border-soft px-[18px] py-[13px] text-left hover:bg-sm-bg"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <MapPin size={16} className="shrink-0 text-sm-violet" />
+                    <span className="truncate text-[15px] font-medium text-sm-ink">
+                      {b.name}
+                    </span>
+                  </div>
+                  <div className="ml-6 mt-1 font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
+                    Pop {(pop ?? 0).toLocaleString()}
+                  </div>
+                  {(missingTag || haveTag) && (
+                    <div className="ml-6 mt-1.5 flex flex-wrap gap-1.5">
+                      {missingTag && (
+                        <span className="rounded-full bg-sm-violet-tint-soft px-2 py-0.5 text-[10.5px] font-medium text-sm-violet-deep">
+                          Missing {missingTag}
+                        </span>
+                      )}
+                      {haveTag && (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[10.5px] font-medium"
+                          style={{ background: '#eef6f6', color: TEAL }}
+                        >
+                          {haveTag} {radiusPhrase(haveRadius)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="ml-6 mt-1 font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
-                  Pop {(pop ?? 0).toLocaleString()}
-                </div>
-              </div>
-              <ChevronRight size={14} className="text-sm-ink4" />
-            </button>
-          )
-        })}
+                <ChevronRight size={14} className="text-sm-ink4" />
+              </button>
+            )
+          })}
       </div>
     </aside>
   )

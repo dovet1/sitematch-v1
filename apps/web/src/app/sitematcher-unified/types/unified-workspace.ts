@@ -225,6 +225,21 @@ export interface GapRule {
   km?: number
 }
 
+// One brand/category token dropped into a Find-Gaps bucket. `key` (`${type}:${id}`)
+// is the namespaced identity used for add/remove/toggle so a category and a brand
+// sharing a raw id can't collide. `targetIds` are the resolved fascia/category
+// UUIDs sent to the API (a brand resolves to all of its fascia ids).
+export interface GapItem {
+  key: string
+  id: string
+  type: 'category' | 'brand'
+  label: string
+  targetIds: string[]
+}
+
+export type GapBucket = 'missing' | 'have'
+export type GapSort = 'pop' | 'az'
+
 export interface CatchmentDefinition {
   mode: CatchmentMode
   value: number

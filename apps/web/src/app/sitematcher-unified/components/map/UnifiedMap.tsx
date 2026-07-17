@@ -80,12 +80,18 @@ export interface CompareBoundariesProps {
 }
 
 function buaFilter(codes: string[] | null, range: [number, number]) {
-  const pop = ['coalesce', ['get', 'pop_final'], ['get', 'pop']] as const
-  const conditions: any[] = ['all', ['>=', pop, range[0]], ['<=', pop, range[1]]]
-  if (codes && codes.length > 0) {
-    conditions.push(['in', ['get', 'gsscode'], ['literal', codes]])
+  // No active query (null) or a query that matched nothing ([]) ⇒ paint no BUAs.
+  // The map only lights up once a bucket produces matching gsscodes.
+  if (!codes || codes.length === 0) {
+    return ['in', ['get', 'gsscode'], ['literal', []]]
   }
-  return conditions
+  const pop = ['coalesce', ['get', 'pop_final'], ['get', 'pop']] as const
+  return [
+    'all',
+    ['>=', pop, range[0]],
+    ['<=', pop, range[1]],
+    ['in', ['get', 'gsscode'], ['literal', codes]],
+  ]
 }
 
 // Insert BUA/overlay layers below the base style's label symbols.

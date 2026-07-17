@@ -30,7 +30,7 @@ function operatorFor(rule: GapRule): ApiRule['operator'] {
 }
 
 // Only rules with resolved target ids are sent; empty rules are skipped.
-function toFilterSet(rules: GapRule[]) {
+export function toFilterSet(rules: GapRule[]) {
   const apiRules: ApiRule[] = rules
     .filter((r) => r.targetIds.length > 0)
     .map((r) => ({

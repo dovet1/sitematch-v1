@@ -22,6 +22,17 @@ export function useFindGaps(enabled: boolean) {
 
   useEffect(() => {
     if (!enabled) return
+    // No buckets ⇒ no query: clear results and the map's gsscode filter so the
+    // national view shows zero highlighted towns until a filter is added.
+    if (gapRules.length === 0) {
+      reqId.current++
+      setResults([])
+      setTotal(0)
+      setGapGssCodes(null)
+      setLoading(false)
+      setError(null)
+      return
+    }
     const id = ++reqId.current
     setLoading(true)
     setError(null)

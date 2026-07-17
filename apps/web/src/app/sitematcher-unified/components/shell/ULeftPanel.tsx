@@ -1,14 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import {
   Plus,
   X,
   Check,
-  Target,
-  RotateCcw,
   MapPin,
   Search,
+  Layers,
   PanelLeftClose,
   PanelLeftOpen,
   GitCompareArrows,
@@ -18,9 +17,11 @@ import {
   useWorkspaceStore,
   MIN_POPULATION,
   MAX_POPULATION,
+  GAP_RADII,
 } from '../../lib/stores/unified-workspace-store'
 import type {
-  GapRule,
+  GapItem,
+  GapBucket,
   ReferenceData,
 } from '../../types/unified-workspace'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -44,294 +45,330 @@ function optionsFor(type: RuleType, ref: ReferenceData): ValueOption[] {
   }))
 }
 
-const RULE_TYPES: { value: RuleType; label: string }[] = [
-  { value: 'category', label: 'Category' },
-  { value: 'brand', label: 'Brand' },
-]
-const KM_STEPS = [1, 3, 5, 10]
+const TOKEN_COLORS = ['#6D31E8', '#0E7C86', '#B4530E', '#2456C4', '#8A1F5C']
 
-function Segmented<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { value: T; label: string }[]
-  value: T
-  onChange: (v: T) => void
-}) {
-  return (
-    <div className="flex gap-1 rounded-lg bg-sm-bg p-1">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          className={
-            'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ' +
-            (value === o.value
-              ? 'bg-sm-ink text-white'
-              : 'text-sm-ink2 hover:bg-sm-border-soft')
-          }
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
+interface Tone {
+  verb: string
+  sub: string
+  emptyHelp: string
+  accent: string
+  tint: string
+  border: string
 }
 
-function ruleConditionLabel(r: GapRule) {
-  if (r.kind === 'proximity') return `${r.op === 'within' ? 'Within' : 'Beyond'} ${r.km} km`
-  return r.op === 'has' ? 'Contains' : 'Excludes'
-}
-function ruleIsPositive(r: GapRule) {
-  return r.op === 'has' || r.op === 'within'
+const TONES: Record<GapBucket, Tone> = {
+  missing: {
+    verb: 'are MISSING',
+    sub: "Towns where these haven't opened yet",
+    emptyHelp: "Add the shops you're checking for",
+    accent: '#7033FF',
+    tint: '#F5F1FF',
+    border: '#E4DBFF',
+  },
+  have: {
+    verb: 'ALREADY HAVE',
+    sub: 'Towns that already contain these',
+    emptyHelp: 'Optional — leave empty to ignore',
+    accent: '#0E7C86',
+    tint: '#eef6f6',
+    border: '#bfe0e0',
+  },
 }
 
-function RuleRow({
-  rule,
-  onToggle,
+function toGapItem(type: RuleType, o: ValueOption): GapItem {
+  return { key: `${type}:${o.id}`, id: o.id, type, label: o.label, targetIds: o.targetIds }
+}
+
+function radiusLabel(km: number): string {
+  return km === 0 ? 'In the town' : `Within ${km} km`
+}
+
+function popShort(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}m`
+  if (n >= 1000) return `${Math.round(n / 1000)}k`
+  return String(n)
+}
+
+function Token({
+  item,
+  index,
+  tone,
   onRemove,
 }: {
-  rule: GapRule
-  onToggle: (id: string) => void
-  onRemove: (id: string) => void
+  item: GapItem
+  index: number
+  tone: Tone
+  onRemove: () => void
 }) {
-  const positive = ruleIsPositive(rule)
+  const color = TOKEN_COLORS[index % TOKEN_COLORS.length]
   return (
-    <div
-      className={
-        'mb-2 flex items-center gap-2.5 rounded-lg border p-2.5 ' +
-        (positive
-          ? 'border-sm-violet-tint bg-sm-violet-tint-soft'
-          : 'border-[#F4D2CC] bg-[#FCECEA]')
-      }
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full border bg-white py-1 pl-1 pr-2"
+      style={{ borderColor: tone.border }}
     >
       <span
-        className={
-          'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-white ' +
-          (positive ? 'bg-sm-violet' : 'bg-[#C2452F]')
-        }
+        className="flex h-[18px] w-[18px] items-center justify-center rounded-[5px] text-[9px] font-bold text-white"
+        style={{ background: color }}
       >
-        {rule.kind === 'proximity' ? (
-          <Target size={12} />
-        ) : positive ? (
-          <Check size={12} />
-        ) : (
-          <X size={12} />
-        )}
+        {item.label.slice(0, 1).toUpperCase()}
       </span>
-      <div className="min-w-0 flex-1">
-        <button
-          type="button"
-          onClick={() => onToggle(rule.id)}
-          title="Flip condition"
-          className={
-            'flex items-center gap-1 font-mono text-[9.5px] font-bold uppercase tracking-wider ' +
-            (positive ? 'text-sm-violet-deep' : 'text-[#B23A2C]')
-          }
-        >
-          {ruleConditionLabel(rule)}
-          <RotateCcw size={9} />
-        </button>
-        <div className="mt-0.5 truncate text-[13px] font-semibold text-sm-ink">
-          {rule.value}{' '}
-          <span className="font-mono text-[10px] font-normal text-sm-ink3">
-            · {rule.type[0].toUpperCase() + rule.type.slice(1)}
-          </span>
-        </div>
-      </div>
+      <span className="text-[12.5px] font-semibold text-sm-ink">{item.label}</span>
       <button
         type="button"
-        onClick={() => onRemove(rule.id)}
+        onClick={onRemove}
         title="Remove"
-        className="shrink-0 p-1 text-sm-ink4 hover:text-sm-ink2"
+        className="text-sm-ink4 hover:text-sm-ink2"
       >
         <X size={12} />
       </button>
+    </span>
+  )
+}
+
+function AndChip() {
+  return (
+    <span className="font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink4">
+      and
+    </span>
+  )
+}
+
+function ProximityRow({
+  tone,
+  radius,
+  onChange,
+}: {
+  tone: Tone
+  radius: number
+  onChange: (r: number) => void
+}) {
+  return (
+    <div className="mt-3 border-t border-dashed pt-3" style={{ borderColor: tone.border }}>
+      <p className="mb-2 text-[11px] text-sm-ink3">Count a match when it&apos;s</p>
+      <div className="flex flex-wrap gap-1.5">
+        {GAP_RADII.map((km) => {
+          const on = radius === km
+          return (
+            <button
+              key={km}
+              type="button"
+              onClick={() => onChange(km)}
+              className="rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors"
+              style={
+                on
+                  ? { background: tone.accent, borderColor: tone.accent, color: '#fff' }
+                  : { background: '#fff', borderColor: tone.border, color: '#4A4451' }
+              }
+            >
+              {radiusLabel(km)}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
 
-function RuleBuilder({
-  refData,
+function Bucket({
+  bucket,
+  badge,
+  items,
+  radius,
   onAdd,
-  onCancel,
+  onRemove,
+  onRadius,
+}: {
+  bucket: GapBucket
+  badge: string
+  items: GapItem[]
+  radius: number
+  onAdd: () => void
+  onRemove: (key: string) => void
+  onRadius: (r: number) => void
+}) {
+  const tone = TONES[bucket]
+  const empty = items.length === 0
+  return (
+    <div
+      className="rounded-[14px] border p-3.5"
+      style={{ background: tone.tint, borderColor: tone.border }}
+    >
+      <div className="flex items-start gap-2.5">
+        <span
+          className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+          style={{ background: tone.accent }}
+        >
+          {badge}
+        </span>
+        <div className="min-w-0">
+          <div className="text-[14px] font-bold leading-tight text-sm-ink">
+            Show towns that <span style={{ color: tone.accent }}>{tone.verb}</span>
+          </div>
+          <div className="mt-0.5 text-[11.5px] text-sm-ink3">{tone.sub}</div>
+        </div>
+      </div>
+
+      {empty ? (
+        <div
+          className="mt-3 rounded-[11px] border border-dashed p-4 text-center"
+          style={{ borderColor: tone.border }}
+        >
+          <p className="text-[12px] text-sm-ink3">{tone.emptyHelp}</p>
+          <button
+            type="button"
+            onClick={onAdd}
+            className="mt-2.5 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-white"
+            style={{ background: tone.accent }}
+          >
+            <Plus size={13} /> Add a brand or category
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {items.map((item, i) => (
+              <Fragment key={item.key}>
+                {i > 0 && <AndChip />}
+                <Token
+                  item={item}
+                  index={i}
+                  tone={tone}
+                  onRemove={() => onRemove(item.key)}
+                />
+              </Fragment>
+            ))}
+            <button
+              type="button"
+              onClick={onAdd}
+              className="inline-flex items-center gap-1 rounded-full border border-dashed px-2.5 py-1 text-[12px] font-medium text-sm-ink3 hover:text-sm-ink"
+              style={{ borderColor: tone.border }}
+            >
+              <Plus size={12} /> Add
+            </button>
+          </div>
+          <ProximityRow tone={tone} radius={radius} onChange={onRadius} />
+        </>
+      )}
+    </div>
+  )
+}
+
+function BrandItemPicker({
+  refData,
+  bucket,
+  selectedKeys,
+  onToggle,
+  onClose,
 }: {
   refData: ReferenceData
-  onAdd: (rule: GapRule) => void
-  onCancel: () => void
+  bucket: GapBucket
+  selectedKeys: Set<string>
+  onToggle: (item: GapItem) => void
+  onClose: () => void
 }) {
-  const [kind, setKind] = useState<'presence' | 'proximity'>('presence')
-  const [type, setType] = useState<RuleType>('brand')
-  const [selected, setSelected] = useState<ValueOption | null>(null)
-  const [pOp, setPOp] = useState<'has' | 'lacks'>('has')
-  const [zOp, setZOp] = useState<'within' | 'beyond'>('within')
-  const [km, setKm] = useState(5)
+  const tone = TONES[bucket]
   const [query, setQuery] = useState('')
+  const brands = useMemo(() => optionsFor('brand', refData), [refData])
+  const categories = useMemo(() => optionsFor('category', refData), [refData])
+  const q = query.trim().toLowerCase()
+  const fBrands = useMemo(
+    () => (q ? brands.filter((o) => o.label.toLowerCase().includes(q)) : brands).slice(0, 50),
+    [brands, q]
+  )
+  const fCategories = useMemo(
+    () =>
+      (q ? categories.filter((o) => o.label.toLowerCase().includes(q)) : categories).slice(0, 50),
+    [categories, q]
+  )
 
-  const options = useMemo(() => optionsFor(type, refData), [type, refData])
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const list = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options
-    return list.slice(0, 100)
-  }, [options, query])
-
-  const commit = () => {
-    if (!selected) return
-    onAdd({
-      id: 'r' + Date.now(),
-      kind,
-      type,
-      value: selected.label,
-      targetIds: selected.targetIds,
-      op: kind === 'presence' ? pOp : zOp,
-      ...(kind === 'proximity' ? { km } : {}),
-    })
+  const renderRow = (type: RuleType, o: ValueOption) => {
+    const item = toGapItem(type, o)
+    const added = selectedKeys.has(item.key)
+    return (
+      <button
+        key={item.key}
+        type="button"
+        onClick={() => onToggle(item)}
+        className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-sm-bg"
+      >
+        <span className="text-[13px] text-sm-ink">{o.label}</span>
+        {added ? (
+          <span
+            className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold uppercase tracking-wide"
+            style={{ color: tone.accent }}
+          >
+            <Check size={12} /> Added
+          </span>
+        ) : (
+          <Plus size={14} className="text-sm-ink4" />
+        )}
+      </button>
+    )
   }
 
   return (
-    <div className="rounded-xl border border-sm-border bg-sm-bg p-3">
-      <p className="font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3">
-        Condition
-      </p>
-      <div className="mt-1.5">
-        <Segmented
-          options={[
-            { value: 'presence', label: 'Presence' },
-            { value: 'proximity', label: 'Proximity' },
-          ]}
-          value={kind}
-          onChange={setKind}
-        />
-      </div>
-
-      <p className="mt-3 font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3">
-        Match on
-      </p>
-      <div className="mt-1.5">
-        <Segmented
-          options={RULE_TYPES}
-          value={type}
-          onChange={(t) => {
-            setType(t)
-            setSelected(null)
-          }}
-        />
-      </div>
-
-      <div className="mt-2.5">
-        <div className="flex h-9 items-center gap-2 rounded-lg border border-sm-border bg-sm-surface px-2.5">
-          <Search size={13} className="text-sm-ink3" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Search ${type}…`}
-            className="w-full bg-transparent text-xs text-sm-ink placeholder:text-sm-ink3 focus:outline-none"
-          />
+    <>
+      <div
+        className="absolute inset-0 z-20"
+        style={{ background: 'rgba(20,16,40,0.14)' }}
+        onClick={onClose}
+      />
+      <div
+        className="absolute inset-x-3 top-3 z-30 rounded-[14px] border border-sm-border bg-white"
+        style={{ boxShadow: '0 20px 48px -16px rgba(20,16,40,0.4)' }}
+      >
+        <div className="p-3">
+          <div
+            className="flex h-9 items-center gap-2 rounded-lg border px-2.5"
+            style={{ borderColor: tone.accent, boxShadow: `0 0 0 3px ${tone.accent}1f` }}
+          >
+            <Search size={13} className="text-sm-ink3" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Type a shop or category"
+              className="w-full bg-transparent text-[13px] text-sm-ink placeholder:text-sm-ink3 focus:outline-none"
+            />
+          </div>
         </div>
-        <div className="mt-1.5 max-h-40 overflow-y-auto rounded-lg border border-sm-border-soft bg-sm-surface">
-          {filtered.length === 0 && (
-            <div className="px-3 py-2.5 text-xs text-sm-ink3">No matches</div>
+        <div className="max-h-[280px] overflow-y-auto px-3 pb-2">
+          {fBrands.length > 0 && (
+            <>
+              <p className="px-2.5 pb-1 pt-2 font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3">
+                Brands
+              </p>
+              {fBrands.map((o) => renderRow('brand', o))}
+            </>
           )}
-          {filtered.map((o) => {
-            const on = selected?.id === o.id
-            return (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => setSelected(o)}
-                className={
-                  'flex w-full items-center gap-2 border-b border-sm-border-soft px-3 py-1.5 text-left text-xs ' +
-                  (on ? 'bg-sm-violet-tint-soft' : 'hover:bg-sm-bg')
-                }
-              >
-                <span
-                  className={
-                    'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ' +
-                    (on ? 'border-sm-violet bg-sm-violet text-white' : 'border-sm-border')
-                  }
-                >
-                  {on && <Check size={9} />}
-                </span>
-                <span className={on ? 'font-semibold text-sm-ink' : 'text-sm-ink'}>
-                  {o.label}
-                </span>
-              </button>
-            )
-          })}
+          {fCategories.length > 0 && (
+            <>
+              <p className="flex items-center gap-1 px-2.5 pb-1 pt-3 font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3">
+                <Layers size={11} /> Categories
+              </p>
+              {fCategories.map((o) => renderRow('category', o))}
+            </>
+          )}
+          {fBrands.length === 0 && fCategories.length === 0 && (
+            <div className="px-2.5 py-4 text-center text-[12px] text-sm-ink3">No matches</div>
+          )}
+        </div>
+        <div className="flex items-center justify-between border-t border-sm-border-soft px-3 py-2.5">
+          <span className="text-[12px] text-sm-ink3">
+            <b className="text-sm-ink">{selectedKeys.size}</b> added to{' '}
+            {bucket === 'missing' ? "'missing'" : "'already have'"}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-3.5 py-1.5 text-[13px] font-semibold text-white"
+            style={{ background: tone.accent }}
+          >
+            Done
+          </button>
         </div>
       </div>
-
-      {kind === 'presence' ? (
-        <>
-          <p className="mt-3 font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3">
-            Town must
-          </p>
-          <div className="mt-1.5">
-            <Segmented
-              options={[
-                { value: 'has', label: 'Contain it' },
-                { value: 'lacks', label: 'Exclude it' },
-              ]}
-              value={pOp}
-              onChange={setPOp}
-            />
-          </div>
-        </>
-      ) : (
-        <>
-          <p className="mt-3 font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3">
-            Proximity
-          </p>
-          <div className="mt-1.5">
-            <Segmented
-              options={[
-                { value: 'within', label: 'Within' },
-                { value: 'beyond', label: 'Beyond' },
-              ]}
-              value={zOp}
-              onChange={setZOp}
-            />
-          </div>
-          <div className="mt-2 flex gap-1.5">
-            {KM_STEPS.map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setKm(v)}
-                className={
-                  'flex-1 rounded-md py-1.5 font-mono text-[11px] transition-colors ' +
-                  (km === v
-                    ? 'bg-sm-ink text-white'
-                    : 'border border-sm-border-soft bg-sm-surface text-sm-ink2')
-                }
-              >
-                {v} km
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      <div className="mt-3.5 flex gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex-1 rounded-lg border border-sm-border bg-sm-surface py-2 text-[13px] font-medium text-sm-ink2"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={commit}
-          disabled={!selected}
-          className="flex-[1.4] rounded-lg bg-sm-violet py-2 text-[13px] font-semibold text-white disabled:opacity-50"
-        >
-          Add filter
-        </button>
-      </div>
-    </div>
+    </>
   )
 }
 
@@ -344,69 +381,85 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 function FindFilters({ refData }: { refData: ReferenceData }) {
-  const gapRules = useWorkspaceStore((s) => s.gapRules)
-  const addGapRule = useWorkspaceStore((s) => s.addGapRule)
-  const removeGapRule = useWorkspaceStore((s) => s.removeGapRule)
-  const toggleGapRule = useWorkspaceStore((s) => s.toggleGapRule)
+  const missingItems = useWorkspaceStore((s) => s.missingItems)
+  const haveItems = useWorkspaceStore((s) => s.haveItems)
+  const missingRadius = useWorkspaceStore((s) => s.missingRadius)
+  const haveRadius = useWorkspaceStore((s) => s.haveRadius)
+  const addBucketItem = useWorkspaceStore((s) => s.addBucketItem)
+  const removeBucketItem = useWorkspaceStore((s) => s.removeBucketItem)
+  const setBucketRadius = useWorkspaceStore((s) => s.setBucketRadius)
   const populationRange = useWorkspaceStore((s) => s.populationRange)
   const setPopulationRange = useWorkspaceStore((s) => s.setPopulationRange)
   const showSubFiveK = useWorkspaceStore((s) => s.showSubFiveK)
   const setShowSubFiveK = useWorkspaceStore((s) => s.setShowSubFiveK)
-  const [building, setBuilding] = useState(false)
+  const [picking, setPicking] = useState<GapBucket | null>(null)
+
+  const bucketItems = (b: GapBucket) => (b === 'missing' ? missingItems : haveItems)
+  const selectedKeys = picking
+    ? new Set(bucketItems(picking).map((i) => i.key))
+    : new Set<string>()
+
+  const togglePick = (item: GapItem) => {
+    if (!picking) return
+    if (bucketItems(picking).some((i) => i.key === item.key)) {
+      removeBucketItem(picking, item.key)
+    } else {
+      addBucketItem(picking, item)
+    }
+  }
+
+  const popRead = `${popShort(populationRange[0])} – ${popShort(populationRange[1])}`
 
   return (
-    <>
+    <div className="relative">
       <div className="border-b border-sm-border-soft px-[18px] py-[18px]">
         <p className="font-mono text-[10px] uppercase tracking-wider text-sm-violet-deep">
           Find Gaps
         </p>
-        <h2 className="mt-1 text-[17px] font-semibold tracking-[-0.3px] text-sm-ink">
-          Filters
+        <h2 className="mt-1 text-[19px] font-bold leading-tight tracking-[-0.4px] text-sm-ink">
+          Where can we open next?
         </h2>
         <p className="mt-1 text-[12.5px] leading-snug text-sm-ink3">
-          Surface towns by presence and proximity, then read the gaps on the right.
+          Fill the two boxes below. We&apos;ll show every town that matches{' '}
+          <b className="font-semibold text-sm-ink2">both</b>.
         </p>
       </div>
 
-      <SectionLabel>Presence &amp; proximity</SectionLabel>
-      <div className="px-[18px] pb-[18px] pt-3">
-        <p className="mb-2.5 text-[11.5px] leading-snug text-sm-ink3">
-          Surface towns by what they contain — or don&apos;t — and by distance to any
-          category or brand.
-        </p>
-        {gapRules.map((r) => (
-          <RuleRow key={r.id} rule={r} onToggle={toggleGapRule} onRemove={removeGapRule} />
-        ))}
-        {gapRules.length === 0 && !building && (
-          <div className="mb-2.5 rounded-lg border border-dashed border-sm-border px-3 py-4 text-center text-xs text-sm-ink3">
-            No filters yet — showing every built-up area.
-          </div>
-        )}
-        {building ? (
-          <RuleBuilder
-            refData={refData}
-            onAdd={(r) => {
-              addGapRule(r)
-              setBuilding(false)
-            }}
-            onCancel={() => setBuilding(false)}
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setBuilding(true)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-sm-border bg-sm-surface py-2 text-[12.5px] font-medium text-sm-ink hover:bg-sm-bg"
-          >
-            <Plus size={13} /> Add filter
-          </button>
-        )}
+      <div className="space-y-3 px-[18px] py-[18px]">
+        <Bucket
+          bucket="missing"
+          badge="1"
+          items={missingItems}
+          radius={missingRadius}
+          onAdd={() => setPicking('missing')}
+          onRemove={(k) => removeBucketItem('missing', k)}
+          onRadius={(r) => setBucketRadius('missing', r)}
+        />
+
+        <div className="flex items-center gap-2 py-0.5">
+          <span className="h-px flex-1 bg-sm-border-soft" />
+          <span className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.15em] text-sm-ink4">
+            And also
+          </span>
+          <span className="h-px flex-1 bg-sm-border-soft" />
+        </div>
+
+        <Bucket
+          bucket="have"
+          badge="2"
+          items={haveItems}
+          radius={haveRadius}
+          onAdd={() => setPicking('have')}
+          onRemove={(k) => removeBucketItem('have', k)}
+          onRadius={(r) => setBucketRadius('have', r)}
+        />
       </div>
 
-      <SectionLabel>Population</SectionLabel>
+      <SectionLabel>Town size (optional)</SectionLabel>
       <div className="px-[18px] pb-[18px] pt-3">
-        <div className="flex items-center justify-between font-mono text-[11px] text-sm-ink2">
-          <span>{populationRange[0].toLocaleString()}</span>
-          <span>{populationRange[1].toLocaleString()}</span>
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] text-sm-ink3">Only show towns in this range</span>
+          <span className="font-mono text-[11px] font-medium text-sm-ink2">{popRead}</span>
         </div>
         <SliderPrimitive.Root
           className="relative mt-3 flex w-full touch-none select-none items-center"
@@ -441,7 +494,17 @@ function FindFilters({ refData }: { refData: ReferenceData }) {
           Show locations with a population of less than 5k
         </label>
       </div>
-    </>
+
+      {picking && (
+        <BrandItemPicker
+          refData={refData}
+          bucket={picking}
+          selectedKeys={selectedKeys}
+          onToggle={togglePick}
+          onClose={() => setPicking(null)}
+        />
+      )}
+    </div>
   )
 }
 

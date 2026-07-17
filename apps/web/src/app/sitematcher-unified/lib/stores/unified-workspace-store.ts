@@ -7,6 +7,9 @@ import type {
   MapSubSelection,
   MissingFascia,
   GapRule,
+  GapItem,
+  GapBucket,
+  GapSort,
   CatchmentDefinition,
   WorkspaceOverlays,
   ComparePair,
@@ -18,6 +21,42 @@ const MAX_COMPARE = 3
 
 export const MIN_POPULATION = 5001
 export const MAX_POPULATION = 1200000
+
+// Radius options (km) offered per bucket; 0 = "In the town" (strict boundary match).
+export const GAP_RADII = [0, 1, 3, 5, 10] as const
+
+// Derive the API-facing GapRule[] from the two buckets. A MISSING item becomes a
+// "lacks"/"beyond" rule; a HAVE item becomes a "has"/"within" rule. Radius 0 uses
+// presence (in the town); radius N uses proximity within/beyond N km. This is the
+// single query representation consumed by useFindGaps / useFindGapsStorePins.
+export function bucketsToGapRules(
+  missingItems: GapItem[],
+  missingRadius: number,
+  haveItems: GapItem[],
+  haveRadius: number
+): GapRule[] {
+  const rule = (item: GapItem, radius: number, present: boolean): GapRule => {
+    const base = {
+      id: `${present ? 'have' : 'missing'}:${item.key}`,
+      type: item.type,
+      value: item.label,
+      targetIds: item.targetIds,
+    }
+    if (radius > 0) {
+      return {
+        ...base,
+        kind: 'proximity',
+        op: present ? 'within' : 'beyond',
+        km: radius,
+      }
+    }
+    return { ...base, kind: 'presence', op: present ? 'has' : 'lacks' }
+  }
+  return [
+    ...missingItems.map((i) => rule(i, missingRadius, false)),
+    ...haveItems.map((i) => rule(i, haveRadius, true)),
+  ]
+}
 
 interface WorkspaceState {
   // Cross-tool selection + navigation
@@ -40,6 +79,14 @@ interface WorkspaceState {
 
   // Overlays / filters
   overlays: WorkspaceOverlays
+  // Find-Gaps "two buckets": brands/categories the town must be MISSING vs must
+  // ALREADY HAVE, each with its own proximity radius (km; 0 = "In the town").
+  // `gapRules` is derived from these on every mutation (see bucketsToGapRules).
+  missingItems: GapItem[]
+  haveItems: GapItem[]
+  missingRadius: number
+  haveRadius: number
+  gapSort: GapSort
   gapRules: GapRule[]
   populationRange: [number, number]
   showSubFiveK: boolean
@@ -81,10 +128,11 @@ interface WorkspaceState {
 
   toggleRoadTraffic: () => void
   toggleTrafficHeatmap: () => void
-  setGapRules: (rules: GapRule[]) => void
-  addGapRule: (rule: GapRule) => void
-  removeGapRule: (id: string) => void
-  toggleGapRule: (id: string) => void
+  addBucketItem: (bucket: GapBucket, item: GapItem) => void
+  removeBucketItem: (bucket: GapBucket, key: string) => void
+  setBucketRadius: (bucket: GapBucket, radius: number) => void
+  clearBuckets: () => void
+  setGapSort: (sort: GapSort) => void
   setPopulationRange: (range: [number, number]) => void
   setShowSubFiveK: (v: boolean) => void
   setGapGssCodes: (codes: string[] | null) => void
@@ -121,6 +169,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   brandFilterBrandIds: [],
 
   overlays: { roadTraffic: false, trafficHeatmap: false, requirements: false },
+  missingItems: [],
+  haveItems: [],
+  missingRadius: 0,
+  haveRadius: 5,
+  gapSort: 'pop',
   gapRules: [],
   populationRange: [MIN_POPULATION, MAX_POPULATION],
   showSubFiveK: false,
@@ -203,25 +256,72 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       overlays: { ...s.overlays, trafficHeatmap: !s.overlays.trafficHeatmap },
     })),
 
-  setGapRules: (gapRules) => set({ gapRules }),
-  addGapRule: (rule) => set((s) => ({ gapRules: [...s.gapRules, rule] })),
-  removeGapRule: (id) =>
-    set((s) => ({ gapRules: s.gapRules.filter((r) => r.id !== id) })),
-  toggleGapRule: (id) =>
-    set((s) => ({
-      gapRules: s.gapRules.map((r) => {
-        if (r.id !== id) return r
-        const op =
-          r.op === 'has'
-            ? 'lacks'
-            : r.op === 'lacks'
-              ? 'has'
-              : r.op === 'within'
-                ? 'beyond'
-                : 'within'
-        return { ...r, op }
-      }),
-    })),
+  // Bucket mutations recompute the derived gapRules in the same set() so the
+  // downstream find/map hooks always read a consistent query.
+  addBucketItem: (bucket, item) =>
+    set((s) => {
+      const missingItems =
+        bucket === 'missing'
+          ? s.missingItems.some((i) => i.key === item.key)
+            ? s.missingItems
+            : [...s.missingItems, item]
+          : s.missingItems
+      const haveItems =
+        bucket === 'have'
+          ? s.haveItems.some((i) => i.key === item.key)
+            ? s.haveItems
+            : [...s.haveItems, item]
+          : s.haveItems
+      return {
+        missingItems,
+        haveItems,
+        gapRules: bucketsToGapRules(
+          missingItems,
+          s.missingRadius,
+          haveItems,
+          s.haveRadius
+        ),
+      }
+    }),
+  removeBucketItem: (bucket, key) =>
+    set((s) => {
+      const missingItems =
+        bucket === 'missing'
+          ? s.missingItems.filter((i) => i.key !== key)
+          : s.missingItems
+      const haveItems =
+        bucket === 'have'
+          ? s.haveItems.filter((i) => i.key !== key)
+          : s.haveItems
+      return {
+        missingItems,
+        haveItems,
+        gapRules: bucketsToGapRules(
+          missingItems,
+          s.missingRadius,
+          haveItems,
+          s.haveRadius
+        ),
+      }
+    }),
+  setBucketRadius: (bucket, radius) =>
+    set((s) => {
+      const missingRadius = bucket === 'missing' ? radius : s.missingRadius
+      const haveRadius = bucket === 'have' ? radius : s.haveRadius
+      return {
+        missingRadius,
+        haveRadius,
+        gapRules: bucketsToGapRules(
+          s.missingItems,
+          missingRadius,
+          s.haveItems,
+          haveRadius
+        ),
+      }
+    }),
+  clearBuckets: () =>
+    set({ missingItems: [], haveItems: [], gapRules: [] }),
+  setGapSort: (gapSort) => set({ gapSort }),
   setPopulationRange: (populationRange) => set({ populationRange }),
   setShowSubFiveK: (showSubFiveK) => set({ showSubFiveK }),
   setGapGssCodes: (gapGssCodes) => set({ gapGssCodes }),
