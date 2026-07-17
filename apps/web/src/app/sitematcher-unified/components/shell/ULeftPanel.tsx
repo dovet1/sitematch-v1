@@ -24,7 +24,7 @@ import type {
   ReferenceData,
 } from '../../types/unified-workspace'
 import { Checkbox } from '@/components/ui/checkbox'
-import { CatchmentControl } from './CatchmentControl'
+import { CatchmentControl, CatchmentPicker } from './CatchmentControl'
 
 type RuleType = 'category' | 'brand'
 interface ValueOption {
@@ -500,8 +500,8 @@ function CompareSection() {
               Comparison active
             </div>
             <p className="mt-0.5 text-[11.5px] leading-snug text-sm-ink3">
-              Use the tray at the bottom of the map to view or clear the
-              comparison.
+              Switch between Pin A and Pin B above to tune each catchment, then use
+              the tray at the bottom of the map to view or clear the comparison.
             </p>
           </div>
         ) : compareArm ? (
@@ -530,10 +530,22 @@ function CompareSection() {
   )
 }
 
+// Colours matching the labelled A/B map pins + comparison modal.
+const ARM_COLOR: Record<'a' | 'b', string> = { a: '#7033FF', b: '#E8622C' }
+
 function AssessPoint() {
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
+  const comparePair = useWorkspaceStore((s) => s.comparePair)
+  const activeArm = useWorkspaceStore((s) => s.activeCompareArm)
+  const setActiveArm = useWorkspaceStore((s) => s.setActiveCompareArm)
+  const setComparePointCatchment = useWorkspaceStore(
+    (s) => s.setComparePointCatchment
+  )
 
   if (!assessPoint) return null
+
+  const activePoint = comparePair ? comparePair[activeArm] : assessPoint
+
   return (
     <>
       <div className="border-b border-sm-border-soft px-[18px] py-[18px]">
@@ -541,27 +553,72 @@ function AssessPoint() {
           Assess Area
         </p>
         <h2 className="mt-1 text-[17px] font-semibold tracking-[-0.3px] text-sm-ink">
-          This point
+          {comparePair ? 'Compare points' : 'This point'}
         </h2>
         <p className="mt-1 text-[12.5px] leading-snug text-sm-ink3">
-          Set the catchment around the dropped pin — the landscape on the right updates.
+          {comparePair
+            ? 'Pick a pin and set its catchment independently — each pin can use its own radius, drive or walk time.'
+            : 'Set the catchment around the dropped pin — the landscape on the right updates.'}
         </p>
       </div>
       <div className="px-[18px] py-[18px]">
+        {comparePair && (
+          <div className="mb-4 flex gap-1 rounded-lg bg-sm-bg p-1">
+            {(['a', 'b'] as const).map((arm) => (
+              <button
+                key={arm}
+                type="button"
+                onClick={() => setActiveArm(arm)}
+                className={
+                  'flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold transition-colors ' +
+                  (activeArm === arm
+                    ? 'text-white'
+                    : 'text-sm-ink2 hover:bg-sm-border-soft')
+                }
+                style={activeArm === arm ? { background: ARM_COLOR[arm] } : undefined}
+              >
+                <span
+                  className="flex h-4 w-4 items-center justify-center rounded-full font-mono text-[10px] font-bold"
+                  style={
+                    activeArm === arm
+                      ? { background: 'rgba(255,255,255,0.25)', color: '#fff' }
+                      : { background: ARM_COLOR[arm], color: '#fff' }
+                  }
+                >
+                  {arm.toUpperCase()}
+                </span>
+                Pin {arm.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-start gap-2.5 rounded-lg border border-sm-violet-tint bg-sm-violet-tint-soft p-3">
-          <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-sm-violet text-white">
+          <span
+            className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-white"
+            style={{ background: comparePair ? ARM_COLOR[activeArm] : '#7033FF' }}
+          >
             <MapPin size={15} />
           </span>
           <div className="min-w-0">
-            <div className="text-[13.5px] font-semibold text-sm-ink">Dropped pin</div>
+            <div className="text-[13.5px] font-semibold text-sm-ink">
+              {comparePair ? `Pin ${activeArm.toUpperCase()}` : 'Dropped pin'}
+            </div>
             <div className="mt-0.5 font-mono text-[11px] text-sm-ink3">
-              {assessPoint.lat.toFixed(4)}, {assessPoint.lng.toFixed(4)}
+              {activePoint.lat.toFixed(4)}, {activePoint.lng.toFixed(4)}
             </div>
           </div>
         </div>
 
         <div className="mt-4">
-          <CatchmentControl />
+          {comparePair ? (
+            <CatchmentPicker
+              value={comparePair[activeArm].catchment}
+              onChange={(c) => setComparePointCatchment(activeArm, c)}
+            />
+          ) : (
+            <CatchmentControl />
+          )}
         </div>
       </div>
 

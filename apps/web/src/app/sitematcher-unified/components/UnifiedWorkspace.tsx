@@ -57,6 +57,7 @@ export function UnifiedWorkspace() {
   const toggleInspector = useWorkspaceStore((s) => s.toggleInspector)
   const compareArm = useWorkspaceStore((s) => s.compareArm)
   const comparePair = useWorkspaceStore((s) => s.comparePair)
+  const activeCompareArm = useWorkspaceStore((s) => s.activeCompareArm)
   const pointCompareOpen = useWorkspaceStore((s) => s.pointCompareOpen)
   const setPointCompareOpen = useWorkspaceStore((s) => s.setPointCompareOpen)
   const clearPointCompare = useWorkspaceStore((s) => s.clearPointCompare)
@@ -159,19 +160,28 @@ export function UnifiedWorkspace() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isSketch])
 
+  // While comparing, the left panel edits one pin at a time — the inspector,
+  // catchment tab and single-pin landscape all follow that active pin so the
+  // surveyor sees live feedback as they tune each catchment. Otherwise it's the
+  // lone Assess pin and the global catchment.
+  const activePoint = comparePair ? comparePair[activeCompareArm] : assessPoint
+  const activeCatchment = comparePair
+    ? comparePair[activeCompareArm].catchment
+    : catchment
+
   // The catchment focus: a selected built-up area, or a synthesized pseudo-area
-  // around the Assess dropped pin. Keeps demographics keyed on a stable identity.
+  // around the active Assess pin. Keeps demographics keyed on a stable identity.
   const focusArea = useMemo<WorkspaceArea | null>(() => {
     if (area) return area
-    if (view === 'assess' && assessPoint)
+    if (view === 'assess' && activePoint)
       return {
-        id: `point:${assessPoint.lat.toFixed(5)},${assessPoint.lng.toFixed(5)}`,
+        id: `point:${activePoint.lat.toFixed(5)},${activePoint.lng.toFixed(5)}`,
         name: 'Dropped point',
-        center: [assessPoint.lng, assessPoint.lat],
+        center: [activePoint.lng, activePoint.lat],
         kind: 'point',
       }
     return null
-  }, [area, view, assessPoint])
+  }, [area, view, activePoint])
 
   // Whether the catchment (isochrone/demographics) fetch should run. Distinct
   // from "Catchment tab is open": a drive/walk Assess pin needs its isochrone on
@@ -181,33 +191,34 @@ export function UnifiedWorkspace() {
   const shouldFetchCatchment =
     !!focusArea ||
     tab === 'catchment' ||
-    (view === 'assess' && !!assessPoint && catchment.mode !== 'distance')
+    (view === 'assess' && !!activePoint && activeCatchment.mode !== 'distance')
 
-  const catchmentData = useCatchment(focusArea, catchment, shouldFetchCatchment)
+  const catchmentData = useCatchment(focusArea, activeCatchment, shouldFetchCatchment)
 
   // Two-location comparison: fetches + diffs the landscape/demographics for both
-  // dropped pins whenever a pair exists (drives both the tray and the modal).
-  const comparison = usePointComparison(comparePair, catchment, refData ?? null)
+  // dropped pins (each with its own catchment) whenever a pair exists. Drives the
+  // tray, the modal, and the per-pin catchment outlines on the map.
+  const comparison = usePointComparison(comparePair, refData ?? null)
 
   // The landscape (nearby stores + missing brands) is read around whichever
   // point is active: a selected BUA's centroid or the Assess dropped pin.
   const center = useMemo(() => {
     if (area) return { lat: area.center[1], lon: area.center[0] }
-    if (view === 'assess' && assessPoint)
-      return { lat: assessPoint.lat, lon: assessPoint.lng }
+    if (view === 'assess' && activePoint)
+      return { lat: activePoint.lat, lon: activePoint.lng }
     return null
-  }, [area, view, assessPoint])
+  }, [area, view, activePoint])
 
   // Under a drive/walk Assess catchment, scope the store landscape to the actual
   // isochrone polygon; otherwise use a radius circle (Assess km value, or the
   // fixed BUA radius when a built-up area is selected).
   const useIsochrone =
-    view === 'assess' && !!assessPoint && catchment.mode !== 'distance'
+    view === 'assess' && !!activePoint && activeCatchment.mode !== 'distance'
   const landscapeIsochrone = useIsochrone ? catchmentData.boundaryGeometry : null
   const landscapeRadiusKm = area
     ? BUA_RADIUS_KM
-    : catchment.mode === 'distance'
-      ? catchment.value
+    : activeCatchment.mode === 'distance'
+      ? activeCatchment.value
       : BUA_RADIUS_KM
   const rawLandscape = useAreaData(
     center,
@@ -410,6 +421,11 @@ export function UnifiedWorkspace() {
               onToggle: catchmentData.toggleLsoa,
               boundaryGeometry: catchmentData.boundaryGeometry,
             }}
+            compareBoundaries={{
+              a: comparison.boundaries.a,
+              b: comparison.boundaries.b,
+              active: activeCompareArm,
+            }}
           />
 
           {isSketch && map && (
@@ -504,7 +520,6 @@ export function UnifiedWorkspace() {
       {comparePair && pointCompareOpen && (
         <UPointCompare
           pair={comparePair}
-          catchment={catchment}
           comparison={comparison}
           onClose={() => setPointCompareOpen(false)}
           onClear={clearPointCompare}

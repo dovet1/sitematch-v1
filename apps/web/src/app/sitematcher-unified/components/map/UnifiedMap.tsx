@@ -45,6 +45,13 @@ const LSOA_OUTLINE_DESELECTED = 'lsoa-outline-deselected'
 const CATCH_SOURCE = 'catchment-boundary'
 const CATCH_LINE_LAYER = 'catchment-boundary-line'
 
+// Per-pin compare outlines (both A and B drawn at once, coloured per pin, with
+// the active pin emphasised). Replaces the single outline while comparing.
+const COMPARE_SOURCE = 'compare-boundary'
+const COMPARE_LINE_LAYER = 'compare-boundary-line'
+const COMPARE_A_COLOR = '#7033FF'
+const COMPARE_B_COLOR = '#E8622C'
+
 // Traffic overlays (available everywhere except sketch). Two independent toggles:
 // road AADT line-shading and a count-point intensity heatmap. Tilesets ported
 // from the SiteAnalyser tool.
@@ -63,6 +70,13 @@ export interface LsoaLayerProps {
   selectedCodes: Set<string>
   onToggle: (code: string) => void
   boundaryGeometry: GeoJSON.Geometry | null
+}
+
+// Per-pin catchment outlines drawn while comparing two locations.
+export interface CompareBoundariesProps {
+  a: GeoJSON.Geometry | null
+  b: GeoJSON.Geometry | null
+  active: 'a' | 'b'
 }
 
 function buaFilter(codes: string[] | null, range: [number, number]) {
@@ -160,6 +174,7 @@ export function UnifiedMap({
   visiblePresentBrandIds = null,
   requirements = [],
   lsoa,
+  compareBoundaries,
   onMap,
   gapStorePins = [],
   gapPinsStatus = 'idle',
@@ -169,6 +184,8 @@ export function UnifiedMap({
   visiblePresentBrandIds?: Set<string> | null
   requirements?: RequirementLocation[]
   lsoa?: LsoaLayerProps
+  // Per-pin compare outlines; null when not comparing.
+  compareBoundaries?: CompareBoundariesProps
   onMap?: (map: mapboxgl.Map | null) => void
   // Find-gaps clustered store pins + their fetch status (drives the map hint).
   gapStorePins?: NearbyStore[]
@@ -191,6 +208,12 @@ export function UnifiedMap({
   // style swap (mirrors how the Assess pin re-places from store state).
   const requirementsRef = useRef<RequirementLocation[]>(requirements)
   requirementsRef.current = requirements
+  // Latest per-pin compare outlines, read by addLayers to re-hydrate the source
+  // after a style swap (mirrors requirementsRef above).
+  const compareBoundariesRef = useRef<CompareBoundariesProps | undefined>(
+    compareBoundaries
+  )
+  compareBoundariesRef.current = compareBoundaries
   // Assess store logo-badge markers, keyed by store id, plus the last-rendered
   // store snapshot used to detect position/visual changes on re-sync.
   const storeMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map())
@@ -217,6 +240,7 @@ export function UnifiedMap({
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
   const compareArm = useWorkspaceStore((s) => s.compareArm)
   const comparePair = useWorkspaceStore((s) => s.comparePair)
+  const activeCompareArm = useWorkspaceStore((s) => s.activeCompareArm)
   const hoveredBrandId = useWorkspaceStore((s) => s.hoveredBrandId)
   const overlaysRequirements = useWorkspaceStore((s) => s.overlays.requirements)
   const overlaysRoadTraffic = useWorkspaceStore((s) => s.overlays.roadTraffic)
@@ -224,6 +248,12 @@ export function UnifiedMap({
   const selectArea = useWorkspaceStore((s) => s.selectArea)
   const setAssessPoint = useWorkspaceStore((s) => s.setAssessPoint)
   const setReqModal = useWorkspaceStore((s) => s.setReqModal)
+
+  // Coordinate-only signature of the compare pair, used to key the camera effect
+  // so it fires only when a pin moves (added/removed), not on a catchment edit.
+  const compareCoordKey = comparePair
+    ? `${comparePair.a.lat},${comparePair.a.lng}|${comparePair.b.lat},${comparePair.b.lng}`
+    : null
 
   // Reconcile the Assess store logo-badge markers against the latest storeDots.
   // Creates/removes markers by id, updates position + badge content in place,
@@ -324,17 +354,32 @@ export function UnifiedMap({
       return
     }
 
+    // Clicking a compare pin selects that arm for editing. stopPropagation keeps
+    // the click from falling through to the map's drop-point handler.
+    const attachArmClick = (marker: mapboxgl.Marker, arm: 'a' | 'b') => {
+      marker.getElement().addEventListener('click', (e) => {
+        e.stopPropagation()
+        useWorkspaceStore.getState().setActiveCompareArm(arm)
+      })
+    }
+
     if (st.comparePair) {
       removePlain()
-      if (!markers.a) markers.a = new mapboxgl.Marker({
-        element: buildLabeledPin('#7033FF', 'A'),
-        anchor: 'bottom',
-      })
+      if (!markers.a) {
+        markers.a = new mapboxgl.Marker({
+          element: buildLabeledPin('#7033FF', 'A'),
+          anchor: 'bottom',
+        })
+        attachArmClick(markers.a, 'a')
+      }
       markers.a.setLngLat([st.comparePair.a.lng, st.comparePair.a.lat]).addTo(map)
-      if (!markers.b) markers.b = new mapboxgl.Marker({
-        element: buildLabeledPin('#E8622C', 'B'),
-        anchor: 'bottom',
-      })
+      if (!markers.b) {
+        markers.b = new mapboxgl.Marker({
+          element: buildLabeledPin('#E8622C', 'B'),
+          anchor: 'bottom',
+        })
+        attachArmClick(markers.b, 'b')
+      }
       markers.b.setLngLat([st.comparePair.b.lng, st.comparePair.b.lat]).addTo(map)
       return
     }
@@ -518,6 +563,35 @@ export function UnifiedMap({
       })
     }
 
+    // Compare outlines: both pins at once, coloured per pin, active pin emphasised.
+    if (!map.getSource(COMPARE_SOURCE)) {
+      map.addSource(COMPARE_SOURCE, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      })
+    }
+    if (!map.getLayer(COMPARE_LINE_LAYER)) {
+      map.addLayer({
+        id: COMPARE_LINE_LAYER,
+        type: 'line',
+        source: COMPARE_SOURCE,
+        paint: {
+          'line-color': [
+            'match',
+            ['get', 'pin'],
+            'a',
+            COMPARE_A_COLOR,
+            'b',
+            COMPARE_B_COLOR,
+            '#7033FF',
+          ] as any,
+          'line-width': ['case', ['get', 'active'], 3.5, 2] as any,
+          'line-opacity': ['case', ['get', 'active'], 1, 0.55] as any,
+          'line-dasharray': [2, 2],
+        },
+      })
+    }
+
     // Traffic heatmap (count-point intensity). Added before the road line so the
     // crisp road shading renders on top of the softer heatmap bloom.
     if (!map.getSource(TRAFFIC_COUNTS_SOURCE)) {
@@ -622,6 +696,7 @@ export function UnifiedMap({
     applyBuaFilter(map)
     applyLsoaFilters(map)
     applyCatchmentBoundary(map)
+    applyCompareBoundaries(map)
     applyVisibility(map)
     applyMapCursor(map)
     readyRef.current = true
@@ -679,6 +754,27 @@ export function UnifiedMap({
     )
   }
 
+  // Draw both pins' catchment outlines (A + B) as one FeatureCollection, tagging
+  // each with its pin id and whether it's the active (emphasised) arm.
+  const applyCompareBoundaries = (map: mapboxgl.Map) => {
+    const src = map.getSource(COMPARE_SOURCE) as mapboxgl.GeoJSONSource | undefined
+    if (!src) return
+    const cb = compareBoundariesRef.current
+    const features: GeoJSON.Feature[] = []
+    if (cb) {
+      for (const pin of ['a', 'b'] as const) {
+        const geom = cb[pin]
+        if (!geom) continue
+        features.push({
+          type: 'Feature',
+          geometry: geom,
+          properties: { pin, active: cb.active === pin },
+        })
+      }
+    }
+    src.setData({ type: 'FeatureCollection', features })
+  }
+
   const applyVisibility = (map: mapboxgl.Map) => {
     const catchmentActive = tab === 'catchment'
     const buaVisible = view === 'find'
@@ -712,13 +808,23 @@ export function UnifiedMap({
     }
     // The Assess boundary (circle for distance, isochrone for drive/walk) is the
     // single dashed shape for a dropped pin — show it whenever a pin exists, not
-    // just on the Catchment tab. The BUA boundary stays scoped to the tab.
-    const boundaryVisible = catchmentActive || (view === 'assess' && !!assessPoint)
+    // just on the Catchment tab. The BUA boundary stays scoped to the tab. While
+    // comparing, the per-pin compare outlines replace it, so hide the single one.
+    const boundaryVisible =
+      !comparePair && (catchmentActive || (view === 'assess' && !!assessPoint))
     if (map.getLayer(CATCH_LINE_LAYER)) {
       map.setLayoutProperty(
         CATCH_LINE_LAYER,
         'visibility',
         boundaryVisible ? 'visible' : 'none'
+      )
+    }
+    // The per-pin compare outlines (A + B) are shown only while a pair exists.
+    if (map.getLayer(COMPARE_LINE_LAYER)) {
+      map.setLayoutProperty(
+        COMPARE_LINE_LAYER,
+        'visibility',
+        comparePair ? 'visible' : 'none'
       )
     }
 
@@ -1014,8 +1120,11 @@ export function UnifiedMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessPoint])
 
-  // Compare flow: re-sync the A/B pins and move the camera. Arming opens up the
-  // whole UK as a drop target; a completed pair frames both pins.
+  // Compare camera: re-sync the A/B pins and move the camera. Arming opens up the
+  // whole UK as a drop target; a completed pair frames both pins. Keyed on a
+  // coordinate-only signature (not the comparePair object, which gets a fresh
+  // reference on every catchment edit) so the camera only moves when a pin is
+  // added or removed — never on a slider/mode change.
   useEffect(() => {
     const map = mapRef.current
     if (!map || !readyRef.current) return
@@ -1031,7 +1140,23 @@ export function UnifiedMap({
       map.flyTo({ ...NATIONAL_VIEWPORT, duration: 900 })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [compareArm, comparePair])
+  }, [compareArm, compareCoordKey])
+
+  // Compare visibility + outlines: suppress the single dashed shape and repaint
+  // both per-pin outlines. Runs on catchment edits, active-arm switches, and when
+  // a pair is added/cleared — none of which the coordinate-keyed camera effect
+  // reacts to. Also re-syncs the pins so active-arm emphasis stays current.
+  const hasComparePair = !!comparePair
+  const compareBoundaryA = compareBoundaries?.a
+  const compareBoundaryB = compareBoundaries?.b
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current) return
+    syncAssessPins(map)
+    applyCompareBoundaries(map)
+    applyVisibility(map)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasComparePair, activeCompareArm, compareBoundaryA, compareBoundaryB])
 
   // Reconcile the Assess store logo-badge markers when the nearby stores change.
   useEffect(() => {

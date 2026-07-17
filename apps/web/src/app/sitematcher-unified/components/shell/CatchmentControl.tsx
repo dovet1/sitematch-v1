@@ -1,7 +1,10 @@
 'use client'
 
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
-import type { CatchmentMode } from '../../types/unified-workspace'
+import type {
+  CatchmentDefinition,
+  CatchmentMode,
+} from '../../types/unified-workspace'
 
 const MODE_OPTIONS: { value: CatchmentMode; label: string }[] = [
   { value: 'distance', label: 'Radius' },
@@ -20,12 +23,17 @@ export const MODE_RANGE: Record<
   walk: { min: 5, max: 30, step: 5, def: 15, unit: 'min' },
 }
 
-// The single catchment definition control (Radius km / Drive / Walk min).
-// Shared by the Assess-mode left panel and the BUA-mode Catchment tab.
-export function CatchmentControl() {
-  const catchment = useWorkspaceStore((s) => s.catchment)
-  const setCatchment = useWorkspaceStore((s) => s.setCatchment)
-  const range = MODE_RANGE[catchment.mode]
+// Presentational catchment definition control (Radius km / Drive / Walk min).
+// Fully controlled — the caller owns the value and the change handler, so the
+// same UI drives the global store (via CatchmentControl) or a single compare arm.
+export function CatchmentPicker({
+  value,
+  onChange,
+}: {
+  value: CatchmentDefinition
+  onChange: (catchment: CatchmentDefinition) => void
+}) {
+  const range = MODE_RANGE[value.mode]
 
   return (
     <div>
@@ -38,11 +46,11 @@ export function CatchmentControl() {
             key={o.value}
             type="button"
             onClick={() =>
-              setCatchment({ mode: o.value, value: MODE_RANGE[o.value].def })
+              onChange({ mode: o.value, value: MODE_RANGE[o.value].def })
             }
             className={
               'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ' +
-              (catchment.mode === o.value
+              (value.mode === o.value
                 ? 'bg-sm-ink text-white'
                 : 'text-sm-ink2 hover:bg-sm-border-soft')
             }
@@ -54,9 +62,9 @@ export function CatchmentControl() {
 
       <div className="mt-3 flex items-center justify-between font-mono text-[11px] text-sm-ink2">
         <span>
-          {catchment.mode === 'distance'
-            ? `${catchment.value} km`
-            : `${catchment.value} min ${catchment.mode}`}
+          {value.mode === 'distance'
+            ? `${value.value} km`
+            : `${value.value} min ${value.mode}`}
         </span>
         <span className="text-sm-ink4">
           {range.min}–{range.max} {range.unit}
@@ -67,12 +75,20 @@ export function CatchmentControl() {
         min={range.min}
         max={range.max}
         step={range.step}
-        value={catchment.value}
+        value={value.value}
         onChange={(e) =>
-          setCatchment({ mode: catchment.mode, value: Number(e.target.value) })
+          onChange({ mode: value.mode, value: Number(e.target.value) })
         }
         className="mt-2 w-full accent-sm-violet"
       />
     </div>
   )
+}
+
+// Store-bound wrapper: the single global catchment control.
+// Shared by the Assess-mode left panel (single pin) and the BUA-mode Catchment tab.
+export function CatchmentControl() {
+  const catchment = useWorkspaceStore((s) => s.catchment)
+  const setCatchment = useWorkspaceStore((s) => s.setCatchment)
+  return <CatchmentPicker value={catchment} onChange={setCatchment} />
 }

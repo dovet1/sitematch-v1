@@ -232,10 +232,18 @@ export interface CatchmentDefinition {
 
 // --- Compare two locations (Assess Area) ---
 
-// A dropped map point in the compare flow.
+// A bare map coordinate (input to dropComparePoint before a catchment is attached).
+export interface LatLng {
+  lat: number
+  lng: number
+}
+
+// A dropped map point in the compare flow, carrying its own catchment so each
+// pin can be analysed at an independent radius / drive / walk.
 export interface ComparePoint {
   lat: number
   lng: number
+  catchment: CatchmentDefinition
 }
 
 // The armed pair: A is the original Assess pin, B the second dropped point.
@@ -243,6 +251,9 @@ export interface ComparePair {
   a: ComparePoint
   b: ComparePoint
 }
+
+// Which compare pin the catchment control currently edits.
+export type CompareArm = 'a' | 'b'
 
 // Aggregated catchment demographics for one compared point.
 export interface CompareStats {

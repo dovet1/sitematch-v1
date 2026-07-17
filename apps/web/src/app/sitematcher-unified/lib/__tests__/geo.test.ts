@@ -1,4 +1,9 @@
-import { pointInGeometry, isInCatchment, haversineMeters } from '../geo'
+import {
+  pointInGeometry,
+  isInCatchment,
+  haversineMeters,
+  circleGeometry,
+} from '../geo'
 
 // A unit square (lng/lat 0..1) with an inner hole (0.4..0.6).
 const squareWithHole: GeoJSON.Polygon = {
@@ -115,6 +120,29 @@ describe('isInCatchment', () => {
       // Right on top of centre — within any radius, but outside the far polygon.
       const atCentre = { lng: center.lon, lat: center.lat }
       expect(isInCatchment(center, atCentre.lng, atCentre.lat, 50, polygon)).toBe(false)
+    })
+  })
+
+  describe('circleGeometry', () => {
+    it('returns a closed ring with steps+1 vertices', () => {
+      const poly = circleGeometry(-1.5, 53.8, 5, 72)
+      expect(poly.type).toBe('Polygon')
+      const ring = poly.coordinates[0]
+      expect(ring).toHaveLength(73)
+      expect(ring[0]).toEqual(ring[ring.length - 1])
+    })
+
+    it('places every vertex approximately radiusKm from the centre', () => {
+      const lng = -1.5
+      const lat = 53.8
+      const radiusKm = 5
+      const ring = circleGeometry(lng, lat, radiusKm).coordinates[0]
+      for (const [vLng, vLat] of ring) {
+        const dMeters = haversineMeters(lat, lng, vLat, vLng)
+        // ~1% tolerance for the equirectangular approximation used by the util.
+        expect(dMeters).toBeGreaterThan(radiusKm * 1000 * 0.99)
+        expect(dMeters).toBeLessThan(radiusKm * 1000 * 1.01)
+      }
     })
   })
 })

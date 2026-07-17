@@ -10,7 +10,8 @@ import type {
   CatchmentDefinition,
   WorkspaceOverlays,
   ComparePair,
-  ComparePoint,
+  CompareArm,
+  LatLng,
 } from '../../types/unified-workspace'
 
 const MAX_COMPARE = 3
@@ -55,8 +56,10 @@ interface WorkspaceState {
 
   // Compare two locations (Assess only). `compareArm` = waiting for pin B;
   // `comparePair` = the two dropped points; `pointCompareOpen` = modal visible.
+  // `activeCompareArm` = which pin the catchment control edits while comparing.
   compareArm: boolean
   comparePair: ComparePair | null
+  activeCompareArm: CompareArm
   pointCompareOpen: boolean
 
   // Panel chrome
@@ -90,7 +93,9 @@ interface WorkspaceState {
   toggleShowLsoa: () => void
 
   armPointCompare: () => void
-  dropComparePoint: (b: ComparePoint) => void
+  dropComparePoint: (b: LatLng) => void
+  setActiveCompareArm: (arm: CompareArm) => void
+  setComparePointCatchment: (arm: CompareArm, catchment: CatchmentDefinition) => void
   setPointCompareOpen: (open: boolean) => void
   clearPointCompare: () => void
 
@@ -129,6 +134,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
 
   compareArm: false,
   comparePair: null,
+  activeCompareArm: 'a',
   pointCompareOpen: false,
 
   leftHidden: false,
@@ -152,6 +158,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       // Leaving/switching mode tears down any in-flight point comparison.
       compareArm: false,
       comparePair: null,
+      activeCompareArm: 'a',
       pointCompareOpen: false,
       // The requirements overlay is pin-gated; don't let it leak across a mode
       // switch and auto-re-enable when a new pin is dropped. Traffic flags persist.
@@ -234,7 +241,12 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       // pins/tray don't orphan in empty Assess mode.
       ...(assessPoint
         ? {}
-        : { compareArm: false, comparePair: null, pointCompareOpen: false }),
+        : {
+            compareArm: false,
+            comparePair: null,
+            activeCompareArm: 'a' as CompareArm,
+            pointCompareOpen: false,
+          }),
       overlays: assessPoint
         ? s.overlays
         : { ...s.overlays, requirements: false },
@@ -247,20 +259,47 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
     set((s) =>
       s.assessPoint && !s.comparePair ? { compareArm: true } : {}
     ),
-  // Drop pin B: pair it with the current Assess pin (pin A) and open the modal.
+  // Drop pin B: pair it with the current Assess pin (pin A). Both pins inherit
+  // the current global catchment as a starting point; the surveyor then tweaks
+  // each independently. The freshly dropped pin B is made active so it's editable
+  // immediately, and the modal stays closed — it opens on demand from the tray.
   dropComparePoint: (b) =>
     set((s) =>
       s.assessPoint
         ? {
-            comparePair: { a: { ...s.assessPoint }, b },
+            comparePair: {
+              a: { ...s.assessPoint, catchment: s.catchment },
+              b: { ...b, catchment: s.catchment },
+            },
             compareArm: false,
-            pointCompareOpen: true,
+            activeCompareArm: 'b',
+            pointCompareOpen: false,
+          }
+        : {}
+    ),
+  setActiveCompareArm: (activeCompareArm) => set({ activeCompareArm }),
+  setComparePointCatchment: (arm, catchment) =>
+    set((s) =>
+      s.comparePair
+        ? {
+            comparePair: {
+              ...s.comparePair,
+              [arm]: { ...s.comparePair[arm], catchment },
+            },
           }
         : {}
     ),
   setPointCompareOpen: (pointCompareOpen) => set({ pointCompareOpen }),
+  // Clearing restores the single-pin global catchment from pin A (the surviving
+  // assessPoint), so the lone pin never inherits pin B's catchment.
   clearPointCompare: () =>
-    set({ compareArm: false, comparePair: null, pointCompareOpen: false }),
+    set((s) => ({
+      compareArm: false,
+      comparePair: null,
+      activeCompareArm: 'a',
+      pointCompareOpen: false,
+      ...(s.comparePair ? { catchment: s.comparePair.a.catchment } : {}),
+    })),
 
   addToCompare: (area) =>
     set((s) => {

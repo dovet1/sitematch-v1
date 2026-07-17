@@ -1,5 +1,24 @@
 // Shared geo helpers for the unified workspace.
 
+// A GeoJSON circle (km) around [lng, lat] — used to outline a distance catchment.
+export function circleGeometry(
+  lng: number,
+  lat: number,
+  radiusKm: number,
+  steps = 72
+): GeoJSON.Polygon {
+  const radiusMeters = radiusKm * 1000
+  const coords: [number, number][] = []
+  for (let i = 0; i <= steps; i++) {
+    const angle = (i / steps) * 2 * Math.PI
+    const dLat = (radiusMeters / 111320) * Math.cos(angle)
+    const dLng =
+      (radiusMeters / (111320 * Math.cos((lat * Math.PI) / 180))) * Math.sin(angle)
+    coords.push([lng + dLng, lat + dLat])
+  }
+  return { type: 'Polygon', coordinates: [coords] }
+}
+
 // Great-circle distance in metres between two [lat, lon] points.
 export function haversineMeters(
   lat1: number,

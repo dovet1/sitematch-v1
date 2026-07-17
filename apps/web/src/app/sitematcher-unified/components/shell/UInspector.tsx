@@ -652,6 +652,8 @@ export function UInspector({
   const view = useWorkspaceStore((s) => s.view)
   const area = useWorkspaceStore((s) => s.area)
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
+  const comparePair = useWorkspaceStore((s) => s.comparePair)
+  const activeCompareArm = useWorkspaceStore((s) => s.activeCompareArm)
   const selectArea = useWorkspaceStore((s) => s.selectArea)
   const setAssessPoint = useWorkspaceStore((s) => s.setAssessPoint)
   const setReqModal = useWorkspaceStore((s) => s.setReqModal)
@@ -695,13 +697,19 @@ export function UInspector({
     )
   }
 
-  // Assess mode with a dropped point: read the landscape around it.
+  // Assess mode with a dropped point: read the landscape around it. While
+  // comparing, the header follows the active arm (Pin A / Pin B) so the figures
+  // and label stay in sync with the pin being edited.
   if (view === 'assess' && assessPoint) {
+    const activePoint = comparePair ? comparePair[activeCompareArm] : assessPoint
+    const title = comparePair
+      ? `Pin ${activeCompareArm.toUpperCase()}`
+      : 'Dropped point'
     return (
       <Opportunity
-        title="Dropped point"
+        title={title}
         areaName="this location"
-        subtitle={`${assessPoint.lat.toFixed(4)}, ${assessPoint.lng.toFixed(4)}`}
+        subtitle={`${activePoint.lat.toFixed(4)}, ${activePoint.lng.toFixed(4)}`}
         landscape={landscape}
         presentBrands={presentBrands}
         missingBrands={missingBrands}

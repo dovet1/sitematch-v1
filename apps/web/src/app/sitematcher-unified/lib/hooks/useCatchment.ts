@@ -7,25 +7,7 @@ import { useDemographicsData } from '@/components/demographics/shared/hooks/useD
 import { useLsoaSelection } from '@/components/demographics/shared/hooks/useLsoaSelection'
 import type { WorkspaceArea, CatchmentDefinition } from '../../types/unified-workspace'
 import { MODE_MAP, MILES_PER_KM } from '../catchment-request'
-
-// A GeoJSON circle (km) around [lng, lat] — used to outline a distance catchment.
-function circleGeometry(
-  lng: number,
-  lat: number,
-  radiusKm: number,
-  steps = 72
-): GeoJSON.Polygon {
-  const radiusMeters = radiusKm * 1000
-  const coords: [number, number][] = []
-  for (let i = 0; i <= steps; i++) {
-    const angle = (i / steps) * 2 * Math.PI
-    const dLat = (radiusMeters / 111320) * Math.cos(angle)
-    const dLng =
-      (radiusMeters / (111320 * Math.cos((lat * Math.PI) / 180))) * Math.sin(angle)
-    coords.push([lng + dLng, lat + dLat])
-  }
-  return { type: 'Polygon', coordinates: [coords] }
-}
+import { circleGeometry } from '../geo'
 
 export interface CatchmentData {
   location: LocationResult | null

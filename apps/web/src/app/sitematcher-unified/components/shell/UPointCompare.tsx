@@ -180,7 +180,6 @@ function StatRow({ row }: { row: CompareStatRow }) {
 
 export interface UPointCompareProps {
   pair: ComparePair
-  catchment: CatchmentDefinition
   comparison: PointComparison
   onClose: () => void
   onClear: () => void
@@ -188,7 +187,6 @@ export interface UPointCompareProps {
 
 export function UPointCompare({
   pair,
-  catchment,
   comparison,
   onClose,
   onClear,
@@ -196,7 +194,6 @@ export function UPointCompare({
   const { loading, error, retry, onlyA, onlyB, missingBoth, bothCount, statRows } =
     comparison
   const hasData = !loading && !error && comparison.a != null && comparison.b != null
-  const rLabel = radiusLabel(catchment)
 
   return (
     <div
@@ -228,9 +225,9 @@ export function UPointCompare({
         <div className="min-h-0 flex-1 overflow-auto">
           {/* the two points */}
           <div className="flex items-stretch gap-3 px-6 py-4">
-            <PtHeadCard point={pair.a} label="A" color="#7033FF" catchment={catchment} />
+            <PtHeadCard point={pair.a} label="A" color="#7033FF" catchment={pair.a.catchment} />
             <div className="self-center font-mono text-[11px] text-sm-ink4">vs</div>
-            <PtHeadCard point={pair.b} label="B" color={PT_B} catchment={catchment} />
+            <PtHeadCard point={pair.b} label="B" color={PT_B} catchment={pair.b.catchment} />
           </div>
 
           {loading && (
@@ -264,8 +261,8 @@ export function UPointCompare({
                   Brands in one location, not the other
                 </div>
                 <div className="mt-0.5 text-[12.5px] leading-relaxed text-sm-ink3">
-                  Trading within the {rLabel} of one pin but absent from the other — the
-                  head-to-head gaps.
+                  Trading within one pin&apos;s catchment but absent from the other —
+                  the head-to-head gaps.
                 </div>
               </div>
               <div className="flex gap-4 px-6 pb-5 pt-3">
@@ -337,7 +334,7 @@ export function UPointCompare({
                   Catchment stats
                 </div>
                 <div className="mt-0.5 text-[12.5px] leading-relaxed text-sm-ink3">
-                  Difference within the {rLabel}. Δ is B relative to A.
+                  Difference within each pin&apos;s catchment. Δ is B relative to A.
                 </div>
               </div>
               <table className="mb-2 w-full border-collapse">
