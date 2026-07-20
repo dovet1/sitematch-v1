@@ -107,6 +107,25 @@ export interface MissingBrand {
 // (/api/public/planning). Keyed on `name` (Council/uid) — `uid` alone is only
 // council-scoped. Applicant/agent names are omitted: PlanIt only ever returns
 // the placeholder "See source"; the `url` link-out reaches the real parties.
+export type PlanningTruncationReason =
+  | 'authority_cap'
+  | 'page_cap'
+  | 'record_cap'
+  | 'upstream_timeout'
+  | 'upstream_busy'
+  | 'rate_limited'
+  | 'upstream_error'
+  | null
+
+// Progress while a planning lookup fans out across planning authorities. A
+// lookup can span ~20 authorities at concurrency 2, so the tab reports which
+// one it is on rather than showing an unqualified spinner for minutes.
+export interface PlanningProgress {
+  done: number
+  total: number
+  authority: string | null
+}
+
 export interface PlanningApplication {
   name: string
   uid: string

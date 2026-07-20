@@ -23,6 +23,8 @@ import type {
   MissingFascia,
   MissingBrand,
   PlanningApplication,
+  PlanningProgress,
+  PlanningTruncationReason,
   PresentBrand,
   RequirementLocation,
 } from '../../types/unified-workspace'
@@ -636,6 +638,27 @@ export function planningStateBadgeClass(state: string): string {
   return 'bg-amber-600'
 }
 
+export function planningTruncationMessage(
+  reason: PlanningTruncationReason
+): string | null {
+  switch (reason) {
+    case 'authority_cap':
+      return 'This area spans a lot of councils, so only part of it was checked.'
+    case 'rate_limited':
+      return 'PlanIt temporarily limited the search, so results may be incomplete.'
+    case 'upstream_busy':
+      return 'PlanIt was busy for some councils, so results may be incomplete.'
+    case 'upstream_timeout':
+    case 'upstream_error':
+      return "Some councils didn't respond, so results may be incomplete."
+    case 'page_cap':
+    case 'record_cap':
+      return 'There are more matching applications than we can show here.'
+    default:
+      return null
+  }
+}
+
 function formatPlanningDate(iso: string | null): string | null {
   if (!iso) return null
   const d = new Date(iso)
@@ -688,25 +711,41 @@ function PlanningRow({
   )
 }
 
+// A lookup fans out across every council covering the area, which can take a
+// while, so the spinner reports how far through it is rather than sitting on a
+// bare "loading" for minutes.
+export function planningProgressMessage(
+  progress: PlanningProgress | null
+): string {
+  if (!progress || progress.total <= 0) return 'Reading planning applications…'
+  const { done, total } = progress
+  return `Checking council ${Math.min(done + 1, total)} of ${total}…`
+}
+
 function PlanningBody({
   loading,
   error,
   truncated,
+  truncationReason,
+  progress,
   applications,
   onOpen,
 }: {
   loading: boolean
   error: string | null
   truncated: boolean
+  truncationReason: PlanningTruncationReason
+  progress: PlanningProgress | null
   applications: PlanningApplication[]
   onOpen: (app: PlanningApplication) => void
 }) {
+  const warning = planningTruncationMessage(truncationReason)
   return (
     <>
       {loading && (
         <div className="flex items-center gap-2 px-[18px] py-4 text-[12.5px] text-sm-ink3">
-          <Loader2 size={13} className="animate-spin" /> Reading planning
-          applications…
+          <Loader2 size={13} className="animate-spin" />{' '}
+          {planningProgressMessage(progress)}
         </div>
       )}
 
@@ -729,12 +768,15 @@ function PlanningBody({
             {error}
           </div>
         )}
-        {truncated && !loading && !error && (
+        {truncated && warning && !loading && !error && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12.5px] text-amber-800">
-            Showing a subset of applications for this area.
+            {warning}
           </div>
         )}
-        {!loading && !error && applications.length === 0 && (
+        {/* Only claim the area is empty when the search actually completed —
+            a truncated run has its own amber notice and must not also assert
+            there is nothing here. */}
+        {!loading && !error && !truncated && applications.length === 0 && (
           <div className="rounded-xl border border-dashed border-sm-border bg-sm-bg px-3 py-3.5 text-center text-[12.5px] text-sm-ink3">
             No large planning applications found in this area.
           </div>
@@ -763,6 +805,8 @@ function Opportunity({
   planningLoading,
   planningError,
   planningTruncated,
+  planningTruncationReason,
+  planningProgress,
   onClose,
   onCollapse,
   onOpenReq,
@@ -783,6 +827,8 @@ function Opportunity({
   planningLoading: boolean
   planningError: string | null
   planningTruncated: boolean
+  planningTruncationReason: PlanningTruncationReason
+  planningProgress: PlanningProgress | null
   onClose: () => void
   onCollapse: () => void
   onOpenReq: (requirementId: string) => void
@@ -908,6 +954,8 @@ function Opportunity({
             loading={planningLoading}
             error={planningError}
             truncated={planningTruncated}
+            truncationReason={planningTruncationReason}
+            progress={planningProgress}
             applications={planningApplications}
             onOpen={onOpenPlanning}
           />
@@ -948,6 +996,8 @@ export function UInspector({
   planningLoading,
   planningError,
   planningTruncated,
+  planningTruncationReason,
+  planningProgress,
 }: {
   hidden: boolean
   onToggle: () => void
@@ -966,6 +1016,8 @@ export function UInspector({
   planningLoading: boolean
   planningError: string | null
   planningTruncated: boolean
+  planningTruncationReason: PlanningTruncationReason
+  planningProgress: PlanningProgress | null
 }) {
   const view = useWorkspaceStore((s) => s.view)
   const area = useWorkspaceStore((s) => s.area)
@@ -1012,6 +1064,8 @@ export function UInspector({
         planningLoading={planningLoading}
         planningError={planningError}
         planningTruncated={planningTruncated}
+        planningTruncationReason={planningTruncationReason}
+        planningProgress={planningProgress}
         onClose={() => selectArea(null)}
         onCollapse={onToggle}
         onOpenReq={setReqModal}
@@ -1045,6 +1099,8 @@ export function UInspector({
         planningLoading={planningLoading}
         planningError={planningError}
         planningTruncated={planningTruncated}
+        planningTruncationReason={planningTruncationReason}
+        planningProgress={planningProgress}
         onClose={() => setAssessPoint(null)}
         onCollapse={onToggle}
         onOpenReq={setReqModal}

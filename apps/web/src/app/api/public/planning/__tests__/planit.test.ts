@@ -1,22 +1,21 @@
-import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
-import area from '@turf/area'
-import { point, polygon as turfPolygon } from '@turf/helpers'
 import {
-  MAX_BOUNDARY_AREA_M2,
-  MAX_OUTBOUND_VERTICES,
+  AuthorityLookupError,
+  MAX_AUTHORITIES,
+  MAX_TOTAL_RECORDS,
   PAGE_SIZE,
+  PLANIT_AREAS_BASE,
   PLANIT_BASE,
   RateLimitError,
   __clearCaches,
-  buildTiles,
+  classifyUpstream,
+  fetchAuthorities,
   fetchPlanningApplications,
   mapRecord,
-  planQuery,
   startDateUTC,
   validateBoundary,
-  vertexCount,
   type Boundary,
 } from '../planit'
+import type { PlanningProgress } from '@/app/sitematcher-unified/types/unified-workspace'
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -83,6 +82,10 @@ function planItRecord(
   }
 }
 
+function areaRecord(id: number, name: string, type = 'English District') {
+  return { area_id: id, area_name: name, area_type: type }
+}
+
 function envelope(records: unknown[], total = records.length) {
   return { from: 0, to: records.length, total, secs_taken: 0.5, records }
 }
@@ -92,19 +95,57 @@ function okResponse(body: unknown): Response {
     ok: true,
     status: 200,
     json: async () => body,
+    text: async () => JSON.stringify(body),
   } as unknown as Response
 }
 
-function status429(): Response {
-  return { ok: false, status: 429, json: async () => ({}) } as unknown as Response
+// PlanIt signals failure with a 400 plus a body that says which failure it is.
+function errorResponse(status: number, body: unknown = {}): Response {
+  const text = typeof body === 'string' ? body : JSON.stringify(body)
+  return {
+    ok: false,
+    status,
+    json: async () => (typeof body === 'string' ? {} : body),
+    text: async () => text,
+  } as unknown as Response
 }
 
-// Reads the query params of a mocked fetch call, whether it went as a
-// form-encoded POST (boundary) or a GET with a query string (bbox tile).
-function callParams(call: [unknown, unknown?]): URLSearchParams {
-  const [url, init] = call as [string, RequestInit | undefined]
-  if (init?.method === 'POST') return init.body as URLSearchParams
-  return new URL(url).searchParams
+const BUSY_BODY = '{"error": "PGRST003: Timed out acquiring connection from connection pool."}'
+const TIMEOUT_BODY = '{"error": "Timeout (45s) from data source"}'
+
+function status429(): Response {
+  return errorResponse(429)
+}
+
+function callUrl(call: unknown): URL {
+  return new URL((call as [string])[0])
+}
+
+function isAreasCall(call: unknown): boolean {
+  return (call as [string])[0].startsWith(PLANIT_AREAS_BASE)
+}
+
+function applicsCalls() {
+  return fetchMock.mock.calls.filter((c) => !isAreasCall(c))
+}
+
+/**
+ * Routes the two PlanIt endpoints this module talks to. `apps` receives the
+ * numeric authority id and the zero-based page index.
+ */
+function mockPlanIt(options: {
+  areas?: unknown[]
+  apps?: (authId: string, index: number) => Response | Promise<Response>
+}) {
+  const areas = options.areas ?? [areaRecord(1, 'Testshire')]
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url.startsWith(PLANIT_AREAS_BASE)) return okResponse(envelope(areas))
+    const params = new URL(url).searchParams
+    const authId = params.get('auth')!
+    const index = Number(params.get('index') ?? '0')
+    if (!options.apps) return okResponse(envelope([]))
+    return options.apps(authId, index)
+  })
 }
 
 const fetchMock = jest.fn()
@@ -113,6 +154,11 @@ beforeEach(() => {
   fetchMock.mockReset()
   __clearCaches()
   global.fetch = fetchMock as unknown as typeof fetch
+  jest.spyOn(console, 'error').mockImplementation(() => {})
+})
+
+afterEach(() => {
+  jest.restoreAllMocks()
 })
 
 // A small rectangle near Sheffield: ~5 km × ~4 km, well under every threshold.
@@ -157,74 +203,28 @@ describe('validateBoundary', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Query planning: verbatim → simplify+buffer → tiles
+// Upstream error classification
 // ---------------------------------------------------------------------------
 
-describe('planQuery', () => {
-  it('sends a small polygon verbatim (no simplify, no buffer)', () => {
-    const plan = planQuery(SMALL)
-    expect(plan.kind).toBe('boundary')
-    if (plan.kind === 'boundary') expect(plan.geometry).toBe(SMALL)
+describe('classifyUpstream', () => {
+  // PlanIt returns HTTP 400 for two unrelated problems, and only the body
+  // distinguishes transient load from a query that was simply too expensive.
+  it('reads connection-pool exhaustion as transient upstream_busy', () => {
+    expect(classifyUpstream(400, BUSY_BODY)).toBe('upstream_busy')
   })
 
-  it('simplifies + buffers an over-limit polygon into a verified superset', () => {
-    const original = circleOf(-1.5, 53.5, 0.04, 4000) // ~62 km², 4001 vertices
-    expect(vertexCount(original)).toBeGreaterThan(MAX_OUTBOUND_VERTICES)
-    const plan = planQuery(original)
-    expect(plan.kind).toBe('boundary')
-    if (plan.kind !== 'boundary') return
-    expect(plan.geometry).not.toBe(original)
-    expect(vertexCount(plan.geometry)).toBeLessThanOrEqual(MAX_OUTBOUND_VERTICES)
-    // Superset guarantee: every original vertex lies inside the sent geometry.
-    for (const [lng, lat] of original.coordinates[0]) {
-      expect(
-        booleanPointInPolygon(point([lng, lat]), {
-          type: 'Feature',
-          properties: {},
-          geometry: plan.geometry,
-        })
-      ).toBe(true)
-    }
+  it('reads the data-source timeout as upstream_timeout', () => {
+    expect(classifyUpstream(400, TIMEOUT_BODY)).toBe('upstream_timeout')
+    expect(classifyUpstream(400, '{"error": "Timeout (30s) from data source"}')).toBe(
+      'upstream_timeout'
+    )
   })
 
-  it('falls back to bbox tiles for a polygon over the area threshold', () => {
-    const big = rect(-2.0, 53.0, -1.5, 53.3) // ~1.1e9 m²
-    expect(area(big)).toBeGreaterThan(MAX_BOUNDARY_AREA_M2)
-    const plan = planQuery(big)
-    expect(plan.kind).toBe('tiles')
-    if (plan.kind !== 'tiles') return
-    expect(plan.tiles.length).toBeGreaterThan(1)
-    for (const [minLon, minLat, maxLon, maxLat] of plan.tiles) {
-      const tilePoly = turfPolygon([
-        [
-          [minLon, minLat],
-          [maxLon, minLat],
-          [maxLon, maxLat],
-          [minLon, maxLat],
-          [minLon, minLat],
-        ],
-      ])
-      expect(area(tilePoly)).toBeLessThanOrEqual(MAX_BOUNDARY_AREA_M2)
-    }
-  })
-
-  it('caps the tile count and flags truncation for a sprawling bbox', () => {
-    // A thin diagonal band: modest polygon area, but a bbox spanning ~6°.
-    const sliver: Boundary = {
-      type: 'Polygon',
-      coordinates: [
-        [
-          [-7, 50],
-          [-6.98, 50],
-          [-1, 55.9],
-          [-1.02, 55.9],
-          [-7, 50],
-        ],
-      ],
-    }
-    const { tiles, tilesTruncated } = buildTiles(sliver)
-    expect(tilesTruncated).toBe(true)
-    expect(tiles).toHaveLength(24)
+  it('falls back to status for timeout codes and upstream_error otherwise', () => {
+    expect(classifyUpstream(504, '')).toBe('upstream_timeout')
+    expect(classifyUpstream(408, '')).toBe('upstream_timeout')
+    expect(classifyUpstream(500, 'server exploded')).toBe('upstream_error')
+    expect(classifyUpstream(400, 'something else')).toBe('upstream_error')
   })
 })
 
@@ -270,6 +270,8 @@ describe('mapRecord', () => {
   })
 
   it('drops records without numeric coordinates and normalises absences to null', () => {
+    // Authority queries return some unlocatable records; they cannot be placed
+    // inside a boundary, so they are dropped rather than guessed at.
     expect(
       mapRecord(planItRecord('X/1', -1.55, 53.8, { location_x: null }))
     ).toBeNull()
@@ -290,62 +292,178 @@ describe('mapRecord', () => {
 })
 
 // ---------------------------------------------------------------------------
+// Authority resolution
+// ---------------------------------------------------------------------------
+
+describe('fetchAuthorities', () => {
+  it('resolves authorities from the boundary bbox and omits the borders field', async () => {
+    mockPlanIt({
+      areas: [areaRecord(296, 'Barnet', 'London Borough'), areaRecord(12, 'Camden')],
+    })
+    const { authorities, truncated } = await fetchAuthorities(SMALL)
+
+    expect(truncated).toBe(false)
+    expect(authorities).toEqual([
+      { id: 296, name: 'Barnet', type: 'London Borough' },
+      { id: 12, name: 'Camden', type: 'English District' },
+    ])
+
+    const params = callUrl(fetchMock.mock.calls[0]).searchParams
+    expect(params.get('bbox')).toBe('-1.6,53,-1.55,53.04')
+    // Area records embed a full authority outline; without `select` every
+    // lookup would download and discard one polygon per authority.
+    expect(params.get('select')).toBe('area_id,area_name,area_type')
+  })
+
+  // PlanIt's nginx 403s Node's default fetch User-Agent, so omitting this
+  // header breaks every server-side request while curl and browsers still work.
+  it('identifies itself with a User-Agent', async () => {
+    mockPlanIt({})
+    await fetchAuthorities(SMALL)
+    const init = fetchMock.mock.calls[0][1] as RequestInit
+    expect((init.headers as Record<string, string>)['User-Agent']).toBeTruthy()
+  })
+
+  it('de-duplicates repeated area ids', async () => {
+    mockPlanIt({
+      areas: [areaRecord(7, 'Dupe'), areaRecord(7, 'Dupe'), areaRecord(8, 'Other')],
+    })
+    const { authorities } = await fetchAuthorities(SMALL)
+    expect(authorities.map((a) => a.id)).toEqual([7, 8])
+  })
+
+  it('skips records missing an id or name rather than querying a bad auth', async () => {
+    mockPlanIt({
+      areas: [
+        areaRecord(1, 'Good'),
+        { area_id: null, area_name: 'No id' },
+        { area_id: 2, area_name: '' },
+        'not an object',
+      ],
+    })
+    const { authorities } = await fetchAuthorities(SMALL)
+    expect(authorities.map((a) => a.name)).toEqual(['Good'])
+  })
+
+  it('caps the authority count and flags truncation', async () => {
+    mockPlanIt({
+      areas: Array.from({ length: MAX_AUTHORITIES + 5 }, (_, i) =>
+        areaRecord(i + 1, `Area ${i + 1}`)
+      ),
+    })
+    const { authorities, truncated } = await fetchAuthorities(SMALL)
+    expect(authorities).toHaveLength(MAX_AUTHORITIES)
+    expect(truncated).toBe(true)
+  })
+
+  it('throws RateLimitError on a 429', async () => {
+    fetchMock.mockResolvedValue(status429())
+    await expect(fetchAuthorities(SMALL)).rejects.toBeInstanceOf(RateLimitError)
+  })
+
+  // Every authority query depends on this lookup, so an unretried blip here
+  // would fail the whole planning tab rather than degrading one council.
+  it('retries a transient PGRST003 rather than failing the whole lookup', async () => {
+    let attempt = 0
+    fetchMock.mockImplementation(async () => {
+      attempt++
+      return attempt === 1
+        ? errorResponse(400, BUSY_BODY)
+        : okResponse(envelope([areaRecord(5, 'Recovered')]))
+    })
+    const { authorities } = await fetchAuthorities(SMALL)
+    expect(attempt).toBe(2)
+    expect(authorities.map((a) => a.name)).toEqual(['Recovered'])
+  })
+
+  it('gives up after the retry budget with a user-facing message', async () => {
+    fetchMock.mockResolvedValue(errorResponse(500, 'server exploded'))
+    // The tab renders this string directly, so it must not quote a status code.
+    await expect(fetchAuthorities(SMALL)).rejects.toThrow(/try again in a few minutes/)
+    await expect(fetchAuthorities(SMALL)).rejects.not.toThrow(/500/)
+    expect(fetchMock.mock.calls).toHaveLength(4)
+  })
+
+  // A data-source timeout is a cost signal, not a blip: retrying it would just
+  // spend another 45s to fail identically.
+  it('does not retry a data-source timeout', async () => {
+    fetchMock.mockResolvedValue(errorResponse(400, TIMEOUT_BODY))
+    await expect(fetchAuthorities(SMALL)).rejects.toThrow(AuthorityLookupError)
+    expect(fetchMock.mock.calls).toHaveLength(1)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Fetch orchestration
 // ---------------------------------------------------------------------------
 
 describe('fetchPlanningApplications', () => {
-  it('POSTs the boundary form-encoded (never a JSON body) with the fixed filters', async () => {
-    fetchMock.mockResolvedValue(
-      okResponse(envelope([planItRecord('A/1', -1.57, 53.02)]))
-    )
+  it('queries each authority by numeric id with no_kin and the fixed filters', async () => {
+    mockPlanIt({
+      areas: [areaRecord(11, 'Alpha'), areaRecord(22, 'Beta')],
+      apps: (authId) =>
+        okResponse(envelope([planItRecord(`${authId}/1`, -1.57, 53.02)])),
+    })
     const result = await fetchPlanningApplications(SMALL)
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toBe(PLANIT_BASE)
-    expect(init.method).toBe('POST')
-    expect(init.body).toBeInstanceOf(URLSearchParams)
-    const params = init.body as URLSearchParams
+    const calls = applicsCalls()
+    expect(calls).toHaveLength(2)
+    const params = callUrl(calls[0]).searchParams
+    expect(callUrl(calls[0]).origin + callUrl(calls[0]).pathname).toBe(PLANIT_BASE)
     expect(params.get('app_size')).toBe('Large')
     expect(params.get('app_state')).toBe('Undecided,Permitted,Rejected')
     expect(params.get('app_type')).toBe('Full,Outline,Amendment')
     expect(params.get('start_date')).toBe(startDateUTC())
-    expect(JSON.parse(params.get('boundary')!)).toEqual(SMALL)
-    expect(result.applications).toHaveLength(1)
+    // Numeric ids only — "Manchester" and "Greater Manchester" are distinct
+    // areas and a name would be ambiguous between them.
+    expect(calls.map((c) => callUrl(c).searchParams.get('auth')).sort()).toEqual([
+      '11',
+      '22',
+    ])
+    // no_kin keeps parent and child areas from refetching each other's records.
+    expect(params.get('no_kin')).toBe('1')
+
+    expect(result.applications).toHaveLength(2)
     expect(result.truncated).toBe(false)
+    expect(result.truncationReason).toBeNull()
   })
 
   it('paginates with zero-based index (never offset)', async () => {
-    const page = (n: number) =>
-      Array.from({ length: n }, (_, i) =>
-        planItRecord(`P/${Math.random()}/${i}`, -1.57, 53.02)
-      )
-    fetchMock
-      .mockResolvedValueOnce(okResponse(envelope(page(PAGE_SIZE), 250)))
-      .mockResolvedValueOnce(okResponse(envelope(page(PAGE_SIZE), 250)))
-      .mockResolvedValueOnce(okResponse(envelope(page(50), 250)))
+    const page = (n: number, tag: string) =>
+      Array.from({ length: n }, (_, i) => planItRecord(`${tag}/${i}`, -1.57, 53.02))
+    mockPlanIt({
+      apps: (_authId, index) => {
+        if (index === 0) return okResponse(envelope(page(PAGE_SIZE, 'a'), 250))
+        if (index === 100) return okResponse(envelope(page(PAGE_SIZE, 'b'), 250))
+        return okResponse(envelope(page(50, 'c'), 250))
+      },
+    })
 
     const result = await fetchPlanningApplications(SMALL)
-    expect(fetchMock).toHaveBeenCalledTimes(3)
-    const indexes = fetchMock.mock.calls.map(
-      (c) => callParams(c as [string, RequestInit]).get('index')
-    )
-    expect(indexes).toEqual(['0', '100', '200'])
-    for (const c of fetchMock.mock.calls) {
-      expect(callParams(c as [string, RequestInit]).get('offset')).toBeNull()
+    const calls = applicsCalls()
+    expect(calls.map((c) => callUrl(c).searchParams.get('index'))).toEqual([
+      '0',
+      '100',
+      '200',
+    ])
+    for (const c of calls) {
+      expect(callUrl(c).searchParams.get('offset')).toBeNull()
     }
     expect(result.applications).toHaveLength(250)
   })
 
-  it('filters results to the requested boundary', async () => {
-    fetchMock.mockResolvedValue(
-      okResponse(
-        envelope([
-          planItRecord('IN/1', -1.57, 53.02),
-          planItRecord('OUT/1', -1.7, 53.02), // west of the polygon
-        ])
-      )
-    )
+  it('filters authority-wide results down to the requested boundary', async () => {
+    // The whole point of the authority model: a council query returns records
+    // well outside the requested area, and the local re-filter removes them.
+    mockPlanIt({
+      apps: () =>
+        okResponse(
+          envelope([
+            planItRecord('IN/1', -1.57, 53.02),
+            planItRecord('OUT/1', -1.7, 53.02), // west of the polygon
+          ])
+        ),
+    })
     const result = await fetchPlanningApplications(SMALL)
     expect(result.applications.map((a) => a.name)).toEqual(['IN/1'])
   })
@@ -358,120 +476,177 @@ describe('fetchPlanningApplications', () => {
   })
 
   it('keeps fetched pages and truncates on a mid-pagination 429', async () => {
-    fetchMock
-      .mockResolvedValueOnce(
-        okResponse(
-          envelope(
-            Array.from({ length: PAGE_SIZE }, (_, i) =>
-              planItRecord(`M/${i}`, -1.57, 53.02)
-            ),
-            250
-          )
-        )
-      )
-      .mockResolvedValue(status429())
+    mockPlanIt({
+      apps: (_authId, index) =>
+        index === 0
+          ? okResponse(
+              envelope(
+                Array.from({ length: PAGE_SIZE }, (_, i) =>
+                  planItRecord(`M/${i}`, -1.57, 53.02)
+                ),
+                250
+              )
+            )
+          : status429(),
+    })
     const result = await fetchPlanningApplications(SMALL)
     expect(result.applications).toHaveLength(PAGE_SIZE)
     expect(result.truncated).toBe(true)
+    expect(result.truncationReason).toBe('rate_limited')
   })
 
-  describe('tiling path', () => {
-    const BIG = rect(-2.0, 53.0, -1.5, 53.3)
-
-    it('queries bbox tiles and survives a per-tile failure as truncated', async () => {
-      fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
-        expect(init?.method).toBeUndefined() // tiles use the measured GET form
-        const bbox = new URL(url).searchParams.get('bbox')!
-        const [minLon] = bbox.split(',').map(Number)
-        if (Math.abs(minLon - -2.0) < 1e-6) {
-          throw Object.assign(new Error('timeout'), { name: 'TimeoutError' })
-        }
-        return okResponse(envelope([]))
-      })
-      const result = await fetchPlanningApplications(BIG)
-      expect(result.truncated).toBe(true)
-      // All tiles were still attempted despite the failures in column -2.0.
-      expect(fetchMock.mock.calls.length).toBeGreaterThan(1)
+  it('sets page_cap when an authority exhausts the page budget', async () => {
+    mockPlanIt({
+      apps: () =>
+        okResponse(
+          envelope(
+            Array.from({ length: PAGE_SIZE }, (_, i) =>
+              planItRecord(`PAGE/${i}`, -1.57, 53.02)
+            ),
+            PAGE_SIZE * 20
+          )
+        ),
     })
-
-    it('keeps partial results on a mid-run 429 across tiles', async () => {
-      let first = true
-      fetchMock.mockImplementation(async () => {
-        if (first) {
-          first = false
-          return okResponse(envelope([planItRecord('T/1', -1.9, 53.05)]))
-        }
-        return status429()
-      })
-      const result = await fetchPlanningApplications(BIG)
-      expect(result.truncated).toBe(true)
-      expect(result.applications.map((a) => a.name)).toEqual(['T/1'])
-    })
+    const result = await fetchPlanningApplications(SMALL)
+    expect(applicsCalls()).toHaveLength(10)
+    expect(result.truncated).toBe(true)
+    expect(result.truncationReason).toBe('page_cap')
   })
 
-  describe('caching', () => {
-    it('serves a repeat identical boundary from the final cache', async () => {
-      fetchMock.mockResolvedValue(
-        okResponse(envelope([planItRecord('C/1', -1.57, 53.02)]))
-      )
-      await fetchPlanningApplications(SMALL)
-      const second = await fetchPlanningApplications(SMALL)
-      expect(fetchMock).toHaveBeenCalledTimes(1)
-      expect(second.applications).toHaveLength(1)
+  it('sets authority_cap when the boundary spans more councils than the budget', async () => {
+    mockPlanIt({
+      areas: Array.from({ length: MAX_AUTHORITIES + 3 }, (_, i) =>
+        areaRecord(i + 1, `Area ${i + 1}`)
+      ),
     })
+    const result = await fetchPlanningApplications(SMALL)
+    expect(result.truncated).toBe(true)
+    expect(result.truncationReason).toBe('authority_cap')
+  })
 
-    it('never shares entries between nearby but non-identical boundaries', async () => {
-      fetchMock.mockResolvedValue(okResponse(envelope([])))
-      await fetchPlanningApplications(SMALL)
-      const tweaked = rect(-1.6, 53.0, -1.55, 53.0401)
-      await fetchPlanningApplications(tweaked)
-      expect(fetchMock).toHaveBeenCalledTimes(2)
+  it('sets record_cap when the fan-out hits the total record limit', async () => {
+    mockPlanIt({
+      areas: Array.from({ length: 15 }, (_, i) => areaRecord(i + 1, `Area ${i + 1}`)),
+      apps: (authId, index) =>
+        okResponse(
+          envelope(
+            Array.from({ length: PAGE_SIZE }, (_, i) =>
+              planItRecord(`REC/${authId}/${index}/${i}`, -1.57, 53.02)
+            ),
+            PAGE_SIZE * 3
+          )
+        ),
     })
+    const result = await fetchPlanningApplications(SMALL)
+    expect(result.applications).toHaveLength(MAX_TOTAL_RECORDS)
+    expect(result.truncated).toBe(true)
+    expect(result.truncationReason).toBe('record_cap')
+  })
 
-    it('keys on the date window: a different start_date refetches', async () => {
-      fetchMock.mockResolvedValue(okResponse(envelope([])))
-      await fetchPlanningApplications(SMALL, new Date('2026-07-19T12:00:00Z'))
-      await fetchPlanningApplications(SMALL, new Date('2026-09-01T12:00:00Z'))
-      expect(fetchMock).toHaveBeenCalledTimes(2)
-      const dates = fetchMock.mock.calls.map(
-        (c) => callParams(c as [string, RequestInit]).get('start_date')
-      )
-      expect(dates).toEqual(['2024-07-19', '2024-09-01'])
+  it('surfaces upstream_timeout for the 45s data-source timeout', async () => {
+    mockPlanIt({ apps: () => errorResponse(400, TIMEOUT_BODY) })
+    const result = await fetchPlanningApplications(SMALL)
+    expect(result.truncated).toBe(true)
+    expect(result.truncationReason).toBe('upstream_timeout')
+  })
+
+  it('does not retry a data-source timeout — a retry would just cost another 45s', async () => {
+    mockPlanIt({ apps: () => errorResponse(400, TIMEOUT_BODY) })
+    await fetchPlanningApplications(SMALL)
+    expect(applicsCalls()).toHaveLength(1)
+  })
+
+  it('retries a transient PGRST003 and keeps the recovered result clean', async () => {
+    let attempt = 0
+    mockPlanIt({
+      apps: () => {
+        attempt++
+        return attempt === 1
+          ? errorResponse(400, BUSY_BODY)
+          : okResponse(envelope([planItRecord('OK/1', -1.57, 53.02)]))
+      },
     })
+    const result = await fetchPlanningApplications(SMALL)
+    expect(applicsCalls()).toHaveLength(2)
+    // A single flake must not leave a warning on an otherwise complete result.
+    expect(result.truncated).toBe(false)
+    expect(result.truncationReason).toBeNull()
+    expect(result.applications.map((a) => a.name)).toEqual(['OK/1'])
+  })
 
-    it('reuses cached upstream tiles across requests, re-filtered per boundary', async () => {
-      // A and B overlap on the middle grid tile [-1.8, 52.5, -1.6, 52.65].
-      const A = rect(-1.99, 52.51, -1.61, 52.64) // tiles -2.0…-1.8, -1.8…-1.6
-      const B = rect(-1.79, 52.51, -1.41, 52.64) // tiles -1.8…-1.6, -1.6…-1.4
-      const r1 = planItRecord('R/1', -1.9, 52.55) // west tile, A only
-      const r2 = planItRecord('R/2', -1.795, 52.55) // shared tile, inside A only
-      const r3 = planItRecord('R/3', -1.5, 52.55) // east tile, B only
-      const r4 = planItRecord('R/4', -1.7, 52.55) // shared tile, inside both
+  it('reports upstream_busy when retries are exhausted', async () => {
+    mockPlanIt({ apps: () => errorResponse(400, BUSY_BODY) })
+    const result = await fetchPlanningApplications(SMALL)
+    expect(applicsCalls()).toHaveLength(2)
+    expect(result.truncated).toBe(true)
+    expect(result.truncationReason).toBe('upstream_busy')
+  })
 
-      fetchMock.mockImplementation(async (url: string) => {
-        const [minLon] = new URL(url).searchParams
-          .get('bbox')!
-          .split(',')
-          .map(Number)
-        if (Math.abs(minLon - -2.0) < 1e-6) return okResponse(envelope([r1]))
-        if (Math.abs(minLon - -1.8) < 1e-6) return okResponse(envelope([r2, r4]))
-        if (Math.abs(minLon - -1.6) < 1e-6) return okResponse(envelope([r3]))
-        return okResponse(envelope([]))
-      })
-
-      const resultA = await fetchPlanningApplications(A)
-      expect(resultA.applications.map((a) => a.name).sort()).toEqual([
-        'R/1',
-        'R/2',
-        'R/4',
-      ])
-      const callsAfterA = fetchMock.mock.calls.length
-
-      const resultB = await fetchPlanningApplications(B)
-      // The shared tile came from the upstream cache: only the new east tile hits.
-      expect(fetchMock.mock.calls.length).toBe(callsAfterA + 1)
-      // …but its candidates are re-filtered to B, so R/2 is correctly excluded.
-      expect(resultB.applications.map((a) => a.name).sort()).toEqual(['R/3', 'R/4'])
+  it('keeps other authorities when one fails', async () => {
+    mockPlanIt({
+      areas: [areaRecord(1, 'Good'), areaRecord(2, 'Bad')],
+      apps: (authId) =>
+        authId === '2'
+          ? errorResponse(400, TIMEOUT_BODY)
+          : okResponse(envelope([planItRecord('KEEP/1', -1.57, 53.02)])),
     })
+    const result = await fetchPlanningApplications(SMALL)
+    expect(result.applications.map((a) => a.name)).toEqual(['KEEP/1'])
+    expect(result.truncated).toBe(true)
+    expect(result.truncationReason).toBe('upstream_timeout')
+  })
+
+  it('reports progress as each authority completes', async () => {
+    mockPlanIt({
+      areas: [areaRecord(1, 'Alpha'), areaRecord(2, 'Beta'), areaRecord(3, 'Gamma')],
+    })
+    const seen: PlanningProgress[] = []
+    await fetchPlanningApplications(SMALL, { onProgress: (p) => seen.push(p) })
+
+    expect(seen[0]).toEqual({ done: 0, total: 3, authority: null })
+    expect(seen[seen.length - 1]).toMatchObject({ done: 3, total: 3 })
+    expect(seen.map((p) => p.done)).toEqual([0, 1, 2, 3])
+    expect(seen.every((p) => p.total === 3)).toBe(true)
+  })
+})
+
+describe('caching', () => {
+  it('serves a repeat identical boundary from the final cache', async () => {
+    mockPlanIt({ apps: () => okResponse(envelope([planItRecord('C/1', -1.57, 53.02)])) })
+    await fetchPlanningApplications(SMALL)
+    const callsAfterFirst = fetchMock.mock.calls.length
+    const second = await fetchPlanningApplications(SMALL)
+    expect(fetchMock.mock.calls).toHaveLength(callsAfterFirst)
+    expect(second.applications).toHaveLength(1)
+  })
+
+  it('reuses a cached authority across different boundaries', async () => {
+    // The big win over the old boundary-hash key: two different areas in the
+    // same council share the authority fetch instead of both paying for it.
+    mockPlanIt({ apps: () => okResponse(envelope([planItRecord('S/1', -1.57, 53.02)])) })
+    await fetchPlanningApplications(SMALL)
+    const afterFirst = applicsCalls().length
+
+    const nearby = rect(-1.599, 53.001, -1.551, 53.039)
+    await fetchPlanningApplications(nearby)
+    expect(applicsCalls()).toHaveLength(afterFirst)
+  })
+
+  it('does not cache a truncated authority result', async () => {
+    mockPlanIt({ apps: () => errorResponse(400, TIMEOUT_BODY) })
+    await fetchPlanningApplications(SMALL)
+    const afterFirst = applicsCalls().length
+
+    const nearby = rect(-1.599, 53.001, -1.551, 53.039)
+    await fetchPlanningApplications(nearby)
+    expect(applicsCalls().length).toBeGreaterThan(afterFirst)
+  })
+
+  it('keys on the date window: a different start_date refetches', async () => {
+    mockPlanIt({})
+    await fetchPlanningApplications(SMALL, { now: new Date('2026-07-19T12:00:00Z') })
+    await fetchPlanningApplications(SMALL, { now: new Date('2026-09-01T12:00:00Z') })
+    const dates = applicsCalls().map((c) => callUrl(c).searchParams.get('start_date'))
+    expect(dates).toEqual(['2024-07-19', '2024-09-01'])
   })
 })

@@ -421,6 +421,11 @@ export function UPointCompareTray({
           Error
         </span>
       )}
+      {/* While a pair exists the map ignores clicks, so both pins stay put. Say
+          so here and name the way out — otherwise the map just reads as broken. */}
+      <span className="shrink-0 text-[12px] text-sm-ink4">
+        Map locked — clear to move pins
+      </span>
       <button
         type="button"
         onClick={onClear}

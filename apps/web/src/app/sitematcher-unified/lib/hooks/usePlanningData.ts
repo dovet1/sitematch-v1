@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { fetchPlanningApplications } from '../services/planning-service'
-import type { PlanningApplication } from '../../types/unified-workspace'
+import type {
+  PlanningApplication,
+  PlanningProgress,
+  PlanningTruncationReason,
+} from '../../types/unified-workspace'
 import { pointInGeometry } from '../geo'
 
 export interface PlanningData {
@@ -10,6 +14,8 @@ export interface PlanningData {
   loading: boolean
   error: string | null
   truncated: boolean
+  truncationReason: PlanningTruncationReason
+  progress: PlanningProgress | null
 }
 
 // Planning applications inside the active boundary (BUA polygon, radius circle
@@ -24,6 +30,9 @@ export function usePlanningData(
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [truncated, setTruncated] = useState(false)
+  const [truncationReason, setTruncationReason] =
+    useState<PlanningTruncationReason>(null)
+  const [progress, setProgress] = useState<PlanningProgress | null>(null)
   const reqId = useRef(0)
 
   // Stable signature so a fresh-but-equal boundary object doesn't re-trigger.
@@ -35,16 +44,21 @@ export function usePlanningData(
       setApplications([])
       setError(null)
       setTruncated(false)
+      setTruncationReason(null)
+      setProgress(null)
       setLoading(false)
       return
     }
     const id = ++reqId.current
     setLoading(true)
     setError(null)
+    setProgress(null)
     const controller = new AbortController()
 
-    fetchPlanningApplications(boundary, controller.signal)
-      .then(({ applications: apps, truncated: wasTruncated }) => {
+    fetchPlanningApplications(boundary, controller.signal, (next) => {
+      if (id === reqId.current) setProgress(next)
+    })
+      .then(({ applications: apps, truncated: wasTruncated, truncationReason }) => {
         if (id !== reqId.current) return
         // The server already filters to the boundary; re-filter as a cheap
         // belt-and-braces guard so a pin can never render outside the outline.
@@ -52,6 +66,7 @@ export function usePlanningData(
           apps.filter((app) => pointInGeometry(app.lng, app.lat, boundary))
         )
         setTruncated(wasTruncated)
+        setTruncationReason(truncationReason)
       })
       .catch((err) => {
         if (err?.name === 'AbortError') return
@@ -59,7 +74,10 @@ export function usePlanningData(
         setError(err instanceof Error ? err.message : 'Planning data failed')
       })
       .finally(() => {
-        if (id === reqId.current) setLoading(false)
+        if (id === reqId.current) {
+          setLoading(false)
+          setProgress(null)
+        }
       })
     return () => controller.abort()
     // boundaryKey captures boundary changes.
@@ -72,5 +90,7 @@ export function usePlanningData(
     loading: loading || (enabled && !boundary),
     error,
     truncated,
+    truncationReason,
+    progress,
   }
 }

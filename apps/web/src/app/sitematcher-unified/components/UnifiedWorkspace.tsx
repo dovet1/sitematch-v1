@@ -502,6 +502,8 @@ export function UnifiedWorkspace() {
             planningLoading={planningLoading}
             planningError={planningError}
             planningTruncated={planning.truncated}
+            planningTruncationReason={planning.truncationReason}
+            planningProgress={planning.progress}
           />
         )}
       </div>

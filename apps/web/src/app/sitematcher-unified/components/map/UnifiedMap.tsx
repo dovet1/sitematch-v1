@@ -17,6 +17,7 @@ import {
   storeVisualChanged,
 } from './store-badges'
 import { StorePinCluster } from './StorePinCluster'
+import { decideMapClick } from './map-click'
 import type { GapPinsStatus } from '../../lib/hooks/useFindGapsStorePins'
 
 // UK-wide "national" starting view for discovery.
@@ -173,12 +174,12 @@ function planningToGeoJSON(
 
 function applyMapCursor(map: mapboxgl.Map) {
   const st = useWorkspaceStore.getState()
-  // Crosshair only for dropping an Assess pin — not while toggling catchment
-  // cells or browsing planning pins.
+  // Crosshair wherever a click would drop or move the Assess pin — including
+  // the Catchment and Planning tabs, where a click that misses their own
+  // features now repositions the pin. A locked comparison is the one Assess
+  // state that ignores clicks, so it drops the crosshair to signal that.
   map.getCanvas().style.cursor =
-    st.view === 'assess' && st.tab !== 'catchment' && st.tab !== 'planning'
-      ? 'crosshair'
-      : ''
+    st.view === 'assess' && !st.comparePair ? 'crosshair' : ''
 }
 
 // A labelled map pin (teardrop) carrying a single letter — used for the A/B
@@ -950,80 +951,94 @@ export function UnifiedMap({
     // Re-add custom layers after a base-style swap (sketch <-> discovery).
     map.on('style.load', onLoad)
 
-    // Click BUA → select it; click empty map in Assess → drop a pin.
-    // The Catchment tab owns clicks (LSOA toggle) via its own layer handlers.
+    // Click BUA → select it; click empty map in Assess → drop a pin. The branch
+    // ordering lives in decideMapClick (see map-click.ts); this handler only
+    // resolves the hit tests and executes the action it hands back.
     map.on('click', (e) => {
       const st = useWorkspaceStore.getState()
-      if (st.tab === 'catchment') return
-      // Planning tab owns clicks entirely: a pin hit opens its modal; anything
-      // else is inert. Placed before the compare / Find-select / Assess-pin
-      // paths so a Planning-tab click can never arm or drop a compare pin,
-      // select a BUA, or move the Assess pin.
-      if (st.tab === 'planning') {
-        if (map.getLayer(PLANNING_LAYER)) {
-          const hit = map.queryRenderedFeatures(e.point, {
-            layers: [PLANNING_LAYER],
-          })
-          const name = hit[0]?.properties?.name
-          if (name) {
-            const app = planningRef.current.find((a) => a.name === name)
-            if (app) st.setPlanningModal(app)
-          }
-        }
-        return
+
+      // Every getLayer guard below covers the same case: the layer is briefly
+      // absent during a style teardown. A hidden layer yields no features, so
+      // an overlay that's toggled off simply reads as a miss.
+      const queryFirst = (
+        layers: string[]
+      ): Record<string, unknown> | undefined => {
+        const present = layers.filter((id) => map.getLayer(id))
+        if (present.length === 0) return undefined
+        const props = map.queryRenderedFeatures(e.point, { layers: present })[0]
+          ?.properties
+        return props ?? undefined
       }
-      // Road-shading popup: consume the click before the Assess pin-drop path so
-      // clicking a road never relocates the dropped pin. Placed after the
-      // catchment guard so LSOA cell-toggling still owns clicks on that tab.
-      if (
-        st.view !== 'sketch' &&
-        st.overlays.roadTraffic &&
-        map.getLayer(TRAFFIC_ROADS_LAYER)
-      ) {
-        const hit = map.queryRenderedFeatures(e.point, {
-          layers: [TRAFFIC_ROADS_LAYER],
-        })
-        if (hit[0]?.properties) {
+
+      // Tile properties are untyped, so read them through these narrowers.
+      const str = (v: unknown) => (typeof v === 'string' ? v : undefined)
+      const num = (v: unknown) => (typeof v === 'number' ? v : undefined)
+
+      const buaProps = st.view === 'find' ? queryFirst([BUA_FILL_LAYER]) : undefined
+      const gsscode = str(buaProps?.gsscode)
+
+      const action = decideMapClick(st, {
+        lsoa:
+          st.tab === 'catchment'
+            ? str(
+                queryFirst([LSOA_FILL_SELECTED, LSOA_FILL_DESELECTED])?.[
+                  LSOA_CODE_PROP
+                ]
+              )
+            : undefined,
+        planning:
+          st.tab === 'planning'
+            ? str(queryFirst([PLANNING_LAYER])?.name)
+            : undefined,
+        road: st.overlays.roadTraffic
+          ? queryFirst([TRAFFIC_ROADS_LAYER])
+          : undefined,
+        bua: gsscode
+          ? {
+              gsscode,
+              name: str(buaProps?.name),
+              population: num(buaProps?.pop_final) ?? num(buaProps?.pop),
+            }
+          : undefined,
+        requirement: st.overlays.requirements
+          ? str(queryFirst([REQ_LAYER])?.requirementId)
+          : undefined,
+      })
+
+      switch (action.kind) {
+        case 'open-planning-modal': {
+          const app = planningRef.current.find((a) => a.name === action.name)
+          if (app) st.setPlanningModal(app)
+          return
+        }
+        case 'open-road-popup':
           new mapboxgl.Popup({ closeButton: true, closeOnClick: false })
             .setLngLat(e.lngLat)
-            .setDOMContent(buildRoadPopup(hit[0].properties))
+            .setDOMContent(buildRoadPopup(action.props))
             .addTo(map)
           return
-        }
-      }
-      if (st.view === 'find') {
-        const feats = map.queryRenderedFeatures(e.point, { layers: [BUA_FILL_LAYER] })
-        const f = feats[0]
-        if (f?.properties?.gsscode) {
+        case 'select-bua':
           selectArea({
-            id: f.properties.gsscode,
-            name: f.properties.name ?? 'Selected area',
+            id: action.bua.gsscode,
+            name: action.bua.name ?? 'Selected area',
             center: [e.lngLat.lng, e.lngLat.lat],
-            population: f.properties.pop_final ?? f.properties.pop,
+            population: action.bua.population,
             kind: 'bua',
           })
-        }
-        return
-      }
-      if (st.view === 'assess') {
-        // Compare flow: armed → this click drops pin B; already paired → ignore
-        // (block relocating pin A until the comparison is cleared).
-        if (st.compareArm) {
+          return
+        case 'open-requirement-modal':
+          setReqModal(action.requirementId)
+          return
+        case 'drop-compare-point':
           st.dropComparePoint({ lat: e.lngLat.lat, lng: e.lngLat.lng })
           return
-        }
-        if (st.comparePair) return
-        // Clicking a requirement pin opens its modal instead of moving the pin.
-        // Guard getLayer — the layer is briefly absent during a style teardown.
-        if (st.overlays.requirements && map.getLayer(REQ_LAYER)) {
-          const hit = map.queryRenderedFeatures(e.point, { layers: [REQ_LAYER] })
-          const requirementId = hit[0]?.properties?.requirementId
-          if (requirementId) {
-            setReqModal(requirementId as string)
-            return
-          }
-        }
-        setAssessPoint({ lat: e.lngLat.lat, lng: e.lngLat.lng })
+        case 'drop-assess-point':
+          setAssessPoint({ lat: e.lngLat.lat, lng: e.lngLat.lng })
+          return
+        // 'consume' → the per-layer lsoaClick handler below owns the toggle.
+        case 'consume':
+        case 'ignore':
+          return
       }
     })
 
@@ -1053,7 +1068,13 @@ export function UnifiedMap({
     // Road-shading hover: pointer cursor when the overlay is on (outside catchment).
     map.on('mouseenter', TRAFFIC_ROADS_LAYER, () => {
       const st = useWorkspaceStore.getState()
-      if (st.overlays.roadTraffic && st.tab !== 'catchment') {
+      // Mirrors the road branch in decideMapClick: no popup on the Catchment or
+      // Planning tabs, so no pointer promising one.
+      if (
+        st.overlays.roadTraffic &&
+        st.tab !== 'catchment' &&
+        st.tab !== 'planning'
+      ) {
         map.getCanvas().style.cursor = 'pointer'
       }
     })
@@ -1226,6 +1247,10 @@ export function UnifiedMap({
     const map = mapRef.current
     if (!map || !readyRef.current) return
     syncAssessPins(map)
+    // A pair locks the map against clicks, so drop the crosshair the moment one
+    // is created and restore it on clear. Without this the cursor would keep
+    // promising a pin drop until the next tab/view change or hover-leave.
+    applyMapCursor(map)
     if (comparePair) {
       const bounds = new mapboxgl.LngLatBounds(
         [comparePair.a.lng, comparePair.a.lat],
