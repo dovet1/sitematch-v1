@@ -22,6 +22,7 @@ import type {
   InspectorTab,
   MissingFascia,
   MissingBrand,
+  PlanningApplication,
   PresentBrand,
   RequirementLocation,
 } from '../../types/unified-workspace'
@@ -623,7 +624,129 @@ const OPP_TABS: { id: InspectorTab; label: string }[] = [
   { id: 'missing', label: 'Missing Brands' },
   { id: 'present', label: 'Present Brands' },
   { id: 'catchment', label: 'Catchment' },
+  { id: 'planning', label: 'Planning' },
 ]
+
+// app_state → badge colour: green for permitted, red for rejected, amber for
+// still-undecided applications.
+export function planningStateBadgeClass(state: string): string {
+  const s = state.toLowerCase()
+  if (s === 'permitted') return 'bg-emerald-600'
+  if (s === 'rejected') return 'bg-rose-600'
+  return 'bg-amber-600'
+}
+
+function formatPlanningDate(iso: string | null): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function PlanningRow({
+  app,
+  onOpen,
+}: {
+  app: PlanningApplication
+  onOpen: (app: PlanningApplication) => void
+}) {
+  const date =
+    formatPlanningDate(app.decidedDate) ?? formatPlanningDate(app.dateValidated)
+  const subline = [app.appType, app.appSize, date].filter(Boolean).join(' · ')
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(app)}
+      className="grid cursor-pointer grid-cols-[1fr_auto] items-center gap-3 rounded-xl border border-sm-border bg-sm-surface p-3 text-left transition-colors hover:bg-sm-bg"
+    >
+      <div className="min-w-0">
+        <div className="mb-1.5 flex items-center gap-1.5">
+          <span
+            className={
+              'rounded-full px-2 py-[3px] font-mono text-[9.5px] font-semibold uppercase tracking-wider text-white ' +
+              planningStateBadgeClass(app.appState)
+            }
+          >
+            {app.appState}
+          </span>
+        </div>
+        <div className="truncate text-[13px] font-medium text-sm-ink2">
+          {app.address || app.name}
+        </div>
+        {subline && (
+          <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
+            {subline}
+          </div>
+        )}
+      </div>
+      <ChevronRight size={15} className="text-sm-ink4" />
+    </button>
+  )
+}
+
+function PlanningBody({
+  loading,
+  error,
+  truncated,
+  applications,
+  onOpen,
+}: {
+  loading: boolean
+  error: string | null
+  truncated: boolean
+  applications: PlanningApplication[]
+  onOpen: (app: PlanningApplication) => void
+}) {
+  return (
+    <>
+      {loading && (
+        <div className="flex items-center gap-2 px-[18px] py-4 text-[12.5px] text-sm-ink3">
+          <Loader2 size={13} className="animate-spin" /> Reading planning
+          applications…
+        </div>
+      )}
+
+      <div className="px-[18px] pt-[18px]">
+        <div className="flex items-baseline justify-between">
+          <div className="text-[17px] font-semibold tracking-[-0.3px] text-sm-ink">
+            Planning applications
+          </div>
+          <span className="font-mono text-[12px] text-sm-ink2">
+            {applications.length}
+          </span>
+        </div>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-sm-ink3">
+          Large planning applications inside this area from the last two years.
+        </p>
+      </div>
+      <div className="flex flex-col gap-2 px-[18px] pb-[18px] pt-2.5">
+        {error && !loading && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-3.5 text-[12.5px] text-rose-700">
+            {error}
+          </div>
+        )}
+        {truncated && !loading && !error && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12.5px] text-amber-800">
+            Showing a subset of applications for this area.
+          </div>
+        )}
+        {!loading && !error && applications.length === 0 && (
+          <div className="rounded-xl border border-dashed border-sm-border bg-sm-bg px-3 py-3.5 text-center text-[12.5px] text-sm-ink3">
+            No large planning applications found in this area.
+          </div>
+        )}
+        {!error &&
+          applications.map((app) => (
+            <PlanningRow key={app.name} app={app} onOpen={onOpen} />
+          ))}
+      </div>
+    </>
+  )
+}
 
 function Opportunity({
   title,
@@ -636,10 +759,15 @@ function Opportunity({
   catchmentData,
   categoryOptions,
   brandOptions,
+  planningApplications,
+  planningLoading,
+  planningError,
+  planningTruncated,
   onClose,
   onCollapse,
   onOpenReq,
   onOpenBrand,
+  onOpenPlanning,
 }: {
   title: string
   areaName: string
@@ -651,10 +779,15 @@ function Opportunity({
   catchmentData: CatchmentData
   categoryOptions: FilterOption[]
   brandOptions: FilterOption[]
+  planningApplications: PlanningApplication[]
+  planningLoading: boolean
+  planningError: string | null
+  planningTruncated: boolean
   onClose: () => void
   onCollapse: () => void
   onOpenReq: (requirementId: string) => void
   onOpenBrand: (m: MissingFascia) => void
+  onOpenPlanning: (app: PlanningApplication) => void
 }) {
   const tab = useWorkspaceStore((s) => s.tab)
   const setTab = useWorkspaceStore((s) => s.setTab)
@@ -755,7 +888,7 @@ function Opportunity({
         ))}
       </div>
 
-      {tab !== 'catchment' && (
+      {tab !== 'catchment' && tab !== 'planning' && (
         <BrandFilterBar
           categoryOptions={categoryOptions}
           brandOptions={brandOptions}
@@ -770,6 +903,14 @@ function Opportunity({
       <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === 'catchment' ? (
           <CatchmentTab data={catchmentData} />
+        ) : tab === 'planning' ? (
+          <PlanningBody
+            loading={planningLoading}
+            error={planningError}
+            truncated={planningTruncated}
+            applications={planningApplications}
+            onOpen={onOpenPlanning}
+          />
         ) : tab === 'present' ? (
           <PresentBody loading={landscape.loading} present={presentBrands} />
         ) : (
@@ -803,6 +944,10 @@ export function UInspector({
   catchment,
   categoryOptions,
   brandOptions,
+  planningApplications,
+  planningLoading,
+  planningError,
+  planningTruncated,
 }: {
   hidden: boolean
   onToggle: () => void
@@ -817,6 +962,10 @@ export function UInspector({
   catchment: CatchmentData
   categoryOptions: FilterOption[]
   brandOptions: FilterOption[]
+  planningApplications: PlanningApplication[]
+  planningLoading: boolean
+  planningError: string | null
+  planningTruncated: boolean
 }) {
   const view = useWorkspaceStore((s) => s.view)
   const area = useWorkspaceStore((s) => s.area)
@@ -827,6 +976,7 @@ export function UInspector({
   const setAssessPoint = useWorkspaceStore((s) => s.setAssessPoint)
   const setReqModal = useWorkspaceStore((s) => s.setReqModal)
   const setBrandModal = useWorkspaceStore((s) => s.setBrandModal)
+  const setPlanningModal = useWorkspaceStore((s) => s.setPlanningModal)
 
   if (hidden) {
     return (
@@ -858,10 +1008,15 @@ export function UInspector({
         catchmentData={catchment}
         categoryOptions={categoryOptions}
         brandOptions={brandOptions}
+        planningApplications={planningApplications}
+        planningLoading={planningLoading}
+        planningError={planningError}
+        planningTruncated={planningTruncated}
         onClose={() => selectArea(null)}
         onCollapse={onToggle}
         onOpenReq={setReqModal}
         onOpenBrand={setBrandModal}
+        onOpenPlanning={setPlanningModal}
       />
     )
   }
@@ -886,10 +1041,15 @@ export function UInspector({
         catchmentData={catchment}
         categoryOptions={categoryOptions}
         brandOptions={brandOptions}
+        planningApplications={planningApplications}
+        planningLoading={planningLoading}
+        planningError={planningError}
+        planningTruncated={planningTruncated}
         onClose={() => setAssessPoint(null)}
         onCollapse={onToggle}
         onOpenReq={setReqModal}
         onOpenBrand={setBrandModal}
+        onOpenPlanning={setPlanningModal}
       />
     )
   }

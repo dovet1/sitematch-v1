@@ -3,6 +3,7 @@ import {
   isInCatchment,
   haversineMeters,
   circleGeometry,
+  geometryBounds,
 } from '../geo'
 
 // A unit square (lng/lat 0..1) with an inner hole (0.4..0.6).
@@ -72,6 +73,32 @@ describe('pointInGeometry', () => {
   it('returns false for non-polygon geometries', () => {
     const point: GeoJSON.Point = { type: 'Point', coordinates: [0, 0] }
     expect(pointInGeometry(0, 0, point)).toBe(false)
+  })
+})
+
+describe('geometryBounds', () => {
+  it('returns the bbox of a Polygon (holes included in the walk)', () => {
+    expect(geometryBounds(squareWithHole)).toEqual([0, 0, 1, 1])
+  })
+
+  it('returns the combined bbox of a MultiPolygon', () => {
+    expect(geometryBounds(twoSquares)).toEqual([0, 0, 11, 11])
+  })
+
+  it('handles negative longitudes', () => {
+    const poly: GeoJSON.Polygon = {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [-2.5, 53.2],
+          [-1.5, 53.2],
+          [-1.5, 53.9],
+          [-2.5, 53.9],
+          [-2.5, 53.2],
+        ],
+      ],
+    }
+    expect(geometryBounds(poly)).toEqual([-2.5, 53.2, -1.5, 53.9])
   })
 })
 

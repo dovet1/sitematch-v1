@@ -60,6 +60,30 @@ export function boundingRadiusMeters(
   return max
 }
 
+// Bounding box of a Polygon / MultiPolygon as [minLon, minLat, maxLon, maxLat].
+export function geometryBounds(
+  geom: GeoJSON.Geometry
+): [number, number, number, number] {
+  let minLon = Infinity
+  let minLat = Infinity
+  let maxLon = -Infinity
+  let maxLat = -Infinity
+  const visit = (ring: number[][]) => {
+    for (const [vlng, vlat] of ring) {
+      if (vlng < minLon) minLon = vlng
+      if (vlng > maxLon) maxLon = vlng
+      if (vlat < minLat) minLat = vlat
+      if (vlat > maxLat) maxLat = vlat
+    }
+  }
+  if (geom.type === 'Polygon') {
+    ;(geom.coordinates as number[][][]).forEach(visit)
+  } else if (geom.type === 'MultiPolygon') {
+    ;(geom.coordinates as number[][][][]).forEach((poly) => poly.forEach(visit))
+  }
+  return [minLon, minLat, maxLon, maxLat]
+}
+
 // Ray-casting test for a [lng,lat] point against a single ring.
 function pointInRing(lng: number, lat: number, ring: number[][]): boolean {
   let inside = false

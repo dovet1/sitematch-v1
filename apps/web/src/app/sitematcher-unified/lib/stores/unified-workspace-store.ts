@@ -15,6 +15,7 @@ import type {
   ComparePair,
   CompareArm,
   LatLng,
+  PlanningApplication,
 } from '../../types/unified-workspace'
 
 const MAX_COMPARE = 3
@@ -72,6 +73,8 @@ interface WorkspaceState {
   brandModal: MissingFascia | null
   // Present-brand info modal, opened by brandId from the Present Brands list.
   brandInfoId: string | null
+  // Planning-application detail modal (Planning tab list row or map pin).
+  planningModal: PlanningApplication | null
 
   // Assess brand-list filters (shared across the Missing/Present tabs).
   brandFilterCategoryIds: string[]
@@ -122,6 +125,7 @@ interface WorkspaceState {
   setReqModal: (requirementId: string | null) => void
   setBrandModal: (missing: MissingFascia | null) => void
   setBrandInfoId: (brandId: string | null) => void
+  setPlanningModal: (app: PlanningApplication | null) => void
   setBrandFilterCategoryIds: (ids: string[]) => void
   setBrandFilterBrandIds: (ids: string[]) => void
   clearBrandFilters: () => void
@@ -164,6 +168,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   reqModal: null,
   brandModal: null,
   brandInfoId: null,
+  planningModal: null,
 
   brandFilterCategoryIds: [],
   brandFilterBrandIds: [],
@@ -204,6 +209,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       reqModal: null,
       brandModal: null,
       brandInfoId: null,
+      planningModal: null,
       tab: 'missing',
       assessPoint: null,
       brandFilterCategoryIds: [],
@@ -228,6 +234,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       reqModal: null,
       brandModal: null,
       brandInfoId: null,
+      planningModal: null,
       brandFilterCategoryIds: [],
       brandFilterBrandIds: [],
     }),
@@ -241,6 +248,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setReqModal: (reqModal) => set({ reqModal }),
   setBrandModal: (brandModal) => set({ brandModal }),
   setBrandInfoId: (brandInfoId) => set({ brandInfoId }),
+  setPlanningModal: (planningModal) => set({ planningModal }),
   setBrandFilterCategoryIds: (brandFilterCategoryIds) =>
     set({ brandFilterCategoryIds }),
   setBrandFilterBrandIds: (brandFilterBrandIds) => set({ brandFilterBrandIds }),
@@ -334,6 +342,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       reqModal: null,
       brandModal: null,
       brandInfoId: null,
+      planningModal: null,
       // A new point yields a fresh landscape, so clear brand-list filters.
       brandFilterCategoryIds: [],
       brandFilterBrandIds: [],

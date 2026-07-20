@@ -14,6 +14,7 @@ import {
   Search,
   Copy,
   Check,
+  ExternalLink,
 } from 'lucide-react'
 import {
   fetchRequirementDetail,
@@ -23,12 +24,13 @@ import {
 import type {
   BrandInfo,
   MissingFascia,
+  PlanningApplication,
   RequirementContact,
   RequirementDetail,
   RequirementLocation,
   StoreEstate,
 } from '../../types/unified-workspace'
-import { Avatar, Kicker } from './UInspector'
+import { Avatar, Kicker, planningStateBadgeClass } from './UInspector'
 import { UStoreEstateMap } from './UStoreEstateMap'
 
 // When a requirement names more than this many towns, switch the target-area list from
@@ -1033,6 +1035,99 @@ function BrandContactColumn({
         <ContactChooser contacts={contacts} onClose={() => setChooserOpen(false)} />
       )}
     </div>
+  )
+}
+
+/* ============================================================================
+ * Planning application modal — opened from the Planning tab list or a map pin.
+ * All text comes from PlanIt (third-party councils) and is rendered strictly as
+ * React children, never as HTML.
+ * ==========================================================================*/
+
+export function UPlanningModal({
+  application,
+  onClose,
+}: {
+  application: PlanningApplication
+  onClose: () => void
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const validated = formatFullDate(application.dateValidated)
+  const decided = formatFullDate(application.decidedDate)
+
+  return (
+    <Overlay onClose={onClose}>
+      <div className="flex items-start gap-3.5">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1.5 flex items-center gap-2">
+            <span
+              className={
+                'rounded-full px-2 py-[3px] font-mono text-[9.5px] font-semibold uppercase tracking-wider text-white ' +
+                planningStateBadgeClass(application.appState)
+              }
+            >
+              {application.appState}
+            </span>
+            <Kicker>Planning application</Kicker>
+          </div>
+          <div className="text-[17px] font-semibold leading-snug tracking-[-0.2px] text-sm-ink">
+            {application.address || application.name}
+          </div>
+          <div className="mt-0.5 font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
+            {application.name}
+          </div>
+        </div>
+        <CloseButton onClose={onClose} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-3.5 gap-y-2.5 border-y border-sm-border-soft py-3.5">
+        <KV k="Type" v={application.appType || '—'} />
+        <KV k="Size" v={application.appSize || '—'} />
+        <KV k="Validated" v={validated ?? '—'} />
+        <KV k="Decided" v={decided ?? '—'} />
+        {application.nDwellings != null && (
+          <KV k="Dwellings" v={application.nDwellings.toLocaleString('en-GB')} />
+        )}
+      </div>
+
+      {application.description && (
+        <div>
+          <Kicker>Description</Kicker>
+          <p className="mt-1.5 max-h-[180px] overflow-auto text-[13px] leading-relaxed text-sm-ink2">
+            {application.description}
+          </p>
+        </div>
+      )}
+
+      {(application.applicantAddress || application.agentAddress) && (
+        <div className="flex flex-col gap-2.5">
+          {application.applicantAddress && (
+            <KV k="Applicant address" v={application.applicantAddress} />
+          )}
+          {application.agentAddress && (
+            <KV k="Agent address" v={application.agentAddress} />
+          )}
+        </div>
+      )}
+
+      {application.url && (
+        <a
+          href={application.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-sm-violet px-3 py-2 text-[12.5px] font-medium text-white hover:bg-sm-violet-deep"
+        >
+          <ExternalLink size={13} /> View application
+        </a>
+      )}
+    </Overlay>
   )
 }
 

@@ -6,7 +6,10 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { MAP_STYLES, MAPBOX_TOKEN } from '@/lib/sitesketcher-v2/constants'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import type { NearbyStore } from '../../lib/services/gaps-service'
-import type { RequirementLocation } from '../../types/unified-workspace'
+import type {
+  PlanningApplication,
+  RequirementLocation,
+} from '../../types/unified-workspace'
 import {
   applyStoreBadgeHighlight,
   buildStoreBadge,
@@ -32,6 +35,11 @@ const BUA_SELECTED_LAYER = 'bua-selected'
 // Live occupier requirement pins (Assess-only, gated on the overlay toggle).
 const REQ_SOURCE = 'assess-requirements'
 const REQ_LAYER = 'assess-requirements-dots'
+
+// Planning application pins (Planning tab only, both modes).
+const PLANNING_SOURCE = 'planning-applications'
+const PLANNING_LAYER = 'planning-applications-dots'
+const PLANNING_COLOR = '#F26B1F'
 
 // LSOA catchment cells (Catchment tab) — reuses the SiteAnalyser tileset.
 const LSOA_TILESET_ID = 'dovet.3xo625k3'
@@ -150,11 +158,27 @@ function buildRoadPopup(props: Record<string, unknown>): HTMLDivElement {
   return root
 }
 
+function planningToGeoJSON(
+  apps: PlanningApplication[]
+): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: apps.map((a) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [a.lng, a.lat] },
+      properties: { name: a.name },
+    })),
+  }
+}
+
 function applyMapCursor(map: mapboxgl.Map) {
   const st = useWorkspaceStore.getState()
-  // Crosshair only for dropping an Assess pin — not while toggling catchment cells.
+  // Crosshair only for dropping an Assess pin — not while toggling catchment
+  // cells or browsing planning pins.
   map.getCanvas().style.cursor =
-    st.view === 'assess' && st.tab !== 'catchment' ? 'crosshair' : ''
+    st.view === 'assess' && st.tab !== 'catchment' && st.tab !== 'planning'
+      ? 'crosshair'
+      : ''
 }
 
 // A labelled map pin (teardrop) carrying a single letter — used for the A/B
@@ -179,6 +203,7 @@ export function UnifiedMap({
   storeDots = [],
   visiblePresentBrandIds = null,
   requirements = [],
+  planningApplications = [],
   lsoa,
   compareBoundaries,
   onMap,
@@ -189,6 +214,8 @@ export function UnifiedMap({
   // Brand ids whose present-store pins should show; null = show all (no filter).
   visiblePresentBrandIds?: Set<string> | null
   requirements?: RequirementLocation[]
+  // Planning application pins (shown only while the Planning tab is open).
+  planningApplications?: PlanningApplication[]
   lsoa?: LsoaLayerProps
   // Per-pin compare outlines; null when not comparing.
   compareBoundaries?: CompareBoundariesProps
@@ -214,6 +241,10 @@ export function UnifiedMap({
   // style swap (mirrors how the Assess pin re-places from store state).
   const requirementsRef = useRef<RequirementLocation[]>(requirements)
   requirementsRef.current = requirements
+  // Latest planning applications: read by addLayers for post-style-load
+  // rehydration, and by the click handler to resolve a pin hit to its record.
+  const planningRef = useRef<PlanningApplication[]>(planningApplications)
+  planningRef.current = planningApplications
   // Latest per-pin compare outlines, read by addLayers to re-hydrate the source
   // after a style swap (mirrors requirementsRef above).
   const compareBoundariesRef = useRef<CompareBoundariesProps | undefined>(
@@ -267,7 +298,9 @@ export function UnifiedMap({
   // state so it stays correct when called from a stale style-load closure.
   const syncStoreMarkers = (map: mapboxgl.Map) => {
     const st = useWorkspaceStore.getState()
-    const assessVisible = st.view === 'assess' && st.tab !== 'catchment'
+    // Hide store badges on the Planning tab so its pins read clearly.
+    const assessVisible =
+      st.view === 'assess' && st.tab !== 'catchment' && st.tab !== 'planning'
     const filterSet = visibleBrandIdsRef.current
     const stores = storeDotsRef.current
     const markers = storeMarkersRef.current
@@ -493,6 +526,31 @@ export function UnifiedMap({
     // Re-hydrate the source (a style swap resets it to the empty seed above).
     const reqSrc = map.getSource(REQ_SOURCE) as mapboxgl.GeoJSONSource | undefined
     reqSrc?.setData(requirementsToGeoJSON(requirementsRef.current))
+
+    // Planning application pins — orange dots, Planning tab only.
+    if (!map.getSource(PLANNING_SOURCE)) {
+      map.addSource(PLANNING_SOURCE, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      })
+    }
+    if (!map.getLayer(PLANNING_LAYER)) {
+      map.addLayer({
+        id: PLANNING_LAYER,
+        type: 'circle',
+        source: PLANNING_SOURCE,
+        paint: {
+          'circle-radius': 7,
+          'circle-color': PLANNING_COLOR,
+          'circle-stroke-color': '#fff',
+          'circle-stroke-width': 2,
+        },
+      })
+    }
+    const planningSrc = map.getSource(PLANNING_SOURCE) as
+      | mapboxgl.GeoJSONSource
+      | undefined
+    planningSrc?.setData(planningToGeoJSON(planningRef.current))
 
     // LSOA catchment cells (Catchment tab).
     if (!map.getSource(LSOA_SOURCE_ID)) {
@@ -797,9 +855,18 @@ export function UnifiedMap({
       view === 'assess' &&
       !!assessPoint &&
       !catchmentActive &&
+      tab !== 'planning' &&
       useWorkspaceStore.getState().overlays.requirements
     if (map.getLayer(REQ_LAYER)) {
       map.setLayoutProperty(REQ_LAYER, 'visibility', reqVisible ? 'visible' : 'none')
+    }
+    // Planning pins own the map while their tab is open — and only then.
+    if (map.getLayer(PLANNING_LAYER)) {
+      map.setLayoutProperty(
+        PLANNING_LAYER,
+        'visibility',
+        tab === 'planning' ? 'visible' : 'none'
+      )
     }
     const lsoaVisible = catchmentActive && showLsoa
     for (const id of [
@@ -888,6 +955,23 @@ export function UnifiedMap({
     map.on('click', (e) => {
       const st = useWorkspaceStore.getState()
       if (st.tab === 'catchment') return
+      // Planning tab owns clicks entirely: a pin hit opens its modal; anything
+      // else is inert. Placed before the compare / Find-select / Assess-pin
+      // paths so a Planning-tab click can never arm or drop a compare pin,
+      // select a BUA, or move the Assess pin.
+      if (st.tab === 'planning') {
+        if (map.getLayer(PLANNING_LAYER)) {
+          const hit = map.queryRenderedFeatures(e.point, {
+            layers: [PLANNING_LAYER],
+          })
+          const name = hit[0]?.properties?.name
+          if (name) {
+            const app = planningRef.current.find((a) => a.name === name)
+            if (app) st.setPlanningModal(app)
+          }
+        }
+        return
+      }
       // Road-shading popup: consume the click before the Assess pin-drop path so
       // clicking a road never relocates the dropped pin. Placed after the
       // catchment guard so LSOA cell-toggling still owns clicks on that tab.
@@ -958,6 +1042,13 @@ export function UnifiedMap({
       }
     })
     map.on('mouseleave', REQ_LAYER, () => applyMapCursor(map))
+
+    map.on('mouseenter', PLANNING_LAYER, () => {
+      if (useWorkspaceStore.getState().tab === 'planning') {
+        map.getCanvas().style.cursor = 'pointer'
+      }
+    })
+    map.on('mouseleave', PLANNING_LAYER, () => applyMapCursor(map))
 
     // Road-shading hover: pointer cursor when the overlay is on (outside catchment).
     map.on('mouseenter', TRAFFIC_ROADS_LAYER, () => {
@@ -1205,6 +1296,17 @@ export function UnifiedMap({
     const src = map.getSource(REQ_SOURCE) as mapboxgl.GeoJSONSource | undefined
     src?.setData(requirementsToGeoJSON(requirements))
   }, [requirements])
+
+  // Feed planning applications into their layer (mirrors the requirements
+  // effect; the tab-change effect above re-runs applyVisibility).
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current) return
+    const src = map.getSource(PLANNING_SOURCE) as
+      | mapboxgl.GeoJSONSource
+      | undefined
+    src?.setData(planningToGeoJSON(planningApplications))
+  }, [planningApplications])
 
   // Re-evaluate overlay-layer visibility when any overlay toggle flips.
   useEffect(() => {

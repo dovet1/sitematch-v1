@@ -3,7 +3,7 @@
 
 export type WorkspaceMode = 'assess' | 'find' | 'sketch'
 
-export type InspectorTab = 'missing' | 'present' | 'catchment' | 'sketch'
+export type InspectorTab = 'missing' | 'present' | 'catchment' | 'planning' | 'sketch'
 
 export type MapScale = 'national' | 'local'
 
@@ -101,6 +101,28 @@ export interface MissingBrand {
   representative: MissingFascia
   logoDomain: string | null
   logoUrl: string | null
+}
+
+// A commercial-relevant planning application from the PlanIt API
+// (/api/public/planning). Keyed on `name` (Council/uid) — `uid` alone is only
+// council-scoped. Applicant/agent names are omitted: PlanIt only ever returns
+// the placeholder "See source"; the `url` link-out reaches the real parties.
+export interface PlanningApplication {
+  name: string
+  uid: string
+  address: string
+  appSize: string
+  appState: string
+  appType: string
+  description: string
+  url: string
+  lat: number
+  lng: number
+  decidedDate: string | null
+  dateValidated: string | null
+  nDwellings: number | null
+  applicantAddress: string | null
+  agentAddress: string | null
 }
 
 // Map sub-selection (a store dot, etc.). Requirements are deferred in v1.

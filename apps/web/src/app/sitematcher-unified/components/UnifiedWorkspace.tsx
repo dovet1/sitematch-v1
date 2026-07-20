@@ -14,13 +14,19 @@ import { useReferenceData } from '../lib/hooks/useReferenceData'
 import { useFindGaps } from '../lib/hooks/useFindGaps'
 import { useAreaData } from '../lib/hooks/useAreaData'
 import { useCatchment } from '../lib/hooks/useCatchment'
+import { usePlanningData } from '../lib/hooks/usePlanningData'
 import { useRequirements } from '../lib/hooks/useRequirements'
 import { useFindGapsStorePins } from '../lib/hooks/useFindGapsStorePins'
 import { computeIsochroneMissing } from '../lib/isochrone-missing'
 import { buildBrandLandscape } from '../lib/brand-landscape'
 import { selectPresentStoreSource } from '../lib/present-store-source'
 import { filterGapStorePins } from '../lib/store-pin-filter'
-import { URequirementModal, UBrandModal, UBrandInfoModal } from './shell/UDetailModals'
+import {
+  URequirementModal,
+  UBrandModal,
+  UBrandInfoModal,
+  UPlanningModal,
+} from './shell/UDetailModals'
 import { UPointCompare, UPointCompareTray } from './shell/UPointCompare'
 import { usePointComparison } from '../lib/hooks/usePointComparison'
 import type { WorkspaceArea } from '../types/unified-workspace'
@@ -46,9 +52,11 @@ export function UnifiedWorkspace() {
   const reqModal = useWorkspaceStore((s) => s.reqModal)
   const brandModal = useWorkspaceStore((s) => s.brandModal)
   const brandInfoId = useWorkspaceStore((s) => s.brandInfoId)
+  const planningModal = useWorkspaceStore((s) => s.planningModal)
   const setReqModal = useWorkspaceStore((s) => s.setReqModal)
   const setBrandModal = useWorkspaceStore((s) => s.setBrandModal)
   const setBrandInfoId = useWorkspaceStore((s) => s.setBrandInfoId)
+  const setPlanningModal = useWorkspaceStore((s) => s.setPlanningModal)
   const brandFilterCategoryIds = useWorkspaceStore((s) => s.brandFilterCategoryIds)
   const brandFilterBrandIds = useWorkspaceStore((s) => s.brandFilterBrandIds)
   const leftHidden = useWorkspaceStore((s) => s.leftHidden)
@@ -194,6 +202,22 @@ export function UnifiedWorkspace() {
     (view === 'assess' && !!activePoint && activeCatchment.mode !== 'distance')
 
   const catchmentData = useCatchment(focusArea, activeCatchment, shouldFetchCatchment)
+
+  // Planning applications inside the active boundary (BUA polygon, radius
+  // circle or isochrone) — fetched only while the Planning tab is open.
+  const planning = usePlanningData(
+    catchmentData.boundaryGeometry,
+    tab === 'planning'
+  )
+  // A failed boundary must show the error state, not an endless boundary-wait
+  // spinner — so the error always wins over loading.
+  const planningError = planning.error ?? catchmentData.error
+  const planningLoading =
+    !planningError &&
+    (planning.loading ||
+      (tab === 'planning' &&
+        !catchmentData.boundaryGeometry &&
+        catchmentData.loading))
 
   // Two-location comparison: fetches + diffs the landscape/demographics for both
   // dropped pins (each with its own catchment) whenever a pair exists. Drives the
@@ -415,6 +439,7 @@ export function UnifiedWorkspace() {
             gapPinsStatus={gapPins.status}
             visiblePresentBrandIds={visiblePresentBrandIds}
             requirements={requirements.withinCatchment}
+            planningApplications={planning.applications}
             lsoa={{
               allCodes: catchmentData.allLsoaCodes,
               selectedCodes: catchmentData.selectedLsoaCodes,
@@ -473,6 +498,10 @@ export function UnifiedWorkspace() {
             catchment={catchmentData}
             categoryOptions={categoryOptions}
             brandOptions={brandOptions}
+            planningApplications={planning.applications}
+            planningLoading={planningLoading}
+            planningError={planningError}
+            planningTruncated={planning.truncated}
           />
         )}
       </div>
@@ -514,6 +543,12 @@ export function UnifiedWorkspace() {
             setBrandInfoId(null)
             setReqModal(id)
           }}
+        />
+      )}
+      {planningModal && (
+        <UPlanningModal
+          application={planningModal}
+          onClose={() => setPlanningModal(null)}
         />
       )}
 
