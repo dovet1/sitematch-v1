@@ -92,7 +92,7 @@ export function UDirectory() {
     node?.kind === 'brand' ? brandProfile?.brand.name : node?.kind === 'agent' ? agentProfile?.agent.name : null
 
   return (
-    <div ref={scrollRef} className="h-full overflow-y-auto bg-sm-bg">
+    <div ref={scrollRef} className="h-full min-w-0 flex-1 overflow-y-auto bg-sm-bg">
       <div className="mx-auto w-full max-w-[1480px] px-7 py-5">
         {node ? (
           <>
