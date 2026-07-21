@@ -34,7 +34,7 @@ export async function GET(
     const { data, error } = await supabase
       .from('brand_contacts')
       .select(
-        'id, contact_name, contact_title, contact_email, contact_phone, contact_area, contact_kind, contact_org, headshot_url, is_primary_contact'
+        'id, contact_name, contact_title, contact_email, contact_phone, contact_area, contact_kind, contact_org, headshot_url, linkedin_url, is_primary_contact'
       )
       .eq('brand_id', id)
       .order('is_primary_contact', { ascending: false })

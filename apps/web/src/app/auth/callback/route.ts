@@ -1,6 +1,5 @@
 import { createServerClient as createSSRServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
-import { Database } from '@/lib/supabase'
 import { UserType } from '@/types/auth'
 import { randomUUID } from 'crypto'
 
@@ -47,7 +46,11 @@ export async function GET(request: NextRequest) {
     const finalRedirect = redirectTo ? decodeURIComponent(redirectTo) : '/auth/reset-password'
     const response = NextResponse.redirect(`${origin}${finalRedirect}`)
     
-    const supabase = createSSRServerClient<Database>(
+    // Not passed <Database>: @supabase/ssr 0.5.2 declares SupabaseClient<Database, SchemaName,
+    // Schema>, but supabase-js 2.75 changed the second generic, and the mismatch makes every
+    // .from() resolve to `never`. Type-only concern — no runtime effect — and consistent with
+    // the untyped createServerClient in lib/supabase.ts. Revisit on the next @supabase/ssr bump.
+    const supabase = createSSRServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -99,7 +102,7 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.redirect(`${origin}${finalRedirect}`)
     
-    const supabase = createSSRServerClient<Database>(
+    const supabase = createSSRServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {

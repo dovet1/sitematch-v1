@@ -31,7 +31,7 @@ export const TooltipTrigger: React.FC<TooltipTriggerProps> = ({
   const [showTooltip, setShowTooltip] = React.useState(false);
   
   if (asChild) {
-    return React.cloneElement(children as React.ReactElement, {
+    return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
       onMouseEnter: () => setShowTooltip(true),
       onMouseLeave: () => setShowTooltip(false),
       'data-tooltip-trigger': true

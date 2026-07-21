@@ -1,15 +1,16 @@
 'use client'
 
-import { MapPin, Search, PenTool, HelpCircle } from 'lucide-react'
+import { MapPin, Search, PenTool, Layers, HelpCircle } from 'lucide-react'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
 import type { WorkspaceMode } from '../../types/unified-workspace'
 
-// Requirements mode is deferred in v1 (see plan) — three modes only.
+// Requirements mode is deferred in v1 (see plan). Directory is a full-pane, map-less mode.
 const MODES: { id: WorkspaceMode; label: string; Icon: typeof MapPin }[] = [
   { id: 'assess', label: 'Assess Area', Icon: MapPin },
   { id: 'find', label: 'Find Gaps', Icon: Search },
   { id: 'sketch', label: 'Sketch Site', Icon: PenTool },
+  { id: 'directory', label: 'Directory', Icon: Layers },
 ]
 
 export function URail() {

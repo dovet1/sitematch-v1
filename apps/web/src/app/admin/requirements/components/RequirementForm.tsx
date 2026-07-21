@@ -27,6 +27,7 @@ interface ContactDraft {
   contact_kind: string
   contact_email: string
   contact_phone: string
+  linkedin_url: string
   is_primary_contact: boolean
 }
 
@@ -36,6 +37,8 @@ interface FormState {
   brand_name: string
   site_size_min: string
   site_size_max: string
+  size_seen_sqft: string
+  size_seen_basis: string
   brochure_url: string
   property_page_link: string
   company_domain: string
@@ -55,6 +58,8 @@ const EMPTY: FormState = {
   brand_name: '',
   site_size_min: '',
   site_size_max: '',
+  size_seen_sqft: '',
+  size_seen_basis: '',
   brochure_url: '',
   property_page_link: '',
   company_domain: '',
@@ -145,6 +150,8 @@ export function RequirementForm({
           brand_name: req.brands?.name ?? '',
           site_size_min: req.site_size_min?.toString() ?? '',
           site_size_max: req.site_size_max?.toString() ?? '',
+          size_seen_sqft: req.size_seen_sqft?.toString() ?? '',
+          size_seen_basis: req.size_seen_basis ?? '',
           brochure_url: req.brochure_url ?? '',
           property_page_link: req.property_page_link ?? '',
           company_domain: req.company_domain ?? '',
@@ -170,6 +177,7 @@ export function RequirementForm({
             contact_title: c.contact_title ?? '',
             contact_org: c.contact_org ?? '',
             contact_kind: c.contact_kind ?? '',
+            linkedin_url: c.linkedin_url ?? '',
             contact_email: c.contact_email ?? '',
             contact_phone: c.contact_phone ?? '',
             is_primary_contact: Boolean(c.is_primary_contact),
@@ -334,6 +342,8 @@ export function RequirementForm({
       description: null,
       site_size_min: num(form.site_size_min),
       site_size_max: num(form.site_size_max),
+      size_seen_sqft: num(form.size_seen_sqft),
+      size_seen_basis: form.size_seen_basis || null,
       site_acreage_min: null,
       site_acreage_max: null,
       dwelling_count_min: null,
@@ -360,6 +370,7 @@ export function RequirementForm({
         contact_title: c.contact_title || null,
         contact_org: c.contact_org || null,
         contact_kind: c.contact_kind || null,
+        linkedin_url: c.linkedin_url || null,
         contact_email: c.contact_email || null,
         contact_phone: c.contact_phone || null,
         is_primary_contact: c.is_primary_contact,
@@ -524,6 +535,21 @@ export function RequirementForm({
           <div><Label>Site size min (sq ft)</Label><Input type="number" value={form.site_size_min} onChange={(e) => set('site_size_min', e.target.value)} /></div>
           <div><Label>Site size max (sq ft)</Label><Input type="number" value={form.site_size_max} onChange={(e) => set('site_size_max', e.target.value)} /></div>
         </div>
+        {/*
+          "Size seen in market" is curated, not computed: stores has no numeric sq ft
+          (size_band is unpopulated), so there is nothing to derive it from. The basis line
+          records where the figure came from so the directory can show its provenance.
+        */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>Size seen in market (sq ft)</Label>
+            <Input type="number" value={form.size_seen_sqft} onChange={(e) => set('size_seen_sqft', e.target.value)} placeholder="4200" />
+          </div>
+          <div>
+            <Label>Basis for size seen</Label>
+            <Input value={form.size_seen_basis} onChange={(e) => set('size_seen_basis', e.target.value)} placeholder="18 stores opened 2024-25" />
+          </div>
+        </div>
       </section>
 
       <section className="space-y-4">
@@ -588,12 +614,12 @@ export function RequirementForm({
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Contacts</h2>
-          <Button type="button" size="sm" variant="outline" onClick={() => set('contacts', [...form.contacts, { contact_name: '', contact_title: '', contact_org: '', contact_kind: '', contact_email: '', contact_phone: '', is_primary_contact: form.contacts.length === 0 }])}>
+          <Button type="button" size="sm" variant="outline" onClick={() => set('contacts', [...form.contacts, { contact_name: '', contact_title: '', contact_org: '', contact_kind: '', contact_email: '', contact_phone: '', linkedin_url: '', is_primary_contact: form.contacts.length === 0 }])}>
             + Add contact
           </Button>
         </div>
         {form.contacts.map((c, i) => (
-          <div key={i} className="grid grid-cols-[1fr_1fr_1fr_130px_1fr_1fr_auto_auto] items-end gap-2 rounded-md border border-gray-200 p-3">
+          <div key={i} className="grid grid-cols-[1fr_1fr_1fr_130px_1fr_1fr_1fr_auto_auto] items-end gap-2 rounded-md border border-gray-200 p-3">
             <div><Label>Name</Label><Input value={c.contact_name} onChange={(e) => set('contacts', form.contacts.map((x, j) => j === i ? { ...x, contact_name: e.target.value } : x))} /></div>
             <div><Label>Title</Label><Input value={c.contact_title} onChange={(e) => set('contacts', form.contacts.map((x, j) => j === i ? { ...x, contact_title: e.target.value } : x))} /></div>
             <div><Label>Org</Label><Input value={c.contact_org} onChange={(e) => set('contacts', form.contacts.map((x, j) => j === i ? { ...x, contact_org: e.target.value } : x))} /></div>
@@ -611,6 +637,7 @@ export function RequirementForm({
             </div>
             <div><Label>Email</Label><Input value={c.contact_email} onChange={(e) => set('contacts', form.contacts.map((x, j) => j === i ? { ...x, contact_email: e.target.value } : x))} /></div>
             <div><Label>Phone</Label><Input value={c.contact_phone} onChange={(e) => set('contacts', form.contacts.map((x, j) => j === i ? { ...x, contact_phone: e.target.value } : x))} /></div>
+            <div><Label>LinkedIn</Label><Input value={c.linkedin_url} onChange={(e) => set('contacts', form.contacts.map((x, j) => j === i ? { ...x, linkedin_url: e.target.value } : x))} placeholder="https://linkedin.com/in/…" /></div>
             <label className="flex items-center gap-1 pb-2 text-xs">
               <input type="checkbox" checked={c.is_primary_contact} onChange={(e) => set('contacts', form.contacts.map((x, j) => ({ ...x, is_primary_contact: j === i ? e.target.checked : (e.target.checked ? false : x.is_primary_contact) })))} />
               Primary

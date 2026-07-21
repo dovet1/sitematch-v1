@@ -1,7 +1,7 @@
 // Shared types for the unified workspace. Shapes follow the design handoff
 // state contract in /docs/design_handoff_unified_workspace/README.md.
 
-export type WorkspaceMode = 'assess' | 'find' | 'sketch'
+export type WorkspaceMode = 'assess' | 'find' | 'sketch' | 'directory'
 
 export type InspectorTab = 'missing' | 'present' | 'catchment' | 'planning' | 'sketch'
 
@@ -241,6 +241,9 @@ export interface StoreEstateStore {
   town: string | null
   lat: number
   lon: number
+  // Drives the directory estate map's "opened in last 12 months" legend series.
+  // Frequently null — many imported stores carry no open_date.
+  openDate?: string | null
 }
 export interface StoreEstate {
   storeCount: number
@@ -347,3 +350,137 @@ export interface WorkspaceOverlays {
   // Requirement location pins (Assess-only, gated on an active dropped point).
   requirements: boolean
 }
+
+// ---------------------------------------------------------------------------
+// Company Directory
+// ---------------------------------------------------------------------------
+
+// One card in the directory grid, from /api/public/directory/brands (backed by the
+// directory_brand_cards() aggregate — every count is independent, not a join product).
+export interface DirectoryBrandCard {
+  id: string
+  name: string
+  logoUrl: string | null
+  domain: string | null
+  websiteUrl: string | null
+  // "Leisure · Restaurants" — parent · child, or just child when there is no parent.
+  category: string | null
+  storeCount: number
+  inHouseCount: number
+  agentCount: number
+  // The status kicker is derived from this alone: there is no expansion_status column,
+  // so it is "Actively acquiring" or "No requirement on file", nothing in between.
+  hasActiveRequirement: boolean
+}
+
+// A contact tile. `kind` drives the visual treatment — in-house tiles are plain, agent
+// tiles get the violet `AGENT · <firm>` tag and navigate to the agent profile.
+export interface DirectoryContact {
+  id: string
+  name: string | null
+  title: string | null
+  org: string | null
+  email: string | null
+  phone: string | null
+  linkedinUrl: string | null
+  kind: 'in-house' | 'agent'
+  // Set only when kind === 'agent' — the directory_agents id to navigate to.
+  agentId?: string
+}
+
+// A row in the In-house teams tab, from /api/public/directory/in-house. Needs its own
+// endpoint: the grid payload carries only counts, so there is nothing to flatten.
+export interface DirectoryTeamMember extends DirectoryContact {
+  brandId: string
+  brandName: string
+  brandLogoUrl: string | null
+}
+
+export interface DirectoryAgentSummary {
+  id: string
+  name: string
+  title: string | null
+  firm: string | null
+  firmId: string | null
+  email: string | null
+  phone: string | null
+  linkedinUrl: string | null
+  region: string | null
+  focus: string | null
+  brandCount: number
+}
+
+// Target location pins. Coordinates are normalised server-side via
+// normalizeRequirementCoordinates() — requirement_locations.coordinates is untyped jsonb
+// holding either [lng, lat] or {lat, lng}, so raw values would plot in the sea.
+export interface DirectoryTarget {
+  id: string
+  name: string | null
+  lat: number
+  lon: number
+}
+
+export interface DirectoryRequirement {
+  id: string
+  sizeMin: number | null
+  sizeMax: number | null
+  sizeSeenSqft: number | null
+  sizeSeenBasis: string | null
+  summary: string | null
+  listingType: string | null
+  useClasses: string[]
+  verifiedAt: string | null
+  brochureUrl: string | null
+  targets: DirectoryTarget[]
+  targetNames: string[]
+}
+
+export interface DirectoryActivityEvent {
+  id: string
+  kind: 'opening' | 'closure'
+  eventDate: string
+  isUpcoming: boolean
+  headline: string
+  url: string | null
+}
+
+// Full brand profile payload, from /api/public/directory/brands/[id].
+export interface DirectoryBrandProfile {
+  brand: {
+    id: string
+    name: string
+    logoUrl: string | null
+    domain: string | null
+    websiteUrl: string | null
+    storeLocatorUrl: string | null
+    category: string | null
+    storeCount: number
+    latestStore: { name: string | null; town: string | null; date: string | null; dateIsProxy: boolean } | null
+    // Estate points for the map; capped at STORE_POINT_CAP.
+    stores: StoreEstateStore[]
+  }
+  requirement: DirectoryRequirement | null
+  contacts: DirectoryContact[]
+  agents: DirectoryContact[]
+  activity: DirectoryActivityEvent[]
+}
+
+// Agent profile payload, from /api/public/directory/agents/[id]. `brands` is the reverse
+// side of brand_agents — the whole point of normalising the edge.
+export interface DirectoryAgentProfile {
+  agent: DirectoryAgentSummary
+  brands: DirectoryBrandCard[]
+}
+
+// Every list endpoint caps its result set and says so explicitly, rather than silently
+// returning a prefix — client-side search cannot find a record the cap omitted.
+export interface DirectoryList<T> {
+  items: T[]
+  truncated: boolean
+}
+
+// Which entity a directory nav-stack node points at. The stack (not a pair of selected
+// ids) is what makes Brand A -> Agent -> Brand B -> back -> Agent -> back work.
+export type DirectoryNode = { kind: 'brand' | 'agent'; id: string }
+
+export type DirectoryTab = 'brands' | 'agents' | 'inhouse'

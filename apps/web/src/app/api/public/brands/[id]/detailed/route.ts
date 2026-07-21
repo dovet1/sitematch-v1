@@ -38,7 +38,15 @@ export async function GET(
     }
 
     // Active-requirement lookup with the SAME visibility rules as the map: free-tier users
-    // only "see" featured-free requirements. limit(1) — any qualifying active requirement.
+    // only "see" featured-free requirements.
+    //
+    // The free-tier filter is applied BEFORE the ordering, not after. Selecting first and
+    // filtering second would show "No requirement on file" to a free user whose brand has a
+    // featured-free requirement sitting behind a newer private one.
+    //
+    // The ordering itself matters because brand_id is not unique and several requirements can
+    // be active at once — a bare limit(1) is nondeterministic and made the same brand flip
+    // between requirements across requests. Matches idx_requirements_brand_active_pick.
     let activeReqQuery = supabase
       .from('requirements')
       .select('id')
@@ -47,7 +55,11 @@ export async function GET(
     if (isFreeTier) {
       activeReqQuery = activeReqQuery.eq('is_featured_free', true);
     }
-    const { data: activeReqRows } = await activeReqQuery.limit(1);
+    const { data: activeReqRows } = await activeReqQuery
+      .order('verified_at', { ascending: false, nullsFirst: false })
+      .order('updated_at', { ascending: false, nullsFirst: false })
+      .order('id', { ascending: true })
+      .limit(1);
     const activeRequirementId: string | null =
       activeReqRows && activeReqRows.length > 0 ? (activeReqRows[0] as { id: string }).id : null;
 

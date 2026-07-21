@@ -8,6 +8,7 @@ import { URail } from './shell/URail'
 import { ULeftPanel } from './shell/ULeftPanel'
 import { UInspector } from './shell/UInspector'
 import { UnifiedMap } from './map/UnifiedMap'
+import { UDirectory } from './shell/directory/UDirectory'
 import { SketchLayer } from './map/SketchLayer'
 import { useWorkspaceStore } from '../lib/stores/unified-workspace-store'
 import { useReferenceData } from '../lib/hooks/useReferenceData'
@@ -78,6 +79,7 @@ export function UnifiedWorkspace() {
   const findGaps = useFindGaps(view === 'find')
 
   const isSketch = view === 'sketch'
+  const isDirectory = view === 'directory'
 
   // Keep the sketch store's tier access in sync so CAD interaction is unlocked.
   const { hasProAccess, hasPlusAccess, loading: tierLoading } = useSubscriptionTier()
@@ -417,6 +419,15 @@ export function UnifiedWorkspace() {
       />
       <div className="flex flex-1 overflow-hidden">
         <URail />
+        {/*
+          Directory is a full-pane, map-less mode: it replaces the left panel, map and
+          inspector entirely rather than sitting alongside them. setMode's existing reset
+          already clears area/selection/modals, so nothing leaks in or out.
+        */}
+        {isDirectory ? (
+          <UDirectory />
+        ) : (
+          <>
         {isSketch ? (
           sketchActive ? (
             <USketchPanel onExit={() => setSketchActive(false)} />
@@ -505,6 +516,8 @@ export function UnifiedWorkspace() {
             planningTruncationReason={planning.truncationReason}
             planningProgress={planning.progress}
           />
+        )}
+          </>
         )}
       </div>
 

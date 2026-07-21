@@ -21,7 +21,7 @@ interface LabelPosition {
 export function PolygonLabels() {
   const [labels, setLabels] = useState<LabelPosition[]>([]);
   const { mapInstance, polygons, units } = useSketchStore();
-  const updateTimeoutRef = useRef<NodeJS.Timeout>();
+  const updateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Calculate and update label positions
   const updateLabels = useCallback(() => {

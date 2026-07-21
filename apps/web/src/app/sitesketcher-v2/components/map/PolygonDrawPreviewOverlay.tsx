@@ -27,7 +27,7 @@ export function PolygonDrawPreviewOverlay() {
   const [label, setLabel] = useState<PreviewLabel | null>(null);
   const [line, setLine] = useState<PreviewLine | null>(null);
   const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
-  const updateTimeoutRef = useRef<NodeJS.Timeout>();
+  const updateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Subscribe to preview store using useSyncExternalStore
   // Third parameter is for SSR compatibility

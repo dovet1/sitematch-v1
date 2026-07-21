@@ -4,7 +4,14 @@ import { useMemo } from 'react'
 import { Map, Source, Layer, Marker } from 'react-map-gl/mapbox'
 import { MapPin } from 'lucide-react'
 import type { CircleLayerSpecification } from 'mapbox-gl'
-import type { StoreEstateStore } from '../../types/unified-workspace'
+import type { StoreEstateStore, DirectoryTarget } from '../../types/unified-workspace'
+
+export type EstateMapMode = 'estate' | 'targets'
+
+// A store counts as "new" when it opened within this window. `stores` has no status or
+// closure date, so the design's third legend series (Closing) has no data source and is
+// not rendered — see the directory plan's substitutions section.
+const NEW_STORE_WINDOW_MS = 365 * 24 * 60 * 60 * 1000
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
@@ -25,17 +32,20 @@ const circleLayer: CircleLayerSpecification = {
   },
 }
 
-// Violet map-pin glyph with a white centre dot + drop shadow (per design handoff).
-function StorePin() {
+// Map-pin glyph with a white centre dot + drop shadow (per design handoff). Recently
+// opened stores render green to match the estate legend.
+function StorePin({ isNew = false }: { isNew?: boolean }) {
+  const fill = isNew ? '#16A34A' : '#7033FF'
+  const shadow = isNew ? 'rgba(22,163,74,.35)' : 'rgba(84,33,204,.35)'
   return (
     <span
       className="block"
-      style={{ filter: 'drop-shadow(0 3px 5px rgba(84,33,204,.35))', transform: 'translateY(-1px)' }}
+      style={{ filter: `drop-shadow(0 3px 5px ${shadow})`, transform: 'translateY(-1px)' }}
     >
       <svg width="20" height="24" viewBox="0 0 20 24" fill="none" aria-hidden>
         <path
           d="M10 0C4.477 0 0 4.477 0 10c0 6.5 10 14 10 14s10-7.5 10-14C20 4.477 15.523 0 10 0Z"
-          fill="#7033FF"
+          fill={fill}
         />
         <circle cx="10" cy="10" r="3.4" fill="#fff" />
       </svg>
@@ -43,15 +53,39 @@ function StorePin() {
   )
 }
 
-// Full-bleed store-estate map for the requirement modal's left column. Fills its container
-// to the rounded bottom-left corner; renders violet pins (small estates) or a circle layer
-// (large estates), a "N stores" chip top-right, and Mapbox attribution.
+// Violet halo-pin for a requirement target location (directory brand profile only).
+function TargetPin() {
+  return (
+    <span className="block" style={{ transform: 'translateY(-1px)' }}>
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden>
+        <circle cx="13" cy="13" r="12" fill="#7033FF" fillOpacity="0.16" />
+        <circle cx="13" cy="13" r="7" fill="#7033FF" fillOpacity="0.28" />
+        <circle cx="13" cy="13" r="3.5" fill="#7033FF" stroke="#fff" strokeWidth="1.5" />
+      </svg>
+    </span>
+  )
+}
+
+// Full-bleed store-estate map. Used by the requirement modal's left column and by the
+// directory brand profile's estate panel.
+//
+// `mode` is controlled: pass `onModeChange` to render the Existing estate / Targets toggle.
+// Without the callback the toggle is hidden and the component behaves exactly as it did
+// before the directory existed, so the requirement modal's usage is unchanged.
 export function UStoreEstateMap({
   stores,
   count,
+  mode = 'estate',
+  onModeChange,
+  targets,
+  showLegend = false,
 }: {
   stores: StoreEstateStore[]
   count: number
+  mode?: EstateMapMode
+  onModeChange?: (mode: EstateMapMode) => void
+  targets?: DirectoryTarget[]
+  showLegend?: boolean
 }) {
   const points = useMemo(
     () => stores.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lon)),
@@ -94,13 +128,58 @@ export function UStoreEstateMap({
 
   const usePins = points.length > 0 && points.length <= PIN_MARKER_CAP
 
-  if (!MAPBOX_TOKEN || points.length === 0) {
+  const targetPoints = useMemo(
+    () => (targets || []).filter((t) => Number.isFinite(t.lat) && Number.isFinite(t.lon)),
+    [targets]
+  )
+
+  const showingTargets = mode === 'targets'
+  const plotted = showingTargets ? targetPoints.length : points.length
+
+  // The count pill reports what is actually plotted, never a headline figure that the map
+  // does not back up — target coordinates are dropped server-side when they fail validation.
+  const countLabel = showingTargets
+    ? `${targetPoints.length.toLocaleString()} ${targetPoints.length === 1 ? 'target town' : 'target towns'}`
+    : `${count.toLocaleString()} ${count === 1 ? 'store' : 'stores'}`
+
+  const newCutoff = Date.now() - NEW_STORE_WINDOW_MS
+  const isNew = (s: StoreEstateStore) =>
+    Boolean(s.openDate) && new Date(s.openDate as string).getTime() >= newCutoff
+
+  const toggle = onModeChange ? (
+    <div className="absolute left-3.5 top-3.5 z-10 inline-flex rounded-full border border-sm-border bg-sm-surface p-0.5 shadow-[0_4px_14px_-6px_rgba(20,10,40,0.3)]">
+      {([
+        { id: 'estate' as const, label: 'Existing estate' },
+        { id: 'targets' as const, label: 'Targets' },
+      ]).map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => onModeChange(t.id)}
+          aria-pressed={mode === t.id}
+          className={
+            'rounded-full px-3 py-1 text-[11.5px] font-medium transition-colors duration-150 ' +
+            (mode === t.id ? 'bg-sm-ink text-white' : 'text-sm-ink3 hover:text-sm-ink2')
+          }
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  ) : null
+
+  if (!MAPBOX_TOKEN || plotted === 0) {
     return (
-      <div className="flex h-full min-h-[160px] items-center justify-center border-t border-sm-border-soft bg-sm-bg text-sm-ink3">
+      <div className="relative flex h-full min-h-[160px] items-center justify-center border-t border-sm-border-soft bg-sm-bg text-sm-ink3">
+        {toggle}
         <div className="flex flex-col items-center gap-1.5">
           <MapPin size={18} className="text-sm-ink3" />
           <span className="text-[12px]">
-            {MAPBOX_TOKEN ? 'No store locations to map' : 'Map unavailable'}
+            {!MAPBOX_TOKEN
+              ? 'Map unavailable'
+              : showingTargets
+                ? 'No target locations on file'
+                : 'No store locations to map'}
           </span>
         </div>
       </div>
@@ -118,10 +197,16 @@ export function UStoreEstateMap({
         logoPosition="bottom-left"
         interactive
       >
-        {usePins ? (
+        {showingTargets ? (
+          targetPoints.map((t) => (
+            <Marker key={t.id} longitude={t.lon} latitude={t.lat} anchor="center">
+              <TargetPin />
+            </Marker>
+          ))
+        ) : usePins ? (
           points.map((s) => (
             <Marker key={s.id} longitude={s.lon} latitude={s.lat} anchor="bottom">
-              <StorePin />
+              <StorePin isNew={isNew(s)} />
             </Marker>
           ))
         ) : (
@@ -130,12 +215,28 @@ export function UStoreEstateMap({
           </Source>
         )}
       </Map>
+
+      {toggle}
+
       <div className="pointer-events-none absolute right-3.5 top-3.5 inline-flex items-center gap-2 rounded-full border border-sm-border bg-sm-surface px-3 py-1.5 shadow-[0_4px_14px_-6px_rgba(20,10,40,0.3)]">
         <span className="h-2 w-2 rounded-full bg-sm-violet" />
-        <span className="font-mono text-[11px] font-medium text-sm-ink2">
-          {count.toLocaleString()} {count === 1 ? 'store' : 'stores'}
-        </span>
+        <span className="font-mono text-[11px] font-medium text-sm-ink2">{countLabel}</span>
       </div>
+
+      {/* Legend is estate-only. "Closing" from the design is omitted: stores carries no
+          status or closure date, so there is nothing to plot it from. */}
+      {showLegend && !showingTargets && (
+        <div className="pointer-events-none absolute bottom-3.5 left-3.5 inline-flex items-center gap-3 rounded-full border border-sm-border bg-sm-surface/95 px-3 py-1.5 shadow-[0_4px_14px_-6px_rgba(20,10,40,0.3)]">
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-sm-ink2">
+            <span className="h-2 w-2 rounded-full bg-sm-violet" />
+            Trading
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-sm-ink2">
+            <span className="h-2 w-2 rounded-full bg-[#16A34A]" />
+            Opened in last 12m
+          </span>
+        </div>
+      )}
     </div>
   )
 }

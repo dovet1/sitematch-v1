@@ -12,7 +12,9 @@ export interface BrandLatestStore {
 
 export interface BrandStoreEstate {
   storeCount: number;
-  stores: { id: string; name: string | null; town: string | null; lat: number; lon: number }[];
+  // `openDate` drives the directory estate map's "opened in last 12 months" legend series.
+  // Often null — many imported stores have no open_date.
+  stores: { id: string; name: string | null; town: string | null; lat: number; lon: number; openDate: string | null }[];
   latestStore: BrandLatestStore | null;
 }
 
@@ -20,7 +22,7 @@ export interface BrandStoreEstate {
 export async function fetchBrandStoreEstate(supabase: any, brandId: string): Promise<BrandStoreEstate> {
   const [{ count }, { data: stores }] = await Promise.all([
     supabase.from('stores').select('*', { count: 'exact', head: true }).eq('brand_id', brandId),
-    supabase.from('stores').select('id, name, town, lat, lon').eq('brand_id', brandId).limit(STORE_POINT_CAP),
+    supabase.from('stores').select('id, name, town, lat, lon, open_date').eq('brand_id', brandId).limit(STORE_POINT_CAP),
   ]);
 
   // Latest store — two explicit steps so a recently-imported row (null open_date) never
@@ -50,7 +52,17 @@ export async function fetchBrandStoreEstate(supabase: any, brandId: string): Pro
     }
   }
 
-  return { storeCount: count ?? 0, stores: stores || [], latestStore };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mappedStores = ((stores || []) as any[]).map((s) => ({
+    id: s.id,
+    name: s.name,
+    town: s.town,
+    lat: s.lat,
+    lon: s.lon,
+    openDate: s.open_date ?? null,
+  }));
+
+  return { storeCount: count ?? 0, stores: mappedStores, latestStore };
 }
 
 // Dominant primary category via the brand_primary_category SQL function. Rendered as

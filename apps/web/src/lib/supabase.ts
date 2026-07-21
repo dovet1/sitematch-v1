@@ -100,6 +100,16 @@ export const createAdminClient = () => {
 // Database type definitions
 export interface Database {
   public: {
+    // Views and Functions are required by postgrest-js's GenericSchema constraint. Without
+    // all three keys (and without Relationships on every table) Database['public'] fails the
+    // constraint and EVERY .from() on a SupabaseClient<Database> silently resolves to `never`
+    // — which is what made this interface dead weight for a long time.
+    //
+    // Functions is intentionally permissive rather than enumerated: typing each RPC would
+    // newly type-check all 33 .rpc() call sites, which is a separate piece of work. This
+    // shape satisfies the constraint without changing .rpc() behaviour.
+    Views: Record<string, never>
+    Functions: Record<string, { Args: Record<string, unknown>; Returns: unknown }>
     Tables: {
       users: {
         Row: {
@@ -110,6 +120,12 @@ export interface Database {
           user_company_name: string | null
           org_id: string | null
           subscription_status: string | null
+          subscription_tier: 'free' | 'pro' | 'plus' | null
+          trial_start_date: string | null
+          trial_end_date: string | null
+          payment_method_added: boolean | null
+          current_session_id: string | null
+          last_session_change: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           newsletter_opt_in: boolean | null
@@ -125,6 +141,12 @@ export interface Database {
           user_company_name?: string | null
           org_id?: string | null
           subscription_status?: string | null
+          subscription_tier?: 'free' | 'pro' | 'plus' | null
+          trial_start_date?: string | null
+          trial_end_date?: string | null
+          payment_method_added?: boolean | null
+          current_session_id?: string | null
+          last_session_change?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           newsletter_opt_in?: boolean | null
@@ -140,12 +162,19 @@ export interface Database {
           user_company_name?: string | null
           org_id?: string | null
           subscription_status?: string | null
+          subscription_tier?: 'free' | 'pro' | 'plus' | null
+          trial_start_date?: string | null
+          trial_end_date?: string | null
+          payment_method_added?: boolean | null
+          current_session_id?: string | null
+          last_session_change?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           newsletter_opt_in?: boolean | null
           hide_sitesketcher_tutorial?: boolean | null
           updated_at?: string
         }
+        Relationships: []
       }
       organisations: {
         Row: {
@@ -171,6 +200,7 @@ export interface Database {
           logo_url?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       leads: {
         Row: {
@@ -190,6 +220,7 @@ export interface Database {
           email?: string
           persona?: 'agent' | 'investor' | 'landlord' | 'vendor'
         }
+        Relationships: []
       }
       listings: {
         Row: {
@@ -262,6 +293,7 @@ export interface Database {
           org_id?: string | null
           linked_agency_id?: string | null
         }
+        Relationships: []
       }
       sectors: {
         Row: {
@@ -281,6 +313,7 @@ export interface Database {
           name?: string
           description?: string | null
         }
+        Relationships: []
       }
       use_classes: {
         Row: {
@@ -303,6 +336,7 @@ export interface Database {
           name?: string
           description?: string | null
         }
+        Relationships: []
       }
       site_sketches: {
         Row: {
@@ -336,6 +370,7 @@ export interface Database {
           location?: any | null
           updated_at?: string
         }
+        Relationships: []
       }
       shared_cads: {
         Row: {
@@ -397,11 +432,13 @@ export interface Database {
           dims_label?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       listing_versions: {
         Row: {
           id: string
           listing_id: string
+          version_number: number
           content: any // JSONB
           status: string
           is_live: boolean
@@ -414,6 +451,7 @@ export interface Database {
         Insert: {
           id?: string
           listing_id: string
+          version_number?: number
           content: any
           status?: string
           is_live?: boolean
@@ -426,6 +464,7 @@ export interface Database {
         Update: {
           id?: string
           listing_id?: string
+          version_number?: number
           content?: any
           status?: string
           is_live?: boolean
@@ -434,6 +473,7 @@ export interface Database {
           review_notes?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       built_up_areas: {
         Row: {
@@ -472,6 +512,7 @@ export interface Database {
           centroid_lat?: number
           centroid_lon?: number
         }
+        Relationships: []
       }
       requirements: {
         Row: {
@@ -495,6 +536,8 @@ export interface Database {
           is_featured_free: boolean
           verified_at: string | null
           status: string
+          size_seen_sqft: number | null
+          size_seen_basis: string | null
           source_listing_id: string | null
           created_by: string | null
           created_at: string
@@ -521,6 +564,8 @@ export interface Database {
           is_featured_free?: boolean
           verified_at?: string | null
           status?: string
+          size_seen_sqft?: number | null
+          size_seen_basis?: string | null
           source_listing_id?: string | null
           created_by?: string | null
           created_at?: string
@@ -547,10 +592,13 @@ export interface Database {
           is_featured_free?: boolean
           verified_at?: string | null
           status?: string
+          size_seen_sqft?: number | null
+          size_seen_basis?: string | null
           source_listing_id?: string | null
           created_by?: string | null
           updated_at?: string
         }
+        Relationships: []
       }
       requirement_locations: {
         Row: {
@@ -582,6 +630,7 @@ export interface Database {
           region?: string | null
           country?: string | null
         }
+        Relationships: []
       }
       requirement_contacts: {
         Row: {
@@ -596,6 +645,7 @@ export interface Database {
           is_primary_contact: boolean
           contact_kind: 'in-house' | 'agency' | null
           contact_org: string | null
+          linkedin_url: string | null
           created_at: string
         }
         Insert: {
@@ -610,6 +660,7 @@ export interface Database {
           is_primary_contact?: boolean
           contact_kind?: 'in-house' | 'agency' | null
           contact_org?: string | null
+          linkedin_url?: string | null
           created_at?: string
         }
         Update: {
@@ -624,7 +675,9 @@ export interface Database {
           is_primary_contact?: boolean
           contact_kind?: 'in-house' | 'agency' | null
           contact_org?: string | null
+          linkedin_url?: string | null
         }
+        Relationships: []
       }
       brands: {
         Row: {
@@ -635,6 +688,8 @@ export interface Database {
           latest_store_name: string | null
           latest_store_town: string | null
           latest_store_opened_at: string | null
+          website_url: string | null
+          store_locator_url: string | null
           created_at: string
         }
         Insert: {
@@ -645,6 +700,8 @@ export interface Database {
           latest_store_name?: string | null
           latest_store_town?: string | null
           latest_store_opened_at?: string | null
+          website_url?: string | null
+          store_locator_url?: string | null
           created_at?: string
         }
         Update: {
@@ -655,7 +712,10 @@ export interface Database {
           latest_store_name?: string | null
           latest_store_town?: string | null
           latest_store_opened_at?: string | null
+          website_url?: string | null
+          store_locator_url?: string | null
         }
+        Relationships: []
       }
       brand_contacts: {
         Row: {
@@ -670,6 +730,7 @@ export interface Database {
           is_primary_contact: boolean
           contact_kind: 'in-house' | 'agency' | null
           contact_org: string | null
+          linkedin_url: string | null
           created_at: string
         }
         Insert: {
@@ -684,6 +745,7 @@ export interface Database {
           is_primary_contact?: boolean
           contact_kind?: 'in-house' | 'agency' | null
           contact_org?: string | null
+          linkedin_url?: string | null
           created_at?: string
         }
         Update: {
@@ -698,7 +760,9 @@ export interface Database {
           is_primary_contact?: boolean
           contact_kind?: 'in-house' | 'agency' | null
           contact_org?: string | null
+          linkedin_url?: string | null
         }
+        Relationships: []
       }
       requirement_sectors: {
         Row: {
@@ -718,6 +782,7 @@ export interface Database {
           requirement_id?: string
           sector_id?: string
         }
+        Relationships: []
       }
       requirement_use_classes: {
         Row: {
@@ -737,6 +802,144 @@ export interface Database {
           requirement_id?: string
           use_class_id?: string
         }
+        Relationships: []
+      }
+      // --- Company Directory (20260721000000_directory.sql) ---
+      // No public SELECT policy on any of these: reads go through the Plus-gated
+      // /api/public/directory/* routes using a service-role client.
+      directory_agencies: {
+        Row: {
+          id: string
+          name: string
+          website: string | null
+          domain: string | null
+          logo_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          website?: string | null
+          domain?: string | null
+          logo_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          website?: string | null
+          domain?: string | null
+          logo_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      directory_agents: {
+        Row: {
+          id: string
+          agency_id: string | null
+          name: string
+          title: string | null
+          email: string | null
+          phone: string | null
+          linkedin_url: string | null
+          headshot_url: string | null
+          region: string | null
+          focus: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          agency_id?: string | null
+          name: string
+          title?: string | null
+          email?: string | null
+          phone?: string | null
+          linkedin_url?: string | null
+          headshot_url?: string | null
+          region?: string | null
+          focus?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          agency_id?: string | null
+          name?: string
+          title?: string | null
+          email?: string | null
+          phone?: string | null
+          linkedin_url?: string | null
+          headshot_url?: string | null
+          region?: string | null
+          focus?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      brand_agents: {
+        Row: {
+          id: string
+          brand_id: string
+          agent_id: string
+          role_note: string | null
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          brand_id: string
+          agent_id: string
+          role_note?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          brand_id?: string
+          agent_id?: string
+          role_note?: string | null
+          display_order?: number
+        }
+        Relationships: []
+      }
+      brand_activity: {
+        Row: {
+          id: string
+          brand_id: string
+          kind: 'opening' | 'closure'
+          event_date: string
+          is_upcoming: boolean
+          headline: string
+          url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          brand_id: string
+          kind: 'opening' | 'closure'
+          event_date: string
+          is_upcoming?: boolean
+          headline: string
+          url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          brand_id?: string
+          kind?: 'opening' | 'closure'
+          event_date?: string
+          is_upcoming?: boolean
+          headline?: string
+          url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
   }

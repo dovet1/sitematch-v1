@@ -38,7 +38,7 @@ export async function GET(
     const { data: brand, error } = await supabase
       .from('brands')
       .select(
-        'id, name, logo_url, domain, latest_store_name, latest_store_town, latest_store_opened_at, stores(count), requirements(count), brand_contacts(count)'
+        'id, name, logo_url, domain, website_url, store_locator_url, latest_store_name, latest_store_town, latest_store_opened_at, stores(count), requirements(count), brand_contacts(count)'
       )
       .eq('id', id)
       .single();
@@ -54,6 +54,8 @@ export async function GET(
         name: brand.name,
         logo_url: brand.logo_url ?? null,
         domain: brand.domain ?? null,
+        website_url: brand.website_url ?? null,
+        store_locator_url: brand.store_locator_url ?? null,
         latest_store_name: brand.latest_store_name ?? null,
         latest_store_town: brand.latest_store_town ?? null,
         latest_store_opened_at: brand.latest_store_opened_at ?? null,
@@ -97,6 +99,25 @@ export async function PATCH(
         return NextResponse.json({ error: 'Invalid domain' }, { status: 400 });
       }
       update.domain = d || null;
+    }
+    // website_url / store_locator_url are full URLs, unlike `domain` which is a bare
+    // hostname for logo.dev — so they get URL validation rather than validateDomain.
+    for (const field of ['website_url', 'store_locator_url'] as const) {
+      if (field in body) {
+        const raw = typeof body[field] === 'string' ? body[field].trim() : '';
+        if (!raw) {
+          update[field] = null;
+          continue;
+        }
+        const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+        try {
+          const parsed = new URL(withProtocol);
+          if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new Error('bad protocol');
+          update[field] = parsed.toString();
+        } catch {
+          return NextResponse.json({ error: `Invalid ${field}` }, { status: 400 });
+        }
+      }
     }
     if ('latest_store_name' in body) update.latest_store_name = body.latest_store_name || null;
     if ('latest_store_town' in body) update.latest_store_town = body.latest_store_town || null;

@@ -114,6 +114,17 @@ export default async function AdminDashboard() {
               Agency Management
             </Link>
           </Button>
+          {/*
+            Named distinctly from "Agency Management" above: that page manages the legacy
+            `agencies` tables tied to listings, this one manages the directory's own
+            `directory_agencies` / `directory_agents`. Unrelated data, similar words.
+          */}
+          <Button asChild>
+            <Link href="/admin/directory-agents">
+              <Users className="h-4 w-4 mr-2" />
+              Directory Agents
+            </Link>
+          </Button>
           <Button asChild>
             <Link href="/admin/articles">
               <FileText className="h-4 w-4 mr-2" />

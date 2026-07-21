@@ -44,7 +44,7 @@ export function MeasurementOverlay() {
   const [previewLabel, setPreviewLabel] = useState<LabelPosition | null>(null);
   const [previewPoint, setPreviewPoint] = useState<PreviewPoint | null>(null);
   const { mapInstance, measurementInProgress, frozenMeasurement, units } = useSketchStore();
-  const updateTimeoutRef = useRef<NodeJS.Timeout>();
+  const updateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Subscribe to preview store for real-time cursor tracking
   const previewState = useSyncExternalStore(

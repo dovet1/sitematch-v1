@@ -43,7 +43,7 @@ export function useFormMonitoring(config: FormMonitoringConfig) {
     validationErrors: []
   });
 
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Initialize monitoring
   useEffect(() => {

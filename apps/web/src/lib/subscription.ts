@@ -22,15 +22,18 @@ export type SubscriptionStatus =
 
 export type SubscriptionTier = 'free' | 'pro' | 'plus'
 
+// Mirrors what the `users` row actually returns: these columns are nullable in the database,
+// so they are `| null` rather than optional. (Previously optional-only, which only type-checked
+// because the Database interface was inert and every query resolved to `never`.)
 interface UserSubscription {
   id: string
-  subscription_status: SubscriptionStatus
-  subscription_tier?: SubscriptionTier  // NEW: User's subscription tier
-  trial_start_date?: string
-  trial_end_date?: string
-  stripe_customer_id?: string
-  stripe_subscription_id?: string
-  payment_method_added: boolean
+  subscription_status: SubscriptionStatus | null
+  subscription_tier?: SubscriptionTier | null
+  trial_start_date?: string | null
+  trial_end_date?: string | null
+  stripe_customer_id?: string | null
+  stripe_subscription_id?: string | null
+  payment_method_added: boolean | null
 }
 
 /**
@@ -111,8 +114,12 @@ export async function getUserSubscriptionStatus(userId: string): Promise<UserSub
     return null
   }
 
+  // `users.subscription_status` is an unconstrained text column, so the client types it as
+  // `string | null`. Narrow it here — this is the single place the raw row enters the app.
+  const row = data as UserSubscription | null
+
   // Cache the result
-  requestCache.set(userId, { data, timestamp: Date.now() })
+  requestCache.set(userId, { data: row, timestamp: Date.now() })
 
   // Periodic cache cleanup to prevent memory leaks
   if (requestCache.size > 100) {
@@ -124,7 +131,7 @@ export async function getUserSubscriptionStatus(userId: string): Promise<UserSub
     })
   }
 
-  return data
+  return row
 }
 
 /**
