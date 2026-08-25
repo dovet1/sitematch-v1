@@ -10,7 +10,34 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "import:onspd": "tsx scripts/import-onspd-postcodes.ts",
+    "import:candidate-sites": "tsx scripts/import-candidate-sites.ts",
+    "inspect:candidate-sites": "tsx scripts/inspect-candidate-sites.ts",
+    "import:road-network": "tsx scripts/import-road-network.ts",
+    "associate:candidate-roads": "tsx scripts/associate-candidate-roads.ts",
+    "inspect:candidate-roads": "tsx scripts/inspect-candidate-roads.ts",
+    "export:road-debug-map": "tsx scripts/export-road-debug-map.ts",
+    "import:traffic-counts": "tsx scripts/import-traffic-counts.ts",
+    "associate:candidate-traffic": "tsx scripts/associate-candidate-traffic.ts",
+    "inspect:candidate-traffic": "tsx scripts/inspect-candidate-traffic.ts",
+    "export:traffic-debug-map": "tsx scripts/export-traffic-debug-map.ts",
+    "import:land-use": "tsx scripts/import-land-use.ts",
+    "sync:store-land-use": "tsx scripts/sync-store-land-use.ts",
+    "associate:candidate-land-use": "tsx scripts/associate-candidate-land-use.ts",
+    "inspect:candidate-land-use": "tsx scripts/inspect-candidate-land-use.ts",
+    "export:land-use-debug-map": "tsx scripts/export-land-use-debug-map.ts",
+    "associate:candidate-geometry": "tsx scripts/associate-candidate-geometry.ts",
+    "inspect:candidate-geometry": "tsx scripts/inspect-candidate-geometry.ts",
+    "export:geometry-debug-map": "tsx scripts/export-geometry-debug-map.ts",
+    "inspect:candidate-brand": "tsx scripts/inspect-candidate-brand.ts",
+    "export:brand-debug-map": "tsx scripts/export-brand-debug-map.ts",
+    "import:constraints": "tsx scripts/import-constraints.ts",
+    "associate:candidate-constraints": "tsx scripts/associate-candidate-constraints.ts",
+    "inspect:candidate-constraints": "tsx scripts/inspect-candidate-constraints.ts",
+    "export:constraint-debug-map": "tsx scripts/export-constraint-debug-map.ts",
+    "find-sites-search": "tsx scripts/find-sites-search.ts",
+    "export:find-sites-results-map": "tsx scripts/export-find-sites-results-map.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -97,6 +124,7 @@
     "postcss": "^8.4.31",
     "prettier": "^3.0.3",
     "tailwindcss": "^3.3.5",
+    "tsx": "^4.20.6",
     "typescript": "^5.2.2"
   }
 }

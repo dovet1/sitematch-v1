@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find Gaps — Design Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="fg-core.jsx"></script>
+<script type="text/babel" src="fg-a.jsx"></script>
+<script type="text/babel" src="fg-b.jsx"></script>
+<script type="text/babel" src="fg-d.jsx"></script>
+<script type="text/babel" src="fg-e.jsx"></script>
+<script type="text/babel" src="fg-f.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const Mount = ({ Component, ...props }) => (
+  <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden" }}>
+    <Component {...props}/>
+  </div>
+);
+
+const App = () => (
+  <DesignCanvas title="Find Gaps — Design Directions">
+    <DCSection id="a" title="Direction A · Clarified layout (safe)" subtitle="Same 3-pane you know — purpose banner, plain-English rules, gap-framed results.">
+      <DCArtboard id="a-main" label="Filters set + results" width={1440} height={860}><Mount Component={DirectionA}/></DCArtboard>
+      <DCArtboard id="a-empty" label="Empty state" width={1440} height={860}><Mount Component={DirectionA} empty/></DCArtboard>
+    </DCSection>
+    <DCSection id="b" title="Direction B · Results-first, filters on top (bold)" subtitle="One question, a horizontal filter sentence-bar, and the shortlist as the hero.">
+      <DCArtboard id="b-main" label="Filters set + results" width={1440} height={860}><Mount Component={DirectionB}/></DCArtboard>
+      <DCArtboard id="b-empty" label="Empty state" width={1440} height={860}><Mount Component={DirectionB} empty/></DCArtboard>
+    </DCSection>
+    <DCSection id="d" title="Direction D · Results-first, guided sidebar (recommended)" subtitle="Direction B's clarity, but filters live in a left sidebar built as a plain-English numbered flow: pick brands/categories, choose have vs missing, set size.">
+      <DCArtboard id="d-main" label="Filters set + results" width={1440} height={860}><Mount Component={DirectionD}/></DCArtboard>
+      <DCArtboard id="d-empty" label="Empty state" width={1440} height={860}><Mount Component={DirectionD} empty/></DCArtboard>
+    </DCSection>
+    <DCSection id="e" title="Direction E · Dead simple (for someone who dislikes tech)" subtitle="No toggles, sliders or chips — full sentences in large type, big tap targets, one obvious action. Pick shops, read the plain-language answer, download the list.">
+      <DCArtboard id="e-main" label="Shops chosen + list" width={1440} height={860}><Mount Component={DirectionE}/></DCArtboard>
+      <DCArtboard id="e-empty" label="Empty state" width={1440} height={860}><Mount Component={DirectionE} empty/></DCArtboard>
+    </DCSection>
+    <DCSection id="f" title="Direction F · Two buckets (AND)" subtitle="The whole filter is two labelled boxes — Missing these / Already have these. Drop brands or categories into each; results are towns matching BOTH (AND), with a plain-English read-back sentence.">
+      <DCArtboard id="f-main" label="Both boxes filled + results" width={1440} height={860}><Mount Component={DirectionF}/></DCArtboard>
+      <DCArtboard id="f-empty" label="Empty state" width={1440} height={860}><Mount Component={DirectionF} empty/></DCArtboard>
+      <DCArtboard id="f-picking" label="Adding a brand / category" width={1440} height={860}><Mount Component={DirectionF} empty picking/></DCArtboard>
+    </DCSection>
+  </DesignCanvas>
+);
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

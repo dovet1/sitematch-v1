@@ -39,6 +39,7 @@ export function Header() {
     pathname === '/sitesketcher-v2' ||
     pathname === '/siteanalyser' ||
     pathname === '/sitematcher-unified' ||
+    pathname?.startsWith('/planning-alerts') ||
     pathname?.startsWith('/new-dashboard')
   ) {
     return null

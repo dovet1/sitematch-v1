@@ -63,3 +63,6 @@ Thumbs.db
 # Local Supabase
 supabase/.branches
 supabase/.temp
+
+# Find-sites debug maps and exploration outputs
+artifacts/

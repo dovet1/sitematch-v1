@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Requirement Modal — States</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBFAF7; --surface:#FFFFFF;
+    --ink:#171419; --ink2:#4A4451; --ink3:#7C7588; --ink4:#B5AEC0;
+    --border:#E8E4DC; --border-soft:#EFEBE2; --border-hard:#D8D2C5;
+    --violet:#7033FF; --violet-deep:#5421CC; --violet-tint:#EEE9FF; --violet-tint-soft:#F5F1FF;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; min-height:100%; }
+  body{
+    font-family:"Inter",system-ui,sans-serif; color:var(--ink);
+    background:
+      radial-gradient(120% 90% at 50% 0%, rgba(112,51,255,.12), transparent 55%),
+      #0E0B12;
+    display:flex; flex-direction:column; align-items:center; gap:22px;
+    min-height:100vh; padding:28px;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{ color:var(--violet-deep); text-decoration:none; }
+  a:hover{ color:var(--violet); }
+
+  /* ---- scenario controls (not part of the design; for review) ---- */
+  .controls{
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap; justify-content:center;
+    color:#CFC7DA; font-size:12.5px;
+  }
+  .seg{ display:inline-flex; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:11px; padding:3px; }
+  .seg button{
+    appearance:none; border:none; background:transparent; cursor:pointer;
+    color:#CFC7DA; font-family:inherit; font-size:12.5px; font-weight:500;
+    padding:7px 14px; border-radius:8px; transition:.15s;
+  }
+  .seg button.on{ background:var(--violet); color:#fff; }
+  .seg button:not(.on):hover{ color:#fff; }
+  .switch{ display:inline-flex; align-items:center; gap:9px; cursor:pointer; user-select:none; }
+  .switch input{ display:none; }
+  .track{ width:38px; height:22px; border-radius:999px; background:rgba(255,255,255,.16); position:relative; transition:.18s; }
+  .track::after{ content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:999px; background:#fff; transition:.18s; }
+  .switch input:checked + .track{ background:var(--violet); }
+  .switch input:checked + .track::after{ transform:translateX(16px); }
+  .ctrl-label{ font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:#8E86A0; }
+
+  /* ============ MODAL ============ */
+  .modal{
+    position:relative; width:960px; max-width:100%; height:632px;
+    background:var(--surface); border-radius:22px;
+    box-shadow:0 40px 120px -30px rgba(20,10,40,.65);
+    display:grid; grid-template-columns:372px 1fr; overflow:hidden;
+  }
+
+  /* ---- LEFT: store estate ---- */
+  .estate{ position:relative; background:var(--bg); border-right:1px solid var(--border-soft); display:flex; flex-direction:column; }
+  .estate-head{ padding:26px 26px 18px; }
+  .brand-row{ display:flex; gap:14px; align-items:center; }
+  .brand-logo{ width:52px; height:52px; border-radius:13px; background:var(--violet-tint); color:var(--violet-deep); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:19px; letter-spacing:-.5px; flex:none; }
+  .brand-name-row{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  .brand-name{ font-size:22px; font-weight:700; letter-spacing:-.5px; color:var(--ink); }
+  .nation-pill{ display:none; align-items:center; gap:5px; background:var(--violet-tint-soft); border:1px solid var(--violet-tint); color:var(--violet-deep); border-radius:999px; padding:3px 9px; font-size:10.5px; font-weight:600; }
+  .kicker{ font-family:"JetBrains Mono",monospace; font-size:10.5px; font-weight:500; letter-spacing:1.4px; text-transform:uppercase; color:var(--ink3); }
+  .brand-sector{ margin-top:5px; }
+  .estate-label{ display:flex; align-items:center; gap:8px; margin-top:22px; color:var(--violet-deep); }
+  .estate-label .kicker{ color:var(--violet-deep); }
+  .estate-stats{ display:grid; grid-template-columns:auto 1fr; gap:4px 22px; padding:16px 26px 18px; }
+  .stat .kicker{ color:var(--ink3); }
+  .stat-val{ font-size:17px; font-weight:600; color:var(--ink); margin-top:6px; letter-spacing:-.2px; }
+  .stat-val.small{ font-size:14.5px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px; }
+  .stat-sub{ font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--ink3); margin-top:4px; }
+  .map-wrap{ position:relative; flex:1; min-height:0; border-top:1px solid var(--border-soft); background:radial-gradient(140% 120% at 30% 20%, #FDFDFB, #F3F1EC 70%, #ECE9E1); overflow:hidden; }
+  .map-wrap svg.land{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .map-grid{ position:absolute; inset:0; background-image:linear-gradient(rgba(120,110,90,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(120,110,90,.05) 1px,transparent 1px); background-size:34px 34px; }
+  .map-city{ position:absolute; font-size:12.5px; color:#9B9486; font-weight:500; }
+  .stores-chip{ position:absolute; right:14px; top:14px; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:6px 13px; font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:500; color:var(--ink2); box-shadow:0 4px 14px -6px rgba(20,10,40,.3); display:flex; align-items:center; gap:7px; }
+  .stores-chip .dot{ width:8px; height:8px; border-radius:999px; background:var(--violet); }
+  .map-attr{ position:absolute; left:14px; bottom:12px; font-family:"JetBrains Mono",monospace; font-size:10px; color:#B0A896; display:flex; align-items:center; gap:5px; }
+  .pin{ filter:drop-shadow(0 3px 5px rgba(84,33,204,.35)); }
+
+  /* ---- RIGHT: requirement ---- */
+  .detail{ position:relative; display:flex; flex-direction:column; min-height:0; }
+  .detail-scroll{ flex:1; overflow:auto; padding:26px 30px 20px; }
+  .detail-scroll::-webkit-scrollbar{ width:8px; }
+  .detail-scroll::-webkit-scrollbar-thumb{ background:var(--border-hard); border-radius:8px; }
+  .close-btn{ position:absolute; top:20px; right:20px; z-index:5; width:34px; height:34px; border-radius:999px; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--ink3); cursor:pointer; transition:.15s; }
+  .close-btn:hover{ background:var(--bg); color:var(--ink); border-color:var(--border-hard); }
+  .req-eyebrow{ display:flex; align-items:center; gap:10px; margin-bottom:22px; }
+  .req-eyebrow .kicker{ color:var(--ink2); }
+  .verified-pill{ display:inline-flex; align-items:center; gap:6px; background:var(--violet-tint-soft); border:1px solid var(--violet-tint); color:var(--violet-deep); border-radius:999px; padding:4px 11px; font-size:11px; font-weight:600; }
+  .verified-pill .tick{ width:6px; height:6px; border-radius:999px; background:var(--violet); }
+  .kv-grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px 24px; }
+  .kv .kicker{ color:var(--ink3); }
+  .kv-val{ font-size:19px; font-weight:600; color:var(--ink); margin-top:7px; letter-spacing:-.3px; }
+  .rule{ height:1px; background:var(--border-soft); margin:24px 0; }
+
+  /* locations */
+  .loc-head{ display:flex; align-items:center; gap:10px; }
+  .count-pill{ font-family:"JetBrains Mono",monospace; font-size:10.5px; font-weight:500; color:var(--ink2); background:var(--bg); border:1px solid var(--border-soft); border-radius:999px; padding:3px 9px; }
+  .loc-search{ display:none; align-items:center; gap:8px; margin-top:12px; background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:9px 12px; }
+  .loc-search input{ appearance:none; border:none; background:transparent; outline:none; font-family:inherit; font-size:13.5px; color:var(--ink); width:100%; }
+  .loc-search input::placeholder{ color:var(--ink4); }
+  .tags{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .tag{ background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:500; color:var(--ink2); transition:.15s; }
+  .tag:hover{ border-color:var(--border-hard); color:var(--ink); }
+  .loc-scroll{ position:relative; max-height:250px; overflow:auto; margin-top:6px; padding-right:4px; }
+  .loc-scroll::-webkit-scrollbar{ width:7px; }
+  .loc-scroll::-webkit-scrollbar-thumb{ background:var(--border-hard); border-radius:8px; }
+  .region-head{ display:flex; align-items:center; gap:9px; margin:16px 0 2px; }
+  .region-head:first-child{ margin-top:8px; }
+  .region-head .kicker{ color:var(--ink3); }
+  .region-head .rline{ flex:1; height:1px; background:var(--border-soft); }
+  .region-head .rcount{ font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--ink4); }
+  .no-results{ display:none; font-size:13px; color:var(--ink3); padding:14px 2px; }
+
+  /* nationwide panel */
+  .nation-panel{ display:flex; gap:14px; align-items:flex-start; margin-top:14px; padding:18px; border-radius:14px; background:linear-gradient(135deg,var(--violet-tint-soft),var(--bg)); border:1px solid var(--violet-tint); }
+  .nation-ico{ width:40px; height:40px; border-radius:11px; background:var(--surface); border:1px solid var(--violet-tint); color:var(--violet-deep); display:flex; align-items:center; justify-content:center; flex:none; }
+  .nation-title{ font-size:15.5px; font-weight:600; color:var(--ink); }
+  .nation-sub{ font-size:13px; color:var(--ink2); line-height:1.55; margin-top:4px; }
+
+  /* contacts */
+  .contacts-wrap{ margin-top:22px; display:flex; flex-direction:column; gap:10px; }
+  .contact{ display:flex; align-items:center; gap:14px; padding:14px 15px; border-radius:14px; background:var(--bg); border:1px solid var(--border-soft); }
+  .avatar{ width:42px; height:42px; border-radius:999px; flex:none; background:var(--violet); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:16px; }
+  .avatar.agency{ background:var(--ink2); }
+  .contact-name-row{ display:flex; align-items:center; gap:8px; }
+  .contact-name{ font-size:14.5px; font-weight:600; color:var(--ink); }
+  .label-chip{ font-family:"JetBrains Mono",monospace; font-size:8.5px; letter-spacing:.6px; text-transform:uppercase; color:var(--ink3); background:var(--surface); border:1px solid var(--border-soft); border-radius:5px; padding:2px 6px; }
+  .contact-role{ font-size:12.5px; color:var(--ink3); margin-top:1px; }
+  .contact-email{ font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink2); margin-top:4px; }
+  .contact-phone{ font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink3); margin-top:2px; }
+  .copy-btn{ appearance:none; align-self:flex-start; margin-top:2px; border:1px solid var(--border); background:var(--surface); color:var(--ink2); border-radius:8px; padding:6px 11px; font-family:inherit; font-size:12px; font-weight:500; cursor:pointer; transition:.15s; }
+  .copy-btn:hover{ border-color:var(--border-hard); color:var(--ink); }
+  .contacts-more{ font-size:12.5px; color:var(--ink3); padding:2px 2px 0; }
+
+  /* contact chooser popover */
+  .contact-menu{ position:absolute; right:30px; bottom:84px; width:360px; max-width:calc(100% - 60px); background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:0 26px 64px -22px rgba(20,10,40,.55); padding:8px; z-index:30; display:none; }
+  .contact-menu.open{ display:block; }
+  .cm-head{ display:flex; align-items:baseline; justify-content:space-between; padding:9px 12px 10px; }
+  .cm-head .kicker{ color:var(--ink3); }
+  .cm-head .hint{ font-size:11.5px; color:var(--ink4); }
+  .cm-row{ display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:12px; }
+  .cm-row + .cm-row{ margin-top:2px; }
+  .cm-row:hover{ background:var(--bg); }
+  .cm-name{ font-size:13.5px; font-weight:600; color:var(--ink); }
+  .cm-role{ font-size:11.5px; color:var(--ink3); margin-top:1px; }
+  .cm-actions{ display:flex; gap:7px; margin-left:auto; }
+  .cm-btn{ display:inline-flex; align-items:center; gap:6px; border-radius:9px; padding:7px 11px; font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:.15s; border:1px solid var(--border); background:var(--surface); color:var(--ink2); }
+  .cm-btn:hover{ border-color:var(--border-hard); color:var(--ink); }
+  .cm-btn.email{ background:var(--violet-tint-soft); border-color:var(--violet-tint); color:var(--violet-deep); }
+  .cm-btn.email:hover{ background:var(--violet-tint); }
+
+  /* footer */
+  .footer{ display:flex; gap:12px; padding:16px 30px; border-top:1px solid var(--border-soft); background:var(--surface); }
+  .btn{ flex:1; height:50px; border-radius:13px; display:flex; align-items:center; justify-content:center; gap:9px; font-size:15px; font-weight:600; cursor:pointer; transition:.15s; border:1px solid var(--border); font-family:inherit; }
+  .btn.secondary{ background:var(--surface); color:var(--ink); }
+  .btn.secondary:hover{ background:var(--bg); border-color:var(--border-hard); }
+  .btn.primary{ background:var(--violet); color:#fff; border-color:var(--violet); box-shadow:0 8px 22px -8px rgba(112,51,255,.6); }
+  .btn.primary:hover{ background:var(--violet-deep); }
+</style>
+</head>
+<body>
+
+  <div class="controls">
+    <div class="seg" id="scopeSeg">
+      <button data-scope="standard" class="on">16 locations</button>
+      <button data-scope="many">100 locations</button>
+      <button data-scope="nationwide">Nationwide</button>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="multiToggle">
+      <span class="track"></span>
+      <span class="ctrl-label">Multiple contacts</span>
+    </label>
+  </div>
+
+  <div class="modal" role="dialog" aria-label="The Padel Club requirement">
+    <!-- LEFT — store estate -->
+    <section class="estate">
+      <div class="estate-head">
+        <div class="brand-row">
+          <div class="brand-logo">TH</div>
+          <div>
+            <div class="brand-name-row">
+              <span class="brand-name">The Padel Club</span>
+              <span class="nation-pill" id="nationPill">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.2"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12"/></svg>
+                Nationwide
+              </span>
+            </div>
+            <div class="kicker brand-sector">Leisure &amp; Sport</div>
+          </div>
+        </div>
+        <div class="estate-label">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l1-3h10l1 3M2 6v7h12V6M2 6h12M6 13V9h4v4"/></svg>
+          <span class="kicker">Store estate</span>
+        </div>
+      </div>
+      <div class="estate-stats">
+        <div class="stat"><div class="kicker">UK stores</div><div class="stat-val">4</div></div>
+        <div class="stat"><div class="kicker">Latest store</div><div class="stat-val small">The Padel Club Cheltenham</div><div class="stat-sub">Opened 12 Feb 2026</div></div>
+      </div>
+      <div class="map-wrap">
+        <div class="map-grid"></div>
+        <svg class="land" viewBox="0 0 372 340" preserveAspectRatio="xMidYMid slice">
+          <g fill="#E6E2D6" stroke="#D8D2C5" stroke-width="1">
+            <path d="M-20 40 Q40 10 110 30 Q180 20 210 70 Q250 90 240 150 Q270 200 230 250 Q250 320 180 360 L-20 360 Z"/>
+            <path d="M250 120 Q320 100 400 130 L400 360 L250 340 Q230 250 250 200 Z"/>
+          </g>
+          <g stroke="#D3CCBC" stroke-width="1.4" fill="none" opacity=".8">
+            <path d="M40 300 Q150 240 190 150 Q210 90 300 60"/>
+            <path d="M20 120 Q120 140 190 150 Q260 160 360 220"/>
+          </g>
+        </svg>
+        <div class="map-city" style="left:200px; top:56px;">Derby</div>
+        <div class="map-city" style="left:96px; top:150px;">Wolverhampton</div>
+        <div class="map-city" style="left:150px; top:196px; font-size:15px; color:#7C7588; font-weight:600;">Birmingham</div>
+        <div class="map-city" style="left:290px; top:150px;">Hinckley</div>
+        <svg class="pin" style="position:absolute; left:150px; top:150px; width:22px; height:28px;" viewBox="0 0 22 28" fill="none"><path d="M11 27C11 27 20 17 20 10A9 9 0 1 0 2 10C2 17 11 27 11 27Z" fill="#7033FF"/><circle cx="11" cy="10" r="3.4" fill="#fff"/></svg>
+        <svg class="pin" style="position:absolute; left:112px; top:120px; width:22px; height:28px;" viewBox="0 0 22 28" fill="none"><path d="M11 27C11 27 20 17 20 10A9 9 0 1 0 2 10C2 17 11 27 11 27Z" fill="#7033FF"/><circle cx="11" cy="10" r="3.4" fill="#fff"/></svg>
+        <svg class="pin" style="position:absolute; left:220px; top:180px; width:22px; height:28px;" viewBox="0 0 22 28" fill="none"><path d="M11 27C11 27 20 17 20 10A9 9 0 1 0 2 10C2 17 11 27 11 27Z" fill="#7033FF"/><circle cx="11" cy="10" r="3.4" fill="#fff"/></svg>
+        <svg class="pin" style="position:absolute; left:184px; top:236px; width:22px; height:28px;" viewBox="0 0 22 28" fill="none"><path d="M11 27C11 27 20 17 20 10A9 9 0 1 0 2 10C2 17 11 27 11 27Z" fill="#7033FF"/><circle cx="11" cy="10" r="3.4" fill="#fff"/></svg>
+        <div class="stores-chip"><span class="dot"></span>4 stores</div>
+        <div class="map-attr">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#B0A896" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l2.5 1.5"/></svg>
+          mapbox
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT — requirement -->
+    <section class="detail">
+      <button class="close-btn" aria-label="Close"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+      <div class="detail-scroll">
+        <div class="req-eyebrow">
+          <span class="kicker">Requirement</span>
+          <span class="verified-pill"><span class="tick"></span>Verified 31 Mar 2026</span>
+        </div>
+        <div class="kv-grid">
+          <div class="kv"><div class="kicker">Size wanted</div><div class="kv-val">20,000&ndash;50,000 sq ft</div></div>
+          <div class="kv"><div class="kicker">Use class</div><div class="kv-val">E &mdash; Commercial</div></div>
+        </div>
+        <div class="rule"></div>
+        <div id="locSection"></div>
+        <div id="contactSection"></div>
+      </div>
+      <div class="footer">
+        <button class="btn secondary"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h5l3 3v9H4z"/><path d="M9 2v3h3"/></svg>Brochure</button>
+        <button class="btn primary" id="contactBtn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5.5" r="2.5"/><path d="M2 13.5c0-2.2 1.8-4 4-4s4 1.8 4 4"/><path d="M11 4.5a2.2 2.2 0 0 1 0 4M12.5 13.5c0-1.6-.8-3-2-3.6"/></svg>Contact</button>
+      </div>
+      <div class="contact-menu" id="contactMenu"></div>
+    </section>
+  </div>
+
+<script>
+  /* ---- data ---- */
+  const LOC16 = ["Bath, Bath and North East Somerset","Bristol, Bristol","Southampton, Southampton","Plymouth, Plymouth","Norwich, Norfolk","Exeter, Devon","Luton, Luton","Cambridge, Cambridgeshire","Canterbury, Kent","Oxford, Oxfordshire","Bournemouth, Bournemouth and Christchurch and Poole","Milton Keynes, Milton Keynes","Guildford, Surrey","Torquay, Torbay","Stratford-upon-Avon, Warwickshire","Farnborough, Hampshire"];
+
+  // Full list of named towns ("Town, County") — no region metadata available.
+  const LOC_MANY = [
+    "Bath, Bath and North East Somerset","Bristol, Bristol","Exeter, Devon","Plymouth, Plymouth","Torquay, Torbay","Truro, Cornwall","Bournemouth, Bournemouth and Christchurch and Poole","Swindon, Swindon","Gloucester, Gloucestershire","Cheltenham, Gloucestershire","Taunton, Somerset","Weston-super-Mare, North Somerset","Yeovil, Somerset","Bridgwater, Somerset","Barnstaple, Devon","Newquay, Cornwall","Salisbury, Wiltshire","Wells, Somerset","Frome, Somerset",
+    "Southampton, Southampton","Portsmouth, Portsmouth","Brighton, Brighton and Hove","Guildford, Surrey","Reading, Reading","Oxford, Oxfordshire","Canterbury, Kent","Maidstone, Kent","Basingstoke, Hampshire","Crawley, West Sussex","Woking, Surrey","Farnborough, Hampshire","Ashford, Kent","Chichester, West Sussex","Eastbourne, East Sussex","Tunbridge Wells, Kent","Slough, Slough","Milton Keynes, Milton Keynes",
+    "Cambridge, Cambridgeshire","Norwich, Norfolk","Ipswich, Suffolk","Colchester, Essex","Chelmsford, Essex","Luton, Luton","Peterborough, Peterborough","Bedford, Bedford","Basildon, Essex","Southend-on-Sea, Southend-on-Sea","Watford, Hertfordshire","St Albans, Hertfordshire","Stevenage, Hertfordshire","Harlow, Essex","King's Lynn, Norfolk","Great Yarmouth, Norfolk",
+    "Birmingham, West Midlands","Coventry, West Midlands","Leicester, Leicestershire","Nottingham, Nottinghamshire","Derby, Derbyshire","Wolverhampton, West Midlands","Stoke-on-Trent, Staffordshire","Northampton, Northamptonshire","Telford, Shropshire","Worcester, Worcestershire","Warwick, Warwickshire","Stratford-upon-Avon, Warwickshire","Solihull, West Midlands","Tamworth, Staffordshire","Rugby, Warwickshire","Kettering, Northamptonshire",
+    "Manchester, Greater Manchester","Leeds, West Yorkshire","Liverpool, Merseyside","Sheffield, South Yorkshire","York, York","Newcastle, Tyne and Wear","Bradford, West Yorkshire","Hull, East Riding of Yorkshire","Preston, Lancashire","Bolton, Greater Manchester","Wigan, Greater Manchester","Warrington, Warrington","Chester, Cheshire","Harrogate, North Yorkshire","Sunderland, Tyne and Wear","Middlesbrough, North Yorkshire","Blackpool, Lancashire","Doncaster, South Yorkshire",
+    "Croydon, Greater London","Ealing, Greater London","Bromley, Greater London","Kingston, Greater London","Wembley, Greater London","Stratford, Greater London","Wimbledon, Greater London","Enfield, Greater London","Barnet, Greater London","Richmond, Greater London","Sutton, Greater London","Harrow, Greater London",
+  ].sort((a,b)=>a.localeCompare(b));
+  const TOTAL = LOC_MANY.length;
+
+  const CONTACT_SINGLE = [{ initials:"G", name:"Gareth Dexter", role:"Acquisition Surveyor", org:"The Padel Club", email:"gareth.dexter@thepadelclub.co.uk", phone:"+44 1242 555 018", label:"In-house", agency:false }];
+  const CONTACTS_MULTI = [
+    { initials:"G", name:"Gareth Dexter", role:"Acquisition Surveyor", org:"The Padel Club", email:"gareth.dexter@thepadelclub.co.uk", phone:"+44 1242 555 018", label:"In-house", agency:false },
+    { initials:"PH", name:"Priya Haldane", role:"Director, Retail Agency", org:"Colliers", email:"p.haldane@colliers.com", phone:"+44 20 7344 6900", label:"Agency", agency:true },
+    { initials:"MR", name:"Marcus Reid", role:"Associate", org:"Savills", email:"mreid@savills.com", phone:"+44 20 7016 3800", label:"Agency", agency:true },
+  ];
+
+  const state = { scope:"standard", multi:false, query:"" };
+  const esc = s => s.replace(/[&<>]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;" }[c]));
+
+  function renderLocations(){
+    const el = document.getElementById("locSection");
+    if (state.scope === "nationwide"){
+      el.innerHTML = `
+        <div class="loc-head"><span class="kicker">Target area</span></div>
+        <div class="nation-panel">
+          <div class="nation-ico"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.2"/><path d="M1.8 8h12.4M8 1.8c2.2 2.2 2.2 10.2 0 12.4M8 1.8c-2.2 2.2-2.2 10.2 0 12.4"/></svg></div>
+          <div>
+            <div class="nation-title">Open to sites nationwide</div>
+            <div class="nation-sub">No specific towns named — will consider suitable opportunities across the UK. Match on size, use class and catchment rather than location.</div>
+          </div>
+        </div>`;
+      return;
+    }
+    if (state.scope === "standard"){
+      el.innerHTML = `
+        <div class="loc-head"><span class="kicker">Wants to be in</span><span class="count-pill">${LOC16.length} towns</span></div>
+        <div class="tags">${LOC16.map(l=>`<span class="tag">${esc(l)}</span>`).join("")}</div>`;
+      return;
+    }
+    // many
+    el.innerHTML = `
+      <div class="loc-head"><span class="kicker">Wants to be in</span><span class="count-pill">${TOTAL} towns</span></div>
+      <div class="loc-search">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#B5AEC0" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+        <input id="locQuery" type="text" placeholder="Filter ${TOTAL} towns…" autocomplete="off">
+      </div>
+      <div class="loc-scroll" id="locScroll">
+        <div class="tags">${LOC_MANY.map(l=>`<span class="tag" data-town="${esc(l.toLowerCase())}">${esc(l)}</span>`).join("")}</div>
+        <div class="no-results" id="noResults">No towns match “<span id="nrTerm"></span>”.</div>
+      </div>`;
+    const q = document.getElementById("locQuery");
+    q.value = state.query;
+    q.addEventListener("input", e => { state.query = e.target.value; filterLocations(); });
+    filterLocations();
+  }
+
+  function filterLocations(){
+    const term = state.query.trim().toLowerCase();
+    const scroll = document.getElementById("locScroll");
+    if (!scroll) return;
+    let shown = 0;
+    scroll.querySelectorAll(".tag").forEach(tag => {
+      const hit = !term || tag.dataset.town.includes(term);
+      tag.style.display = hit ? "" : "none";
+      if (hit) shown++;
+    });
+    document.getElementById("noResults").style.display = shown ? "none" : "block";
+    document.getElementById("nrTerm").textContent = state.query.trim();
+  }
+
+  function renderContacts(){
+    const el = document.getElementById("contactSection");
+    const list = state.multi ? CONTACTS_MULTI : CONTACT_SINGLE;
+    const heading = state.multi
+      ? `<div class="loc-head" style="margin-top:24px"><span class="kicker">Contacts</span><span class="count-pill">${list.length}</span></div>`
+      : "";
+    el.innerHTML = heading + `<div class="contacts-wrap">` + list.map(c => `
+      <div class="contact">
+        <div class="avatar${c.agency?" agency":""}">${esc(c.initials)}</div>
+        <div style="flex:1; min-width:0;">
+          <div class="contact-name-row"><span class="contact-name">${esc(c.name)}</span>${state.multi?`<span class="label-chip">${esc(c.label)}</span>`:""}</div>
+          <div class="contact-role">${esc(c.role)}${c.org?" · "+esc(c.org):""}</div>
+          <div class="contact-email">${esc(c.email)}</div>
+          <div class="contact-phone">${esc(c.phone)}</div>
+        </div>
+        <button class="copy-btn">Copy</button>
+      </div>`).join("") + `</div>`;
+    // footer CTA label reflects multiple contacts
+    const btn = document.getElementById("contactBtn");
+    btn.lastChild.textContent = state.multi ? `Contact (${list.length})` : "Contact";
+    renderContactMenu(list);
+  }
+
+  function renderContactMenu(list){
+    const menu = document.getElementById("contactMenu");
+    const head = state.multi
+      ? `<div class="cm-head"><span class="kicker">Who would you like to contact?</span></div>`
+      : `<div class="cm-head"><span class="kicker">Get in touch</span></div>`;
+    menu.innerHTML = head + list.map(c => `
+      <div class="cm-row">
+        <div style="min-width:0;">
+          <div class="cm-name">${esc(c.name)}</div>
+          <div class="cm-role">${esc(c.role)}${c.org?" · "+esc(c.org):""}</div>
+        </div>
+        <div class="cm-actions">
+          <a class="cm-btn email" href="mailto:${esc(c.email)}">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3.5" width="12" height="9" rx="1.5"/><path d="M2.5 4.5L8 8.5l5.5-4"/></svg>Email</a>
+          <a class="cm-btn" href="tel:${esc(c.phone.replace(/\s/g,''))}">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2.5l1 3-1.5 1a7 7 0 0 0 3 3l1-1.5 3 1V13a1 1 0 0 1-1 1A10 10 0 0 1 3 4a1 1 0 0 1 0-1z"/></svg>Call</a>
+        </div>
+      </div>`).join("");
+  }
+
+  function render(){
+    document.getElementById("nationPill").style.display = state.scope === "nationwide" ? "inline-flex" : "none";
+    renderLocations();
+    renderContacts();
+  }
+
+  document.getElementById("scopeSeg").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    state.scope = b.dataset.scope; state.query = "";
+    [...e.currentTarget.children].forEach(x => x.classList.toggle("on", x === b));
+    render();
+  });
+  document.getElementById("multiToggle").addEventListener("change", e => { state.multi = e.target.checked; render(); });
+
+  // Contact button opens a chooser popover; outside-click / Esc closes it.
+  const contactBtn = document.getElementById("contactBtn");
+  const contactMenu = document.getElementById("contactMenu");
+  contactBtn.addEventListener("click", e => { e.stopPropagation(); contactMenu.classList.toggle("open"); });
+  document.addEventListener("click", e => { if (!contactMenu.contains(e.target) && e.target !== contactBtn) contactMenu.classList.remove("open"); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") contactMenu.classList.remove("open"); });
+
+  render();
+</script>
+</body>
+</html>

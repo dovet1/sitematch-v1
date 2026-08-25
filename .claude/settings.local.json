@@ -75,7 +75,13 @@
       "Bash(npx eslint *)",
       "Bash(echo \"=== exit: $? ===\")",
       "Read(//private/tmp/**)",
-      "Bash(echo \"EXIT: $?\")"
+      "Bash(echo \"EXIT: $?\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import json;d=json.load\\(open\\('/tmp/pl2.json'\\)\\);r=d.get\\('records'\\) or [];print\\(' total=',d.get\\('total'\\),'n=',len\\(r\\)\\);print\\(' has location_x:', 'location_x' in r[0] if r else 'n/a'\\); print\\(' keys:', sorted\\(r[0].keys\\(\\)\\) if r else None\\)\")",
+      "Bash(python3 -c \"import json;d=json.load\\(open\\('/tmp/pb.json'\\)\\);r=d.get\\('records'\\) or [];print\\('  total=',d.get\\('total'\\),'n=',len\\(r\\)\\)\")",
+      "Bash(printf \"krad london -> \"; curl -s --max-time 55 -o /tmp/pk.json -w \"http=%{http_code} t=%{time_total}\\\\n\" \"https://www.planit.org.uk/api/applics/json?app_size=Large&app_state=Undecided,Permitted,Rejected&app_type=Full,Outline,Amendment&start_date=2024-07-20&pg_sz=100&index=0&lat=51.52&lng=-0.125&krad=2\"; head -c 200 /tmp/pk.json; echo; printf \"recent-style end_date london bbox -> \"; curl -s --max-time 55 -o /dev/null -w \"http=%{http_code} t=%{time_total}\\\\n\" \"https://www.planit.org.uk/api/applics/json?app_size=Large&start_date=2026-01-01&pg_sz=100&bbox=-0.15,51.50,-0.10,51.5375\")",
+      "Bash(python3 -)"
     ],
     "deny": []
   }

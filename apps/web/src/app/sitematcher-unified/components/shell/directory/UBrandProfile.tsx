@@ -111,15 +111,12 @@ export function UBrandProfile({
                 {u}
               </span>
             ))}
-            {requirement ? (
+            {/* Brands with no requirement linked say nothing about requirements at all —
+                no negative "on file" status, here or anywhere else on the profile. */}
+            {requirement && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[#DCFCE7] px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.09em] text-[#15803D]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#16A34A]" />
                 Actively acquiring
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-sm-border-soft px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.09em] text-sm-ink3">
-                <span className="h-1.5 w-1.5 rounded-full bg-sm-ink4" />
-                No requirement on file
               </span>
             )}
           </div>
@@ -127,8 +124,8 @@ export function UBrandProfile({
 
         {/*
           Hero stats. The design's "Head office" and "Operating since" have no columns, so
-          the cluster uses what the data actually supports and drops to two stats when
-          there is no requirement to date-stamp.
+          the cluster uses what the data actually supports and drops to two stats for a
+          brand with no requirement linked to it.
         */}
         <div className="hidden items-start gap-7 border-l border-sm-border-soft pl-6 sm:flex">
           <div>
@@ -157,13 +154,19 @@ export function UBrandProfile({
       </UPanel>
 
       {/* ---- Main row: requirement + estate map ---- */}
+      {/* Without a requirement the left column is dropped entirely and the estate map
+          takes the full row, rather than leaving a panel with nothing to say. */}
       <div
         className="grid gap-3.5"
-        style={{ gridTemplateColumns: 'minmax(0,0.82fr) minmax(0,1.18fr)' }}
+        style={{
+          gridTemplateColumns: requirement
+            ? 'minmax(0,0.82fr) minmax(0,1.18fr)'
+            : 'minmax(0,1fr)',
+        }}
       >
-        <UPanel className="flex min-h-[310px] flex-col">
-          <UPanelHeader title="Expansion requirement" />
-          {requirement ? (
+        {requirement && (
+          <UPanel className="flex min-h-[310px] flex-col">
+            <UPanelHeader title="Expansion requirement" />
             <div className="flex flex-1 flex-col p-4 pt-3">
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="rounded-[11px] border border-sm-border-soft bg-sm-bg p-3.5">
@@ -256,25 +259,18 @@ export function UBrandProfile({
                 </div>
               )}
             </div>
-          ) : (
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
-              <FileText size={22} className="text-sm-ink4" />
-              <div className="text-[13.5px] font-semibold text-sm-ink">No requirement on file</div>
-              <p className="max-w-[260px] text-[12px] leading-snug text-sm-ink3">
-                We don&apos;t hold a live requirement for {brand.name}. Contact the team below to
-                ask about their current acquisition plans.
-              </p>
-            </div>
-          )}
-        </UPanel>
+          </UPanel>
+        )}
 
         <UPanel className="flex min-h-[310px] flex-col overflow-hidden">
           <div className="relative flex-1">
+            {/* No requirement means no targets to toggle to: withholding onModeChange
+                hides the Existing estate / Targets switch (see UStoreEstateMap). */}
             <UStoreEstateMap
               stores={brand.stores}
               count={brand.storeCount}
-              mode={mapMode}
-              onModeChange={setMapMode}
+              mode={requirement ? mapMode : 'estate'}
+              onModeChange={requirement ? setMapMode : undefined}
               targets={requirement?.targets ?? []}
               showLegend
             />

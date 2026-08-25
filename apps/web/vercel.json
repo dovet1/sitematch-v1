@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/process-cache-rebuilds",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/send-monthly-planning-alerts",
+      "schedule": "0 8 1 * *"
     }
   ],
   "functions": {
@@ -24,6 +28,9 @@
       "maxDuration": 300
     },
     "app/api/cron/process-cache-rebuilds/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/cron/send-monthly-planning-alerts/route.ts": {
       "maxDuration": 300
     }
   },

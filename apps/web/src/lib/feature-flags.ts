@@ -28,3 +28,11 @@ export const UNIFIED_WORKSPACE_FLAG = 'unified_workspace_enabled'
 export function isUnifiedWorkspaceEnabled(): Promise<boolean> {
   return isFeatureEnabled(UNIFIED_WORKSPACE_FLAG)
 }
+
+// Find Sites — the standalone experimental prospecting route. Off by default; enable the
+// `find_sites_enabled` row in the DB to view it (internal/beta convention).
+export const FIND_SITES_FLAG = 'find_sites_enabled'
+
+export function isFindSitesEnabled(): Promise<boolean> {
+  return isFeatureEnabled(FIND_SITES_FLAG)
+}
