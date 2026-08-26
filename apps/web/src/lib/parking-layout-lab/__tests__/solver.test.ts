@@ -353,10 +353,19 @@ describe('parking-layout-lab solver', () => {
     for (const c of out.candidates) assertCandidateInvariants(out, c);
   });
 
-  it('5. narrow square plot only fits single-loaded interior rows (perimeter modules too narrow)', () => {
-    const out = solveParkingLayout(baseInput({ boundary: rect(15, 15), accessPoint: m(0, 7.5) }));
+  it('5. a shallow strip yields only single-loaded rows (too shallow for double-loaded modules), with no solos', () => {
+    // A ~16 m usable depth is too shallow to sit a double-loaded module comfortably,
+    // so the layout falls back to single-loaded rows along the long edges. (A tiny
+    // square like 15×15 fits only isolated single stalls, which are now correctly
+    // rejected as solos — see tests 19–21.)
+    const out = solveParkingLayout(baseInput({ boundary: rect(40, 18), accessPoint: m(20, 0) }));
     expect(out.candidates.length).toBeGreaterThan(0);
-    for (const c of out.candidates) assertCandidateInvariants(out, c);
+    for (const c of out.candidates) {
+      expect(c.rows.length).toBeGreaterThan(0);
+      expect(c.rows.every((r) => r.loading === 'single')).toBe(true);
+      expect(c.rows.every((r) => r.stalls.length >= 2)).toBe(true);
+      assertCandidateInvariants(out, c);
+    }
   });
 
   it('6. plot too small for any stall returns a warning and no candidates', () => {
@@ -592,6 +601,81 @@ describe('parking-layout-lab solver', () => {
     const hinted = solveParkingLayout({ ...input, draft: true, draftOrientationDeg: 37 });
     expect(hinted.candidates.length).toBe(1);
   });
+
+  it('19. no candidate row is ever a solo/stub — in normal, draft and accessible modes — and stallCount / aisles stay consistent', () => {
+    const MIN = 2; // LIMITS.minStallsPerRun
+    const circle = (() => {
+      const N = 40;
+      const R = 60;
+      const pts: [number, number][] = [];
+      for (let i = 0; i < N; i++) {
+        const a = (i / N) * Math.PI * 2;
+        pts.push([R + R * Math.cos(a), R + R * Math.sin(a)]);
+      }
+      return baseInput({ boundary: poly(pts), accessPoint: m(R, 0) });
+    })();
+    const fixtures: SolverInput[] = [
+      baseInput(),
+      baseInput({ exclusions: [poly([[20, 12], [30, 12], [30, 18], [20, 18]])] }),
+      baseInput({ boundary: poly([[0, 0], [60, 0], [60, 20], [25, 20], [25, 45], [0, 45]]), accessPoint: m(30, 0) }),
+      circle,
+    ];
+    // Each fixture in plain, draft, and accessible-at-50% modes: the merge path
+    // runs everywhere so a 2-stall row can never collapse to a lone bay.
+    const modes: ((i: SolverInput) => SolverInput)[] = [
+      (i) => i,
+      (i) => ({ ...i, draft: true }),
+      (i) => ({ ...i, accessible: { rate: 0.5, bay: { width: 3.6, length: 4.8, sharedAccessWidth: 1.2 } } }),
+    ];
+    for (const fx of fixtures) {
+      for (const mode of modes) {
+        const out = solveParkingLayout(mode(fx));
+        for (const c of out.candidates) {
+          for (const row of c.rows) {
+            expect(row.stalls.length).toBeGreaterThanOrEqual(MIN);
+          }
+          // stallCount is exactly the emitted geometry (merged bays counted as 1).
+          expect(c.stallCount).toBe(c.rows.reduce((n, r) => n + r.stalls.length, 0));
+          // No orphaned serving aisle: every perimeter/interior aisle has a row.
+          const rowAisleIds = new Set(c.rows.map((r) => r.aisleId));
+          for (const a of c.driveAisles) {
+            if (a.role === 'perimeter' || a.role === 'interior') {
+              expect(rowAisleIds.has(a.aisleId)).toBe(true);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('20. an interior band clipped by an exclusion never leaves a single stranded stall', () => {
+    // A tall thin central exclusion splits interior bands; the clearance can clip
+    // a band down toward one surviving cell on the narrow side — which must be
+    // dropped, not emitted as a solo.
+    const wall = poly([[30, 4], [33, 4], [33, 56], [30, 56]]);
+    const out = solveParkingLayout(baseInput({ boundary: rect(60, 40), exclusions: [wall], accessPoint: m(10, 0) }));
+    expect(out.candidates.length).toBeGreaterThan(0);
+    for (const c of out.candidates) {
+      for (const row of c.rows) expect(row.stalls.length).toBeGreaterThanOrEqual(2);
+      const rowAisleIds = new Set(c.rows.map((r) => r.aisleId));
+      for (const a of c.driveAisles) {
+        if (a.role === 'perimeter' || a.role === 'interior') expect(rowAisleIds.has(a.aisleId)).toBe(true);
+      }
+      assertCandidateInvariants(out, c);
+    }
+  });
+
+  it('21. a boundary edge that fits exactly one perimeter stall produces no length-1 perimeter row', () => {
+    // Corner clearance is aisle/2 (=3 m) each end; a 9 m edge leaves a 3 m usable
+    // span — room for exactly one 2.4 m stall, which as a solo must be dropped.
+    const shape = poly([[0, 0], [9, 0], [9, 40], [50, 40], [50, 70], [0, 70]]);
+    const out = solveParkingLayout(baseInput({ boundary: shape, accessPoint: m(25, 40) }));
+    expect(out.candidates.length).toBeGreaterThan(0);
+    for (const c of out.candidates) {
+      for (const row of c.rows) expect(row.stalls.length).toBeGreaterThanOrEqual(2);
+      assertCandidateInvariants(out, c);
+    }
+  });
 });
 
 // --- M2: manoeuvring + accessible bays -------------------------------------
@@ -730,6 +814,23 @@ describe('parking-layout-lab solver — M2', () => {
     const out = solveParkingLayout(baseInput());
     for (const c of out.candidates) {
       expect(allStalls(c).some((s) => s.accessible)).toBe(false);
+    }
+  });
+
+  it('accessible-bay merging never collapses a row into a solo, even at a maximal target rate', () => {
+    // A 100% rate maximally pressures every row to merge; the per-row cap must
+    // still keep each row at >= 2 final spaces (a 2-stall row can take 0 merges).
+    const out = solveParkingLayout(
+      baseInput({
+        boundary: rect(24, 24),
+        accessPoint: m(12, 0),
+        accessible: { rate: 1, bay: { width: 3.6, length: 4.8, sharedAccessWidth: 1.2 } },
+      }),
+    );
+    expect(out.candidates.length).toBeGreaterThan(0);
+    for (const c of out.candidates) {
+      for (const row of c.rows) expect(row.stalls.length).toBeGreaterThanOrEqual(2);
+      assertCandidateInvariants(out, c);
     }
   });
 });

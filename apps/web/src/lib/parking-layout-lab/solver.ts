@@ -73,6 +73,10 @@ const LIMITS = {
   maxIterations: 2_000_000, // hard cap on the total generation budget (perimeter + all interior candidates)
   minStallDim: 1.0, // metres
   minAisle: 2.0, // metres
+  // A run of fewer than this many contiguous stalls is an unrealistic solo/stub
+  // and is never emitted (perimeter + interior), and never left behind by an
+  // accessible-bay merge. 2 => only true single-stall solos are dropped.
+  minStallsPerRun: 2,
 };
 
 const EPS = 1e-6;
@@ -748,7 +752,10 @@ function buildPerimeter(
       const runStart = g[0];
       const freeLen = g[g.length - 1] + stallW - runStart;
       const count = Math.floor(freeLen / stallW);
-      if (count <= 0) continue;
+      // Skip solos/stubs: a sub-minimum run is dropped along with its aisle and
+      // `accepted` reservation (all committed below this guard), so nothing is
+      // stranded and the interior region isn't wrongly reserved for it.
+      if (count < LIMITS.minStallsPerRun) continue;
       const offset = (freeLen - count * stallW) / 2;
       const s0 = runStart + offset;
       const s1 = s0 + count * stallW;
@@ -1010,12 +1017,14 @@ function sweepRowInterior(args: {
     if (valid) {
       current.push(stall);
     } else if (current.length > 0) {
-      rows.push(current);
+      // Emit the run only if it clears the solo/stub minimum; otherwise discard
+      // it (a lone stall stranded between obstructions is unrealistic).
+      if (current.length >= LIMITS.minStallsPerRun) rows.push(current);
       current = [];
     }
     x += stallW;
   }
-  if (current.length > 0) rows.push(current);
+  if (current.length >= LIMITS.minStallsPerRun) rows.push(current);
   return { rows, iterations };
 }
 
@@ -1782,6 +1791,12 @@ function mergeAdjacentStalls(a: LocalRing, b: LocalRing): LocalRing {
  * reuses already-validated space — genuinely wider, not just relabelled —
  * at the cost of one standard stall's yield per bay. Bay LENGTH upgrades
  * aren't modelled; only width/placement are (see module doc comment).
+ *
+ * Each merge drops a row's final space count by one, so merging is capped per
+ * row to keep the row at/above `minStallsPerRun` — otherwise a legal 2-stall
+ * row would collapse to a single accessible bay, i.e. a solo (a length-1 row).
+ * When the cap prevents reaching `targetCount`, the caller's existing
+ * accessible-bay-shortfall warning discloses it.
  */
 function applyAccessibleBays(
   rows: LocalRowBuild[],
@@ -1795,7 +1810,21 @@ function applyAccessibleBays(
     }
   });
   candidates.sort((a, b) => a.d - b.d);
-  const chosen = candidates.slice(0, Math.max(0, targetCount));
+
+  // Max merges a row may take before it would drop below the minimum run:
+  // final count = stalls - merges, and merges use non-overlapping pairs.
+  const maxMergesByRow = rows.map((row) =>
+    Math.min(Math.floor(row.stalls.length / 2), row.stalls.length - LIMITS.minStallsPerRun),
+  );
+  const mergesTakenByRow = new Map<number, number>();
+  const chosen: { rowIdx: number; pairStart: number; d: number }[] = [];
+  for (const c of candidates) {
+    if (chosen.length >= Math.max(0, targetCount)) break;
+    const taken = mergesTakenByRow.get(c.rowIdx) ?? 0;
+    if (taken >= maxMergesByRow[c.rowIdx]) continue; // would push this row below the minimum run
+    mergesTakenByRow.set(c.rowIdx, taken + 1);
+    chosen.push(c);
+  }
 
   const chosenByRow = new Map<number, Set<number>>();
   for (const c of chosen) {
