@@ -1,0 +1,8 @@
+{
+  "projectId": "dfe8aec4-8a31-45fa-9e80-34f0878e4323",
+  "shape": "package",
+  "pkg": "design-system",
+  "globalName": "SiteMatcherDS",
+  "buildCmd": "npm run build --workspace=design-system",
+  "cssEntry": "dist/styles.css"
+}
