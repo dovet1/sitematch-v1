@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F2F0EC;font-family:Poppins,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#6B2FE3;text-decoration:none}a:hover{color:#5423bb}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes sweep{0%{transform:translateY(-40px);opacity:0}20%{opacity:1}100%{transform:translateY(460px);opacity:0}}
+@keyframes pulseRing{0%,100%{opacity:.35}50%{opacity:.9}}
+</style>
+</helmet>
+
+<section style="padding:56px 64px 96px;display:flex;flex-direction:column;gap:56px">
+
+  <div style="display:flex;align-items:flex-start;gap:20px;max-width:1360px">
+    <div style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:#6B2FE3;background:#F1EBFE;border:1px solid #E2D6FC;padding:7px 10px;border-radius:8px">1a</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <h1 style="margin:0;font:600 30px/1.15 Poppins,sans-serif;color:#26242A;letter-spacing:-.01em">Automatic parking layouts in SiteSketcher</h1>
+      <p style="margin:0;max-width:760px;font:400 15px/1.6 Poppins,sans-serif;color:#6A655E;text-wrap:pretty">One interaction direction: the existing Parking tool gains a method choice. Manual is unchanged and stays the default. Auto layout reuses the same left panel, map and inspector, needs only a boundary and an access point, and reads existing polygons and CAD overlays as exclusions automatically.</p>
+    </div>
+  </div>
+
+  <!-- ============ 1. METHOD CHOICE ============ -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <span style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#9A948B">01</span>
+      <span style="font:600 17px/1 Poppins,sans-serif;color:#26242A">Parking method choice</span>
+      <span style="font:400 13.5px/1 Poppins,sans-serif;color:#7C766E">Manual stays selected by default — the existing controls sit directly below the choice.</span>
+    </div>
+
+    <div style="width:1360px;background:#fff;border:1px solid #E9E5DF;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(24,20,14,.05),0 14px 34px rgba(24,20,14,.06)">
+      <div style="height:64px;display:flex;align-items:center;gap:24px;padding:0 20px;border-bottom:1px solid #EEEAE4;background:#fff">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div style="width:28px;height:28px;border-radius:8px;background:#6B2FE3;display:flex;align-items:center;justify-content:center"><div style="width:11px;height:11px;background:#fff;transform:rotate(45deg);border-radius:2px"></div></div>
+          <span style="font:600 18px/1 Poppins,sans-serif;color:#6B2FE3;letter-spacing:-.01em">SiteMatcher</span>
+        </div>
+        <div style="flex:1;display:flex;justify-content:center">
+          <div style="width:560px;height:40px;border:1px solid #EAE6DF;background:#FBFAF8;border-radius:20px;display:flex;align-items:center;gap:10px;padding:0 16px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A948B" stroke-width="2"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+            <span style="flex:1;font:400 14px/1 Poppins,sans-serif;color:#A29C93">Search a town, postcode or address...</span>
+            <span style="font:400 11px/1 'JetBrains Mono',monospace;color:#B3ADA4">⌘K</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="height:36px;padding:0 16px;background:#6B2FE3;border-radius:18px;display:flex;align-items:center;gap:8px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"></path></svg>
+            <span style="font:600 14px/1 Poppins,sans-serif;color:#fff">Export</span>
+          </div>
+          <div style="width:34px;height:34px;border-radius:17px;background:#F1EBFE;border:1px solid #E2D6FC;display:flex;align-items:center;justify-content:center;font:600 14px/1 Poppins,sans-serif;color:#6B2FE3">D</div>
+        </div>
+      </div>
+
+      <div style="display:flex;height:736px">
+        <div style="width:56px;border-right:1px solid #EEEAE4;background:#fff;display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px 0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><path d="M12 21s6.5-6.1 6.5-10.5a6.5 6.5 0 10-13 0C5.5 14.9 12 21 12 21z"></path><circle cx="12" cy="10.3" r="2.3"></circle></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+          <div style="width:36px;height:36px;border-radius:12px;background:#231F2B;display:flex;align-items:center;justify-content:center">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M4 20l3.5-9.5L15 3l6 6-7.5 7.5L4 20z" stroke-linejoin="round"></path></svg>
+          </div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><path d="M12 3l9 4.8-9 4.8-9-4.8L12 3z" stroke-linejoin="round"></path><path d="M3 13.2l9 4.8 9-4.8"></path></svg>
+        </div>
+
+        <div style="width:322px;border-right:1px solid #EEEAE4;display:flex;flex-direction:column;background:#fff">
+          <div style="padding:16px 20px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:6px;font:500 14px/1 Poppins,sans-serif;color:#57534E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="2"><path d="M14 6l-6 6 6 6"></path></svg>Sketches</div>
+            <div style="display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:4px;background:#6B2FE3"></div><span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:#8A857D">UNSAVED CHANGES</span></div>
+          </div>
+          <div style="padding:12px 20px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #EFEBE5">
+            <span style="font:600 19px/1 Poppins,sans-serif;color:#26242A">Untitled Sketch</span>
+            <div style="height:38px;padding:0 16px;background:#6B2FE3;border-radius:19px;display:flex;align-items:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M5 5h11l3 3v11H5z"></path><path d="M9 5v5h6"></path></svg><span style="font:600 14px/1 Poppins,sans-serif;color:#fff">Save</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);padding:10px 12px;border-bottom:1px solid #EFEBE5">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 0;border-radius:12px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M5 3l7 17 2.2-6.8L21 11 5 3z" stroke-linejoin="round"></path></svg><span style="font:400 12px/1 Poppins,sans-serif;color:#57534E">Select</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 0;border-radius:12px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M12 3l7.5 4.6v8.8L12 21l-7.5-4.6V7.6L12 3z" stroke-linejoin="round"></path></svg><span style="font:400 12px/1 Poppins,sans-serif;color:#57534E">Polygon</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 0;border-radius:12px;background:#F5F0FE;border:1px solid #DFD1FB"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="1.6"><path d="M5 15h14v-2.4l-1.7-4A2 2 0 0015.4 7H8.6a2 2 0 00-1.9 1.6L5 12.6V15z" stroke-linejoin="round"></path><circle cx="8.2" cy="17.4" r="1.3"></circle><circle cx="15.8" cy="17.4" r="1.3"></circle></svg><span style="font:500 12px/1 Poppins,sans-serif;color:#6B2FE3">Parking</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 0;border-radius:12px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M12 3l9 4.8-9 4.8-9-4.8L12 3z" stroke-linejoin="round"></path><path d="M3 13.2l9 4.8 9-4.8"></path></svg><span style="font:400 12px/1 Poppins,sans-serif;color:#57534E">CAD</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 0;border-radius:12px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M14.6 3.4l6 6L9.4 20.6l-6-6 11.2-11.2z"></path><path d="M8 10l2 2M11 7l2 2"></path></svg><span style="font:400 12px/1 Poppins,sans-serif;color:#57534E">Measure</span></div>
+          </div>
+
+          <div style="padding:18px 20px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #EFEBE5">
+            <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">PARKING METHOD</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:#F6F4F0;border:1px solid #EAE6DF;border-radius:13px">
+              <div style="display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 0;background:#6B2FE3;border-radius:9px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M5 15h14v-2.4l-1.7-4A2 2 0 0015.4 7H8.6a2 2 0 00-1.9 1.6L5 12.6V15z" stroke-linejoin="round"></path></svg><span style="font:600 13.5px/1 Poppins,sans-serif;color:#fff">Manual</span></div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 0;border-radius:9px" style-hover="background:#EFECE6"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.7"><path d="M12 4l1.7 4.6L18 10l-4.3 1.4L12 16l-1.7-4.6L6 10l4.3-1.4L12 4z" stroke-linejoin="round"></path></svg><span style="font:500 13.5px/1 Poppins,sans-serif;color:#57534E">Auto layout</span></div>
+            </div>
+            <p style="margin:0;font:400 12.5px/1.5 Poppins,sans-serif;color:#7C766E">Place and configure individual parking blocks.</p>
+            <p style="margin:0;font:400 12.5px/1.5 Poppins,sans-serif;color:#A29C93">Auto layout — generate parking bays and circulation within a site boundary.</p>
+          </div>
+
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 20px 16px;display:flex;flex-direction:column;gap:12px">
+            <p style="margin:0;font:400 13.5px/1.5 Poppins,sans-serif;color:#57534E">Configure a bay block, then click the map to place it.</p>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">SPACES</span>
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="width:40px;height:40px;border:1px solid #EAE6DF;border-radius:20px;display:flex;align-items:center;justify-content:center;font:400 20px/1 Poppins,sans-serif;color:#57534E">−</div>
+                <span style="font:600 22px/1 'JetBrains Mono',monospace;color:#26242A">10</span>
+                <div style="width:40px;height:40px;border:1px solid #EAE6DF;border-radius:20px;display:flex;align-items:center;justify-content:center;font:400 20px/1 Poppins,sans-serif;color:#57534E">+</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">LAYOUT</span>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:#F6F4F0;border:1px solid #EAE6DF;border-radius:13px">
+                <div style="padding:11px 0;text-align:center;background:#6B2FE3;border-radius:9px;font:600 14px/1 Poppins,sans-serif;color:#fff">Single</div>
+                <div style="padding:11px 0;text-align:center;font:500 14px/1 Poppins,sans-serif;color:#57534E">Double</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">STALL SIZE</span>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:#F6F4F0;border:1px solid #EAE6DF;border-radius:13px">
+                <div style="padding:11px 0;text-align:center;background:#6B2FE3;border-radius:9px;font:600 14px/1 Poppins,sans-serif;color:#fff">Standard</div>
+                <div style="padding:11px 0;text-align:center;font:500 14px/1 Poppins,sans-serif;color:#57534E">Larger</div>
+              </div>
+            </div>
+            <div style="border:1px solid #EFEBE5;background:#FBFAF8;border-radius:13px;padding:14px 16px;display:flex;flex-direction:column;gap:7px">
+              <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">BLOCK FOOTPRINT</span>
+              <span style="font:400 18px/1 'JetBrains Mono',monospace;color:#26242A">24.0 × 4.8 m</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1;position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0;background:radial-gradient(120px 90px at 16% 20%,#4E5C3C 0%,rgba(78,92,60,0) 70%),radial-gradient(170px 130px at 74% 12%,#4A5838 0%,rgba(74,88,56,0) 72%),radial-gradient(210px 160px at 86% 72%,#46543A 0%,rgba(70,84,58,0) 75%),radial-gradient(190px 150px at 26% 84%,#515F3F 0%,rgba(81,95,63,0) 75%),linear-gradient(160deg,#7C8662 0%,#8C9369 45%,#78845C 100%)"></div>
+          <svg width="100%" height="100%" viewBox="0 0 984 736" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0">
+            <path d="M-20 190 C 240 240, 520 120, 1000 250" stroke="rgba(246,242,230,.35)" stroke-width="2" stroke-dasharray="7 7" fill="none"></path>
+            <path d="M120 -20 C 260 260, 380 420, 460 760" stroke="rgba(246,242,230,.3)" stroke-width="2" stroke-dasharray="7 7" fill="none"></path>
+            <path d="M980 60 C 800 300, 860 520, 700 760" stroke="rgba(246,242,230,.28)" stroke-width="2" stroke-dasharray="7 7" fill="none"></path>
+            <polygon points="300,120 700,170 660,560 270,500" fill="rgba(107,47,227,.14)" stroke="#7C4DFF" stroke-width="3"></polygon>
+            <rect x="380" y="300" width="88" height="16" rx="3" fill="rgba(255,255,255,.85)" stroke="#6B2FE3" stroke-width="1.5"></rect>
+            <g stroke="#6B2FE3" stroke-width="1"><path d="M386 302v12M394 302v12M402 302v12M410 302v12M418 302v12M426 302v12M434 302v12M442 302v12M450 302v12M458 302v12"></path></g>
+          </svg>
+          <div style="position:absolute;left:452px;top:132px;background:#fff;border:1px solid #DFD1FB;border-radius:7px;padding:3px 7px;font:400 11px/1 'JetBrains Mono',monospace;color:#6B2FE3">113m</div>
+          <div style="position:absolute;left:262px;top:560px;background:#fff;border:1px solid #DFD1FB;border-radius:7px;padding:3px 7px;font:400 11px/1 'JetBrains Mono',monospace;color:#6B2FE3">156m</div>
+          <div style="position:absolute;right:24px;top:24px;display:flex;flex-direction:column;gap:12px;align-items:flex-end">
+            <div style="background:#fff;border-radius:14px;padding:5px;display:flex;gap:4px;box-shadow:0 4px 14px rgba(20,16,10,.14)">
+              <div style="padding:8px 14px;border-radius:10px;background:#F6F4F0;display:flex;gap:6px;align-items:center;font:500 13.5px/1 Poppins,sans-serif;color:#26242A">2D</div>
+              <div style="padding:8px 14px;border-radius:10px;font:400 13.5px/1 Poppins,sans-serif;color:#7C766E">3D</div>
+            </div>
+            <div style="background:#fff;border-radius:14px;padding:5px;display:flex;gap:4px;box-shadow:0 4px 14px rgba(20,16,10,.14)">
+              <div style="padding:8px 14px;border-radius:10px;background:#F6F4F0;font:500 13.5px/1 'JetBrains Mono',monospace;color:#26242A">m</div>
+              <div style="padding:8px 14px;border-radius:10px;font:400 13.5px/1 'JetBrains Mono',monospace;color:#7C766E">ft</div>
+            </div>
+            <div style="background:#fff;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 4px 14px rgba(20,16,10,.14);min-width:150px">
+              <span style="font:600 14px/1 Poppins,sans-serif;color:#26242A">Map Style</span>
+              <span style="font:400 13.5px/1 Poppins,sans-serif;color:#57534E;padding:8px 6px">Satellite</span>
+              <span style="font:600 13.5px/1 Poppins,sans-serif;color:#fff;background:#6B2FE3;border-radius:10px;padding:9px 10px">Hybrid</span>
+              <span style="font:400 13.5px/1 Poppins,sans-serif;color:#57534E;padding:8px 6px">Streets</span>
+            </div>
+          </div>
+          <div style="position:absolute;left:16px;bottom:14px;font:400 10.5px/1 'JetBrains Mono',monospace;color:rgba(255,255,255,.7)">imagery indicative</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;max-width:1360px">
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">DEFAULT</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">Manual is preselected, so an existing user sees the same panel as before with one extra row above it.</span></div>
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">SWITCHING</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">Choosing Auto layout replaces the block controls in place — no modal, no page change. The choice is remembered per sketch.</span></div>
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">STATES</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">Segment: rest / hover (warm grey fill) / selected (violet fill). Keyboard: ←→ moves between the two methods.</span></div>
+    </div>
+  </div>
+
+  <!-- ============ 2. AUTO SETUP ============ -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <span style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#9A948B">02</span>
+      <span style="font:600 17px/1 Poppins,sans-serif;color:#26242A">Auto layout setup</span>
+      <span style="font:400 13.5px/1 Poppins,sans-serif;color:#7C766E">Boundary already selected · one internal polygon and one CAD overlay detected as exclusions.</span>
+    </div>
+
+    <div style="width:1360px;background:#fff;border:1px solid #E9E5DF;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(24,20,14,.05),0 14px 34px rgba(24,20,14,.06)">
+      <div style="height:64px;display:flex;align-items:center;gap:24px;padding:0 20px;border-bottom:1px solid #EEEAE4">
+        <div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:8px;background:#6B2FE3;display:flex;align-items:center;justify-content:center"><div style="width:11px;height:11px;background:#fff;transform:rotate(45deg);border-radius:2px"></div></div><span style="font:600 18px/1 Poppins,sans-serif;color:#6B2FE3;letter-spacing:-.01em">SiteMatcher</span></div>
+        <div style="flex:1;display:flex;justify-content:center"><div style="width:560px;height:40px;border:1px solid #EAE6DF;background:#FBFAF8;border-radius:20px;display:flex;align-items:center;gap:10px;padding:0 16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A948B" stroke-width="2"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span style="flex:1;font:400 14px/1 Poppins,sans-serif;color:#A29C93">Search a town, postcode or address...</span><span style="font:400 11px/1 'JetBrains Mono',monospace;color:#B3ADA4">⌘K</span></div></div>
+        <div style="display:flex;align-items:center;gap:12px"><div style="height:36px;padding:0 16px;background:#6B2FE3;border-radius:18px;display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"></path></svg><span style="font:600 14px/1 Poppins,sans-serif;color:#fff">Export</span></div><div style="width:34px;height:34px;border-radius:17px;background:#F1EBFE;border:1px solid #E2D6FC;display:flex;align-items:center;justify-content:center;font:600 14px/1 Poppins,sans-serif;color:#6B2FE3">D</div></div>
+      </div>
+      <div style="display:flex;height:736px">
+        <div style="width:56px;border-right:1px solid #EEEAE4;display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px 0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><path d="M12 21s6.5-6.1 6.5-10.5a6.5 6.5 0 10-13 0C5.5 14.9 12 21 12 21z"></path><circle cx="12" cy="10.3" r="2.3"></circle></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+          <div style="width:36px;height:36px;border-radius:12px;background:#231F2B;display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M4 20l3.5-9.5L15 3l6 6-7.5 7.5L4 20z" stroke-linejoin="round"></path></svg></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><path d="M12 3l9 4.8-9 4.8-9-4.8L12 3z" stroke-linejoin="round"></path><path d="M3 13.2l9 4.8 9-4.8"></path></svg>
+        </div>
+
+        <div style="width:322px;border-right:1px solid #EEEAE4;display:flex;flex-direction:column;background:#fff">
+          <div style="padding:14px 20px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:6px;font:500 14px/1 Poppins,sans-serif;color:#57534E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="2"><path d="M14 6l-6 6 6 6"></path></svg>Sketches</div>
+            <div style="display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:4px;background:#6B2FE3"></div><span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:#8A857D">UNSAVED CHANGES</span></div>
+          </div>
+          <div style="padding:10px 20px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #EFEBE5">
+            <span style="font:600 19px/1 Poppins,sans-serif;color:#26242A">Untitled Sketch</span>
+            <div style="height:36px;padding:0 15px;background:#6B2FE3;border-radius:18px;display:flex;align-items:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M5 5h11l3 3v11H5z"></path><path d="M9 5v5h6"></path></svg><span style="font:600 14px/1 Poppins,sans-serif;color:#fff">Save</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);padding:8px 12px;border-bottom:1px solid #EFEBE5">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M5 3l7 17 2.2-6.8L21 11 5 3z" stroke-linejoin="round"></path></svg><span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">Select</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M12 3l7.5 4.6v8.8L12 21l-7.5-4.6V7.6L12 3z" stroke-linejoin="round"></path></svg><span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">Polygon</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0;border-radius:12px;background:#F5F0FE;border:1px solid #DFD1FB"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="1.6"><path d="M5 15h14v-2.4l-1.7-4A2 2 0 0015.4 7H8.6a2 2 0 00-1.9 1.6L5 12.6V15z" stroke-linejoin="round"></path><circle cx="8.2" cy="17.4" r="1.3"></circle><circle cx="15.8" cy="17.4" r="1.3"></circle></svg><span style="font:500 11.5px/1 Poppins,sans-serif;color:#6B2FE3">Parking</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M12 3l9 4.8-9 4.8-9-4.8L12 3z" stroke-linejoin="round"></path><path d="M3 13.2l9 4.8 9-4.8"></path></svg><span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">CAD</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M14.6 3.4l6 6L9.4 20.6l-6-6 11.2-11.2z"></path><path d="M8 10l2 2M11 7l2 2"></path></svg><span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">Measure</span></div>
+          </div>
+
+          <div style="padding:14px 20px;border-bottom:1px solid #EFEBE5;display:flex;flex-direction:column;gap:9px">
+            <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">PARKING METHOD</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:#F6F4F0;border:1px solid #EAE6DF;border-radius:13px">
+              <div style="display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 0;border-radius:9px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.7"><path d="M5 15h14v-2.4l-1.7-4A2 2 0 0015.4 7H8.6a2 2 0 00-1.9 1.6L5 12.6V15z" stroke-linejoin="round"></path></svg><span style="font:500 13.5px/1 Poppins,sans-serif;color:#57534E">Manual</span></div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 0;background:#6B2FE3;border-radius:9px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M12 4l1.7 4.6L18 10l-4.3 1.4L12 16l-1.7-4.6L6 10l4.3-1.4L12 4z" stroke-linejoin="round"></path></svg><span style="font:600 13.5px/1 Poppins,sans-serif;color:#fff">Auto layout</span></div>
+            </div>
+            <p style="margin:0;font:400 12.5px/1.5 Poppins,sans-serif;color:#7C766E">Generate parking bays and circulation within a site boundary.</p>
+          </div>
+
+          <div style="padding:14px 20px;border-bottom:1px solid #EFEBE5;display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">REQUIRED</span>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid #EFEBE5;border-radius:11px;background:#FBFAF8">
+              <div style="width:20px;height:20px;border-radius:10px;background:#EDE6FE;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="3"><path d="M4 12.5l5 5 11-11"></path></svg></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:500 13px/1.2 Poppins,sans-serif;color:#26242A">Site boundary</span><span style="font:400 11.5px/1.2 Poppins,sans-serif;color:#8A857D">Plot A · 1.59 ha</span></div>
+              <span style="font:500 12px/1 Poppins,sans-serif;color:#6B2FE3">Change</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid #EFEBE5;border-radius:11px;background:#FBFAF8">
+              <div style="width:20px;height:20px;border-radius:10px;background:#EDE6FE;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="3"><path d="M4 12.5l5 5 11-11"></path></svg></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:500 13px/1.2 Poppins,sans-serif;color:#26242A">Buildings detected</span><span style="font:400 11.5px/1.2 Poppins,sans-serif;color:#8A857D">1 polygon · 1 CAD overlay</span></div>
+              <span style="font:500 12px/1 Poppins,sans-serif;color:#6B2FE3">Review</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1.5px solid #DFD1FB;border-radius:11px;background:#F8F5FF">
+              <div style="width:20px;height:20px;border-radius:10px;border:1.5px dashed #B39BF0"></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:500 13px/1.2 Poppins,sans-serif;color:#26242A">Vehicle access</span><span style="font:400 11.5px/1.2 Poppins,sans-serif;color:#6B2FE3">Click a boundary edge on the map</span></div>
+            </div>
+          </div>
+
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 20px;display:flex;flex-direction:column;gap:11px">
+            <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D;flex-shrink:0">LAYOUT SETTINGS</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:#F6F4F0;border:1px solid #EAE6DF;border-radius:13px">
+              <div style="padding:10px 0;text-align:center;background:#6B2FE3;border-radius:9px;font:600 13.5px/1 Poppins,sans-serif;color:#fff">Standard</div>
+              <div style="padding:10px 0;text-align:center;font:500 13.5px/1 Poppins,sans-serif;color:#57534E">Larger</div>
+            </div>
+            <span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">2.4m × 4.8m per space</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+              <div style="border:1px solid #EFEBE5;border-radius:11px;padding:10px;display:flex;flex-direction:column;gap:5px"><span style="font:400 10.5px/1.3 Poppins,sans-serif;color:#8A857D">Drive aisle</span><span style="font:400 15px/1 'JetBrains Mono',monospace;color:#26242A">6.0 m</span></div>
+              <div style="border:1px solid #EFEBE5;border-radius:11px;padding:10px;display:flex;flex-direction:column;gap:5px"><span style="font:400 10.5px/1.3 Poppins,sans-serif;color:#8A857D">Setback</span><span style="font:400 15px/1 'JetBrains Mono',monospace;color:#26242A">3.0 m</span></div>
+              <div style="border:1px solid #EFEBE5;border-radius:11px;padding:10px;display:flex;flex-direction:column;gap:5px"><span style="font:400 10.5px/1.3 Poppins,sans-serif;color:#8A857D">Bldg clear.</span><span style="font:400 15px/1 'JetBrains Mono',monospace;color:#26242A">5.0 m</span></div>
+            </div>
+            <div onClick="{{ toggleAdv }}" style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border:1px solid #EFEBE5;border-radius:11px;cursor:pointer" style-hover="background:#FBFAF8">
+              <span style="font:500 13.5px/1 Poppins,sans-serif;color:#57534E">Advanced settings</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A857D" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg>
+            </div>
+            <sc-if value="{{ adv }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:10px;padding:12px 13px;border:1px solid #EFEBE5;background:#FBFAF8;border-radius:11px">
+                <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 12.5px/1 Poppins,sans-serif;color:#57534E">Check vehicle manoeuvring</span><div style="width:34px;height:20px;border-radius:10px;background:#6B2FE3;display:flex;align-items:center;justify-content:flex-end;padding:0 3px"><div style="width:14px;height:14px;border-radius:7px;background:#fff"></div></div></div>
+                <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 12.5px/1 Poppins,sans-serif;color:#57534E">One-way circulation</span><div style="width:34px;height:20px;border-radius:10px;background:#E6E1D9;display:flex;align-items:center;padding:0 3px"><div style="width:14px;height:14px;border-radius:7px;background:#fff"></div></div></div>
+                <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 12.5px/1 Poppins,sans-serif;color:#57534E">Gate queue allowance</span><span style="font:400 12.5px/1 'JetBrains Mono',monospace;color:#26242A">12 m</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 12.5px/1 Poppins,sans-serif;color:#57534E">Accessible bays</span><span style="font:400 12.5px/1 'JetBrains Mono',monospace;color:#26242A">6%</span></div>
+              </div>
+            </sc-if>
+          </div>
+          <div style="padding:14px 20px 16px;border-top:1px solid #EFEBE5;display:flex;flex-direction:column;gap:8px;background:#fff">
+            <div style="height:46px;border-radius:23px;background:#E7E2DA;display:flex;align-items:center;justify-content:center;font:600 15px/1 Poppins,sans-serif;color:#A8A29A">Create layouts</div>
+            <span style="font:400 11.5px/1.4 Poppins,sans-serif;color:#8A857D;text-align:center">Set a vehicle access point to continue</span>
+          </div>
+        </div>
+
+        <div style="flex:1;position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0;background:radial-gradient(120px 90px at 16% 20%,#4E5C3C 0%,rgba(78,92,60,0) 70%),radial-gradient(170px 130px at 74% 12%,#4A5838 0%,rgba(74,88,56,0) 72%),radial-gradient(210px 160px at 86% 72%,#46543A 0%,rgba(70,84,58,0) 75%),radial-gradient(190px 150px at 26% 84%,#515F3F 0%,rgba(81,95,63,0) 75%),linear-gradient(160deg,#7C8662 0%,#8C9369 45%,#78845C 100%)"></div>
+          <svg width="100%" height="100%" viewBox="0 0 984 736" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0">
+            <defs>
+              <pattern id="cadHatch" width="8" height="8" patternTransform="rotate(35)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,.75)" stroke-width="1.4"></line></pattern>
+            </defs>
+            <path d="M-20 190 C 240 240, 520 120, 1000 250" stroke="rgba(246,242,230,.35)" stroke-width="2" stroke-dasharray="7 7" fill="none"></path>
+            <path d="M120 -20 C 260 260, 380 420, 460 760" stroke="rgba(246,242,230,.3)" stroke-width="2" stroke-dasharray="7 7" fill="none"></path>
+            <polygon points="300,120 700,170 660,560 270,500" fill="rgba(107,47,227,.16)" stroke="#7C4DFF" stroke-width="3.5"></polygon>
+            <g fill="#fff" stroke="#6B2FE3" stroke-width="2.5"><circle cx="300" cy="120" r="7"></circle><circle cx="700" cy="170" r="7"></circle><circle cx="660" cy="560" r="7"></circle><circle cx="270" cy="500" r="7"></circle></g>
+            <polygon points="392,236 556,248 550,342 386,332" fill="rgba(38,36,42,.55)" stroke="#F4F1EA" stroke-width="2" stroke-dasharray="6 5"></polygon>
+            <rect x="596" y="392" width="196" height="128" fill="url(#cadHatch)" stroke="#F4F1EA" stroke-width="2" stroke-dasharray="6 5"></rect>
+            <rect x="596" y="392" width="196" height="128" fill="rgba(38,36,42,.32)"></rect>
+          </svg>
+          <div style="position:absolute;left:452px;top:132px;background:#fff;border:1px solid #DFD1FB;border-radius:7px;padding:3px 7px;font:400 11px/1 'JetBrains Mono',monospace;color:#6B2FE3">113m</div>
+          <div style="position:absolute;left:262px;top:552px;background:#fff;border:1px solid #DFD1FB;border-radius:7px;padding:3px 7px;font:400 11px/1 'JetBrains Mono',monospace;color:#6B2FE3">156m</div>
+          <div style="position:absolute;left:392px;top:274px;background:rgba(255,255,255,.94);border-radius:8px;padding:5px 9px;font:500 11.5px/1 Poppins,sans-serif;color:#26242A">Building · polygon</div>
+          <div style="position:absolute;left:600px;top:440px;background:rgba(255,255,255,.94);border-radius:8px;padding:5px 9px;font:500 11.5px/1 Poppins,sans-serif;color:#26242A">CAD overlay · crosses boundary</div>
+          <div style="position:absolute;left:24px;top:24px;background:#fff;border-radius:13px;padding:11px 13px;display:flex;align-items:center;gap:11px;box-shadow:0 6px 20px rgba(20,16,10,.18)">
+            <div style="width:24px;height:24px;border-radius:12px;background:#EDE6FE;display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="3"><path d="M4 12.5l5 5 11-11"></path></svg></div>
+            <div style="display:flex;flex-direction:column;gap:2px"><span style="font:500 13px/1.2 Poppins,sans-serif;color:#26242A">2 buildings detected</span><span style="font:400 11.5px/1.2 Poppins,sans-serif;color:#8A857D">Treated as parking exclusions</span></div>
+            <span style="font:500 12.5px/1 Poppins,sans-serif;color:#6B2FE3;padding-left:6px">Review</span>
+          </div>
+          <div style="position:absolute;right:24px;top:24px;display:flex;flex-direction:column;gap:12px;align-items:flex-end">
+            <div style="background:#fff;border-radius:14px;padding:5px;display:flex;gap:4px;box-shadow:0 4px 14px rgba(20,16,10,.14)"><div style="padding:8px 14px;border-radius:10px;background:#F6F4F0;font:500 13.5px/1 Poppins,sans-serif;color:#26242A">2D</div><div style="padding:8px 14px;border-radius:10px;font:400 13.5px/1 Poppins,sans-serif;color:#7C766E">3D</div></div>
+            <div style="background:#fff;border-radius:14px;padding:5px;display:flex;gap:4px;box-shadow:0 4px 14px rgba(20,16,10,.14)"><div style="padding:8px 14px;border-radius:10px;background:#F6F4F0;font:500 13.5px/1 'JetBrains Mono',monospace;color:#26242A">m</div><div style="padding:8px 14px;border-radius:10px;font:400 13.5px/1 'JetBrains Mono',monospace;color:#7C766E">ft</div></div>
+            <div style="background:#fff;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 4px 14px rgba(20,16,10,.14);min-width:150px"><span style="font:600 14px/1 Poppins,sans-serif;color:#26242A">Map Style</span><span style="font:400 13.5px/1 Poppins,sans-serif;color:#57534E;padding:8px 6px">Satellite</span><span style="font:600 13.5px/1 Poppins,sans-serif;color:#fff;background:#6B2FE3;border-radius:10px;padding:9px 10px">Hybrid</span><span style="font:400 13.5px/1 Poppins,sans-serif;color:#57534E;padding:8px 6px">Streets</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;max-width:1360px">
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">AUTOMATIC DETECTION</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">Any polygon or CAD overlay inside or crossing the boundary becomes an exclusion. Nothing is redrawn — the map dims and dashes them instead.</span></div>
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">PROGRESSIVE DISCLOSURE</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">Four common settings are visible; manoeuvring checks, one-way circulation, gate queue and accessible bays live in Advanced settings (shown open in state 03).</span></div>
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">BLOCKED PRIMARY</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">Create layouts stays disabled with an inline reason until the access point exists. Only boundary and access are mandatory.</span></div>
+    </div>
+  </div>
+
+  <!-- ============ 3. ACCESS POINT ============ -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <span style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#9A948B">03</span>
+      <span style="font:600 17px/1 Poppins,sans-serif;color:#26242A">Access point + detected exclusions reviewed</span>
+      <span style="font:400 13.5px/1 Poppins,sans-serif;color:#7C766E">Review expands the list and highlights both objects on the map; hovering an edge previews the access point.</span>
+    </div>
+
+    <div style="width:1360px;background:#fff;border:1px solid #E9E5DF;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(24,20,14,.05),0 14px 34px rgba(24,20,14,.06)">
+      <div style="height:64px;display:flex;align-items:center;gap:24px;padding:0 20px;border-bottom:1px solid #EEEAE4">
+        <div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:8px;background:#6B2FE3;display:flex;align-items:center;justify-content:center"><div style="width:11px;height:11px;background:#fff;transform:rotate(45deg);border-radius:2px"></div></div><span style="font:600 18px/1 Poppins,sans-serif;color:#6B2FE3;letter-spacing:-.01em">SiteMatcher</span></div>
+        <div style="flex:1;display:flex;justify-content:center"><div style="width:560px;height:40px;border:1px solid #EAE6DF;background:#FBFAF8;border-radius:20px;display:flex;align-items:center;gap:10px;padding:0 16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A948B" stroke-width="2"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span style="flex:1;font:400 14px/1 Poppins,sans-serif;color:#A29C93">Search a town, postcode or address...</span><span style="font:400 11px/1 'JetBrains Mono',monospace;color:#B3ADA4">⌘K</span></div></div>
+        <div style="display:flex;align-items:center;gap:12px"><div style="height:36px;padding:0 16px;background:#6B2FE3;border-radius:18px;display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"></path></svg><span style="font:600 14px/1 Poppins,sans-serif;color:#fff">Export</span></div><div style="width:34px;height:34px;border-radius:17px;background:#F1EBFE;border:1px solid #E2D6FC;display:flex;align-items:center;justify-content:center;font:600 14px/1 Poppins,sans-serif;color:#6B2FE3">D</div></div>
+      </div>
+      <div style="display:flex;height:736px">
+        <div style="width:56px;border-right:1px solid #EEEAE4;display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px 0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><path d="M12 21s6.5-6.1 6.5-10.5a6.5 6.5 0 10-13 0C5.5 14.9 12 21 12 21z"></path><circle cx="12" cy="10.3" r="2.3"></circle></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+          <div style="width:36px;height:36px;border-radius:12px;background:#231F2B;display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M4 20l3.5-9.5L15 3l6 6-7.5 7.5L4 20z" stroke-linejoin="round"></path></svg></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><path d="M12 3l9 4.8-9 4.8-9-4.8L12 3z" stroke-linejoin="round"></path><path d="M3 13.2l9 4.8 9-4.8"></path></svg>
+        </div>
+
+        <div style="width:322px;border-right:1px solid #EEEAE4;display:flex;flex-direction:column;background:#fff">
+          <div style="padding:14px 20px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:6px;font:500 14px/1 Poppins,sans-serif;color:#57534E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="2"><path d="M14 6l-6 6 6 6"></path></svg>Sketches</div>
+            <div style="display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:4px;background:#6B2FE3"></div><span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:#8A857D">UNSAVED CHANGES</span></div>
+          </div>
+          <div style="padding:10px 20px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #EFEBE5">
+            <span style="font:600 19px/1 Poppins,sans-serif;color:#26242A">Untitled Sketch</span>
+            <div style="height:36px;padding:0 15px;background:#6B2FE3;border-radius:18px;display:flex;align-items:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M5 5h11l3 3v11H5z"></path><path d="M9 5v5h6"></path></svg><span style="font:600 14px/1 Poppins,sans-serif;color:#fff">Save</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);padding:8px 12px;border-bottom:1px solid #EFEBE5">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M5 3l7 17 2.2-6.8L21 11 5 3z" stroke-linejoin="round"></path></svg><span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">Select</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M12 3l7.5 4.6v8.8L12 21l-7.5-4.6V7.6L12 3z" stroke-linejoin="round"></path></svg><span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">Polygon</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0;border-radius:12px;background:#F5F0FE;border:1px solid #DFD1FB"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="1.6"><path d="M5 15h14v-2.4l-1.7-4A2 2 0 0015.4 7H8.6a2 2 0 00-1.9 1.6L5 12.6V15z" stroke-linejoin="round"></path><circle cx="8.2" cy="17.4" r="1.3"></circle><circle cx="15.8" cy="17.4" r="1.3"></circle></svg><span style="font:500 11.5px/1 Poppins,sans-serif;color:#6B2FE3">Parking</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M12 3l9 4.8-9 4.8-9-4.8L12 3z" stroke-linejoin="round"></path><path d="M3 13.2l9 4.8 9-4.8"></path></svg><span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">CAD</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M14.6 3.4l6 6L9.4 20.6l-6-6 11.2-11.2z"></path><path d="M8 10l2 2M11 7l2 2"></path></svg><span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">Measure</span></div>
+          </div>
+
+          <div style="padding:14px 20px;border-bottom:1px solid #EFEBE5;display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">REQUIRED</span>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid #EFEBE5;border-radius:11px;background:#FBFAF8">
+              <div style="width:20px;height:20px;border-radius:10px;background:#EDE6FE;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="3"><path d="M4 12.5l5 5 11-11"></path></svg></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:500 13px/1.2 Poppins,sans-serif;color:#26242A">Site boundary</span><span style="font:400 11.5px/1.2 Poppins,sans-serif;color:#8A857D">Plot A · 1.59 ha</span></div>
+              <span style="font:500 12px/1 Poppins,sans-serif;color:#6B2FE3">Change</span>
+            </div>
+            <div style="border:1.5px solid #DFD1FB;border-radius:11px;background:#F8F5FF;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 11px">
+                <div style="width:20px;height:20px;border-radius:10px;background:#EDE6FE;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="3"><path d="M4 12.5l5 5 11-11"></path></svg></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:500 13px/1.2 Poppins,sans-serif;color:#26242A">Buildings detected</span><span style="font:400 11.5px/1.2 Poppins,sans-serif;color:#8A857D">Highlighted on map</span></div>
+                <span style="font:500 12px/1 Poppins,sans-serif;color:#6B2FE3">Hide</span>
+              </div>
+              <div style="border-top:1px solid #E7DDFB;background:#fff;display:flex;flex-direction:column">
+                <div style="display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid #F2EEF9"><div style="width:12px;height:12px;border-radius:3px;background:#3B3742"></div><span style="flex:1;font:400 12.5px/1 Poppins,sans-serif;color:#26242A">Building A · polygon</span><span style="font:400 11px/1 'JetBrains Mono',monospace;color:#8A857D">inside</span></div>
+                <div style="display:flex;align-items:center;gap:9px;padding:9px 12px"><div style="width:12px;height:12px;border-radius:3px;background:#8A857D"></div><span style="flex:1;font:400 12.5px/1 Poppins,sans-serif;color:#26242A">BBS2025 Type 15 · CAD</span><span style="font:400 11px/1 'JetBrains Mono',monospace;color:#8A857D">crossing</span></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid #EFEBE5;border-radius:11px;background:#FBFAF8">
+              <div style="width:20px;height:20px;border-radius:10px;background:#EDE6FE;display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="3"><path d="M4 12.5l5 5 11-11"></path></svg></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:500 13px/1.2 Poppins,sans-serif;color:#26242A">Vehicle access</span><span style="font:400 11.5px/1.2 Poppins,sans-serif;color:#8A857D">South edge · 42 m from corner</span></div>
+              <span style="font:500 12px/1 Poppins,sans-serif;color:#6B2FE3">Move</span>
+            </div>
+          </div>
+
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 20px;display:flex;flex-direction:column;gap:11px">
+            <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D;flex-shrink:0">ADVANCED SETTINGS</span>
+            <div style="display:flex;flex-direction:column;gap:12px;padding:13px;border:1px solid #EFEBE5;background:#FBFAF8;border-radius:12px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 12.5px/1 Poppins,sans-serif;color:#57534E">Check vehicle manoeuvring</span><div style="width:34px;height:20px;border-radius:10px;background:#6B2FE3;display:flex;align-items:center;justify-content:flex-end;padding:0 3px"><div style="width:14px;height:14px;border-radius:7px;background:#fff"></div></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 12.5px/1 Poppins,sans-serif;color:#57534E">One-way circulation</span><div style="width:34px;height:20px;border-radius:10px;background:#E6E1D9;display:flex;align-items:center;padding:0 3px"><div style="width:14px;height:14px;border-radius:7px;background:#fff"></div></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 12.5px/1 Poppins,sans-serif;color:#57534E">Gate queue allowance</span><span style="font:400 12.5px/1 'JetBrains Mono',monospace;color:#26242A">12 m</span></div>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 12.5px/1 Poppins,sans-serif;color:#57534E">Reserve accessible bays</span><div style="width:34px;height:20px;border-radius:10px;background:#6B2FE3;display:flex;align-items:center;justify-content:flex-end;padding:0 3px"><div style="width:14px;height:14px;border-radius:7px;background:#fff"></div></div></div>
+                <div style="display:flex;align-items:center;gap:10px"><div style="flex:1;height:5px;border-radius:3px;background:#E6E1D9;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:34%;background:#6B2FE3;border-radius:3px"></div><div style="position:absolute;left:34%;top:-6px;width:16px;height:16px;border-radius:8px;background:#fff;border:2px solid #6B2FE3"></div></div><span style="font:400 12.5px/1 'JetBrains Mono',monospace;color:#26242A">6%</span></div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:14px 20px 16px;border-top:1px solid #EFEBE5;display:flex;flex-direction:column;gap:8px;background:#fff">
+            <div style="height:46px;border-radius:23px;background:#6B2FE3;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 6px 16px rgba(107,47,227,.24)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M12 4l1.7 4.6L18 10l-4.3 1.4L12 16l-1.7-4.6L6 10l4.3-1.4L12 4z" stroke-linejoin="round"></path></svg><span style="font:600 15px/1 Poppins,sans-serif;color:#fff">Create layouts</span></div>
+            <span style="font:400 11.5px/1.4 Poppins,sans-serif;color:#8A857D;text-align:center">Generates up to 3 concept options</span>
+          </div>
+        </div>
+
+        <div style="flex:1;position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0;background:radial-gradient(120px 90px at 16% 20%,#4E5C3C 0%,rgba(78,92,60,0) 70%),radial-gradient(170px 130px at 74% 12%,#4A5838 0%,rgba(74,88,56,0) 72%),radial-gradient(210px 160px at 86% 72%,#46543A 0%,rgba(70,84,58,0) 75%),radial-gradient(190px 150px at 26% 84%,#515F3F 0%,rgba(81,95,63,0) 75%),linear-gradient(160deg,#7C8662 0%,#8C9369 45%,#78845C 100%)"></div>
+          <svg width="100%" height="100%" viewBox="0 0 984 736" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0">
+            <defs><pattern id="cadHatch3" width="8" height="8" patternTransform="rotate(35)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,.75)" stroke-width="1.4"></line></pattern></defs>
+            <path d="M-20 190 C 240 240, 520 120, 1000 250" stroke="rgba(246,242,230,.35)" stroke-width="2" stroke-dasharray="7 7" fill="none"></path>
+            <polygon points="300,120 700,170 660,560 270,500" fill="rgba(107,47,227,.16)" stroke="#7C4DFF" stroke-width="3.5"></polygon>
+            <line x1="270" y1="500" x2="660" y2="560" stroke="#C4B2F7" stroke-width="9" stroke-linecap="round" opacity=".85"></line>
+            <polygon points="392,236 556,248 550,342 386,332" fill="rgba(38,36,42,.6)" stroke="#C4B2F7" stroke-width="3"></polygon>
+            <rect x="596" y="392" width="196" height="128" fill="url(#cadHatch3)"></rect>
+            <rect x="596" y="392" width="196" height="128" fill="rgba(38,36,42,.34)" stroke="#C4B2F7" stroke-width="3"></rect>
+            <g><circle cx="466" cy="530" r="26" fill="rgba(107,47,227,.25)" stroke="#fff" stroke-width="2" style="animation:pulseRing 2.4s ease-in-out infinite"></circle><circle cx="466" cy="530" r="11" fill="#6B2FE3" stroke="#fff" stroke-width="3"></circle></g>
+            <path d="M466 530 L 466 452" stroke="#fff" stroke-width="3" stroke-dasharray="8 6"></path>
+            <path d="M474 486l-8 10-8-10" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"></path>
+          </svg>
+          <div style="position:absolute;left:352px;top:596px;background:#231F2B;border-radius:9px;padding:8px 11px;display:flex;flex-direction:column;gap:2px;box-shadow:0 8px 20px rgba(20,16,10,.28)"><span style="font:500 12.5px/1 Poppins,sans-serif;color:#fff">Vehicle access here</span><span style="font:400 11px/1 'JetBrains Mono',monospace;color:#B6AECB">click to place · drag to move</span></div>
+          <div style="position:absolute;left:392px;top:274px;background:rgba(255,255,255,.94);border-radius:8px;padding:5px 9px;font:500 11.5px/1 Poppins,sans-serif;color:#26242A">Building A · excluded</div>
+          <div style="position:absolute;left:600px;top:440px;background:rgba(255,255,255,.94);border-radius:8px;padding:5px 9px;font:500 11.5px/1 Poppins,sans-serif;color:#26242A">CAD overlay · excluded</div>
+          <div style="position:absolute;right:24px;top:24px;display:flex;flex-direction:column;gap:12px;align-items:flex-end">
+            <div style="background:#fff;border-radius:14px;padding:5px;display:flex;gap:4px;box-shadow:0 4px 14px rgba(20,16,10,.14)"><div style="padding:8px 14px;border-radius:10px;background:#F6F4F0;font:500 13.5px/1 Poppins,sans-serif;color:#26242A">2D</div><div style="padding:8px 14px;border-radius:10px;font:400 13.5px/1 Poppins,sans-serif;color:#7C766E">3D</div></div>
+            <div style="background:#fff;border-radius:14px;padding:5px;display:flex;gap:4px;box-shadow:0 4px 14px rgba(20,16,10,.14)"><div style="padding:8px 14px;border-radius:10px;background:#F6F4F0;font:500 13.5px/1 'JetBrains Mono',monospace;color:#26242A">m</div><div style="padding:8px 14px;border-radius:10px;font:400 13.5px/1 'JetBrains Mono',monospace;color:#7C766E">ft</div></div>
+            <div style="background:#fff;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 4px 14px rgba(20,16,10,.14);min-width:150px"><span style="font:600 14px/1 Poppins,sans-serif;color:#26242A">Map Style</span><span style="font:400 13.5px/1 Poppins,sans-serif;color:#57534E;padding:8px 6px">Satellite</span><span style="font:600 13.5px/1 Poppins,sans-serif;color:#fff;background:#6B2FE3;border-radius:10px;padding:9px 10px">Hybrid</span><span style="font:400 13.5px/1 Poppins,sans-serif;color:#57534E;padding:8px 6px">Streets</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;max-width:1360px">
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">EDGE SNAP</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">Hovering the boundary thickens the nearest edge; the click snaps a marker onto it. Esc cancels, drag re-positions along the same edge.</span></div>
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">REVIEW</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">Review outlines detected objects in light violet and lists them. Each row can be excluded from the calculation by unticking it — no redrawing.</span></div>
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">READY</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">With boundary and access set, Create layouts becomes the only violet action in the panel.</span></div>
+    </div>
+  </div>
+
+  <!-- ============ 4. GENERATING ============ -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <span style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#9A948B">04</span>
+      <span style="font:600 17px/1 Poppins,sans-serif;color:#26242A">Generating</span>
+      <span style="font:400 13.5px/1 Poppins,sans-serif;color:#7C766E">Boundary, buildings and CAD stay visible; the panel stays in place and settings are dimmed but not hidden.</span>
+    </div>
+
+    <div style="width:1360px;background:#fff;border:1px solid #E9E5DF;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(24,20,14,.05),0 14px 34px rgba(24,20,14,.06)">
+      <div style="height:64px;display:flex;align-items:center;gap:24px;padding:0 20px;border-bottom:1px solid #EEEAE4">
+        <div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:8px;background:#6B2FE3;display:flex;align-items:center;justify-content:center"><div style="width:11px;height:11px;background:#fff;transform:rotate(45deg);border-radius:2px"></div></div><span style="font:600 18px/1 Poppins,sans-serif;color:#6B2FE3;letter-spacing:-.01em">SiteMatcher</span></div>
+        <div style="flex:1;display:flex;justify-content:center"><div style="width:560px;height:40px;border:1px solid #EAE6DF;background:#FBFAF8;border-radius:20px;display:flex;align-items:center;gap:10px;padding:0 16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A948B" stroke-width="2"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span style="flex:1;font:400 14px/1 Poppins,sans-serif;color:#A29C93">Search a town, postcode or address...</span></div></div>
+        <div style="display:flex;align-items:center;gap:12px"><div style="height:36px;padding:0 16px;background:#6B2FE3;border-radius:18px;display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"></path></svg><span style="font:600 14px/1 Poppins,sans-serif;color:#fff">Export</span></div><div style="width:34px;height:34px;border-radius:17px;background:#F1EBFE;border:1px solid #E2D6FC;display:flex;align-items:center;justify-content:center;font:600 14px/1 Poppins,sans-serif;color:#6B2FE3">D</div></div>
+      </div>
+      <div style="display:flex;height:736px">
+        <div style="width:56px;border-right:1px solid #EEEAE4;display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px 0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><path d="M12 21s6.5-6.1 6.5-10.5a6.5 6.5 0 10-13 0C5.5 14.9 12 21 12 21z"></path><circle cx="12" cy="10.3" r="2.3"></circle></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+          <div style="width:36px;height:36px;border-radius:12px;background:#231F2B;display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M4 20l3.5-9.5L15 3l6 6-7.5 7.5L4 20z" stroke-linejoin="round"></path></svg></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><path d="M12 3l9 4.8-9 4.8-9-4.8L12 3z" stroke-linejoin="round"></path><path d="M3 13.2l9 4.8 9-4.8"></path></svg>
+        </div>
+        <div style="width:322px;border-right:1px solid #EEEAE4;display:flex;flex-direction:column;background:#fff">
+          <div style="padding:14px 20px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #EFEBE5"><span style="font:600 19px/1 Poppins,sans-serif;color:#26242A">Untitled Sketch</span><div style="height:36px;padding:0 15px;background:#6B2FE3;border-radius:18px;display:flex;align-items:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M5 5h11l3 3v11H5z"></path><path d="M9 5v5h6"></path></svg><span style="font:600 14px/1 Poppins,sans-serif;color:#fff">Save</span></div></div>
+          <div style="padding:16px 20px;border-bottom:1px solid #EFEBE5;display:flex;flex-direction:column;gap:10px;opacity:.5">
+            <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">REQUIRED</span>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid #EFEBE5;border-radius:11px;background:#FBFAF8"><div style="width:20px;height:20px;border-radius:10px;background:#EDE6FE"></div><span style="flex:1;font:500 13px/1 Poppins,sans-serif;color:#26242A">Site boundary</span><span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">Plot A</span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid #EFEBE5;border-radius:11px;background:#FBFAF8"><div style="width:20px;height:20px;border-radius:10px;background:#EDE6FE"></div><span style="flex:1;font:500 13px/1 Poppins,sans-serif;color:#26242A">Buildings detected</span><span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">2</span></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid #EFEBE5;border-radius:11px;background:#FBFAF8"><div style="width:20px;height:20px;border-radius:10px;background:#EDE6FE"></div><span style="flex:1;font:500 13px/1 Poppins,sans-serif;color:#26242A">Vehicle access</span><span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">South</span></div>
+          </div>
+          <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+            <div style="height:46px;border-radius:23px;background:#6B2FE3;display:flex;align-items:center;justify-content:center;gap:10px;opacity:.92">
+              <div style="width:17px;height:17px;border-radius:9px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .9s linear infinite"></div>
+              <span style="font:600 15px/1 Poppins,sans-serif;color:#fff">Creating layouts…</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:9px;padding:14px;border:1px solid #EFEBE5;background:#FBFAF8;border-radius:12px">
+              <div style="display:flex;align-items:center;gap:9px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="3"><path d="M4 12.5l5 5 11-11"></path></svg><span style="font:400 12.5px/1 Poppins,sans-serif;color:#57534E">Boundary and exclusions read</span></div>
+              <div style="display:flex;align-items:center;gap:9px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="3"><path d="M4 12.5l5 5 11-11"></path></svg><span style="font:400 12.5px/1 Poppins,sans-serif;color:#57534E">Access corridor set out</span></div>
+              <div style="display:flex;align-items:center;gap:9px"><div style="width:14px;height:14px;border-radius:7px;border:2px solid #DCD6CD;border-top-color:#6B2FE3;animation:spin .9s linear infinite"></div><span style="font:400 12.5px/1 Poppins,sans-serif;color:#26242A">Fitting bays and aisles</span></div>
+              <div style="display:flex;align-items:center;gap:9px"><div style="width:14px;height:14px;border-radius:7px;border:2px solid #E6E1D9"></div><span style="font:400 12.5px/1 Poppins,sans-serif;color:#A8A29A">Comparing options</span></div>
+            </div>
+            <span style="font:400 12px/1.5 Poppins,sans-serif;color:#8A857D">Usually under 10 seconds. You can keep panning the map.</span>
+            <div style="height:40px;border-radius:20px;border:1px solid #EAE6DF;display:flex;align-items:center;justify-content:center;font:500 14px/1 Poppins,sans-serif;color:#57534E">Cancel</div>
+          </div>
+        </div>
+        <div style="flex:1;position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0;background:radial-gradient(120px 90px at 16% 20%,#4E5C3C 0%,rgba(78,92,60,0) 70%),radial-gradient(170px 130px at 74% 12%,#4A5838 0%,rgba(74,88,56,0) 72%),radial-gradient(210px 160px at 86% 72%,#46543A 0%,rgba(70,84,58,0) 75%),radial-gradient(190px 150px at 26% 84%,#515F3F 0%,rgba(81,95,63,0) 75%),linear-gradient(160deg,#7C8662 0%,#8C9369 45%,#78845C 100%)"></div>
+          <svg width="100%" height="100%" viewBox="0 0 984 736" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0">
+            <defs>
+              <pattern id="cadHatch4" width="8" height="8" patternTransform="rotate(35)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,.75)" stroke-width="1.4"></line></pattern>
+              <clipPath id="site4"><polygon points="300,120 700,170 660,560 270,500"></polygon></clipPath>
+              <mask id="usable4"><polygon points="300,120 700,170 660,560 270,500" fill="#fff"></polygon><polygon points="382,226 566,238 560,352 376,342" fill="#000"></polygon><rect x="586" y="382" width="216" height="148" fill="#000"></rect></mask>
+            </defs>
+            <polygon points="300,120 700,170 660,560 270,500" fill="rgba(107,47,227,.16)" stroke="#7C4DFF" stroke-width="3.5"></polygon>
+            <g mask="url(#usable4)" transform="rotate(-9 470 430)">
+              <rect x="308" y="336" width="368" height="22" fill="rgba(255,255,255,.22)"></rect>
+              <rect x="308" y="358" width="368" height="22" fill="rgba(255,255,255,.22)"></rect>
+              <rect x="308" y="410" width="368" height="22" fill="rgba(255,255,255,.18)"></rect>
+              <rect x="308" y="432" width="368" height="22" fill="rgba(255,255,255,.18)"></rect>
+              <rect x="308" y="484" width="368" height="22" fill="rgba(255,255,255,.14)"></rect>
+            </g>
+            <polygon points="392,236 556,248 550,342 386,332" fill="rgba(38,36,42,.55)" stroke="#F4F1EA" stroke-width="2" stroke-dasharray="6 5"></polygon>
+            <rect x="596" y="392" width="196" height="128" fill="url(#cadHatch4)"></rect>
+            <rect x="596" y="392" width="196" height="128" fill="rgba(38,36,42,.32)" stroke="#F4F1EA" stroke-width="2" stroke-dasharray="6 5"></rect>
+            <circle cx="466" cy="530" r="11" fill="#6B2FE3" stroke="#fff" stroke-width="3"></circle>
+            <g clip-path="url(#site4)"><rect x="270" y="120" width="430" height="6" fill="rgba(255,255,255,.75)" style="animation:sweep 2.2s linear infinite"></rect></g>
+          </svg>
+          <div style="position:absolute;left:24px;top:24px;background:#fff;border-radius:13px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(20,16,10,.18)">
+            <div style="width:16px;height:16px;border-radius:8px;border:2.5px solid #E6E1D9;border-top-color:#6B2FE3;animation:spin .9s linear infinite"></div>
+            <span style="font:500 13px/1 Poppins,sans-serif;color:#26242A">Testing bay orientations…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;max-width:1360px">
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">RESTRAINT</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">No overlay, no blocking spinner. A single sweep across the boundary plus faint candidate rows; the map stays pannable.</span></div>
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">CANCEL</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">Cancel returns to state 03 with every input preserved. Nothing is written to the sketch until a layout is applied.</span></div>
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">FAILURE PATH</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">If nothing fits, the panel returns to settings with the "no valid layout" message shown in the edge states below.</span></div>
+    </div>
+  </div>
+
+  <!-- ============ 5. CANDIDATES ============ -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <span style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#9A948B">05</span>
+      <span style="font:600 17px/1 Poppins,sans-serif;color:#26242A">Compare candidates</span>
+      <span style="font:400 13.5px/1 Poppins,sans-serif;color:#7C766E">Live: click an option to update the map preview.</span>
+    </div>
+
+    <div style="width:1360px;background:#fff;border:1px solid #E9E5DF;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(24,20,14,.05),0 14px 34px rgba(24,20,14,.06)">
+      <div style="height:64px;display:flex;align-items:center;gap:24px;padding:0 20px;border-bottom:1px solid #EEEAE4">
+        <div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:8px;background:#6B2FE3;display:flex;align-items:center;justify-content:center"><div style="width:11px;height:11px;background:#fff;transform:rotate(45deg);border-radius:2px"></div></div><span style="font:600 18px/1 Poppins,sans-serif;color:#6B2FE3;letter-spacing:-.01em">SiteMatcher</span></div>
+        <div style="flex:1;display:flex;justify-content:center"><div style="width:560px;height:40px;border:1px solid #EAE6DF;background:#FBFAF8;border-radius:20px;display:flex;align-items:center;gap:10px;padding:0 16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A948B" stroke-width="2"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span style="flex:1;font:400 14px/1 Poppins,sans-serif;color:#A29C93">Search a town, postcode or address...</span></div></div>
+        <div style="display:flex;align-items:center;gap:12px"><div style="height:36px;padding:0 16px;background:#6B2FE3;border-radius:18px;display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"></path></svg><span style="font:600 14px/1 Poppins,sans-serif;color:#fff">Export</span></div><div style="width:34px;height:34px;border-radius:17px;background:#F1EBFE;border:1px solid #E2D6FC;display:flex;align-items:center;justify-content:center;font:600 14px/1 Poppins,sans-serif;color:#6B2FE3">D</div></div>
+      </div>
+      <div style="display:flex;height:736px">
+        <div style="width:56px;border-right:1px solid #EEEAE4;display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px 0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><path d="M12 21s6.5-6.1 6.5-10.5a6.5 6.5 0 10-13 0C5.5 14.9 12 21 12 21z"></path><circle cx="12" cy="10.3" r="2.3"></circle></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+          <div style="width:36px;height:36px;border-radius:12px;background:#231F2B;display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M4 20l3.5-9.5L15 3l6 6-7.5 7.5L4 20z" stroke-linejoin="round"></path></svg></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><path d="M12 3l9 4.8-9 4.8-9-4.8L12 3z" stroke-linejoin="round"></path><path d="M3 13.2l9 4.8 9-4.8"></path></svg>
+        </div>
+        <div style="width:322px;border-right:1px solid #EEEAE4;display:flex;flex-direction:column;background:#fff">
+          <div style="padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #EFEBE5"><span style="font:600 19px/1 Poppins,sans-serif;color:#26242A">Untitled Sketch</span><div style="height:36px;padding:0 15px;background:#6B2FE3;border-radius:18px;display:flex;align-items:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M5 5h11l3 3v11H5z"></path><path d="M9 5v5h6"></path></svg><span style="font:600 14px/1 Poppins,sans-serif;color:#fff">Save</span></div></div>
+
+          <div style="padding:16px 20px 0;display:flex;align-items:center;justify-content:space-between">
+            <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">CONCEPT LAYOUTS · 3</span>
+            <span style="font:500 12px/1 Poppins,sans-serif;color:#6B2FE3">Regenerate</span>
+          </div>
+
+          <div style="padding:12px 20px;display:flex;flex-direction:column;gap:10px">
+            <div onClick="{{ pick1 }}" style="position:relative;border:1px solid #EFEBE5;border-radius:13px;padding:13px 14px;background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:9px" style-hover="border-color:#DCD6CD">
+              <sc-if value="{{ sel1 }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;border:2px solid #6B2FE3;border-radius:13px;background:rgba(107,47,227,.05);pointer-events:none"></div></sc-if>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font:600 13.5px/1 Poppins,sans-serif;color:#26242A">Option 1</span>
+                <span style="flex:1"></span>
+                <span style="font:600 20px/1 'JetBrains Mono',monospace;color:#26242A">112</span>
+                <span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">spaces</span>
+              </div>
+              <div style="display:flex;gap:14px"><span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">6 rows</span><span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">3,010 m²</span></div>
+            </div>
+
+            <div onClick="{{ pick2 }}" style="position:relative;border:1px solid #EFEBE5;border-radius:13px;padding:13px 14px;background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:9px" style-hover="border-color:#DCD6CD">
+              <sc-if value="{{ sel2 }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;border:2px solid #6B2FE3;border-radius:13px;background:rgba(107,47,227,.05);pointer-events:none"></div></sc-if>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font:600 13.5px/1 Poppins,sans-serif;color:#26242A">Option 2</span>
+                <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.08em;color:#6B2FE3;background:#F1EBFE;border:1px solid #E2D6FC;border-radius:6px;padding:4px 6px">BEST YIELD</span>
+                <span style="flex:1"></span>
+                <span style="font:600 20px/1 'JetBrains Mono',monospace;color:#26242A">126</span>
+                <span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">spaces</span>
+              </div>
+              <div style="display:flex;gap:14px"><span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">7 rows</span><span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">3,340 m²</span><span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">8 accessible</span></div>
+            </div>
+
+            <div onClick="{{ pick3 }}" style="position:relative;border:1px solid #EFEBE5;border-radius:13px;padding:13px 14px;background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:9px" style-hover="border-color:#DCD6CD">
+              <sc-if value="{{ sel3 }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;border:2px solid #6B2FE3;border-radius:13px;background:rgba(107,47,227,.05);pointer-events:none"></div></sc-if>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font:600 13.5px/1 Poppins,sans-serif;color:#26242A">Option 3</span>
+                <span style="flex:1"></span>
+                <span style="font:600 20px/1 'JetBrains Mono',monospace;color:#26242A">131</span>
+                <span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">spaces</span>
+              </div>
+              <div style="display:flex;gap:14px"><span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">8 rows</span><span style="font:400 11.5px/1 'JetBrains Mono',monospace;color:#8A857D">3,520 m²</span></div>
+              <div style="display:flex;align-items:flex-start;gap:8px;padding:9px 10px;background:#FDF6EC;border:1px solid #F2E3CB;border-radius:9px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B07A1E" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg>
+                <span style="font:400 11.5px/1.45 Poppins,sans-serif;color:#8A6318">6 bays fall within the 5 m building clearance. Manoeuvring check failed on 1 row.</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:auto;padding:16px 20px 18px;display:flex;flex-direction:column;gap:10px;border-top:1px solid #EFEBE5">
+            <p style="margin:0;font:400 11.5px/1.5 Poppins,sans-serif;color:#8A857D">Concept layout only. Review planning compliance, accessibility, vehicle tracking, gradients, drainage and detailed highway design separately.</p>
+            <div style="height:46px;border-radius:23px;background:#6B2FE3;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(107,47,227,.24);font:600 15px/1 Poppins,sans-serif;color:#fff">Use this layout</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="height:40px;border-radius:20px;border:1px solid #EAE6DF;display:flex;align-items:center;justify-content:center;font:500 13.5px/1 Poppins,sans-serif;color:#57534E">Adjust settings</div>
+              <div style="height:40px;border-radius:20px;border:1px solid #EAE6DF;display:flex;align-items:center;justify-content:center;font:500 13.5px/1 Poppins,sans-serif;color:#57534E">Regenerate</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1;position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0;background:radial-gradient(120px 90px at 16% 20%,#4E5C3C 0%,rgba(78,92,60,0) 70%),radial-gradient(170px 130px at 74% 12%,#4A5838 0%,rgba(74,88,56,0) 72%),radial-gradient(210px 160px at 86% 72%,#46543A 0%,rgba(70,84,58,0) 75%),radial-gradient(190px 150px at 26% 84%,#515F3F 0%,rgba(81,95,63,0) 75%),linear-gradient(160deg,#7C8662 0%,#8C9369 45%,#78845C 100%)"></div>
+          <svg width="100%" height="100%" viewBox="0 0 984 736" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0">
+            <defs>
+              <pattern id="stalls5" width="11" height="22" patternUnits="userSpaceOnUse"><rect width="11" height="22" fill="rgba(255,255,255,.9)"></rect><line x1="11" y1="1" x2="11" y2="21" stroke="#6B2FE3" stroke-width="1.2"></line></pattern>
+              <pattern id="cadHatch5" width="8" height="8" patternTransform="rotate(35)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,.75)" stroke-width="1.4"></line></pattern>
+              <clipPath id="site5"><polygon points="300,120 700,170 660,560 270,500"></polygon></clipPath>
+              <mask id="usable5"><polygon points="300,120 700,170 660,560 270,500" fill="#fff"></polygon><polygon points="382,226 566,238 560,352 376,342" fill="#000"></polygon><rect x="586" y="382" width="216" height="148" fill="#000"></rect></mask>
+            </defs>
+            <polygon points="300,120 700,170 660,560 270,500" fill="rgba(107,47,227,.12)" stroke="#7C4DFF" stroke-width="3.5"></polygon>
+            <g mask="url(#usable5)">
+              <g transform="{{ rot }}">
+                <sc-for list="{{ aisles }}" as="a" hint-placeholder-count="2">
+                  <rect x="{{ a.x }}" y="{{ a.y }}" width="{{ a.w }}" height="{{ a.h }}" fill="rgba(35,31,43,.42)"></rect>
+                </sc-for>
+                <sc-for list="{{ bays }}" as="b" hint-placeholder-count="6">
+                  <rect x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}" fill="url(#stalls5)" stroke="#5A23D0" stroke-width="1.6"></rect>
+                </sc-for>
+              </g>
+            </g>
+            <g clip-path="url(#site5)"><rect x="438" y="400" width="58" height="150" fill="rgba(255,255,255,.3)" stroke="#fff" stroke-width="2" stroke-dasharray="9 7"></rect></g>
+            <polygon points="392,236 556,248 550,342 386,332" fill="rgba(38,36,42,.62)" stroke="#F4F1EA" stroke-width="2" stroke-dasharray="6 5"></polygon>
+            <rect x="596" y="392" width="196" height="128" fill="url(#cadHatch5)"></rect>
+            <rect x="596" y="392" width="196" height="128" fill="rgba(38,36,42,.4)" stroke="#F4F1EA" stroke-width="2" stroke-dasharray="6 5"></rect>
+            <circle cx="466" cy="530" r="11" fill="#6B2FE3" stroke="#fff" stroke-width="3"></circle>
+          </svg>
+          <div style="position:absolute;left:24px;top:24px;background:#fff;border-radius:13px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 6px 20px rgba(20,16,10,.18)">
+            <span style="font:600 13px/1 Poppins,sans-serif;color:#26242A">Option {{ optNo }} preview</span>
+            <span style="width:1px;height:16px;background:#EAE6DF"></span>
+            <span style="font:400 12.5px/1 'JetBrains Mono',monospace;color:#57534E">{{ spaces }} spaces</span>
+            <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.08em;color:#6B2FE3;background:#F1EBFE;border:1px solid #E2D6FC;border-radius:6px;padding:4px 6px">CONCEPT</span>
+          </div>
+          <div style="position:absolute;left:24px;bottom:24px;background:#fff;border-radius:13px;padding:13px 15px;display:flex;flex-direction:column;gap:9px;box-shadow:0 6px 20px rgba(20,16,10,.18)">
+            <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">LEGEND</span>
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:22px;height:11px;background:#fff;border:1.5px solid #5A23D0"></div><span style="font:400 12px/1 Poppins,sans-serif;color:#57534E">Parking bays / rows</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:22px;height:11px;background:#7A7486"></div><span style="font:400 12px/1 Poppins,sans-serif;color:#57534E">Circulation aisle</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:22px;height:11px;border:1.5px dashed #8A857D;background:#EDEBE6"></div><span style="font:400 12px/1 Poppins,sans-serif;color:#57534E">Access corridor</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:11px;height:11px;border-radius:6px;background:#6B2FE3"></div><span style="font:400 12px/1 Poppins,sans-serif;color:#57534E">Vehicle access point</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><div style="width:22px;height:11px;background:#3B3742"></div><span style="font:400 12px/1 Poppins,sans-serif;color:#57534E">Buildings / excluded</span></div>
+          </div>
+          <div style="position:absolute;right:24px;top:24px;display:flex;flex-direction:column;gap:12px;align-items:flex-end">
+            <div style="background:#fff;border-radius:14px;padding:5px;display:flex;gap:4px;box-shadow:0 4px 14px rgba(20,16,10,.14)"><div style="padding:8px 14px;border-radius:10px;background:#F6F4F0;font:500 13.5px/1 Poppins,sans-serif;color:#26242A">2D</div><div style="padding:8px 14px;border-radius:10px;font:400 13.5px/1 Poppins,sans-serif;color:#7C766E">3D</div></div>
+            <div style="background:#fff;border-radius:14px;padding:5px;display:flex;gap:4px;box-shadow:0 4px 14px rgba(20,16,10,.14)"><div style="padding:8px 14px;border-radius:10px;background:#F6F4F0;font:500 13.5px/1 'JetBrains Mono',monospace;color:#26242A">m</div><div style="padding:8px 14px;border-radius:10px;font:400 13.5px/1 'JetBrains Mono',monospace;color:#7C766E">ft</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;max-width:1360px">
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">SELECTION</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">Selecting a card redraws the preview immediately (no confirm step). Bay orientation, row count and aisle positions all change with the option.</span></div>
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">WARNINGS</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">Warnings sit inside the affected card in warm amber, never as a blocking dialog. Higher yield with a warning is allowed — it is not hidden or auto-rejected.</span></div>
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">LEGIBILITY</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">Bays are near-white fills with violet stall lines so they read over satellite and hybrid; aisles use dark charcoal at 42%.</span></div>
+    </div>
+  </div>
+
+  <!-- ============ 6. APPLIED ============ -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <span style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#9A948B">06</span>
+      <span style="font:600 17px/1 Poppins,sans-serif;color:#26242A">Applied layout in the normal Select view</span>
+      <span style="font:400 13.5px/1 Poppins,sans-serif;color:#7C766E">One grouped item under Parking, alongside the manual block. Standard inspector on the right.</span>
+    </div>
+
+    <div style="width:1360px;background:#fff;border:1px solid #E9E5DF;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(24,20,14,.05),0 14px 34px rgba(24,20,14,.06)">
+      <div style="height:64px;display:flex;align-items:center;gap:24px;padding:0 20px;border-bottom:1px solid #EEEAE4">
+        <div style="display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:8px;background:#6B2FE3;display:flex;align-items:center;justify-content:center"><div style="width:11px;height:11px;background:#fff;transform:rotate(45deg);border-radius:2px"></div></div><span style="font:600 18px/1 Poppins,sans-serif;color:#6B2FE3;letter-spacing:-.01em">SiteMatcher</span></div>
+        <div style="flex:1;display:flex;justify-content:center"><div style="width:520px;height:40px;border:1px solid #EAE6DF;background:#FBFAF8;border-radius:20px;display:flex;align-items:center;gap:10px;padding:0 16px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A948B" stroke-width="2"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg><span style="flex:1;font:400 14px/1 Poppins,sans-serif;color:#A29C93">Search a town, postcode or address...</span></div></div>
+        <div style="display:flex;align-items:center;gap:12px"><div style="height:36px;padding:0 16px;background:#6B2FE3;border-radius:18px;display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"></path></svg><span style="font:600 14px/1 Poppins,sans-serif;color:#fff">Export</span></div><div style="width:34px;height:34px;border-radius:17px;background:#F1EBFE;border:1px solid #E2D6FC;display:flex;align-items:center;justify-content:center;font:600 14px/1 Poppins,sans-serif;color:#6B2FE3">D</div></div>
+      </div>
+      <div style="display:flex;height:736px">
+        <div style="width:56px;border-right:1px solid #EEEAE4;display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px 0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><path d="M12 21s6.5-6.1 6.5-10.5a6.5 6.5 0 10-13 0C5.5 14.9 12 21 12 21z"></path><circle cx="12" cy="10.3" r="2.3"></circle></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+          <div style="width:36px;height:36px;border-radius:12px;background:#231F2B;display:flex;align-items:center;justify-content:center"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M4 20l3.5-9.5L15 3l6 6-7.5 7.5L4 20z" stroke-linejoin="round"></path></svg></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C766E" stroke-width="1.6"><path d="M12 3l9 4.8-9 4.8-9-4.8L12 3z" stroke-linejoin="round"></path><path d="M3 13.2l9 4.8 9-4.8"></path></svg>
+        </div>
+
+        <div style="width:322px;border-right:1px solid #EEEAE4;display:flex;flex-direction:column;background:#fff">
+          <div style="padding:14px 20px 0;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:6px;font:500 14px/1 Poppins,sans-serif;color:#57534E"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="2"><path d="M14 6l-6 6 6 6"></path></svg>Sketches</div>
+            <div style="display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:4px;background:#6B2FE3"></div><span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.1em;color:#8A857D">UNSAVED CHANGES</span></div>
+          </div>
+          <div style="padding:10px 20px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #EFEBE5"><span style="font:600 19px/1 Poppins,sans-serif;color:#26242A">Untitled Sketch</span><div style="height:36px;padding:0 15px;background:#6B2FE3;border-radius:18px;display:flex;align-items:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><path d="M5 5h11l3 3v11H5z"></path><path d="M9 5v5h6"></path></svg><span style="font:600 14px/1 Poppins,sans-serif;color:#fff">Save</span></div></div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);padding:8px 12px;border-bottom:1px solid #EFEBE5">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0;border-radius:12px;background:#F3EFFD"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="1.6"><path d="M5 3l7 17 2.2-6.8L21 11 5 3z" stroke-linejoin="round"></path></svg><span style="font:500 11.5px/1 Poppins,sans-serif;color:#6B2FE3">Select</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M12 3l7.5 4.6v8.8L12 21l-7.5-4.6V7.6L12 3z" stroke-linejoin="round"></path></svg><span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">Polygon</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M5 15h14v-2.4l-1.7-4A2 2 0 0015.4 7H8.6a2 2 0 00-1.9 1.6L5 12.6V15z" stroke-linejoin="round"></path><circle cx="8.2" cy="17.4" r="1.3"></circle><circle cx="15.8" cy="17.4" r="1.3"></circle></svg><span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">Parking</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M12 3l9 4.8-9 4.8-9-4.8L12 3z" stroke-linejoin="round"></path><path d="M3 13.2l9 4.8 9-4.8"></path></svg><span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">CAD</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 0"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M14.6 3.4l6 6L9.4 20.6l-6-6 11.2-11.2z"></path><path d="M8 10l2 2M11 7l2 2"></path></svg><span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">Measure</span></div>
+          </div>
+
+          <div style="padding:18px 20px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">PLOTS · 1</span>
+              <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px"><div style="width:14px;height:14px;border-radius:8px;background:#6B2FE3"></div><span style="flex:1;font:500 14.5px/1 Poppins,sans-serif;color:#26242A">Plot A</span><span style="font:400 12.5px/1 'JetBrains Mono',monospace;color:#8A857D">1.59 ha</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">PARKING · 2</span>
+              <div style="border:1.5px solid #6B2FE3;background:#F8F5FF;border-radius:14px;padding:11px 14px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:11px">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#6B2FE3" stroke-width="1.6"><path d="M12 4l1.7 4.6L18 10l-4.3 1.4L12 16l-1.7-4.6L6 10l4.3-1.4L12 4z" stroke-linejoin="round"></path></svg>
+                  <span style="flex:1;font:500 14.5px/1 Poppins,sans-serif;color:#26242A">Auto layout 1</span>
+                  <span style="font:400 12.5px/1 'JetBrains Mono',monospace;color:#57534E">126 sp</span>
+                </div>
+                <div style="display:flex;gap:8px;padding-left:30px">
+                  <span style="font:400 11px/1 'JetBrains Mono',monospace;color:#8A857D">7 rows</span>
+                  <span style="font:400 11px/1 'JetBrains Mono',monospace;color:#8A857D">·</span>
+                  <span style="font:400 11px/1 'JetBrains Mono',monospace;color:#8A857D">8 accessible</span>
+                  <span style="font:400 11px/1 'JetBrains Mono',monospace;color:#8A857D">·</span>
+                  <span style="font:400 11px/1 'JetBrains Mono',monospace;color:#8A857D">concept</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:12px"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M5 15h14v-2.4l-1.7-4A2 2 0 0015.4 7H8.6a2 2 0 00-1.9 1.6L5 12.6V15z" stroke-linejoin="round"></path><circle cx="8.2" cy="17.4" r="1.3"></circle><circle cx="15.8" cy="17.4" r="1.3"></circle></svg><span style="flex:1;font:500 14.5px/1 Poppins,sans-serif;color:#26242A">Parking 1</span><span style="font:400 12.5px/1 'JetBrains Mono',monospace;color:#8A857D">10 sp</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">CAD OVERLAYS · 1</span>
+              <div style="display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:12px"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#57534E" stroke-width="1.6"><path d="M12 3l9 4.8-9 4.8-9-4.8L12 3z" stroke-linejoin="round"></path><path d="M3 13.2l9 4.8 9-4.8"></path></svg><span style="flex:1;font:500 14.5px/1 Poppins,sans-serif;color:#26242A">BBS2025 Type 15 (1)</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1;position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0;background:radial-gradient(120px 90px at 16% 20%,#4E5C3C 0%,rgba(78,92,60,0) 70%),radial-gradient(170px 130px at 74% 12%,#4A5838 0%,rgba(74,88,56,0) 72%),radial-gradient(210px 160px at 86% 72%,#46543A 0%,rgba(70,84,58,0) 75%),radial-gradient(190px 150px at 26% 84%,#515F3F 0%,rgba(81,95,63,0) 75%),linear-gradient(160deg,#7C8662 0%,#8C9369 45%,#78845C 100%)"></div>
+          <svg width="100%" height="100%" viewBox="0 0 984 736" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0">
+            <defs>
+              <pattern id="stalls6" width="11" height="22" patternUnits="userSpaceOnUse"><rect width="11" height="22" fill="rgba(255,255,255,.9)"></rect><line x1="11" y1="1" x2="11" y2="21" stroke="#6B2FE3" stroke-width="1.2"></line></pattern>
+              <pattern id="cadHatch6" width="8" height="8" patternTransform="rotate(35)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,.75)" stroke-width="1.4"></line></pattern>
+              <clipPath id="site6"><polygon points="300,120 700,170 660,560 270,500"></polygon></clipPath>
+              <mask id="usable6"><polygon points="300,120 700,170 660,560 270,500" fill="#fff"></polygon><polygon points="382,226 566,238 560,352 376,342" fill="#000"></polygon><rect x="586" y="382" width="216" height="148" fill="#000"></rect></mask>
+            </defs>
+            <polygon points="300,120 700,170 660,560 270,500" fill="rgba(107,47,227,.12)" stroke="#7C4DFF" stroke-width="3.5"></polygon>
+            <g mask="url(#usable6)">
+              <g transform="rotate(-9 470 430)">
+                <rect x="308" y="380" width="368" height="30" fill="rgba(35,31,43,.42)"></rect>
+                <rect x="308" y="454" width="368" height="30" fill="rgba(35,31,43,.42)"></rect>
+                <rect x="308" y="336" width="368" height="22" fill="url(#stalls6)" stroke="#5A23D0" stroke-width="1.6"></rect>
+                <rect x="308" y="358" width="368" height="22" fill="url(#stalls6)" stroke="#5A23D0" stroke-width="1.6"></rect>
+                <rect x="308" y="410" width="368" height="22" fill="url(#stalls6)" stroke="#5A23D0" stroke-width="1.6"></rect>
+                <rect x="308" y="432" width="368" height="22" fill="url(#stalls6)" stroke="#5A23D0" stroke-width="1.6"></rect>
+                <rect x="308" y="484" width="368" height="22" fill="url(#stalls6)" stroke="#5A23D0" stroke-width="1.6"></rect>
+                <rect x="308" y="506" width="368" height="22" fill="url(#stalls6)" stroke="#5A23D0" stroke-width="1.6"></rect>
+              </g>
+              <rect x="438" y="400" width="58" height="150" fill="rgba(255,255,255,.28)" stroke="#fff" stroke-width="2" stroke-dasharray="9 7"></rect>
+            </g>
+            <polygon points="392,236 556,248 550,342 386,332" fill="rgba(38,36,42,.62)" stroke="#F4F1EA" stroke-width="2" stroke-dasharray="6 5"></polygon>
+            <rect x="596" y="392" width="196" height="128" fill="url(#cadHatch6)"></rect>
+            <rect x="596" y="392" width="196" height="128" fill="rgba(38,36,42,.4)" stroke="#F4F1EA" stroke-width="2" stroke-dasharray="6 5"></rect>
+            <circle cx="466" cy="530" r="11" fill="#6B2FE3" stroke="#fff" stroke-width="3"></circle>
+            <rect x="318" y="176" width="120" height="16" rx="3" fill="rgba(255,255,255,.9)" stroke="#6B2FE3" stroke-width="1.5"></rect>
+            <g stroke="#6B2FE3" stroke-width="1"><path d="M330 178v12M342 178v12M354 178v12M366 178v12M378 178v12M390 178v12M402 178v12M414 178v12M426 178v12"></path></g>
+          </svg>
+          <div style="position:absolute;left:322px;top:200px;background:rgba(255,255,255,.94);border-radius:8px;padding:5px 9px;font:500 11.5px/1 Poppins,sans-serif;color:#26242A">Parking 1 · manual</div>
+          <div style="position:absolute;left:24px;bottom:24px;background:#fff;border-radius:11px;padding:9px 12px;display:flex;align-items:center;gap:9px;box-shadow:0 4px 14px rgba(20,16,10,.14)">
+            <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.08em;color:#6B2FE3;background:#F1EBFE;border:1px solid #E2D6FC;border-radius:6px;padding:4px 6px">CONCEPT</span>
+            <span style="font:400 11.5px/1 Poppins,sans-serif;color:#57534E">Parking-yield estimate — not a construction layout</span>
+          </div>
+        </div>
+
+        <div style="width:322px;border-left:1px solid #EEEAE4;background:#fff;display:flex;flex-direction:column">
+          <div style="padding:16px 20px 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #EFEBE5;flex-shrink:0">
+            <span style="font:600 18px/1 Poppins,sans-serif;color:#26242A">Auto parking layout</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A857D" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 20px 16px;display:flex;flex-direction:column;gap:13px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:500 13.5px/1 Poppins,sans-serif;color:#57534E">Name</span>
+              <div style="height:44px;border:1px solid #EAE6DF;border-radius:12px;display:flex;align-items:center;padding:0 14px;font:400 15px/1 Poppins,sans-serif;color:#26242A">Auto layout 1</div>
+            </div>
+            <div style="border:1px solid #EFEBE5;background:#FBFAF8;border-radius:13px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+              <span style="font:600 10.5px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">TOTAL SPACES</span>
+              <span style="font:400 26px/1 'JetBrains Mono',monospace;color:#26242A">126</span>
+              <div style="display:flex;gap:16px;padding-top:2px">
+                <div style="display:flex;flex-direction:column;gap:3px"><span style="font:400 11px/1 Poppins,sans-serif;color:#8A857D">Standard</span><span style="font:400 13.5px/1 'JetBrains Mono',monospace;color:#26242A">118</span></div>
+                <div style="display:flex;flex-direction:column;gap:3px"><span style="font:400 11px/1 Poppins,sans-serif;color:#8A857D">Accessible</span><span style="font:400 13.5px/1 'JetBrains Mono',monospace;color:#26242A">8</span></div>
+                <div style="display:flex;flex-direction:column;gap:3px"><span style="font:400 11px/1 Poppins,sans-serif;color:#8A857D">Footprint</span><span style="font:400 13.5px/1 'JetBrains Mono',monospace;color:#26242A">3,340 m²</span></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1px">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #F3EFE9"><span style="font:400 13.5px/1 Poppins,sans-serif;color:#57534E">Stall size</span><span style="font:400 13px/1 'JetBrains Mono',monospace;color:#26242A">Standard · 2.4 × 4.8 m</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #F3EFE9"><span style="font:400 13.5px/1 Poppins,sans-serif;color:#57534E">Aisle width</span><span style="font:400 13px/1 'JetBrains Mono',monospace;color:#26242A">6.0 m</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #F3EFE9"><span style="font:400 13.5px/1 Poppins,sans-serif;color:#57534E">Boundary setback</span><span style="font:400 13px/1 'JetBrains Mono',monospace;color:#26242A">3.0 m</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #F3EFE9"><span style="font:400 13.5px/1 Poppins,sans-serif;color:#57534E">Building clearance</span><span style="font:400 13px/1 'JetBrains Mono',monospace;color:#26242A">5.0 m</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0"><span style="font:400 13.5px/1 Poppins,sans-serif;color:#57534E">Exclusions used</span><span style="font:400 13px/1 'JetBrains Mono',monospace;color:#26242A">1 polygon · 1 CAD</span></div>
+            </div>
+            <p style="margin:0;font:400 11.5px/1.5 Poppins,sans-serif;color:#8A857D">Concept layout only. Review planning compliance, accessibility, vehicle tracking, gradients, drainage and detailed highway design separately.</p>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="height:44px;border-radius:22px;border:1px solid #EAE6DF;display:flex;align-items:center;justify-content:center;font:500 14px/1 Poppins,sans-serif;color:#57534E">Edit layout settings</div>
+              <div style="height:44px;border-radius:22px;border:1px solid #EAE6DF;display:flex;align-items:center;justify-content:center;font:500 14px/1 Poppins,sans-serif;color:#57534E">Regenerate</div>
+            </div>
+            <div style="height:48px;border-radius:14px;background:#FEF1F1;border:1px solid #FADCDC;display:flex;align-items:center;justify-content:center;font:600 15px/1 Poppins,sans-serif;color:#E5484D">Remove from Sketch</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;max-width:1360px">
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">REVERSIBLE</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">The layout is one object: select, rename, regenerate, or remove with the existing destructive styling. Manual blocks can still be added before or after.</span></div>
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">NO FAKE EDITING</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">No per-bay handles or nudge controls in the inspector — changes go through Edit layout settings or Regenerate, so the panel never promises editing that isn't supported.</span></div>
+      <div style="flex:1;border:1px dashed #DFD9D0;background:#FBFAF8;border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px"><span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">EXPORT</span><span style="font:400 12.5px/1.5 Poppins,sans-serif;color:#5F5A54">The concept caveat travels with the object, so it also appears on export alongside the yield figure.</span></div>
+    </div>
+  </div>
+
+  <!-- ============ EDGE STATES ============ -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <span style="font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.14em;color:#9A948B">EDGE</span>
+      <span style="font:600 17px/1 Poppins,sans-serif;color:#26242A">Edge states</span>
+      <span style="font:400 13.5px/1 Poppins,sans-serif;color:#7C766E">All handled inside the same left panel — no extra flows.</span>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:16px;max-width:1360px">
+      <div style="width:320px;background:#fff;border:1px solid #E9E5DF;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">NO SITE BOUNDARY</span>
+        <div style="border:1.5px dashed #DFD1FB;background:#F8F5FF;border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px">
+          <span style="font:500 13.5px/1.3 Poppins,sans-serif;color:#26242A">Draw a site boundary to continue</span>
+          <span style="font:400 12px/1.5 Poppins,sans-serif;color:#7C766E">Auto layout needs one outer polygon. Draw one now, or switch to Manual placement.</span>
+          <div style="display:flex;gap:8px;padding-top:2px">
+            <div style="height:34px;padding:0 13px;border-radius:17px;background:#6B2FE3;display:flex;align-items:center;font:600 12.5px/1 Poppins,sans-serif;color:#fff">Draw polygon</div>
+            <div style="height:34px;padding:0 13px;border-radius:17px;border:1px solid #EAE6DF;display:flex;align-items:center;font:500 12.5px/1 Poppins,sans-serif;color:#57534E">Use Manual</div>
+          </div>
+        </div>
+        <span style="font:400 12px/1.5 Poppins,sans-serif;color:#5F5A54">Choosing Draw polygon switches the tool, keeps Auto layout armed, and returns here when the plot closes.</span>
+      </div>
+
+      <div style="width:320px;background:#fff;border:1px solid #E9E5DF;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">MULTIPLE BOUNDARIES</span>
+        <div style="border:1px solid #EFEBE5;background:#FBFAF8;border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:9px">
+          <span style="font:500 13.5px/1.3 Poppins,sans-serif;color:#26242A">Pick the site boundary</span>
+          <span style="font:400 12px/1.5 Poppins,sans-serif;color:#7C766E">Click a plot on the map. Candidates pulse violet while choosing.</span>
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:#fff;border:1.5px solid #6B2FE3;border-radius:10px"><div style="width:12px;height:12px;border-radius:7px;background:#6B2FE3"></div><span style="flex:1;font:400 12.5px/1 Poppins,sans-serif;color:#26242A">Plot A</span><span style="font:400 11px/1 'JetBrains Mono',monospace;color:#8A857D">1.59 ha</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:#fff;border:1px solid #EFEBE5;border-radius:10px"><div style="width:12px;height:12px;border-radius:7px;background:#E9A23B"></div><span style="flex:1;font:400 12.5px/1 Poppins,sans-serif;color:#26242A">Plot B</span><span style="font:400 11px/1 'JetBrains Mono',monospace;color:#8A857D">0.74 ha</span></div>
+        </div>
+        <span style="font:400 12px/1.5 Poppins,sans-serif;color:#5F5A54">Hovering a row highlights that polygon; clicking either the row or the map sets the boundary. The largest enclosing plot is pre-highlighted.</span>
+      </div>
+
+      <div style="width:320px;background:#fff;border:1px solid #E9E5DF;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">NO VALID LAYOUT</span>
+        <div style="border:1px solid #F2E3CB;background:#FDF6EC;border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B07A1E" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg><span style="font:500 13.5px/1.3 Poppins,sans-serif;color:#26242A">No layout fits these settings</span></div>
+          <span style="font:400 12px/1.5 Poppins,sans-serif;color:#8A6318">The usable area left after exclusions and setbacks is 18 m wide — under one bay plus aisle.</span>
+          <span style="font:400 12px/1.5 Poppins,sans-serif;color:#7C766E">Try a 3.0 m setback, a narrower aisle, or place blocks manually.</span>
+        </div>
+        <span style="font:400 12px/1.5 Poppins,sans-serif;color:#5F5A54">The panel returns to settings with the failing values focused. Nothing is added to the sketch.</span>
+      </div>
+
+      <div style="width:320px;background:#fff;border:1px solid #E9E5DF;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">CANDIDATE WITH WARNINGS</span>
+        <div style="border:1px solid #EFEBE5;border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font:600 13px/1 Poppins,sans-serif;color:#26242A">Option 3</span><span style="flex:1"></span><span style="font:600 18px/1 'JetBrains Mono',monospace;color:#26242A">131</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;padding:9px 10px;background:#FDF6EC;border:1px solid #F2E3CB;border-radius:9px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B07A1E" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg><span style="font:400 11.5px/1.45 Poppins,sans-serif;color:#8A6318">6 bays within building clearance · 1 row failed manoeuvring</span></div>
+          <span style="font:400 11.5px/1.4 Poppins,sans-serif;color:#7C766E">Highest yield, lowest confidence. Selectable — the warning follows into the inspector.</span>
+        </div>
+        <span style="font:400 12px/1.5 Poppins,sans-serif;color:#5F5A54">Warnings never block Use this layout; they persist as an amber row on the applied object.</span>
+      </div>
+
+      <div style="width:320px;background:#fff;border:1px solid #E9E5DF;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 10px/1 'JetBrains Mono',monospace;letter-spacing:.12em;color:#8A857D">OUT OF DATE</span>
+        <div style="border:1px solid #F2E3CB;background:#FDF6EC;border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B07A1E" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg><span style="font:500 13.5px/1.3 Poppins,sans-serif;color:#26242A">Layout out of date</span></div>
+          <span style="font:400 12px/1.5 Poppins,sans-serif;color:#8A6318">Plot A was reshaped after this layout was generated.</span>
+          <div style="height:36px;border-radius:18px;background:#6B2FE3;display:flex;align-items:center;justify-content:center;font:600 13px/1 Poppins,sans-serif;color:#fff">Regenerate</div>
+        </div>
+        <span style="font:400 12px/1.5 Poppins,sans-serif;color:#5F5A54">The object list shows an amber dot on Auto layout 1 and the map draws it at 55% opacity until it is regenerated or dismissed.</span>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  state = { sel: 2, adv: false };
+  renderVals() {
+    const R = (y, h) => ({ x: 308, y, w: 368, h });
+    const sets = {
+      1: { rot: 'rotate(-7 470 430)', bays: [R(350,22),R(372,22),R(424,22),R(446,22),R(498,22)], aisles: [R(394,30),R(468,30)], spaces: 112 },
+      2: { rot: 'rotate(-9 470 430)', bays: [R(336,22),R(358,22),R(410,22),R(432,22),R(484,22),R(506,22)], aisles: [R(380,30),R(454,30)], spaces: 126 },
+      3: { rot: 'rotate(-13 470 430)', bays: [R(330,22),R(352,22),R(404,22),R(426,22),R(478,22),R(500,22),R(522,22)], aisles: [R(374,30),R(448,30)], spaces: 131 }
+    };
+    const s = sets[this.state.sel];
+    return {
+      bays: s.bays, aisles: s.aisles, rot: s.rot, spaces: s.spaces, optNo: this.state.sel,
+      sel1: this.state.sel === 1, sel2: this.state.sel === 2, sel3: this.state.sel === 3,
+      pick1: () => this.setState({ sel: 1 }),
+      pick2: () => this.setState({ sel: 2 }),
+      pick3: () => this.setState({ sel: 3 }),
+      adv: this.state.adv,
+      toggleAdv: () => this.setState(st => ({ adv: !st.adv }))
+    };
+  }
+}
+</script>
+</body>
+</html>
