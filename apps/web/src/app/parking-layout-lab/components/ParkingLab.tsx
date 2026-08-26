@@ -16,7 +16,6 @@ import { createSolverWorkerClient, type SolverWorkerClient } from '@/lib/parking
 import { candidateToGeoJSON } from '@/lib/parking-layout-lab/geojson';
 import type {
   CandidateLayout,
-  DestinationPoint,
   LngLat,
   OrientationSummary,
   SolverInput,
@@ -84,7 +83,7 @@ export default function ParkingLab() {
   const [boundary, setBoundary] = useState<LngLat[] | null>(null);
   const [exclusions, setExclusions] = useState<LngLat[][]>([]);
   const [accessPoint, setAccessPoint] = useState<LngLat | null>(null);
-  const [activeMode, setActiveMode] = useState<'boundary' | 'exclusion' | 'access' | 'destination' | null>(null);
+  const [activeMode, setActiveMode] = useState<'boundary' | 'exclusion' | 'access' | null>(null);
 
   // --- During-drag geometry overlay: null when not dragging (use the
   // committed boundary/exclusions above); set only by onLiveGeometryChange,
@@ -100,13 +99,12 @@ export default function ParkingLab() {
   const [boundarySetback, setBoundarySetback] = useState(1);
   const [exclusionClearance, setExclusionClearance] = useState(1);
 
-  // --- M2: manoeuvring + accessibility + pedestrian routing -----------------
+  // --- M2: manoeuvring + accessibility -------------------------------------
   const [vehicleEnabled, setVehicleEnabled] = useState(false);
   const [oneWay, setOneWay] = useState(false);
   const [gateQueueVehicles, setGateQueueVehicles] = useState(0);
   const [accessibleEnabled, setAccessibleEnabled] = useState(false);
   const [accessibleRatePct, setAccessibleRatePct] = useState(5);
-  const [destinations, setDestinations] = useState<DestinationPoint[]>([]);
 
   // --- Live recompute --------------------------------------------------------
   const [live, setLive] = useState(true);
@@ -216,20 +214,6 @@ export default function ParkingLab() {
     setLiveBoundary(draggedBoundary);
     setLiveExclusions(draggedExclusions);
   }, []);
-  const handleDestinationPoint = useCallback(
-    (pt: LngLat) => {
-      setDestinations((prev) => [...prev, { id: `dest-${Date.now()}-${prev.length}`, point: pt, attachTo: 'boundary' }]);
-      if (!liveRef.current) invalidateResult();
-    },
-    [invalidateResult],
-  );
-  const handleDestinationRemove = useCallback(
-    (id: string) => {
-      setDestinations((prev) => prev.filter((d) => d.id !== id));
-      if (!liveRef.current) invalidateResult();
-    },
-    [invalidateResult],
-  );
 
   // --- Mode controls -------------------------------------------------------
   const drawBoundary = () => {
@@ -244,10 +228,6 @@ export default function ParkingLab() {
     setActiveMode('access');
     mapRef.current?.startAccess();
   };
-  const addDestination = () => {
-    setActiveMode('destination');
-    mapRef.current?.startDestination();
-  };
   const deleteSelected = () => mapRef.current?.deleteSelected();
   const clearAll = () => {
     mapRef.current?.clearAll();
@@ -256,7 +236,6 @@ export default function ParkingLab() {
     setLiveBoundary(null);
     setLiveExclusions(null);
     setAccessPoint(null);
-    setDestinations([]);
     setActiveMode(null);
     invalidateResult();
   };
@@ -279,7 +258,6 @@ export default function ParkingLab() {
       accessible: accessibleEnabled
         ? { rate: accessibleRatePct / 100, bay: { width: 3.6, length: 4.8, sharedAccessWidth: 1.2 } }
         : undefined,
-      destinations: destinations.length > 0 ? destinations : undefined,
     };
   }, [
     boundary,
@@ -294,7 +272,6 @@ export default function ParkingLab() {
     gateQueueVehicles,
     accessibleEnabled,
     accessibleRatePct,
-    destinations,
   ]);
 
   // --- Full solve: fires on every COMMITTED input change while live is on. ---
@@ -547,36 +524,6 @@ export default function ParkingLab() {
               </div>
             </Section>
 
-            <Section title="Pedestrian destinations (optional)">
-              <div className="grid grid-cols-1 gap-2">
-                <ModeButton active={activeMode === 'destination'} onClick={addDestination}>
-                  Add destination
-                </ModeButton>
-              </div>
-              {destinations.length > 0 && (
-                <ul className="mt-2 space-y-1">
-                  {destinations.map((d, i) => (
-                    <li
-                      key={d.id}
-                      className="flex items-center justify-between rounded-md border border-sm-border-soft bg-sm-bg px-2 py-1 text-xs text-sm-ink2"
-                    >
-                      <span>Destination {i + 1}</span>
-                      <button
-                        onClick={() => handleDestinationRemove(d.id)}
-                        className="text-sm-ink4 hover:text-red-600"
-                        aria-label={`Remove destination ${i + 1}`}
-                      >
-                        ✕
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {activeMode === 'destination' && (
-                <p className="mt-2 text-xs text-sm-violet">Click the map to place a destination.</p>
-              )}
-            </Section>
-
             <Section title="5 · Generate">
               <label className="mb-2 flex cursor-pointer items-center gap-2 text-xs text-sm-ink2">
                 <input
@@ -623,9 +570,6 @@ export default function ParkingLab() {
             onModeEnd={handleModeEnd}
             live={live}
             onLiveGeometryChange={handleLiveGeometryChange}
-            destinations={destinations}
-            onDestinationPoint={handleDestinationPoint}
-            onDestinationRemove={handleDestinationRemove}
           />
           <Legend />
         </main>
@@ -918,9 +862,6 @@ function Legend() {
     { c: '#10B981', label: 'Usable boundary' },
     { c: '#EF4444', label: 'Exclusion clearance' },
     { c: '#F97316', label: 'Visibility keepout' },
-    { c: '#0D9488', label: 'Pedestrian corridor' },
-    { c: '#DC2626', label: 'Pedestrian crossing' },
-    { c: '#14B8A6', label: 'Destination' },
   ];
   return (
     <div className="pointer-events-none absolute bottom-3 left-3 rounded-lg bg-white/90 p-2.5 text-[11px] shadow-md ring-1 ring-black/5">

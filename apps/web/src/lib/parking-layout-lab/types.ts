@@ -60,10 +60,6 @@ export type SolverInput = {
   options?: SolverOptions;
 
   // --- M2, all optional / off by default ---
-  /** Pedestrian destinations (building entrances, bus stops, ...). */
-  destinations?: DestinationPoint[];
-  /** User-drawn pedestrian paths that take precedence over automatic routing. */
-  pedestrianOverrides?: PedestrianOverride[];
   /** Enables manoeuvring validation (approachability, dead-end turning bays, gate queue) when set. */
   vehicle?: Vehicle;
   /** Enables directed (one-way loop) circulation checking when true. Requires `vehicle`. */
@@ -103,7 +99,7 @@ export type SolverOptions = {
 };
 
 // ---------------------------------------------------------------------------
-// M2 — manoeuvring + pedestrian routing + accessible bays.
+// M2 — manoeuvring + accessible bays.
 // All of the fields below are OPTIONAL and OFF by default: omitting them
 // reproduces exactly the M1 geometry (no behaviour change for callers that
 // don't opt in).
@@ -135,37 +131,6 @@ export type AccessiblePolicy = {
   /** Fraction (0–1) of total stalls that should be accessible. */
   rate: number;
   bay: AccessibleBayConfig;
-};
-
-/** A pedestrian destination — a building entrance, bus stop, etc. */
-export type DestinationPoint = {
-  id: string;
-  point: LngLat;
-  attachTo: 'boundary' | 'exclusion';
-  /** Which exclusion this attaches to, when attachTo === 'exclusion'. Nearest one if omitted. */
-  anchorId?: string;
-  label?: string;
-};
-
-/** A user-drawn pedestrian path that overrides automatic routing for one destination. */
-export type PedestrianOverride = {
-  destinationId: string;
-  path: LngLat[];
-};
-
-/** One routed pedestrian connection from a destination back to the site entrance. */
-export type PedestrianRoute = {
-  id: string;
-  destinationId: string;
-  accessible: boolean;
-  userOverride?: boolean;
-  path: LngLat[];
-  widthM: number;
-  clearanceM: number;
-  /** Derived polygon: `path` buffered by widthM + clearanceM. */
-  corridor: Ring;
-  /** Areas where this corridor crosses a vehicle drive aisle — areas, not points. */
-  crossings: PolygonInput[];
 };
 
 /** Orientation of a parking module, as a bearing in degrees within the local frame. */
@@ -241,8 +206,6 @@ export type CandidateLayout = {
   /** Deterministic score; higher is better. */
   score: number;
   warnings: SolverWarning[];
-  /** Routed pedestrian connections, one per destination. Empty when no destinations were given. */
-  pedestrianRoutes: PedestrianRoute[];
 };
 
 /** Full solver result. */

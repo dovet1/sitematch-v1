@@ -282,27 +282,6 @@ function assertCandidateInvariants(out: SolverOutput, candidate: CandidateLayout
   }
 
   expect(candidate.warnings.some((w) => w.code === 'entrance-disconnected')).toBe(false);
-
-  // M2: pedestrian corridors don't cut through parked stalls — UNLESS the
-  // simplified router couldn't avoid it, which must then be disclosed (same
-  // disclose-don't-silently-fail pattern as partial vehicle connectivity).
-  const pedestrianObstructed = candidate.warnings.some((w) => w.code === 'pedestrian-route-obstructed');
-  for (const route of candidate.pedestrianRoutes) {
-    if (!pedestrianObstructed) {
-      for (const stall of stalls) {
-        expect(overlapsM(route.corridor, stall.corners)).toBe(false);
-      }
-    }
-    for (const crossing of route.crossings) {
-      const c = ringToM(crossing.ring).reduce(
-        (acc, p) => [acc[0] + p[0], acc[1] + p[1]] as [number, number],
-        [0, 0] as [number, number],
-      );
-      const n = dropClose(crossing.ring).length;
-      const centroid: [number, number] = [c[0] / n, c[1] / n];
-      expect(pointInPolygonM(centroid, ringToM(route.corridor))).toBe(true);
-    }
-  }
 }
 
 // --- Tests -----------------------------------------------------------------
@@ -615,7 +594,7 @@ describe('parking-layout-lab solver', () => {
   });
 });
 
-// --- M2: manoeuvring, pedestrian routing, accessible bays ------------------
+// --- M2: manoeuvring + accessible bays -------------------------------------
 // All M2 fields are opt-in — the M1 suite above already proves omitting them
 // reproduces M1 behaviour. These tests exercise the M2 codepaths directly.
 
@@ -751,60 +730,6 @@ describe('parking-layout-lab solver — M2', () => {
     const out = solveParkingLayout(baseInput());
     for (const c of out.candidates) {
       expect(allStalls(c).some((s) => s.accessible)).toBe(false);
-    }
-  });
-
-  it('a pedestrian destination on the boundary gets routed to the entrance with a valid corridor', () => {
-    const destinations = [{ id: 'd1', point: m(10, 30), attachTo: 'boundary' as const, label: 'Bus stop' }];
-    const out = solveParkingLayout(baseInput({ destinations }));
-    expect(out.candidates.length).toBeGreaterThan(0);
-    for (const c of out.candidates) {
-      assertCandidateInvariants(out, c);
-      expect(c.pedestrianRoutes.length).toBe(1);
-      expect(c.pedestrianRoutes[0].destinationId).toBe('d1');
-      expect(c.pedestrianRoutes[0].path.length).toBeGreaterThanOrEqual(2);
-    }
-  });
-
-  it('a pedestrian destination attached to a building routes around it, not through it', () => {
-    const building = poly([
-      [20, 12],
-      [30, 12],
-      [30, 18],
-      [20, 18],
-    ]);
-    const destinations = [{ id: 'entrance', point: m(25, 15), attachTo: 'exclusion' as const, anchorId: '0' }];
-    const out = solveParkingLayout(baseInput({ exclusions: [building], destinations }));
-    expect(out.candidates.length).toBeGreaterThan(0);
-    for (const c of out.candidates) {
-      assertCandidateInvariants(out, c);
-      expect(c.pedestrianRoutes.length).toBe(1);
-      const route = c.pedestrianRoutes[0];
-      if (!c.warnings.some((w) => w.code === 'pedestrian-route-obstructed')) {
-        for (const ex of out.expandedExclusions) {
-          expect(overlapsM(route.corridor, ex.ring)).toBe(false);
-        }
-      }
-    }
-  });
-
-  it('a user pedestrian override is used verbatim instead of automatic routing', () => {
-    const destinations = [{ id: 'd1', point: m(10, 30), attachTo: 'boundary' as const }];
-    const overridePath: LngLat[] = [m(10, 30), m(15, 15), m(25, 1)];
-    const out = solveParkingLayout(
-      baseInput({ destinations, pedestrianOverrides: [{ destinationId: 'd1', path: overridePath }] }),
-    );
-    expect(out.candidates.length).toBeGreaterThan(0);
-    for (const c of out.candidates) {
-      expect(c.pedestrianRoutes[0].userOverride).toBe(true);
-      expect(c.pedestrianRoutes[0].path.length).toBe(overridePath.length);
-    }
-  });
-
-  it('omitting `destinations` never produces pedestrian routes', () => {
-    const out = solveParkingLayout(baseInput());
-    for (const c of out.candidates) {
-      expect(c.pedestrianRoutes).toEqual([]);
     }
   });
 });

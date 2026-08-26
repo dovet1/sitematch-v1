@@ -15,7 +15,7 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ParkingLab from '../ParkingLab';
-import type { DestinationPoint, LngLat, SolverOutput } from '@/lib/parking-layout-lab/types';
+import type { LngLat, SolverOutput } from '@/lib/parking-layout-lab/types';
 
 // --- Mock LabMap: capture the latest props + a spy-able imperative handle. ---
 let mockLatestLabMapProps: {
@@ -25,9 +25,6 @@ let mockLatestLabMapProps: {
   onModeEnd: () => void;
   live: boolean;
   onLiveGeometryChange: (boundary: LngLat[] | null, exclusions: LngLat[][]) => void;
-  destinations: DestinationPoint[];
-  onDestinationPoint: (pt: LngLat) => void;
-  onDestinationRemove: (id: string) => void;
 } | null = null;
 const mockSetResultCollection = jest.fn();
 const mockSetPreviewUpdating = jest.fn();
@@ -36,13 +33,12 @@ jest.mock('../LabMap', () => {
   const React = require('react');
   return {
     __esModule: true,
-    default: React.forwardRef((props: any, ref: any) => {
+    default: React.forwardRef(function LabMapMock(props: any, ref: any) {
       mockLatestLabMapProps = props;
       React.useImperativeHandle(ref, () => ({
         startBoundary: jest.fn(),
         startExclusion: jest.fn(),
         startAccess: jest.fn(),
-        startDestination: jest.fn(),
         cancelMode: jest.fn(),
         clearAll: jest.fn(),
         deleteSelected: jest.fn(),
@@ -228,31 +224,6 @@ describe('ParkingLab', () => {
         client.emitError('The layout worker failed; falling back to main-thread solving.');
       });
     }).not.toThrow();
-  });
-
-  it('M2: placing a destination via the map callback is included in the next solve input', () => {
-    render(<ParkingLab />);
-    const client = mockClients[0];
-
-    act(() => {
-      mockLatestLabMapProps!.onBoundaryChange(BOUNDARY);
-      mockLatestLabMapProps!.onAccessPoint(ACCESS);
-    });
-    client.solve.mockClear();
-
-    act(() => {
-      mockLatestLabMapProps!.onDestinationPoint(ACCESS);
-    });
-    expect(client.solve).toHaveBeenCalled();
-    const lastInput = client.solve.mock.calls[client.solve.mock.calls.length - 1][0];
-    expect(lastInput.destinations).toHaveLength(1);
-    expect(mockLatestLabMapProps!.destinations).toHaveLength(1);
-
-    const destId = mockLatestLabMapProps!.destinations[0].id;
-    act(() => {
-      mockLatestLabMapProps!.onDestinationRemove(destId);
-    });
-    expect(mockLatestLabMapProps!.destinations).toHaveLength(0);
   });
 
   it('M2: enabling manoeuvring checks includes a vehicle profile in the solve input', async () => {

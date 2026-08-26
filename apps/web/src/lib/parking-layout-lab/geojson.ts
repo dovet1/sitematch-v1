@@ -116,19 +116,6 @@ export function candidateToGeoJSON(
     pointFeature(output.snappedAccessPoint, { featureType: 'access-point' }),
   );
 
-  // M2: pedestrian destinations.
-  (input.destinations ?? []).forEach((dest) => {
-    features.push(
-      pointFeature(dest.point, {
-        featureType: 'destination-point',
-        destinationId: dest.id,
-        attachTo: dest.attachTo,
-        anchorId: dest.anchorId ?? null,
-        label: dest.label ?? null,
-      }),
-    );
-  });
-
   // Access corridor.
   if (candidate.accessCorridor) {
     features.push(
@@ -182,32 +169,6 @@ export function candidateToGeoJSON(
           accessible: !!stall.accessible,
           stallWidthM: input.stall.width,
           stallLengthM: input.stall.length,
-        }),
-      );
-    });
-  });
-
-  // M2: pedestrian routes + their crossing areas.
-  candidate.pedestrianRoutes.forEach((route) => {
-    features.push(
-      polygonFeature(route.corridor, {
-        featureType: 'pedestrian-corridor',
-        candidateId: candidate.candidateId,
-        routeId: route.id,
-        destinationId: route.destinationId,
-        accessible: route.accessible,
-        userOverride: !!route.userOverride,
-        widthM: route.widthM,
-        clearanceM: route.clearanceM,
-      }),
-    );
-    route.crossings.forEach((crossing, i) => {
-      features.push(
-        polygonFeature(crossing.ring, {
-          featureType: 'pedestrian-crossing',
-          candidateId: candidate.candidateId,
-          routeId: route.id,
-          crossingIndex: i,
         }),
       );
     });

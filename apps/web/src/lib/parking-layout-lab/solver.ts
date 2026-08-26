@@ -14,7 +14,7 @@
  * Scope (M2, all opt-in via SolverInput fields — absent means M1 behaviour):
  * simplified manoeuvring validation (approachability, dead-end turning bays,
  * one-way loop circulation, gate queue throat, visibility keepouts) and
- * pedestrian routing + accessible bay designation.
+ * accessible bay designation.
  *
  * NON-GOALS: structured parking, angled stalls, multiple vehicle entrances,
  * rigorous swept-path/AutoTURN-grade validation, fire routes, gradients,
@@ -26,20 +26,16 @@ import buffer from '@turf/buffer';
 import booleanValid from '@turf/boolean-valid';
 import difference from '@turf/difference';
 import intersect from '@turf/intersect';
-import union from '@turf/union';
 import { polygon as turfPolygon, featureCollection } from '@turf/helpers';
 
 import type {
   AccessiblePolicy,
   CandidateLayout,
-  DestinationPoint,
   DriveAisle,
   LngLat,
   Orientation,
   OrientationSummary,
   ParkingRow,
-  PedestrianOverride,
-  PedestrianRoute,
   PolygonInput,
   SolverInput,
   SolverOutput,
@@ -153,9 +149,6 @@ export function solveParkingLayout(input: SolverInput): SolverOutput {
     ensureCW(projectRing(vk.ring, proj)),
   );
   const blockingExclusionsLocal = [...expandedExclusionsLocal, ...visibilityKeepoutsLocal];
-  // Raw (un-buffered) exclusion outlines, for M2 destination anchoring — a
-  // building entrance anchors to the real footprint, not its clearance buffer.
-  const rawExclusionsLocal = (input.exclusions ?? []).map((ex) => ensureCW(projectRing(ex.ring, proj)));
 
   // --- 5. Snap the access point to the nearest boundary edge -------------
   const accessLocal = proj.toLocal(input.accessPoint);
@@ -207,9 +200,6 @@ export function solveParkingLayout(input: SolverInput): SolverOutput {
     vehicle: input.vehicle,
     oneWay: input.oneWay,
     accessible: input.accessible,
-    destinations: input.destinations,
-    pedestrianOverrides: input.pedestrianOverrides,
-    rawExclusionsLocal,
     snappedAccessLocal: snappedLocal,
   };
 
@@ -1426,9 +1416,6 @@ function assembleCandidate(args: {
   vehicle?: Vehicle;
   oneWay?: boolean;
   accessible?: AccessiblePolicy;
-  destinations?: DestinationPoint[];
-  pedestrianOverrides?: PedestrianOverride[];
-  rawExclusionsLocal?: LocalRing[];
   snappedAccessLocal?: LocalPoint;
 }): CandidateLayout {
   const {
@@ -1447,9 +1434,6 @@ function assembleCandidate(args: {
     vehicle,
     oneWay,
     accessible,
-    destinations,
-    pedestrianOverrides,
-    rawExclusionsLocal,
     snappedAccessLocal,
   } = args;
 
@@ -1564,26 +1548,6 @@ function assembleCandidate(args: {
     travelDir: travelDirById.get(a.aisleId),
   }));
 
-  // --- M2: pedestrian routing (opt-in via `destinations`) -------------------
-  let pedestrianRoutes: PedestrianRoute[] = [];
-  if (destinations && destinations.length > 0 && snappedAccessLocal) {
-    const built = buildPedestrianRoutes({
-      destinations,
-      overrides: pedestrianOverrides ?? [],
-      usable: usableLocal,
-      rawExclusions: rawExclusionsLocal ?? [],
-      blockingExclusions: exclusionsLocal,
-      stallBlockers,
-      driveAisles: finalAisleSet,
-      targetLocal: snappedAccessLocal,
-      proj,
-    });
-    pedestrianRoutes = built.routes;
-    warnings.push(...built.warnings);
-    const totalCrossings = pedestrianRoutes.reduce((n, r) => n + r.crossings.length, 0);
-    m2Penalty += totalCrossings * 5;
-  }
-
   if (accessible && accessibleCount < accessibleTarget) {
     warnings.push({
       code: 'accessible-bay-shortfall',
@@ -1617,7 +1581,6 @@ function assembleCandidate(args: {
     parkingFootprintSqm,
     score,
     warnings,
-    pedestrianRoutes,
   };
 }
 
@@ -1861,222 +1824,6 @@ function applyAccessibleBays(
   });
 
   return { rows: newRows, accessibleCount: chosen.length };
-}
-
-// ---------------------------------------------------------------------------
-// M2 — pedestrian routing.
-// ---------------------------------------------------------------------------
-const PEDESTRIAN_WIDTH_M = 1.8;
-const PEDESTRIAN_CLEARANCE_M = 0.3;
-
-function nearestRing(pt: LocalPoint, rings: LocalRing[]): LocalRing {
-  let best = rings[0];
-  let bestD = Infinity;
-  for (const r of rings) {
-    const d = distanceToRing(pt, r);
-    if (d < bestD) {
-      bestD = d;
-      best = r;
-    }
-  }
-  return best;
-}
-
-/** Nearest point on `attachRing`, offset by `offset` toward whichever side lands inside `usable`. */
-function snapNearRing(pt: LocalPoint, attachRing: LocalRing, usable: LocalRing, offset: number): LocalPoint {
-  const pts = dropClosingLocal(attachRing);
-  let best: LocalPoint = pts[0];
-  let bestDist = Infinity;
-  let bestA: LocalPoint = pts[0];
-  let bestB: LocalPoint = pts[1] ?? pts[0];
-  for (let i = 0; i < pts.length; i++) {
-    const a = pts[i];
-    const b = pts[(i + 1) % pts.length];
-    const seg = pointToSegment(pt, a, b);
-    if (seg.distance < bestDist) {
-      bestDist = seg.distance;
-      best = seg.closest;
-      bestA = a;
-      bestB = b;
-    }
-  }
-  const ex = bestB[0] - bestA[0];
-  const ey = bestB[1] - bestA[1];
-  const len = Math.hypot(ex, ey) || 1;
-  const nx = -ey / len;
-  const ny = ex / len;
-  const probeA: LocalPoint = [best[0] + nx * offset, best[1] + ny * offset];
-  const probeB: LocalPoint = [best[0] - nx * offset, best[1] - ny * offset];
-  return pointInRing(probeA, usable) ? probeA : probeB;
-}
-
-function intersectRings(a: LocalRing, b: LocalRing): LocalRing | null {
-  try {
-    const fa = turfPolygon([closeRing(a)]);
-    const fb = turfPolygon([closeRing(b)]);
-    const result = intersect(featureCollection([fa, fb]));
-    if (!result || !result.geometry) return null;
-    const rings = allPolygonRings(result.geometry).map(dropClosingLocal);
-    if (rings.length === 0) return null;
-    let best = rings[0];
-    let bestArea = polygonAreaLocal(best);
-    for (const r of rings.slice(1)) {
-      const ar = polygonAreaLocal(r);
-      if (ar > bestArea) {
-        best = r;
-        bestArea = ar;
-      }
-    }
-    return bestArea < EPS ? null : best;
-  } catch {
-    return null;
-  }
-}
-
-/** Buffers a (usually 1- or 2-segment) walking path into one connected corridor polygon. */
-function buildPedestrianCorridor(path: LocalPoint[], width: number): LocalRing {
-  const segments: LocalRing[] = [];
-  for (let i = 0; i < path.length - 1; i++) segments.push(buildConnector(path[i], path[i + 1], width));
-  if (segments.length <= 1) return segments[0] ?? closeRing([path[0], path[0], path[0], path[0]]);
-  try {
-    let acc: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> = turfPolygon([closeRing(segments[0])]);
-    for (const seg of segments.slice(1)) {
-      const result = union(featureCollection([acc, turfPolygon([closeRing(seg)])]));
-      if (!result || !result.geometry) continue;
-      acc = result as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>;
-    }
-    const rings = allPolygonRings(acc.geometry).map(dropClosingLocal);
-    if (rings.length === 0) return segments[0];
-    return rings.reduce((a, b) => (polygonAreaLocal(a) >= polygonAreaLocal(b) ? a : b));
-  } catch {
-    return segments.reduce((a, b) => (polygonAreaLocal(a) >= polygonAreaLocal(b) ? a : b));
-  }
-}
-
-/**
- * Candidate bend points: drive-aisle centroids first (guaranteed stall-free —
- * a car park's aisles are exactly the stall-free lanes a pedestrian could
- * also walk along), then usable-boundary vertices as a fallback for routing
- * around a concave notch. Closest-to-the-direct-path first.
- */
-function findPedestrianBend(
-  from: LocalPoint,
-  to: LocalPoint,
-  usable: LocalRing,
-  driveAisles: LocalAisleBuild[],
-  width: number,
-  isValid: (ring: LocalRing) => boolean,
-): LocalPoint | null {
-  const MAX_WAYPOINTS = 16;
-  const mid: LocalPoint = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2];
-  const candidates: LocalPoint[] = [...driveAisles.map((a) => centroidLocal(a.ring)), ...dropClosingLocal(usable)];
-  const waypoints = candidates
-    .map((wp) => ({ wp, d: dist(wp, mid) }))
-    .sort((a, b) => a.d - b.d)
-    .slice(0, MAX_WAYPOINTS)
-    .map((x) => x.wp);
-  for (const wp of waypoints) {
-    const seg1 = buildConnector(from, wp, width);
-    const seg2 = buildConnector(wp, to, width);
-    if (isValid(seg1) && isValid(seg2)) return wp;
-  }
-  return null;
-}
-
-/**
- * Routes each destination back to the site entrance: a direct line when
- * clear of stalls and inside the site, else a single bend via a nearby
- * usable-boundary vertex (mirrors the vehicle spine connector fallback — a
- * lightweight visibility-style search, not a full path planner).
- */
-function buildPedestrianRoutes(args: {
-  destinations: DestinationPoint[];
-  overrides: PedestrianOverride[];
-  usable: LocalRing;
-  rawExclusions: LocalRing[];
-  /** Buffered/expanded exclusions + visibility keepouts — the actual blocking zone, wider than `rawExclusions`. */
-  blockingExclusions: LocalRing[];
-  stallBlockers: LocalRing[];
-  driveAisles: LocalAisleBuild[];
-  targetLocal: LocalPoint;
-  proj: LocalProjection;
-}): { routes: PedestrianRoute[]; warnings: SolverWarning[] } {
-  const { destinations, overrides, usable, rawExclusions, blockingExclusions, stallBlockers, driveAisles, targetLocal, proj } =
-    args;
-  const corridorWidth = PEDESTRIAN_WIDTH_M + 2 * PEDESTRIAN_CLEARANCE_M;
-  const routeValid = (ring: LocalRing): boolean =>
-    polygonInsideTol(ring, usable, EDGE_TOL) &&
-    !stallBlockers.some((s) => polygonsOverlap(ring, s)) &&
-    !blockingExclusions.some((e) => polygonsOverlap(ring, e));
-
-  const routes: PedestrianRoute[] = [];
-  let anyObstructed = false;
-
-  for (const dest of destinations) {
-    const destLocal = proj.toLocal(dest.point);
-    let attachRing: LocalRing = usable;
-    if (dest.attachTo === 'exclusion' && rawExclusions.length > 0) {
-      const idx = dest.anchorId !== undefined ? Number(dest.anchorId) : NaN;
-      attachRing = Number.isInteger(idx) && rawExclusions[idx] ? rawExclusions[idx] : nearestRing(destLocal, rawExclusions);
-    }
-    // Snap outward from the RAW footprint, but keep pushing until clear of the
-    // actual blocking zone (the raw edge + clearance buffer) — a fixed small
-    // offset from the raw edge can still land inside an expanded exclusion.
-    let attachPoint = snapNearRing(destLocal, attachRing, usable, 0.5);
-    for (let extra = 0; extra <= 8 && blockingExclusions.some((e) => pointInRing(attachPoint, e)); extra += 0.5) {
-      attachPoint = snapNearRing(destLocal, attachRing, usable, 0.5 + extra + 0.5);
-    }
-
-    const override = overrides.find((o) => o.destinationId === dest.id);
-    let pathLocal: LocalPoint[];
-    let userOverride = false;
-    if (override && override.path.length >= 2) {
-      pathLocal = override.path.map((p) => proj.toLocal(p));
-      userOverride = true;
-    } else {
-      const direct = buildConnector(attachPoint, targetLocal, corridorWidth);
-      if (routeValid(direct)) {
-        pathLocal = [attachPoint, targetLocal];
-      } else {
-        const bend = findPedestrianBend(attachPoint, targetLocal, usable, driveAisles, corridorWidth, routeValid);
-        if (bend) {
-          pathLocal = [attachPoint, bend, targetLocal];
-        } else {
-          pathLocal = [attachPoint, targetLocal];
-          anyObstructed = true;
-        }
-      }
-    }
-
-    const corridorRing = buildPedestrianCorridor(pathLocal, corridorWidth);
-    const crossings: PolygonInput[] = [];
-    for (const a of driveAisles) {
-      const overlap = intersectRings(corridorRing, a.ring);
-      if (overlap) crossings.push({ ring: unprojectRing(overlap, proj) });
-    }
-
-    routes.push({
-      id: `ped-${dest.id}`,
-      destinationId: dest.id,
-      accessible: crossings.length === 0,
-      userOverride,
-      path: pathLocal.map((p) => proj.toLngLat(p)),
-      widthM: PEDESTRIAN_WIDTH_M,
-      clearanceM: PEDESTRIAN_CLEARANCE_M,
-      corridor: unprojectRing(corridorRing, proj),
-      crossings,
-    });
-  }
-
-  const warnings: SolverWarning[] = anyObstructed
-    ? [
-        {
-          code: 'pedestrian-route-obstructed',
-          message: 'A pedestrian route could not fully avoid obstacles with a single bend; treat it as indicative only.',
-        },
-      ]
-    : [];
-  return { routes, warnings };
 }
 
 // ---------------------------------------------------------------------------

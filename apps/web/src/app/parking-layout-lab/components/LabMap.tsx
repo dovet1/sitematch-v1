@@ -15,16 +15,14 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
-import type { DestinationPoint, LngLat } from '@/lib/parking-layout-lab/types';
+import type { LngLat } from '@/lib/parking-layout-lab/types';
 
-export type LabDrawMode = 'idle' | 'boundary' | 'exclusion' | 'access' | 'destination';
+export type LabDrawMode = 'idle' | 'boundary' | 'exclusion' | 'access';
 
 export type LabMapHandle = {
   startBoundary: () => void;
   startExclusion: () => void;
   startAccess: () => void;
-  /** M2: click-to-place a new pedestrian destination. */
-  startDestination: () => void;
   cancelMode: () => void;
   clearAll: () => void;
   deleteSelected: () => void;
@@ -46,12 +44,6 @@ type Props = {
   live: boolean;
   /** Throttled during-drag geometry, only fired while `live` is true. */
   onLiveGeometryChange: (boundary: LngLat[] | null, exclusions: LngLat[][]) => void;
-  /** M2: pedestrian destinations to render as markers — ParkingLab owns the list. */
-  destinations: DestinationPoint[];
-  /** M2: called when the user clicks the map in destination mode. */
-  onDestinationPoint: (pt: LngLat) => void;
-  /** M2: called when the user clicks a destination marker to remove it. */
-  onDestinationRemove: (id: string) => void;
 };
 
 const RESULT_SOURCE = 'pll-result';
@@ -67,9 +59,6 @@ const LabMap = forwardRef<LabMapHandle, Props>(function LabMap(
     onModeEnd,
     live,
     onLiveGeometryChange,
-    destinations,
-    onDestinationPoint,
-    onDestinationRemove,
   },
   ref,
 ) {
@@ -77,7 +66,6 @@ const LabMap = forwardRef<LabMapHandle, Props>(function LabMap(
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
   const accessMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const destinationMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
   const modeRef = useRef<LabDrawMode>('idle');
   // Feature id -> role, so we can tell boundary polygons from exclusions.
   const rolesRef = useRef<Map<string, 'boundary' | 'exclusion'>>(new Map());
@@ -92,8 +80,6 @@ const LabMap = forwardRef<LabMapHandle, Props>(function LabMap(
     onModeEnd,
     live,
     onLiveGeometryChange,
-    onDestinationPoint,
-    onDestinationRemove,
   });
   cbs.current = {
     onBoundaryChange,
@@ -102,8 +88,6 @@ const LabMap = forwardRef<LabMapHandle, Props>(function LabMap(
     onModeEnd,
     live,
     onLiveGeometryChange,
-    onDestinationPoint,
-    onDestinationRemove,
   };
 
   useEffect(() => {
@@ -232,13 +216,6 @@ const LabMap = forwardRef<LabMapHandle, Props>(function LabMap(
         modeRef.current = 'idle';
         cbs.current.onAccessPoint(pt);
         cbs.current.onModeEnd();
-        return;
-      }
-      if (modeRef.current === 'destination') {
-        const pt: LngLat = [e.lngLat.lng, e.lngLat.lat];
-        modeRef.current = 'idle';
-        cbs.current.onDestinationPoint(pt);
-        cbs.current.onModeEnd();
       }
     };
 
@@ -277,39 +254,6 @@ const LabMap = forwardRef<LabMapHandle, Props>(function LabMap(
       .addTo(map);
   }
 
-  // M2: keep destination markers in sync with the `destinations` prop —
-  // ParkingLab owns the list, this component just renders + reports clicks.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready) return;
-    const existing = destinationMarkersRef.current;
-    const seen = new Set<string>();
-    for (const dest of destinations) {
-      seen.add(dest.id);
-      let marker = existing.get(dest.id);
-      if (!marker) {
-        const el = document.createElement('div');
-        el.style.cssText =
-          'width:14px;height:14px;border-radius:3px;background:#14B8A6;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3);cursor:pointer;';
-        el.title = dest.label ?? 'Destination (click to remove)';
-        el.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          cbs.current.onDestinationRemove(dest.id);
-        });
-        marker = new mapboxgl.Marker({ element: el }).setLngLat(dest.point).addTo(map);
-        existing.set(dest.id, marker);
-      } else {
-        marker.setLngLat(dest.point);
-      }
-    }
-    for (const [id, marker] of Array.from(existing.entries())) {
-      if (!seen.has(id)) {
-        marker.remove();
-        existing.delete(id);
-      }
-    }
-  }, [destinations, ready]);
-
   useImperativeHandle(ref, (): LabMapHandle => ({
     startBoundary: () => {
       modeRef.current = 'boundary';
@@ -324,11 +268,6 @@ const LabMap = forwardRef<LabMapHandle, Props>(function LabMap(
       drawRef.current?.changeMode('simple_select');
       if (mapRef.current) mapRef.current.getCanvas().style.cursor = 'crosshair';
     },
-    startDestination: () => {
-      modeRef.current = 'destination';
-      drawRef.current?.changeMode('simple_select');
-      if (mapRef.current) mapRef.current.getCanvas().style.cursor = 'crosshair';
-    },
     cancelMode: () => {
       modeRef.current = 'idle';
       drawRef.current?.changeMode('simple_select');
@@ -339,8 +278,6 @@ const LabMap = forwardRef<LabMapHandle, Props>(function LabMap(
       rolesRef.current.clear();
       accessMarkerRef.current?.remove();
       accessMarkerRef.current = null;
-      for (const marker of Array.from(destinationMarkersRef.current.values())) marker.remove();
-      destinationMarkersRef.current.clear();
       const map = mapRef.current;
       const src = map?.getSource(RESULT_SOURCE) as mapboxgl.GeoJSONSource | undefined;
       src?.setData({ type: 'FeatureCollection', features: [] });
@@ -486,36 +423,6 @@ function addResultLayers(map: mapboxgl.Map) {
     source: src,
     filter: ['==', ['get', 'featureType'], 'usable-boundary'],
     paint: { 'line-color': '#10B981', 'line-width': 1.5, 'line-dasharray': [3, 2] },
-  });
-
-  // M2: pedestrian corridors + their crossing areas over vehicle aisles.
-  map.addLayer({
-    id: 'pll-pedestrian-corridor',
-    type: 'fill',
-    source: src,
-    filter: ['==', ['get', 'featureType'], 'pedestrian-corridor'],
-    paint: {
-      'fill-color': ['case', ['get', 'accessible'], '#14B8A6', '#0D9488'],
-      'fill-opacity': 0.3,
-    },
-  });
-  map.addLayer({
-    id: 'pll-pedestrian-corridor-line',
-    type: 'line',
-    source: src,
-    filter: ['==', ['get', 'featureType'], 'pedestrian-corridor'],
-    paint: {
-      'line-color': '#0D9488',
-      'line-width': 1.2,
-      'line-dasharray': ['case', ['get', 'userOverride'], ['literal', [1, 0]], ['literal', [1, 1]]],
-    },
-  });
-  map.addLayer({
-    id: 'pll-pedestrian-crossing',
-    type: 'fill',
-    source: src,
-    filter: ['==', ['get', 'featureType'], 'pedestrian-crossing'],
-    paint: { 'fill-color': '#DC2626', 'fill-opacity': 0.4 },
   });
 }
 
