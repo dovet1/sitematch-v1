@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
 import { hasProAccess, hasPlusAccess } from '@/lib/subscription-utils';
-import { sanitizeSketchForUser } from '@/lib/sitesketcher-v2/validation';
+import { sanitizeSketchForUser, validateAutoLayouts } from '@/lib/sitesketcher-v2/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,28 +101,69 @@ export async function PUT(
       version: 2,
     } : undefined;
 
-    // CAD preservation: If user is non-Plus and sending empty CAD arrays, merge back preserved CAD from DB
-    if (v2Data && !isPlus) {
+    // Record presence on the RAW payload before any transformation — once
+    // normalised below, "omitted" and "explicit []" become indistinguishable.
+    const hadAutoLayoutsField = !!data && Object.prototype.hasOwnProperty.call(data, 'autoLayouts');
+
+    // Fast-path reject: a non-empty autoLayouts from a non-Plus viewer is
+    // rejected outright, before touching the DB.
+    if (v2Data && !isPlus && hadAutoLayoutsField && (v2Data.autoLayouts?.length || 0) > 0) {
+      return NextResponse.json(
+        { error: 'Auto parking layouts require Plus subscription' },
+        { status: 403 }
+      );
+    }
+
+    // The existing row is needed whenever CAD or auto-layouts might need
+    // preserving (non-Plus CAD preserve; non-Plus OR field-omitted auto-layouts preserve).
+    let existingData: any = null;
+    if (v2Data && (!isPlus || !hadAutoLayoutsField)) {
       const { data: existingSketch } = await supabase
         .from('site_sketches')
         .select('data')
         .eq('id', (await params).id)
         .eq('user_id', user.id)
         .single();
+      existingData = existingSketch?.data ?? null;
+    }
 
-      if (existingSketch?.data) {
-        // Preserve existing CAD data if client sent empty arrays
-        const clientCadImages = v2Data.cadImages || [];
-        const clientCadInstances = v2Data.cadInstances || [];
+    // CAD preservation: If user is non-Plus and sending empty CAD arrays, merge back preserved CAD from DB
+    if (v2Data && !isPlus && existingData) {
+      // Preserve existing CAD data if client sent empty arrays
+      const clientCadImages = v2Data.cadImages || [];
+      const clientCadInstances = v2Data.cadInstances || [];
 
-        if (clientCadImages.length === 0 && clientCadInstances.length === 0) {
-          v2Data = {
-            ...v2Data,
-            cadImages: existingSketch.data.cadImages || [],
-            cadInstances: existingSketch.data.cadInstances || [],
-          };
+      if (clientCadImages.length === 0 && clientCadInstances.length === 0) {
+        v2Data = {
+          ...v2Data,
+          cadImages: existingData.cadImages || [],
+          cadInstances: existingData.cadInstances || [],
+        };
+      }
+    }
+
+    // Auto parking — PRESERVE BEFORE NORMALISE (order matters, see
+    // INTEGRATION_PLAN.md §6c: normalising an omitted field to `[]` first
+    // would make "omitted -> preserve" and "explicit [] -> delete"
+    // indistinguishable and could silently delete a user's layouts).
+    if (v2Data) {
+      if (!isPlus || !hadAutoLayoutsField) {
+        // non-Plus (field omitted or explicit []) -> preserve hidden existing.
+        // Plus, field omitted -> preserve existing (a partial update must not destroy it).
+        v2Data = { ...v2Data, autoLayouts: existingData?.autoLayouts || [] };
+      } else {
+        // Plus, field explicitly present: validate + accept as-is. `[]` here
+        // is an intentional delete-all, not "omitted".
+        const autoLayoutsValidation = validateAutoLayouts(v2Data.autoLayouts, true);
+        if (!autoLayoutsValidation.isValid) {
+          return NextResponse.json(
+            { error: autoLayoutsValidation.errors[0] },
+            { status: 403 }
+          );
         }
       }
+      // Only now normalise a still-absent field to `[]`.
+      v2Data.autoLayouts = v2Data.autoLayouts ?? [];
     }
 
     // Tier enforcement if data is being updated

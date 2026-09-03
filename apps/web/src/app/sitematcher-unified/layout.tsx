@@ -2,7 +2,8 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
 import { checkPlusAccess } from '@/lib/gapfinder-access'
-import { isUnifiedWorkspaceEnabled } from '@/lib/feature-flags'
+import { isUnifiedWorkspaceEnabled, isAutoParkingEnabled } from '@/lib/feature-flags'
+import { AutoParkingFlagProvider } from './lib/auto-parking-flag-context'
 
 export default async function UnifiedWorkspaceLayout({
   children,
@@ -25,7 +26,12 @@ export default async function UnifiedWorkspaceLayout({
     return <UpgradeState />
   }
 
-  return <>{children}</>
+  // Sub-feature kill-switch: resolved once per request here (server) and
+  // bridged to the client tree via context — the real Plus enforcement for
+  // Auto parking still happens server-side on save (see the sketches API).
+  const autoParkingEnabled = await isAutoParkingEnabled()
+
+  return <AutoParkingFlagProvider enabled={autoParkingEnabled}>{children}</AutoParkingFlagProvider>
 }
 
 function UpgradeState() {

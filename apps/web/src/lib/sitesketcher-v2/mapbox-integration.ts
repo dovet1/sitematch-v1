@@ -174,7 +174,7 @@ export function polygonToDrawFeature(polygon: Polygon): any {
  */
 function polygonTo3DFeature(polygon: Polygon): any {
   const color = POLYGON_COLORS[polygon.colorIndex] || POLYGON_COLORS[0];
-  const height = polygon.height > 0 ? polygon.height : DEFAULT_BUILDING_HEIGHT_METERS;
+  const height = polygon.height >= 0 ? polygon.height : DEFAULT_BUILDING_HEIGHT_METERS;
 
   return {
     id: polygon.id,
@@ -362,7 +362,7 @@ export function syncDrawTo3D(map: mapboxgl.Map, draw: MapboxDraw): void {
     const colorIndex = f.properties.colorIndex ?? f.properties.user_colorIndex ?? 0;
     const color = POLYGON_COLORS[colorIndex] || POLYGON_COLORS[0];
     const featureHeight = f.properties.height ?? f.properties.user_height ?? DEFAULT_BUILDING_HEIGHT_METERS;
-    const height = featureHeight > 0 ? featureHeight : DEFAULT_BUILDING_HEIGHT_METERS;
+    const height = featureHeight >= 0 ? featureHeight : DEFAULT_BUILDING_HEIGHT_METERS;
 
     return {
       ...f,
@@ -542,6 +542,297 @@ export function syncParkingToMap(
       ),
     });
   }
+}
+
+/**
+ * Auto parking — access-point marker, hover-edge affordance, applied-layout
+ * geometry layers, and the stale-layout boundary overlay. Mirrors the
+ * parking-block layer pattern above: plain GeoJSON sources kept in sync from
+ * the store, with `selected`/`stale` baked into feature properties rather
+ * than computed from a Mapbox expression referencing store state.
+ */
+export function setupAutoParkingLayer(map: mapboxgl.Map): void {
+  if (!map.getSource('auto-parking-access-point')) {
+    map.addSource('auto-parking-access-point', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+  }
+  if (!map.getSource('auto-parking-hover-edge')) {
+    map.addSource('auto-parking-hover-edge', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+  }
+  if (!map.getSource('auto-parking-layouts')) {
+    map.addSource('auto-parking-layouts', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+  }
+  if (!map.getSource('auto-parking-stale-boundary')) {
+    map.addSource('auto-parking-stale-boundary', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+  }
+
+  // Faint dashed outline of a stale layout's boundary AT GENERATION TIME —
+  // drawn first so the current amber boundary sits on top of it.
+  if (!map.getLayer('auto-parking-prev-boundary-line')) {
+    map.addLayer({
+      id: 'auto-parking-prev-boundary-line',
+      type: 'line',
+      source: 'auto-parking-stale-boundary',
+      filter: ['==', ['get', 'kind'], 'previous'],
+      paint: {
+        'line-color': '#FFFFFF',
+        'line-width': 1.5,
+        'line-opacity': 0.55,
+        'line-dasharray': [2, 2],
+      },
+    });
+  }
+  if (!map.getLayer('auto-parking-stale-boundary-fill')) {
+    map.addLayer({
+      id: 'auto-parking-stale-boundary-fill',
+      type: 'fill',
+      source: 'auto-parking-stale-boundary',
+      filter: ['==', ['get', 'kind'], 'current'],
+      paint: { 'fill-color': '#E9A23B', 'fill-opacity': 0.08 },
+    });
+  }
+  if (!map.getLayer('auto-parking-stale-boundary-line')) {
+    map.addLayer({
+      id: 'auto-parking-stale-boundary-line',
+      type: 'line',
+      source: 'auto-parking-stale-boundary',
+      filter: ['==', ['get', 'kind'], 'current'],
+      paint: { 'line-color': '#E9A23B', 'line-width': 2.5 },
+    });
+  }
+  if (!map.getLayer('auto-parking-stale-boundary-vertex')) {
+    map.addLayer({
+      id: 'auto-parking-stale-boundary-vertex',
+      type: 'circle',
+      source: 'auto-parking-stale-boundary',
+      filter: ['==', ['get', 'kind'], 'current-vertex'],
+      paint: {
+        'circle-radius': 6.5,
+        'circle-color': '#E9A23B',
+        'circle-stroke-color': '#FFFFFF',
+        'circle-stroke-width': 2,
+      },
+    });
+  }
+
+  if (!map.getLayer('auto-parking-aisle-fill')) {
+    map.addLayer({
+      id: 'auto-parking-aisle-fill',
+      type: 'fill',
+      source: 'auto-parking-layouts',
+      filter: ['==', ['get', 'featureType'], 'drive-aisle'],
+      paint: {
+        'fill-color': '#26242A',
+        'fill-opacity': [
+          'case',
+          ['boolean', ['get', 'stale'], false],
+          0.2,
+          ['boolean', ['get', 'selected'], false],
+          0.5,
+          0.38,
+        ],
+      },
+    });
+  }
+  if (!map.getLayer('auto-parking-corridor-fill')) {
+    map.addLayer({
+      id: 'auto-parking-corridor-fill',
+      type: 'fill',
+      source: 'auto-parking-layouts',
+      filter: ['==', ['get', 'featureType'], 'access-corridor'],
+      paint: {
+        'fill-color': '#FFFFFF',
+        'fill-opacity': ['case', ['boolean', ['get', 'stale'], false], 0.15, 0.28],
+      },
+    });
+  }
+  if (!map.getLayer('auto-parking-stall-fill')) {
+    map.addLayer({
+      id: 'auto-parking-stall-fill',
+      type: 'fill',
+      source: 'auto-parking-layouts',
+      filter: ['==', ['get', 'featureType'], 'parking-stall'],
+      paint: {
+        'fill-color': ['case', ['boolean', ['get', 'accessible'], false], '#5A23D0', '#FFFFFF'],
+        'fill-opacity': [
+          'case',
+          ['boolean', ['get', 'stale'], false],
+          0.38,
+          ['boolean', ['get', 'selected'], false],
+          0.85,
+          0.7,
+        ],
+      },
+    });
+  }
+  if (!map.getLayer('auto-parking-stall-outline')) {
+    map.addLayer({
+      id: 'auto-parking-stall-outline',
+      type: 'line',
+      source: 'auto-parking-layouts',
+      filter: ['==', ['get', 'featureType'], 'parking-stall'],
+      paint: {
+        'line-color': '#5A23D0',
+        'line-width': ['case', ['boolean', ['get', 'selected'], false], 1.6, 1.1],
+        'line-opacity': ['case', ['boolean', ['get', 'stale'], false], 0.5, 0.9],
+      },
+    });
+  }
+  if (!map.getLayer('auto-parking-hover-edge-line')) {
+    map.addLayer({
+      id: 'auto-parking-hover-edge-line',
+      type: 'line',
+      source: 'auto-parking-hover-edge',
+      layout: { 'line-cap': 'round' },
+      paint: { 'line-color': '#C4B2F7', 'line-width': 9, 'line-opacity': 0.85 },
+    });
+  }
+  if (!map.getLayer('auto-parking-access-halo')) {
+    map.addLayer({
+      id: 'auto-parking-access-halo',
+      type: 'circle',
+      source: 'auto-parking-access-point',
+      paint: {
+        'circle-radius': 13,
+        'circle-color': '#7C4DFF',
+        'circle-opacity': 0.25,
+      },
+    });
+  }
+  if (!map.getLayer('auto-parking-access-dot')) {
+    map.addLayer({
+      id: 'auto-parking-access-dot',
+      type: 'circle',
+      source: 'auto-parking-access-point',
+      paint: {
+        'circle-radius': 8,
+        'circle-color': '#7C4DFF',
+        'circle-stroke-color': '#FFFFFF',
+        'circle-stroke-width': 2,
+      },
+    });
+  }
+}
+
+/** Updates the draft access-point marker. Pass `null` while nothing is placed yet. */
+export function syncAutoParkingAccessPointToMap(map: mapboxgl.Map, point: [number, number] | null): void {
+  setupAutoParkingLayer(map);
+  const source = map.getSource('auto-parking-access-point') as mapboxgl.GeoJSONSource;
+  if (!source) return;
+  source.setData({
+    type: 'FeatureCollection',
+    features: point
+      ? [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: point } }]
+      : [],
+  });
+}
+
+/** Updates the thickened nearest-edge affordance shown while hovering the boundary during access placement. */
+export function syncAutoParkingHoverEdgeToMap(
+  map: mapboxgl.Map,
+  edge: [[number, number], [number, number]] | null
+): void {
+  setupAutoParkingLayer(map);
+  const source = map.getSource('auto-parking-hover-edge') as mapboxgl.GeoJSONSource;
+  if (!source) return;
+  source.setData({
+    type: 'FeatureCollection',
+    features: edge
+      ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: edge } }]
+      : [],
+  });
+}
+
+export interface AutoParkingLayoutRenderEntry {
+  id: string;
+  /** Persisted geometry, already clipped to the CURRENT boundary when stale (see auto-parking/clip.ts). */
+  features: GeoJSON.Feature[];
+  stale: boolean;
+  /** Only needed when stale — draws the amber current-boundary overlay + faint previous-boundary outline. */
+  currentBoundaryRing?: [number, number][];
+  previousBoundaryRing?: [number, number][];
+}
+
+/**
+ * Renders every applied AutoParkingLayout's persisted geometry, merged into one
+ * source, plus an optional transient candidate `preview` (rendered while the
+ * user is still choosing a candidate, before apply). Preview features are drawn
+ * with the "selected" styling and are non-interactive — the applied-layout
+ * click path only matches persisted layout ids. Stale entries additionally
+ * render at reduced opacity and get an amber current-boundary + faint
+ * previous-boundary overlay (state 06 of the guided flow).
+ */
+export function syncAutoParkingLayoutsToMap(
+  map: mapboxgl.Map,
+  entries: AutoParkingLayoutRenderEntry[],
+  selectedAutoLayoutId?: string | null,
+  preview?: GeoJSON.FeatureCollection | null
+): void {
+  setupAutoParkingLayer(map);
+  const source = map.getSource('auto-parking-layouts') as mapboxgl.GeoJSONSource;
+  const staleBoundarySource = map.getSource('auto-parking-stale-boundary') as mapboxgl.GeoJSONSource;
+
+  if (source) {
+    const features = entries.flatMap((entry) =>
+      entry.features.map((f) => ({
+        ...f,
+        properties: { ...f.properties, selected: entry.id === selectedAutoLayoutId, stale: entry.stale },
+      }))
+    );
+    if (preview) {
+      for (const f of preview.features) {
+        features.push({ ...f, properties: { ...f.properties, selected: true, stale: false } } as any);
+      }
+    }
+    source.setData({ type: 'FeatureCollection', features: features as any });
+  }
+
+  if (staleBoundarySource) {
+    const boundaryFeatures: GeoJSON.Feature[] = [];
+    for (const entry of entries) {
+      if (!entry.stale || !entry.currentBoundaryRing) continue;
+      const ring = closeRing(entry.currentBoundaryRing);
+      boundaryFeatures.push({
+        type: 'Feature',
+        properties: { kind: 'current', layoutId: entry.id },
+        geometry: { type: 'Polygon', coordinates: [ring] },
+      });
+      for (const vertex of ring.slice(0, -1)) {
+        boundaryFeatures.push({
+          type: 'Feature',
+          properties: { kind: 'current-vertex', layoutId: entry.id },
+          geometry: { type: 'Point', coordinates: vertex },
+        });
+      }
+      if (entry.previousBoundaryRing) {
+        boundaryFeatures.push({
+          type: 'Feature',
+          properties: { kind: 'previous', layoutId: entry.id },
+          geometry: { type: 'Polygon', coordinates: [closeRing(entry.previousBoundaryRing)] },
+        });
+      }
+    }
+    staleBoundarySource.setData({ type: 'FeatureCollection', features: boundaryFeatures });
+  }
+}
+
+function closeRing(ring: [number, number][]): [number, number][] {
+  if (ring.length === 0) return ring;
+  const [firstLng, firstLat] = ring[0];
+  const [lastLng, lastLat] = ring[ring.length - 1];
+  if (firstLng === lastLng && firstLat === lastLat) return ring;
+  return [...ring, ring[0]];
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { SketchData } from '@/types/sitesketcher-v2';
+import type { AutoParkingLayout, SketchData } from '@/types/sitesketcher-v2';
 
 // Free tier limits
 export const FREE_TIER_LIMITS = {
@@ -7,9 +7,68 @@ export const FREE_TIER_LIMITS = {
   maxCadImages: 0, // Free users cannot have CAD
 };
 
+// Auto parking payload bounds — a crafted or runaway payload can't bloat the
+// sketch JSONB. See docs/design_handoff_auto_parking/INTEGRATION_PLAN.md §6c.
+export const AUTO_PARKING_LIMITS = {
+  maxLayoutsPerSketch: 20,
+  maxFeaturesPerLayout: 2000,
+  maxCoordinatesPerLayout: 50_000,
+};
+
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
+}
+
+function countFeatureCoordinates(feature: { geometry?: { type?: string; coordinates?: unknown } }): number {
+  const geometry = feature?.geometry;
+  if (!geometry) return 0;
+  if (geometry.type === 'Point') return 1;
+  if (geometry.type === 'Polygon' && Array.isArray(geometry.coordinates)) {
+    return (geometry.coordinates as unknown[][]).reduce(
+      (sum, ring) => sum + (Array.isArray(ring) ? ring.length : 0),
+      0
+    );
+  }
+  return 0;
+}
+
+/**
+ * Entitlement + payload-bound validation for `autoLayouts`, independent of
+ * the rest of `validateSketchData` so route handlers can apply it without
+ * re-running the (differently-calibrated) polygon/parking free-tier checks
+ * below. "Non-empty, non-Plus" is the gate — clients routinely send `[]`.
+ */
+export function validateAutoLayouts(
+  autoLayouts: AutoParkingLayout[] | undefined,
+  hasPlusAccess: boolean
+): ValidationResult {
+  const layouts = autoLayouts ?? [];
+  const errors: string[] = [];
+
+  if (!hasPlusAccess) {
+    if (layouts.length > 0) {
+      errors.push('Auto parking layouts require Plus subscription');
+    }
+    return { isValid: errors.length === 0, errors };
+  }
+
+  if (layouts.length > AUTO_PARKING_LIMITS.maxLayoutsPerSketch) {
+    errors.push(`A sketch is limited to ${AUTO_PARKING_LIMITS.maxLayoutsPerSketch} auto-parking layouts`);
+  }
+  for (const layout of layouts) {
+    const features = layout.geometry?.features ?? [];
+    const label = layout.name || layout.id;
+    if (features.length > AUTO_PARKING_LIMITS.maxFeaturesPerLayout) {
+      errors.push(`Auto parking layout "${label}" has too many geometry features`);
+    }
+    const coordinateCount = features.reduce((sum, f) => sum + countFeatureCoordinates(f as any), 0);
+    if (coordinateCount > AUTO_PARKING_LIMITS.maxCoordinatesPerLayout) {
+      errors.push(`Auto parking layout "${label}" geometry is too large`);
+    }
+  }
+
+  return { isValid: errors.length === 0, errors };
 }
 
 export function validateSketchData(
@@ -39,6 +98,8 @@ export function validateSketchData(
     }
   }
 
+  errors.push(...validateAutoLayouts(data.autoLayouts, hasPlusAccess).errors);
+
   return {
     isValid: errors.length === 0,
     errors,
@@ -58,10 +119,12 @@ export function sanitizeSketchForUser(
     return data;
   }
 
-  // Non-Plus users: strip CAD data
+  // Non-Plus users: strip CAD + auto-parking data. The stored rows keep it
+  // (preserve, don't destroy) for re-upgrade — see the PUT handler.
   return {
     ...data,
     cadImages: [],
     cadInstances: [],
+    autoLayouts: [],
   };
 }

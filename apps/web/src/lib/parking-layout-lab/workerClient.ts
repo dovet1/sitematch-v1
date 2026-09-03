@@ -41,9 +41,21 @@ export function createSolverWorkerClient(opts?: {
   createWorker?: () => WorkerLike;
   /** Called once, the first time the client falls back to main-thread solving. */
   onFallback?: () => void;
+  /**
+   * Default true (the standalone lab's existing behaviour, unchanged): when
+   * the Worker is unavailable or errors, solve synchronously on the main
+   * thread rather than fail. Pass `false` for callers where a ~20s blocking
+   * main-thread solve would freeze pan and make Cancel unprocessable —
+   * worker unavailability/error then surfaces as a genuine `onError` instead.
+   */
+  mainThreadFallback?: boolean;
 }): SolverWorkerClient {
+  const allowMainThreadFallback = opts?.mainThreadFallback !== false;
   let worker: WorkerLike | null = null;
   let fallbackMode = false;
+  /** No worker, and main-thread fallback is disabled: every dispatch errors. */
+  let hardFailed = false;
+  let hardFailReason = 'The layout worker is unavailable.';
   let terminated = false;
 
   let counter = 0;
@@ -66,17 +78,23 @@ export function createSolverWorkerClient(opts?: {
   }
 
   function goFallback(reason: string) {
-    if (fallbackMode) return;
-    fallbackMode = true;
+    if (fallbackMode || hardFailed) return;
     try {
       worker?.terminate();
     } catch {
       /* already gone */
     }
     worker = null;
-    errorCb?.(reason);
-    opts?.onFallback?.();
-    // Retry whatever was in flight, now on the main thread.
+    if (allowMainThreadFallback) {
+      fallbackMode = true;
+      errorCb?.(reason);
+      opts?.onFallback?.();
+    } else {
+      hardFailed = true;
+      hardFailReason = reason;
+    }
+    // Retry whatever was in flight — on the main thread if allowed, otherwise
+    // the retry itself resolves as the single `onError` for this run.
     if (activeRunId !== null) {
       const input = inputByRunId.get(activeRunId);
       const runId = activeRunId;
@@ -87,21 +105,39 @@ export function createSolverWorkerClient(opts?: {
 
   try {
     if (typeof Worker === 'undefined' && !opts?.createWorker) {
-      fallbackMode = true;
+      if (allowMainThreadFallback) fallbackMode = true;
+      else {
+        hardFailed = true;
+        hardFailReason = 'The layout worker is unavailable in this environment.';
+      }
     } else {
       worker = createWorker();
       worker.onmessage = (event) => handleResponse(event.data);
-      worker.onerror = () => goFallback('The layout worker failed; falling back to main-thread solving.');
+      worker.onerror = () =>
+        goFallback(
+          allowMainThreadFallback
+            ? 'The layout worker failed; falling back to main-thread solving.'
+            : 'The layout worker failed.',
+        );
     }
   } catch {
-    fallbackMode = true;
+    if (allowMainThreadFallback) fallbackMode = true;
+    else {
+      hardFailed = true;
+      hardFailReason = 'The layout worker could not be created.';
+    }
     worker = null;
   }
 
   function dispatch(runId: number, input: SolverInput) {
     if (terminated) return;
     activeRunId = runId;
-    if (fallbackMode || !worker) {
+    if (hardFailed) {
+      fallbackTimer = setTimeout(() => {
+        fallbackTimer = null;
+        handleResponse({ runId, error: hardFailReason });
+      }, 0);
+    } else if (fallbackMode || !worker) {
       fallbackTimer = setTimeout(() => {
         fallbackTimer = null;
         let response: SolverResponseMessage;

@@ -256,6 +256,83 @@ describe('parking-layout-lab workerClient', () => {
     expect(onResult.mock.calls[0][0]).toEqual(fakeOutput('final-pending'));
   });
 
+  it('mainThreadFallback:false surfaces a worker error as onError instead of solving on the main thread', () => {
+    jest.useFakeTimers();
+    try {
+      const worker = new FakeWorker();
+      const client = createSolverWorkerClient({ createWorker: () => worker, mainThreadFallback: false });
+      const onError = jest.fn();
+      const onResult = jest.fn();
+      client.onError(onError);
+      client.onResult(onResult);
+
+      client.solve(fakeInput('a'));
+      worker.triggerError();
+      jest.runAllTimers();
+
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onResult).not.toHaveBeenCalled();
+      expect(client.isFallback()).toBe(false); // never entered main-thread fallback mode
+      expect(worker.terminated).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('mainThreadFallback:false fails every subsequent solve too, without ever posting to a worker again', () => {
+    jest.useFakeTimers();
+    try {
+      const worker = new FakeWorker();
+      const client = createSolverWorkerClient({ createWorker: () => worker, mainThreadFallback: false });
+      const onError = jest.fn();
+      client.onError(onError);
+
+      client.solve(fakeInput('a'));
+      worker.triggerError();
+      jest.runAllTimers();
+      expect(onError).toHaveBeenCalledTimes(1);
+
+      client.solve(fakeInput('b'));
+      jest.runAllTimers();
+      expect(onError).toHaveBeenCalledTimes(2);
+      expect(worker.posted.length).toBe(1); // only the original pre-error post
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('mainThreadFallback:false with no Worker available fails immediately rather than solving synchronously', () => {
+    jest.useFakeTimers();
+    try {
+      const client = createSolverWorkerClient({
+        createWorker: () => {
+          throw new Error('Worker unsupported in this environment');
+        },
+        mainThreadFallback: false,
+      });
+      expect(client.isFallback()).toBe(false);
+
+      const onError = jest.fn();
+      const onResult = jest.fn();
+      client.onError(onError);
+      client.onResult(onResult);
+      client.solve({
+        boundary: { ring: [] },
+        exclusions: [],
+        accessPoint: [0, 0],
+        stall: { width: 2.4, length: 4.8 },
+        aisleWidth: 6,
+        boundarySetback: 1,
+        exclusionClearance: 1,
+      });
+      jest.runAllTimers();
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onResult).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('uses the main-thread fallback from the start when no Worker can be created', () => {
     jest.useFakeTimers();
     try {

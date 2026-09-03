@@ -71,6 +71,49 @@ describe('getSketchObjectCount', () => {
       polygons: 1,
       parkingBlocks: 1,
       cadImages: 2,
+      autoLayouts: 0,
+    });
+  });
+
+  it('counts applied auto-parking layouts', () => {
+    expect(
+      getSketchObjectCount({
+        polygons: [polygon],
+        parkingBlocks: [],
+        cadImages: [],
+        cadInstances: [],
+        autoLayouts: [
+          {
+            id: 'auto-1',
+            name: 'Auto layout 1',
+            geometrySchemaVersion: 1,
+            boundaryId: polygon.id,
+            exclusionRefs: [],
+            accessPoint: [0, 0],
+            settingsSnapshot: {
+              stallSize: 'standard',
+              aisleWidth: 6,
+              boundarySetback: 1,
+              buildingClearance: 1,
+              checkManoeuvring: false,
+              oneWay: false,
+              gateQueueVehicles: null,
+              accessibleBays: { on: false, percent: 5 },
+            },
+            geometry: { type: 'FeatureCollection', features: [] },
+            metrics: { totalSpaces: 10, standard: 10, accessible: 0, rows: 1, footprintSqm: 50 },
+            warnings: [],
+            sourceHash: 'v1-abc',
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+      })
+    ).toEqual({
+      polygons: 1,
+      parkingBlocks: 0,
+      cadImages: 0,
+      autoLayouts: 1,
     });
   });
 });

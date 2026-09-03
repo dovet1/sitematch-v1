@@ -8,7 +8,7 @@ interface SavedSketch {
   id: string
   name: string
   updated_at: string
-  data: { polygons?: unknown[]; parkingBlocks?: unknown[] }
+  data: { polygons?: unknown[]; parkingBlocks?: unknown[]; autoLayouts?: unknown[] }
 }
 
 function relativeTime(dateString: string) {
@@ -130,7 +130,8 @@ export function USketchLauncher({ onActivate }: { onActivate: () => void }) {
           !error &&
           sketches.map((sketch) => {
             const polygonCount = sketch.data?.polygons?.length || 0
-            const parkingCount = sketch.data?.parkingBlocks?.length || 0
+            const parkingCount =
+              (sketch.data?.parkingBlocks?.length || 0) + (sketch.data?.autoLayouts?.length || 0)
             return (
               <button
                 key={sketch.id}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   MousePointer2,
   Pentagon,
@@ -12,16 +12,20 @@ import {
   Loader2,
   Minus,
   Plus,
-  Check,
+  Sparkles,
+  AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
+import { useSketchStore, type ParkingMethod } from '@/lib/sitesketcher-v2/state-manager'
 import { POLYGON_COLORS, PARKING_DIMENSIONS } from '@/lib/sitesketcher-v2/constants'
 import { calculatePolygonArea, calculateDistance } from '@/lib/sitesketcher-v2/polygon-utils'
+import { deriveAutoLayoutStale } from '@/lib/sitesketcher-v2/auto-parking/staleness'
 import type { Tool } from '@/types/sitesketcher-v2'
 import { SaveModal } from '../../../sitesketcher-v2/components/modals/SaveModal'
 import { getSketchObjectCount } from '@/lib/sitesketcher-v2/object-count'
 import { UCadLibrary } from './UCadLibrary'
+import { useAutoParkingEnabled } from '../../lib/auto-parking-flag-context'
+import { USketchAutoParkingPanel } from './USketchAutoParkingPanel'
 
 const SKETCH_TOOLS: { id: Tool; label: string; key: string; Icon: typeof MousePointer2 }[] = [
   { id: 'select', label: 'Select', key: 'V', Icon: MousePointer2 },
@@ -31,7 +35,7 @@ const SKETCH_TOOLS: { id: Tool; label: string; key: string; Icon: typeof MousePo
   { id: 'measure', label: 'Measure', key: 'M', Icon: Ruler },
 ]
 
-function Kicker({ children }: { children: React.ReactNode }) {
+export function Kicker({ children }: { children: React.ReactNode }) {
   return (
     <span className="font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3">
       {children}
@@ -39,7 +43,7 @@ function Kicker({ children }: { children: React.ReactNode }) {
   )
 }
 
-function formatArea(sqm: number) {
+export function formatArea(sqm: number) {
   if (sqm < 10000) return `${sqm.toFixed(0)} m²`
   return `${(sqm / 10000).toFixed(2)} ha`
 }
@@ -66,8 +70,9 @@ export function USketchPanel({ onExit }: { onExit: () => void }) {
   const parkingBlocks = useSketchStore((s) => s.parkingBlocks)
   const cadImages = useSketchStore((s) => s.cadImages)
   const cadInstances = useSketchStore((s) => s.cadInstances)
+  const autoLayouts = useSketchStore((s) => s.autoLayouts)
 
-  const objectCount = getSketchObjectCount({ polygons, parkingBlocks, cadImages, cadInstances })
+  const objectCount = getSketchObjectCount({ polygons, parkingBlocks, cadImages, cadInstances, autoLayouts })
 
   const performSave = async (name: string, description: string): Promise<boolean> => {
     setSaving(true)
@@ -272,11 +277,20 @@ function LayersPanel() {
   const polygons = useSketchStore((s) => s.polygons)
   const parkingBlocks = useSketchStore((s) => s.parkingBlocks)
   const cadInstances = useSketchStore((s) => s.cadInstances)
+  const cadImages = useSketchStore((s) => s.cadImages)
+  const savedCads = useSketchStore((s) => s.savedCads)
+  const autoLayouts = useSketchStore((s) => s.autoLayouts)
   const selectedId = useSketchStore((s) => s.selectedId)
   const setSelectedId = useSketchStore((s) => s.setSelectedId)
+  const selectedAutoLayoutId = useSketchStore((s) => s.selectedAutoLayoutId)
+  const setSelectedAutoLayoutId = useSketchStore((s) => s.setSelectedAutoLayoutId)
   const getCadForInstance = useSketchStore((s) => s.getCadForInstance)
 
-  const empty = polygons.length === 0 && parkingBlocks.length === 0 && cadInstances.length === 0
+  const empty =
+    polygons.length === 0 &&
+    parkingBlocks.length === 0 &&
+    cadInstances.length === 0 &&
+    autoLayouts.length === 0
 
   if (empty) {
     return (
@@ -329,12 +343,44 @@ function LayersPanel() {
         </div>
       )}
 
-      {parkingBlocks.length > 0 && (
+      {(parkingBlocks.length > 0 || autoLayouts.length > 0) && (
         <div>
           <div className="px-1 pb-1.5">
-            <Kicker>Parking · {parkingBlocks.length}</Kicker>
+            <Kicker>Parking · {parkingBlocks.length + autoLayouts.length}</Kicker>
           </div>
           <div className="flex flex-col gap-1">
+            {autoLayouts.map((layout) => {
+              const stale = deriveAutoLayoutStale(layout, { polygons, cadInstances, cadImages, savedCads })
+              return (
+                <button
+                  key={layout.id}
+                  type="button"
+                  onClick={() => setSelectedAutoLayoutId(layout.id)}
+                  className={
+                    'flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors ' +
+                    (selectedAutoLayoutId === layout.id
+                      ? 'border-sm-violet bg-sm-violet-tint-soft'
+                      : 'border-transparent hover:border-sm-border hover:bg-sm-bg')
+                  }
+                >
+                  <Sparkles size={14} className="shrink-0 text-sm-violet" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate text-[13px] font-medium text-sm-ink">{layout.name}</span>
+                      {stale && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#E9A23B]" />}
+                    </span>
+                    {stale && (
+                      <span className="mt-0.5 flex items-center gap-1 font-mono text-[9.5px] font-semibold uppercase tracking-wide text-[#8A6318]">
+                        <AlertTriangle size={9} /> Out of date
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 font-mono text-[10px] text-sm-ink3">
+                    {layout.metrics.totalSpaces} sp
+                  </span>
+                </button>
+              )
+            })}
             {parkingBlocks.map((b) => (
               <button
                 key={b.id}
@@ -444,6 +490,35 @@ function PolygonPanel() {
 /* ---------- Parking ---------- */
 
 function ParkingPanel() {
+  const autoParkingFlag = useAutoParkingEnabled()
+  const hasPlusAccess = useSketchStore((s) => s.effectiveAccess.hasPlusAccess)
+  const parkingMethod = useSketchStore((s) => s.parkingMethod)
+  const setParkingMethod = useSketchStore((s) => s.setParkingMethod)
+
+  // The method toggle (and everything behind it) is gated by BOTH the
+  // server-resolved kill-switch and Plus access; real enforcement of the
+  // Plus gate happens server-side on save regardless of this client check.
+  const autoAvailable = autoParkingFlag && hasPlusAccess
+
+  return (
+    <div className="flex flex-col gap-4 p-4">
+      {autoAvailable && (
+        <Segmented
+          label="Parking method"
+          value={parkingMethod}
+          options={[
+            { value: 'manual', label: 'Manual' },
+            { value: 'auto', label: 'Auto layout' },
+          ]}
+          onChange={(v) => setParkingMethod(v as ParkingMethod)}
+        />
+      )}
+      {autoAvailable && parkingMethod === 'auto' ? <USketchAutoParkingPanel /> : <ManualParkingPanel />}
+    </div>
+  )
+}
+
+function ManualParkingPanel() {
   const parkingPlacement = useSketchStore((s) => s.parkingPlacement)
   const setParkingPlacement = useSketchStore((s) => s.setParkingPlacement)
   const { spaces, layout, stallSize } = parkingPlacement
@@ -453,7 +528,7 @@ function ParkingPanel() {
   const totalWidth = stall.length * (layout === 'double' ? 2 : 1)
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <>
       <p className="text-[12px] leading-relaxed text-sm-ink3">
         Configure a bay block, then click the map to place it.
       </p>
@@ -503,6 +578,54 @@ function ParkingPanel() {
         <div className="mt-1 font-mono text-[13px] text-sm-ink">
           {totalLength.toFixed(1)} × {totalWidth.toFixed(1)} m
         </div>
+      </div>
+    </>
+  )
+}
+
+/**
+ * Auto layout guided flow — lives in its own module
+ * (USketchAutoParkingPanel.tsx) per the state-machine's size; imported below.
+ */
+export const WARNING_CARD_CLASS =
+  'rounded-lg border border-[#F2E3CB] bg-[#FDF6EC] px-3 py-2 text-[12px] leading-relaxed text-[#8A6318]'
+
+function NumberField({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  onChange,
+}: {
+  label: string
+  value: number
+  min?: number
+  max?: number
+  step?: number
+  onChange: (v: number) => void
+}) {
+  const clamp = (v: number) => {
+    let n = v
+    if (min !== undefined) n = Math.max(min, n)
+    if (max !== undefined) n = Math.min(max, n)
+    return Math.round(n * 100) / 100
+  }
+  return (
+    <div>
+      <div className="pb-2">
+        <Kicker>{label}</Kicker>
+      </div>
+      <div className="flex items-center gap-2">
+        <StepBtn onClick={() => onChange(clamp(value - step))} disabled={min !== undefined && value <= min}>
+          <Minus size={14} />
+        </StepBtn>
+        <span className="flex-1 text-center font-mono text-[14px] font-semibold text-sm-ink">
+          {Number.isInteger(step) ? value : value.toFixed(1)}
+        </span>
+        <StepBtn onClick={() => onChange(clamp(value + step))} disabled={max !== undefined && value >= max}>
+          <Plus size={14} />
+        </StepBtn>
       </div>
     </div>
   )
@@ -588,7 +711,7 @@ function MeasurePanel() {
 
 /* ---------- Shared primitives ---------- */
 
-function Toggle({
+export function Toggle({
   label,
   description,
   checked,
@@ -628,7 +751,7 @@ function Toggle({
   )
 }
 
-function StepBtn({
+export function StepBtn({
   children,
   onClick,
   disabled,
@@ -649,7 +772,7 @@ function StepBtn({
   )
 }
 
-function Segmented({
+export function Segmented({
   label,
   value,
   options,

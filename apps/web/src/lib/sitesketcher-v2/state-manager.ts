@@ -5,6 +5,7 @@ import {
   CadImage,
   SavedCad,
   CadInstance,
+  AutoParkingLayout,
   Tool,
   MapStyle,
   Units,
@@ -19,7 +20,23 @@ import {
 import { DEFAULT_BUILDING_HEIGHT_METERS, DEFAULT_VIEWPORT, MAX_HISTORY_SIZE, TIER_FEATURES } from './constants';
 import { rotatePolygonPoints } from './polygon-utils';
 import { measurementPreviewStore } from './measurement-preview-store';
+import {
+  createDefaultAutoParkingDraft,
+  type AutoParkingDraft,
+  type AutoParkingPhase,
+  type AutoParkingGenerationStatus,
+} from './auto-parking/types';
+import { isAccessAnchorValid, snapPointToBoundaryEdge, type AccessAnchor } from './auto-parking/access-point';
+import type { CandidateLayout, SolverInput, SolverOutput } from '@/lib/parking-layout-lab/types';
 import type mapboxgl from 'mapbox-gl';
+
+export type ParkingMethod = 'manual' | 'auto';
+
+/** The solver run a candidate was chosen from — needed to build the persisted AutoParkingLayout on apply. */
+export interface AutoParkingSolverRun {
+  input: SolverInput;
+  output: SolverOutput;
+}
 
 interface SketchState {
   // Map reference (for coordinate transformations)
@@ -45,6 +62,29 @@ interface SketchState {
   view: ViewMode;
   sideLabelsOn: boolean;
   parkingPlacement: Pick<ParkingBlock, 'spaces' | 'layout' | 'stallSize'>;
+
+  // Auto parking — parkingMethod is persisted per sketch (SketchData.settings.parkingMethod);
+  // autoParkingDraft is transient workflow state, never persisted (see
+  // docs/design_handoff_auto_parking_guided/README.md "State Management").
+  parkingMethod: ParkingMethod;
+  autoParkingDraft: AutoParkingDraft;
+  // Worker-driven, transient (owned/mutated by the worker controller hook).
+  autoParkingGenerationStatus: AutoParkingGenerationStatus;
+  autoParkingGenerationError: string | null;
+  autoParkingCandidates: CandidateLayout[];
+  autoParkingSelectedCandidateId: string | null;
+  autoParkingSolverRun: AutoParkingSolverRun | null;
+  // Map-only draft-solve preview rendered while dragging boundary/access/exclusion
+  // geometry during compare — never touches candidate cards/metrics (see useAutoParkingWorker).
+  autoParkingLivePreview: GeoJSON.FeatureCollection | null;
+  autoParkingPreviewUpdating: boolean;
+  // Persisted, applied layouts (SketchData.autoLayouts). Selection is tracked
+  // separately from selectedId/selectedType — see setSelectedAutoLayoutId —
+  // because the shared store's selectedType union is also consumed by the
+  // standalone SiteSketcher shell (RightInspector.tsx), which the integration
+  // plan explicitly keeps unmodified.
+  autoLayouts: AutoParkingLayout[];
+  selectedAutoLayoutId: string | null;
 
   // Drawing state
   drawingInProgress: PolygonInProgress | null;
@@ -133,6 +173,46 @@ interface SketchState {
   setView: (view: ViewMode) => void;
   setSideLabelsOn: (on: boolean) => void;
   setParkingPlacement: (settings: Partial<SketchState['parkingPlacement']>) => void;
+
+  // Actions - Auto parking (guided flow; see auto-parking/types.ts AutoParkingPhase)
+  /** Manually toggling to 'auto' always starts a fresh guided boundary draw — never auto-selects an existing polygon. */
+  setParkingMethod: (method: ParkingMethod) => void;
+  /** Boundary just closed (draw.create) — commits it and advances straight to access placement. */
+  setAutoParkingBoundary: (boundaryId: string) => void;
+  startAutoParkingBoundaryEdit: () => void;
+  commitAutoParkingBoundaryEdit: () => void;
+  cancelAutoParkingBoundaryEdit: () => void;
+  /** Live value update only (hover preview / drag) — never changes phase. */
+  setAutoParkingAccessAnchor: (anchor: AccessAnchor | null) => void;
+  /** Click / drag-release — sets the anchor AND advances/exits the placement phase. */
+  commitAutoParkingAccessAnchor: (anchor: AccessAnchor) => void;
+  startAutoParkingAccessEdit: () => void;
+  cancelAutoParkingAccessEdit: () => void;
+  updateAutoParkingSettings: (updates: Partial<AutoParkingDraft['settings']>) => void;
+  setAutoParkingSettingsExpanded: (expanded: boolean) => void;
+  setAutoParkingPhase: (phase: AutoParkingPhase) => void;
+  resetAutoParkingDraft: () => void;
+  setAutoParkingGenerationStatus: (status: AutoParkingGenerationStatus, error?: string | null) => void;
+  setAutoParkingCandidates: (
+    candidates: CandidateLayout[],
+    run: AutoParkingSolverRun | null,
+    selectedCandidateId?: string | null
+  ) => void;
+  setAutoParkingSelectedCandidateId: (id: string | null) => void;
+  setAutoParkingLivePreview: (fc: GeoJSON.FeatureCollection | null) => void;
+  setAutoParkingPreviewUpdating: (updating: boolean) => void;
+  clearAutoParkingGeneration: () => void;
+  /** Reopens the guided comparison flow with a working copy of an already-applied layout ("Edit layout settings" / "Regenerate"). */
+  enterAutoParkingEditor: (layout: AutoParkingLayout, opts?: { expandSettings?: boolean }) => void;
+  /** Consumes (returns + clears) the one-shot "auto-generate on entry" flag set by enterAutoParkingEditor. */
+  consumeAutoParkingPendingGenerate: () => boolean;
+  /** Commits the chosen candidate: adds a new layout, or replaces draft.editingLayoutId's layout in place. Exits Auto back to Select. */
+  applyAutoParkingLayout: (layout: AutoParkingLayout) => void;
+  addAutoLayout: (layout: AutoParkingLayout) => void;
+  updateAutoLayout: (id: string, updates: Partial<AutoParkingLayout>) => void;
+  deleteAutoLayout: (id: string) => void;
+  setAutoLayouts: (layouts: AutoParkingLayout[]) => void;
+  setSelectedAutoLayoutId: (id: string | null) => void;
 
   // Actions - Drawing
   startPolygonDrawing: (colorIndex: number) => void;
@@ -230,6 +310,18 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     layout: 'single',
     stallSize: 'standard',
   },
+
+  parkingMethod: 'manual',
+  autoParkingDraft: createDefaultAutoParkingDraft(),
+  autoParkingGenerationStatus: 'idle',
+  autoParkingGenerationError: null,
+  autoParkingCandidates: [],
+  autoParkingSelectedCandidateId: null,
+  autoParkingSolverRun: null,
+  autoParkingLivePreview: null,
+  autoParkingPreviewUpdating: false,
+  autoLayouts: [],
+  selectedAutoLayoutId: null,
 
   drawingInProgress: null,
   measurementInProgress: null,
@@ -672,6 +764,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     set({
       selectedId: id,
       selectedType: type,
+      selectedAutoLayoutId: null,
       activeTool: id ? 'select' : get().activeTool,
     }),
 
@@ -684,6 +777,279 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     set((state) => ({
       parkingPlacement: { ...state.parkingPlacement, ...settings },
     })),
+
+  // Auto parking actions — see auto-parking/types.ts for the AutoParkingPhase state machine.
+  setParkingMethod: (method) =>
+    set({
+      parkingMethod: method,
+      isDirty: true,
+      // Manually toggling to Auto always starts a fresh guided boundary draw
+      // (no existing-polygon auto-select — see README.md §1). Toggling back
+      // to Manual cancels any in-flight guided step.
+      autoParkingDraft: createDefaultAutoParkingDraft(),
+      autoParkingGenerationStatus: 'idle',
+      autoParkingGenerationError: null,
+      autoParkingCandidates: [],
+      autoParkingSelectedCandidateId: null,
+      autoParkingSolverRun: null,
+      autoParkingLivePreview: null,
+      autoParkingPreviewUpdating: false,
+    }),
+
+  // The boundary polygon just closed (draw.create) — commit it and advance
+  // straight to vehicle-access placement.
+  setAutoParkingBoundary: (boundaryId) =>
+    set((state) => ({
+      autoParkingDraft: {
+        ...state.autoParkingDraft,
+        boundaryId,
+        boundarySnapshot: null,
+        accessAnchor: null,
+        accessAnchorSnapshot: null,
+        phaseBeforeEdit: null,
+        phase: 'access',
+      },
+      autoParkingGenerationStatus: 'idle',
+      autoParkingGenerationError: null,
+      autoParkingCandidates: [],
+      autoParkingSelectedCandidateId: null,
+      autoParkingSolverRun: null,
+    })),
+
+  startAutoParkingBoundaryEdit: () => {
+    const state = get();
+    const boundary = state.polygons.find((p) => p.id === state.autoParkingDraft.boundaryId);
+    if (!boundary) return;
+    set({
+      autoParkingDraft: {
+        ...state.autoParkingDraft,
+        boundarySnapshot: boundary.points,
+        phaseBeforeEdit: state.autoParkingDraft.phase,
+        phase: 'boundary-edit',
+      },
+    });
+  },
+
+  commitAutoParkingBoundaryEdit: () => {
+    const state = get();
+    const draft = state.autoParkingDraft;
+    const boundary = state.polygons.find((p) => p.id === draft.boundaryId);
+    const anchorStillValid =
+      !!draft.accessAnchor && !!boundary && isAccessAnchorValid(draft.accessAnchor, boundary.points);
+    set({
+      autoParkingDraft: {
+        ...draft,
+        boundarySnapshot: null,
+        // The edge the access point sat on may have been deleted while editing —
+        // unset it and reopen placement rather than keep a dangling anchor.
+        accessAnchor: anchorStillValid ? draft.accessAnchor : null,
+        phase: anchorStillValid ? draft.phaseBeforeEdit ?? 'ready' : 'access',
+        phaseBeforeEdit: null,
+      },
+    });
+  },
+
+  cancelAutoParkingBoundaryEdit: () => {
+    const state = get();
+    const draft = state.autoParkingDraft;
+    if (draft.boundaryId && draft.boundarySnapshot) {
+      get().updatePolygon(draft.boundaryId, { points: draft.boundarySnapshot }, { recordHistory: false });
+    }
+    set({
+      autoParkingDraft: {
+        ...draft,
+        boundarySnapshot: null,
+        phase: draft.phaseBeforeEdit ?? 'ready',
+        phaseBeforeEdit: null,
+      },
+    });
+  },
+
+  setAutoParkingAccessAnchor: (anchor) =>
+    set((state) => ({ autoParkingDraft: { ...state.autoParkingDraft, accessAnchor: anchor } })),
+
+  commitAutoParkingAccessAnchor: (anchor) =>
+    set((state) => {
+      const draft = state.autoParkingDraft;
+      const nextPhase: AutoParkingPhase =
+        draft.phase === 'access-edit' ? draft.phaseBeforeEdit ?? 'ready' : draft.phase === 'access' ? 'ready' : draft.phase;
+      return {
+        autoParkingDraft: {
+          ...draft,
+          accessAnchor: anchor,
+          accessAnchorSnapshot: null,
+          phase: nextPhase,
+          phaseBeforeEdit: nextPhase === draft.phase ? draft.phaseBeforeEdit : null,
+        },
+      };
+    }),
+
+  startAutoParkingAccessEdit: () =>
+    set((state) => ({
+      autoParkingDraft: {
+        ...state.autoParkingDraft,
+        accessAnchorSnapshot: state.autoParkingDraft.accessAnchor,
+        phaseBeforeEdit: state.autoParkingDraft.phase,
+        phase: 'access-edit',
+      },
+    })),
+
+  cancelAutoParkingAccessEdit: () =>
+    set((state) => ({
+      autoParkingDraft: {
+        ...state.autoParkingDraft,
+        accessAnchor: state.autoParkingDraft.accessAnchorSnapshot,
+        accessAnchorSnapshot: null,
+        phase: state.autoParkingDraft.phaseBeforeEdit ?? 'ready',
+        phaseBeforeEdit: null,
+      },
+    })),
+
+  updateAutoParkingSettings: (updates) =>
+    set((state) => ({
+      autoParkingDraft: {
+        ...state.autoParkingDraft,
+        settings: { ...state.autoParkingDraft.settings, ...updates },
+      },
+    })),
+
+  setAutoParkingSettingsExpanded: (expanded) =>
+    set((state) => ({ autoParkingDraft: { ...state.autoParkingDraft, settingsExpanded: expanded } })),
+
+  setAutoParkingPhase: (phase) => set((state) => ({ autoParkingDraft: { ...state.autoParkingDraft, phase } })),
+
+  resetAutoParkingDraft: () =>
+    set({ autoParkingDraft: createDefaultAutoParkingDraft(), autoParkingLivePreview: null, autoParkingPreviewUpdating: false }),
+
+  setAutoParkingGenerationStatus: (status, error = null) =>
+    set({ autoParkingGenerationStatus: status, autoParkingGenerationError: error }),
+
+  setAutoParkingCandidates: (candidates, run, selectedCandidateId) =>
+    set((state) => ({
+      autoParkingCandidates: candidates,
+      autoParkingSolverRun: run,
+      autoParkingSelectedCandidateId: selectedCandidateId ?? candidates[0]?.candidateId ?? null,
+      autoParkingGenerationStatus: 'idle',
+      autoParkingGenerationError: null,
+      autoParkingLivePreview: null,
+      autoParkingPreviewUpdating: false,
+      autoParkingDraft: { ...state.autoParkingDraft, phase: candidates.length > 0 || run ? 'compare' : state.autoParkingDraft.phase },
+    })),
+
+  setAutoParkingSelectedCandidateId: (id) => set({ autoParkingSelectedCandidateId: id }),
+
+  setAutoParkingLivePreview: (fc) => set({ autoParkingLivePreview: fc }),
+  setAutoParkingPreviewUpdating: (updating) => set({ autoParkingPreviewUpdating: updating }),
+
+  clearAutoParkingGeneration: () =>
+    set({
+      autoParkingGenerationStatus: 'idle',
+      autoParkingGenerationError: null,
+      autoParkingCandidates: [],
+      autoParkingSelectedCandidateId: null,
+      autoParkingSolverRun: null,
+      autoParkingLivePreview: null,
+      autoParkingPreviewUpdating: false,
+    }),
+
+  enterAutoParkingEditor: (layout, opts) => {
+    const state = get();
+    const boundary = state.polygons.find((p) => p.id === layout.boundaryId);
+    const snap = boundary ? snapPointToBoundaryEdge(layout.accessPoint, boundary.points) : null;
+    const anchor: AccessAnchor | null = snap ? { edgeIndex: snap.edgeIndex, distanceAlongEdgeM: snap.distanceAlongEdgeM } : null;
+    set({
+      parkingMethod: 'auto',
+      activeTool: 'parking',
+      selectedAutoLayoutId: null,
+      selectedId: null,
+      selectedType: null,
+      autoParkingGenerationStatus: 'idle',
+      autoParkingGenerationError: null,
+      autoParkingCandidates: [],
+      autoParkingSelectedCandidateId: null,
+      autoParkingSolverRun: null,
+      autoParkingLivePreview: null,
+      autoParkingPreviewUpdating: false,
+      autoParkingDraft: {
+        boundaryId: layout.boundaryId,
+        boundarySnapshot: null,
+        accessAnchor: anchor,
+        accessAnchorSnapshot: null,
+        phaseBeforeEdit: null,
+        settings: { ...layout.settingsSnapshot, accessibleBays: { ...layout.settingsSnapshot.accessibleBays } },
+        settingsExpanded: !!opts?.expandSettings,
+        phase: 'ready',
+        editingLayoutId: layout.id,
+        pendingAutoGenerate: true,
+      },
+    });
+  },
+
+  consumeAutoParkingPendingGenerate: () => {
+    const pending = get().autoParkingDraft.pendingAutoGenerate;
+    if (pending) {
+      set((state) => ({ autoParkingDraft: { ...state.autoParkingDraft, pendingAutoGenerate: false } }));
+    }
+    return pending;
+  },
+
+  applyAutoParkingLayout: (layout) => {
+    const editingId = get().autoParkingDraft.editingLayoutId;
+    // Regenerating an existing layout replaces it in place under the SAME id — never a duplicate.
+    const finalLayout = editingId ? { ...layout, id: editingId } : layout;
+    if (editingId) {
+      get().updateAutoLayout(editingId, finalLayout);
+    } else {
+      get().addAutoLayout(finalLayout);
+    }
+    set({
+      selectedAutoLayoutId: finalLayout.id,
+      activeTool: 'select',
+      autoParkingDraft: createDefaultAutoParkingDraft(),
+      autoParkingGenerationStatus: 'idle',
+      autoParkingGenerationError: null,
+      autoParkingCandidates: [],
+      autoParkingSelectedCandidateId: null,
+      autoParkingSolverRun: null,
+      autoParkingLivePreview: null,
+      autoParkingPreviewUpdating: false,
+    });
+  },
+
+  addAutoLayout: (layout) => {
+    get().pushHistory();
+    set((state) => ({
+      autoLayouts: [...state.autoLayouts, layout],
+      isDirty: true,
+    }));
+  },
+
+  updateAutoLayout: (id, updates) => {
+    get().pushHistory();
+    set((state) => ({
+      autoLayouts: state.autoLayouts.map((l) => (l.id === id ? { ...l, ...updates, updatedAt: Date.now() } : l)),
+      isDirty: true,
+    }));
+  },
+
+  deleteAutoLayout: (id) => {
+    get().pushHistory();
+    set((state) => ({
+      autoLayouts: state.autoLayouts.filter((l) => l.id !== id),
+      selectedAutoLayoutId: state.selectedAutoLayoutId === id ? null : state.selectedAutoLayoutId,
+      isDirty: true,
+    }));
+  },
+
+  setAutoLayouts: (layouts) => set({ autoLayouts: layouts }),
+
+  setSelectedAutoLayoutId: (id) =>
+    set({
+      selectedAutoLayoutId: id,
+      selectedId: id ? null : get().selectedId,
+      selectedType: id ? null : get().selectedType,
+      activeTool: id ? 'select' : get().activeTool,
+    }),
 
   // Drawing actions
   startPolygonDrawing: (colorIndex) =>
@@ -726,13 +1092,16 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       return null;
     }
 
+    const isAutoParkingBoundary =
+      state.parkingMethod === 'auto' && state.autoParkingDraft.phase === 'boundary';
+
     const polygon: Polygon = {
       id: `polygon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: `Plot ${String.fromCharCode(65 + state.polygons.length)}`,
       colorIndex: state.drawingInProgress.colorIndex,
       points: state.drawingInProgress.points,
       rotation: 0,
-      height: DEFAULT_BUILDING_HEIGHT_METERS,
+      height: isAutoParkingBoundary ? 0 : DEFAULT_BUILDING_HEIGHT_METERS,
       showDistances: true,
       showArea: true,
       createdAt: Date.now(),
@@ -744,6 +1113,13 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       drawingInProgress: null,
       isDirty: true,
     }));
+
+    // Only while the guided flow is actively waiting on its boundary step —
+    // an unrelated plot drawn during compare/editing must not hijack it.
+    if (isAutoParkingBoundary) {
+      get().setAutoParkingBoundary(polygon.id);
+      set({ activeTool: 'parking' });
+    }
 
     get().pushHistory();
     return polygon;
@@ -931,6 +1307,17 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       mapFocusRequest: null,
       history: [],
       historyIndex: -1,
+      parkingMethod: 'manual',
+      autoParkingDraft: createDefaultAutoParkingDraft(),
+      autoParkingGenerationStatus: 'idle',
+      autoParkingGenerationError: null,
+      autoParkingCandidates: [],
+      autoParkingSelectedCandidateId: null,
+      autoParkingSolverRun: null,
+      autoParkingLivePreview: null,
+      autoParkingPreviewUpdating: false,
+      autoLayouts: [],
+      selectedAutoLayoutId: null,
     });
   },
 
@@ -942,13 +1329,15 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     const data = sketch.data;
     const cadImages = data.cadImages || [];
     const cadInstances = data.cadInstances || [];
+    const autoLayouts = data.autoLayouts || [];
 
     set({
       polygons: data.polygons || [],
       parkingBlocks: data.parkingBlocks || [],
-      // CAD visibility filtering (empty for non-Plus, full for Plus)
+      // CAD / auto-layout visibility filtering (empty for non-Plus, full for Plus)
       cadImages: effectiveAccess.hasPlusAccess ? cadImages : [],
       cadInstances: effectiveAccess.hasPlusAccess ? cadInstances : [],
+      autoLayouts: effectiveAccess.hasPlusAccess ? autoLayouts : [],
       // NOTE: savedCads remain unchanged - library persists across sketch loads
       viewport: data.viewport || { ...DEFAULT_VIEWPORT },
       units: data.settings?.units || 'metric',
@@ -968,6 +1357,17 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       measurementInProgress: null, // Explicitly clear measurement on load
       frozenMeasurement: null, // Explicitly clear frozen measurement on load
       cadPlacementInProgress: null, // Explicitly clear placement on load
+      // parkingMethod is remembered per sketch; absent (older sketches) defaults to manual.
+      parkingMethod: data.settings?.parkingMethod || 'manual',
+      autoParkingDraft: createDefaultAutoParkingDraft(),
+      autoParkingGenerationStatus: 'idle',
+      autoParkingGenerationError: null,
+      autoParkingCandidates: [],
+      autoParkingSelectedCandidateId: null,
+      autoParkingSolverRun: null,
+      autoParkingLivePreview: null,
+      autoParkingPreviewUpdating: false,
+      selectedAutoLayoutId: null,
     });
 
     // Push initial history state
@@ -983,11 +1383,13 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       parkingBlocks: state.parkingBlocks,
       cadImages: state.cadImages, // Legacy support (can be removed after full migration)
       cadInstances: state.cadInstances,
+      autoLayouts: state.autoLayouts,
       viewport: state.viewport,
       settings: {
         units: state.units,
         mapStyle: state.mapStyle,
         sideLabelsOn: state.sideLabelsOn,
+        parkingMethod: state.parkingMethod,
       },
     };
   },

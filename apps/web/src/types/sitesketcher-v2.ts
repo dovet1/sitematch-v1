@@ -122,6 +122,68 @@ export interface SiteSketchRow {
   updated_at: string;
 }
 
+// --- Auto parking (see docs/design_handoff_auto_parking/INTEGRATION_PLAN.md) ---
+
+export interface AutoParkingExclusionRef {
+  id: string;
+  kind: 'polygon' | 'cadInstance' | 'cadImage';
+}
+
+export interface AutoParkingSettingsSnapshot {
+  stallSize: 'standard' | 'larger';
+  aisleWidth: number;
+  boundarySetback: number;
+  buildingClearance: number; // solver exclusionClearance
+  checkManoeuvring: boolean;
+  oneWay: boolean; // omitted from SolverInput unless checkManoeuvring
+  gateQueueVehicles: number | null; // omitted from SolverInput unless checkManoeuvring
+  accessibleBays: { on: boolean; percent: number };
+}
+
+export interface AutoParkingMetrics {
+  totalSpaces: number;
+  standard: number;
+  accessible: number;
+  rows: number;
+  footprintSqm: number;
+}
+
+export interface AutoParkingWarning {
+  code: string;
+  message: string;
+}
+
+// A chosen, applied auto-parking layout. Only applied layouts + their
+// regeneration inputs are persisted — candidate previews are transient.
+export interface AutoParkingLayout {
+  id: string;
+  name: string; // "Auto layout 1"
+  geometrySchemaVersion: 1; // bump to migrate rendering without re-solving
+  // regeneration inputs / provenance
+  boundaryId: string; // source polygon id
+  exclusionRefs: AutoParkingExclusionRef[];
+  accessPoint: [number, number]; // snapped lng/lat
+  /**
+   * The boundary ring at generation time. Optional/backward-compatible
+   * (absent on layouts persisted before this field existed) — used to draw
+   * the faint "previous boundary" outline once the layout goes stale (see
+   * docs/design_handoff_auto_parking_guided/README.md §10, state 06).
+   */
+  boundarySnapshot?: [number, number][];
+  settingsSnapshot: AutoParkingSettingsSnapshot;
+  // chosen result — LAYOUT FEATURES ONLY (stall / aisle / access-corridor /
+  // access-point), lng/lat. See lib/sitesketcher-v2/auto-parking/geojson.ts.
+  geometry: GeoJSON.FeatureCollection;
+  metrics: AutoParkingMetrics;
+  warnings: AutoParkingWarning[];
+  // integrity — canonical hash of: boundary ring + CURRENT mandatory exclusion
+  // set derived from it + snapped accessPoint + settingsSnapshot. Staleness is
+  // ALWAYS derived by recomputing this hash and comparing — never stored.
+  sourceHash: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 // v2 data shape (stored in data JSONB column)
 export interface SketchData {
   version: 2; // v2 marker - critical for filtering
@@ -129,8 +191,14 @@ export interface SketchData {
   parkingBlocks: ParkingBlock[];
   cadInstances: CadInstance[]; // CHANGED from cadImages
   cadImages?: CadImage[]; // DEPRECATED: Keep for backward compatibility during transition
+  autoLayouts?: AutoParkingLayout[]; // Plus-only; optional so old sketches load without it
   viewport: { center: [number, number]; zoom: number; pitch: number; bearing: number };
-  settings: { units: 'metric' | 'imperial'; mapStyle: string; sideLabelsOn: boolean };
+  settings: {
+    units: 'metric' | 'imperial';
+    mapStyle: string;
+    sideLabelsOn: boolean;
+    parkingMethod?: 'manual' | 'auto'; // per-sketch; defaults to 'manual' when absent
+  };
 }
 
 // Full sketch type (row + parsed data)

@@ -8,9 +8,14 @@ import {
   setupMapboxDraw,
   setup3DLayer,
   setupParkingLayer,
+  setupAutoParkingLayer,
   toggle3DLayer,
   syncDrawTo3D,
   syncParkingToMap,
+  syncAutoParkingAccessPointToMap,
+  syncAutoParkingHoverEdgeToMap,
+  syncAutoParkingLayoutsToMap,
+  type AutoParkingLayoutRenderEntry,
   syncPolygonsTo3D,
   loadPolygonsIntoDraw,
   enterPolygonDrawMode,
@@ -20,11 +25,24 @@ import {
   removeCadImageFromMap,
 } from '@/lib/sitesketcher-v2/mapbox-integration'
 import { calculateCadImageCorners } from '@/lib/sitesketcher-v2/cad-utils'
+import { snapPointToBoundaryEdge, reprojectAccessAnchor } from '@/lib/sitesketcher-v2/auto-parking/access-point'
+import { buildCandidatePreviewGeometry, buildSolverInput } from '@/lib/sitesketcher-v2/auto-parking/adapter'
+import { detectMandatoryExclusions } from '@/lib/sitesketcher-v2/auto-parking/detection'
+import { deriveAutoLayoutStale } from '@/lib/sitesketcher-v2/auto-parking/staleness'
+import { clipFeaturesToBoundary } from '@/lib/sitesketcher-v2/auto-parking/clip'
+import {
+  BOUNDARY_INTERACTIVE_PHASES,
+  ACCESS_INTERACTIVE_PHASES,
+  LIVE_REFIT_PHASES,
+  type AutoParkingDraft,
+} from '@/lib/sitesketcher-v2/auto-parking/types'
+import { useAutoParkingWorker, representativeAngle } from '../../lib/hooks/useAutoParkingWorker'
 import { calculateEdgeDistance } from '@/lib/sitesketcher-v2/polygon-utils'
 import type { CadImage, CadInstance, SavedCad, MapStyle } from '@/types/sitesketcher-v2'
 import { PolygonLabels } from '../../../sitesketcher-v2/components/map/PolygonLabels'
 import { MeasurementOverlay } from '../../../sitesketcher-v2/components/map/MeasurementOverlay'
 import { PolygonDrawPreviewOverlay } from '../../../sitesketcher-v2/components/map/PolygonDrawPreviewOverlay'
+import { AutoParkingOverlays } from './AutoParkingOverlays'
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import { toast } from 'sonner'
@@ -116,6 +134,83 @@ function getCadInteractionState(id: string): { locked: boolean; exists: boolean 
 }
 
 /**
+ * Transient candidate-preview geometry for the map, derived from the current
+ * auto-parking draft. Returns null unless the user is on the candidate step
+ * with a selected candidate and a solver run to build it from. Kept as a plain
+ * function so it can be called both from the reactive sync effect and from the
+ * style-reload restore path (which reads a fresh `getState()` snapshot).
+ */
+function getAutoParkingPreviewGeometry(
+  state: ReturnType<typeof useSketchStore.getState>
+): GeoJSON.FeatureCollection | null {
+  if (state.parkingMethod !== 'auto') return null
+  if (!LIVE_REFIT_PHASES.has(state.autoParkingDraft.phase)) return null
+  // A landed draft solve reflects whatever's currently being dragged — it
+  // takes priority over the static (pre-drag) selected-candidate geometry.
+  if (state.autoParkingLivePreview) return state.autoParkingLivePreview
+  const run = state.autoParkingSolverRun
+  const selectedId = state.autoParkingSelectedCandidateId
+  if (!run || !selectedId) return null
+  const candidate = state.autoParkingCandidates.find((c) => c.candidateId === selectedId)
+  if (!candidate) return null
+  return buildCandidatePreviewGeometry(run.input, run.output, candidate)
+}
+
+/**
+ * True while the guided flow should re-fit live on direct map edits — either
+ * actively comparing/editing, or mid-"Change" on the boundary/access of a
+ * comparison that was already in flight (in-flow editing must not leave Auto
+ * mode or mark the candidate stale — see README.md §3/§5).
+ */
+function isAutoParkingLiveRefitActive(draft: AutoParkingDraft): boolean {
+  if (LIVE_REFIT_PHASES.has(draft.phase)) return true
+  if (BOUNDARY_INTERACTIVE_PHASES.has(draft.phase) || ACCESS_INTERACTIVE_PHASES.has(draft.phase)) {
+    return !!draft.phaseBeforeEdit && LIVE_REFIT_PHASES.has(draft.phaseBeforeEdit)
+  }
+  return false
+}
+
+/** Resolves the draft's edge-relative access anchor to a concrete lng/lat against the current boundary ring. */
+function resolveAutoParkingAccessPoint(
+  state: ReturnType<typeof useSketchStore.getState>
+): [number, number] | null {
+  if (state.parkingMethod !== 'auto') return null
+  const { boundaryId, accessAnchor } = state.autoParkingDraft
+  if (!boundaryId || !accessAnchor) return null
+  const boundary = state.polygons.find((p) => p.id === boundaryId)
+  if (!boundary) return null
+  return reprojectAccessAnchor(accessAnchor, boundary.points)
+}
+
+/** Every applied AutoParkingLayout as a map render entry — stale ones clipped/flagged for reduced-opacity display. */
+function getAutoParkingLayoutRenderEntries(
+  state: ReturnType<typeof useSketchStore.getState>
+): AutoParkingLayoutRenderEntry[] {
+  return state.autoLayouts.map((layout) => {
+    const stale = deriveAutoLayoutStale(layout, {
+      polygons: state.polygons,
+      cadInstances: state.cadInstances,
+      cadImages: state.cadImages,
+      savedCads: state.savedCads,
+    })
+    if (!stale) {
+      return { id: layout.id, features: layout.geometry.features as GeoJSON.Feature[], stale: false }
+    }
+    const currentBoundaryRing = state.polygons.find((p) => p.id === layout.boundaryId)?.points
+    const clipped = currentBoundaryRing
+      ? clipFeaturesToBoundary(layout.geometry, currentBoundaryRing)
+      : layout.geometry;
+    return {
+      id: layout.id,
+      features: clipped.features as GeoJSON.Feature[],
+      stale: true,
+      currentBoundaryRing,
+      previousBoundaryRing: layout.boundarySnapshot,
+    }
+  })
+}
+
+/**
  * Drives the SiteSketcher layers on the *shared* Unified Workspace map. Unlike
  * MapCanvas it does not create the map — it attaches to a provided instance and
  * tears its own layers/handlers back down on unmount so the discovery tools can
@@ -128,7 +223,17 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
   const drawRef = useRef<MapboxDraw | null>(null)
   const parkingDragRef = useRef<{ id: string; moved: boolean } | null>(null)
   const cadDragRef = useRef<{ id: string; moved: boolean } | null>(null)
+  const accessDragRef = useRef<{ moved: boolean } | null>(null)
   const suppressNextMapClickRef = useRef(false)
+  // Throttled (trailing-edge) live-draft-solve scheduling while dragging
+  // boundary/exclusion/access geometry during Auto compare — mirrors
+  // parking-layout-lab's LabMap draw.render throttle.
+  const lastLiveDraftEmitRef = useRef(0)
+  const liveDraftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Set when a polygon is closed to serve as the auto-parking boundary, so the
+  // draw.selectionchange that MapboxDraw fires straight after draw.create does
+  // not select the plot and flip the tool back to 'select' (see draw.create).
+  const completingAutoBoundaryRef = useRef(false)
   const isApplyingDrawUpdateRef = useRef(false)
   const isProgrammaticDrawSyncRef = useRef(false)
   const isUserInteractionRef = useRef(true)
@@ -160,6 +265,14 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
     measurementInProgress,
     frozenMeasurement,
     cadPlacementInProgress,
+    parkingMethod,
+    autoParkingDraft,
+    autoParkingCandidates,
+    autoParkingSelectedCandidateId,
+    autoParkingSolverRun,
+    autoParkingLivePreview,
+    autoLayouts,
+    selectedAutoLayoutId,
     setViewport,
     addPolygon,
     addParkingBlock,
@@ -171,7 +284,97 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
     placeCadImage,
     placeCadInstance,
     cancelCadPlacement,
+    commitAutoParkingAccessAnchor,
+    cancelAutoParkingBoundaryEdit,
+    cancelAutoParkingAccessEdit,
+    setSelectedAutoLayoutId,
   } = useSketchStore()
+
+  const { generate: generateAutoParkingFull, generateDraft: generateAutoParkingDraft } = useAutoParkingWorker()
+
+  /**
+   * Builds the current solver input from committed store state (boundary +
+   * detected exclusions + reprojected access point) for the guided flow's
+   * live re-fit. Returns null when any required input is missing/invalid —
+   * callers should silently skip the solve rather than throw.
+   */
+  const buildLiveAutoParkingInput = useCallback((accessPointOverride?: [number, number]) => {
+    const state = useSketchStore.getState()
+    const draft = state.autoParkingDraft
+    if (!draft.boundaryId || !draft.accessAnchor) return null
+
+    // Read boundary/exclusion geometry from Draw's LIVE buffer where a feature
+    // is currently loaded (mid-drag), falling back to committed store state —
+    // draw.render fires before the corresponding draw.update commits it.
+    const liveById = new Map((drawRef.current?.getAll().features ?? []).map((f) => [String(f.id), f]))
+    const liveRingFor = (id: string, fallback: [number, number][]): [number, number][] => {
+      const live = liveById.get(id)
+      return live && live.geometry.type === 'Polygon'
+        ? (live.geometry.coordinates[0] as [number, number][])
+        : fallback
+    }
+
+    const boundaryPolygon = state.polygons.find((p) => p.id === draft.boundaryId)
+    if (!boundaryPolygon) return null
+    const boundaryRing = liveRingFor(boundaryPolygon.id, boundaryPolygon.points)
+
+    const polygonsForDetection = state.polygons.map((p) => ({ ...p, points: liveRingFor(p.id, p.points) }))
+    const exclusions = detectMandatoryExclusions({
+      boundaryId: draft.boundaryId,
+      boundaryRing,
+      polygons: polygonsForDetection,
+      cadInstances: state.cadInstances,
+      cadImages: state.cadImages,
+      savedCads: state.savedCads,
+    })
+
+    const accessPoint = accessPointOverride ?? reprojectAccessAnchor(draft.accessAnchor, boundaryRing)
+    if (!accessPoint) return null
+
+    return { boundaryRing, exclusions, accessPoint, settings: draft.settings }
+  }, [])
+
+  /** Full, authoritative solve — after draw.update / drag release / a committed settings change. */
+  const refitAutoParkingFull = useCallback((accessPointOverride?: [number, number]) => {
+    const state = useSketchStore.getState()
+    if (state.parkingMethod !== 'auto' || !isAutoParkingLiveRefitActive(state.autoParkingDraft)) return
+    const params = buildLiveAutoParkingInput(accessPointOverride)
+    if (!params) return
+    generateAutoParkingFull(buildSolverInput(params))
+  }, [buildLiveAutoParkingInput, generateAutoParkingFull])
+
+  const emitAutoParkingDraft = useCallback((accessPointOverride?: [number, number]) => {
+    lastLiveDraftEmitRef.current = Date.now()
+    const state = useSketchStore.getState()
+    if (state.parkingMethod !== 'auto' || !isAutoParkingLiveRefitActive(state.autoParkingDraft)) return
+    const params = buildLiveAutoParkingInput(accessPointOverride)
+    if (!params) return
+    const selectedCandidate = state.autoParkingCandidates.find(
+      (c) => c.candidateId === state.autoParkingSelectedCandidateId
+    )
+    generateAutoParkingDraft(
+      buildSolverInput(params),
+      selectedCandidate ? representativeAngle(selectedCandidate.orientationSummary) : undefined
+    )
+  }, [buildLiveAutoParkingInput, generateAutoParkingDraft])
+
+  const LIVE_DRAFT_THROTTLE_MS = 150
+  /** Throttled (trailing-edge) draft-solve scheduling — mirrors parking-layout-lab's LabMap draw.render throttle. */
+  const scheduleAutoParkingDraft = useCallback((accessPointOverride?: [number, number]) => {
+    const since = Date.now() - lastLiveDraftEmitRef.current
+    if (since >= LIVE_DRAFT_THROTTLE_MS) {
+      if (liveDraftTimerRef.current) {
+        clearTimeout(liveDraftTimerRef.current)
+        liveDraftTimerRef.current = null
+      }
+      emitAutoParkingDraft(accessPointOverride)
+    } else if (!liveDraftTimerRef.current) {
+      liveDraftTimerRef.current = setTimeout(() => {
+        liveDraftTimerRef.current = null
+        emitAutoParkingDraft(accessPointOverride)
+      }, LIVE_DRAFT_THROTTLE_MS - since)
+    }
+  }, [emitAutoParkingDraft])
 
   const handleCadMouseDown = useCallback(
     (e: mapboxgl.MapMouseEvent | mapboxgl.MapLayerMouseEvent, cadId: string) => {
@@ -311,6 +514,7 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
 
       setup3DLayer(map)
       setupParkingLayer(map)
+      setupAutoParkingLayer(map)
 
       const initialPolygons = useSketchStore.getState().polygons
       if (initialPolygons.length > 0) {
@@ -332,6 +536,13 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
           return
         }
         e.features.forEach((feature: any) => {
+          const stateBeforeCreate = useSketchStore.getState()
+          const isAutoParkingBoundary =
+            stateBeforeCreate.parkingMethod === 'auto' &&
+            stateBeforeCreate.autoParkingDraft.phase === 'boundary'
+          if (isAutoParkingBoundary) {
+            feature.properties = { ...feature.properties, height: 0 }
+          }
           const polygon = drawFeatureToPolygon(feature)
           const currentPolygons = useSketchStore.getState().polygons
           const existingNames = currentPolygons.map((p) => p.name)
@@ -343,6 +554,19 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
           }
           const colorIndex = useSketchStore.getState().selectedPolygonColorIndex
           addPolygon({ ...polygon, name: newName, colorIndex })
+
+          // Auto layout: a boundary drawn from within the guided flow's
+          // boundary step becomes its site boundary and advances straight to
+          // access placement — the user stays in the Parking tool throughout.
+          if (isAutoParkingBoundary) {
+            completingAutoBoundaryRef.current = true
+            // Mapbox Draw emits draw.create synchronously from the click that
+            // closes the polygon. The shared map's click handler runs later in
+            // that same event dispatch; without suppressing it, the finishing
+            // double-click is immediately reused to place vehicle access.
+            suppressNextMapClickRef.current = true
+            useSketchStore.getState().setAutoParkingBoundary(polygon.id)
+          }
         })
         syncDrawTo3D(map, draw)
       })
@@ -357,6 +581,14 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
           })
         })
         syncDrawTo3D(map, draw)
+        // Committed geometry change (drag released / vertex edit finished) —
+        // cancel any trailing throttled draft so a late tick can't fire after,
+        // and visually undo, the full solve this update is about to trigger.
+        if (liveDraftTimerRef.current) {
+          clearTimeout(liveDraftTimerRef.current)
+          liveDraftTimerRef.current = null
+        }
+        refitAutoParkingFull()
       })
 
       on('draw.delete', (e: any) => {
@@ -368,7 +600,47 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
         syncDrawTo3D(map, draw)
       })
 
+      on('draw.render', () => {
+        const state = useSketchStore.getState()
+        if (state.parkingMethod !== 'auto') return
+        if (!isAutoParkingLiveRefitActive(state.autoParkingDraft)) return
+        scheduleAutoParkingDraft()
+      })
+
+      on('draw.modechange', (e: any) => {
+        // MapboxDraw's own built-in modes (draw_polygon) already cancel an
+        // in-progress shape on Escape and fall back to simple_select — while
+        // the guided flow is still waiting on its boundary step, re-arm
+        // draw_polygon so the user can keep trying rather than getting stuck.
+        const state = useSketchStore.getState()
+        if (
+          state.parkingMethod === 'auto' &&
+          state.autoParkingDraft.phase === 'boundary' &&
+          e.mode === 'simple_select'
+        ) {
+          requestAnimationFrame(() => {
+            if (useSketchStore.getState().autoParkingDraft.phase === 'boundary') {
+              try {
+                draw.changeMode('draw_polygon')
+              } catch {}
+            }
+          })
+        }
+      })
+
       on('draw.selectionchange', (e: any) => {
+        // The plot we just closed to become the auto boundary must not select
+        // itself (which would switch the tool to 'select' and leave auto mode).
+        if (completingAutoBoundaryRef.current) {
+          completingAutoBoundaryRef.current = false
+          return
+        }
+        const state = useSketchStore.getState()
+        // While the guided flow owns direct-select editing of the boundary or
+        // an exclusion polygon (Change / in-compare direct edits), selecting
+        // via Draw must not flip selectedId/selectedType — that belongs to
+        // the Select tool only.
+        if (state.parkingMethod === 'auto' && state.activeTool === 'parking') return
         const selectedId = e.features[0]?.id || null
         if (selectedId) {
           setSelectedId(selectedId, 'polygon')
@@ -424,6 +696,18 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
         handleCadMouseDown(event, cadId)
       })
 
+      on('mousedown', 'auto-parking-access-dot', (event: mapboxgl.MapLayerMouseEvent) => {
+        const state = useSketchStore.getState()
+        if (state.parkingMethod !== 'auto' || !state.autoParkingDraft.accessAnchor) return
+        const { phase } = state.autoParkingDraft
+        if (phase === 'boundary' || phase === 'boundary-edit' || phase === 'generating') return
+        event.preventDefault()
+        accessDragRef.current = { moved: false }
+        suppressNextMapClickRef.current = true
+        map.dragPan.disable()
+        map.getCanvas().style.cursor = 'grabbing'
+      })
+
       on('mousemove', (event: mapboxgl.MapMouseEvent) => {
         handleCadMouseMove(event)
 
@@ -436,7 +720,47 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
           return
         }
 
+        if (accessDragRef.current) {
+          accessDragRef.current.moved = true
+          const state = useSketchStore.getState()
+          const boundary = state.polygons.find((p) => p.id === state.autoParkingDraft.boundaryId)
+          if (boundary) {
+            const snap = snapPointToBoundaryEdge([event.lngLat.lng, event.lngLat.lat], boundary.points)
+            if (snap) {
+              state.setAutoParkingAccessAnchor({ edgeIndex: snap.edgeIndex, distanceAlongEdgeM: snap.distanceAlongEdgeM })
+              syncAutoParkingAccessPointToMap(map, snap.point)
+              scheduleAutoParkingDraft(snap.point)
+            }
+          }
+          return
+        }
+
         const latestState = useSketchStore.getState()
+
+        // Access placement (initial or "Change"): the nearest boundary edge
+        // thickens and a preview marker follows the cursor before commit.
+        if (
+          latestState.activeTool === 'parking' &&
+          latestState.parkingMethod === 'auto' &&
+          ACCESS_INTERACTIVE_PHASES.has(latestState.autoParkingDraft.phase) &&
+          latestState.autoParkingDraft.boundaryId
+        ) {
+          const boundary = latestState.polygons.find((p) => p.id === latestState.autoParkingDraft.boundaryId)
+          if (boundary) {
+            const snap = snapPointToBoundaryEdge([event.lngLat.lng, event.lngLat.lat], boundary.points)
+            if (snap) {
+              const ring = boundary.points
+              const openLen = ring.length > 1 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1] ? ring.length - 1 : ring.length
+              const a = ring[snap.edgeIndex]
+              const b = ring[(snap.edgeIndex + 1) % openLen]
+              syncAutoParkingHoverEdgeToMap(map, [a, b])
+              syncAutoParkingAccessPointToMap(map, snap.point)
+              map.getCanvas().style.cursor = 'pointer'
+            }
+          }
+          return
+        }
+
         if (latestState.activeTool !== 'measure') return
         const measurement = latestState.measurementInProgress
         if (!measurement || measurement.points.length === 0) return
@@ -449,6 +773,30 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
 
       on('mouseup', () => {
         handleCadMouseUp()
+
+        if (accessDragRef.current) {
+          const wasMoved = accessDragRef.current.moved
+          accessDragRef.current = null
+          const isPlacingChangedAccess =
+            !wasMoved && useSketchStore.getState().autoParkingDraft.phase === 'access-edit'
+          // A stationary press on the access marker during "Change" is a
+          // placement click, not a drag. Let the following click handler snap
+          // and commit it; only suppress the synthetic click after a real drag
+          // (or when the marker is not currently being repositioned).
+          suppressNextMapClickRef.current = !isPlacingChangedAccess
+          map.dragPan.enable()
+          map.getCanvas().style.cursor = 'crosshair'
+          if (wasMoved) {
+            const state = useSketchStore.getState()
+            const anchor = state.autoParkingDraft.accessAnchor
+            if (anchor) {
+              state.commitAutoParkingAccessAnchor(anchor)
+              refitAutoParkingFull()
+            }
+          }
+          return
+        }
+
         const dragState = parkingDragRef.current
         if (!dragState) return
         suppressNextMapClickRef.current = true
@@ -481,6 +829,39 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
             placeCadInstance(state.cadPlacementInProgress.savedCadId, anchor)
           } else {
             placeCadImage(state.cadPlacementInProgress as string, anchor)
+          }
+          return
+        }
+
+        if (state.activeTool === 'parking' && state.parkingMethod === 'auto') {
+          // Auto layout: no manual block is ever created while this method is
+          // active — see README.md's interaction priority table.
+          const draft = state.autoParkingDraft
+          if ((draft.phase === 'access' || draft.phase === 'access-edit') && draft.boundaryId) {
+            const boundary = state.polygons.find((p) => p.id === draft.boundaryId)
+            if (boundary) {
+              const snap = snapPointToBoundaryEdge(
+                [event.lngLat.lng, event.lngLat.lat],
+                boundary.points
+              )
+              if (snap) {
+                commitAutoParkingAccessAnchor({ edgeIndex: snap.edgeIndex, distanceAlongEdgeM: snap.distanceAlongEdgeM })
+                refitAutoParkingFull(snap.point)
+              }
+            }
+            return
+          }
+          // Ready / comparing / editing: clicking a boundary or exclusion
+          // polygon's body enters direct vertex editing on it (same
+          // click-to-edit affordance the Select tool offers) so the user can
+          // manipulate boundary/building vertices directly during compare.
+          if (draft.phase === 'ready' || draft.phase === 'compare' || draft.phase === 'editing') {
+            const lngLat: [number, number] = [event.lngLat.lng, event.lngLat.lat]
+            const hitPolygon = state.polygons
+              .filter((polygon) => isPointInPolygon(lngLat, polygon.points))
+              .map((polygon) => ({ polygon, area: getProjectedPolygonArea(map, polygon.points) }))
+              .sort((a, b) => a.area - b.area)[0]?.polygon
+            if (hitPolygon) selectPolygonForVertexEditing(draw, hitPolygon.id)
           }
           return
         }
@@ -551,6 +932,25 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
               if (parkingId) {
                 draw.changeMode('simple_select', { featureIds: [] })
                 latestState.setSelectedId(parkingId, 'parking')
+                return
+              }
+            }
+
+            const autoParkingLayers = ['auto-parking-stall-fill', 'auto-parking-aisle-fill'].filter(
+              (layerId) => map.getLayer(layerId)
+            )
+            if (autoParkingLayers.length > 0) {
+              const autoParkingFeatures = map.queryRenderedFeatures(
+                [
+                  [point.x - 4, point.y - 4],
+                  [point.x + 4, point.y + 4],
+                ],
+                { layers: autoParkingLayers }
+              )
+              const autoLayoutId = autoParkingFeatures[0]?.properties?.autoLayoutId
+              if (autoLayoutId) {
+                draw.changeMode('simple_select', { featureIds: [] })
+                latestState.setSelectedAutoLayoutId(autoLayoutId)
                 return
               }
             }
@@ -660,6 +1060,17 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
       const is3D = useSketchStore.getState().view === '3d'
       setup3DLayer(map)
       setupParkingLayer(map)
+      setupAutoParkingLayer(map)
+      {
+        const s = useSketchStore.getState()
+        syncAutoParkingAccessPointToMap(map, resolveAutoParkingAccessPoint(s))
+        syncAutoParkingLayoutsToMap(
+          map,
+          getAutoParkingLayoutRenderEntries(s),
+          s.selectedAutoLayoutId,
+          getAutoParkingPreviewGeometry(s)
+        )
+      }
 
       const currentCadImages = useSketchStore.getState().cadImages
       currentCadImages.forEach((cadImage) => {
@@ -706,8 +1117,16 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
   useEffect(() => {
     if (mapRef.current && drawRef.current && isLoaded) {
       const map = mapRef.current
-      if (activeTool === 'polygon') {
+      // The Auto parking flow draws its site boundary while the Parking tool
+      // stays active, so drive draw mode off the draft phase too, not just
+      // the Polygon tool; "Change" on a completed boundary card enters
+      // direct vertex editing on that same polygon.
+      const drawingAutoBoundary = parkingMethod === 'auto' && autoParkingDraft.phase === 'boundary'
+      const editingAutoBoundary = parkingMethod === 'auto' && autoParkingDraft.phase === 'boundary-edit'
+      if (activeTool === 'polygon' || drawingAutoBoundary) {
         enterPolygonDrawMode(drawRef.current, mapRef.current)
+      } else if (editingAutoBoundary && autoParkingDraft.boundaryId) {
+        selectPolygonForVertexEditing(drawRef.current, autoParkingDraft.boundaryId)
       } else if (activeTool === 'select') {
         if (selectedId && selectedType === 'polygon') {
           selectPolygonForVertexEditing(drawRef.current, selectedId)
@@ -718,13 +1137,29 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
         drawRef.current.changeMode('simple_select')
       }
 
-      if (activeTool === 'measure' || activeTool === 'parking' || cadPlacementInProgress) {
+      const autoAccessPlacement = parkingMethod === 'auto' && ACCESS_INTERACTIVE_PHASES.has(autoParkingDraft.phase)
+      if (
+        activeTool === 'measure' ||
+        activeTool === 'parking' ||
+        drawingAutoBoundary ||
+        autoAccessPlacement ||
+        cadPlacementInProgress
+      ) {
         map.getCanvas().style.cursor = 'crosshair'
       } else {
         map.getCanvas().style.cursor = ''
       }
     }
-  }, [activeTool, selectedId, selectedType, isLoaded, cadPlacementInProgress])
+  }, [
+    activeTool,
+    selectedId,
+    selectedType,
+    isLoaded,
+    cadPlacementInProgress,
+    parkingMethod,
+    autoParkingDraft.phase,
+    autoParkingDraft.boundaryId,
+  ])
 
   // Sync polygon geometry changes from store back to Draw.
   useEffect(() => {
@@ -753,6 +1188,46 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
       syncParkingToMap(mapRef.current, parkingBlocks, selectedId)
     }
   }, [parkingBlocks, selectedId, isLoaded])
+
+  // Sync the Auto layout draft's access-point marker (resolved from its
+  // edge-relative anchor against the current boundary ring, so it stays
+  // pinned as the boundary is reshaped).
+  useEffect(() => {
+    if (!mapRef.current || !isLoaded) return
+    syncAutoParkingAccessPointToMap(mapRef.current, resolveAutoParkingAccessPoint(useSketchStore.getState()))
+  }, [parkingMethod, autoParkingDraft.accessAnchor, autoParkingDraft.boundaryId, polygons, isLoaded])
+
+  // Clear the hover-edge affordance whenever access placement isn't active.
+  useEffect(() => {
+    if (!mapRef.current || !isLoaded) return
+    if (!(parkingMethod === 'auto' && ACCESS_INTERACTIVE_PHASES.has(autoParkingDraft.phase))) {
+      syncAutoParkingHoverEdgeToMap(mapRef.current, null)
+    }
+  }, [parkingMethod, autoParkingDraft.phase, isLoaded])
+
+  // Sync applied auto-parking layouts (bays/aisles/corridor, stale opacity +
+  // clip + amber boundary overlay) + selection, plus the transient candidate
+  // preview / live draft preview while the user is comparing/editing.
+  useEffect(() => {
+    if (!mapRef.current || !isLoaded) return
+    const state = useSketchStore.getState()
+    const preview = getAutoParkingPreviewGeometry(state)
+    syncAutoParkingLayoutsToMap(mapRef.current, getAutoParkingLayoutRenderEntries(state), selectedAutoLayoutId, preview)
+  }, [
+    autoLayouts,
+    selectedAutoLayoutId,
+    isLoaded,
+    parkingMethod,
+    polygons,
+    cadInstances,
+    cadImages,
+    savedCads,
+    autoParkingDraft.phase,
+    autoParkingCandidates,
+    autoParkingSelectedCandidateId,
+    autoParkingSolverRun,
+    autoParkingLivePreview,
+  ])
 
   // Sync CAD images with map
   useEffect(() => {
@@ -892,11 +1367,36 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [cadPlacementInProgress, cancelCadPlacement])
 
+  // Escape during the guided Auto flow's boundary-edit / access-edit
+  // sub-modes restores the pre-edit geometry and exits editing. Boundary
+  // draw's own Escape-to-cancel is handled natively by MapboxDraw + the
+  // draw.modechange re-arm above; the very first access placement (phase
+  // 'access', nothing to restore yet) has no Escape behaviour to define.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      const state = useSketchStore.getState()
+      if (state.parkingMethod !== 'auto') return
+      const { phase } = state.autoParkingDraft
+      if (phase === 'boundary-edit') {
+        cancelAutoParkingBoundaryEdit()
+        try {
+          drawRef.current?.changeMode('simple_select')
+        } catch {}
+      } else if (phase === 'access-edit') {
+        cancelAutoParkingAccessEdit()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [cancelAutoParkingBoundaryEdit, cancelAutoParkingAccessEdit])
+
   return (
     <>
       {isLoaded && <PolygonLabels />}
       {isLoaded && (measurementInProgress || frozenMeasurement) && <MeasurementOverlay />}
       {isLoaded && <PolygonDrawPreviewOverlay />}
+      {isLoaded && <AutoParkingOverlays />}
       <div className={`view-3d-vignette ${view === '3d' ? 'view-3d' : ''}`} />
     </>
   )

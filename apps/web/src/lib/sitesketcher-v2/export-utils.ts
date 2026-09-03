@@ -1,5 +1,5 @@
 import { calculateArea } from './polygon-utils';
-import type { Polygon, ParkingBlock } from '@/types/sitesketcher-v2';
+import type { AutoParkingLayout, Polygon, ParkingBlock } from '@/types/sitesketcher-v2';
 
 /**
  * Export sketch as JSON file
@@ -56,6 +56,21 @@ export function exportCSV(sketch: any) {
         '',
         parking.spaces.toString(),
         `${parking.layout} / ${parking.stallSize}`,
+      ]);
+    });
+  }
+
+  // Add applied auto-parking layouts
+  if (sketch.data.autoLayouts) {
+    sketch.data.autoLayouts.forEach((layout: AutoParkingLayout) => {
+      rows.push([
+        'Auto parking layout',
+        layout.name,
+        '',
+        '',
+        '',
+        layout.metrics.totalSpaces.toString(),
+        `${layout.metrics.rows} rows · ${layout.metrics.accessible} accessible · concept`,
       ]);
     });
   }
@@ -150,6 +165,20 @@ export async function exportPDF(map: mapboxgl.Map, sketch: any) {
       sketch.data.parkingBlocks.forEach((parking: ParkingBlock) => {
         doc.text(
           `  • ${parking.name}: ${parking.spaces} spaces (${parking.layout})`,
+          15,
+          y
+        );
+        y += 5;
+      });
+      y += 3;
+    }
+
+    if (sketch.data.autoLayouts && sketch.data.autoLayouts.length > 0) {
+      doc.text(`Auto Parking Layouts (${sketch.data.autoLayouts.length}):`, 10, y);
+      y += 7;
+      sketch.data.autoLayouts.forEach((layout: AutoParkingLayout) => {
+        doc.text(
+          `  • ${layout.name}: ${layout.metrics.totalSpaces} spaces (${layout.metrics.rows} rows, ${layout.metrics.accessible} accessible) — concept`,
           15,
           y
         );

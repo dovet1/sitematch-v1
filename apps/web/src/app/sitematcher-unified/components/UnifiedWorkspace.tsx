@@ -138,10 +138,18 @@ export function UnifiedWorkspace() {
           e.preventDefault()
           store.setActiveTool('measure')
           break
-        case 'escape':
-          store.setActiveTool('select')
+        case 'escape': {
+          // The guided Auto flow's own map-interaction cancel (boundary draw,
+          // boundary-edit, access placement/edit) is handled by SketchLayer —
+          // it must not also be blown out of the Parking tool here.
+          const autoInteractivePhases = new Set(['boundary', 'boundary-edit', 'access', 'access-edit'])
+          const inAutoInteraction =
+            store.parkingMethod === 'auto' && autoInteractivePhases.has(store.autoParkingDraft.phase)
+          if (!inAutoInteraction) store.setActiveTool('select')
           store.cancelMeasurement()
+          if (store.selectedAutoLayoutId) store.setSelectedAutoLayoutId(null)
           break
+        }
         case 'enter':
           if (store.activeTool === 'measure' && store.measurementInProgress) {
             e.preventDefault()
@@ -157,7 +165,10 @@ export function UnifiedWorkspace() {
           break
         case 'delete':
         case 'backspace':
-          if (store.selectedId) {
+          if (store.selectedAutoLayoutId) {
+            e.preventDefault()
+            store.deleteAutoLayout(store.selectedAutoLayoutId)
+          } else if (store.selectedId) {
             e.preventDefault()
             if (store.selectedType === 'polygon') store.deletePolygon(store.selectedId)
             else if (store.selectedType === 'parking') store.deleteParkingBlock(store.selectedId)

@@ -36,3 +36,12 @@ export const FIND_SITES_FLAG = 'find_sites_enabled'
 export function isFindSitesEnabled(): Promise<boolean> {
   return isFeatureEnabled(FIND_SITES_FLAG)
 }
+
+// Auto parking (SiteMatcher unified workspace, Sketch tool). Off by default until
+// the full vertical flow (through apply + persistence) is done — see
+// docs/design_handoff_auto_parking/INTEGRATION_PLAN.md §8.
+export const AUTO_PARKING_FLAG = 'auto_parking_enabled'
+
+export function isAutoParkingEnabled(): Promise<boolean> {
+  return isFeatureEnabled(AUTO_PARKING_FLAG)
+}

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
-import { hasProAccess } from '@/lib/subscription-utils';
+import { hasProAccess, hasPlusAccess } from '@/lib/subscription-utils';
+import { sanitizeSketchForUser, validateAutoLayouts } from '@/lib/sitesketcher-v2/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const isPlus = await hasPlusAccess(user.id);
     const supabase = await createServerClient();
 
     // Fetch v2 sketches only ordered by most recently updated
@@ -44,7 +46,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ sketches });
+    // This list `select('*')` is otherwise unsanitized — strip CAD/auto-parking
+    // data for a non-Plus viewer here too (the stored rows keep it for
+    // re-upgrade; only the response is filtered).
+    const sanitizedSketches = (sketches || []).map((sketch) => ({
+      ...sketch,
+      data: sanitizeSketchForUser(sketch.data, isPlus),
+    }));
+
+    return NextResponse.json({ sketches: sanitizedSketches });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
@@ -75,6 +85,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const isPlus = await hasPlusAccess(user.id);
     const supabase = await createServerClient();
     const body = await request.json();
     const { name, description, data, thumbnail_url, location } = body;
@@ -110,6 +121,18 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
+    // Auto parking: Plus-only, plus payload bounds regardless of tier.
+    const autoLayoutsValidation = validateAutoLayouts(v2Data.autoLayouts, isPlus);
+    if (!autoLayoutsValidation.isValid) {
+      return NextResponse.json(
+        { error: autoLayoutsValidation.errors[0] },
+        { status: 403 }
+      );
+    }
+    // Presence can't be the gate (clients routinely send `[]`); normalise
+    // omitted -> [] only after the entitlement check above has run.
+    v2Data.autoLayouts = v2Data.autoLayouts ?? [];
 
     // Insert new sketch
     const { data: sketch, error } = await supabase
