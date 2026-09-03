@@ -61,14 +61,23 @@ export function AutoParkingOverlays() {
         </div>
       )}
 
+      {parkingMethod === 'auto' && (phase === 'entrance' || phase === 'entrance-edit') && (
+        <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-[#231F2B] px-4 py-2 text-[12.5px] font-medium text-white shadow-[0_4px_12px_rgba(20,16,10,0.14)]">
+          <span className="h-2 w-2 rounded-full bg-[#2FA37A]" />
+          Placing entrance <span className="text-white/60">snaps to the nearest wall</span>
+        </div>
+      )}
+
       {comparing && candidates.length > 0 && (
         <div className="absolute bottom-4 left-4 rounded-xl bg-white/95 px-3.5 py-3 text-[11.5px] shadow-[0_4px_12px_rgba(20,16,10,0.14)]">
           <div className="mb-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3">Legend</div>
           <div className="flex flex-col gap-1">
             <LegendRow swatch={<span className="h-2.5 w-3.5 rounded-[2px] border border-sm-violet bg-white" />} label="Parking bays" />
             <LegendRow swatch={<span className="h-2.5 w-3.5 rounded-[2px] bg-[#3B3742]" />} label="Circulation aisle" />
-            <LegendRow swatch={<span className="h-2.5 w-3.5 rounded-[2px] border border-dashed border-sm-ink3 bg-[#26242A]" />} label="Obstacle · avoided" />
+            <LegendRow swatch={<span className="h-2.5 w-3.5 rounded-[2px] border border-dashed border-sm-ink3 bg-[#26242A]" />} label="Building · avoided" />
             <LegendRow swatch={<span className="h-2.5 w-2.5 rounded-full bg-sm-violet" />} label="Vehicle access" />
+            <LegendRow swatch={<span className="h-2.5 w-2.5 rounded-full bg-[#2FA37A]" />} label="Building entrance" />
+            <LegendRow swatch={<span className="h-2.5 w-3.5 rounded-[2px] border border-dashed border-[#2FA37A]" />} label="Accessible bays near entrance" />
           </div>
         </div>
       )}

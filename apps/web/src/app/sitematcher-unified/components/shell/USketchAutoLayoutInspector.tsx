@@ -107,7 +107,7 @@ export function USketchAutoLayoutInspector({ layoutId }: { layoutId: string }) {
         />
         <PropertyRow label="Aisle width" value={`${layout.settingsSnapshot.aisleWidth} m`} />
         <PropertyRow label="Boundary setback" value={`${layout.settingsSnapshot.boundarySetback} m`} />
-        <PropertyRow label="Obstacles avoided" value={`${layout.exclusionRefs.length}`} />
+        <PropertyRow label="Buildings avoided" value={`${layout.exclusionRefs.length}`} />
       </dl>
 
       {layout.warnings.length > 0 && (

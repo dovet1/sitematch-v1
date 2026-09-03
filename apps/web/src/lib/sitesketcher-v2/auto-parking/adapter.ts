@@ -20,7 +20,7 @@ import type {
   SolverOutput,
   Vehicle,
 } from '@/lib/parking-layout-lab/types';
-import type { AutoParkingLayout } from '@/types/sitesketcher-v2';
+import type { AutoParkingEntrance, AutoParkingLayout } from '@/types/sitesketcher-v2';
 import type { DetectedExclusion } from './detection';
 import { computeSourceHash } from './hash';
 import { filterLayoutFeatures } from './geojson';
@@ -43,12 +43,13 @@ export interface BuildSolverInputParams {
   boundaryRing: LngLat[];
   exclusions: DetectedExclusion[];
   accessPoint: LngLat;
+  entrancePoint?: LngLat;
   settings: AutoParkingLayout['settingsSnapshot'];
 }
 
 /** Builds the solver's input from the current draft — the "generate" action. */
 export function buildSolverInput(params: BuildSolverInputParams): SolverInput {
-  const { boundaryRing, exclusions, accessPoint, settings } = params;
+  const { boundaryRing, exclusions, accessPoint, entrancePoint, settings } = params;
   const stall = PARKING_DIMENSIONS[settings.stallSize];
 
   const input: SolverInput = {
@@ -74,6 +75,7 @@ export function buildSolverInput(params: BuildSolverInputParams): SolverInput {
     input.accessible = {
       rate: settings.accessibleBays.percent / 100,
       bay: DEFAULT_AUTO_PARKING_ACCESSIBLE_BAY,
+      ...(entrancePoint ? { anchorPoint: entrancePoint } : {}),
     };
   }
 
@@ -109,6 +111,8 @@ export interface BuildAutoParkingLayoutParams {
   name: string;
   boundaryId: string;
   exclusions: DetectedExclusion[];
+  entrance?: AutoParkingEntrance;
+  entrancePoint?: LngLat;
   settingsSnapshot: AutoParkingLayout['settingsSnapshot'];
   solverInput: SolverInput;
   solverOutput: SolverOutput;
@@ -123,6 +127,8 @@ export function buildAutoParkingLayout(params: BuildAutoParkingLayoutParams): Au
     name,
     boundaryId,
     exclusions,
+    entrance,
+    entrancePoint,
     settingsSnapshot,
     solverInput,
     solverOutput,
@@ -143,6 +149,7 @@ export function buildAutoParkingLayout(params: BuildAutoParkingLayoutParams): Au
     boundaryRing: solverInput.boundary.ring,
     exclusions,
     accessPoint: solverOutput.snappedAccessPoint,
+    ...(entrance && entrancePoint ? { entrance: { anchor: entrance, point: entrancePoint } } : {}),
     settingsSnapshot,
   });
 
@@ -151,8 +158,9 @@ export function buildAutoParkingLayout(params: BuildAutoParkingLayoutParams): Au
     name,
     geometrySchemaVersion: 1,
     boundaryId,
-    exclusionRefs: exclusions.map((e) => ({ id: e.id, kind: e.kind })),
+    exclusionRefs: exclusions.map((e) => ({ id: e.id, kind: e.kind, ...(e.source ? { source: e.source } : {}) })),
     accessPoint: solverOutput.snappedAccessPoint,
+    ...(entrance ? { entrance } : {}),
     boundarySnapshot: solverInput.boundary.ring,
     settingsSnapshot,
     geometry,

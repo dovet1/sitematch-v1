@@ -142,7 +142,15 @@ export function UnifiedWorkspace() {
           // The guided Auto flow's own map-interaction cancel (boundary draw,
           // boundary-edit, access placement/edit) is handled by SketchLayer —
           // it must not also be blown out of the Parking tool here.
-          const autoInteractivePhases = new Set(['boundary', 'boundary-edit', 'access', 'access-edit'])
+          const autoInteractivePhases = new Set([
+            'boundary',
+            'boundary-edit',
+            'buildings',
+            'entrance',
+            'entrance-edit',
+            'access',
+            'access-edit',
+          ])
           const inAutoInteraction =
             store.parkingMethod === 'auto' && autoInteractivePhases.has(store.autoParkingDraft.phase)
           if (!inAutoInteraction) store.setActiveTool('select')

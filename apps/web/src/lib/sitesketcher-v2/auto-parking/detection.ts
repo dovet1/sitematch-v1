@@ -13,7 +13,13 @@
  */
 
 import { calculateCadImageCorners } from '../cad-utils';
-import type { CadImage, CadInstance, Polygon, SavedCad } from '@/types/sitesketcher-v2';
+import type {
+  AutoParkingExclusionRef,
+  CadImage,
+  CadInstance,
+  Polygon,
+  SavedCad,
+} from '@/types/sitesketcher-v2';
 import type { LngLat } from '@/lib/parking-layout-lab/types';
 import {
   createProjection,
@@ -31,6 +37,7 @@ const TOUCH_TOLERANCE_M = 0.02;
 export interface DetectedExclusion {
   id: string;
   kind: 'polygon' | 'cadInstance' | 'cadImage';
+  source?: 'drawn' | 'selected' | 'mandatory';
   /** [lng, lat] ring, open or closed (both accepted). */
   ring: LngLat[];
 }
@@ -79,6 +86,77 @@ export function detectMandatoryExclusions(input: DetectionInput): DetectedExclus
   }
 
   return out;
+}
+
+/**
+ * The new guided flow makes polygon buildings explicit, but placed CAD keeps
+ * its existing safety behaviour: every intersecting CAD footprint is always
+ * avoided and cannot be unmarked in the Buildings step.
+ */
+export function detectMandatoryCadExclusions(input: DetectionInput): DetectedExclusion[] {
+  const { boundaryRing, cadInstances, cadImages, savedCads } = input;
+  const out: DetectedExclusion[] = [];
+
+  for (const instance of cadInstances) {
+    const savedCad = savedCads.find((cad) => cad.id === instance.savedCadId);
+    if (!savedCad) continue;
+    const ring = cadQuad(instance, savedCad);
+    if (ringsIntersect(boundaryRing, ring)) {
+      out.push({ id: instance.id, kind: 'cadInstance', ring, source: 'mandatory' });
+    }
+  }
+
+  for (const cadImage of cadImages) {
+    if (cadImage.anchor === null) continue;
+    const ring = cadQuad(cadImage);
+    if (ringsIntersect(boundaryRing, ring)) {
+      out.push({ id: cadImage.id, kind: 'cadImage', ring, source: 'mandatory' });
+    }
+  }
+
+  return out;
+}
+
+export interface ResolvedSelectedExclusions {
+  exclusions: DetectedExclusion[];
+  missingRefs: AutoParkingExclusionRef[];
+}
+
+/** Resolve only the polygon refs explicitly chosen by the user. */
+export function resolveSelectedBuildingExclusions(
+  refs: AutoParkingExclusionRef[],
+  polygons: Polygon[],
+): ResolvedSelectedExclusions {
+  const exclusions: DetectedExclusion[] = [];
+  const missingRefs: AutoParkingExclusionRef[] = [];
+
+  for (const ref of refs) {
+    if (ref.kind !== 'polygon') continue;
+    const polygon = polygons.find((candidate) => candidate.id === ref.id);
+    if (!polygon || polygon.points.length < 3) {
+      missingRefs.push(ref);
+      continue;
+    }
+    exclusions.push({
+      id: polygon.id,
+      kind: 'polygon',
+      ring: polygon.points,
+      source: ref.source === 'drawn' ? 'drawn' : 'selected',
+    });
+  }
+
+  return { exclusions, missingRefs };
+}
+
+/** Explicit polygon buildings plus the mandatory intersecting CAD set. */
+export function resolveGuidedExclusions(
+  input: DetectionInput & { buildingRefs: AutoParkingExclusionRef[] },
+): ResolvedSelectedExclusions {
+  const selected = resolveSelectedBuildingExclusions(input.buildingRefs, input.polygons);
+  return {
+    exclusions: [...selected.exclusions, ...detectMandatoryCadExclusions(input)],
+    missingRefs: selected.missingRefs,
+  };
 }
 
 function cadQuad(item: CadImage | CadInstance, savedCad?: SavedCad): LngLat[] {

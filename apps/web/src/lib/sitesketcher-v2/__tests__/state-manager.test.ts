@@ -317,7 +317,7 @@ describe('SiteSketcher v2 auto parking — parkingMethod persistence', () => {
     expect(state.autoParkingSolverRun).toBeNull();
   });
 
-  it('setAutoParkingBoundary advances the phase to access and clears any prior access anchor / candidates', () => {
+  it('setAutoParkingBoundary advances to buildings and clears prior guided inputs / candidates', () => {
     useSketchStore.getState().commitAutoParkingAccessAnchor({ edgeIndex: 0, distanceAlongEdgeM: 1 });
     useSketchStore.getState().setAutoParkingCandidates([], { input: {} as any, output: {} as any });
 
@@ -325,13 +325,17 @@ describe('SiteSketcher v2 auto parking — parkingMethod persistence', () => {
 
     const state = useSketchStore.getState();
     expect(state.autoParkingDraft.boundaryId).toBe('polygon-1');
-    expect(state.autoParkingDraft.phase).toBe('access');
+    expect(state.autoParkingDraft.phase).toBe('buildings');
+    expect(state.autoParkingDraft.buildingRefs).toEqual([]);
+    expect(state.autoParkingDraft.entrance).toBeNull();
     expect(state.autoParkingDraft.accessAnchor).toBeNull();
     expect(state.autoParkingSolverRun).toBeNull();
   });
 
   it('commitAutoParkingAccessAnchor advances phase from access to ready', () => {
     useSketchStore.getState().setAutoParkingBoundary('polygon-1');
+    useSketchStore.getState().continueAutoParkingBuildings();
+    useSketchStore.getState().commitAutoParkingEntrance({ kind: 'target', point: [0.5, 0.5] });
     useSketchStore.getState().commitAutoParkingAccessAnchor({ edgeIndex: 0, distanceAlongEdgeM: 5 });
 
     const state = useSketchStore.getState();
@@ -342,6 +346,8 @@ describe('SiteSketcher v2 auto parking — parkingMethod persistence', () => {
   it('boundary-edit: commit checks access-anchor validity and restores phaseBeforeEdit', () => {
     useSketchStore.getState().setPolygons([polygon]);
     useSketchStore.getState().setAutoParkingBoundary('polygon-1');
+    useSketchStore.getState().continueAutoParkingBuildings();
+    useSketchStore.getState().commitAutoParkingEntrance({ kind: 'target', point: [0.5, 0.5] });
     useSketchStore.getState().commitAutoParkingAccessAnchor({ edgeIndex: 0, distanceAlongEdgeM: 5 });
     expect(useSketchStore.getState().autoParkingDraft.phase).toBe('ready');
 
@@ -365,7 +371,32 @@ describe('SiteSketcher v2 auto parking — parkingMethod persistence', () => {
 
     const state = useSketchStore.getState();
     expect(state.polygons[0].points).toEqual(polygon.points);
-    expect(state.autoParkingDraft.phase).toBe('access');
+    expect(state.autoParkingDraft.phase).toBe('buildings');
+  });
+
+  it('supports the optional buildings step and persists drawn/selected provenance in the draft', () => {
+    useSketchStore.getState().setPolygons([polygon]);
+    useSketchStore.getState().setAutoParkingBoundary('boundary-1');
+    useSketchStore.getState().toggleAutoParkingBuilding('polygon-1', 'drawn');
+    expect(useSketchStore.getState().autoParkingDraft.buildingRefs).toEqual([
+      { id: 'polygon-1', kind: 'polygon', source: 'drawn' },
+    ]);
+    useSketchStore.getState().continueAutoParkingBuildings();
+    expect(useSketchStore.getState().autoParkingDraft.phase).toBe('entrance');
+  });
+
+  it('unmarking an entrance building clears the entrance but leaves the polygon intact', () => {
+    useSketchStore.getState().setPolygons([polygon]);
+    useSketchStore.getState().setAutoParkingBoundary('boundary-1');
+    useSketchStore.getState().toggleAutoParkingBuilding('polygon-1', 'selected');
+    useSketchStore.getState().continueAutoParkingBuildings();
+    useSketchStore.getState().commitAutoParkingEntrance({
+      kind: 'building', buildingId: 'polygon-1', edgeIndex: 0, distanceAlongEdgeM: 2,
+    });
+    useSketchStore.getState().startAutoParkingBuildingsEdit();
+    useSketchStore.getState().toggleAutoParkingBuilding('polygon-1', 'selected');
+    expect(useSketchStore.getState().autoParkingDraft.entrance).toBeNull();
+    expect(useSketchStore.getState().polygons).toEqual([polygon]);
   });
 
   it('finishPolygonDrawing while in auto mode makes the new plot the boundary and returns to the Parking tool', () => {
@@ -414,6 +445,17 @@ describe('SiteSketcher v2 auto parking — applied layout CRUD + selection', () 
       })
     ).not.toThrow();
     expect(useSketchStore.getState().autoLayouts).toEqual([]);
+  });
+
+  it('legacy regenerate pauses at entrance and keeps the one-shot generation pending', () => {
+    useSketchStore.getState().setPolygons([polygon]);
+    useSketchStore.getState().enterAutoParkingEditor(autoLayout);
+    expect(useSketchStore.getState().autoParkingDraft.phase).toBe('entrance');
+    expect(useSketchStore.getState().autoParkingDraft.pendingAutoGenerate).toBe(true);
+
+    useSketchStore.getState().commitAutoParkingEntrance({ kind: 'target', point: [0.5, 0.5] });
+    expect(useSketchStore.getState().autoParkingDraft.phase).toBe('ready');
+    expect(useSketchStore.getState().autoParkingDraft.pendingAutoGenerate).toBe(true);
   });
 
   it('deleteAutoLayout removes it and clears its selection', () => {

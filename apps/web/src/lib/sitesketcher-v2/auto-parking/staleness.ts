@@ -8,7 +8,8 @@
  */
 
 import type { AutoParkingLayout, CadImage, CadInstance, Polygon, SavedCad } from '@/types/sitesketcher-v2';
-import { detectMandatoryExclusions } from './detection';
+import { detectMandatoryExclusions, resolveGuidedExclusions } from './detection';
+import { resolveEntrance } from './entrance-point';
 import { isLayoutStale } from './hash';
 
 export interface StalenessSceneInput {
@@ -28,19 +29,42 @@ export function deriveAutoLayoutStale(layout: AutoParkingLayout, scene: Stalenes
   const boundaryPolygon = scene.polygons.find((p) => p.id === layout.boundaryId);
   if (!boundaryPolygon) return true; // the boundary itself was deleted
 
-  const exclusions = detectMandatoryExclusions({
+  const detectionInput = {
     boundaryId: boundaryPolygon.id,
     boundaryRing: boundaryPolygon.points,
     polygons: scene.polygons,
     cadInstances: scene.cadInstances,
     cadImages: scene.cadImages,
     savedCads: scene.savedCads,
+  };
+
+  // Layouts saved before the entrance/building-picking flow retain the exact
+  // v1 mandatory-detection contract until they are explicitly regenerated.
+  if (!layout.entrance) {
+    const exclusions = detectMandatoryExclusions(detectionInput);
+    return isLayoutStale(layout, {
+      boundaryRing: boundaryPolygon.points,
+      exclusions,
+      accessPoint: layout.accessPoint,
+      settingsSnapshot: layout.settingsSnapshot,
+    });
+  }
+
+  const resolved = resolveGuidedExclusions({
+    ...detectionInput,
+    buildingRefs: layout.exclusionRefs.filter((ref) => ref.kind === 'polygon'),
   });
+  // An explicitly selected building is provenance, not a hint. Deletion must
+  // mark the reviewed layout stale rather than silently dropping the blocker.
+  if (resolved.missingRefs.length > 0) return true;
+  const entrancePoint = resolveEntrance(layout.entrance, scene.polygons);
+  if (!entrancePoint) return true;
 
   return isLayoutStale(layout, {
     boundaryRing: boundaryPolygon.points,
-    exclusions,
+    exclusions: resolved.exclusions,
     accessPoint: layout.accessPoint,
+    entrance: { anchor: layout.entrance, point: entrancePoint },
     settingsSnapshot: layout.settingsSnapshot,
   });
 }

@@ -810,6 +810,26 @@ describe('parking-layout-lab solver — M2', () => {
     }
   });
 
+  it('uses the accessible anchor independently of vehicle access', () => {
+    const policy = { rate: 0.1, bay: { width: 3.6, length: 4.8, sharedAccessWidth: 1.2 } };
+    const left = solveParkingLayout(baseInput({
+      boundary: rect(80, 60),
+      accessPoint: m(40, 0),
+      accessible: { ...policy, anchorPoint: m(5, 55) },
+    }));
+    const right = solveParkingLayout(baseInput({
+      boundary: rect(80, 60),
+      accessPoint: m(40, 0),
+      accessible: { ...policy, anchorPoint: m(75, 55) },
+    }));
+    const meanAccessibleX = (candidate: CandidateLayout) => {
+      const stalls = allStalls(candidate).filter((stall) => stall.accessible);
+      return stalls.reduce((sum, stall) => sum + toM(stall.center)[0], 0) / stalls.length;
+    };
+    expect(meanAccessibleX(left.candidates[0])).toBeLessThan(meanAccessibleX(right.candidates[0]));
+    expect(left.snappedAccessPoint).toEqual(right.snappedAccessPoint);
+  });
+
   it('omitting `accessible` never marks a stall accessible', () => {
     const out = solveParkingLayout(baseInput());
     for (const c of out.candidates) {

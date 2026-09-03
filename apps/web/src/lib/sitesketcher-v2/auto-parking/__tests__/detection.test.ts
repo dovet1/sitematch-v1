@@ -1,4 +1,9 @@
-import { detectMandatoryExclusions, ringsIntersect } from '../detection';
+import {
+  detectMandatoryCadExclusions,
+  detectMandatoryExclusions,
+  resolveGuidedExclusions,
+  ringsIntersect,
+} from '../detection';
 import type { CadInstance, Polygon, SavedCad } from '@/types/sitesketcher-v2';
 import type { LngLat } from '@/lib/parking-layout-lab/types';
 
@@ -119,6 +124,10 @@ describe('detectMandatoryExclusions', () => {
     });
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ id: 'inst-1', kind: 'cadInstance' });
+    const mandatory = detectMandatoryCadExclusions({
+      boundaryId: 'boundary', boundaryRing: boundary, polygons: [], cadInstances: [instance], cadImages: [], savedCads: [savedCad],
+    });
+    expect(mandatory[0]).toMatchObject({ id: 'inst-1', kind: 'cadInstance', source: 'mandatory' });
   });
 
   it('skips a CAD instance whose SavedCad is missing (can\'t compute a quad)', () => {
@@ -140,5 +149,24 @@ describe('detectMandatoryExclusions', () => {
       savedCads: [],
     });
     expect(result).toEqual([]);
+  });
+
+  it('guided resolution includes only selected polygons and reports missing refs', () => {
+    const selected = polygon('selected', rect(5, 5, 5, 5));
+    const unselected = polygon('unselected', rect(15, 5, 5, 5));
+    const result = resolveGuidedExclusions({
+      boundaryId: 'boundary',
+      boundaryRing: boundary,
+      buildingRefs: [
+        { id: 'selected', kind: 'polygon', source: 'drawn' },
+        { id: 'missing', kind: 'polygon', source: 'selected' },
+      ],
+      polygons: [selected, unselected],
+      cadInstances: [],
+      cadImages: [],
+      savedCads: [],
+    });
+    expect(result.exclusions).toEqual([{ id: 'selected', kind: 'polygon', source: 'drawn', ring: selected.points }]);
+    expect(result.missingRefs).toEqual([{ id: 'missing', kind: 'polygon', source: 'selected' }]);
   });
 });

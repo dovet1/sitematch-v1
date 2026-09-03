@@ -80,6 +80,17 @@ describe('computeSourceHash', () => {
     expect(a).not.toBe(b);
   });
 
+  it('uses a v2 hash and changes when the building entrance moves', () => {
+    const entrance = { anchor: { kind: 'target' as const, point: [-1.0794, 51.2804] as LngLat }, point: [-1.0794, 51.2804] as LngLat };
+    const a = computeSourceHash({ ...baseInput(), entrance });
+    const b = computeSourceHash({
+      ...baseInput(),
+      entrance: { anchor: { kind: 'target', point: [-1.0793, 51.2804] }, point: [-1.0793, 51.2804] },
+    });
+    expect(a.startsWith('v2-')).toBe(true);
+    expect(a).not.toBe(b);
+  });
+
   it('changes when the boundary ring changes', () => {
     const a = computeSourceHash(baseInput());
     const movedBoundary = boundaryRing.map(([lng, lat]) => [lng + 0.001, lat] as LngLat);

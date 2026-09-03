@@ -8,19 +8,22 @@
  * docs/design_handoff_auto_parking_guided/README.md.
  */
 
-import type { AutoParkingLayout } from '@/types/sitesketcher-v2';
+import type { AutoParkingEntrance, AutoParkingLayout } from '@/types/sitesketcher-v2';
 import type { LngLat } from '@/lib/parking-layout-lab/types';
 import type { AccessAnchor } from './access-point';
 
 /**
- * The six-state guided flow (README §"State Management" `phase`), split
- * further so boundary/access editing ("Change") are their own phases rather
+ * The guided flow (README §"State Management" `phase`), split further so
+ * boundary/entrance/access editing ("Change") are their own phases rather
  * than overloading the initial draw/placement phases.
  */
 export type AutoParkingPhase =
   | 'boundary' // drawing the initial site boundary (guided step 1)
   | 'boundary-edit' // "Change" on the completed Site boundary card
-  | 'access' // placing the initial vehicle access point (guided step 2)
+  | 'buildings' // draw/select the optional building set (guided step 2)
+  | 'entrance' // placing the initial free/building-wall entrance (guided step 3)
+  | 'entrance-edit' // "Change" on the completed Building entrance card
+  | 'access' // placing the initial vehicle access point (guided step 4)
   | 'access-edit' // "Change" on the completed Vehicle access card
   | 'ready' // both inputs set, layout settings + "Create layouts"
   | 'generating' // solve in flight
@@ -31,6 +34,11 @@ export interface AutoParkingDraft {
   boundaryId: string | null;
   /** Boundary ring snapshot taken when "Change" was clicked — restored on Escape. */
   boundarySnapshot: LngLat[] | null;
+  /** Explicit polygon buildings. Intersecting CAD is derived and mandatory. */
+  buildingRefs: Array<{ id: string; kind: 'polygon'; source: 'drawn' | 'selected' }>;
+  buildingMode: 'draw' | 'select';
+  entrance: AutoParkingEntrance | null;
+  entranceSnapshot: AutoParkingEntrance | null;
   accessAnchor: AccessAnchor | null;
   /** Access anchor snapshot taken when "Change" was clicked — restored on Escape. */
   accessAnchorSnapshot: AccessAnchor | null;
@@ -63,6 +71,10 @@ export function createDefaultAutoParkingDraft(): AutoParkingDraft {
   return {
     boundaryId: null,
     boundarySnapshot: null,
+    buildingRefs: [],
+    buildingMode: 'draw',
+    entrance: null,
+    entranceSnapshot: null,
     accessAnchor: null,
     accessAnchorSnapshot: null,
     phaseBeforeEdit: null,
@@ -83,6 +95,11 @@ export const BOUNDARY_INTERACTIVE_PHASES: ReadonlySet<AutoParkingPhase> = new Se
 export const ACCESS_INTERACTIVE_PHASES: ReadonlySet<AutoParkingPhase> = new Set<AutoParkingPhase>([
   'access',
   'access-edit',
+]);
+/** Phases where the building entrance is being placed/edited on the map. */
+export const ENTRANCE_INTERACTIVE_PHASES: ReadonlySet<AutoParkingPhase> = new Set<AutoParkingPhase>([
+  'entrance',
+  'entrance-edit',
 ]);
 /** Phases with a live candidate on screen that direct on-map edits should re-fit rather than invalidate. */
 export const LIVE_REFIT_PHASES: ReadonlySet<AutoParkingPhase> = new Set<AutoParkingPhase>(['compare', 'editing']);

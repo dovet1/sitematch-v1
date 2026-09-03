@@ -204,7 +204,9 @@ export function solveParkingLayout(input: SolverInput): SolverOutput {
     vehicle: input.vehicle,
     oneWay: input.oneWay,
     accessible: input.accessible,
-    snappedAccessLocal: snappedLocal,
+    accessibleAnchorLocal: input.accessible?.anchorPoint
+      ? proj.toLocal(input.accessible.anchorPoint)
+      : snappedLocal,
   };
 
   if (orientations.length === 0) {
@@ -1425,7 +1427,7 @@ function assembleCandidate(args: {
   vehicle?: Vehicle;
   oneWay?: boolean;
   accessible?: AccessiblePolicy;
-  snappedAccessLocal?: LocalPoint;
+  accessibleAnchorLocal?: LocalPoint;
 }): CandidateLayout {
   const {
     perimeter,
@@ -1443,7 +1445,7 @@ function assembleCandidate(args: {
     vehicle,
     oneWay,
     accessible,
-    snappedAccessLocal,
+    accessibleAnchorLocal,
   } = args;
 
   const rawRows = [...perimeter.rows, ...(interior?.rows ?? [])];
@@ -1456,7 +1458,7 @@ function assembleCandidate(args: {
   const accessibleTarget = accessible ? Math.ceil(accessible.rate * preMergeStallCount) : 0;
   const { rows: workingRows, accessibleCount } =
     accessible && accessibleTarget > 0
-      ? applyAccessibleBays(rawRows, accessibleTarget, snappedAccessLocal ?? centroidLocal(usableLocal))
+      ? applyAccessibleBays(rawRows, accessibleTarget, accessibleAnchorLocal ?? centroidLocal(usableLocal))
       : { rows: rawRows.map((r) => ({ ...r, accessibleFlags: r.stalls.map(() => false) })), accessibleCount: 0 };
 
   const stallBlockers = workingRows.flatMap((r) => r.stalls);

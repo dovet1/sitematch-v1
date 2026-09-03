@@ -6,6 +6,7 @@ import {
   SavedCad,
   CadInstance,
   AutoParkingLayout,
+  AutoParkingEntrance,
   Tool,
   MapStyle,
   Units,
@@ -27,6 +28,7 @@ import {
   type AutoParkingGenerationStatus,
 } from './auto-parking/types';
 import { isAccessAnchorValid, snapPointToBoundaryEdge, type AccessAnchor } from './auto-parking/access-point';
+import { isEntranceValid } from './auto-parking/entrance-point';
 import type { CandidateLayout, SolverInput, SolverOutput } from '@/lib/parking-layout-lab/types';
 import type mapboxgl from 'mapbox-gl';
 
@@ -182,6 +184,15 @@ interface SketchState {
   startAutoParkingBoundaryEdit: () => void;
   commitAutoParkingBoundaryEdit: () => void;
   cancelAutoParkingBoundaryEdit: () => void;
+  setAutoParkingBuildingMode: (mode: AutoParkingDraft['buildingMode']) => void;
+  toggleAutoParkingBuilding: (id: string, source: 'drawn' | 'selected') => void;
+  continueAutoParkingBuildings: () => void;
+  startAutoParkingBuildingsEdit: () => void;
+  /** Live value update while hovering/dragging; never advances the phase. */
+  setAutoParkingEntrance: (entrance: AutoParkingEntrance | null) => void;
+  commitAutoParkingEntrance: (entrance: AutoParkingEntrance) => void;
+  startAutoParkingEntranceEdit: () => void;
+  cancelAutoParkingEntranceEdit: () => void;
   /** Live value update only (hover preview / drag) — never changes phase. */
   setAutoParkingAccessAnchor: (anchor: AccessAnchor | null) => void;
   /** Click / drag-release — sets the anchor AND advances/exits the placement phase. */
@@ -797,17 +808,21 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     }),
 
   // The boundary polygon just closed (draw.create) — commit it and advance
-  // straight to vehicle-access placement.
+  // to the optional building-capture step.
   setAutoParkingBoundary: (boundaryId) =>
     set((state) => ({
       autoParkingDraft: {
         ...state.autoParkingDraft,
         boundaryId,
         boundarySnapshot: null,
+        buildingRefs: [],
+        buildingMode: 'draw',
+        entrance: null,
+        entranceSnapshot: null,
         accessAnchor: null,
         accessAnchorSnapshot: null,
         phaseBeforeEdit: null,
-        phase: 'access',
+        phase: 'buildings',
       },
       autoParkingGenerationStatus: 'idle',
       autoParkingGenerationError: null,
@@ -864,6 +879,107 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       },
     });
   },
+
+  setAutoParkingBuildingMode: (mode) =>
+    set((state) => ({ autoParkingDraft: { ...state.autoParkingDraft, buildingMode: mode } })),
+
+  toggleAutoParkingBuilding: (id, source) =>
+    set((state) => {
+      const draft = state.autoParkingDraft;
+      const exists = draft.buildingRefs.some((ref) => ref.id === id);
+      const buildingRefs = exists
+        ? draft.buildingRefs.filter((ref) => ref.id !== id)
+        : [...draft.buildingRefs, { id, kind: 'polygon' as const, source }];
+      const entrance =
+        exists && draft.entrance?.kind === 'building' && draft.entrance.buildingId === id
+          ? null
+          : draft.entrance;
+      const editingVisibleLayout = draft.phaseBeforeEdit === 'compare' || draft.phaseBeforeEdit === 'editing';
+      return {
+        autoParkingDraft: { ...draft, buildingRefs, entrance },
+        autoParkingCandidates: editingVisibleLayout ? state.autoParkingCandidates : [],
+        autoParkingSelectedCandidateId: editingVisibleLayout ? state.autoParkingSelectedCandidateId : null,
+        autoParkingSolverRun: editingVisibleLayout ? state.autoParkingSolverRun : null,
+        autoParkingLivePreview: null,
+      };
+    }),
+
+  continueAutoParkingBuildings: () =>
+    set((state) => {
+      const draft = state.autoParkingDraft;
+      const missing = draft.buildingRefs.some(
+        (ref) => !state.polygons.some((polygon) => polygon.id === ref.id),
+      );
+      if (missing) return state;
+      const boundary = state.polygons.find((polygon) => polygon.id === draft.boundaryId);
+      const entranceValid = isEntranceValid(draft.entrance, state.polygons, boundary?.points);
+      const returnPhase = draft.phaseBeforeEdit;
+      const phase: AutoParkingPhase =
+        returnPhase && entranceValid ? returnPhase : 'entrance';
+      return {
+        autoParkingDraft: {
+          ...draft,
+          entrance: entranceValid ? draft.entrance : null,
+          phase,
+          phaseBeforeEdit: phase === 'entrance' ? returnPhase : null,
+        },
+      };
+    }),
+
+  startAutoParkingBuildingsEdit: () =>
+    set((state) => ({
+      autoParkingDraft: {
+        ...state.autoParkingDraft,
+        phaseBeforeEdit: state.autoParkingDraft.phase,
+        phase: 'buildings',
+      },
+    })),
+
+  setAutoParkingEntrance: (entrance) =>
+    set((state) => ({ autoParkingDraft: { ...state.autoParkingDraft, entrance } })),
+
+  commitAutoParkingEntrance: (entrance) =>
+    set((state) => {
+      const draft = state.autoParkingDraft;
+      const nextPhase: AutoParkingPhase =
+        draft.phase === 'entrance-edit'
+          ? draft.phaseBeforeEdit ?? (draft.accessAnchor ? 'ready' : 'access')
+          : draft.phase === 'entrance' && draft.phaseBeforeEdit
+            ? draft.phaseBeforeEdit
+          : draft.accessAnchor
+            ? 'ready'
+            : 'access';
+      return {
+        autoParkingDraft: {
+          ...draft,
+          entrance,
+          entranceSnapshot: null,
+          phase: nextPhase,
+          phaseBeforeEdit: null,
+        },
+      };
+    }),
+
+  startAutoParkingEntranceEdit: () =>
+    set((state) => ({
+      autoParkingDraft: {
+        ...state.autoParkingDraft,
+        entranceSnapshot: state.autoParkingDraft.entrance,
+        phaseBeforeEdit: state.autoParkingDraft.phase,
+        phase: 'entrance-edit',
+      },
+    })),
+
+  cancelAutoParkingEntranceEdit: () =>
+    set((state) => ({
+      autoParkingDraft: {
+        ...state.autoParkingDraft,
+        entrance: state.autoParkingDraft.entranceSnapshot,
+        entranceSnapshot: null,
+        phase: state.autoParkingDraft.phaseBeforeEdit ?? (state.autoParkingDraft.accessAnchor ? 'ready' : 'access'),
+        phaseBeforeEdit: null,
+      },
+    })),
 
   setAutoParkingAccessAnchor: (anchor) =>
     set((state) => ({ autoParkingDraft: { ...state.autoParkingDraft, accessAnchor: anchor } })),
@@ -957,6 +1073,25 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     const boundary = state.polygons.find((p) => p.id === layout.boundaryId);
     const snap = boundary ? snapPointToBoundaryEdge(layout.accessPoint, boundary.points) : null;
     const anchor: AccessAnchor | null = snap ? { edgeIndex: snap.edgeIndex, distanceAlongEdgeM: snap.distanceAlongEdgeM } : null;
+    const buildingRefs = layout.exclusionRefs
+      .filter((ref) => ref.kind === 'polygon')
+      .map((ref) => ({
+        id: ref.id,
+        kind: 'polygon' as const,
+        source: ref.source === 'drawn' ? 'drawn' as const : 'selected' as const,
+      }));
+    const hasMissingBuilding = buildingRefs.some(
+      (ref) => !state.polygons.some((polygon) => polygon.id === ref.id),
+    );
+    const entrance = layout.entrance ?? null;
+    const entranceValid = isEntranceValid(entrance, state.polygons, boundary?.points);
+    const phase: AutoParkingPhase = hasMissingBuilding
+      ? 'buildings'
+      : !entranceValid
+        ? 'entrance'
+        : anchor
+          ? 'ready'
+          : 'access';
     set({
       parkingMethod: 'auto',
       activeTool: 'parking',
@@ -973,12 +1108,16 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       autoParkingDraft: {
         boundaryId: layout.boundaryId,
         boundarySnapshot: null,
+        buildingRefs,
+        buildingMode: 'select',
+        entrance: entranceValid ? entrance : null,
+        entranceSnapshot: null,
         accessAnchor: anchor,
         accessAnchorSnapshot: null,
         phaseBeforeEdit: null,
         settings: { ...layout.settingsSnapshot, accessibleBays: { ...layout.settingsSnapshot.accessibleBays } },
         settingsExpanded: !!opts?.expandSettings,
-        phase: 'ready',
+        phase,
         editingLayoutId: layout.id,
         pendingAutoGenerate: true,
       },

@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useMemo, useRef } from 'react'
-import { Loader2, ChevronDown, ChevronUp, AlertTriangle, Sparkles } from 'lucide-react'
+import { Loader2, ChevronDown, ChevronUp, AlertTriangle, Sparkles, PenLine, MousePointer2, X } from 'lucide-react'
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
 import { calculatePolygonArea } from '@/lib/sitesketcher-v2/polygon-utils'
-import { detectMandatoryExclusions } from '@/lib/sitesketcher-v2/auto-parking/detection'
+import { resolveGuidedExclusions } from '@/lib/sitesketcher-v2/auto-parking/detection'
 import { buildAutoParkingLayout, buildSolverInput } from '@/lib/sitesketcher-v2/auto-parking/adapter'
 import { reprojectAccessAnchor } from '@/lib/sitesketcher-v2/auto-parking/access-point'
-import type { Polygon } from '@/types/sitesketcher-v2'
+import { resolveEntrance } from '@/lib/sitesketcher-v2/auto-parking/entrance-point'
+import type { AutoParkingEntrance, Polygon } from '@/types/sitesketcher-v2'
 import type { CandidateLayout, SolverInput } from '@/lib/parking-layout-lab/types'
 import { representativeAngle, useAutoParkingWorker } from '../../lib/hooks/useAutoParkingWorker'
 import { Kicker, formatArea, WARNING_CARD_CLASS } from './USketchPanel'
@@ -67,6 +68,11 @@ export function USketchAutoParkingPanel() {
   const setAutoParkingSelectedCandidateId = useSketchStore((s) => s.setAutoParkingSelectedCandidateId)
   const startAutoParkingBoundaryEdit = useSketchStore((s) => s.startAutoParkingBoundaryEdit)
   const commitAutoParkingBoundaryEdit = useSketchStore((s) => s.commitAutoParkingBoundaryEdit)
+  const setAutoParkingBuildingMode = useSketchStore((s) => s.setAutoParkingBuildingMode)
+  const toggleAutoParkingBuilding = useSketchStore((s) => s.toggleAutoParkingBuilding)
+  const continueAutoParkingBuildings = useSketchStore((s) => s.continueAutoParkingBuildings)
+  const startAutoParkingBuildingsEdit = useSketchStore((s) => s.startAutoParkingBuildingsEdit)
+  const startAutoParkingEntranceEdit = useSketchStore((s) => s.startAutoParkingEntranceEdit)
   const startAutoParkingAccessEdit = useSketchStore((s) => s.startAutoParkingAccessEdit)
   const consumeAutoParkingPendingGenerate = useSketchStore((s) => s.consumeAutoParkingPendingGenerate)
   const applyAutoParkingLayout = useSketchStore((s) => s.applyAutoParkingLayout)
@@ -76,32 +82,37 @@ export function USketchAutoParkingPanel() {
 
   const boundaryPolygon = polygons.find((p) => p.id === draft.boundaryId) ?? null
 
-  const exclusions = useMemo(() => {
-    if (!boundaryPolygon) return []
-    return detectMandatoryExclusions({
+  const resolvedExclusions = useMemo(() => {
+    if (!boundaryPolygon) return { exclusions: [], missingRefs: [] }
+    return resolveGuidedExclusions({
       boundaryId: boundaryPolygon.id,
       boundaryRing: boundaryPolygon.points,
+      buildingRefs: draft.buildingRefs,
       polygons,
       cadInstances,
       cadImages,
       savedCads,
     })
-  }, [boundaryPolygon, polygons, cadInstances, cadImages, savedCads])
+  }, [boundaryPolygon, draft.buildingRefs, polygons, cadInstances, cadImages, savedCads])
+  const exclusions = resolvedExclusions.exclusions
 
   const accessPoint = useMemo(() => {
     if (!boundaryPolygon || !draft.accessAnchor) return null
     return reprojectAccessAnchor(draft.accessAnchor, boundaryPolygon.points)
   }, [boundaryPolygon, draft.accessAnchor])
 
+  const entrancePoint = useMemo(() => resolveEntrance(draft.entrance, polygons), [draft.entrance, polygons])
+
   const currentSolverInput = useMemo(() => {
-    if (!boundaryPolygon || !accessPoint) return null
+    if (!boundaryPolygon || !accessPoint || !entrancePoint || resolvedExclusions.missingRefs.length > 0) return null
     return buildSolverInput({
       boundaryRing: boundaryPolygon.points,
       exclusions,
       accessPoint,
+      entrancePoint,
       settings: draft.settings,
     })
-  }, [boundaryPolygon, exclusions, accessPoint, draft.settings])
+  }, [boundaryPolygon, exclusions, accessPoint, entrancePoint, resolvedExclusions.missingRefs.length, draft.settings])
 
   const handleGenerate = () => {
     if (!currentSolverInput) return
@@ -143,14 +154,38 @@ export function USketchAutoParkingPanel() {
     regenerateLive,
   ])
 
+  const buildingRefsKey = JSON.stringify(draft.buildingRefs)
+  const previousBuildingRefsKeyRef = useRef(buildingRefsKey)
+  useEffect(() => {
+    const buildingsChanged = previousBuildingRefsKeyRef.current !== buildingRefsKey
+    previousBuildingRefsKeyRef.current = buildingRefsKey
+    if (!buildingsChanged || !currentSolverInput) return
+    if (draft.phaseBeforeEdit !== 'compare' && draft.phaseBeforeEdit !== 'editing') return
+    const selectedCandidate = candidates.find((candidate) => candidate.candidateId === selectedCandidateId) ?? null
+    generateDraft(
+      currentSolverInput,
+      selectedCandidate ? representativeAngle(selectedCandidate.orientationSummary) : undefined,
+    )
+    const timer = setTimeout(() => regenerateLive(currentSolverInput), 300)
+    return () => clearTimeout(timer)
+  }, [
+    buildingRefsKey,
+    currentSolverInput,
+    draft.phaseBeforeEdit,
+    candidates,
+    selectedCandidateId,
+    generateDraft,
+    regenerateLive,
+  ])
+
   // "Edit layout settings" / "Regenerate" from the applied-layout inspector
   // reopen the comparison flow with a working copy and auto-generate once.
   const handleGenerateRef = useRef(handleGenerate)
   handleGenerateRef.current = handleGenerate
   useEffect(() => {
-    if (draft.phase !== 'ready' || !boundaryPolygon || !accessPoint) return
+    if (draft.phase !== 'ready' || !boundaryPolygon || !accessPoint || !entrancePoint) return
     if (consumeAutoParkingPendingGenerate()) handleGenerateRef.current()
-  }, [draft.phase, boundaryPolygon, accessPoint, consumeAutoParkingPendingGenerate])
+  }, [draft.phase, boundaryPolygon, accessPoint, entrancePoint, consumeAutoParkingPendingGenerate])
 
   // The settings drawer opens expanded by default once comparison starts
   // (state 04) even though it starts collapsed pre-generation (state 03).
@@ -163,7 +198,7 @@ export function USketchAutoParkingPanel() {
   }, [draft.phase, setAutoParkingSettingsExpanded])
 
   const handleUseLayout = () => {
-    if (!boundaryPolygon || !solverRun || !selectedCandidateId || !resultMatchesCurrentInput) return
+    if (!boundaryPolygon || !entrancePoint || !draft.entrance || !solverRun || !selectedCandidateId || !resultMatchesCurrentInput) return
     const candidate = candidates.find((c) => c.candidateId === selectedCandidateId)
     if (!candidate) return
     const editingLayout = draft.editingLayoutId ? autoLayouts.find((l) => l.id === draft.editingLayoutId) : undefined
@@ -172,6 +207,8 @@ export function USketchAutoParkingPanel() {
       name: editingLayout?.name ?? `Auto layout ${autoLayouts.length + 1}`,
       boundaryId: boundaryPolygon.id,
       exclusions,
+      entrance: draft.entrance,
+      entrancePoint,
       settingsSnapshot: draft.settings,
       solverInput: solverRun.input,
       solverOutput: solverRun.output,
@@ -212,6 +249,20 @@ export function USketchAutoParkingPanel() {
           title="Site boundary"
           meta={boundaryPolygon ? `${boundaryPolygon.name} · ${formatArea(calculatePolygonArea(boundaryPolygon.points))}` : undefined}
           onChange={startAutoParkingBoundaryEdit}
+          compact
+        />
+        <GuidedStepCard
+          variant="done"
+          title="Buildings"
+          meta={`${draft.buildingRefs.length} selected${exclusions.filter((e) => e.source === 'mandatory').length ? ` · ${exclusions.filter((e) => e.source === 'mandatory').length} CAD automatic` : ''}`}
+          onChange={startAutoParkingBuildingsEdit}
+          compact
+        />
+        <GuidedStepCard
+          variant="done"
+          title="Building entrance"
+          meta={entranceMeta(draft.entrance, polygons)}
+          onChange={startAutoParkingEntranceEdit}
           compact
         />
         <GuidedStepCard
@@ -295,7 +346,7 @@ export function USketchAutoParkingPanel() {
 
         <div className="flex items-center gap-1.5 rounded-lg bg-sm-bg px-2.5 py-2 text-[11.5px] text-sm-ink3">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#3FB27A]" />
-          Drag boundary, access or a building — bays re-fit live
+          Drag boundary, access, a building or the entrance — bays re-fit live
         </div>
 
         <button
@@ -325,6 +376,16 @@ export function USketchAutoParkingPanel() {
     )
   }
 
+  if (draft.phase === 'entrance-edit') {
+    return (
+      <GuidedStepCard
+        variant="editing"
+        title="Editing building entrance"
+        description={draft.buildingRefs.length > 0 ? 'Click another wall, or drag the marker along its building.' : 'Click or drag the visitor target point inside the site.'}
+      />
+    )
+  }
+
   // --- Access editing ("Change") ----------------------------------------------
   if (draft.phase === 'access-edit') {
     return (
@@ -346,6 +407,108 @@ export function USketchAutoParkingPanel() {
     )
   }
 
+  // --- Optional building capture (guided step 2) -----------------------------
+  if (draft.phase === 'buildings') {
+    const mandatoryCad = exclusions.filter((exclusion) => exclusion.source === 'mandatory')
+    return (
+      <>
+        <div className="flex flex-col gap-2">
+          <GuidedStepCard
+            variant="done"
+            title="Site boundary"
+            meta={boundaryPolygon ? `${boundaryPolygon.name} · ${formatArea(calculatePolygonArea(boundaryPolygon.points))}` : undefined}
+            onChange={startAutoParkingBoundaryEdit}
+          />
+          <div className="rounded-xl border border-[#DFD1FB] bg-[#F8F5FF]">
+            <div className="px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sm-violet text-[11px] font-bold text-white">2</span>
+                <span className="text-[13.5px] font-semibold text-sm-ink">Buildings</span>
+                <span className="rounded bg-sm-border-soft px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wide text-sm-ink3">Optional</span>
+                <span className="ml-auto font-mono text-[11px] font-semibold text-sm-violet">{draft.buildingRefs.length + mandatoryCad.length}</span>
+              </div>
+              <p className="mt-1 text-[12px] leading-relaxed text-sm-ink2">Layouts route around anything here. Skip if the plot is clear.</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setAutoParkingBuildingMode('draw')} className={buildingModeButton(draft.buildingMode === 'draw')}>
+                  <PenLine size={13} /> Draw building
+                </button>
+                <button type="button" onClick={() => setAutoParkingBuildingMode('select')} className={buildingModeButton(draft.buildingMode === 'select')}>
+                  <MousePointer2 size={13} /> Select on map
+                </button>
+              </div>
+            </div>
+            {(draft.buildingRefs.length > 0 || mandatoryCad.length > 0 || resolvedExclusions.missingRefs.length > 0) && (
+              <div className="flex flex-col gap-1.5 border-t border-[#DFD1FB] px-3 py-2.5">
+                {draft.buildingRefs.map((ref) => {
+                  const polygon = polygons.find((candidate) => candidate.id === ref.id)
+                  return (
+                    <div key={ref.id} className="flex items-center gap-2 rounded-lg bg-white/70 px-2 py-1.5">
+                      <span className="h-3.5 w-3.5 rounded-[3px] bg-[#3B3742]" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[12.5px] font-medium text-sm-ink">{polygon?.name ?? 'Missing building'}</div>
+                        <div className={'text-[10.5px] ' + (polygon ? 'text-sm-ink3' : 'text-[#8A6318]')}>
+                          {polygon ? `${ref.source} · ${formatArea(calculatePolygonArea(polygon.points))}` : 'No longer exists · remove or replace to continue'}
+                        </div>
+                      </div>
+                      <button type="button" aria-label={`Unmark ${polygon?.name ?? 'missing building'}`} onClick={() => toggleAutoParkingBuilding(ref.id, ref.source)} className="text-sm-ink3 hover:text-sm-ink">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )
+                })}
+                {mandatoryCad.map((exclusion) => (
+                  <div key={`${exclusion.kind}:${exclusion.id}`} className="flex items-center gap-2 rounded-lg bg-white/70 px-2 py-1.5">
+                    <span className="h-3.5 w-3.5 rounded-[3px] border border-dashed border-sm-ink3 bg-[#3B3742]" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[12.5px] font-medium text-sm-ink">CAD building</div>
+                      <div className="text-[10.5px] text-sm-ink3">automatically avoided</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <GuidedStepCard variant="dimmed" number={3} title="Set the building entrance" />
+          <GuidedStepCard variant="dimmed" number={4} title="Set a vehicle access point" />
+          <GuidedStepCard variant="dimmed" number={5} title="Create layouts" />
+        </div>
+        <button
+          type="button"
+          onClick={continueAutoParkingBuildings}
+          disabled={resolvedExclusions.missingRefs.length > 0}
+          className="mt-auto rounded-lg bg-sm-violet px-3 py-2.5 text-[13px] font-semibold text-white hover:bg-sm-violet-deep disabled:opacity-40"
+        >
+          Continue
+        </button>
+        <p className="text-center text-[11px] text-sm-ink3">
+          {resolvedExclusions.missingRefs.length > 0 ? 'Remove or replace missing buildings to continue' : `${draft.buildingRefs.length + mandatoryCad.length} buildings added · next, set the building entrance`}
+        </p>
+      </>
+    )
+  }
+
+  // --- Building entrance (guided step 3) --------------------------------------
+  if (draft.phase === 'entrance') {
+    return (
+      <>
+        <StepList
+          activePhase="entrance"
+          boundaryPolygon={boundaryPolygon}
+          buildingCount={draft.buildingRefs.length + exclusions.filter((e) => e.source === 'mandatory').length}
+          entrance={null}
+          accessAnchor={draft.accessAnchor}
+          polygons={polygons}
+          onChangeBoundary={startAutoParkingBoundaryEdit}
+          onChangeBuildings={startAutoParkingBuildingsEdit}
+        />
+        {draft.editingLayoutId && !draft.entrance && (
+          <div className={WARNING_CARD_CLASS}>Set a building entrance to regenerate this existing layout.</div>
+        )}
+        <Footer disabled helper="Set the entrance to continue" />
+      </>
+    )
+  }
+
   // --- Placing the access point (guided step 2) --------------------------------
   if (draft.phase === 'access') {
     return (
@@ -353,8 +516,13 @@ export function USketchAutoParkingPanel() {
         <StepList
           activePhase="access"
           boundaryPolygon={boundaryPolygon}
+          buildingCount={draft.buildingRefs.length + exclusions.filter((e) => e.source === 'mandatory').length}
+          entrance={draft.entrance}
           accessAnchor={null}
+          polygons={polygons}
           onChangeBoundary={startAutoParkingBoundaryEdit}
+          onChangeBuildings={startAutoParkingBuildingsEdit}
+          onChangeEntrance={startAutoParkingEntranceEdit}
         />
         <Footer disabled helper="Set an access point to continue" />
       </>
@@ -367,8 +535,13 @@ export function USketchAutoParkingPanel() {
       <StepList
         activePhase="ready"
         boundaryPolygon={boundaryPolygon}
+        buildingCount={draft.buildingRefs.length + exclusions.filter((e) => e.source === 'mandatory').length}
+        entrance={draft.entrance}
         accessAnchor={draft.accessAnchor}
+        polygons={polygons}
         onChangeBoundary={startAutoParkingBoundaryEdit}
+        onChangeBuildings={startAutoParkingBuildingsEdit}
+        onChangeEntrance={startAutoParkingEntranceEdit}
         onChangeAccess={startAutoParkingAccessEdit}
       />
 
@@ -388,7 +561,7 @@ export function USketchAutoParkingPanel() {
       <button
         type="button"
         onClick={handleGenerate}
-        disabled={!accessPoint}
+        disabled={!accessPoint || !entrancePoint || resolvedExclusions.missingRefs.length > 0}
         className="flex items-center justify-center gap-1.5 rounded-lg bg-sm-violet px-3 py-2.5 text-[13px] font-semibold text-white shadow-[0_6px_16px_rgba(112,51,255,0.24)] transition-colors hover:bg-sm-violet-deep disabled:opacity-40 disabled:shadow-none disabled:hover:bg-sm-violet"
       >
         <Sparkles size={14} /> Create layouts
@@ -403,14 +576,24 @@ export function USketchAutoParkingPanel() {
 function StepList({
   activePhase,
   boundaryPolygon,
+  buildingCount = 0,
+  entrance = null,
   accessAnchor,
+  polygons = [],
   onChangeBoundary,
+  onChangeBuildings,
+  onChangeEntrance,
   onChangeAccess,
 }: {
-  activePhase: 'boundary' | 'access' | 'ready'
+  activePhase: 'boundary' | 'entrance' | 'access' | 'ready'
   boundaryPolygon: Polygon | null
+  buildingCount?: number
+  entrance?: AutoParkingEntrance | null
   accessAnchor: { edgeIndex: number; distanceAlongEdgeM: number } | null
+  polygons?: Polygon[]
   onChangeBoundary?: () => void
+  onChangeBuildings?: () => void
+  onChangeEntrance?: () => void
   onChangeAccess?: () => void
 }) {
   return (
@@ -431,10 +614,31 @@ function StepList({
         />
       )}
 
+      {activePhase === 'boundary' ? (
+        <GuidedStepCard variant="dimmed" number={2} title="Buildings" />
+      ) : (
+        <GuidedStepCard variant="done" title="Buildings" meta={`${buildingCount} added`} onChange={onChangeBuildings} />
+      )}
+
+      {activePhase === 'entrance' ? (
+        <GuidedStepCard
+          variant="active"
+          number={3}
+          title="Set the building entrance"
+          description={buildingCount > 0
+            ? 'Click a building wall to drop the primary entrance. Accessible bays are placed nearest to it — drag to slide it along the wall.'
+            : 'No buildings? Drop a target point where visitors arrive instead.'}
+        />
+      ) : activePhase === 'access' || activePhase === 'ready' ? (
+        <GuidedStepCard variant="done" title="Building entrance" meta={entranceMeta(entrance, polygons)} onChange={onChangeEntrance} />
+      ) : (
+        <GuidedStepCard variant="dimmed" number={3} title="Set the building entrance" />
+      )}
+
       {activePhase === 'access' ? (
         <GuidedStepCard
           variant="active"
-          number={2}
+          number={4}
           title="Set a vehicle access point"
           description="Hover the boundary — the nearest edge thickens. Click to drop the entry; drag to slide it along the edge."
         />
@@ -450,12 +654,26 @@ function StepList({
           onChange={onChangeAccess}
         />
       ) : (
-        <GuidedStepCard variant="dimmed" number={2} title="Set a vehicle access point" />
+        <GuidedStepCard variant="dimmed" number={4} title="Set a vehicle access point" />
       )}
 
-      {activePhase !== 'ready' && <GuidedStepCard variant="dimmed" number={3} title="Create layouts" />}
+      {activePhase !== 'ready' && <GuidedStepCard variant="dimmed" number={5} title="Create layouts" />}
     </div>
   )
+}
+
+function entranceMeta(entrance: AutoParkingEntrance | null | undefined, polygons: Polygon[]): string | undefined {
+  if (!entrance) return undefined
+  if (entrance.kind === 'target') return 'Visitor target point'
+  const building = polygons.find((polygon) => polygon.id === entrance.buildingId)
+  return building ? `${building.name} wall` : 'Missing building'
+}
+
+function buildingModeButton(active: boolean): string {
+  return 'flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-[11.5px] font-semibold transition-colors ' +
+    (active
+      ? 'border-sm-violet bg-sm-violet text-white'
+      : 'border-[#DFD1FB] bg-white text-sm-violet hover:bg-sm-violet-tint-soft')
 }
 
 function GuidedStepCard({

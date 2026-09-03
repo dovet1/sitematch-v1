@@ -70,6 +70,19 @@ describe('buildSolverInput', () => {
     expect(input.accessible).toEqual({ rate: 0.1, bay: DEFAULT_AUTO_PARKING_ACCESSIBLE_BAY });
   });
 
+  it('passes a separate entrance target to accessible placement without changing vehicle access', () => {
+    const entrancePoint = m(55, 35);
+    const input = buildSolverInput({
+      boundaryRing,
+      exclusions: [],
+      accessPoint,
+      entrancePoint,
+      settings: { ...baseSettings, accessibleBays: { on: true, percent: 10 } },
+    });
+    expect(input.accessPoint).toEqual(accessPoint);
+    expect(input.accessible?.anchorPoint).toEqual(entrancePoint);
+  });
+
   it('uses larger stall dimensions when selected', () => {
     const input = buildSolverInput({
       boundaryRing,
@@ -149,5 +162,29 @@ describe('buildAutoParkingLayout', () => {
     });
 
     expect(layout.exclusionRefs).toEqual([{ id: 'poly-x', kind: 'polygon' }]);
+  });
+
+  it('persists building provenance and the entrance used for accessible placement', () => {
+    const entrance = { kind: 'target' as const, point: m(50, 35) };
+    const enabledSettings = { ...baseSettings, accessibleBays: { on: true, percent: 5 } };
+    const exclusion: DetectedExclusion = {
+      id: 'poly-x', kind: 'polygon', source: 'drawn', ring: [m(5, 5), m(6, 5), m(6, 6)],
+    };
+    const solverInput = buildSolverInput({
+      boundaryRing,
+      exclusions: [exclusion],
+      accessPoint,
+      entrancePoint: entrance.point,
+      settings: enabledSettings,
+    });
+    const solverOutput = solveParkingLayout(solverInput);
+    const layout = buildAutoParkingLayout({
+      id: 'layout-3', name: 'Auto layout 3', boundaryId: 'boundary-1', exclusions: [exclusion],
+      entrance, entrancePoint: entrance.point, settingsSnapshot: enabledSettings, solverInput, solverOutput,
+      candidate: solverOutput.candidates[0],
+    });
+    expect(layout.exclusionRefs).toEqual([{ id: 'poly-x', kind: 'polygon', source: 'drawn' }]);
+    expect(layout.entrance).toEqual(entrance);
+    expect(layout.sourceHash.startsWith('v2-')).toBe(true);
   });
 });

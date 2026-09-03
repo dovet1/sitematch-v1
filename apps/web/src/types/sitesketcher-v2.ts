@@ -127,7 +127,21 @@ export interface SiteSketchRow {
 export interface AutoParkingExclusionRef {
   id: string;
   kind: 'polygon' | 'cadInstance' | 'cadImage';
+  /** How this exclusion entered the layout. Optional for layouts saved before the guided-building flow. */
+  source?: 'drawn' | 'selected' | 'mandatory';
 }
+
+export type AutoParkingEntrance =
+  | {
+      kind: 'building';
+      buildingId: string;
+      edgeIndex: number;
+      distanceAlongEdgeM: number;
+    }
+  | {
+      kind: 'target';
+      point: [number, number];
+    };
 
 export interface AutoParkingSettingsSnapshot {
   stallSize: 'standard' | 'larger';
@@ -163,6 +177,12 @@ export interface AutoParkingLayout {
   boundaryId: string; // source polygon id
   exclusionRefs: AutoParkingExclusionRef[];
   accessPoint: [number, number]; // snapped lng/lat
+  /**
+   * Accessible-bay destination. Optional for layouts saved before the guided
+   * entrance step; those layouts keep their legacy vehicle-access placement
+   * until the user supplies an entrance during regeneration.
+   */
+  entrance?: AutoParkingEntrance;
   /**
    * The boundary ring at generation time. Optional/backward-compatible
    * (absent on layouts persisted before this field existed) — used to draw

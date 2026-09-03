@@ -8,7 +8,7 @@
  * the layout's current inputs and compare. See INTEGRATION_PLAN.md §3c.
  */
 
-import type { AutoParkingLayout } from '@/types/sitesketcher-v2';
+import type { AutoParkingEntrance, AutoParkingLayout } from '@/types/sitesketcher-v2';
 import type { LngLat } from '@/lib/parking-layout-lab/types';
 import type { DetectedExclusion } from './detection';
 
@@ -16,24 +16,25 @@ export interface SourceHashInput {
   boundaryRing: LngLat[];
   exclusions: DetectedExclusion[];
   accessPoint: LngLat;
+  entrance?: { anchor: AutoParkingEntrance; point: LngLat };
   settingsSnapshot: AutoParkingLayout['settingsSnapshot'];
 }
-
-const HASH_VERSION = 'v1';
 
 export function computeSourceHash(input: SourceHashInput): string {
   const sortedExclusions = [...input.exclusions]
     .sort((a, b) => exclusionKey(a).localeCompare(exclusionKey(b)))
     .map((e) => ({ id: e.id, kind: e.kind, ring: e.ring }));
 
-  const payload = stableStringify({
+  const source: Record<string, unknown> = {
     boundary: input.boundaryRing,
     exclusions: sortedExclusions,
     accessPoint: input.accessPoint,
     settings: input.settingsSnapshot,
-  });
+  };
+  if (input.entrance) source.entrance = input.entrance;
+  const payload = stableStringify(source);
 
-  return `${HASH_VERSION}-${fnv1a(payload)}`;
+  return `${input.entrance ? 'v2' : 'v1'}-${fnv1a(payload)}`;
 }
 
 /** Recomputes the layout's current hash and compares — never trust a stored flag. */

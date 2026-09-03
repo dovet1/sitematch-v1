@@ -552,6 +552,9 @@ export function syncParkingToMap(
  * than computed from a Mapbox expression referencing store state.
  */
 export function setupAutoParkingLayer(map: mapboxgl.Map): void {
+  const beforeDrawVertices = map.getLayer('gl-draw-polygon-and-line-vertex-inactive')
+    ? 'gl-draw-polygon-and-line-vertex-inactive'
+    : undefined;
   if (!map.getSource('auto-parking-access-point')) {
     map.addSource('auto-parking-access-point', {
       type: 'geojson',
@@ -560,6 +563,12 @@ export function setupAutoParkingLayer(map: mapboxgl.Map): void {
   }
   if (!map.getSource('auto-parking-hover-edge')) {
     map.addSource('auto-parking-hover-edge', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+  }
+  if (!map.getSource('auto-parking-guidance')) {
+    map.addSource('auto-parking-guidance', {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] },
     });
@@ -698,6 +707,82 @@ export function setupAutoParkingLayer(map: mapboxgl.Map): void {
       paint: { 'line-color': '#C4B2F7', 'line-width': 9, 'line-opacity': 0.85 },
     });
   }
+  if (!map.getLayer('auto-parking-building-fill')) {
+    map.addLayer({
+      id: 'auto-parking-building-fill',
+      type: 'fill',
+      source: 'auto-parking-guidance',
+      filter: ['==', ['get', 'kind'], 'building'],
+      paint: { 'fill-color': '#26242A', 'fill-opacity': 0.52 },
+    }, beforeDrawVertices);
+  }
+  if (!map.getLayer('auto-parking-building-line-selected')) {
+    map.addLayer({
+      id: 'auto-parking-building-line-selected',
+      type: 'line',
+      source: 'auto-parking-guidance',
+      filter: ['all', ['==', ['get', 'kind'], 'building'], ['!=', ['get', 'source'], 'drawn']],
+      paint: {
+        'line-color': '#F4F1EA',
+        'line-width': 2,
+        'line-dasharray': [3, 2],
+      },
+    }, beforeDrawVertices);
+  }
+  if (!map.getLayer('auto-parking-building-line-drawn')) {
+    map.addLayer({
+      id: 'auto-parking-building-line-drawn',
+      type: 'line',
+      source: 'auto-parking-guidance',
+      filter: ['all', ['==', ['get', 'kind'], 'building'], ['==', ['get', 'source'], 'drawn']],
+      paint: {
+        'line-color': '#F4F1EA',
+        'line-width': 2,
+      },
+    }, beforeDrawVertices);
+  }
+  if (!map.getLayer('auto-parking-accessible-zone')) {
+    map.addLayer({
+      id: 'auto-parking-accessible-zone',
+      type: 'line',
+      source: 'auto-parking-guidance',
+      filter: ['==', ['get', 'kind'], 'accessible-zone'],
+      paint: { 'line-color': '#2FA37A', 'line-width': 2, 'line-dasharray': [3, 2] },
+    });
+  }
+  if (!map.getLayer('auto-parking-entrance-wall')) {
+    map.addLayer({
+      id: 'auto-parking-entrance-wall',
+      type: 'line',
+      source: 'auto-parking-guidance',
+      filter: ['==', ['get', 'kind'], 'entrance-wall'],
+      layout: { 'line-cap': 'round' },
+      paint: { 'line-color': '#2FA37A', 'line-width': 7, 'line-opacity': 0.9 },
+    });
+  }
+  if (!map.getLayer('auto-parking-entrance-halo')) {
+    map.addLayer({
+      id: 'auto-parking-entrance-halo',
+      type: 'circle',
+      source: 'auto-parking-guidance',
+      filter: ['==', ['get', 'kind'], 'entrance'],
+      paint: { 'circle-radius': 13, 'circle-color': '#2FA37A', 'circle-opacity': 0.24 },
+    });
+  }
+  if (!map.getLayer('auto-parking-entrance-dot')) {
+    map.addLayer({
+      id: 'auto-parking-entrance-dot',
+      type: 'circle',
+      source: 'auto-parking-guidance',
+      filter: ['==', ['get', 'kind'], 'entrance'],
+      paint: {
+        'circle-radius': 8,
+        'circle-color': '#2FA37A',
+        'circle-stroke-color': '#FFFFFF',
+        'circle-stroke-width': 2,
+      },
+    });
+  }
   if (!map.getLayer('auto-parking-access-halo')) {
     map.addLayer({
       id: 'auto-parking-access-halo',
@@ -736,6 +821,61 @@ export function syncAutoParkingAccessPointToMap(map: mapboxgl.Map, point: [numbe
       ? [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: point } }]
       : [],
   });
+}
+
+export interface AutoParkingGuidanceInput {
+  buildings: Array<{ id: string; source: 'drawn' | 'selected'; ring: [number, number][] }>;
+  entrancePoint: [number, number] | null;
+  entranceWall: [[number, number], [number, number]] | null;
+  accessibleGeometry?: GeoJSON.FeatureCollection | null;
+}
+
+/** Selected building chrome, the entrance marker/wall, and an accurate zone derived from returned accessible stalls. */
+export function syncAutoParkingGuidanceToMap(map: mapboxgl.Map, input: AutoParkingGuidanceInput): void {
+  setupAutoParkingLayer(map);
+  const source = map.getSource('auto-parking-guidance') as mapboxgl.GeoJSONSource;
+  if (!source) return;
+  const features: GeoJSON.Feature[] = input.buildings.map((building) => ({
+    type: 'Feature',
+    properties: { kind: 'building', id: building.id, source: building.source },
+    geometry: { type: 'Polygon', coordinates: [closeRing(building.ring)] },
+  }));
+  if (input.entranceWall) {
+    features.push({
+      type: 'Feature',
+      properties: { kind: 'entrance-wall' },
+      geometry: { type: 'LineString', coordinates: input.entranceWall },
+    });
+  }
+  if (input.entrancePoint) {
+    features.push({
+      type: 'Feature',
+      properties: { kind: 'entrance' },
+      geometry: { type: 'Point', coordinates: input.entrancePoint },
+    });
+  }
+
+  const accessibleCoordinates = (input.accessibleGeometry?.features ?? []).flatMap((feature) => {
+    if (feature.geometry.type !== 'Polygon' || !feature.properties?.accessible) return [];
+    return feature.geometry.coordinates[0] as [number, number][];
+  });
+  if (accessibleCoordinates.length > 0) {
+    const lngs = accessibleCoordinates.map((coordinate) => coordinate[0]);
+    const lats = accessibleCoordinates.map((coordinate) => coordinate[1]);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    features.push({
+      type: 'Feature',
+      properties: { kind: 'accessible-zone' },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[[minLng, minLat], [maxLng, minLat], [maxLng, maxLat], [minLng, maxLat], [minLng, minLat]]],
+      },
+    });
+  }
+  source.setData({ type: 'FeatureCollection', features });
 }
 
 /** Updates the thickened nearest-edge affordance shown while hovering the boundary during access placement. */

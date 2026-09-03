@@ -131,6 +131,8 @@ export type AccessiblePolicy = {
   /** Fraction (0–1) of total stalls that should be accessible. */
   rate: number;
   bay: AccessibleBayConfig;
+  /** Preferred destination for accessible bays. Defaults to vehicle access for legacy callers. */
+  anchorPoint?: LngLat;
 };
 
 /** Orientation of a parking module, as a bearing in degrees within the local frame. */
