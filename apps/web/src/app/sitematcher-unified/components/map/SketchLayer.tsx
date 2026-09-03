@@ -38,6 +38,7 @@ import {
 } from '@/lib/sitesketcher-v2/auto-parking/entrance-point'
 import { deriveAutoLayoutStale } from '@/lib/sitesketcher-v2/auto-parking/staleness'
 import { clipFeaturesToBoundary } from '@/lib/sitesketcher-v2/auto-parking/clip'
+import { shouldSuppressEntranceMarkerClick } from '@/lib/sitesketcher-v2/auto-parking/interaction'
 import {
   BOUNDARY_INTERACTIVE_PHASES,
   ACCESS_INTERACTIVE_PHASES,
@@ -423,7 +424,12 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
 
       const state = useSketchStore.getState()
       if (state.cadPlacementInProgress) return
-      if (state.activeTool !== 'select' && state.activeTool !== 'cad') return
+      if (
+        state.activeTool !== 'select' &&
+        state.activeTool !== 'cad' &&
+        !(state.activeTool === 'parking' && state.parkingMethod === 'auto')
+      )
+        return
 
       const cadState = getCadInteractionState(id)
       if (!cadState.exists || cadState.locked) return
@@ -450,17 +456,24 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
       } else {
         moveCadImage(id, anchor)
       }
+      // A CAD is a mandatory exclusion — while comparing/editing an Auto layout,
+      // dragging it re-fits the bays live, mirroring a building polygon drag.
+      // (scheduleAutoParkingDraft self-guards when no live re-fit is active.)
+      scheduleAutoParkingDraft()
     },
-    [moveCadImage, updateCadInstance]
+    [moveCadImage, updateCadInstance, scheduleAutoParkingDraft]
   )
 
   const handleCadMouseUp = useCallback(() => {
     if (cadDragRef.current && mapRef.current) {
+      const moved = cadDragRef.current.moved
       mapRef.current.dragPan.enable()
       mapRef.current.getCanvas().style.cursor = ''
       cadDragRef.current = null
+      // Commit the drag with an authoritative full solve (self-guarded).
+      if (moved) refitAutoParkingFull()
     }
-  }, [])
+  }, [refitAutoParkingFull])
 
   const handleCadMouseEnter = useCallback(
     (cadId: string) => () => {
@@ -747,7 +760,12 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
       on('mousedown', (event: mapboxgl.MapMouseEvent) => {
         const state = useSketchStore.getState()
         if (state.cadPlacementInProgress) return
-        if (state.activeTool !== 'select' && state.activeTool !== 'cad') return
+        if (
+          state.activeTool !== 'select' &&
+          state.activeTool !== 'cad' &&
+          !(state.activeTool === 'parking' && state.parkingMethod === 'auto')
+        )
+          return
         const cadId = findCadImageAtPoint(
           map,
           event.point,
@@ -895,7 +913,11 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
         if (entranceDragRef.current) {
           const wasMoved = entranceDragRef.current.moved
           entranceDragRef.current = null
-          suppressNextMapClickRef.current = true
+          const phase = useSketchStore.getState().autoParkingDraft.phase
+          // During entrance placement the marker is a hover preview. A click
+          // directly on it must reach the map click handler so it can be
+          // committed instead of leaving Draw to select the building below.
+          suppressNextMapClickRef.current = shouldSuppressEntranceMarkerClick(phase, wasMoved)
           map.dragPan.enable()
           map.getCanvas().style.cursor = 'crosshair'
           if (wasMoved) {

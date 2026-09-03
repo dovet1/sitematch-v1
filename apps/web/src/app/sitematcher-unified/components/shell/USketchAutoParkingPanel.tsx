@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef } from 'react'
-import { Loader2, ChevronDown, ChevronUp, AlertTriangle, Sparkles, PenLine, MousePointer2, X } from 'lucide-react'
+import { Loader2, ChevronDown, ChevronUp, AlertTriangle, Sparkles, PenLine, MousePointer2, ImagePlus, X } from 'lucide-react'
+import { UCadLibrary } from './UCadLibrary'
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
 import { calculatePolygonArea } from '@/lib/sitesketcher-v2/polygon-utils'
 import { resolveGuidedExclusions } from '@/lib/sitesketcher-v2/auto-parking/detection'
@@ -428,14 +429,22 @@ export function USketchAutoParkingPanel() {
                 <span className="ml-auto font-mono text-[11px] font-semibold text-sm-violet">{draft.buildingRefs.length + mandatoryCad.length}</span>
               </div>
               <p className="mt-1 text-[12px] leading-relaxed text-sm-ink2">Layouts route around anything here. Skip if the plot is clear.</p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="mt-2 grid grid-cols-3 gap-2">
                 <button type="button" onClick={() => setAutoParkingBuildingMode('draw')} className={buildingModeButton(draft.buildingMode === 'draw')}>
-                  <PenLine size={13} /> Draw building
+                  <PenLine size={13} /> Draw
                 </button>
                 <button type="button" onClick={() => setAutoParkingBuildingMode('select')} className={buildingModeButton(draft.buildingMode === 'select')}>
-                  <MousePointer2 size={13} /> Select on map
+                  <MousePointer2 size={13} /> Select
+                </button>
+                <button type="button" onClick={() => setAutoParkingBuildingMode('cad')} className={buildingModeButton(draft.buildingMode === 'cad')}>
+                  <ImagePlus size={13} /> Add CAD
                 </button>
               </div>
+              {draft.buildingMode === 'cad' && (
+                <div className="mt-2 overflow-hidden rounded-lg border border-[#DFD1FB] bg-white">
+                  <UCadLibrary />
+                </div>
+              )}
             </div>
             {(draft.buildingRefs.length > 0 || mandatoryCad.length > 0 || resolvedExclusions.missingRefs.length > 0) && (
               <div className="flex flex-col gap-1.5 border-t border-[#DFD1FB] px-3 py-2.5">

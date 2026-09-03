@@ -568,13 +568,16 @@ export const useSketchStore = create<SketchState>((set, get) => ({
     // NEW: Check if it's a savedCadId or legacy CAD image ID
     const state = get();
     const isSavedCad = state.savedCads.some(cad => cad.id === savedCadIdOrLegacyId);
+    // Placing from within the guided Auto-parking Buildings step must not
+    // switch the tool/panel away from Parking, or the guided flow unmounts.
+    const inGuidedBuildings =
+      state.parkingMethod === 'auto' && state.autoParkingDraft.phase === 'buildings';
 
     if (isSavedCad) {
       // New flow: place from library
       set({
         cadPlacementInProgress: { savedCadId: savedCadIdOrLegacyId },
-        activeTool: 'cad',
-        activePanel: null,
+        ...(inGuidedBuildings ? {} : { activeTool: 'cad', activePanel: null }),
         selectedId: null, // No selection until instance created
         selectedType: null,
       });
@@ -721,15 +724,20 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       updatedAt: Date.now(),
     };
 
-    set((state) => ({
-      cadInstances: [...state.cadInstances, instance],
-      cadPlacementInProgress: null,
-      selectedId: instance.id,
-      selectedType: 'cad',
-      activeTool: 'select',
-      activePanel: null,
-      isDirty: true,
-    }));
+    set((state) => {
+      // Keep the guided Auto-parking flow on the Parking tool when the CAD is
+      // dropped from its Buildings step; otherwise fall back to Select.
+      const inGuidedBuildings =
+        state.parkingMethod === 'auto' && state.autoParkingDraft.phase === 'buildings';
+      return {
+        cadInstances: [...state.cadInstances, instance],
+        cadPlacementInProgress: null,
+        selectedId: instance.id,
+        selectedType: 'cad',
+        ...(inGuidedBuildings ? {} : { activeTool: 'select', activePanel: null }),
+        isDirty: true,
+      };
+    });
   },
 
   // Helper
@@ -772,11 +780,18 @@ export const useSketchStore = create<SketchState>((set, get) => ({
   },
 
   setSelectedId: (id, type) =>
-    set({
-      selectedId: id,
-      selectedType: type,
-      selectedAutoLayoutId: null,
-      activeTool: id ? 'select' : get().activeTool,
+    set((state) => {
+      // Selecting a CAD from within the guided Auto-parking flow must keep the
+      // Parking tool active — the user manipulates it (move/rotate) in place via
+      // the inspector rather than being yanked into Select mode.
+      const keepGuidedTool =
+        type === 'cad' && state.parkingMethod === 'auto' && state.activeTool === 'parking'
+      return {
+        selectedId: id,
+        selectedType: type,
+        selectedAutoLayoutId: null,
+        activeTool: id && !keepGuidedTool ? 'select' : state.activeTool,
+      }
     }),
 
   setSelectedPolygonColorIndex: (index) => set({ selectedPolygonColorIndex: index }),

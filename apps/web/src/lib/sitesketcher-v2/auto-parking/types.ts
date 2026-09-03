@@ -36,7 +36,7 @@ export interface AutoParkingDraft {
   boundarySnapshot: LngLat[] | null;
   /** Explicit polygon buildings. Intersecting CAD is derived and mandatory. */
   buildingRefs: Array<{ id: string; kind: 'polygon'; source: 'drawn' | 'selected' }>;
-  buildingMode: 'draw' | 'select';
+  buildingMode: 'draw' | 'select' | 'cad';
   entrance: AutoParkingEntrance | null;
   entranceSnapshot: AutoParkingEntrance | null;
   accessAnchor: AccessAnchor | null;
