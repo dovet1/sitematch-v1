@@ -30,11 +30,13 @@ import { snapPointToBoundaryEdge, reprojectAccessAnchor } from '@/lib/sitesketch
 import { buildCandidatePreviewGeometry, buildSolverInput } from '@/lib/sitesketcher-v2/auto-parking/adapter'
 import { resolveGuidedExclusions, ringsIntersect } from '@/lib/sitesketcher-v2/auto-parking/detection'
 import {
+  entranceBuildings,
   entranceWall,
   isEntranceValid,
   isPointInsideRing,
   resolveEntrance,
   snapEntranceToBuildings,
+  type EntranceBuilding,
 } from '@/lib/sitesketcher-v2/auto-parking/entrance-point'
 import { deriveAutoLayoutStale } from '@/lib/sitesketcher-v2/auto-parking/staleness'
 import { clipFeaturesToBoundary } from '@/lib/sitesketcher-v2/auto-parking/clip'
@@ -197,6 +199,24 @@ function resolveAutoParkingAccessPoint(
   return reprojectAccessAnchor(accessAnchor, boundary.points)
 }
 
+/** The guided building set (selected polygons + intersecting CAD) the entrance snaps/resolves against. */
+function autoParkingEntranceBuildings(
+  state: ReturnType<typeof useSketchStore.getState>,
+): EntranceBuilding[] {
+  const draft = state.autoParkingDraft
+  const boundary = state.polygons.find((polygon) => polygon.id === draft.boundaryId)
+  if (!boundary) return []
+  return entranceBuildings({
+    boundaryId: boundary.id,
+    boundaryRing: boundary.points,
+    buildingRefs: draft.buildingRefs,
+    polygons: state.polygons,
+    cadInstances: state.cadInstances,
+    cadImages: state.cadImages,
+    savedCads: state.savedCads,
+  })
+}
+
 function syncAutoParkingGuidanceForState(
   map: mapboxgl.Map,
   state: ReturnType<typeof useSketchStore.getState>,
@@ -209,10 +229,11 @@ function syncAutoParkingGuidanceForState(
     const polygon = state.polygons.find((candidate) => candidate.id === ref.id)
     return polygon ? [{ id: ref.id, source: ref.source, ring: polygon.points }] : []
   })
+  const entranceBuildingsList = autoParkingEntranceBuildings(state)
   syncAutoParkingGuidanceToMap(map, {
     buildings,
-    entrancePoint: resolveEntrance(state.autoParkingDraft.entrance, state.polygons),
-    entranceWall: entranceWall(state.autoParkingDraft.entrance, state.polygons),
+    entrancePoint: resolveEntrance(state.autoParkingDraft.entrance, entranceBuildingsList),
+    entranceWall: entranceWall(state.autoParkingDraft.entrance, entranceBuildingsList),
   })
 }
 
@@ -369,7 +390,7 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
 
     const accessPoint = accessPointOverride ?? reprojectAccessAnchor(draft.accessAnchor, boundaryRing)
     if (!accessPoint) return null
-    const entrancePoint = resolveEntrance(draft.entrance, polygonsForDetection)
+    const entrancePoint = resolveEntrance(draft.entrance, resolved.exclusions)
     if (!entrancePoint) return null
 
     return { boundaryRing, exclusions: resolved.exclusions, accessPoint, entrancePoint, settings: draft.settings }
@@ -654,7 +675,7 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
           stateAfterUpdate.autoParkingDraft.entrance &&
           !isEntranceValid(
             stateAfterUpdate.autoParkingDraft.entrance,
-            stateAfterUpdate.polygons,
+            autoParkingEntranceBuildings(stateAfterUpdate),
             stateAfterUpdate.polygons.find((polygon) => polygon.id === stateAfterUpdate.autoParkingDraft.boundaryId)?.points,
           )
         ) {
@@ -833,12 +854,16 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
           const point: [number, number] = [event.lngLat.lng, event.lngLat.lat]
           const entrance = state.autoParkingDraft.entrance
           if (entrance?.kind === 'building') {
-            const building = state.polygons.find((polygon) => polygon.id === entrance.buildingId)
-            const snap = building ? snapPointToBoundaryEdge(point, building.points) : null
+            const kind = entrance.buildingKind ?? 'polygon'
+            const building = autoParkingEntranceBuildings(state).find(
+              (candidate) => candidate.id === entrance.buildingId && candidate.kind === kind,
+            )
+            const snap = building ? snapPointToBoundaryEdge(point, building.ring) : null
             if (snap) {
               state.setAutoParkingEntrance({
                 kind: 'building',
                 buildingId: entrance.buildingId,
+                buildingKind: entrance.buildingKind,
                 edgeIndex: snap.edgeIndex,
                 distanceAlongEdgeM: snap.distanceAlongEdgeM,
               })
@@ -862,8 +887,9 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
           ENTRANCE_INTERACTIVE_PHASES.has(latestState.autoParkingDraft.phase)
         ) {
           const point: [number, number] = [event.lngLat.lng, event.lngLat.lat]
-          if (latestState.autoParkingDraft.buildingRefs.length > 0) {
-            const snap = snapEntranceToBuildings(point, latestState.autoParkingDraft.buildingRefs, latestState.polygons)
+          const entranceBuildingsList = autoParkingEntranceBuildings(latestState)
+          if (entranceBuildingsList.length > 0) {
+            const snap = snapEntranceToBuildings(point, entranceBuildingsList)
             latestState.setAutoParkingEntrance(snap?.entrance ?? null)
           } else {
             const boundary = latestState.polygons.find((polygon) => polygon.id === latestState.autoParkingDraft.boundaryId)
@@ -1014,8 +1040,9 @@ export function SketchLayer({ map }: { map: mapboxgl.Map }) {
           }
           if (ENTRANCE_INTERACTIVE_PHASES.has(draft.phase) && draft.boundaryId) {
             const point: [number, number] = [event.lngLat.lng, event.lngLat.lat]
-            if (draft.buildingRefs.length > 0) {
-              const snap = snapEntranceToBuildings(point, draft.buildingRefs, state.polygons)
+            const entranceBuildingsList = autoParkingEntranceBuildings(state)
+            if (entranceBuildingsList.length > 0) {
+              const snap = snapEntranceToBuildings(point, entranceBuildingsList)
               if (snap) {
                 commitAutoParkingEntrance(snap.entrance)
                 refitAutoParkingFull()

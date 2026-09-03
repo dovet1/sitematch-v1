@@ -135,6 +135,12 @@ export type AutoParkingEntrance =
   | {
       kind: 'building';
       buildingId: string;
+      /**
+       * Which object `buildingId` refers to. Absent on entrances saved before
+       * CAD footprints were entrance-attachable — treat a missing value as
+       * 'polygon' for backward compatibility.
+       */
+      buildingKind?: 'polygon' | 'cadInstance' | 'cadImage';
       edgeIndex: number;
       distanceAlongEdgeM: number;
     }

@@ -28,7 +28,7 @@ import {
   type AutoParkingGenerationStatus,
 } from './auto-parking/types';
 import { isAccessAnchorValid, snapPointToBoundaryEdge, type AccessAnchor } from './auto-parking/access-point';
-import { isEntranceValid } from './auto-parking/entrance-point';
+import { entranceBuildings, isEntranceValid, type EntranceBuilding } from './auto-parking/entrance-point';
 import type { CandidateLayout, SolverInput, SolverOutput } from '@/lib/parking-layout-lab/types';
 import type mapboxgl from 'mapbox-gl';
 
@@ -264,6 +264,22 @@ interface SketchState {
   // Actions - Save helpers
   getSketchData: () => any;
 }
+
+/** The guided building set (selected polygons + intersecting CAD) the entrance snaps/resolves against. */
+const entranceBuildingsForState = (state: SketchState): EntranceBuilding[] => {
+  const draft = state.autoParkingDraft;
+  const boundary = state.polygons.find((polygon) => polygon.id === draft.boundaryId);
+  if (!boundary) return [];
+  return entranceBuildings({
+    boundaryId: boundary.id,
+    boundaryRing: boundary.points,
+    buildingRefs: draft.buildingRefs,
+    polygons: state.polygons,
+    cadInstances: state.cadInstances,
+    cadImages: state.cadImages,
+    savedCads: state.savedCads,
+  });
+};
 
 const createHistoryState = (state: SketchState): HistoryState => ({
   polygons: JSON.parse(JSON.stringify(state.polygons)),
@@ -905,8 +921,13 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       const buildingRefs = exists
         ? draft.buildingRefs.filter((ref) => ref.id !== id)
         : [...draft.buildingRefs, { id, kind: 'polygon' as const, source }];
+      // Only a polygon-building entrance is cleared here — untoggling a polygon
+      // never removes a CAD the entrance may be attached to.
       const entrance =
-        exists && draft.entrance?.kind === 'building' && draft.entrance.buildingId === id
+        exists &&
+        draft.entrance?.kind === 'building' &&
+        (draft.entrance.buildingKind ?? 'polygon') === 'polygon' &&
+        draft.entrance.buildingId === id
           ? null
           : draft.entrance;
       const editingVisibleLayout = draft.phaseBeforeEdit === 'compare' || draft.phaseBeforeEdit === 'editing';
@@ -927,7 +948,7 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       );
       if (missing) return state;
       const boundary = state.polygons.find((polygon) => polygon.id === draft.boundaryId);
-      const entranceValid = isEntranceValid(draft.entrance, state.polygons, boundary?.points);
+      const entranceValid = isEntranceValid(draft.entrance, entranceBuildingsForState(state), boundary?.points);
       const returnPhase = draft.phaseBeforeEdit;
       const phase: AutoParkingPhase =
         returnPhase && entranceValid ? returnPhase : 'entrance';
@@ -1099,7 +1120,18 @@ export const useSketchStore = create<SketchState>((set, get) => ({
       (ref) => !state.polygons.some((polygon) => polygon.id === ref.id),
     );
     const entrance = layout.entrance ?? null;
-    const entranceValid = isEntranceValid(entrance, state.polygons, boundary?.points);
+    const layoutEntranceBuildings = boundary
+      ? entranceBuildings({
+          boundaryId: boundary.id,
+          boundaryRing: boundary.points,
+          buildingRefs,
+          polygons: state.polygons,
+          cadInstances: state.cadInstances,
+          cadImages: state.cadImages,
+          savedCads: state.savedCads,
+        })
+      : [];
+    const entranceValid = isEntranceValid(entrance, layoutEntranceBuildings, boundary?.points);
     const phase: AutoParkingPhase = hasMissingBuilding
       ? 'buildings'
       : !entranceValid

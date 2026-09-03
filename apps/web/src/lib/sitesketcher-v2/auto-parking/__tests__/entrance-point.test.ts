@@ -4,9 +4,9 @@ import {
   isPointInsideRing,
   resolveEntrance,
   snapEntranceToBuildings,
+  type EntranceBuilding,
 } from '../entrance-point';
 import type { LngLat } from '@/lib/parking-layout-lab/types';
-import type { Polygon } from '@/types/sitesketcher-v2';
 
 const ORIGIN: LngLat = [-1.08, 51.28];
 const EARTH_R = 6_378_137;
@@ -18,34 +18,39 @@ function m(x: number, y: number): LngLat {
   ];
 }
 
-function building(id: string, x: number): Polygon {
-  return {
-    id,
-    name: id,
-    colorIndex: 0,
-    points: [m(x, 10), m(x + 10, 10), m(x + 10, 20), m(x, 20), m(x, 10)],
-    rotation: 0,
-    height: 0,
-    showDistances: false,
-    showArea: false,
-    createdAt: 1,
-    updatedAt: 1,
-  };
+function building(id: string, x: number, kind: EntranceBuilding['kind'] = 'polygon'): EntranceBuilding {
+  return { id, kind, ring: [m(x, 10), m(x + 10, 10), m(x + 10, 20), m(x, 20), m(x, 10)] };
 }
 
 describe('building entrance geometry', () => {
   const buildings = [building('a', 5), building('b', 30)];
-  const refs = buildings.map((item) => ({ id: item.id, kind: 'polygon' as const, source: 'selected' as const }));
 
-  it('snaps to the nearest selected building wall and resolves from its edge anchor', () => {
-    const result = snapEntranceToBuildings(m(29, 15), refs, buildings);
+  it('snaps to the nearest building wall and resolves from its edge anchor', () => {
+    const result = snapEntranceToBuildings(m(29, 15), buildings);
     expect(result?.entrance.buildingId).toBe('b');
+    expect(result?.entrance.buildingKind).toBe('polygon');
     expect(resolveEntrance(result!.entrance, buildings)).toEqual(result!.point);
     expect(entranceWall(result!.entrance, buildings)).toEqual(result!.wall);
   });
 
-  it('becomes invalid when its referenced building is missing', () => {
+  it('snaps to a CAD footprint and tags the entrance as a CAD wall', () => {
+    const cad = building('cad-1', 30, 'cadInstance');
+    const result = snapEntranceToBuildings(m(29, 15), [building('a', 5), cad]);
+    expect(result?.entrance.buildingId).toBe('cad-1');
+    expect(result?.entrance.buildingKind).toBe('cadInstance');
+    expect(resolveEntrance(result!.entrance, [cad])).toEqual(result!.point);
+    // A same-id polygon must not satisfy a CAD-kind entrance.
+    expect(resolveEntrance(result!.entrance, [building('cad-1', 30, 'polygon')])).toBeNull();
+  });
+
+  it('treats a missing buildingKind as a polygon (backward compatibility)', () => {
     const entrance = { kind: 'building' as const, buildingId: 'a', edgeIndex: 0, distanceAlongEdgeM: 2 };
+    expect(isEntranceValid(entrance, buildings)).toBe(true);
+    expect(resolveEntrance(entrance, [building('a', 5, 'cadInstance')])).toBeNull();
+  });
+
+  it('becomes invalid when its referenced building is missing', () => {
+    const entrance = { kind: 'building' as const, buildingId: 'a', buildingKind: 'polygon' as const, edgeIndex: 0, distanceAlongEdgeM: 2 };
     expect(isEntranceValid(entrance, buildings)).toBe(true);
     expect(isEntranceValid(entrance, buildings.slice(1))).toBe(false);
     expect(resolveEntrance(entrance, buildings.slice(1))).toBeNull();

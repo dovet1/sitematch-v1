@@ -57,7 +57,7 @@ export function deriveAutoLayoutStale(layout: AutoParkingLayout, scene: Stalenes
   // An explicitly selected building is provenance, not a hint. Deletion must
   // mark the reviewed layout stale rather than silently dropping the blocker.
   if (resolved.missingRefs.length > 0) return true;
-  const entrancePoint = resolveEntrance(layout.entrance, scene.polygons);
+  const entrancePoint = resolveEntrance(layout.entrance, resolved.exclusions);
   if (!entrancePoint) return true;
 
   return isLayoutStale(layout, {

@@ -8,7 +8,7 @@ import { calculatePolygonArea } from '@/lib/sitesketcher-v2/polygon-utils'
 import { resolveGuidedExclusions } from '@/lib/sitesketcher-v2/auto-parking/detection'
 import { buildAutoParkingLayout, buildSolverInput } from '@/lib/sitesketcher-v2/auto-parking/adapter'
 import { reprojectAccessAnchor } from '@/lib/sitesketcher-v2/auto-parking/access-point'
-import { resolveEntrance } from '@/lib/sitesketcher-v2/auto-parking/entrance-point'
+import { resolveEntrance, type EntranceBuilding } from '@/lib/sitesketcher-v2/auto-parking/entrance-point'
 import type { AutoParkingEntrance, Polygon } from '@/types/sitesketcher-v2'
 import type { CandidateLayout, SolverInput } from '@/lib/parking-layout-lab/types'
 import { representativeAngle, useAutoParkingWorker } from '../../lib/hooks/useAutoParkingWorker'
@@ -102,7 +102,7 @@ export function USketchAutoParkingPanel() {
     return reprojectAccessAnchor(draft.accessAnchor, boundaryPolygon.points)
   }, [boundaryPolygon, draft.accessAnchor])
 
-  const entrancePoint = useMemo(() => resolveEntrance(draft.entrance, polygons), [draft.entrance, polygons])
+  const entrancePoint = useMemo(() => resolveEntrance(draft.entrance, exclusions), [draft.entrance, exclusions])
 
   const currentSolverInput = useMemo(() => {
     if (!boundaryPolygon || !accessPoint || !entrancePoint || resolvedExclusions.missingRefs.length > 0) return null
@@ -262,7 +262,7 @@ export function USketchAutoParkingPanel() {
         <GuidedStepCard
           variant="done"
           title="Building entrance"
-          meta={entranceMeta(draft.entrance, polygons)}
+          meta={entranceMeta(draft.entrance, exclusions, polygons)}
           onChange={startAutoParkingEntranceEdit}
           compact
         />
@@ -382,7 +382,7 @@ export function USketchAutoParkingPanel() {
       <GuidedStepCard
         variant="editing"
         title="Editing building entrance"
-        description={draft.buildingRefs.length > 0 ? 'Click another wall, or drag the marker along its building.' : 'Click or drag the visitor target point inside the site.'}
+        description={exclusions.length > 0 ? 'Click another wall, or drag the marker along its building.' : 'Click or drag the visitor target point inside the site.'}
       />
     )
   }
@@ -527,6 +527,7 @@ export function USketchAutoParkingPanel() {
           boundaryPolygon={boundaryPolygon}
           buildingCount={draft.buildingRefs.length + exclusions.filter((e) => e.source === 'mandatory').length}
           entrance={draft.entrance}
+          entranceBuildingsList={exclusions}
           accessAnchor={null}
           polygons={polygons}
           onChangeBoundary={startAutoParkingBoundaryEdit}
@@ -546,6 +547,7 @@ export function USketchAutoParkingPanel() {
         boundaryPolygon={boundaryPolygon}
         buildingCount={draft.buildingRefs.length + exclusions.filter((e) => e.source === 'mandatory').length}
         entrance={draft.entrance}
+        entranceBuildingsList={exclusions}
         accessAnchor={draft.accessAnchor}
         polygons={polygons}
         onChangeBoundary={startAutoParkingBoundaryEdit}
@@ -587,6 +589,7 @@ function StepList({
   boundaryPolygon,
   buildingCount = 0,
   entrance = null,
+  entranceBuildingsList = [],
   accessAnchor,
   polygons = [],
   onChangeBoundary,
@@ -598,6 +601,7 @@ function StepList({
   boundaryPolygon: Polygon | null
   buildingCount?: number
   entrance?: AutoParkingEntrance | null
+  entranceBuildingsList?: EntranceBuilding[]
   accessAnchor: { edgeIndex: number; distanceAlongEdgeM: number } | null
   polygons?: Polygon[]
   onChangeBoundary?: () => void
@@ -639,7 +643,7 @@ function StepList({
             : 'No buildings? Drop a target point where visitors arrive instead.'}
         />
       ) : activePhase === 'access' || activePhase === 'ready' ? (
-        <GuidedStepCard variant="done" title="Building entrance" meta={entranceMeta(entrance, polygons)} onChange={onChangeEntrance} />
+        <GuidedStepCard variant="done" title="Building entrance" meta={entranceMeta(entrance, entranceBuildingsList, polygons)} onChange={onChangeEntrance} />
       ) : (
         <GuidedStepCard variant="dimmed" number={3} title="Set the building entrance" />
       )}
@@ -671,11 +675,21 @@ function StepList({
   )
 }
 
-function entranceMeta(entrance: AutoParkingEntrance | null | undefined, polygons: Polygon[]): string | undefined {
+function entranceMeta(
+  entrance: AutoParkingEntrance | null | undefined,
+  buildings: EntranceBuilding[],
+  polygons: Polygon[],
+): string | undefined {
   if (!entrance) return undefined
   if (entrance.kind === 'target') return 'Visitor target point'
-  const building = polygons.find((polygon) => polygon.id === entrance.buildingId)
-  return building ? `${building.name} wall` : 'Missing building'
+  const kind = entrance.buildingKind ?? 'polygon'
+  const attached = buildings.some((building) => building.id === entrance.buildingId && building.kind === kind)
+  if (!attached) return 'Missing building'
+  if (kind === 'polygon') {
+    const polygon = polygons.find((polygon) => polygon.id === entrance.buildingId)
+    return polygon ? `${polygon.name} wall` : 'Building wall'
+  }
+  return 'CAD wall'
 }
 
 function buildingModeButton(active: boolean): string {
