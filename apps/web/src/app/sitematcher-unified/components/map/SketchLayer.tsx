@@ -212,7 +212,6 @@ function syncAutoParkingGuidanceForState(
     buildings,
     entrancePoint: resolveEntrance(state.autoParkingDraft.entrance, state.polygons),
     entranceWall: entranceWall(state.autoParkingDraft.entrance, state.polygons),
-    accessibleGeometry: getAutoParkingPreviewGeometry(state),
   })
 }
 

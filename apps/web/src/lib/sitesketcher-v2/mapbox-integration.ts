@@ -741,15 +741,6 @@ export function setupAutoParkingLayer(map: mapboxgl.Map): void {
       },
     }, beforeDrawVertices);
   }
-  if (!map.getLayer('auto-parking-accessible-zone')) {
-    map.addLayer({
-      id: 'auto-parking-accessible-zone',
-      type: 'line',
-      source: 'auto-parking-guidance',
-      filter: ['==', ['get', 'kind'], 'accessible-zone'],
-      paint: { 'line-color': '#2FA37A', 'line-width': 2, 'line-dasharray': [3, 2] },
-    });
-  }
   if (!map.getLayer('auto-parking-entrance-wall')) {
     map.addLayer({
       id: 'auto-parking-entrance-wall',
@@ -827,10 +818,9 @@ export interface AutoParkingGuidanceInput {
   buildings: Array<{ id: string; source: 'drawn' | 'selected'; ring: [number, number][] }>;
   entrancePoint: [number, number] | null;
   entranceWall: [[number, number], [number, number]] | null;
-  accessibleGeometry?: GeoJSON.FeatureCollection | null;
 }
 
-/** Selected building chrome, the entrance marker/wall, and an accurate zone derived from returned accessible stalls. */
+/** Selected building chrome and the entrance marker/wall. */
 export function syncAutoParkingGuidanceToMap(map: mapboxgl.Map, input: AutoParkingGuidanceInput): void {
   setupAutoParkingLayer(map);
   const source = map.getSource('auto-parking-guidance') as mapboxgl.GeoJSONSource;
@@ -855,26 +845,6 @@ export function syncAutoParkingGuidanceToMap(map: mapboxgl.Map, input: AutoParki
     });
   }
 
-  const accessibleCoordinates = (input.accessibleGeometry?.features ?? []).flatMap((feature) => {
-    if (feature.geometry.type !== 'Polygon' || !feature.properties?.accessible) return [];
-    return feature.geometry.coordinates[0] as [number, number][];
-  });
-  if (accessibleCoordinates.length > 0) {
-    const lngs = accessibleCoordinates.map((coordinate) => coordinate[0]);
-    const lats = accessibleCoordinates.map((coordinate) => coordinate[1]);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    features.push({
-      type: 'Feature',
-      properties: { kind: 'accessible-zone' },
-      geometry: {
-        type: 'Polygon',
-        coordinates: [[[minLng, minLat], [maxLng, minLat], [maxLng, maxLat], [minLng, maxLat], [minLng, minLat]]],
-      },
-    });
-  }
   source.setData({ type: 'FeatureCollection', features });
 }
 

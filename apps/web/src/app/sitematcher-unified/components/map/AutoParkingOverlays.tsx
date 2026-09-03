@@ -77,7 +77,6 @@ export function AutoParkingOverlays() {
             <LegendRow swatch={<span className="h-2.5 w-3.5 rounded-[2px] border border-dashed border-sm-ink3 bg-[#26242A]" />} label="Building · avoided" />
             <LegendRow swatch={<span className="h-2.5 w-2.5 rounded-full bg-sm-violet" />} label="Vehicle access" />
             <LegendRow swatch={<span className="h-2.5 w-2.5 rounded-full bg-[#2FA37A]" />} label="Building entrance" />
-            <LegendRow swatch={<span className="h-2.5 w-3.5 rounded-[2px] border border-dashed border-[#2FA37A]" />} label="Accessible bays near entrance" />
           </div>
         </div>
       )}
