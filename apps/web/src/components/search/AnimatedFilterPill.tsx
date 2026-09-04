@@ -23,12 +23,15 @@ export const AnimatedFilterPill = React.forwardRef<HTMLDivElement, AnimatedFilte
       maxWidth: 0, 
       marginRight: 0,
       paddingLeft: 0,
-      paddingRight: 0
+      paddingRight: 0,
+      // A shorter exit belongs on the exit variant. It was previously an `exit`
+      // key inside `transition`, which framer-motion has no such option for, so
+      // the pill has in fact been leaving at the default 0.2s all along.
+      transition: { duration: 0.15, ease: 'easeOut' }
     }}
     transition={{ 
       duration: 0.2, 
-      ease: "easeOut",
-      exit: { duration: 0.15 }
+      ease: 'easeOut'
     }}
     layout
   >

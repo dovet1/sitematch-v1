@@ -73,3 +73,7 @@ ds-bundle/
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+
+# TypeScript incremental build cache. Committing it made type-checks unreliable:
+# a stale cache let tsc skip files that the production build then failed on.
+*.tsbuildinfo

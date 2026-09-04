@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { X, Building2, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -109,7 +109,7 @@ export function ImmersiveListingModal({
   }, [isOpen, isMobile]);
   
   // Animation variants
-  const backdropVariants = {
+  const backdropVariants: Variants = {
     hidden: { opacity: 0 },
     visible: { 
       opacity: 1,
@@ -117,7 +117,7 @@ export function ImmersiveListingModal({
     }
   };
 
-  const modalVariants = {
+  const modalVariants: Variants = {
     hidden: { 
       scale: 0.95,
       opacity: 0,
