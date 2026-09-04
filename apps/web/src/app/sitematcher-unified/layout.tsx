@@ -2,8 +2,13 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getCurrentUser } from '@/lib/auth'
 import { checkPlusAccess } from '@/lib/gapfinder-access'
-import { isUnifiedWorkspaceEnabled, isAutoParkingEnabled } from '@/lib/feature-flags'
+import {
+  isUnifiedWorkspaceEnabled,
+  isAutoParkingEnabled,
+  isRetailCentreGapsEnabled,
+} from '@/lib/feature-flags'
 import { AutoParkingFlagProvider } from './lib/auto-parking-flag-context'
+import { RetailCentreFlagProvider } from './lib/retail-centre-flag-context'
 
 export default async function UnifiedWorkspaceLayout({
   children,
@@ -29,9 +34,18 @@ export default async function UnifiedWorkspaceLayout({
   // Sub-feature kill-switch: resolved once per request here (server) and
   // bridged to the client tree via context — the real Plus enforcement for
   // Auto parking still happens server-side on save (see the sketches API).
-  const autoParkingEnabled = await isAutoParkingEnabled()
+  const [autoParkingEnabled, retailCentreGapsEnabled] = await Promise.all([
+    isAutoParkingEnabled(),
+    isRetailCentreGapsEnabled(),
+  ])
 
-  return <AutoParkingFlagProvider enabled={autoParkingEnabled}>{children}</AutoParkingFlagProvider>
+  return (
+    <AutoParkingFlagProvider enabled={autoParkingEnabled}>
+      <RetailCentreFlagProvider enabled={retailCentreGapsEnabled}>
+        {children}
+      </RetailCentreFlagProvider>
+    </AutoParkingFlagProvider>
+  )
 }
 
 function UpgradeState() {

@@ -45,3 +45,11 @@ export const AUTO_PARKING_FLAG = 'auto_parking_enabled'
 export function isAutoParkingEnabled(): Promise<boolean> {
   return isFeatureEnabled(AUTO_PARKING_FLAG)
 }
+
+// GeoDS retail-centre geography in Find Gaps. Kept off until the GeoDS import
+// and Mapbox layers have both been deployed.
+export const RETAIL_CENTRE_GAPS_FLAG = 'retail_centre_gaps_enabled'
+
+export function isRetailCentreGapsEnabled(): Promise<boolean> {
+  return isFeatureEnabled(RETAIL_CENTRE_GAPS_FLAG)
+}

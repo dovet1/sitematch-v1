@@ -19,6 +19,7 @@ import {
 import { StorePinCluster } from './StorePinCluster'
 import { decideMapClick } from './map-click'
 import type { GapPinsStatus } from '../../lib/hooks/useFindGapsStorePins'
+import { useRetailCentreGapsEnabled } from '../../lib/retail-centre-flag-context'
 
 // UK-wide "national" starting view for discovery.
 const NATIONAL_VIEWPORT = {
@@ -32,6 +33,17 @@ const BUA_SOURCE_LAYER = 'bua'
 const BUA_FILL_LAYER = 'bua-fill'
 const BUA_OUTLINE_LAYER = 'bua-outline'
 const BUA_SELECTED_LAYER = 'bua-selected'
+
+const RETAIL_TILESET_ID = process.env.NEXT_PUBLIC_MAPBOX_RETAIL_CENTRES_TILESET_ID
+const RETAIL_SOURCE_ID = 'retail-centres-source'
+const RETAIL_POLYGON_SOURCE_LAYER =
+  process.env.NEXT_PUBLIC_MAPBOX_RETAIL_CENTRES_POLYGON_LAYER ?? 'retail_centres'
+const RETAIL_POINT_SOURCE_LAYER =
+  process.env.NEXT_PUBLIC_MAPBOX_RETAIL_CENTRES_POINT_LAYER ?? 'retail_centres_points'
+const RETAIL_FILL_LAYER = 'retail-centres-fill'
+const RETAIL_OUTLINE_LAYER = 'retail-centres-outline'
+const RETAIL_POINT_LAYER = 'retail-centres-points'
+const RETAIL_SELECTED_LAYER = 'retail-centres-selected'
 
 // Live occupier requirement pins (Assess-only, gated on the overlay toggle).
 const REQ_SOURCE = 'assess-requirements'
@@ -101,6 +113,10 @@ function buaFilter(codes: string[] | null, range: [number, number]) {
     ['<=', pop, range[1]],
     ['in', ['get', 'gsscode'], ['literal', codes]],
   ]
+}
+
+function retailCentreFilter(ids: string[] | null) {
+  return ['in', ['get', 'rc_id'], ['literal', ids ?? []]]
 }
 
 // Insert BUA/overlay layers below the base style's label symbols.
@@ -225,6 +241,7 @@ export function UnifiedMap({
   gapStorePins?: NearbyStore[]
   gapPinsStatus?: GapPinsStatus
 }) {
+  const retailCentreEnabled = useRetailCentreGapsEnabled()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const prevViewRef = useRef(useWorkspaceStore.getState().view)
@@ -272,7 +289,8 @@ export function UnifiedMap({
   const tab = useWorkspaceStore((s) => s.tab)
   const showLsoa = useWorkspaceStore((s) => s.showLsoa)
   const area = useWorkspaceStore((s) => s.area)
-  const gapGssCodes = useWorkspaceStore((s) => s.gapGssCodes)
+  const gapAreaIds = useWorkspaceStore((s) => s.gapAreaIds)
+  const gapGeography = useWorkspaceStore((s) => s.gapGeography)
   const populationRange = useWorkspaceStore((s) => s.populationRange)
   const showSubFiveK = useWorkspaceStore((s) => s.showSubFiveK)
   const assessPoint = useWorkspaceStore((s) => s.assessPoint)
@@ -502,6 +520,84 @@ export function UnifiedMap({
         },
         beforeId
       )
+    }
+
+    if (retailCentreEnabled && RETAIL_TILESET_ID) {
+      if (!map.getSource(RETAIL_SOURCE_ID)) {
+        map.addSource(RETAIL_SOURCE_ID, {
+          type: 'vector',
+          url: `mapbox://${RETAIL_TILESET_ID}`,
+        })
+      }
+      const classificationColor: mapboxgl.Expression = [
+        'match',
+        ['get', 'form'],
+        'retail_park', '#E8622C',
+        'shopping_centre', '#0E7C86',
+        '#7033FF',
+      ]
+      if (!map.getLayer(RETAIL_POINT_LAYER)) {
+        map.addLayer(
+          {
+            id: RETAIL_POINT_LAYER,
+            type: 'circle',
+            source: RETAIL_SOURCE_ID,
+            'source-layer': RETAIL_POINT_SOURCE_LAYER,
+            maxzoom: 9.5,
+            filter: retailCentreFilter([]) as any,
+            paint: {
+              'circle-color': classificationColor,
+              'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, 2.5, 9, 6],
+              'circle-opacity': 0.78,
+              'circle-stroke-color': '#fff',
+              'circle-stroke-width': 1,
+            },
+          },
+          beforeId
+        )
+      }
+      if (!map.getLayer(RETAIL_FILL_LAYER)) {
+        map.addLayer(
+          {
+            id: RETAIL_FILL_LAYER,
+            type: 'fill',
+            source: RETAIL_SOURCE_ID,
+            'source-layer': RETAIL_POLYGON_SOURCE_LAYER,
+            minzoom: 8.5,
+            filter: retailCentreFilter([]) as any,
+            paint: { 'fill-color': classificationColor, 'fill-opacity': 0.34 },
+          },
+          beforeId
+        )
+      }
+      if (!map.getLayer(RETAIL_OUTLINE_LAYER)) {
+        map.addLayer(
+          {
+            id: RETAIL_OUTLINE_LAYER,
+            type: 'line',
+            source: RETAIL_SOURCE_ID,
+            'source-layer': RETAIL_POLYGON_SOURCE_LAYER,
+            minzoom: 8.5,
+            filter: retailCentreFilter([]) as any,
+            paint: { 'line-color': '#342D3A', 'line-width': 0.8 },
+          },
+          beforeId
+        )
+      }
+      if (!map.getLayer(RETAIL_SELECTED_LAYER)) {
+        map.addLayer(
+          {
+            id: RETAIL_SELECTED_LAYER,
+            type: 'line',
+            source: RETAIL_SOURCE_ID,
+            'source-layer': RETAIL_POLYGON_SOURCE_LAYER,
+            minzoom: 8.5,
+            filter: ['==', ['get', 'rc_id'], '__none__'],
+            paint: { 'line-color': '#7033FF', 'line-width': 3 },
+          },
+          beforeId
+        )
+      }
     }
 
     // Requirement pins — larger violet markers, styled distinctly from stores.
@@ -759,6 +855,7 @@ export function UnifiedMap({
     }
 
     applyBuaFilter(map)
+    applyRetailCentreFilter(map)
     applyLsoaFilters(map)
     applyCatchmentBoundary(map)
     applyCompareBoundaries(map)
@@ -779,6 +876,13 @@ export function UnifiedMap({
         st.area?.kind === 'bua' ? st.area.id : '__none__',
       ] as any)
     }
+    if (map.getLayer(RETAIL_SELECTED_LAYER)) {
+      map.setFilter(RETAIL_SELECTED_LAYER, [
+        '==',
+        ['get', 'rc_id'],
+        st.area?.kind === 'retail_centre' ? st.area.id : '__none__',
+      ] as any)
+    }
     // Re-place the Assess pin(s) if they were set before the style settled.
     syncAssessPins(map)
   }
@@ -789,9 +893,18 @@ export function UnifiedMap({
       showSubFiveK ? 0 : populationRange[0],
       populationRange[1],
     ]
-    const f = buaFilter(gapGssCodes, effRange) as any
+    const f = buaFilter(gapAreaIds, effRange) as any
     map.setFilter(BUA_FILL_LAYER, f)
     map.setFilter(BUA_OUTLINE_LAYER, f)
+  }
+
+  const applyRetailCentreFilter = (map: mapboxgl.Map) => {
+    const filter = retailCentreFilter(
+      gapGeography === 'retail_centre' ? gapAreaIds : []
+    ) as any
+    for (const id of [RETAIL_POINT_LAYER, RETAIL_FILL_LAYER, RETAIL_OUTLINE_LAYER]) {
+      if (map.getLayer(id)) map.setFilter(id, filter)
+    }
   }
 
   const applyLsoaFilters = (map: mapboxgl.Map) => {
@@ -842,10 +955,21 @@ export function UnifiedMap({
 
   const applyVisibility = (map: mapboxgl.Map) => {
     const catchmentActive = tab === 'catchment'
-    const buaVisible = view === 'find'
+    const buaVisible = view === 'find' && gapGeography === 'town'
     for (const id of [BUA_FILL_LAYER, BUA_OUTLINE_LAYER, BUA_SELECTED_LAYER]) {
       if (map.getLayer(id)) {
         map.setLayoutProperty(id, 'visibility', buaVisible ? 'visible' : 'none')
+      }
+    }
+    const retailVisible = view === 'find' && gapGeography === 'retail_centre'
+    for (const id of [
+      RETAIL_POINT_LAYER,
+      RETAIL_FILL_LAYER,
+      RETAIL_OUTLINE_LAYER,
+      RETAIL_SELECTED_LAYER,
+    ]) {
+      if (map.getLayer(id)) {
+        map.setLayoutProperty(id, 'visibility', retailVisible ? 'visible' : 'none')
       }
     }
     // Assess store logo badges are HTML markers; their visibility is handled by
@@ -972,10 +1096,41 @@ export function UnifiedMap({
 
       // Tile properties are untyped, so read them through these narrowers.
       const str = (v: unknown) => (typeof v === 'string' ? v : undefined)
-      const num = (v: unknown) => (typeof v === 'number' ? v : undefined)
+      const num = (v: unknown) => {
+        if (typeof v === 'number') return v
+        if (typeof v === 'string' && v.trim() !== '') {
+          const parsed = Number(v)
+          return Number.isFinite(parsed) ? parsed : undefined
+        }
+        return undefined
+      }
 
       const buaProps = st.view === 'find' ? queryFirst([BUA_FILL_LAYER]) : undefined
       const gsscode = str(buaProps?.gsscode)
+      const retailProps = st.view === 'find' && st.gapGeography === 'retail_centre'
+        ? queryFirst([RETAIL_FILL_LAYER, RETAIL_POINT_LAYER])
+        : undefined
+      const rcId = str(retailProps?.rc_id)
+      if (rcId) {
+        selectArea({
+          id: rcId,
+          name: str(retailProps?.name) ?? 'Selected retail centre',
+          center: [
+            num(retailProps?.centroid_lon) ?? e.lngLat.lng,
+            num(retailProps?.centroid_lat) ?? e.lngLat.lat,
+          ],
+          kind: 'retail_centre',
+          region: str(retailProps?.region_name),
+          classification: str(retailProps?.classification),
+          retailCount: num(retailProps?.retail_count),
+          retailForm: str(retailProps?.form) as
+            | 'high_street'
+            | 'retail_park'
+            | 'shopping_centre'
+            | undefined,
+        })
+        return
+      }
 
       const action = decideMapClick(st, {
         lsoa:
@@ -1050,6 +1205,15 @@ export function UnifiedMap({
     map.on('mouseleave', BUA_FILL_LAYER, () => {
       applyMapCursor(map)
     })
+    for (const layerId of [RETAIL_POINT_LAYER, RETAIL_FILL_LAYER]) {
+      map.on('mouseenter', layerId, () => {
+        const st = useWorkspaceStore.getState()
+        if (st.view === 'find' && st.gapGeography === 'retail_centre') {
+          map.getCanvas().style.cursor = 'pointer'
+        }
+      })
+      map.on('mouseleave', layerId, () => applyMapCursor(map))
+    }
 
     map.on('mouseenter', REQ_LAYER, () => {
       if (useWorkspaceStore.getState().overlays.requirements) {
@@ -1172,14 +1336,21 @@ export function UnifiedMap({
       syncStoreMarkers(map)
       applyMapCursor(map)
     }
-  }, [view])
+    // addLayers/applyVisibility intentionally read live refs + Zustand state;
+    // this effect is keyed only by the mode switches that require a resync.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, gapGeography])
 
   // Re-apply the BUA filter when rules/population change.
   useEffect(() => {
     const map = mapRef.current
-    if (map && readyRef.current) applyBuaFilter(map)
+    if (map && readyRef.current) {
+      applyBuaFilter(map)
+      applyRetailCentreFilter(map)
+      applyVisibility(map)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gapGssCodes, populationRange, showSubFiveK])
+  }, [gapAreaIds, populationRange, showSubFiveK, gapGeography])
 
   // Re-evaluate layer visibility when the tab or LSOA overlay toggle changes.
   useEffect(() => {
@@ -1215,6 +1386,13 @@ export function UnifiedMap({
         '==',
         ['get', 'gsscode'],
         area?.kind === 'bua' ? area.id : '__none__',
+      ] as any)
+    }
+    if (map.getLayer(RETAIL_SELECTED_LAYER)) {
+      map.setFilter(RETAIL_SELECTED_LAYER, [
+        '==',
+        ['get', 'rc_id'],
+        area?.kind === 'retail_centre' ? area.id : '__none__',
       ] as any)
     }
     if (area) {

@@ -23,9 +23,34 @@ import type {
   GapItem,
   GapBucket,
   ReferenceData,
+  RetailCentreForm,
 } from '../../types/unified-workspace'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CatchmentControl, CatchmentPicker } from './CatchmentControl'
+import { useRetailCentreGapsEnabled } from '../../lib/retail-centre-flag-context'
+
+const RETAIL_FORMS: Array<{ id: RetailCentreForm; label: string }> = [
+  { id: 'high_street', label: 'High streets' },
+  { id: 'retail_park', label: 'Retail parks' },
+  { id: 'shopping_centre', label: 'Shopping centres' },
+]
+
+const RETAIL_CLASSIFICATIONS: Array<{
+  label: string
+  form: RetailCentreForm
+}> = [
+  { label: 'Regional Centre', form: 'high_street' },
+  { label: 'Major Town Centre', form: 'high_street' },
+  { label: 'Town Centre', form: 'high_street' },
+  { label: 'Market Town', form: 'high_street' },
+  { label: 'District Centre', form: 'high_street' },
+  { label: 'Local Centre', form: 'high_street' },
+  { label: 'Small Local Centre', form: 'high_street' },
+  { label: 'Large Retail Park', form: 'retail_park' },
+  { label: 'Small Retail Park', form: 'retail_park' },
+  { label: 'Large Shopping Centre', form: 'shopping_centre' },
+  { label: 'Small Shopping Centre', form: 'shopping_centre' },
+]
 
 type RuleType = 'category' | 'brand'
 interface ValueOption {
@@ -59,7 +84,7 @@ interface Tone {
 const TONES: Record<GapBucket, Tone> = {
   missing: {
     verb: 'are MISSING',
-    sub: "Towns where these haven't opened yet",
+    sub: "Places where these haven't opened yet",
     emptyHelp: "Add the shops you're checking for",
     accent: '#7033FF',
     tint: '#F5F1FF',
@@ -67,7 +92,7 @@ const TONES: Record<GapBucket, Tone> = {
   },
   have: {
     verb: 'ALREADY HAVE',
-    sub: 'Towns that already contain these',
+    sub: 'Places that already contain these',
     emptyHelp: 'Optional — leave empty to ignore',
     accent: '#0E7C86',
     tint: '#eef6f6',
@@ -79,8 +104,8 @@ function toGapItem(type: RuleType, o: ValueOption): GapItem {
   return { key: `${type}:${o.id}`, id: o.id, type, label: o.label, targetIds: o.targetIds }
 }
 
-function radiusLabel(km: number): string {
-  return km === 0 ? 'In the town' : `Within ${km} km`
+function radiusLabel(km: number, areaLabel: string): string {
+  return km === 0 ? `In the ${areaLabel}` : `Within ${km} km`
 }
 
 function popShort(n: number): string {
@@ -137,10 +162,12 @@ function ProximityRow({
   tone,
   radius,
   onChange,
+  areaLabel,
 }: {
   tone: Tone
   radius: number
   onChange: (r: number) => void
+  areaLabel: string
 }) {
   return (
     <div className="mt-3 border-t border-dashed pt-3" style={{ borderColor: tone.border }}>
@@ -160,7 +187,7 @@ function ProximityRow({
                   : { background: '#fff', borderColor: tone.border, color: '#4A4451' }
               }
             >
-              {radiusLabel(km)}
+              {radiusLabel(km, areaLabel)}
             </button>
           )
         })}
@@ -177,6 +204,8 @@ function Bucket({
   onAdd,
   onRemove,
   onRadius,
+  placeLabel,
+  areaLabel,
 }: {
   bucket: GapBucket
   badge: string
@@ -185,6 +214,8 @@ function Bucket({
   onAdd: () => void
   onRemove: (key: string) => void
   onRadius: (r: number) => void
+  placeLabel: string
+  areaLabel: string
 }) {
   const tone = TONES[bucket]
   const empty = items.length === 0
@@ -202,7 +233,7 @@ function Bucket({
         </span>
         <div className="min-w-0">
           <div className="text-[14px] font-bold leading-tight text-sm-ink">
-            Show towns that <span style={{ color: tone.accent }}>{tone.verb}</span>
+            Show {placeLabel} that <span style={{ color: tone.accent }}>{tone.verb}</span>
           </div>
           <div className="mt-0.5 text-[11.5px] text-sm-ink3">{tone.sub}</div>
         </div>
@@ -246,7 +277,7 @@ function Bucket({
               <Plus size={12} /> Add
             </button>
           </div>
-          <ProximityRow tone={tone} radius={radius} onChange={onRadius} />
+          <ProximityRow tone={tone} radius={radius} onChange={onRadius} areaLabel={areaLabel} />
         </>
       )}
     </div>
@@ -381,6 +412,13 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 function FindFilters({ refData }: { refData: ReferenceData }) {
+  const retailEnabled = useRetailCentreGapsEnabled()
+  const gapGeography = useWorkspaceStore((s) => s.gapGeography)
+  const setGapGeography = useWorkspaceStore((s) => s.setGapGeography)
+  const retailForms = useWorkspaceStore((s) => s.retailForms)
+  const setRetailForms = useWorkspaceStore((s) => s.setRetailForms)
+  const retailClassifications = useWorkspaceStore((s) => s.retailClassifications)
+  const setRetailClassifications = useWorkspaceStore((s) => s.setRetailClassifications)
   const missingItems = useWorkspaceStore((s) => s.missingItems)
   const haveItems = useWorkspaceStore((s) => s.haveItems)
   const missingRadius = useWorkspaceStore((s) => s.missingRadius)
@@ -393,6 +431,9 @@ function FindFilters({ refData }: { refData: ReferenceData }) {
   const showSubFiveK = useWorkspaceStore((s) => s.showSubFiveK)
   const setShowSubFiveK = useWorkspaceStore((s) => s.setShowSubFiveK)
   const [picking, setPicking] = useState<GapBucket | null>(null)
+  const isRetail = gapGeography === 'retail_centre'
+  const placeLabel = isRetail ? 'retail centres' : 'towns'
+  const areaLabel = isRetail ? 'retail centre' : 'town'
 
   const bucketItems = (b: GapBucket) => (b === 'missing' ? missingItems : haveItems)
   const selectedKeys = picking
@@ -420,9 +461,31 @@ function FindFilters({ refData }: { refData: ReferenceData }) {
           Where can we open next?
         </h2>
         <p className="mt-1 text-[12.5px] leading-snug text-sm-ink3">
-          Fill the two boxes below. We&apos;ll show every town that matches{' '}
+          Fill the two boxes below. We&apos;ll show every {areaLabel} that matches{' '}
           <b className="font-semibold text-sm-ink2">both</b>.
         </p>
+        {retailEnabled && (
+          <div className="mt-3 grid grid-cols-2 rounded-lg bg-sm-bg p-1" aria-label="Gap geography">
+            {([
+              ['town', 'Towns'],
+              ['retail_centre', 'Retail centres'],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setGapGeography(value)}
+                className={
+                  'rounded-md px-2 py-1.5 text-[12px] font-semibold transition-colors ' +
+                  (gapGeography === value
+                    ? 'bg-white text-sm-ink shadow-sm'
+                    : 'text-sm-ink3 hover:text-sm-ink')
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-3 px-[18px] py-[18px]">
@@ -434,6 +497,8 @@ function FindFilters({ refData }: { refData: ReferenceData }) {
           onAdd={() => setPicking('missing')}
           onRemove={(k) => removeBucketItem('missing', k)}
           onRadius={(r) => setBucketRadius('missing', r)}
+          placeLabel={placeLabel}
+          areaLabel={areaLabel}
         />
 
         <div className="flex items-center gap-2 py-0.5">
@@ -452,9 +517,60 @@ function FindFilters({ refData }: { refData: ReferenceData }) {
           onAdd={() => setPicking('have')}
           onRemove={(k) => removeBucketItem('have', k)}
           onRadius={(r) => setBucketRadius('have', r)}
+          placeLabel={placeLabel}
+          areaLabel={areaLabel}
         />
       </div>
 
+      {isRetail ? (
+        <>
+          <SectionLabel>Retail centre type (optional)</SectionLabel>
+          <div className="space-y-4 px-[18px] pb-[18px] pt-3">
+            <div className="space-y-2">
+              {RETAIL_FORMS.map((form) => (
+                <label key={form.id} className="flex items-center gap-2 text-[12px] text-sm-ink2">
+                  <Checkbox
+                    checked={retailForms.includes(form.id)}
+                    onCheckedChange={(checked) =>
+                      setRetailForms(
+                        checked === true
+                          ? [...retailForms, form.id]
+                          : retailForms.filter((id) => id !== form.id)
+                      )
+                    }
+                  />
+                  {form.label}
+                </label>
+              ))}
+            </div>
+            <div>
+              <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-wide text-sm-ink3">
+                Classification
+              </p>
+              <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
+                {RETAIL_CLASSIFICATIONS
+                  .filter((item) => retailForms.length === 0 || retailForms.includes(item.form))
+                  .map((item) => (
+                    <label key={item.label} className="flex items-center gap-2 text-[12px] text-sm-ink2">
+                      <Checkbox
+                        checked={retailClassifications.includes(item.label)}
+                        onCheckedChange={(checked) =>
+                          setRetailClassifications(
+                            checked === true
+                              ? [...retailClassifications, item.label]
+                              : retailClassifications.filter((label) => label !== item.label)
+                          )
+                        }
+                      />
+                      {item.label}
+                    </label>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
       <SectionLabel>Town size (optional)</SectionLabel>
       <div className="px-[18px] pb-[18px] pt-3">
         <div className="flex items-center justify-between">
@@ -494,6 +610,8 @@ function FindFilters({ refData }: { refData: ReferenceData }) {
           Show locations with a population of less than 5k
         </label>
       </div>
+        </>
+      )}
 
       {picking && (
         <BrandItemPicker

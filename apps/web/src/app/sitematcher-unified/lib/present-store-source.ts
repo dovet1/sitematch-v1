@@ -8,5 +8,7 @@ export function selectPresentStoreSource(
   landscapeStores: NearbyStore[],
   buaStorePins: NearbyStore[]
 ): NearbyStore[] {
-  return area?.kind === 'bua' ? buaStorePins : landscapeStores
+  return area?.kind === 'bua' || area?.kind === 'retail_centre'
+    ? buaStorePins
+    : landscapeStores
 }

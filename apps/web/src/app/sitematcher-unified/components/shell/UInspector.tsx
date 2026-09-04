@@ -17,7 +17,7 @@ import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import { toFilterSet } from '../../lib/services/gaps-service'
 import { exportBUAsToCSV } from '@/lib/buas/export-utils'
 import type {
-  BUAResult,
+  GapResult,
   GapItem,
   InspectorTab,
   MissingFascia,
@@ -111,14 +111,15 @@ function joinLabels(items: GapItem[]): string {
   return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`
 }
 
-function radiusPhrase(km: number): string {
-  return km === 0 ? 'in the town' : `within ${km} km`
+function radiusPhrase(km: number, areaLabel = 'town'): string {
+  return km === 0 ? `in the ${areaLabel}` : `within ${km} km`
 }
 
 // "Two boxes, one list" onboarding shown before any filter is added.
-function FindEmpty() {
+function FindEmpty({ geography }: { geography: 'town' | 'retail_centre' }) {
+  const noun = geography === 'town' ? 'town' : 'retail centre'
   const points = [
-    ['Box 1', 'the brands/categories a town is missing'],
+    ['Box 1', `the brands/categories a ${noun} is missing`],
     ['Box 2', 'the brands/categories it must already have'],
     ['Both must be true', 'results match every box (AND)'],
     ['Export as CSV', 'take the shortlist away with you'],
@@ -132,8 +133,8 @@ function FindEmpty() {
         Two boxes, one list
       </h3>
       <p className="mt-1.5 text-[13px] leading-relaxed text-sm-ink3">
-        Fill the two boxes on the left to build a location strategy. We&apos;ll show every UK
-        town that matches — your white space, ready to work.
+        Fill the two boxes on the left to build a location strategy. We&apos;ll show every UK{' '}
+        {noun} that matches — your white space, ready to work.
       </p>
       <ul className="mt-4 space-y-2.5">
         {points.map(([k, v]) => (
@@ -158,7 +159,7 @@ function FindResults({
   error,
   onCollapse,
 }: {
-  results: BUAResult[]
+  results: GapResult[]
   total: number
   loading: boolean
   error: string | null
@@ -174,6 +175,9 @@ function FindResults({
   const gapRules = useWorkspaceStore((s) => s.gapRules)
   const populationRange = useWorkspaceStore((s) => s.populationRange)
   const showSubFiveK = useWorkspaceStore((s) => s.showSubFiveK)
+  const gapGeography = useWorkspaceStore((s) => s.gapGeography)
+  const retailForms = useWorkspaceStore((s) => s.retailForms)
+  const retailClassifications = useWorkspaceStore((s) => s.retailClassifications)
   const [exporting, setExporting] = useState(false)
 
   const hasQuery = missingItems.length > 0 || haveItems.length > 0
@@ -183,8 +187,16 @@ function FindResults({
     const arr = [...results]
     if (gapSort === 'az') {
       arr.sort((a, b) => a.name.localeCompare(b.name))
+    } else if (gapSort === 'retail_count') {
+      arr.sort((a, b) =>
+        ('retail_count' in b ? b.retail_count ?? -1 : -1) -
+        ('retail_count' in a ? a.retail_count ?? -1 : -1)
+      )
     } else {
-      arr.sort((a, b) => (b.pop_final ?? b.pop) - (a.pop_final ?? a.pop))
+      arr.sort((a, b) =>
+        ('pop' in b ? b.pop_final ?? b.pop : 0) -
+        ('pop' in a ? a.pop_final ?? a.pop : 0)
+      )
     }
     return arr
   }, [results, gapSort])
@@ -202,8 +214,13 @@ function FindResults({
       }
       await exportBUAsToCSV(
         {
-          minPop: showSubFiveK ? 0 : populationRange[0],
-          maxPop: populationRange[1],
+          geography: gapGeography,
+          ...(gapGeography === 'town'
+            ? {
+                minPop: showSubFiveK ? 0 : populationRange[0],
+                maxPop: populationRange[1],
+              }
+            : { retailForms, retailClassifications }),
           filterSet: toFilterSet(gapRules),
         },
         targetNames
@@ -232,30 +249,36 @@ function FindResults({
           <>
             <Kicker>You&apos;re looking for</Kicker>
             <div className="mt-2 rounded-[12px] bg-[#f6f4ef] px-3.5 py-3 text-[13px] leading-relaxed text-sm-ink2">
-              Towns{' '}
+              {gapGeography === 'town' ? 'Towns' : 'Retail centres'}{' '}
               {missingItems.length > 0 && (
                 <>
                   missing <b className="font-semibold text-sm-ink">{joinLabels(missingItems)}</b>
-                  {missingRadius > 0 && <> {radiusPhrase(missingRadius)}</>}
+                  {missingRadius > 0 && <> {radiusPhrase(missingRadius, gapGeography === 'town' ? 'town' : 'retail centre')}</>}
                 </>
               )}
               {missingItems.length > 0 && haveItems.length > 0 && ', '}
               {haveItems.length > 0 && (
                 <>
                   that have <b className="font-semibold text-sm-ink">{joinLabels(haveItems)}</b>{' '}
-                  {radiusPhrase(haveRadius)}
+                  {radiusPhrase(haveRadius, gapGeography === 'town' ? 'town' : 'retail centre')}
                 </>
               )}
-              , with a population of{' '}
-              <b className="font-semibold text-sm-ink">
-                {popShort(showSubFiveK ? 0 : populationRange[0])}–{popShort(populationRange[1])}
-              </b>
+              {gapGeography === 'town' && (
+                <>
+                  , with a population of{' '}
+                  <b className="font-semibold text-sm-ink">
+                    {popShort(showSubFiveK ? 0 : populationRange[0])}–{popShort(populationRange[1])}
+                  </b>
+                </>
+              )}
               .
             </div>
 
             <div className="mt-4 flex items-center justify-between">
               <div>
-                <Kicker>Matching towns</Kicker>
+                <Kicker>
+                  Matching {gapGeography === 'town' ? 'towns' : 'retail centres'}
+                </Kicker>
                 <div className="mt-1 flex items-baseline gap-2">
                   <span className="text-[24px] font-semibold tracking-[-0.5px] text-sm-ink">
                     {results.length.toLocaleString()}
@@ -286,7 +309,10 @@ function FindResults({
 
             <div className="mt-3 flex items-center gap-2">
               <Kicker>Sort</Kicker>
-              {(['pop', 'az'] as const).map((s) => (
+              {(gapGeography === 'town'
+                ? (['pop', 'az'] as const)
+                : (['retail_count', 'az'] as const)
+              ).map((s) => (
                 <button
                   key={s}
                   type="button"
@@ -298,7 +324,11 @@ function FindResults({
                       : 'border border-sm-border-soft text-sm-ink3 hover:text-sm-ink')
                   }
                 >
-                  {s === 'pop' ? 'Population ↓' : 'A–Z'}
+                  {s === 'pop'
+                    ? 'Population ↓'
+                    : s === 'retail_count'
+                      ? 'Retail units ↓'
+                      : 'A–Z'}
                 </button>
               ))}
               {loading && <Loader2 size={11} className="ml-auto animate-spin text-sm-ink3" />}
@@ -315,7 +345,7 @@ function FindResults({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {!hasQuery && <FindEmpty />}
+        {!hasQuery && <FindEmpty geography={gapGeography} />}
         {hasQuery && error && (
           <div className="px-[18px] py-6 text-center text-[12.5px] text-[#B23A2C]">
             {error}
@@ -323,24 +353,30 @@ function FindResults({
         )}
         {hasQuery && !error && results.length === 0 && !loading && (
           <div className="px-[18px] py-8 text-center text-[12.5px] text-sm-ink3">
-            No built-up areas match these filters. Loosen a rule or widen the
-            population range.
+            No {gapGeography === 'town' ? 'towns' : 'retail centres'} match these
+            filters. Loosen a rule
+            {gapGeography === 'town' ? ' or widen the population range' : ' or type filter'}.
           </div>
         )}
         {hasQuery &&
           sorted.map((b) => {
-            const pop = b.pop_final ?? b.pop
+            const isRetail = 'rc_id' in b
+            const pop = !isRetail ? b.pop_final ?? b.pop : null
             return (
               <button
-                key={b.gsscode}
+                key={isRetail ? b.rc_id : b.gsscode}
                 type="button"
                 onClick={() =>
                   selectArea({
-                    id: b.gsscode,
+                    id: isRetail ? b.rc_id : b.gsscode,
                     name: b.name,
                     center: [b.centroid_lon, b.centroid_lat],
                     population: pop ?? undefined,
-                    kind: 'bua',
+                    kind: isRetail ? 'retail_centre' : 'bua',
+                    region: isRetail ? b.region_name ?? undefined : undefined,
+                    classification: isRetail ? b.classification : undefined,
+                    retailCount: isRetail ? b.retail_count ?? undefined : undefined,
+                    retailForm: isRetail ? b.form : undefined,
                   })
                 }
                 className="grid w-full grid-cols-[1fr_auto] items-center gap-3 border-b border-sm-border-soft px-[18px] py-[13px] text-left hover:bg-sm-bg"
@@ -353,7 +389,9 @@ function FindResults({
                     </span>
                   </div>
                   <div className="ml-6 mt-1 font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
-                    Pop {(pop ?? 0).toLocaleString()}
+                    {isRetail
+                      ? `${b.classification} · ${(b.retail_count ?? 0).toLocaleString()} retail units`
+                      : `Pop ${(pop ?? 0).toLocaleString()}`}
                   </div>
                   {(missingTag || haveTag) && (
                     <div className="ml-6 mt-1.5 flex flex-wrap gap-1.5">
@@ -367,7 +405,7 @@ function FindResults({
                           className="rounded-full px-2 py-0.5 text-[10.5px] font-medium"
                           style={{ background: '#eef6f6', color: TEAL }}
                         >
-                          {haveTag} {radiusPhrase(haveRadius)}
+                          {haveTag} {radiusPhrase(haveRadius, gapGeography === 'town' ? 'town' : 'retail centre')}
                         </span>
                       )}
                     </div>
@@ -848,6 +886,10 @@ function Opportunity({
   )
   const setBrandFilterBrandIds = useWorkspaceStore((s) => s.setBrandFilterBrandIds)
   const clearBrandFilters = useWorkspaceStore((s) => s.clearBrandFilters)
+  const isRetailCentre = area?.kind === 'retail_centre'
+  const opportunityTabs = isRetailCentre
+    ? OPP_TABS.filter((item) => item.id !== 'catchment')
+    : OPP_TABS
 
   const agg = catchmentData.rawData?.aggregated as
     | { population_total?: number; affluence?: { avg_raw_score?: number } }
@@ -878,18 +920,18 @@ function Opportunity({
             >
               <div className="rounded-lg border border-sm-border-soft bg-sm-violet/[0.06] px-2.5 py-1.5">
                 <div className="text-[9.5px] font-medium uppercase tracking-wide text-sm-ink3">
-                  Population
+                  {isRetailCentre ? 'Classification' : 'Population'}
                 </div>
                 <div className="mt-0.5 text-[17px] font-semibold leading-none text-sm-ink">
-                  {popLabel}
+                  {isRetailCentre ? area.classification ?? '—' : popLabel}
                 </div>
               </div>
               <div className="rounded-lg border border-sm-border-soft bg-emerald-500/[0.07] px-2.5 py-1.5">
                 <div className="text-[9.5px] font-medium uppercase tracking-wide text-sm-ink3">
-                  Affluence
+                  {isRetailCentre ? 'Retail units' : 'Affluence'}
                 </div>
                 <div className="mt-0.5 text-[17px] font-semibold leading-none text-sm-ink">
-                  {affluenceLabel}
+                  {isRetailCentre ? area.retailCount?.toLocaleString() ?? '—' : affluenceLabel}
                 </div>
               </div>
             </div>
@@ -917,7 +959,7 @@ function Opportunity({
       </div>
 
       <div className="flex shrink-0 border-b border-sm-border">
-        {OPP_TABS.map((t) => (
+        {opportunityTabs.map((t) => (
           <button
             key={t.id}
             type="button"
@@ -1001,7 +1043,7 @@ export function UInspector({
 }: {
   hidden: boolean
   onToggle: () => void
-  findResults: BUAResult[]
+  findResults: GapResult[]
   findTotal: number
   findLoading: boolean
   findError: string | null

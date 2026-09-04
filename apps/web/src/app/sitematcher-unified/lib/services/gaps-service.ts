@@ -1,11 +1,14 @@
-// Client-side fetch wrappers over the existing GapFinder / stores endpoints.
-// v1 introduces no new API routes — these centralize error handling and the
-// mapping from the workspace's GapRule shape to the server's FilterSet contract.
+// Client-side fetch wrappers over the GapFinder / stores endpoints. These
+// centralize error handling and map the workspace rule/geography state to the
+// server contracts.
 
 import type {
   BUAResult,
+  GapGeography,
   GapRule,
   ReferenceData,
+  RetailCentreForm,
+  RetailCentreResult,
   MissingFascia,
 } from '../../types/unified-workspace'
 
@@ -73,18 +76,40 @@ export async function fetchReferenceData(
 
 export async function findGaps(
   rules: GapRule[],
-  populationRange: [number, number]
-): Promise<{ results: BUAResult[]; total: number }> {
+  options: {
+    geography: GapGeography
+    populationRange: [number, number]
+    retailForms?: RetailCentreForm[]
+    retailClassifications?: string[]
+  }
+): Promise<{
+  results: Array<BUAResult | RetailCentreResult>
+  total: number
+  matchingIds?: string[]
+}> {
   const body = {
-    minPop: populationRange[0],
-    maxPop: populationRange[1],
+    geography: options.geography,
+    ...(options.geography === 'town'
+      ? { minPop: options.populationRange[0], maxPop: options.populationRange[1] }
+      : {
+          retailForms: options.retailForms,
+          retailClassifications: options.retailClassifications,
+        }),
     filterSet: toFilterSet(rules),
   }
-  const data = await postJson<{ results: BUAResult[]; total: number }>(
+  const data = await postJson<{
+    results: Array<BUAResult | RetailCentreResult>
+    total: number
+    matchingIds?: string[]
+  }>(
     '/api/public/gaps/find',
     body
   )
-  return { results: data.results ?? [], total: data.total ?? 0 }
+  return {
+    results: data.results ?? [],
+    total: data.total ?? 0,
+    matchingIds: data.matchingIds,
+  }
 }
 
 export async function filterGssCodes(
@@ -154,6 +179,31 @@ export async function fetchStoresInBua(
   if (!res.ok) throw new Error(`in-bua failed (${res.status})`)
   const data = await res.json()
   return data.stores ?? []
+}
+
+export async function fetchStoresInGapArea(
+  geography: GapGeography,
+  areaId: string,
+  signal?: AbortSignal
+): Promise<NearbyStore[]> {
+  const params = new URLSearchParams({ geography, areaId })
+  const res = await fetch(`/api/public/stores/in-gap-area?${params.toString()}`, { signal })
+  if (!res.ok) throw new Error(`in-gap-area failed (${res.status})`)
+  const data = await res.json()
+  return data.stores ?? []
+}
+
+export async function fetchRetailCentreBoundary(
+  areaId: string,
+  signal?: AbortSignal
+): Promise<GeoJSON.Geometry | null> {
+  const params = new URLSearchParams({ areaId })
+  const res = await fetch(`/api/public/gaps/retail-centre-boundary?${params.toString()}`, {
+    signal,
+  })
+  if (!res.ok) throw new Error(`retail-centre-boundary failed (${res.status})`)
+  const data = await res.json()
+  return data.geometry ?? null
 }
 
 // Viewport-scoped, fascia/category-filtered store pins (find-gaps brand context,

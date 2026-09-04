@@ -16,6 +16,8 @@ import type {
   CompareArm,
   LatLng,
   PlanningApplication,
+  GapGeography,
+  RetailCentreForm,
 } from '../../types/unified-workspace'
 
 const MAX_COMPARE = 3
@@ -90,6 +92,9 @@ interface WorkspaceState {
   missingRadius: number
   haveRadius: number
   gapSort: GapSort
+  gapGeography: GapGeography
+  retailForms: RetailCentreForm[]
+  retailClassifications: string[]
   gapRules: GapRule[]
   populationRange: [number, number]
   showSubFiveK: boolean
@@ -98,8 +103,8 @@ interface WorkspaceState {
   showLsoa: boolean
   compare: WorkspaceArea[]
 
-  // Find-Gaps map filter — gsscodes matching the active rules (null = show all).
-  gapGssCodes: string[] | null
+  // Find-Gaps map filter — identifiers matching the active geography/rules.
+  gapAreaIds: string[] | null
 
   // Assess-Area dropped pin. Scope/radius now derives from `catchment`.
   assessPoint: { lat: number; lng: number } | null
@@ -137,9 +142,12 @@ interface WorkspaceState {
   setBucketRadius: (bucket: GapBucket, radius: number) => void
   clearBuckets: () => void
   setGapSort: (sort: GapSort) => void
+  setGapGeography: (geography: GapGeography) => void
+  setRetailForms: (forms: RetailCentreForm[]) => void
+  setRetailClassifications: (classifications: string[]) => void
   setPopulationRange: (range: [number, number]) => void
   setShowSubFiveK: (v: boolean) => void
-  setGapGssCodes: (codes: string[] | null) => void
+  setGapAreaIds: (ids: string[] | null) => void
   setAssessPoint: (point: { lat: number; lng: number } | null) => void
   setCatchment: (catchment: CatchmentDefinition) => void
   toggleShowLsoa: () => void
@@ -179,6 +187,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   missingRadius: 0,
   haveRadius: 5,
   gapSort: 'pop',
+  gapGeography: 'town',
+  retailForms: [],
+  retailClassifications: [],
   gapRules: [],
   populationRange: [MIN_POPULATION, MAX_POPULATION],
   showSubFiveK: false,
@@ -186,7 +197,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   showLsoa: true,
   compare: [],
 
-  gapGssCodes: null,
+  gapAreaIds: null,
 
   assessPoint: null,
 
@@ -241,7 +252,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
 
   // Tab switching is only meaningful when there's an active selection —
   // a picked built-up area or an Assess dropped point.
-  setTab: (tab) => set((s) => (s.area || s.assessPoint ? { tab } : {})),
+  setTab: (tab) =>
+    set((s) =>
+      (s.area || s.assessPoint) &&
+      !(s.area?.kind === 'retail_centre' && tab === 'catchment')
+        ? { tab }
+        : {}
+    ),
 
   setSelected: (selected) => set({ selected }),
   setHoveredBrandId: (hoveredBrandId) => set({ hoveredBrandId }),
@@ -330,9 +347,21 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   clearBuckets: () =>
     set({ missingItems: [], haveItems: [], gapRules: [] }),
   setGapSort: (gapSort) => set({ gapSort }),
+  setGapGeography: (gapGeography) =>
+    set({
+      gapGeography,
+      gapSort: gapGeography === 'town' ? 'pop' : 'retail_count',
+      area: null,
+      selected: null,
+      tab: 'missing',
+      gapAreaIds: null,
+    }),
+  setRetailForms: (retailForms) => set({ retailForms }),
+  setRetailClassifications: (retailClassifications) =>
+    set({ retailClassifications }),
   setPopulationRange: (populationRange) => set({ populationRange }),
   setShowSubFiveK: (showSubFiveK) => set({ showSubFiveK }),
-  setGapGssCodes: (gapGssCodes) => set({ gapGssCodes }),
+  setGapAreaIds: (gapAreaIds) => set({ gapAreaIds }),
   // Dropping a new point or closing the dropped-point inspector (null) must not
   // leave a stale modal open; closing also clears the requirements overlay so
   // its pins (and now-hidden toggle) don't orphan in empty Assess mode.

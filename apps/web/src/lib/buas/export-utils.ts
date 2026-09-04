@@ -10,9 +10,12 @@ import type { FilterSet } from '@/types/filters'
  */
 export async function exportBUAsToCSV(
   filters: {
-    minPop: number
-    maxPop: number
+    geography?: 'town' | 'retail_centre'
+    minPop?: number
+    maxPop?: number
     filterSet: FilterSet
+    retailForms?: string[]
+    retailClassifications?: string[]
   },
   targetNames: Record<string, string>
 ): Promise<void> {

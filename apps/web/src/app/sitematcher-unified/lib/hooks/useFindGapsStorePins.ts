@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type mapboxgl from 'mapbox-gl'
 import { useWorkspaceStore } from '../stores/unified-workspace-store'
 import {
-  fetchStoresInBua,
+  fetchStoresInGapArea,
   fetchStoresInViewport,
   type NearbyStore,
 } from '../services/gaps-service'
@@ -55,20 +55,27 @@ export function useFindGapsStorePins(map: mapboxgl.Map | null): GapStorePinsResu
 
   const hasRuleTargets = fasciaIds.length > 0 || categoryIds.length > 0
 
-  const buaId = area?.kind === 'bua' ? area.id : null
+  const polygonAreaId = area?.kind === 'bua' || area?.kind === 'retail_centre'
+    ? area.id
+    : null
+  const polygonGeography = area?.kind === 'bua'
+    ? 'town' as const
+    : area?.kind === 'retail_centre'
+      ? 'retail_centre' as const
+      : null
 
   useEffect(() => {
     // Scenario 1: a BUA is selected -> all stores in its polygon.
-    if (buaId) {
+    if (polygonAreaId && polygonGeography) {
       const controller = new AbortController()
       setResult((r) => ({ pins: r.pins, status: 'loading' }))
-      fetchStoresInBua(buaId, controller.signal)
+      fetchStoresInGapArea(polygonGeography, polygonAreaId, controller.signal)
         .then((stores) =>
           setResult({ pins: stores, status: stores.length ? 'ready' : 'empty' })
         )
         .catch((err) => {
           if (controller.signal.aborted) return
-          console.error('Find-gaps BUA store pins error', err)
+          console.error('Find-gaps selected-area store pins error', err)
           setResult({ pins: [], status: 'empty' })
         })
       return () => controller.abort()
@@ -127,7 +134,7 @@ export function useFindGapsStorePins(map: mapboxgl.Map | null): GapStorePinsResu
       if (timer) clearTimeout(timer)
       controller?.abort()
     }
-  }, [buaId, view, hasRuleTargets, map, fasciaIds, categoryIds])
+  }, [polygonAreaId, polygonGeography, view, hasRuleTargets, map, fasciaIds, categoryIds])
 
   return result
 }

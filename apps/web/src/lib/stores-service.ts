@@ -732,6 +732,65 @@ export class StoreService {
     return { results: data || [], total }
   }
 
+  /** Find retail-centre gaps using GeoDS classifications and retail-unit rank. */
+  async findRetailCentreGaps(filters: {
+    filterSet: FilterSet
+    retailForms?: string[]
+    retailClassifications?: string[]
+    offset?: number
+    limit?: number
+  }): Promise<{ results: any[]; matchingIds: string[]; total: number }> {
+    const normalizedFilterSet = this.normalizeFilterSet(filters.filterSet)
+    const allRows: any[] = []
+    const pageSize = 1000
+    let offset = 0
+
+    while (true) {
+      const { data, error } = await this.supabase
+        .rpc('filter_retail_centres_with_expression', {
+          p_filter_expression: normalizedFilterSet,
+          p_forms: filters.retailForms?.length ? filters.retailForms : null,
+          p_classifications: filters.retailClassifications?.length
+            ? filters.retailClassifications
+            : null,
+        })
+        .range(offset, offset + pageSize - 1)
+
+      if (error) {
+        console.error('Failed to filter retail centres:', error)
+        throw new Error(`Failed to filter retail centres: ${error.message}`)
+      }
+      const rows = data || []
+      allRows.push(...rows)
+      if (rows.length < pageSize) break
+      offset += pageSize
+    }
+
+    const resultOffset = Math.max(0, filters.offset ?? 0)
+    const resultLimit = Math.min(50000, Math.max(1, filters.limit ?? 1000))
+    return {
+      results: allRows.slice(resultOffset, resultOffset + resultLimit),
+      matchingIds: allRows.map((row) => row.rc_id),
+      total: allRows.length,
+    }
+  }
+
+  async getStoresInRetailCentre(rcId: string): Promise<Store[]> {
+    const { data, error } = await this.supabase.rpc('get_stores_in_retail_centre', {
+      p_rc_id: rcId,
+    })
+    if (error) throw new Error(`Failed to fetch stores in retail centre: ${error.message}`)
+    return data || []
+  }
+
+  async getRetailCentreBoundary(rcId: string): Promise<GeoJSON.Geometry | null> {
+    const { data, error } = await this.supabase.rpc('get_retail_centre_boundary', {
+      p_rc_id: rcId,
+    })
+    if (error) throw new Error(`Failed to fetch retail centre boundary: ${error.message}`)
+    return data ?? null
+  }
+
   /**
    * Get filtered gsscodes for map display (no limit, returns all matching gsscodes)
    * This is used by the map to filter the Mapbox tileset client-side

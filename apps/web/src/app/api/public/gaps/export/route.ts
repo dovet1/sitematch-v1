@@ -3,6 +3,7 @@ import { createStoreService } from '@/lib/stores-service'
 import { requireGapFinderAccess } from '@/lib/gapfinder-access'
 import { generateFilterSummary } from '@/lib/buas/generate-filter-summary'
 import type { FilterSet } from '@/types/filters'
+import { isRetailCentreGapsEnabled } from '@/lib/feature-flags'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +30,34 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { minPop, maxPop, filterSet, targetNames = {} } = body
+
+    if (body.geography === 'retail_centre') {
+      if (!(await isRetailCentreGapsEnabled())) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      }
+      const service = await createStoreService()
+      const { results } = await service.findRetailCentreGaps({
+        filterSet: filterSet ?? { rules: [] },
+        retailForms: Array.isArray(body.retailForms) ? body.retailForms : [],
+        retailClassifications: Array.isArray(body.retailClassifications)
+          ? body.retailClassifications
+          : [],
+        limit: 50000,
+      })
+      const csv = generateRetailCentreCSV(results, {
+        filterSet,
+        targetNames,
+        forms: body.retailForms ?? [],
+        classifications: body.retailClassifications ?? [],
+      })
+      const date = new Date().toISOString().split('T')[0]
+      return new NextResponse(csv, {
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="retail-centre-gap-analysis-${date}.csv"`,
+        },
+      })
+    }
 
     // Validate required fields
     if (typeof minPop !== 'number' || typeof maxPop !== 'number') {
@@ -123,6 +152,50 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+function generateRetailCentreCSV(
+  centres: Array<{
+    rc_id: string
+    name: string
+    classification: string
+    form_label: string
+    retail_count: number | null
+    region_name: string | null
+    country: string | null
+  }>,
+  filters: {
+    filterSet?: FilterSet
+    targetNames: Record<string, string>
+    forms: string[]
+    classifications: string[]
+  }
+): string {
+  const lines = [
+    `# Exported At,${new Date().toISOString().split('T')[0]}`,
+    '# Geography,Retail centres',
+    '# Source,GeoDS v4.0 (Open Government Licence)',
+    `# Forms,${escapeCSV(filters.forms.length ? filters.forms.join('; ') : 'All')}`,
+    `# Classifications,${escapeCSV(filters.classifications.length ? filters.classifications.join('; ') : 'All')}`,
+  ]
+  if (filters.filterSet?.rules.length) {
+    lines.push(`# Filters,${escapeCSV(generateFilterSummary(filters.filterSet.rules, filters.targetNames))}`)
+  } else {
+    lines.push('# Filters,None')
+  }
+  lines.push('', 'Retail Centre ID,Name,Classification,Form,Retail Units,Region,Country')
+  for (const centre of centres) {
+    lines.push([
+      centre.rc_id,
+      centre.name,
+      centre.classification,
+      centre.form_label,
+      centre.retail_count?.toString() ?? '',
+      centre.region_name ?? '',
+      centre.country ?? '',
+    ].map(escapeCSV).join(','))
+  }
+  return lines.join('\n')
 }
 
 /**

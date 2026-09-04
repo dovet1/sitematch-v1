@@ -18,6 +18,7 @@ import { useCatchment } from '../lib/hooks/useCatchment'
 import { usePlanningData } from '../lib/hooks/usePlanningData'
 import { useRequirements } from '../lib/hooks/useRequirements'
 import { useFindGapsStorePins } from '../lib/hooks/useFindGapsStorePins'
+import { useRetailCentreBoundary } from '../lib/hooks/useRetailCentreBoundary'
 import { computeIsochroneMissing } from '../lib/isochrone-missing'
 import { buildBrandLandscape } from '../lib/brand-landscape'
 import { selectPresentStoreSource } from '../lib/present-store-source'
@@ -217,28 +218,37 @@ export function UnifiedWorkspace() {
   // the Summary tab too, since the store landscape is scoped to that polygon.
   // Fetch whenever there's a focus so the sidebar header's Population + Affluence
   // metrics stay populated on every tab, not just the Catchment tab.
-  const shouldFetchCatchment =
-    !!focusArea ||
-    tab === 'catchment' ||
-    (view === 'assess' && !!activePoint && activeCatchment.mode !== 'distance')
+  const shouldFetchCatchment = focusArea?.kind === 'retail_centre'
+    ? false
+    : !!focusArea ||
+      tab === 'catchment' ||
+      (view === 'assess' && !!activePoint && activeCatchment.mode !== 'distance')
 
   const catchmentData = useCatchment(focusArea, activeCatchment, shouldFetchCatchment)
+  const retailBoundary = useRetailCentreBoundary(
+    focusArea?.kind === 'retail_centre' ? focusArea.id : null
+  )
+  const activeBoundary = focusArea?.kind === 'retail_centre'
+    ? retailBoundary.geometry
+    : catchmentData.boundaryGeometry
 
   // Planning applications inside the active boundary (BUA polygon, radius
   // circle or isochrone) — fetched only while the Planning tab is open.
   const planning = usePlanningData(
-    catchmentData.boundaryGeometry,
+    activeBoundary,
     tab === 'planning'
   )
   // A failed boundary must show the error state, not an endless boundary-wait
   // spinner — so the error always wins over loading.
-  const planningError = planning.error ?? catchmentData.error
+  const planningError = planning.error ?? (
+    focusArea?.kind === 'retail_centre' ? retailBoundary.error : catchmentData.error
+  )
   const planningLoading =
     !planningError &&
     (planning.loading ||
       (tab === 'planning' &&
-        !catchmentData.boundaryGeometry &&
-        catchmentData.loading))
+        !activeBoundary &&
+        (focusArea?.kind === 'retail_centre' ? retailBoundary.loading : catchmentData.loading)))
 
   // Two-location comparison: fetches + diffs the landscape/demographics for both
   // dropped pins (each with its own catchment) whenever a pair exists. Drives the
@@ -474,7 +484,7 @@ export function UnifiedWorkspace() {
               allCodes: catchmentData.allLsoaCodes,
               selectedCodes: catchmentData.selectedLsoaCodes,
               onToggle: catchmentData.toggleLsoa,
-              boundaryGeometry: catchmentData.boundaryGeometry,
+              boundaryGeometry: activeBoundary,
             }}
             compareBoundaries={{
               a: comparison.boundaries.a,

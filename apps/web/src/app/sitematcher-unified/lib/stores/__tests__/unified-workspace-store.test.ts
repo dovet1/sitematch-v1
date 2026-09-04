@@ -84,3 +84,44 @@ describe('unified-workspace-store — per-arm compare catchment', () => {
     })
   })
 })
+
+describe('unified-workspace-store — Find Gaps geography', () => {
+  it('switches ranking and clears an incompatible selection/map filter', () => {
+    store.setState({
+      gapGeography: 'town',
+      gapSort: 'pop',
+      area: {
+        id: 'E123',
+        name: 'Test town',
+        center: [-1, 52],
+        kind: 'bua',
+      },
+      gapAreaIds: ['E123'],
+    })
+
+    store.getState().setGapGeography('retail_centre')
+
+    const retail = store.getState()
+    expect(retail.gapSort).toBe('retail_count')
+    expect(retail.area).toBeNull()
+    expect(retail.gapAreaIds).toBeNull()
+
+    store.getState().setGapGeography('town')
+    expect(store.getState().gapSort).toBe('pop')
+  })
+
+  it('does not allow the Catchment tab for a retail-centre selection', () => {
+    store.setState({
+      area: {
+        id: 'rc-1',
+        name: 'Test centre',
+        center: [-1, 52],
+        kind: 'retail_centre',
+      },
+      tab: 'missing',
+    })
+
+    store.getState().setTab('catchment')
+    expect(store.getState().tab).toBe('missing')
+  })
+})

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createStoreService } from '@/lib/stores-service'
 import { requireGapFinderAccess } from '@/lib/gapfinder-access'
+import { isRetailCentreGapsEnabled } from '@/lib/feature-flags'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +56,33 @@ export async function POST(request: NextRequest) {
 
     const filters = await request.json()
 
-    // Validate required fields
+    const geography = filters.geography === 'retail_centre' ? 'retail_centre' : 'town'
+    if (geography === 'retail_centre') {
+      if (!(await isRetailCentreGapsEnabled())) {
+        return NextResponse.json({ results: [], total: 0, error: 'Not found' }, { status: 404 })
+      }
+      if (!filters.filterSet || !Array.isArray(filters.filterSet.rules)) {
+        return NextResponse.json(
+          { results: [], total: 0, error: 'filterSet is required' },
+          { status: 400 }
+        )
+      }
+      const service = await createStoreService()
+      const result = await service.findRetailCentreGaps({
+        filterSet: filters.filterSet,
+        retailForms: Array.isArray(filters.retailForms) ? filters.retailForms : [],
+        retailClassifications: Array.isArray(filters.retailClassifications)
+          ? filters.retailClassifications
+          : [],
+        offset: typeof filters.offset === 'number' ? filters.offset : 0,
+        limit: typeof filters.limit === 'number'
+          ? Math.min(1000, Math.max(1, filters.limit))
+          : 1000,
+      })
+      return NextResponse.json({ ...result, showing: result.results.length })
+    }
+
+    // Town mode remains backward compatible when geography is omitted.
     if (typeof filters.minPop !== 'number' || typeof filters.maxPop !== 'number') {
       return NextResponse.json(
         {

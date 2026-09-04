@@ -12,6 +12,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "import:onspd": "tsx scripts/import-onspd-postcodes.ts",
+    "import:retail-centres": "tsx scripts/import-retail-centres.ts",
+    "build:retail-centre-tiles": "bash scripts/build-retail-centre-tiles.sh",
     "import:candidate-sites": "tsx scripts/import-candidate-sites.ts",
     "inspect:candidate-sites": "tsx scripts/inspect-candidate-sites.ts",
     "import:road-network": "tsx scripts/import-road-network.ts",

@@ -33,6 +33,14 @@ const pointArea: WorkspaceArea = {
   kind: 'point',
 }
 
+const retailCentreArea: WorkspaceArea = {
+  id: 'rc-1',
+  name: 'Test Retail Park',
+  center: [-0.12, 51.5],
+  kind: 'retail_centre',
+  classification: 'Large Retail Park',
+}
+
 describe('selectPresentStoreSource', () => {
   it('uses BUA polygon pins when a BUA is selected', () => {
     const landscapeStores = [store('radius-store')]
@@ -53,5 +61,14 @@ describe('selectPresentStoreSource', () => {
     expect(selectPresentStoreSource(null, landscapeStores, buaPins)).toBe(
       landscapeStores
     )
+  })
+
+  it('uses exact polygon pins when a retail centre is selected', () => {
+    const landscapeStores = [store('radius-store')]
+    const polygonPins = [store('retail-centre-store')]
+
+    expect(
+      selectPresentStoreSource(retailCentreArea, landscapeStores, polygonPins)
+    ).toBe(polygonPins)
   })
 })

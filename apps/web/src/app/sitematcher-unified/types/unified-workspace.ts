@@ -9,6 +9,9 @@ export type MapScale = 'national' | 'local'
 
 export type CatchmentMode = 'distance' | 'drive' | 'walk'
 
+export type GapGeography = 'town' | 'retail_centre'
+export type RetailCentreForm = 'high_street' | 'retail_park' | 'shopping_centre'
+
 // A selected opportunity: a built-up area or a dropped point.
 export interface WorkspaceArea {
   id: string
@@ -16,8 +19,11 @@ export interface WorkspaceArea {
   region?: string
   center: [number, number]
   population?: number
-  // 'bua' = a built-up area picked from the gap list/map; 'point' = a dropped Assess pin.
-  kind: 'bua' | 'point'
+  // Polygon selections use their exact boundary for Present and Planning.
+  kind: 'bua' | 'retail_centre' | 'point'
+  classification?: string
+  retailCount?: number
+  retailForm?: RetailCentreForm
 }
 
 // A ranked built-up area returned by /api/public/gaps/find.
@@ -31,6 +37,22 @@ export interface BUAResult {
   centroid_lat: number
   centroid_lon: number
 }
+
+export interface RetailCentreResult {
+  rc_id: string
+  name: string
+  classification: string
+  form: RetailCentreForm
+  form_label: string
+  country: string | null
+  region_name: string | null
+  retail_count: number | null
+  area_km2: number | null
+  centroid_lat: number
+  centroid_lon: number
+}
+
+export type GapResult = BUAResult | RetailCentreResult
 
 // Reference data for the rule builder (categories + brands with nested fascias).
 export interface RefCategory {
@@ -282,7 +304,7 @@ export interface GapItem {
 }
 
 export type GapBucket = 'missing' | 'have'
-export type GapSort = 'pop' | 'az'
+export type GapSort = 'pop' | 'retail_count' | 'az'
 
 export interface CatchmentDefinition {
   mode: CatchmentMode
