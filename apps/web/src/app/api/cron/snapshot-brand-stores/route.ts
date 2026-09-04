@@ -14,9 +14,11 @@ export const maxDuration = 300
  * whatever the last successful run saw.
  *
  * Each run refreshes the previous month as well as the current one. Without that, a month
- * would be frozen at 03:00 on its final day and lose its last 21 hours; the previous
- * month is only rewritten while it is still the most recent one, so the cost is one extra
- * aggregate per day and never a rewrite of settled history.
+ * would be frozen at 03:00 on its final day and lose its last 21 hours. That refresh is
+ * only valid for a month we were already capturing daily, so snapshot_brand_stores()
+ * skips an elapsed month that holds no rows rather than reconstructing it from today's
+ * store table — on the very first run, and after any outage longer than a month, the
+ * previous month is correctly left empty rather than backfilled.
  */
 export async function GET(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
