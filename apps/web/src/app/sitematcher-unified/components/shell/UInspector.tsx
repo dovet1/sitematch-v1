@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   MapPin,
   X,
@@ -30,8 +30,32 @@ import type {
 } from '../../types/unified-workspace'
 import type { CatchmentData } from '../../lib/hooks/useCatchment'
 import type { Landscape } from '../../lib/hooks/useAreaData'
+import type { FloorAreaProfiles } from '../../lib/hooks/useFloorAreaProfiles'
 import { BrandFilterBar, type FilterOption } from './BrandFilterBar'
 import { CatchmentTab } from './CatchmentTab'
+import {
+  ObservedSize,
+  FasciaSizes,
+  NearMissTag,
+  NoSizeChip,
+  GroupHeader,
+  SizeFootnote,
+} from './SizeBlocks'
+import {
+  bandById,
+  bandFitCounts,
+  classify,
+  entrySampleCount,
+  formatSqFtRange,
+  matchingProfiles,
+  partitionBySize,
+  unknownCount,
+  type FloorAreaProfile,
+  type SizeBand,
+  type SizeBandId,
+  type SizeEntry,
+  type SizeFit,
+} from '../../lib/size-filter'
 
 // Small circular initials avatar (fallback when no logo is available).
 export function Avatar({ label, size = 36 }: { label: string; size?: number }) {
@@ -422,18 +446,57 @@ function FindResults({
 
 /* ---------- Opportunity: the landscape around an area / dropped point ---------- */
 
+// The size the filter reads a brand by, and how it is drawn. A brand with more
+// than one profile trades in more than one format, and gets a row per fascia:
+// one median across Tesco Express and Tesco Extra describes neither.
+function fasciaHeading(
+  all: FloorAreaProfile[],
+  shown: FloorAreaProfile[],
+  band: SizeBand | null
+): string {
+  if (!band) return 'Trades across formats · filter by size to narrow'
+  return shown.length < all.length ? 'Matching format' : 'Trades across formats'
+}
+
+function SizeDetail({
+  profiles,
+  band,
+  label,
+}: {
+  profiles: FloorAreaProfile[]
+  band: SizeBand | null
+  label?: string | null
+}) {
+  if (profiles.length === 0) return null
+  if (profiles.length === 1)
+    return <ObservedSize profile={profiles[0]} label={label} />
+  const shown = matchingProfiles(profiles, band)
+  return (
+    <FasciaSizes profiles={shown} heading={fasciaHeading(profiles, shown, band)} />
+  )
+}
+
 function MissingRow({
   m,
+  profiles,
+  band,
+  fit,
   onOpen,
 }: {
   m: MissingBrand
+  profiles: FloorAreaProfile[]
+  band: SizeBand | null
+  fit: SizeFit | null
   onOpen: (m: MissingFascia) => void
 }) {
   return (
     <button
       type="button"
       onClick={() => onOpen(m.representative)}
-      className="grid grid-cols-[36px_1fr_auto] items-center gap-3 rounded-xl border border-sm-border bg-sm-surface p-3 text-left hover:bg-sm-bg"
+      className={
+        'grid grid-cols-[36px_1fr_auto] items-start gap-3 rounded-xl border bg-sm-surface p-3 text-left hover:bg-sm-bg ' +
+        (fit === 'near' ? 'border-[#F0DEBE]' : 'border-sm-border')
+      }
     >
       <BrandLogo label={m.brandName} domain={m.logoDomain} logoUrl={m.logoUrl} />
       <div className="min-w-0">
@@ -452,19 +515,31 @@ function MissingRow({
             )}
           </div>
         )}
+        <SizeDetail profiles={profiles} band={band} />
+        {/* "We don't know" only needs saying once the user is filtering on size. */}
+        {profiles.length === 0 && band && <NoSizeChip />}
+        {fit === 'near' && <NearMissTag />}
       </div>
-      <ChevronRight size={15} className="text-sm-ink4" />
+      <ChevronRight size={15} className="mt-0.5 text-sm-ink4" />
     </button>
   )
 }
 
 // Promoted "wants to open here" row for an occupier with a live requirement
-// whose target location falls within the active catchment.
+// whose target location falls within the active catchment. The requirement is
+// the current, authoritative claim, so it leads the card; the measured estate
+// sits below it under its own label, never merged into the same figure.
 function RequirementRow({
   req,
+  profiles,
+  band,
+  fit,
   onOpen,
 }: {
   req: RequirementLocation
+  profiles: FloorAreaProfile[]
+  band: SizeBand | null
+  fit: SizeFit | null
   onOpen: (requirementId: string) => void
 }) {
   const sizeRange = formatRequirementSizeRange(req)
@@ -472,7 +547,10 @@ function RequirementRow({
     <button
       type="button"
       onClick={() => onOpen(req.requirementId)}
-      className="rounded-xl border border-sm-violet-tint bg-sm-violet-tint-soft p-3 text-left hover:brightness-[0.98]"
+      className={
+        'rounded-xl border bg-sm-violet-tint-soft p-3 text-left hover:brightness-[0.98] ' +
+        (fit === 'near' ? 'border-[#F0DEBE]' : 'border-sm-violet-tint')
+      }
     >
       <div className="mb-2 flex items-center gap-1.5">
         <span className="rounded-full bg-sm-violet px-2 py-[3px] font-mono text-[9.5px] font-semibold uppercase tracking-wider text-white">
@@ -482,7 +560,7 @@ function RequirementRow({
           Wants to open here
         </span>
       </div>
-      <div className="grid grid-cols-[36px_1fr_auto] items-center gap-3">
+      <div className="grid grid-cols-[36px_1fr_auto] items-start gap-3">
         <BrandLogo
           label={req.companyName}
           domain={req.companyDomain}
@@ -497,8 +575,10 @@ function RequirementRow({
               {sizeRange}
             </div>
           )}
+          <SizeDetail profiles={profiles} band={band} label="Estate today" />
+          {fit === 'near' && <NearMissTag />}
         </div>
-        <ChevronRight size={15} className="text-sm-violet-deep" />
+        <ChevronRight size={15} className="mt-0.5 text-sm-violet-deep" />
       </div>
     </button>
   )
@@ -534,8 +614,19 @@ function formatRange(
   return `Up to ${format(max ?? 0)} ${unit}`
 }
 
-function TradingRow({ b }: { b: PresentBrand }) {
+function TradingRow({
+  b,
+  profiles,
+  band,
+  fit,
+}: {
+  b: PresentBrand
+  profiles: FloorAreaProfile[]
+  band: SizeBand | null
+  fit: SizeFit | null
+}) {
   const count = `${b.storeCount} ${b.storeCount === 1 ? 'store' : 'stores'}`
+  const meta = b.town ? `${count} · ${b.town}` : count
   const setHoveredBrandId = useWorkspaceStore((s) => s.setHoveredBrandId)
   const setBrandInfoId = useWorkspaceStore((s) => s.setBrandInfoId)
   return (
@@ -544,7 +635,10 @@ function TradingRow({ b }: { b: PresentBrand }) {
       onClick={() => setBrandInfoId(b.brandId)}
       onMouseEnter={() => setHoveredBrandId(b.brandId)}
       onMouseLeave={() => setHoveredBrandId(null)}
-      className="grid w-full cursor-pointer grid-cols-[28px_1fr] items-center gap-3 border-b border-sm-border-soft px-[18px] py-2.5 text-left transition-colors hover:bg-sm-bg"
+      className={
+        'grid w-full cursor-pointer grid-cols-[28px_1fr] items-start gap-3 border-b px-[18px] py-2.5 text-left transition-colors hover:bg-sm-bg ' +
+        (fit === 'near' ? 'border-[#F0DEBE] bg-[#FEFCF7]' : 'border-sm-border-soft')
+      }
     >
       <BrandLogo
         label={b.brandName}
@@ -557,18 +651,176 @@ function TradingRow({ b }: { b: PresentBrand }) {
           {b.brandName}
         </div>
         <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
-          {b.town ? `${count} · ${b.town}` : count}
+          {meta}
         </div>
+        {/* On Present, the observed block answers "which of their local formats
+            would my unit be?", so it carries no second label. */}
+        <SizeDetail profiles={profiles} band={band} />
+        {profiles.length === 0 && band && <NoSizeChip />}
+        {fit === 'near' && <NearMissTag />}
       </div>
     </button>
   )
 }
 
-function MissingBody({
+// The simplified row used by both demoted groups. `dimmed` is the "outside"
+// treatment: still there, still callable, just not the answer to this question.
+function DemotedRow({
+  name,
+  meta,
+  domain,
+  logoUrl,
+  profiles,
+  dimmed,
+  onClick,
+}: {
+  name: string
+  meta: string | null
+  domain: string | null
+  logoUrl: string | null
+  profiles: FloorAreaProfile[]
+  dimmed?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        'grid w-full grid-cols-[28px_1fr_auto] items-center gap-3 rounded-xl border border-sm-border-soft bg-sm-surface px-3 py-2.5 text-left hover:bg-sm-bg ' +
+        (dimmed ? 'opacity-[0.72]' : '')
+      }
+    >
+      <BrandLogo label={name} domain={domain} logoUrl={logoUrl} size={28} />
+      <div className="min-w-0">
+        <div className="truncate text-[13px] font-semibold text-sm-ink">{name}</div>
+        {profiles.length > 0 ? (
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <span className="font-mono text-[11px] text-sm-ink3">
+              {formatSqFtRange(
+                Math.min(...profiles.map((p) => p.p25SqFt)),
+                Math.max(...profiles.map((p) => p.p75SqFt))
+              )}
+            </span>
+            <span className="text-[10px] text-sm-ink4">sq ft GIA</span>
+          </div>
+        ) : (
+          meta && (
+            <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
+              {meta}
+            </div>
+          )
+        )}
+      </div>
+      <ChevronRight size={14} className="text-sm-ink4" />
+    </button>
+  )
+}
+
+// The two groups a size band creates below the main list. They are the whole
+// point of not hard-filtering: a brand whose size we've never measured is a
+// different answer from one that doesn't fit, and neither is a "no".
+function DemotedGroup({
+  title,
+  note,
+  count,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string
+  note?: string
+  count: number
+  open: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="mt-3">
+      <GroupHeader title={title} count={count} open={open} onToggle={onToggle} />
+      {note && (
+        <p className="mb-2 text-[11px] leading-[1.5] text-sm-ink3">{note}</p>
+      )}
+      {open && <div className="flex flex-col gap-2">{children}</div>}
+    </div>
+  )
+}
+
+// One row of the Missing tab before the size filter has had its say: either a
+// live requirement or an established brand with no presence here.
+type MissingItem =
+  | { kind: 'req'; key: string; req: RequirementLocation; brandId: string | null }
+  | { kind: 'brand'; key: string; brand: MissingBrand; brandId: string }
+
+function missingEntry(
+  item: MissingItem,
+  profilesFor: (brandId: string | null) => FloorAreaProfile[]
+): SizeEntry {
+  const profiles = profilesFor(item.brandId)
+  if (item.kind === 'req') {
+    return {
+      key: item.key,
+      hasRequirement:
+        item.req.siteSizeMin != null || item.req.siteSizeMax != null,
+      // Only a sq ft requirement is a size claim; acreage and dwelling counts
+      // describe a different kind of site and must not be matched as floor area.
+      requirement: {
+        min: item.req.siteSizeMin,
+        max: item.req.siteSizeMax,
+      },
+      profiles,
+      sampleCount: entrySampleCount(profiles),
+      name: item.req.companyName,
+    }
+  }
+  return {
+    key: item.key,
+    hasRequirement: false,
+    requirement: null,
+    profiles,
+    sampleCount: entrySampleCount(profiles),
+    name: item.brand.brandName,
+  }
+}
+
+function presentEntry(
+  brand: PresentBrand,
+  profilesFor: (brandId: string | null) => FloorAreaProfile[]
+): SizeEntry {
+  const profiles = profilesFor(brand.brandId)
+  return {
+    key: brand.brandId,
+    hasRequirement: false,
+    requirement: null,
+    profiles,
+    sampleCount: entrySampleCount(profiles),
+    name: brand.brandName,
+  }
+}
+
+// Shown when a band matches nothing known. Never a dead end: the groups below
+// it are still on screen and still worth a phone call.
+function NoSizeResults({ band }: { band: SizeBand }) {
+  return (
+    <div className="rounded-xl border border-dashed border-sm-border bg-sm-bg px-3 py-5 text-center">
+      <div className="text-[13.5px] font-semibold text-sm-ink">
+        No known-size brands fit {band.short} sq ft
+      </div>
+      <div className="mt-1 text-[11.5px] leading-[1.5] text-sm-ink3">
+        Absence isn&apos;t a no — the near-miss and no-size brands below are still
+        worth a call.
+      </div>
+    </div>
+  )
+}
+
+export function MissingBody({
   loading,
   missing,
   requirements,
   areaName,
+  band,
+  profilesFor,
   onOpenReq,
   onOpenBrand,
 }: {
@@ -576,10 +828,55 @@ function MissingBody({
   missing: MissingBrand[]
   requirements: RequirementLocation[]
   areaName: string
+  band: SizeBand | null
+  profilesFor: (brandId: string | null) => FloorAreaProfile[]
   onOpenReq: (requirementId: string) => void
   onOpenBrand: (m: MissingFascia) => void
 }) {
   const gapCount = requirements.length + missing.length
+  const [unknownOpen, setUnknownOpen] = useState(true)
+  const [outsideOpen, setOutsideOpen] = useState(false)
+
+  // A new band collapses the "outside" group again — it is the answer the user
+  // least wants after changing their mind about the unit.
+  useEffect(() => {
+    setOutsideOpen(false)
+  }, [band?.id])
+
+  const items = useMemo<MissingItem[]>(
+    () => [
+      ...requirements.map((r) => ({
+        kind: 'req' as const,
+        key: `req:${r.id}`,
+        req: r,
+        brandId: r.brandId,
+      })),
+      ...missing.map((m) => ({
+        kind: 'brand' as const,
+        key: `brand:${m.brandId}`,
+        brand: m,
+        brandId: m.brandId,
+      })),
+    ],
+    [requirements, missing]
+  )
+
+  const { main, unknown, outside, fits } = useMemo(() => {
+    if (!band) {
+      return {
+        main: items,
+        unknown: [] as MissingItem[],
+        outside: [] as MissingItem[],
+        fits: new Map<string, SizeFit>(),
+      }
+    }
+    const part = partitionBySize(items, (i) => missingEntry(i, profilesFor), band)
+    const byKey = new Map<string, SizeFit>()
+    for (const i of part.main)
+      byKey.set(i.key, classify(missingEntry(i, profilesFor), band))
+    return { ...part, fits: byKey }
+  }, [items, band, profilesFor])
+
   return (
     <>
       {loading && (
@@ -599,6 +896,7 @@ function MissingBody({
           {requirements.length > 0
             ? `Occupiers with a live requirement naming ${areaName} show first, then established brands with no presence here.`
             : 'Established brands with no presence nearby that fit this location.'}
+          {band ? ' Sized against your unit.' : ' Set a size to match your unit.'}
         </p>
       </div>
       <div className="flex flex-col gap-2 px-[18px] pb-[18px] pt-2.5">
@@ -607,24 +905,152 @@ function MissingBody({
             No missing brands found for this catchment.
           </div>
         )}
-        {requirements.map((r) => (
-          <RequirementRow key={r.id} req={r} onOpen={onOpenReq} />
-        ))}
-        {missing.map((m) => (
-          <MissingRow key={m.brandId} m={m} onOpen={onOpenBrand} />
-        ))}
+        {band && gapCount > 0 && main.length === 0 && <NoSizeResults band={band} />}
+
+        {main.map((item) =>
+          item.kind === 'req' ? (
+            <RequirementRow
+              key={item.key}
+              req={item.req}
+              profiles={profilesFor(item.brandId)}
+              band={band}
+              fit={fits.get(item.key) ?? null}
+              onOpen={onOpenReq}
+            />
+          ) : (
+            <MissingRow
+              key={item.key}
+              m={item.brand}
+              profiles={profilesFor(item.brandId)}
+              band={band}
+              fit={fits.get(item.key) ?? null}
+              onOpen={onOpenBrand}
+            />
+          )
+        )}
+
+        {unknown.length > 0 && (
+          <DemotedGroup
+            title="Size not on record"
+            note="We don't know their format yet — that's different from not fitting. Still callable."
+            count={unknown.length}
+            open={unknownOpen}
+            onToggle={() => setUnknownOpen((v) => !v)}
+          >
+            {unknown.map((item) => (
+              <DemotedRow
+                key={item.key}
+                name={
+                  item.kind === 'req' ? item.req.companyName : item.brand.brandName
+                }
+                meta={
+                  item.kind === 'req'
+                    ? 'Live requirement · no size stated'
+                    : missingMeta(item.brand)
+                }
+                domain={
+                  item.kind === 'req' ? item.req.companyDomain : item.brand.logoDomain
+                }
+                logoUrl={item.kind === 'req' ? item.req.logoUrl : item.brand.logoUrl}
+                profiles={[]}
+                onClick={() =>
+                  item.kind === 'req'
+                    ? onOpenReq(item.req.requirementId)
+                    : onOpenBrand(item.brand.representative)
+                }
+              />
+            ))}
+          </DemotedGroup>
+        )}
+
+        {band && outside.length > 0 && (
+          <DemotedGroup
+            title={`Outside ${band.short} sq ft`}
+            count={outside.length}
+            open={outsideOpen}
+            onToggle={() => setOutsideOpen((v) => !v)}
+          >
+            {outside.map((item) => (
+              <DemotedRow
+                key={item.key}
+                name={
+                  item.kind === 'req' ? item.req.companyName : item.brand.brandName
+                }
+                meta={
+                  item.kind === 'req'
+                    ? formatRequirementSizeRange(item.req)
+                    : missingMeta(item.brand)
+                }
+                domain={
+                  item.kind === 'req' ? item.req.companyDomain : item.brand.logoDomain
+                }
+                logoUrl={item.kind === 'req' ? item.req.logoUrl : item.brand.logoUrl}
+                profiles={item.kind === 'req' ? [] : profilesFor(item.brandId)}
+                dimmed
+                onClick={() =>
+                  item.kind === 'req'
+                    ? onOpenReq(item.req.requirementId)
+                    : onOpenBrand(item.brand.representative)
+                }
+              />
+            ))}
+          </DemotedGroup>
+        )}
+
+        {!loading && gapCount > 0 && <SizeFootnote />}
       </div>
     </>
   )
 }
 
-function PresentBody({
+function missingMeta(m: MissingBrand): string | null {
+  const parts: string[] = []
+  if (m.categoryName) parts.push(m.categoryName)
+  if (m.nearestStoreDistance != null)
+    parts.push(`nearest ${(m.nearestStoreDistance / 1000).toFixed(1)} km`)
+  return parts.length > 0 ? parts.join(' · ') : null
+}
+
+function presentMeta(b: PresentBrand): string {
+  const count = `${b.storeCount} ${b.storeCount === 1 ? 'store' : 'stores'}`
+  return b.town ? `${count} · ${b.town}` : count
+}
+
+export function PresentBody({
   loading,
   present,
+  band,
+  profilesFor,
 }: {
   loading: boolean
   present: PresentBrand[]
+  band: SizeBand | null
+  profilesFor: (brandId: string | null) => FloorAreaProfile[]
 }) {
+  const setBrandInfoId = useWorkspaceStore((s) => s.setBrandInfoId)
+  const [unknownOpen, setUnknownOpen] = useState(true)
+  const [outsideOpen, setOutsideOpen] = useState(false)
+
+  useEffect(() => {
+    setOutsideOpen(false)
+  }, [band?.id])
+
+  const { main, unknown, outside, fits } = useMemo(() => {
+    if (!band) {
+      return {
+        main: present,
+        unknown: [] as PresentBrand[],
+        outside: [] as PresentBrand[],
+        fits: new Map<string, SizeFit>(),
+      }
+    }
+    const part = partitionBySize(present, (b) => presentEntry(b, profilesFor), band)
+    const byKey = new Map<string, SizeFit>()
+    for (const b of part.main)
+      byKey.set(b.brandId, classify(presentEntry(b, profilesFor), band))
+    return { ...part, fits: byKey }
+  }, [present, band, profilesFor])
+
   return (
     <>
       {loading && (
@@ -644,6 +1070,9 @@ function PresentBody({
         </div>
         <p className="mt-1 text-[12.5px] leading-relaxed text-sm-ink3">
           Brands with an established presence within this catchment.
+          {band
+            ? ' Their local format is matched against your unit.'
+            : ' Set a size to see whose local format fits your unit.'}
         </p>
       </div>
       <div className="pt-2.5">
@@ -652,13 +1081,77 @@ function PresentBody({
             No brands trading within this catchment.
           </div>
         )}
-        {present.map((b) => (
-          <TradingRow key={b.brandId} b={b} />
+        {band && present.length > 0 && main.length === 0 && (
+          <div className="px-[18px] pb-2">
+            <NoSizeResults band={band} />
+          </div>
+        )}
+        {main.map((b) => (
+          <TradingRow
+            key={b.brandId}
+            b={b}
+            profiles={profilesFor(b.brandId)}
+            band={band}
+            fit={fits.get(b.brandId) ?? null}
+          />
         ))}
+
+        <div className="px-[18px]">
+          {unknown.length > 0 && (
+            <DemotedGroup
+              title="Size not on record"
+              note="We don't know their format yet — that's different from not fitting. Still callable."
+              count={unknown.length}
+              open={unknownOpen}
+              onToggle={() => setUnknownOpen((v) => !v)}
+            >
+              {unknown.map((b) => (
+                <DemotedRow
+                  key={b.brandId}
+                  name={b.brandName}
+                  meta={presentMeta(b)}
+                  domain={b.logoDomain}
+                  logoUrl={b.logoUrl}
+                  profiles={[]}
+                  onClick={() => setBrandInfoId(b.brandId)}
+                />
+              ))}
+            </DemotedGroup>
+          )}
+
+          {band && outside.length > 0 && (
+            <DemotedGroup
+              title={`Outside ${band.short} sq ft`}
+              count={outside.length}
+              open={outsideOpen}
+              onToggle={() => setOutsideOpen((v) => !v)}
+            >
+              {outside.map((b) => (
+                <DemotedRow
+                  key={b.brandId}
+                  name={b.brandName}
+                  meta={presentMeta(b)}
+                  domain={b.logoDomain}
+                  logoUrl={b.logoUrl}
+                  profiles={profilesFor(b.brandId)}
+                  dimmed
+                  onClick={() => setBrandInfoId(b.brandId)}
+                />
+              ))}
+            </DemotedGroup>
+          )}
+
+          {!loading && present.length > 0 && (
+            <div className="pb-[18px]">
+              <SizeFootnote />
+            </div>
+          )}
+        </div>
       </div>
     </>
   )
 }
+
 
 const OPP_TABS: { id: InspectorTab; label: string }[] = [
   { id: 'missing', label: 'Missing Brands' },
@@ -839,6 +1332,7 @@ function Opportunity({
   catchmentData,
   categoryOptions,
   brandOptions,
+  floorAreaProfiles,
   planningApplications,
   planningLoading,
   planningError,
@@ -861,6 +1355,7 @@ function Opportunity({
   catchmentData: CatchmentData
   categoryOptions: FilterOption[]
   brandOptions: FilterOption[]
+  floorAreaProfiles: FloorAreaProfiles
   planningApplications: PlanningApplication[]
   planningLoading: boolean
   planningError: string | null
@@ -885,7 +1380,47 @@ function Opportunity({
     (s) => s.setBrandFilterCategoryIds
   )
   const setBrandFilterBrandIds = useWorkspaceStore((s) => s.setBrandFilterBrandIds)
+  const brandFilterSizeBandId = useWorkspaceStore((s) => s.brandFilterSizeBandId)
+  const setBrandFilterSizeBandId = useWorkspaceStore(
+    (s) => s.setBrandFilterSizeBandId
+  )
   const clearBrandFilters = useWorkspaceStore((s) => s.clearBrandFilters)
+
+  // A brand with no profile is "size not on record", which the panel says out
+  // loud rather than treating as a non-match.
+  const profilesByBrand = floorAreaProfiles.byBrand
+  const profilesFor = useCallback(
+    (brandId: string | null) => (brandId ? (profilesByBrand[brandId] ?? []) : []),
+    [profilesByBrand]
+  )
+
+  const band = bandById(brandFilterSizeBandId)
+
+  // Popover counts run over the tab the user is looking at, after Category and
+  // Brand have had their say — the question is "how many of THESE fit my unit".
+  const sizeEntries = useMemo<SizeEntry[]>(() => {
+    if (tab === 'present') {
+      return presentBrands.map((b) => presentEntry(b, profilesFor))
+    }
+    if (tab !== 'missing') return []
+    return [
+      ...requirements.map((r) =>
+        missingEntry(
+          { kind: 'req', key: `req:${r.id}`, req: r, brandId: r.brandId },
+          profilesFor
+        )
+      ),
+      ...missingBrands.map((m) =>
+        missingEntry(
+          { kind: 'brand', key: `brand:${m.brandId}`, brand: m, brandId: m.brandId },
+          profilesFor
+        )
+      ),
+    ]
+  }, [tab, presentBrands, missingBrands, requirements, profilesFor])
+
+  const sizeFitCounts = useMemo(() => bandFitCounts(sizeEntries), [sizeEntries])
+  const sizeUnknownCount = useMemo(() => unknownCount(sizeEntries), [sizeEntries])
   const isRetailCentre = area?.kind === 'retail_centre'
   const opportunityTabs = isRetailCentre
     ? OPP_TABS.filter((item) => item.id !== 'catchment')
@@ -982,8 +1517,13 @@ function Opportunity({
           brandOptions={brandOptions}
           selectedCategoryIds={brandFilterCategoryIds}
           selectedBrandIds={brandFilterBrandIds}
+          sizeBandId={brandFilterSizeBandId}
+          sizeFitCounts={sizeFitCounts}
+          sizeUnknownCount={sizeUnknownCount}
+          showSizeFilter={!floorAreaProfiles.unavailable}
           onCategoryChange={setBrandFilterCategoryIds}
           onBrandChange={setBrandFilterBrandIds}
+          onSizeBandChange={setBrandFilterSizeBandId}
           onClear={clearBrandFilters}
         />
       )}
@@ -1002,13 +1542,20 @@ function Opportunity({
             onOpen={onOpenPlanning}
           />
         ) : tab === 'present' ? (
-          <PresentBody loading={landscape.loading} present={presentBrands} />
+          <PresentBody
+            loading={landscape.loading}
+            present={presentBrands}
+            band={band}
+            profilesFor={profilesFor}
+          />
         ) : (
           <MissingBody
             loading={landscape.loading}
             missing={missingBrands}
             requirements={requirements}
             areaName={areaName}
+            band={band}
+            profilesFor={profilesFor}
             onOpenReq={onOpenReq}
             onOpenBrand={onOpenBrand}
           />
@@ -1034,6 +1581,7 @@ export function UInspector({
   catchment,
   categoryOptions,
   brandOptions,
+  floorAreaProfiles,
   planningApplications,
   planningLoading,
   planningError,
@@ -1054,6 +1602,7 @@ export function UInspector({
   catchment: CatchmentData
   categoryOptions: FilterOption[]
   brandOptions: FilterOption[]
+  floorAreaProfiles: FloorAreaProfiles
   planningApplications: PlanningApplication[]
   planningLoading: boolean
   planningError: string | null
@@ -1102,6 +1651,7 @@ export function UInspector({
         catchmentData={catchment}
         categoryOptions={categoryOptions}
         brandOptions={brandOptions}
+        floorAreaProfiles={floorAreaProfiles}
         planningApplications={planningApplications}
         planningLoading={planningLoading}
         planningError={planningError}
@@ -1137,6 +1687,7 @@ export function UInspector({
         catchmentData={catchment}
         categoryOptions={categoryOptions}
         brandOptions={brandOptions}
+        floorAreaProfiles={floorAreaProfiles}
         planningApplications={planningApplications}
         planningLoading={planningLoading}
         planningError={planningError}

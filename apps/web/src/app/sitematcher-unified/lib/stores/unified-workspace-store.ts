@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { SizeBandId } from '../size-filter'
 import type {
   WorkspaceMode,
   InspectorTab,
@@ -81,6 +82,10 @@ interface WorkspaceState {
   // Assess brand-list filters (shared across the Missing/Present tabs).
   brandFilterCategoryIds: string[]
   brandFilterBrandIds: string[]
+  // "I have a unit this big" — the size band the brand lists are matched
+  // against. null means no band, which is the default: the list stays in its
+  // requirement-first order and sizes are shown but not filtered on.
+  brandFilterSizeBandId: SizeBandId | null
 
   // Overlays / filters
   overlays: WorkspaceOverlays
@@ -133,6 +138,7 @@ interface WorkspaceState {
   setPlanningModal: (app: PlanningApplication | null) => void
   setBrandFilterCategoryIds: (ids: string[]) => void
   setBrandFilterBrandIds: (ids: string[]) => void
+  setBrandFilterSizeBandId: (id: SizeBandId | null) => void
   clearBrandFilters: () => void
 
   toggleRoadTraffic: () => void
@@ -180,6 +186,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
 
   brandFilterCategoryIds: [],
   brandFilterBrandIds: [],
+  brandFilterSizeBandId: null,
 
   overlays: { roadTraffic: false, trafficHeatmap: false, requirements: false },
   missingItems: [],
@@ -225,6 +232,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       assessPoint: null,
       brandFilterCategoryIds: [],
       brandFilterBrandIds: [],
+      brandFilterSizeBandId: null,
       // Leaving/switching mode tears down any in-flight point comparison.
       compareArm: false,
       comparePair: null,
@@ -248,6 +256,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       planningModal: null,
       brandFilterCategoryIds: [],
       brandFilterBrandIds: [],
+      brandFilterSizeBandId: null,
     }),
 
   // Tab switching is only meaningful when there's an active selection —
@@ -269,8 +278,14 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setBrandFilterCategoryIds: (brandFilterCategoryIds) =>
     set({ brandFilterCategoryIds }),
   setBrandFilterBrandIds: (brandFilterBrandIds) => set({ brandFilterBrandIds }),
+  setBrandFilterSizeBandId: (brandFilterSizeBandId) =>
+    set({ brandFilterSizeBandId }),
   clearBrandFilters: () =>
-    set({ brandFilterCategoryIds: [], brandFilterBrandIds: [] }),
+    set({
+      brandFilterCategoryIds: [],
+      brandFilterBrandIds: [],
+      brandFilterSizeBandId: null,
+    }),
 
   toggleRoadTraffic: () =>
     set((s) => ({
@@ -375,6 +390,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       // A new point yields a fresh landscape, so clear brand-list filters.
       brandFilterCategoryIds: [],
       brandFilterBrandIds: [],
+      brandFilterSizeBandId: null,
       // Clearing the point (null) also tears down any active comparison so its
       // pins/tray don't orphan in empty Assess mode.
       ...(assessPoint

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:#16131F}
+  a{color:#6C4CE0;text-decoration:none}
+  a:hover{color:#5537c9}
+  ::-webkit-scrollbar{width:10px}
+  ::-webkit-scrollbar-thumb{background:#e6e3ee;border-radius:8px;border:3px solid #fff}
+</style>
+</helmet>
+
+<div style="min-height:100vh;width:100%;background:radial-gradient(1200px 800px at 18% 30%, #23202b 0%, #15141b 55%, #101017 100%);display:flex;justify-content:flex-end;align-items:stretch;padding:22px;font-family:'Hanken Grotesk',sans-serif;">
+
+  <div style="flex:1;position:relative;overflow:hidden;border-radius:16px 0 0 16px;opacity:.5;">
+    <div style="position:absolute;width:260px;height:260px;left:12%;top:26%;border-radius:50%;background:radial-gradient(circle,#6C4CE0 0%,transparent 70%);opacity:.35;filter:blur(8px)"></div>
+    <div style="position:absolute;width:180px;height:180px;left:34%;top:52%;border-radius:50%;background:radial-gradient(circle,#4c8ee0 0%,transparent 70%);opacity:.3;filter:blur(8px)"></div>
+    <div style="position:absolute;inset:0;background-image:linear-gradient(#ffffff10 1px,transparent 1px),linear-gradient(90deg,#ffffff10 1px,transparent 1px);background-size:46px 46px"></div>
+    <div style="position:absolute;left:34%;top:44%;width:14px;height:14px;background:#8b6bff;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 8px #8b6bff40"></div>
+  </div>
+
+  <div style="width:456px;flex:none;background:#fff;border-radius:16px;box-shadow:0 30px 80px -20px #00000060;display:flex;flex-direction:column;max-height:calc(100vh - 44px);overflow:hidden;">
+
+    <div style="padding:20px 22px 0 22px;flex:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:'Space Mono',monospace;font-size:12px;color:#a4a0ad;letter-spacing:.02em;">51.8736, -0.4174</span>
+        <div style="display:flex;gap:10px;color:#c3c0cc;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </div>
+      </div>
+      <h1 style="font-size:29px;font-weight:800;margin:8px 0 16px;letter-spacing:-.02em;">Dropped point</h1>
+
+      <div style="display:flex;gap:10px;margin-bottom:20px;">
+        <div style="flex:1;background:#F1EDFB;border-radius:12px;padding:10px 14px;">
+          <div style="font-size:10px;letter-spacing:.14em;font-weight:700;color:#8b83b8;text-transform:uppercase;">Population</div>
+          <div style="font-size:20px;font-weight:700;margin-top:2px;">220,584</div>
+        </div>
+        <div style="flex:1;background:#E9F4EC;border-radius:12px;padding:10px 14px;">
+          <div style="font-size:10px;letter-spacing:.14em;font-weight:700;color:#5a9a72;text-transform:uppercase;">Affluence</div>
+          <div style="font-size:20px;font-weight:700;margin-top:2px;">43.1</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:22px;border-bottom:1px solid #EEECF3;">
+        <div onClick="{{ selectMissing }}" style="{{ missingTabStyle }}">Missing<br>Brands</div>
+        <div onClick="{{ selectPresent }}" style="{{ presentTabStyle }}">Present<br>Brands</div>
+        <div style="font-size:15px;font-weight:600;color:#c3c0cc;padding-bottom:12px;line-height:1.15;cursor:default;">Catchment</div>
+        <div style="font-size:15px;font-weight:600;color:#c3c0cc;padding-bottom:12px;line-height:1.15;cursor:default;">Planning</div>
+      </div>
+    </div>
+
+    <div style="padding:16px 22px 0 22px;flex:none;position:relative;z-index:20;">
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;height:42px;border:1px solid #E4E1EC;border-radius:11px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;color:#7d7986;font-size:14px;font-weight:500;cursor:default;">Category
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div style="flex:1;height:42px;border:1px solid #E4E1EC;border-radius:11px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;color:#7d7986;font-size:14px;font-weight:500;cursor:default;">Brand
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div onClick="{{ toggleSize }}" style="{{ sizeTriggerStyle }}">{{ sizeTriggerLabel }}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </div>
+
+      <sc-if value="{{ sizeOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;right:22px;top:60px;width:290px;background:#fff;border:1px solid #E4E1EC;border-radius:14px;box-shadow:0 20px 44px -12px #00000030;padding:8px;z-index:40;">
+          <div style="font-size:10px;letter-spacing:.14em;font-weight:700;color:#a4a0ad;text-transform:uppercase;padding:8px 10px 6px;">Match my unit size</div>
+          <sc-for list="{{ bands }}" as="band" hint-placeholder-count="5">
+            <div onClick="{{ band.onSelect }}" style="{{ band.rowStyle }}">
+              <div>
+                <div style="font-size:14px;font-weight:600;">{{ band.label }}</div>
+                <div style="font-size:11.5px;color:#a4a0ad;margin-top:1px;">{{ band.countText }}</div>
+              </div>
+              <sc-if value="{{ band.active }}" hint-placeholder-val="{{ false }}">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6C4CE0" stroke-width="2.6"><path d="M5 12l5 5 9-11"/></svg>
+              </sc-if>
+            </div>
+          </sc-for>
+          <div style="border-top:1px solid #F0EEF4;margin-top:4px;padding:8px 10px 4px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:11.5px;color:#a4a0ad;">{{ unknownCount }} brands have no size on record</span>
+            <span onClick="{{ clearBand }}" style="{{ clearLinkStyle }}">Clear</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hasBand }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:9px;margin-top:12px;padding:11px 13px;background:#FAF9FE;border:1px solid #EEE9FB;border-radius:11px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8b83b8" stroke-width="2" style="flex:none;margin-top:1px;"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+          <div style="font-size:12px;line-height:1.45;color:#6a6577;">A <b style="color:#5537c9;">requirement</b> is what a brand says it wants — current. A <b style="color:#4a4655;">size</b> is measured from its existing shops (gross internal area, historic). They are kept separate.</div>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:18px 22px 22px 22px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <h2 style="font-size:21px;font-weight:800;margin:0;letter-spacing:-.01em;">{{ heading }}</h2>
+        <span style="font-family:'Space Mono',monospace;font-size:15px;color:#a4a0ad;">{{ count }}</span>
+      </div>
+      <p style="font-size:13px;line-height:1.5;color:#8b8792;margin:7px 0 18px;">{{ subtext }}</p>
+
+      <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;padding:26px 20px;background:#FAFAFC;border:1px dashed #E4E1EC;border-radius:14px;margin-bottom:16px;">
+          <div style="font-size:15px;font-weight:700;">No known-size brands fit {{ activeBandShort }} sq ft</div>
+          <div style="font-size:12.5px;color:#8b8792;margin-top:6px;line-height:1.5;">Absence isn't a no — the near-miss and no-size brands below are still worth a call.</div>
+        </div>
+      </sc-if>
+
+      <sc-for list="{{ mainItems }}" as="item" hint-placeholder-count="4">
+        <div style="{{ item.cardStyle }}">
+          <sc-if value="{{ item.showReq }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px;">
+              <span style="background:#6C4CE0;color:#fff;font-size:10px;font-weight:700;letter-spacing:.1em;padding:3px 8px;border-radius:6px;">REQUIREMENT</span>
+              <span style="font-size:10px;font-weight:700;letter-spacing:.13em;color:#9a95b4;">WANTS TO OPEN HERE</span>
+            </div>
+          </sc-if>
+
+          <div style="display:flex;align-items:flex-start;gap:13px;">
+            <div style="{{ item.iconStyle }}">{{ item.initials }}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:15.5px;font-weight:700;line-height:1.2;">{{ item.name }}</div>
+
+              <sc-if value="{{ item.showReq }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:13.5px;margin-top:4px;color:#2a2733;">Wants <b style="font-weight:700;">{{ item.reqRange }}</b> sq&nbsp;ft</div>
+              </sc-if>
+
+              <sc-if value="{{ item.noData }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:11px;font-weight:700;letter-spacing:.11em;color:#a4a0ad;text-transform:uppercase;margin-top:5px;">{{ item.meta }}</div>
+                <div style="display:inline-flex;align-items:center;gap:6px;margin-top:7px;background:#F4F3F6;border-radius:6px;padding:3px 8px;">
+                  <span style="font-size:11.5px;color:#8b8792;font-weight:600;">Size not on record</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ item.showObserved }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:8px;">
+                  <sc-if value="{{ item.observedLabel }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#a4a0ad;text-transform:uppercase;">{{ item.observedLabel }}</span>
+                  </sc-if>
+                  <div style="display:flex;align-items:center;gap:7px;margin-top:2px;">
+                    <span style="font-family:'Space Mono',monospace;font-size:13.5px;color:#4a4655;font-weight:700;">{{ item.obs.range }}</span>
+                    <span style="font-size:12px;color:#8b8792;">sq ft</span>
+                    <span style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#7a7684;background:#EEECF2;padding:1px 5px;border-radius:4px;">GIA</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-top:5px;">
+                    <div style="position:relative;flex:1;height:8px;">
+                      <div style="position:absolute;top:3px;left:0;right:0;height:2px;background:#E7E4EE;border-radius:2px;"></div>
+                      <div style="position:absolute;top:1px;height:6px;border-radius:3px;background:#C4BFD2;left:{{ item.obs.boxLeft }}%;width:{{ item.obs.boxWidth }}%;"></div>
+                      <div style="position:absolute;top:-1px;height:10px;width:2px;background:#6b6774;border-radius:2px;left:{{ item.obs.med }}%;"></div>
+                    </div>
+                    <span style="font-size:11px;color:#a4a0ad;white-space:nowrap;">{{ item.obs.footnote }}</span>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ item.showFascias }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:8px;">
+                  <div style="font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#a4a0ad;text-transform:uppercase;">{{ item.fasciaHeading }}</div>
+                  <sc-for list="{{ item.fascias }}" as="f" hint-placeholder-count="2">
+                    <div style="{{ f.rowStyle }}">
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <span style="font-size:13px;font-weight:700;color:#2a2733;">{{ f.name }}</span>
+                        <span style="display:flex;align-items:center;gap:5px;"><span style="font-family:'Space Mono',monospace;font-size:12.5px;color:#4a4655;font-weight:700;">{{ f.range }}</span><span style="font-size:11px;color:#8b8792;">sq ft</span><span style="font-size:8.5px;font-weight:700;letter-spacing:.08em;color:#7a7684;background:#EEECF2;padding:1px 4px;border-radius:4px;">GIA</span></span>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+                        <div style="position:relative;flex:1;height:8px;">
+                          <div style="position:absolute;top:3px;left:0;right:0;height:2px;background:#E7E4EE;border-radius:2px;"></div>
+                          <div style="position:absolute;top:1px;height:6px;border-radius:3px;background:#C4BFD2;left:{{ f.boxLeft }}%;width:{{ f.boxWidth }}%;"></div>
+                          <div style="position:absolute;top:-1px;height:10px;width:2px;background:#6b6774;border-radius:2px;left:{{ f.med }}%;"></div>
+                        </div>
+                        <span style="font-size:11px;color:#a4a0ad;white-space:nowrap;">{{ f.footnote }}</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ item.presentMeta }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:11px;font-weight:700;letter-spacing:.11em;color:#a4a0ad;text-transform:uppercase;margin-top:4px;">{{ item.presentMeta }}</div>
+              </sc-if>
+
+              <sc-if value="{{ item.nearMiss }}" hint-placeholder-val="{{ false }}">
+                <div style="display:inline-flex;align-items:center;gap:5px;margin-top:9px;background:#FBF1E1;border-radius:6px;padding:3px 8px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b9761f" stroke-width="2.4"><path d="M7 12h10M13 8l4 4-4 4"/></svg>
+                  <span style="font-size:11px;font-weight:700;color:#a3671a;letter-spacing:.02em;">Near your size band</span>
+                </div>
+              </sc-if>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c3c0cc" stroke-width="2.4" style="flex:none;margin-top:2px;"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+        </div>
+      </sc-for>
+
+      <sc-if value="{{ hasUnknown }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:18px;">
+          <div onClick="{{ toggleUnknown }}" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 0 10px;border-top:1px solid #EEECF3;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:11px;font-weight:700;letter-spacing:.13em;color:#8b8792;text-transform:uppercase;">Size not on record</span>
+              <span style="font-family:'Space Mono',monospace;font-size:12px;color:#b4b0bd;">{{ unknownCount }}</span>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b4b0bd" stroke-width="2.2" style="{{ unknownChevStyle }}"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <p style="font-size:11.5px;line-height:1.5;color:#a4a0ad;margin:0 0 10px;">We don't know their format yet — that's different from not fitting. Still callable.</p>
+          <sc-if value="{{ unknownOpen }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <sc-for list="{{ unknownItems }}" as="item" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:13px;padding:11px 14px;border:1px solid #F0EEF4;border-radius:14px;margin-bottom:8px;background:#fff;">
+                  <div style="{{ item.iconStyle }}">{{ item.initials }}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:14.5px;font-weight:700;">{{ item.name }}</div>
+                    <div style="font-size:10.5px;font-weight:700;letter-spacing:.11em;color:#a4a0ad;text-transform:uppercase;margin-top:3px;">{{ item.meta }}</div>
+                  </div>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c3c0cc" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hasOutside }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:14px;">
+          <div onClick="{{ toggleOutside }}" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 0;border-top:1px solid #EEECF3;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:11px;font-weight:700;letter-spacing:.13em;color:#8b8792;text-transform:uppercase;">Outside {{ activeBandShort }} sq ft</span>
+              <span style="font-family:'Space Mono',monospace;font-size:12px;color:#b4b0bd;">{{ outsideCount }}</span>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b4b0bd" stroke-width="2.2" style="{{ outsideChevStyle }}"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <sc-if value="{{ outsideOpen }}" hint-placeholder-val="{{ false }}">
+            <div>
+              <sc-for list="{{ outsideItems }}" as="item" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:13px;padding:11px 14px;border:1px solid #F0EEF4;border-radius:14px;margin-bottom:8px;background:#fff;opacity:.72;">
+                  <div style="{{ item.iconStyle }}">{{ item.initials }}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:14.5px;font-weight:700;">{{ item.name }}</div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:3px;"><span style="font-family:'Space Mono',monospace;font-size:12px;color:#8b8792;">{{ item.obs.range }}</span><span style="font-size:11px;color:#a4a0ad;">sq ft GIA</span></div>
+                  </div>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c3c0cc" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <div style="margin-top:20px;padding-top:14px;border-top:1px solid #F0EEF4;font-size:11px;line-height:1.5;color:#b4b0bd;">
+        Sizes are <b style="color:#8b8792;">gross internal area (GIA)</b> measured from each brand's shops — the whole envelope including storage, so larger than the sales area an agent quotes. A stated requirement is the stronger, current signal and always leads.
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:940}}">
+class Component extends DCLogic {
+  state = { tab: 'missing', band: null, sizeOpen: false, unknownOpen: true, outsideOpen: false };
+
+  bandsDef = [
+    { id:'u1',  label:'Under 1,000 sq ft', short:'under 1,000', lo:0,     hi:1000 },
+    { id:'1-3', label:'1,000 – 3,000 sq ft', short:'1,000–3,000', lo:1000, hi:3000 },
+    { id:'3-10',label:'3,000 – 10,000 sq ft', short:'3,000–10,000', lo:3000, hi:10000 },
+    { id:'10-50',label:'10,000 – 50,000 sq ft', short:'10,000–50,000', lo:10000, hi:50000 },
+    { id:'50',  label:'50,000 sq ft +', short:'50,000+', lo:50000, hi:Infinity },
+  ];
+
+  missing = [
+    { name:'Taco Bell (South East England)', cat:'Food & Beverage', req:[1200,2500], obs:{min:900,p25:1350,median:1750,p75:2150,max:3100,n:38,cov:0.28} },
+    { name:'Costa Drive Thru (East Anglia and the East)', cat:'Food & Beverage', req:[1800,3000], obs:{min:1200,p25:1650,median:2000,p75:2500,max:3400,n:52,cov:0.30} },
+    { name:'Jollyes', cat:'Pet', req:[3000,7000], obs:{min:2600,p25:3900,median:5200,p75:6600,max:8200,n:61,cov:0.33} },
+    { name:'PureGym', cat:'Health & Fitness', req:[8000,18000], obs:{min:6000,p25:9500,median:13000,p75:17500,max:26000,n:44,cov:0.46} },
+    { name:'Greggs', cat:'Food & Beverage', obs:{min:500,p25:820,median:1050,p75:1380,max:2400,n:1240,cov:0.22} },
+    { name:'Starbucks', cat:'Food & Beverage', obs:{min:900,p25:1300,median:1700,p75:2200,max:3400,n:300,cov:0.31} },
+    { name:'Nando\u2019s', cat:'Food & Beverage', obs:{min:2200,p25:3100,median:3900,p75:4700,max:6200,n:210,cov:0.24} },
+    { name:'Pets at Home', cat:'Pet', obs:{min:6000,p25:8200,median:10500,p75:13000,max:18000,n:120,cov:0.30} },
+    { name:'Home Bargains', cat:'Discount', obs:{min:8000,p25:12500,median:16000,p75:21000,max:34000,n:170,cov:0.41} },
+    { name:'The Range', cat:'Discount', obs:{min:20000,p25:32000,median:42000,p75:55000,max:82000,n:90,cov:0.36} },
+    { name:'Tesco', cat:'Grocery', fascias:[
+        { name:'Tesco Express', min:2600,p25:3270,median:3950,p75:4610,max:6200,n:1400,cov:0.18 },
+        { name:'Tesco Superstore', min:38000,p25:44000,median:47800,p75:53000,max:66000,n:480,cov:0.20 },
+        { name:'Tesco Extra', min:82000,p25:95000,median:105000,p75:118000,max:160000,n:210,cov:0.22 },
+    ] },
+    { name:'Access Self Storage', cat:'Self Storage', meta:'Self Storage \u00b7 Nearest 14.7 km' },
+    { name:'Allendale Co-operative Society', cat:'Grocery', meta:'Grocery \u00b7 Nearest 358.0 km' },
+    { name:'Alley Cats Pizza', cat:'Food & Beverage', meta:'Food & Beverage \u00b7 Nearest 42.3 km' },
+  ];
+
+  present = [
+    { name:'Aldi', cat:'Grocery', presentMeta:'2 stores \u00b7 Luton', obs:{min:12000,p25:15500,median:17500,p75:19500,max:24000,n:1078,cov:0.15} },
+    { name:'B&M', cat:'Discount', presentMeta:'2 stores \u00b7 Luton', obs:{min:9000,p25:13000,median:16500,p75:21000,max:32000,n:700,cov:0.35} },
+    { name:'Starbucks', cat:'Food & Beverage', presentMeta:'4 stores \u00b7 Luton', obs:{min:900,p25:1300,median:1700,p75:2200,max:3400,n:300,cov:0.31} },
+    { name:'Asda', cat:'Grocery', presentMeta:'3 stores \u00b7 Luton', fascias:[
+        { name:'Asda Supermarket', min:15000,p25:22000,median:30000,p75:42000,max:60000,n:180,cov:0.34 },
+        { name:'Asda Superstore', min:55000,p25:72000,median:90000,p75:110000,max:150000,n:320,cov:0.28 },
+    ] },
+    { name:'Big Yellow', cat:'Self Storage', presentMeta:'1 store \u00b7 Luton', obs:{min:30000,p25:45000,median:60000,p75:78000,max:100000,n:90,cov:0.30} },
+    { name:'Bannatyne', cat:'Health & Fitness', presentMeta:'1 store \u00b7 Luton', meta:'Health & Fitness \u00b7 1 store \u00b7 Luton' },
+  ];
+
+  catColor(cat){
+    const m = { 'Grocery':'#2E7D4F','Food & Beverage':'#C0413B','Pet':'#C6408A','Discount':'#2563C9','Health & Fitness':'#0E8C8C','Self Storage':'#B9761F' };
+    return m[cat] || '#6C4CE0';
+  }
+  initials(name){ const s=name.replace(/[^A-Za-z ].*$/,'').trim().split(/\s+/); return ((s[0]||'')[0]||'')+((s[1]||'')[0]||''); }
+  fmt(n){ let r; if(n<1000)r=Math.round(n/10)*10; else if(n<10000)r=Math.round(n/50)*50; else if(n<100000)r=Math.round(n/500)*500; else r=Math.round(n/1000)*1000; return r.toLocaleString('en-GB'); }
+  range(a,b){ return this.fmt(a)+'\u2013'+this.fmt(b); }
+  spreadWord(cov){ return cov>=0.38?'wide spread':(cov<=0.20?'tight':''); }
+  footnote(o){ const s=this.spreadWord(o.cov); return o.n.toLocaleString('en-GB')+' stores'+(s?' \u00b7 '+s:''); }
+  dist(o){ const span=(o.max-o.min)||1; return { boxLeft:Math.round((o.p25-o.min)/span*100), boxWidth:Math.max(3,Math.round((o.p75-o.p25)/span*100)), med:Math.round((o.median-o.min)/span*100) }; }
+
+  overlaps(lo,hi,b){ return lo<=b.hi && hi>=b.lo; }
+  near(lo,hi,b){ if(this.overlaps(lo,hi,b)) return false; if(lo>b.hi) return b.hi!==Infinity && lo<=b.hi*1.25; if(hi<b.lo) return hi>=b.lo*0.75; return false; }
+
+  ranges(item){
+    if(item.fascias) return item.fascias.map(f=>[f.p25,f.p75]);
+    if(item.req) return [[item.req[0],item.req[1]]];
+    if(item.obs) return [[item.obs.p25,item.obs.p75]];
+    return null;
+  }
+  fitFor(item,b){
+    if(!b) return 'na';
+    const rs=this.ranges(item);
+    if(!rs) return 'unknown';
+    if(rs.some(r=>this.overlaps(r[0],r[1],b))) return 'fit';
+    if(rs.some(r=>this.near(r[0],r[1],b))) return 'near';
+    return 'outside';
+  }
+
+  buildDisplay(item, b){
+    const color=this.catColor(item.cat);
+    const iconStyle=`width:44px;height:44px;flex:none;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;background:${color}22;color:${color};`;
+    const d={ name:item.name, initials:this.initials(item.name), iconStyle, showReq:!!item.req, presentMeta:item.presentMeta&&!item.fascias&&!item.obs?item.presentMeta:(this.state.tab==='present'&&(item.obs||item.fascias)?item.presentMeta:null) };
+    if(item.req) d.reqRange=this.range(item.req[0],item.req[1]);
+
+    const noData=!item.obs && !item.fascias;
+    if(noData){ d.noData=true; d.meta=item.meta||item.cat; }
+
+    if(item.fascias){
+      let list=item.fascias;
+      if(b){ const match=item.fascias.filter(f=>this.overlaps(f.p25,f.p75,b)||this.near(f.p25,f.p75,b)); if(match.length) list=match; }
+      d.showFascias=true;
+      d.fasciaHeading = b ? (list.length<item.fascias.length?'Matching format':'Trades across formats') : 'Trades across formats \u00b7 filter by size to narrow';
+      d.fascias=list.map((f,i)=>({ name:f.name, range:this.range(f.p25,f.p75), footnote:this.footnote(f), ...this.dist(f), rowStyle:`margin-top:${i===0?'7':'9'}px;` }));
+    } else if(item.obs){
+      d.showObserved=true;
+      d.obs={ range:this.range(item.obs.p25,item.obs.p75), footnote:this.footnote(item.obs), ...this.dist(item.obs) };
+      if(item.req) d.observedLabel='Estate today';
+      else if(this.state.tab==='present' && item.presentMeta){ d.observedLabel=item.presentMeta; }
+    }
+
+    const fit=this.fitFor(item,b);
+    d.nearMiss = fit==='near';
+    d._fit=fit; d._hasReq=!!item.req; d._n=(item.obs&&item.obs.n)||(item.fascias&&item.fascias[0].n)||0;
+
+    const isReqCard=!!item.req;
+    let bg='#fff', border='1px solid #EEECF3';
+    if(isReqCard){ bg='#F5F2FD'; border='1px solid #ECE6FB'; }
+    if(d.nearMiss){ border='1px solid #F0DEBE'; }
+    d.cardStyle=`background:${bg};border:${border};border-radius:16px;padding:15px 16px;margin-bottom:10px;`;
+    return d;
+  }
+
+  renderVals(){
+    const b = this.state.band ? this.bandsDef.find(x=>x.id===this.state.band) : null;
+    const raw = this.state.tab==='missing' ? this.missing : this.present;
+
+    const display = raw.map(it=>this.buildDisplay(it,b));
+
+    let mainItems, unknownItems=[], outsideItems=[];
+    if(b){
+      const fitRank={fit:0,near:1};
+      mainItems = display.filter(d=>d._fit==='fit'||d._fit==='near')
+        .sort((x,y)=> (fitRank[x._fit]-fitRank[y._fit]) || (y._hasReq-x._hasReq) || (y._n-x._n));
+      unknownItems = display.filter(d=>d._fit==='unknown');
+      outsideItems = display.filter(d=>d._fit==='outside');
+    } else {
+      mainItems = display.filter(d=>!d.noData).sort((x,y)=>(y._hasReq-x._hasReq));
+      unknownItems = display.filter(d=>d.noData);
+    }
+
+    const bandCount = (bd)=> raw.filter(it=>this.fitFor(it,bd)==='fit').length;
+    const bands = this.bandsDef.map(bd=>{
+      const active=this.state.band===bd.id;
+      return {
+        label:bd.label, short:bd.short, active,
+        countText: bandCount(bd)+' brands fit',
+        rowStyle:`display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:9px;cursor:pointer;${active?'background:#F3EFFD;':''}`,
+        onSelect:()=>this.setState({band:bd.id,sizeOpen:false,outsideOpen:false}),
+      };
+    });
+
+    const isMissing=this.state.tab==='missing';
+    const tabBase='font-size:15px;font-weight:700;padding-bottom:12px;line-height:1.15;cursor:pointer;';
+    const activeTab=tabBase+'color:#16131F;border-bottom:2.5px solid #6C4CE0;';
+    const idleTab='font-size:15px;font-weight:600;padding-bottom:12px;line-height:1.15;cursor:pointer;color:#b4b0bd;';
+
+    return {
+      selectMissing:()=>this.setState({tab:'missing'}),
+      selectPresent:()=>this.setState({tab:'present'}),
+      missingTabStyle: isMissing?activeTab:idleTab,
+      presentTabStyle: !isMissing?activeTab:idleTab,
+
+      toggleSize:()=>this.setState(s=>({sizeOpen:!s.sizeOpen})),
+      clearBand:()=>this.setState({band:null,sizeOpen:false}),
+      sizeOpen:this.state.sizeOpen,
+      hasBand:!!b,
+      activeBandShort: b?b.short:'',
+      sizeTriggerLabel: b?b.short:'Size',
+      sizeTriggerStyle: `flex:1;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:14px;font-weight:600;cursor:pointer;${b?'background:#6C4CE0;color:#fff;border:1px solid #6C4CE0;':'border:1px solid #E4E1EC;color:#7d7986;'}`,
+      clearLinkStyle:'font-size:12px;font-weight:700;color:#6C4CE0;cursor:pointer;',
+      bands,
+
+      heading: isMissing?'The gap \u00b7 missing here':'Already trading here',
+      subtext: isMissing?'Occupiers with a live requirement show first, then established brands with no presence here. Set a size to match your unit.':'Brands with an established presence in this catchment. Set a size to see whose local format fits your unit.',
+      count: isMissing?'177':'57',
+
+      mainItems,
+      noResults: !!b && mainItems.length===0,
+
+      hasUnknown: unknownItems.length>0,
+      unknownItems,
+      unknownCount: this.state.tab==='missing' ? '69' : String(unknownItems.length),
+      unknownOpen:this.state.unknownOpen,
+      toggleUnknown:()=>this.setState(s=>({unknownOpen:!s.unknownOpen})),
+      unknownChevStyle:`transition:transform .2s;${this.state.unknownOpen?'':'transform:rotate(-90deg);'}`,
+
+      hasOutside: !!b && outsideItems.length>0,
+      outsideItems,
+      outsideCount:String(outsideItems.length),
+      outsideOpen:this.state.outsideOpen,
+      toggleOutside:()=>this.setState(s=>({outsideOpen:!s.outsideOpen})),
+      outsideChevStyle:`transition:transform .2s;${this.state.outsideOpen?'':'transform:rotate(-90deg);'}`,
+    };
+  }
+}
+</script>
+</body>
+</html>

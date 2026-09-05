@@ -91,7 +91,15 @@ export function USketchPanel({ onExit }: { onExit: () => void }) {
         toast.error(err.error || 'Plus subscription required to save')
         return false
       }
-      if (!res.ok) throw new Error('Failed to save sketch')
+      if (!res.ok) {
+        // Surface the server's actual error instead of a generic string so
+        // failures (e.g. a rejected DB write) are diagnosable from the toast.
+        const serverError = await res
+          .json()
+          .then((b) => b?.error as string | undefined)
+          .catch(() => undefined)
+        throw new Error(serverError || `Failed to save sketch (HTTP ${res.status})`)
+      }
       const result = await res.json()
       if (!sketchId) setSketchId(result.sketch.id)
       setSketchName(result.sketch.name)
@@ -101,7 +109,8 @@ export function USketchPanel({ onExit }: { onExit: () => void }) {
       return true
     } catch (err) {
       console.error('Save error:', err)
-      toast.error('Failed to save sketch. Please try again.')
+      const message = err instanceof Error ? err.message : 'Failed to save sketch. Please try again.'
+      toast.error(message)
       return false
     } finally {
       setSaving(false)

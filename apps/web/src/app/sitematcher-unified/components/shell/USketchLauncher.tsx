@@ -57,6 +57,20 @@ export function USketchLauncher({ onActivate }: { onActivate: () => void }) {
 
   const handleStartNew = () => {
     reset()
+    // reset() restores the default viewport (London, zoom 12). In the unified
+    // workspace the SketchLayer is already attached to the shared map, so that
+    // would fly the map away from the parcel the user is looking at. Re-adopt
+    // the live map view so a new sketch starts exactly where the map already is.
+    const map = useSketchStore.getState().mapInstance
+    if (map) {
+      const c = map.getCenter()
+      useSketchStore.getState().setViewport({
+        center: [c.lng, c.lat],
+        zoom: map.getZoom(),
+        pitch: map.getPitch(),
+        bearing: map.getBearing(),
+      })
+    }
     onActivate()
   }
 

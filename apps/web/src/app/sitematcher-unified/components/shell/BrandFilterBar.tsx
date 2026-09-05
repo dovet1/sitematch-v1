@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, ChevronDown, Search, X } from 'lucide-react'
+import { SizeFilterControl, SizeExplainer } from './SizeFilterControl'
+import type { SizeBandId } from '../../lib/size-filter'
 
 export interface FilterOption {
   id: string
@@ -139,42 +141,66 @@ export function BrandFilterBar({
   brandOptions,
   selectedCategoryIds,
   selectedBrandIds,
+  sizeBandId,
+  sizeFitCounts,
+  sizeUnknownCount,
+  showSizeFilter,
   onCategoryChange,
   onBrandChange,
+  onSizeBandChange,
   onClear,
 }: {
   categoryOptions: FilterOption[]
   brandOptions: FilterOption[]
   selectedCategoryIds: string[]
   selectedBrandIds: string[]
+  sizeBandId: SizeBandId | null
+  sizeFitCounts: Record<SizeBandId, number>
+  sizeUnknownCount: number
+  // Hidden when the floor-area lookup is unavailable, so the row never offers a
+  // control that could only ever return nothing.
+  showSizeFilter: boolean
   onCategoryChange: (ids: string[]) => void
   onBrandChange: (ids: string[]) => void
+  onSizeBandChange: (id: SizeBandId | null) => void
   onClear: () => void
 }) {
-  const active = selectedCategoryIds.length > 0 || selectedBrandIds.length > 0
+  const active =
+    selectedCategoryIds.length > 0 || selectedBrandIds.length > 0 || sizeBandId != null
   return (
-    <div className="flex items-center gap-2 border-b border-sm-border-soft px-[18px] py-2.5">
-      <FilterDropdown
-        label="Category"
-        options={categoryOptions}
-        selected={selectedCategoryIds}
-        onChange={onCategoryChange}
-      />
-      <FilterDropdown
-        label="Brand"
-        options={brandOptions}
-        selected={selectedBrandIds}
-        onChange={onBrandChange}
-      />
-      {active && (
-        <button
-          type="button"
-          onClick={onClear}
-          className="shrink-0 rounded-lg px-2 py-1 text-[12px] font-medium text-sm-ink3 hover:text-sm-ink2"
-        >
-          Clear
-        </button>
-      )}
-    </div>
+    <>
+      <div className="flex items-center gap-2 border-b border-sm-border-soft px-[18px] py-2.5">
+        <FilterDropdown
+          label="Category"
+          options={categoryOptions}
+          selected={selectedCategoryIds}
+          onChange={onCategoryChange}
+        />
+        <FilterDropdown
+          label="Brand"
+          options={brandOptions}
+          selected={selectedBrandIds}
+          onChange={onBrandChange}
+        />
+        {showSizeFilter && (
+          <SizeFilterControl
+            selected={sizeBandId}
+            fitCounts={sizeFitCounts}
+            unknownCount={sizeUnknownCount}
+            onChange={onSizeBandChange}
+          />
+        )}
+        {active && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="shrink-0 rounded-lg px-2 py-1 text-[12px] font-medium text-sm-ink3 hover:text-sm-ink2"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      {sizeBandId != null && <SizeExplainer />}
+    </>
   )
 }

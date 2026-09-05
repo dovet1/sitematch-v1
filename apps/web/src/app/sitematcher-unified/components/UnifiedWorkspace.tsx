@@ -17,6 +17,7 @@ import { useAreaData } from '../lib/hooks/useAreaData'
 import { useCatchment } from '../lib/hooks/useCatchment'
 import { usePlanningData } from '../lib/hooks/usePlanningData'
 import { useRequirements } from '../lib/hooks/useRequirements'
+import { useFloorAreaProfiles } from '../lib/hooks/useFloorAreaProfiles'
 import { useFindGapsStorePins } from '../lib/hooks/useFindGapsStorePins'
 import { useRetailCentreBoundary } from '../lib/hooks/useRetailCentreBoundary'
 import { computeIsochroneMissing } from '../lib/isochrone-missing'
@@ -418,6 +419,20 @@ export function UnifiedWorkspace() {
     [reqLocal, catSet, brandSet, brandCategoryIds]
   )
 
+  // Observed floor areas for every brand the panel could show — requirements
+  // included, since a requirement card also carries its estate-today block.
+  // Fetched off the unfiltered lists so the popover's "N brands fit" counts
+  // don't have to refetch each time Category or Brand changes.
+  const floorAreaBrandIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const b of present) ids.add(b.brandId)
+    for (const b of missing) ids.add(b.brandId)
+    for (const r of reqLocal) if (r.brandId) ids.add(r.brandId)
+    return Array.from(ids)
+  }, [present, missing, reqLocal])
+
+  const floorAreaProfiles = useFloorAreaProfiles(floorAreaBrandIds)
+
   // null = no filters active, so the map shows every present-brand pin.
   const visiblePresentBrandIds = useMemo(() => {
     if (catSet.size === 0 && brandSet.size === 0) return null
@@ -538,6 +553,7 @@ export function UnifiedWorkspace() {
             catchment={catchmentData}
             categoryOptions={categoryOptions}
             brandOptions={brandOptions}
+            floorAreaProfiles={floorAreaProfiles}
             planningApplications={planning.applications}
             planningLoading={planningLoading}
             planningError={planningError}
