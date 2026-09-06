@@ -900,3 +900,64 @@ Working files are in the session scratchpad, not committed:
 External data used: MHCLG non-domestic bulk CSV (1,321,580 certs), Scottish
 non-domestic extended historic extract (91,981 certs), OS Open UPRN (42M, OGL),
 GeoDS retail centre boundaries (9,623, already in repo).
+
+---
+
+## 11. [2026-09-06] Known defect: concession / host-building matches
+
+A concession trades inside somebody else's building — a Benugo café inside John Lewis,
+a Vets4Pets inside a Pets at Home, an MFG EV bay in a Morrisons car park. It shares a
+postal address with its host, and the host is who lodges the EPC. The matcher finds that
+certificate, agrees on the street number, grades the row `high`, and records the host's
+floor area:
+
+| store | recorded | reality |
+|---|---|---|
+| Benugo John Lewis Oxford | 139,360 sq ft | the John Lewis |
+| Mfg Ev Power Morrisons Weybridge | 123,322 sq ft | the Morrisons |
+| Vets4Pets Inside Pets At Home, 159 Sir Henry Parkes Rd | 41,086 sq ft | the Pets at Home |
+
+`confidence` cannot catch this and is not wrong not to — it grades whether the certificate
+identifies the premises at that address, and it does. The unasked question is whether the
+resulting number is credible for the format. That is what `size_plausibility` is for.
+
+The matcher does answer it, partially: run `epc-2026.09.05-allbrands` demoted 2,027 rows
+that fell outside 3x their brand/fascia median. It cannot see a concession, because it
+anchors on the fascia's own median and a fascia polluted by concessions inflates the very
+baseline meant to catch them — hence the category ceiling below, and hence the iteration.
+Those 2,027 rows also left the column carrying two vocabularies for one idea; the
+migration normalises them to `implausible` and adds the CHECK constraint the original
+table declaration lacked.
+
+**Migration `20260908000000_demote_concession_floor_area_matches.sql` corrects the data**
+(51 of 19,111 high-confidence rows, 0.27%) and carries the rule in full. It is a
+corrective pass over one matcher run — **the rule still needs porting into the matcher**,
+which lives outside this repository, or the next run reintroduces the same rows.
+
+The rule, in brief. A high-confidence row is implausible when the certificate does not
+name our brand (`brand_on_certificate IS NOT TRUE`) and the area is grossly out of scale:
+
+- **against its own format** — more than 4x the median of its *fascia* profile, where that
+  profile rests on at least 20 stores. Fascia, never brand: Morrisons' brand-level median
+  is 2,669 sq ft because 660 Morrisons Daily shops outvote the supermarkets.
+- **against its category** — for a store with no trusted format baseline, more than 8x the
+  category's 99th percentile. Deliberately extreme: at 8x it catches Benugo (21x) and
+  leaves IKEA Oxford Street (4.8x), UNIQLO Manchester (1.5x) and Costco Leicester (1.03x)
+  alone. Category ceilings are built only from stores that *do* have a trusted baseline,
+  so concessions cannot inflate the ceiling meant to catch them.
+
+Applied iteratively: a bad row inflates the very median it is judged against, so each pass
+rebuilds the affected profiles and looks again. Converges after two demoting passes.
+
+**Rejected — matching the host's name inside our own store name.** It reads as the obvious
+signal and is not safe: "TK Maxx, Willow Place Shopping Centre" matches the brand Willow,
+"Co-op Wells Next The Sea" matches Next, "Tesco Lichfield Three Spires Express" matches
+Three. The harm is only ever an implausible area, so the test is anchored on area.
+
+**Still unfixed, for whoever picks this up.** The test only catches gross outliers. "Slim
+Chickens 226 Bishopsgate" at 47,469 sq ft is almost certainly the host building too, but
+at 4.7x its category ceiling it sits below the threshold, and lowering the threshold far
+enough to catch it would start demoting real flagship stores. A matcher-side fix — reading
+`certs_at_address > 1` together with `brand_on_certificate = false` at match time, where
+the candidate certificates are still in hand — would separate these properly. The
+database-side rule cannot, because by then only the chosen certificate survives.
