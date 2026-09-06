@@ -1,0 +1,36 @@
+# EPC register extracts and anything derived from them that carries address text.
+# Address and postcode fields are Ordnance Survey / Royal Mail licensed and are NOT
+# Open Government Licence — see README. Aggregates without addresses are fine to commit.
+
+# register extracts and working indexes
+*.pkl
+index_all.json
+bulk_index*.json
+scot_index*.json
+raw.json
+open_uprn.zip
+scot/
+scot_hist/
+certificates-*.csv
+
+# UPRN coordinate caches
+*uprn_coords*.json
+coords_all*.json
+
+# per-store outputs — these carry certificate_address
+all_stores*.csv
+epc_all_brands.csv
+epc_assessment*.csv
+epc_profiles.csv
+load_check.csv
+store_ids.csv
+
+# generated summaries
+SUMMARY_*.md
+
+# credentials
+.token
+
+# python bytecode
+__pycache__/
+*.pyc
