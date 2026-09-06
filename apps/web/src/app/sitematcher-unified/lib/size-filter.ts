@@ -81,6 +81,43 @@ export interface FloorAreaProfile {
 
 export type BrandProfileMap = Record<string, FloorAreaProfile[]>
 
+// brand_floor_area_profiles refuses to summarise fewer than five shops, and it is
+// right to: quartiles over three points are noise. But "no distribution" is not
+// "nothing to say" — for those brands we hold the individual measurements, and
+// showing them beats showing nothing.
+//
+// The evidence they carry varies enormously and the UI must not flatten that.
+// Three of a three-shop estate is a census. Two of a thirty-shop estate is a
+// corner of it, and could easily be the two atypical shops. Both are worth
+// showing; neither is worth showing without its denominator. So every one of
+// these carries "N of M shops measured", and none of them is ever drawn as a
+// distribution — no IQR box, no median, no "typical size".
+export interface MeasuredEstate {
+  brandId: string
+  // Shops the brand trades from, measured or not — the denominator that says
+  // whether these figures describe the estate or just a corner of it.
+  totalStores: number
+  // High-confidence measurements only, ascending. Never empty.
+  measuredSqFt: number[]
+}
+
+// Share of the estate these figures actually cover, 0–1. The number the reader
+// needs in order to know how much weight the figures can bear.
+export function measuredCoverage(m: MeasuredEstate): number {
+  if (m.totalStores <= 0) return 0
+  return Math.min(1, m.measuredSqFt.length / m.totalStores)
+}
+
+export type MeasuredEstateMap = Record<string, MeasuredEstate>
+
+export function measuredRange(m: MeasuredEstate): SizeRange | null {
+  if (m.measuredSqFt.length === 0) return null
+  return [
+    Math.min(...m.measuredSqFt),
+    Math.max(...m.measuredSqFt),
+  ]
+}
+
 // Rule 1 in one function. A brand with more than one fascia profile is read at
 // fascia level and its brand-level row is dropped: a single median across
 // Tesco Express and Tesco Extra describes neither. A brand with one fascia
@@ -128,11 +165,16 @@ export function requirementRange(req: RequirementSize | null): SizeRange | null 
 // middle half of the estate, not its extremes.
 export function effectiveRanges(
   requirement: RequirementSize | null,
-  profiles: FloorAreaProfile[]
+  profiles: FloorAreaProfile[],
+  measured?: MeasuredEstate | null
 ): SizeRange[] | null {
   const req = requirementRange(requirement)
   if (req) return [req]
   if (profiles.length > 0) return profiles.map((p) => [p.p25SqFt, p.p75SqFt])
+  // Small estates match on what was actually measured, min to max. There is no
+  // IQR to take and pretending otherwise would invent a middle half that does
+  // not exist.
+  if (measured) return measuredRange(measured) ? [measuredRange(measured)!] : null
   return null
 }
 
@@ -164,6 +206,8 @@ export interface SizeEntry {
   hasRequirement: boolean
   requirement: RequirementSize | null
   profiles: FloorAreaProfile[]
+  // Set only for a brand with no distribution profile — see MeasuredEstate.
+  measured: MeasuredEstate | null
   // Ordering tiebreak and display footnote; the largest sample behind the brand.
   sampleCount: number
   // Last-resort tiebreak so the order is stable across renders.
@@ -175,7 +219,10 @@ export function entrySampleCount(profiles: FloorAreaProfile[]): number {
 }
 
 export function classify(entry: SizeEntry, band: SizeBand): SizeFit {
-  return fitFor(effectiveRanges(entry.requirement, entry.profiles), band)
+  return fitFor(
+    effectiveRanges(entry.requirement, entry.profiles, entry.measured),
+    band
+  )
 }
 
 export interface SizePartition<T> {
@@ -233,8 +280,9 @@ export function bandFitCounts(entries: SizeEntry[]): Record<SizeBandId, number> 
 }
 
 export function unknownCount(entries: SizeEntry[]): number {
-  return entries.filter((e) => effectiveRanges(e.requirement, e.profiles) === null)
-    .length
+  return entries.filter(
+    (e) => effectiveRanges(e.requirement, e.profiles, e.measured) === null
+  ).length
 }
 
 /* ---------- formatting ---------- */
@@ -302,4 +350,22 @@ export function distributionGeometry(profile: FloorAreaProfile): {
     boxWidth: Math.round(boxWidth),
     medianLeft: Math.round(Math.min(100, Math.max(0, pct(profile.medianSqFt)))),
   }
+}
+
+// A small estate reads as the shops themselves, not as a summary of them. Up to
+// three are listed individually — three tight figures say "this is their format"
+// far better than a range does — and beyond that the span, because a list stops
+// being readable.
+export function formatMeasuredShops(m: MeasuredEstate): string {
+  const values = [...m.measuredSqFt].sort((a, b) => a - b)
+  if (values.length === 0) return ''
+  if (values.length <= 3) return values.map(formatSqFtValue).join(' · ')
+  return formatSqFtRange(values[0], values[values.length - 1])
+}
+
+// The denominator is the whole point: "1 of 4 shops measured" is a different
+// claim from "3 of 3", and the reader has to be able to tell them apart.
+export function measuredFootnote(m: MeasuredEstate): string {
+  const noun = m.totalStores === 1 ? 'shop' : 'shops'
+  return `${m.measuredSqFt.length} of ${m.totalStores} ${noun} measured`
 }

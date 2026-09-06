@@ -20,17 +20,36 @@ jest.mock('@/lib/gapfinder-access', () => ({
 // One `from()` per table, each resolving whatever the test queued.
 const profileRows: { data: unknown[]; error: unknown } = { data: [], error: null }
 const fasciaRows: { data: unknown[]; error: unknown } = { data: [], error: null }
-const inCalls: { table: string; ids: string[] }[] = []
+const storeRows: { data: unknown[]; error: unknown } = { data: [], error: null }
+const areaRows: { data: unknown[]; error: unknown } = { data: [], error: null }
+const inCalls: { table: string; ids: string[]; eq?: [string, unknown] }[] = []
+
+const queued = (table: string) =>
+  table === 'fascias'
+    ? fasciaRows
+    : table === 'stores'
+      ? storeRows
+      : table === 'store_floor_areas'
+        ? areaRows
+        : profileRows
 
 jest.mock('@/lib/supabase', () => ({
   createAdminClient: () => ({
     from: (table: string) => ({
-      select: () => ({
-        in: (_col: string, ids: string[]) => {
-          inCalls.push({ table, ids })
-          return Promise.resolve(table === 'fascias' ? fasciaRows : profileRows)
-        },
-      }),
+      select: () => {
+        const builder = {
+          eqPair: undefined as [string, unknown] | undefined,
+          eq(col: string, val: unknown) {
+            builder.eqPair = [col, val]
+            return builder
+          },
+          in(_col: string, ids: string[]) {
+            inCalls.push({ table, ids, eq: builder.eqPair })
+            return Promise.resolve(queued(table))
+          },
+        }
+        return builder
+      },
     }),
   }),
 }))
@@ -59,16 +78,18 @@ function profileRow(over: Record<string, unknown> = {}) {
   }
 }
 
+function reset() {
+  jest.clearAllMocks()
+  inCalls.length = 0
+  for (const q of [profileRows, fasciaRows, storeRows, areaRows]) {
+    q.data = []
+    q.error = null
+  }
+  requireGapFinderAccess.mockResolvedValue({ authorized: true, userId: 'u1' })
+}
+
 describe('POST /api/public/brands/floor-area-profiles', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    inCalls.length = 0
-    profileRows.data = []
-    profileRows.error = null
-    fasciaRows.data = []
-    fasciaRows.error = null
-    requireGapFinderAccess.mockResolvedValue({ authorized: true, userId: 'u1' })
-  })
+  beforeEach(reset)
 
   it('refuses a caller without GapFinder access, and reads nothing', async () => {
     const denied = { status: 403, json: async () => ({ error: 'no' }) }
@@ -199,5 +220,87 @@ describe('POST /api/public/brands/floor-area-profiles', () => {
     expect(res.status).toBe(500)
     expect(body.profiles).toEqual({})
     expect(body.error).not.toContain('brand_floor_area_profiles')
+  })
+})
+
+// Brands the profiles table will not summarise still have something to say: the
+// shops we measured. The route returns those together with the estate size, so
+// the panel can show figures without implying a distribution and the reader can
+// see what share of the estate they cover.
+describe('brands with measurements but no distribution', () => {
+  beforeEach(reset)
+
+  const SMALL = '11111111-2222-3333-4444-555555555555'
+  const BIG = '66666666-7777-8888-9999-aaaaaaaaaaaa'
+
+  it('returns the measured shops and the size of the estate they came from', async () => {
+    storeRows.data = [
+      { id: 's1', brand_id: SMALL },
+      { id: 's2', brand_id: SMALL },
+      { id: 's3', brand_id: SMALL },
+    ]
+    areaRows.data = [
+      { store_id: 's3', floor_area_sqft: 872 },
+      { store_id: 's1', floor_area_sqft: 840 },
+    ]
+
+    const res = await POST(request({ brandIds: [SMALL] }))
+    const body = (await res.json()) as { measured: Record<string, any> }
+
+    expect(body.measured[SMALL]).toEqual({
+      brandId: SMALL,
+      totalStores: 3,
+      measuredSqFt: [840, 872],
+    })
+  })
+
+  it('only reads high-confidence measurements', async () => {
+    storeRows.data = [{ id: 's1', brand_id: SMALL }]
+    areaRows.data = [{ store_id: 's1', floor_area_sqft: 840 }]
+
+    await POST(request({ brandIds: [SMALL] }))
+
+    const areaCall = inCalls.find((c) => c.table === 'store_floor_areas')
+    expect(areaCall?.eq).toEqual(['confidence', 'high'])
+  })
+
+  it('covers a large estate too, carrying the fraction that qualifies it', async () => {
+    storeRows.data = Array.from({ length: 30 }, (_, i) => ({
+      id: `b${i}`,
+      brand_id: BIG,
+    }))
+    areaRows.data = [
+      { store_id: 'b7', floor_area_sqft: 9500 },
+      { store_id: 'b2', floor_area_sqft: 8000 },
+    ]
+
+    const res = await POST(request({ brandIds: [BIG] }))
+    const body = (await res.json()) as { measured: Record<string, any> }
+
+    // Two of thirty is thin, and the denominator is what says so — the route
+    // reports both rather than deciding for the reader.
+    expect(body.measured[BIG]).toEqual({
+      brandId: BIG,
+      totalStores: 30,
+      measuredSqFt: [8000, 9500],
+    })
+  })
+
+  it('omits a small brand with no measurement at all', async () => {
+    storeRows.data = [{ id: 's1', brand_id: SMALL }]
+    areaRows.data = []
+
+    const res = await POST(request({ brandIds: [SMALL] }))
+    const body = (await res.json()) as { measured: Record<string, unknown> }
+
+    expect(body.measured).toEqual({})
+  })
+
+  it('does not look up brands that already have a distribution', async () => {
+    profileRows.data = [profileRow()]
+
+    await POST(request({ brandIds: [BRAND] }))
+
+    expect(inCalls.some((c) => c.table === 'stores')).toBe(false)
   })
 })

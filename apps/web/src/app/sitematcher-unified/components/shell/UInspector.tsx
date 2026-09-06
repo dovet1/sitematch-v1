@@ -35,6 +35,7 @@ import { BrandFilterBar, type FilterOption } from './BrandFilterBar'
 import { CatchmentTab } from './CatchmentTab'
 import {
   ObservedSize,
+  MeasuredShops,
   FasciaSizes,
   NearMissTag,
   NoSizeChip,
@@ -46,11 +47,15 @@ import {
   bandFitCounts,
   classify,
   entrySampleCount,
+  formatMeasuredShops,
   formatSqFtRange,
+  measuredFootnote,
   matchingProfiles,
+  measuredRange,
   partitionBySize,
   unknownCount,
   type FloorAreaProfile,
+  type MeasuredEstate,
   type SizeBand,
   type SizeBandId,
   type SizeEntry,
@@ -460,13 +465,19 @@ function fasciaHeading(
 
 function SizeDetail({
   profiles,
+  measured,
   band,
   label,
 }: {
   profiles: FloorAreaProfile[]
+  measured: MeasuredEstate | null
   band: SizeBand | null
   label?: string | null
 }) {
+  // A brand below the profile sample floor still has something to say — its
+  // shops, shown as shops rather than as a distribution.
+  if (profiles.length === 0 && measured)
+    return <MeasuredShops measured={measured} label={label ?? undefined} />
   if (profiles.length === 0) return null
   if (profiles.length === 1)
     return <ObservedSize profile={profiles[0]} label={label} />
@@ -479,12 +490,14 @@ function SizeDetail({
 function MissingRow({
   m,
   profiles,
+  measured,
   band,
   fit,
   onOpen,
 }: {
   m: MissingBrand
   profiles: FloorAreaProfile[]
+  measured: MeasuredEstate | null
   band: SizeBand | null
   fit: SizeFit | null
   onOpen: (m: MissingFascia) => void
@@ -515,9 +528,9 @@ function MissingRow({
             )}
           </div>
         )}
-        <SizeDetail profiles={profiles} band={band} />
+        <SizeDetail profiles={profiles} measured={measured} band={band} />
         {/* "We don't know" only needs saying once the user is filtering on size. */}
-        {profiles.length === 0 && band && <NoSizeChip />}
+        {profiles.length === 0 && !measured && band && <NoSizeChip />}
         {fit === 'near' && <NearMissTag />}
       </div>
       <ChevronRight size={15} className="mt-0.5 text-sm-ink4" />
@@ -532,12 +545,14 @@ function MissingRow({
 function RequirementRow({
   req,
   profiles,
+  measured,
   band,
   fit,
   onOpen,
 }: {
   req: RequirementLocation
   profiles: FloorAreaProfile[]
+  measured: MeasuredEstate | null
   band: SizeBand | null
   fit: SizeFit | null
   onOpen: (requirementId: string) => void
@@ -575,7 +590,12 @@ function RequirementRow({
               {sizeRange}
             </div>
           )}
-          <SizeDetail profiles={profiles} band={band} label="Estate today" />
+          <SizeDetail
+            profiles={profiles}
+            measured={measured}
+            band={band}
+            label="Estate today"
+          />
           {fit === 'near' && <NearMissTag />}
         </div>
         <ChevronRight size={15} className="mt-0.5 text-sm-violet-deep" />
@@ -617,11 +637,13 @@ function formatRange(
 function TradingRow({
   b,
   profiles,
+  measured,
   band,
   fit,
 }: {
   b: PresentBrand
   profiles: FloorAreaProfile[]
+  measured: MeasuredEstate | null
   band: SizeBand | null
   fit: SizeFit | null
 }) {
@@ -655,8 +677,8 @@ function TradingRow({
         </div>
         {/* On Present, the observed block answers "which of their local formats
             would my unit be?", so it carries no second label. */}
-        <SizeDetail profiles={profiles} band={band} />
-        {profiles.length === 0 && band && <NoSizeChip />}
+        <SizeDetail profiles={profiles} measured={measured} band={band} />
+        {profiles.length === 0 && !measured && band && <NoSizeChip />}
         {fit === 'near' && <NearMissTag />}
       </div>
     </button>
@@ -671,6 +693,7 @@ function DemotedRow({
   domain,
   logoUrl,
   profiles,
+  measured,
   dimmed,
   onClick,
 }: {
@@ -679,6 +702,7 @@ function DemotedRow({
   domain: string | null
   logoUrl: string | null
   profiles: FloorAreaProfile[]
+  measured?: MeasuredEstate | null
   dimmed?: boolean
   onClick: () => void
 }) {
@@ -694,15 +718,27 @@ function DemotedRow({
       <BrandLogo label={name} domain={domain} logoUrl={logoUrl} size={28} />
       <div className="min-w-0">
         <div className="truncate text-[13px] font-semibold text-sm-ink">{name}</div>
-        {profiles.length > 0 ? (
-          <div className="mt-0.5 flex items-center gap-1.5">
-            <span className="font-mono text-[11px] text-sm-ink3">
-              {formatSqFtRange(
-                Math.min(...profiles.map((p) => p.p25SqFt)),
-                Math.max(...profiles.map((p) => p.p75SqFt))
-              )}
-            </span>
-            <span className="text-[10px] text-sm-ink4">sq ft GIA</span>
+        {profiles.length > 0 || measured ? (
+          <div className="mt-0.5">
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-[11px] text-sm-ink3">
+                {profiles.length > 0
+                  ? formatSqFtRange(
+                      Math.min(...profiles.map((p) => p.p25SqFt)),
+                      Math.max(...profiles.map((p) => p.p75SqFt))
+                    )
+                  : formatMeasuredShops(measured!)}
+              </span>
+              <span className="text-[10px] text-sm-ink4">sq ft GIA</span>
+            </div>
+            {/* A demoted brand is exactly where thin evidence needs stating: a
+                brand pushed out of the list on two measured shops of thirty
+                should show that it was two of thirty. */}
+            {profiles.length === 0 && measured && (
+              <div className="text-[10px] text-sm-ink4">
+                {measuredFootnote(measured)}
+              </div>
+            )}
           </div>
         ) : (
           meta && (
@@ -754,9 +790,11 @@ type MissingItem =
 
 function missingEntry(
   item: MissingItem,
-  profilesFor: (brandId: string | null) => FloorAreaProfile[]
+  profilesFor: (brandId: string | null) => FloorAreaProfile[],
+  measuredFor: (brandId: string | null) => MeasuredEstate | null
 ): SizeEntry {
   const profiles = profilesFor(item.brandId)
+  const measured = profiles.length === 0 ? measuredFor(item.brandId) : null
   if (item.kind === 'req') {
     return {
       key: item.key,
@@ -769,6 +807,7 @@ function missingEntry(
         max: item.req.siteSizeMax,
       },
       profiles,
+      measured,
       sampleCount: entrySampleCount(profiles),
       name: item.req.companyName,
     }
@@ -778,22 +817,28 @@ function missingEntry(
     hasRequirement: false,
     requirement: null,
     profiles,
-    sampleCount: entrySampleCount(profiles),
+    measured,
+    // A handful of measured shops is real evidence but a small amount of it, so
+    // these sort below a brand with a full distribution inside the same tier.
+    sampleCount: entrySampleCount(profiles) || (measured?.measuredSqFt.length ?? 0),
     name: item.brand.brandName,
   }
 }
 
 function presentEntry(
   brand: PresentBrand,
-  profilesFor: (brandId: string | null) => FloorAreaProfile[]
+  profilesFor: (brandId: string | null) => FloorAreaProfile[],
+  measuredFor: (brandId: string | null) => MeasuredEstate | null
 ): SizeEntry {
   const profiles = profilesFor(brand.brandId)
+  const measured = profiles.length === 0 ? measuredFor(brand.brandId) : null
   return {
     key: brand.brandId,
     hasRequirement: false,
     requirement: null,
     profiles,
-    sampleCount: entrySampleCount(profiles),
+    measured,
+    sampleCount: entrySampleCount(profiles) || (measured?.measuredSqFt.length ?? 0),
     name: brand.brandName,
   }
 }
@@ -821,6 +866,7 @@ export function MissingBody({
   areaName,
   band,
   profilesFor,
+  measuredFor,
   onOpenReq,
   onOpenBrand,
 }: {
@@ -830,6 +876,7 @@ export function MissingBody({
   areaName: string
   band: SizeBand | null
   profilesFor: (brandId: string | null) => FloorAreaProfile[]
+  measuredFor: (brandId: string | null) => MeasuredEstate | null
   onOpenReq: (requirementId: string) => void
   onOpenBrand: (m: MissingFascia) => void
 }) {
@@ -870,12 +917,16 @@ export function MissingBody({
         fits: new Map<string, SizeFit>(),
       }
     }
-    const part = partitionBySize(items, (i) => missingEntry(i, profilesFor), band)
+    const part = partitionBySize(
+      items,
+      (i) => missingEntry(i, profilesFor, measuredFor),
+      band
+    )
     const byKey = new Map<string, SizeFit>()
     for (const i of part.main)
-      byKey.set(i.key, classify(missingEntry(i, profilesFor), band))
+      byKey.set(i.key, classify(missingEntry(i, profilesFor, measuredFor), band))
     return { ...part, fits: byKey }
-  }, [items, band, profilesFor])
+  }, [items, band, profilesFor, measuredFor])
 
   return (
     <>
@@ -913,6 +964,7 @@ export function MissingBody({
               key={item.key}
               req={item.req}
               profiles={profilesFor(item.brandId)}
+              measured={measuredFor(item.brandId)}
               band={band}
               fit={fits.get(item.key) ?? null}
               onOpen={onOpenReq}
@@ -922,6 +974,7 @@ export function MissingBody({
               key={item.key}
               m={item.brand}
               profiles={profilesFor(item.brandId)}
+              measured={measuredFor(item.brandId)}
               band={band}
               fit={fits.get(item.key) ?? null}
               onOpen={onOpenBrand}
@@ -986,6 +1039,7 @@ export function MissingBody({
                 }
                 logoUrl={item.kind === 'req' ? item.req.logoUrl : item.brand.logoUrl}
                 profiles={item.kind === 'req' ? [] : profilesFor(item.brandId)}
+                measured={item.kind === 'req' ? null : measuredFor(item.brandId)}
                 dimmed
                 onClick={() =>
                   item.kind === 'req'
@@ -1021,11 +1075,13 @@ export function PresentBody({
   present,
   band,
   profilesFor,
+  measuredFor,
 }: {
   loading: boolean
   present: PresentBrand[]
   band: SizeBand | null
   profilesFor: (brandId: string | null) => FloorAreaProfile[]
+  measuredFor: (brandId: string | null) => MeasuredEstate | null
 }) {
   const setBrandInfoId = useWorkspaceStore((s) => s.setBrandInfoId)
   const [unknownOpen, setUnknownOpen] = useState(true)
@@ -1044,12 +1100,16 @@ export function PresentBody({
         fits: new Map<string, SizeFit>(),
       }
     }
-    const part = partitionBySize(present, (b) => presentEntry(b, profilesFor), band)
+    const part = partitionBySize(
+      present,
+      (b) => presentEntry(b, profilesFor, measuredFor),
+      band
+    )
     const byKey = new Map<string, SizeFit>()
     for (const b of part.main)
-      byKey.set(b.brandId, classify(presentEntry(b, profilesFor), band))
+      byKey.set(b.brandId, classify(presentEntry(b, profilesFor, measuredFor), band))
     return { ...part, fits: byKey }
-  }, [present, band, profilesFor])
+  }, [present, band, profilesFor, measuredFor])
 
   return (
     <>
@@ -1091,6 +1151,7 @@ export function PresentBody({
             key={b.brandId}
             b={b}
             profiles={profilesFor(b.brandId)}
+            measured={measuredFor(b.brandId)}
             band={band}
             fit={fits.get(b.brandId) ?? null}
           />
@@ -1134,6 +1195,7 @@ export function PresentBody({
                   domain={b.logoDomain}
                   logoUrl={b.logoUrl}
                   profiles={profilesFor(b.brandId)}
+                  measured={measuredFor(b.brandId)}
                   dimmed
                   onClick={() => setBrandInfoId(b.brandId)}
                 />
@@ -1393,6 +1455,12 @@ function Opportunity({
     (brandId: string | null) => (brandId ? (profilesByBrand[brandId] ?? []) : []),
     [profilesByBrand]
   )
+  // Brands too small for a distribution, carrying their measured shops instead.
+  const measuredByBrand = floorAreaProfiles.measuredByBrand
+  const measuredFor = useCallback(
+    (brandId: string | null) => (brandId ? (measuredByBrand[brandId] ?? null) : null),
+    [measuredByBrand]
+  )
 
   const band = bandById(brandFilterSizeBandId)
 
@@ -1400,24 +1468,26 @@ function Opportunity({
   // Brand have had their say — the question is "how many of THESE fit my unit".
   const sizeEntries = useMemo<SizeEntry[]>(() => {
     if (tab === 'present') {
-      return presentBrands.map((b) => presentEntry(b, profilesFor))
+      return presentBrands.map((b) => presentEntry(b, profilesFor, measuredFor))
     }
     if (tab !== 'missing') return []
     return [
       ...requirements.map((r) =>
         missingEntry(
           { kind: 'req', key: `req:${r.id}`, req: r, brandId: r.brandId },
-          profilesFor
+          profilesFor,
+          measuredFor
         )
       ),
       ...missingBrands.map((m) =>
         missingEntry(
           { kind: 'brand', key: `brand:${m.brandId}`, brand: m, brandId: m.brandId },
-          profilesFor
+          profilesFor,
+          measuredFor
         )
       ),
     ]
-  }, [tab, presentBrands, missingBrands, requirements, profilesFor])
+  }, [tab, presentBrands, missingBrands, requirements, profilesFor, measuredFor])
 
   const sizeFitCounts = useMemo(() => bandFitCounts(sizeEntries), [sizeEntries])
   const sizeUnknownCount = useMemo(() => unknownCount(sizeEntries), [sizeEntries])
@@ -1547,6 +1617,7 @@ function Opportunity({
             present={presentBrands}
             band={band}
             profilesFor={profilesFor}
+            measuredFor={measuredFor}
           />
         ) : (
           <MissingBody
@@ -1556,6 +1627,7 @@ function Opportunity({
             areaName={areaName}
             band={band}
             profilesFor={profilesFor}
+            measuredFor={measuredFor}
             onOpenReq={onOpenReq}
             onOpenBrand={onOpenBrand}
           />

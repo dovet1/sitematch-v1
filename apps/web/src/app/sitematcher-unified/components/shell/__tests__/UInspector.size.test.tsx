@@ -2,7 +2,11 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MissingBody, PresentBody } from '../UInspector'
 import { SizeFilterControl } from '../SizeFilterControl'
-import { bandById, type FloorAreaProfile } from '../../../lib/size-filter'
+import {
+  bandById,
+  type FloorAreaProfile,
+  type MeasuredEstate,
+} from '../../../lib/size-filter'
 import type {
   MissingBrand,
   PresentBrand,
@@ -85,7 +89,13 @@ function requirement(over: Partial<RequirementLocation> = {}): RequirementLocati
 // one we have never measured.
 const NANDOS = missingBrand('nandos', 'Nando’s')
 const RANGE = missingBrand('range', 'The Range')
+// Two shops, both measured — below the profile sample floor, so it carries
+// individual measurements rather than a distribution.
 const ALLEY = missingBrand('alley', 'Alley Cats Pizza')
+// Seventeen shops, three measured — real evidence, but a corner of the estate.
+const GRAVITY = missingBrand('gravity', 'Gravity')
+// Nothing at all: no profile, no measured shop.
+const CENTRA = missingBrand('centra', 'Centra')
 const TESCO = missingBrand('tesco', 'Tesco')
 
 const PROFILES: Record<string, FloorAreaProfile[]> = {
@@ -134,15 +144,25 @@ const PROFILES: Record<string, FloorAreaProfile[]> = {
 const profilesFor = (brandId: string | null) =>
   brandId ? (PROFILES[brandId] ?? []) : []
 
+// Brands with no distribution carry their measured shops instead — a two-shop
+// census, and a thin sample of a seventeen-shop estate.
+const MEASURED: Record<string, MeasuredEstate> = {
+  alley: { brandId: 'alley', totalStores: 2, measuredSqFt: [915, 1776] },
+  gravity: { brandId: 'gravity', totalStores: 17, measuredSqFt: [8191, 8514] },
+}
+const measuredFor = (brandId: string | null) =>
+  brandId ? (MEASURED[brandId] ?? null) : null
+
 function renderMissing(bandId: string | null) {
   return render(
     <MissingBody
       loading={false}
-      missing={[NANDOS, RANGE, ALLEY, TESCO]}
+      missing={[NANDOS, RANGE, ALLEY, GRAVITY, CENTRA, TESCO]}
       requirements={[requirement()]}
       areaName="Luton"
       band={bandById(bandId as never)}
       profilesFor={profilesFor}
+      measuredFor={measuredFor}
       onOpenReq={jest.fn()}
       onOpenBrand={jest.fn()}
     />
@@ -199,7 +219,7 @@ describe('Missing Brands panel — a band selected', () => {
     expect(
       screen.getByText(/that's different from not fitting/)
     ).toBeInTheDocument()
-    expect(screen.getByText('Alley Cats Pizza')).toBeInTheDocument()
+    expect(screen.getByText('Centra')).toBeInTheDocument()
   })
 
   it('demotes rather than deletes a brand that clearly does not fit', async () => {
@@ -243,11 +263,12 @@ describe('Missing Brands panel — a band selected', () => {
     render(
       <MissingBody
         loading={false}
-        missing={[ALLEY]}
+        missing={[CENTRA]}
         requirements={[]}
         areaName="Luton"
         band={bandById('50+')}
         profilesFor={profilesFor}
+        measuredFor={measuredFor}
         onOpenReq={jest.fn()}
         onOpenBrand={jest.fn()}
       />
@@ -256,7 +277,91 @@ describe('Missing Brands panel — a band selected', () => {
       screen.getByText(/No known-size brands fit 50,000\+ sq ft/)
     ).toBeInTheDocument()
     expect(screen.getByText(/Absence isn't a no/)).toBeInTheDocument()
+    expect(screen.getByText('Centra')).toBeInTheDocument()
+  })
+})
+
+// A brand below the profiles table's five-store floor. The point of showing
+// these is that measuring three of a three-shop estate is a census, not a thin
+// sample — but it is emphatically not a distribution, and must never be drawn
+// as one.
+describe('Brands measured but without a distribution', () => {
+  it('shows the shops themselves rather than nothing', () => {
+    renderMissing(null)
+    const card = screen
+      .getByText('Alley Cats Pizza')
+      .closest('button') as HTMLElement
+    expect(within(card).getByText('Measured shops')).toBeInTheDocument()
+    expect(within(card).getByText('920 · 1,800')).toBeInTheDocument()
+    expect(within(card).getByTitle('Gross internal area')).toBeInTheDocument()
+  })
+
+  it('states how much of the estate the figures cover', () => {
+    renderMissing(null)
+    const card = screen
+      .getByText('Alley Cats Pizza')
+      .closest('button') as HTMLElement
+    expect(within(card).getByText('2 of 2 shops measured')).toBeInTheDocument()
+  })
+
+  it('never draws two measurements as a distribution', () => {
+    renderMissing(null)
+    const measured = screen
+      .getByText('Alley Cats Pizza')
+      .closest('button') as HTMLElement
+    expect(within(measured).queryByTestId('distribution-bar')).toBeNull()
+    // A brand that does have a distribution still gets its bar.
+    const profiled = screen.getByText('Nando’s').closest('button') as HTMLElement
+    expect(within(profiled).getByTestId('distribution-bar')).toBeInTheDocument()
+  })
+
+  it('becomes filterable — it fits a band its measurements overlap', () => {
+    renderMissing('1-3')
+    const card = screen
+      .getByText('Alley Cats Pizza')
+      .closest('button') as HTMLElement
+    expect(within(card).getByText('Measured shops')).toBeInTheDocument()
+    // It is in the main list, not demoted into a group.
+    expect(within(card).queryByText('Size not on record')).toBeNull()
+  })
+
+  it('is demoted like any other known size when it does not fit', async () => {
+    renderMissing('50+')
+    expect(screen.queryByText('Alley Cats Pizza')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByText('Outside 50,000+ sq ft'))
+    // Present in the collapsed group, showing what it rests on — never deleted.
     expect(screen.getByText('Alley Cats Pizza')).toBeInTheDocument()
+  })
+
+  it('is not counted among the brands with no size on record', () => {
+    renderMissing('3-10')
+    const unknownGroup = screen
+      .getByText('Size not on record')
+      .closest('button') as HTMLElement
+    expect(within(unknownGroup).getByText('1')).toBeInTheDocument()
+  })
+
+  // A thin sample of a large estate is worth showing, but only alongside the
+  // fraction that says how much weight it can bear.
+  it('shows a thin sample of a large estate with its denominator', () => {
+    renderMissing(null)
+    const card = screen.getByText('Gravity').closest('button') as HTMLElement
+    expect(within(card).getByText('8,200 · 8,500')).toBeInTheDocument()
+    expect(within(card).getByText('2 of 17 shops measured')).toBeInTheDocument()
+    expect(within(card).queryByTestId('distribution-bar')).toBeNull()
+  })
+
+  it('lets a thin sample carry the brand into a matching band', () => {
+    renderMissing('3-10')
+    const card = screen.getByText('Gravity').closest('button') as HTMLElement
+    expect(within(card).getByText('2 of 17 shops measured')).toBeInTheDocument()
+  })
+
+  it('still shows the fraction once the brand has been demoted', async () => {
+    renderMissing('50+')
+    await userEvent.click(screen.getByText('Outside 50,000+ sq ft'))
+    const row = screen.getByText('Gravity').closest('button') as HTMLElement
+    expect(within(row).getByText('2 of 17 shops measured')).toBeInTheDocument()
   })
 })
 
@@ -304,6 +409,7 @@ describe('Present Brands panel', () => {
         present={[ALDI, BANNATYNE]}
         band={bandById('10-50')}
         profilesFor={presentProfiles}
+        measuredFor={() => null}
       />
     )
     expect(screen.getByText('Aldi')).toBeInTheDocument()

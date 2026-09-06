@@ -20,6 +20,16 @@ export const dynamic = 'force-dynamic'
 //
 // The profiles themselves are already built from confidence='high' store
 // matches only, so no further gate is applied to them.
+//
+// A second pass covers the brands the profiles table refuses to summarise. It
+// requires five stores before it will compute quartiles — correctly, since
+// quartiles over three points are noise — which leaves ~70 brands with nothing
+// to show. For those the route returns the individual measured shops together
+// with the size of the estate they came from, so the panel can show figures
+// without ever drawing them as a distribution, and the reader can see how much
+// of the estate they cover: three of three shops is a census, two of thirty is
+// a corner. Only confidence='high' rows are eligible here too — the lower tiers
+// were the wrong premises about half the time in assessment.
 
 // A catchment's missing list can run to a few hundred brands. Above this the
 // request is a mistake, not a use case.
@@ -52,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     if (!body || !Array.isArray(body.brandIds)) {
       return NextResponse.json(
-        { profiles: {}, error: 'brandIds must be an array' },
+        { profiles: {}, measured: {}, error: 'brandIds must be an array' },
         { status: 400 }
       )
     }
@@ -65,10 +75,15 @@ export async function POST(request: NextRequest) {
       )
     )
 
-    if (brandIds.length === 0) return NextResponse.json({ profiles: {} })
+    if (brandIds.length === 0)
+      return NextResponse.json({ profiles: {}, measured: {} })
     if (brandIds.length > MAX_BRAND_IDS) {
       return NextResponse.json(
-        { profiles: {}, error: `At most ${MAX_BRAND_IDS} brand ids per request` },
+        {
+          profiles: {},
+          measured: {},
+          error: `At most ${MAX_BRAND_IDS} brand ids per request`,
+        },
         { status: 400 }
       )
     }
@@ -105,6 +120,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const measured = await measuredEstates(
+      supabase,
+      brandIds.filter((id) => !rows.some((r) => r.brand_id === id))
+    )
+
     const profiles: Record<string, unknown[]> = {}
     for (const r of rows) {
       const list = profiles[r.brand_id] ?? (profiles[r.brand_id] = [])
@@ -122,15 +142,97 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ profiles })
+    return NextResponse.json({ profiles, measured })
   } catch (error) {
     console.error('Floor-area profiles API error:', error)
     return NextResponse.json(
       {
         profiles: {},
+        measured: {},
         error: error instanceof Error ? error.message : 'Internal server error',
       },
       { status: 500 }
     )
   }
+}
+
+// For brands with no distribution profile: how many shops they trade from, and
+// the high-confidence measurements we hold. Both numbers travel together —
+// a measurement without its denominator cannot be weighed, and the panel shows
+// the fraction on every card that carries one.
+//
+// The store lookup is bounded by the uncovered brands only (~70 brands, a few
+// hundred shops in current data), because a brand with a distribution never
+// reaches here.
+async function measuredEstates(
+  supabase: ReturnType<typeof createAdminClient>,
+  brandIds: string[]
+): Promise<Record<string, { brandId: string; totalStores: number; measuredSqFt: number[] }>> {
+  const out: Record<
+    string,
+    { brandId: string; totalStores: number; measuredSqFt: number[] }
+  > = {}
+  if (brandIds.length === 0) return out
+
+  const stores: { id: string; brand_id: string }[] = []
+  for (let i = 0; i < brandIds.length; i += CHUNK) {
+    const { data, error } = await supabase
+      .from('stores')
+      .select('id, brand_id')
+      .in('brand_id', brandIds.slice(i, i + CHUNK))
+    if (error) throw error
+    stores.push(...((data ?? []) as unknown as { id: string; brand_id: string }[]))
+  }
+
+  const storesByBrand = new Map<string, string[]>()
+  for (const s of stores) {
+    const list = storesByBrand.get(s.brand_id)
+    if (list) list.push(s.id)
+    else storesByBrand.set(s.brand_id, [s.id])
+  }
+
+  const candidateStoreIds: string[] = []
+  const brandOfStore = new Map<string, string>()
+  for (const [brandId, ids] of Array.from(storesByBrand)) {
+    for (const id of ids) {
+      candidateStoreIds.push(id)
+      brandOfStore.set(id, brandId)
+    }
+  }
+  if (candidateStoreIds.length === 0) return out
+
+  const areas: { store_id: string; floor_area_sqft: number | null }[] = []
+  for (let i = 0; i < candidateStoreIds.length; i += CHUNK) {
+    const { data, error } = await supabase
+      .from('store_floor_areas')
+      .select('store_id, floor_area_sqft')
+      .eq('confidence', 'high')
+      .in('store_id', candidateStoreIds.slice(i, i + CHUNK))
+    if (error) throw error
+    areas.push(
+      ...((data ?? []) as unknown as {
+        store_id: string
+        floor_area_sqft: number | null
+      }[])
+    )
+  }
+
+  for (const a of areas) {
+    if (a.floor_area_sqft == null) continue
+    const brandId = brandOfStore.get(a.store_id)
+    if (!brandId) continue
+    const entry =
+      out[brandId] ??
+      (out[brandId] = {
+        brandId,
+        totalStores: storesByBrand.get(brandId)?.length ?? 0,
+        measuredSqFt: [],
+      })
+    entry.measuredSqFt.push(Number(a.floor_area_sqft))
+  }
+
+  for (const entry of Object.values(out)) {
+    entry.measuredSqFt.sort((x, y) => x - y)
+  }
+  return out
 }

@@ -3,9 +3,12 @@
 import { ChevronDown, MoveRight } from 'lucide-react'
 import {
   distributionGeometry,
+  formatMeasuredShops,
   formatSqFtRange,
+  measuredFootnote,
   sampleFootnote,
   type FloorAreaProfile,
+  type MeasuredEstate,
 } from '../../lib/size-filter'
 
 // The measured half of the panel. Everything here is deliberately the *quieter*
@@ -36,7 +39,11 @@ function GiaTag({ small = false }: { small?: boolean }) {
 function DistributionBar({ profile }: { profile: FloorAreaProfile }) {
   const { boxLeft, boxWidth, medianLeft } = distributionGeometry(profile)
   return (
-    <div className="relative h-2 flex-1" aria-hidden="true">
+    <div
+      className="relative h-2 flex-1"
+      aria-hidden="true"
+      data-testid="distribution-bar"
+    >
       <div className="absolute inset-x-0 top-[3px] h-[2px] rounded bg-[#E7E4EE]" />
       <div
         className="absolute top-px h-[6px] rounded-[3px] bg-[#C4BFD2]"
@@ -78,6 +85,39 @@ export function ObservedSize({
         <span className="whitespace-nowrap text-[10px] text-sm-ink3">
           {sampleFootnote(profile)}
         </span>
+      </div>
+    </div>
+  )
+}
+
+// A brand too small for a distribution: its shops, one by one. Deliberately
+// missing the distribution bar — a rail with an IQR box drawn over two points
+// would claim a shape the data does not have. The footnote carries the
+// denominator instead, because "3 of 3 shops measured" and "1 of 4" are
+// different claims and the reader has to be able to tell them apart.
+export function MeasuredShops({
+  measured,
+  label = 'Measured shops',
+}: {
+  measured: MeasuredEstate
+  label?: string | null
+}) {
+  return (
+    <div className="mt-1.5">
+      {label && (
+        <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-sm-ink3">
+          {label}
+        </span>
+      )}
+      <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+        <span className="font-mono text-[12.5px] font-semibold text-sm-ink2">
+          {formatMeasuredShops(measured)}
+        </span>
+        <span className="text-[11px] text-sm-ink3">sq ft</span>
+        <GiaTag />
+      </div>
+      <div className="mt-0.5 text-[10px] text-sm-ink3">
+        {measuredFootnote(measured)}
       </div>
     </div>
   )

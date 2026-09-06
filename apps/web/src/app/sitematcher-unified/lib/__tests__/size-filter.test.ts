@@ -9,8 +9,12 @@ import {
   fitFor,
   formatRequirement,
   formatSqFt,
+  formatMeasuredShops,
   formatSqFtRange,
   matchingProfiles,
+  measuredCoverage,
+  measuredFootnote,
+  measuredRange,
   near,
   overlaps,
   partitionBySize,
@@ -20,8 +24,13 @@ import {
   sqFtFromM2,
   unknownCount,
   type FloorAreaProfile,
+  type MeasuredEstate,
   type SizeEntry,
 } from '../size-filter'
+
+function measured(over: Partial<MeasuredEstate> = {}): MeasuredEstate {
+  return { brandId: 'b1', totalStores: 3, measuredSqFt: [840, 850, 872], ...over }
+}
 
 const band = (id: string) => {
   const b = SIZE_BANDS.find((x) => x.id === id)
@@ -51,6 +60,7 @@ function entry(over: Partial<SizeEntry> = {}): SizeEntry {
     hasRequirement: false,
     requirement: null,
     profiles: [],
+    measured: null,
     sampleCount: 0,
     name: 'Brand',
     ...over,
@@ -345,5 +355,95 @@ describe('misc helpers', () => {
         band('3-10')
       )
     ).toBe('fit')
+  })
+})
+
+// Brands the profiles table will not summarise. The figures are real but their
+// weight varies — three of three shops is a census, two of thirty is a corner
+// of the estate — so the coverage fraction travels with them everywhere and
+// they are never dressed up as a distribution.
+describe('measured estates without a distribution', () => {
+  it('reports how much of the estate the figures cover', () => {
+    expect(measuredCoverage(measured())).toBe(1)
+    expect(
+      measuredCoverage(measured({ totalStores: 17, measuredSqFt: [1, 2, 3] }))
+    ).toBeCloseTo(0.176, 3)
+    expect(measuredCoverage(measured({ totalStores: 0, measuredSqFt: [] }))).toBe(0)
+  })
+
+  it('states the denominator for a thin sample of a large estate', () => {
+    expect(
+      measuredFootnote(measured({ totalStores: 30, measuredSqFt: [8000, 9500] }))
+    ).toBe('2 of 30 shops measured')
+    expect(
+      measuredFootnote(measured({ totalStores: 26, measuredSqFt: [1200] }))
+    ).toBe('1 of 26 shops measured')
+  })
+
+  it('lets a large estate with a thin sample be matched like any other', () => {
+    const thin = entry({
+      measured: measured({ totalStores: 17, measuredSqFt: [8191, 8514] }),
+    })
+    expect(classify(thin, band('3-10'))).toBe('fit')
+    expect(classify(thin, band('50+'))).toBe('outside')
+  })
+
+  it('matches on the span of what was actually measured', () => {
+    expect(measuredRange(measured())).toEqual([840, 872])
+    expect(measuredRange(measured({ measuredSqFt: [3412] }))).toEqual([3412, 3412])
+  })
+
+  it('has nothing to match on when no shop was measured', () => {
+    expect(measuredRange(measured({ measuredSqFt: [] }))).toBeNull()
+  })
+
+  it('is used only when there is no requirement and no distribution', () => {
+    const m = measured()
+    // A requirement outranks it.
+    expect(effectiveRanges({ min: 1200, max: 2500 }, [], m)).toEqual([[1200, 2500]])
+    // So does a real distribution.
+    expect(
+      effectiveRanges(null, [profile({ p25SqFt: 3100, p75SqFt: 4700 })], m)
+    ).toEqual([[3100, 4700]])
+    // Otherwise it is what we have.
+    expect(effectiveRanges(null, [], m)).toEqual([[840, 872]])
+  })
+
+  it('turns an unknown brand into a filterable one', () => {
+    const e = entry({ measured: measured() })
+    expect(classify(e, band('u1'))).toBe('fit')
+    expect(classify(e, band('1-3'))).toBe('near')
+    expect(classify(e, band('10-50'))).toBe('outside')
+    expect(classify(entry(), band('u1'))).toBe('unknown')
+  })
+
+  it('stops counting toward "no size on record"', () => {
+    expect(unknownCount([entry({ measured: measured() }), entry()])).toBe(1)
+  })
+
+  it('lists a handful of shops individually, and a longer estate as a span', () => {
+    expect(formatMeasuredShops(measured())).toBe('840 · 850 · 870')
+    expect(formatMeasuredShops(measured({ measuredSqFt: [3412] }))).toBe('3,400')
+    expect(
+      formatMeasuredShops(
+        measured({ totalStores: 4, measuredSqFt: [1873, 2013, 3488, 5371] })
+      )
+    ).toBe('1,850–5,350')
+  })
+
+  it('sorts the figures even when they arrive out of order', () => {
+    expect(formatMeasuredShops(measured({ measuredSqFt: [872, 840, 850] }))).toBe(
+      '840 · 850 · 870'
+    )
+  })
+
+  it('always states the denominator, because 1-of-4 is not 3-of-3', () => {
+    expect(measuredFootnote(measured())).toBe('3 of 3 shops measured')
+    expect(
+      measuredFootnote(measured({ totalStores: 4, measuredSqFt: [10064] }))
+    ).toBe('1 of 4 shops measured')
+    expect(
+      measuredFootnote(measured({ totalStores: 1, measuredSqFt: [3412] }))
+    ).toBe('1 of 1 shop measured')
   })
 })
