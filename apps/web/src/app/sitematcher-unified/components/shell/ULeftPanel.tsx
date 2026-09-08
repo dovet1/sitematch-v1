@@ -192,6 +192,11 @@ function ProximityRow({
           )
         })}
       </div>
+      {radius > 0 && (
+        <p className="mt-2 text-[10.5px] leading-relaxed text-sm-ink4">
+          Stores inside the {areaLabel} always count; outside stores use the {radius} km distance.
+        </p>
+      )}
     </div>
   )
 }

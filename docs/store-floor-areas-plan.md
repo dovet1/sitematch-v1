@@ -690,8 +690,8 @@ existing `rebuild_lock`. Both parts were wrong, and both were verified in review
   siblings hard-code `lock_name = 'bua_summary_rebuild'`
   (`supabase/migrations/042_create_rebuild_lock_table.sql:24`). Reusing it would
   couple EPC matching to BUA rebuilds.
-- **The import route already starts the BUA rebuild fire-and-forget**
-  (`apps/web/src/app/api/admin/stores/import/upload/route.ts:759`). Adding a
+- **The import route already queues the BUA rebuild and nudges its worker**
+  (`apps/web/src/app/api/admin/stores/import/upload/route.ts`). Adding a
   second inline responsibility makes failures harder to retry.
 
 **Replacement:** on successful insert, enqueue store ids. A separate idempotent

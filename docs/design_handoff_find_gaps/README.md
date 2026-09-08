@@ -55,7 +55,7 @@ Picker open after clicking "+ Add".
 - **Add token:** clicking "+ Add" opens the picker popover for that bucket (scrim + focus ring). Selecting a row toggles it into/out of that bucket; "Done" closes.
 - **Remove token:** the "×" on each token chip.
 - **AND semantics:** results = towns that are missing *all* Bucket-1 items **AND** have *all* Bucket-2 items (never OR). Both within-bucket and cross-bucket combination are AND. Empty Bucket 2 = ignored.
-- **Proximity:** each bucket has its own radius. "In the town" = strict boundary match; "Within N km" = match if an item exists within N km of the town centroid. Changing it re-queries and updates the read-back sentence and row tags (e.g. "Tesco, Asda within 5 km").
+- **Proximity:** each bucket has its own radius. "In the town" = strict boundary match. "Within N km" first includes every match inside the town, then uses the selected centroid-distance cache for outside matches. Changing it re-queries and updates the read-back sentence and row tags (e.g. "Tesco, Asda within 5 km").
 - **Population slider:** dual-handle range; "optional" — full range = no constraint.
 - **Read-back sentence** (top of results) regenerates from current buckets + proximity + population on every change; it is the single source of truth for "what am I asking".
 - **Sort:** Population ↓ / A–Z pills re-sort the list.

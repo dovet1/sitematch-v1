@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase';
+import { adminClient } from '@/lib/admin-auth';
 import { requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -14,8 +14,8 @@ export const maxDuration = 300; // 5 minutes
  * Process:
  * 1. Check for pending rebuild requests in cache_rebuild_queue
  * 2. Check if rebuild already running (via is_rebuild_running())
- * 3. If clear, trigger rebuild and mark queue entry as processed
- * 4. Fire-and-forget: rebuild continues in database after request timeout
+ * 3. If clear, run the rebuild with the service-role client
+ * 4. Mark the queue entry processed only after the database reports completion
  *
  * Authentication: Requires admin user
  */
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     console.log(`✅ ADMIN: Processing cache rebuild queue (user: ${user.id})`);
     const startTime = Date.now();
 
-    const supabase = await createServerClient();
+    const supabase = adminClient();
 
     // Check for pending rebuilds (oldest first)
     const { data: pending, error: queueError } = await supabase
@@ -36,9 +36,14 @@ export async function POST(request: NextRequest) {
       .is('processed_at', null)
       .order('created_at', { ascending: true })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (queueError || !pending) {
+    if (queueError) {
+      console.error('❌ ADMIN: Failed to read rebuild queue:', queueError);
+      return NextResponse.json({ error: 'Failed to read rebuild queue' }, { status: 500 });
+    }
+
+    if (!pending) {
       console.log('ℹ️  ADMIN: No pending cache rebuilds');
       return NextResponse.json({
         success: true,
@@ -70,23 +75,22 @@ export async function POST(request: NextRequest) {
 
     console.log('🚀 ADMIN: Starting cache rebuild...');
 
-    // Mark as processed (starting rebuild)
+    // Leave processed_at NULL until the rebuild completes so failures remain retryable.
     const now = new Date().toISOString();
     const { error: updateError } = await supabase
       .from('cache_rebuild_queue')
       .update({
-        processed_at: now,
-        rebuild_started_at: now
+        rebuild_started_at: now,
+        error: null
       })
       .eq('id', pending.id);
 
     if (updateError) {
-      console.error('⚠️  ADMIN: Error marking queue entry as processed:', updateError);
+      console.error('❌ ADMIN: Error marking queue entry as started:', updateError);
+      return NextResponse.json({ error: 'Failed to mark rebuild as started' }, { status: 500 });
     }
 
-    // Trigger rebuild (fire-and-forget)
-    // Rebuild continues in database even after request timeout
-    const { error: rebuildError } = await supabase.rpc('rebuild_all_bua_summaries', {
+    const { data: rebuildData, error: rebuildError } = await supabase.rpc('rebuild_all_bua_summaries', {
       p_user_id: user.id  // Admin-triggered
     });
 
@@ -105,15 +109,54 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
+    const progress = ((rebuildData || []) as Array<{ progress?: string }>)
+      .map((row) => row.progress)
+      .filter((message): message is string => Boolean(message));
+
+    if (progress.some((message) => message.includes('already in progress'))) {
+      await supabase
+        .from('cache_rebuild_queue')
+        .update({ rebuild_started_at: null })
+        .eq('id', pending.id)
+        .is('processed_at', null);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Rebuild already in progress; queue item left pending',
+        skipped: true,
+        queue_id: pending.id
+      });
+    }
+
+    const completedAt = new Date().toISOString();
+    const { error: completeError } = await supabase
+      .from('cache_rebuild_queue')
+      .update({
+        processed_at: completedAt,
+        rebuild_completed_at: completedAt,
+        error: null
+      })
+      .eq('id', pending.id);
+
+    if (completeError) {
+      console.error('❌ ADMIN: Rebuild completed but queue finalization failed:', completeError);
+      return NextResponse.json({
+        success: false,
+        error: 'Rebuild completed but queue finalization failed',
+        queue_id: pending.id
+      }, { status: 500 });
+    }
+
     const duration = Date.now() - startTime;
-    console.log(`✅ ADMIN: Rebuild started successfully (duration: ${duration}ms)`);
+    console.log(`✅ ADMIN: Rebuild completed successfully (duration: ${duration}ms)`);
 
     return NextResponse.json({
       success: true,
-      message: 'Rebuild started',
+      message: 'Rebuild completed',
       queue_id: pending.id,
       reason: pending.reason,
-      duration_ms: duration
+      duration_ms: duration,
+      progress
     });
 
   } catch (error) {

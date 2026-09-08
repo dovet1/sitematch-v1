@@ -10,13 +10,28 @@ All core components have been implemented and are ready for testing.
 
 ## What Was Built
 
-### 1. Database Migrations (6 files)
+### 1. Database Migrations (8 files)
 
 #### Migration 039: BUA Summary Rebuild Functions
 **File**: `supabase/migrations/039_create_bua_summary_rebuild_functions.sql`
 - Creates `rebuild_bua_store_presence()` - Rebuilds BUA store presence summary
 - Creates `rebuild_bua_store_nearby()` - Rebuilds proximity summary (1km, 3km, 5km, 10km)
 - Creates `rebuild_all_bua_summaries()` - Master function calling both
+
+#### Migration 20260913010000: Boundary-based BUA proximity and atomic rebuilds
+**File**: `supabase/migrations/20260913010000_bua_proximity_from_boundary.sql`
+- Measures proximity from the BUA polygon rather than its centroid
+- Counts stores inside the town in every proximity band
+- Builds into temporary tables before atomically replacing the live summaries
+- Uses an automatically released advisory lock and service-role-only execution
+- Validates geometry coverage and summary invariants before replacing live data
+
+#### Migration 20260913020000: Presence-aware proximity filters
+**File**: `supabase/migrations/20260913020000_include_presence_in_proximity_filters.sql`
+- Supersedes the expensive boundary-distance calculation from the preceding migration
+- Makes stores inside a BUA or retail centre count at every proximity setting
+- Retains centroid-distance caches for stores outside the area
+- Keeps the atomic swap, validation, advisory lock and service-role security improvements
 
 #### Migration 040: Remove Store ID Constraint
 **File**: `supabase/migrations/040_remove_store_id_unique_constraint.sql`
@@ -96,7 +111,7 @@ Comprehensive type definitions:
 - Category conflict detection (blocks if fascia has different primary category)
 - Smart duplicate detection (50m proximity + same brand/fascia)
 - Batch store insertion (500 rows per batch)
-- Fire-and-forget rebuild trigger with concurrency guard
+- Durable rebuild queue with an immediate worker nudge and scheduled retry
 - Comprehensive error logging to `store_import_logs`
 - Runtime: nodejs, maxDuration: 300s
 
@@ -104,7 +119,7 @@ Comprehensive type definitions:
 **File**: `apps/web/src/app/api/admin/stores/rebuild-summaries/route.ts`
 - Manual rebuild trigger for admin troubleshooting
 - Calls `rebuild_all_bua_summaries()` RPC with user ID
-- Handles timeout gracefully (rebuild continues on Supabase even if HTTP times out)
+- Reports timeouts as an unknown outcome instead of incorrectly reporting success
 - Returns 409 if rebuild already in progress
 - Runtime: nodejs, maxDuration: 300s
 
@@ -228,7 +243,7 @@ Optional: fascia, postcode, town, suburb, county, lat, lon
 ### Performance
 - Preview: <5 seconds for 100 rows
 - Execute: <2 minutes for 500 rows (with geocoding)
-- Summary rebuild: 3-7 minutes (async, doesn't block UI)
+- Summary rebuild: runs from the durable background queue without blocking the import UI
 
 ## Environment Variables
 
@@ -324,15 +339,15 @@ Optional: fascia, postcode, town, suburb, county, lat, lon
 
 1. **Geocoding Limit**: Maximum 500 rows requiring geocoding per import (to prevent timeout)
 2. **Preview Rows**: Only first 20 rows shown in preview table (full validation runs on all rows)
-3. **Rebuild Timeout**: HTTP request may timeout after 5 minutes, but rebuild continues on Supabase
+3. **Rebuild Timeout**: Failed or timed-out queue jobs remain pending and are retried
 4. **File Size**: Maximum 10MB CSV file size
 
 ## Architecture Decisions
 
 1. **Boringly Reliable Design**: Strict validation rules with automatic skip/block (no complex user decisions)
 2. **Dry Run Mode**: Allows users to test import without inserting data
-3. **Fire-and-Forget Rebuild**: Async trigger with timeout handling
-4. **Concurrency Guards**: Prevents overlapping rebuilds with 15-minute lock
+3. **Queued Rebuild**: Imports enqueue durable work and nudge the worker immediately
+4. **Concurrency Guards**: A transaction-scoped advisory lock prevents overlapping rebuilds
 5. **Comprehensive Logging**: All imports logged for audit trail and troubleshooting
 6. **Smart Duplicate Detection**: Proximity + brand/fascia match prevents false positives
 7. **Improved Geocoding**: Includes town and postcode for better accuracy

@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth'
-import { createServerClient } from '@/lib/supabase'
+import { adminClient } from '@/lib/admin-auth'
 import type { RebuildResponse } from '@/types/store-import'
 
 export const runtime = 'nodejs'
-export const maxDuration = 300 // 5 minutes (may timeout but rebuild continues on Supabase)
+export const maxDuration = 300 // 5 minutes
 
 export async function POST(request: NextRequest) {
   try {
     // Require admin auth
     const user = await requireAdmin()
-    const supabase = await createServerClient()
+    const supabase = adminClient()
 
     console.log('Starting BUA summary rebuild...')
 
@@ -38,10 +38,23 @@ export async function POST(request: NextRequest) {
       } as RebuildResponse, { status: 500 })
     }
 
+    const progress = ((data || []) as Array<{ progress?: string }>)
+      .map((row) => row.progress)
+      .filter((message): message is string => Boolean(message))
+
+    if (progress.some((message) => message.includes('already in progress'))) {
+      return NextResponse.json({
+        success: false,
+        progress,
+        message: 'Rebuild already in progress. Please wait for it to complete.',
+        error: 'rebuild_in_progress'
+      } as RebuildResponse, { status: 409 })
+    }
+
     // Rebuild completed successfully
     const response: RebuildResponse = {
       success: true,
-      progress: data || [],
+      progress,
       message: 'BUA summary tables rebuilt successfully'
     }
 
@@ -49,14 +62,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response)
 
   } catch (error: any) {
-    // This might be a timeout error - rebuild may still be running on Supabase
+    // Do not report an unknown database outcome as success.
     if (error.name === 'AbortError' || error.message?.includes('timeout')) {
-      console.warn('Rebuild request timed out (rebuild may still be running on Supabase)')
+      console.warn('Rebuild request timed out')
       return NextResponse.json({
-        success: true, // Not false - rebuild is likely still running
+        success: false,
         progress: [],
-        message: 'Rebuild started successfully. This may take 5-10 minutes. The rebuild continues on the database server even though this request timed out. Check the Gap Analysis tool in a few minutes to verify the update.'
-      } as RebuildResponse)
+        message: 'The rebuild request timed out. Its final database state is unknown; check the summary timestamps before retrying.',
+        error: 'rebuild_timeout'
+      } as RebuildResponse, { status: 504 })
     }
 
     console.error('Rebuild endpoint error:', error)

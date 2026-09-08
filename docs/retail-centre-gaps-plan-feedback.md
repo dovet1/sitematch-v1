@@ -208,6 +208,14 @@ removes the only unbounded dependency from the critical path.
 
 ## 6. The summary rebuild is already at its ceiling
 
+> **BUA update (September 2026):**
+> `20260913010000_bua_proximity_from_boundary.sql` introduced the safer staged
+> rebuild. `20260913020000_include_presence_in_proximity_filters.sql` subsequently
+> restored the faster centroid proximity cache and combines it with polygon
+> presence at query time. It swaps both summaries only after validation and uses
+> a transaction-scoped advisory lock.
+> The original warning remains relevant to the separate retail-centre rebuild.
+
 `supabase/migrations/052_fix_rebuild_statement_timeout.sql` and `053_...` exist
 because the rebuild was being killed by statement timeouts. It now runs with
 `statement_timeout = 0` behind a **15-minute lock expiry**, and

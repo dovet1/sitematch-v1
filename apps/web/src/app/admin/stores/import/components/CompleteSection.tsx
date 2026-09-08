@@ -163,9 +163,9 @@ export function CompleteSection({ data, onReset }: CompleteSectionProps) {
               />
             </svg>
             <div>
-              <p className="font-semibold text-blue-900">Data Rebuild in Progress</p>
+              <p className="font-semibold text-blue-900">Data Rebuild Queued</p>
               <p className="text-sm text-blue-700 mt-1">
-                BUA summary tables are being rebuilt. Data will be available in the Gap Analysis tool in 5-10 minutes.
+                The BUA summaries will rebuild in the background. Gap Analysis usually updates within a few minutes.
               </p>
             </div>
           </div>

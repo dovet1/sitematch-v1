@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { parse } from 'csv-parse/sync'
 import { stringify } from 'csv-stringify/sync'
 import { requireAdmin } from '@/lib/auth'
+import { adminClient } from '@/lib/admin-auth'
 import { createServerClient } from '@/lib/supabase'
 import type { CSVRow } from '@/types/store-import'
 
@@ -791,31 +792,33 @@ export async function POST(request: NextRequest) {
           is_dry_run: false
         })
 
-        // Trigger BUA summary rebuild (fire-and-forget)
-        console.log('Triggering BUA summary rebuild...')
-        supabase.rpc('rebuild_all_bua_summaries', {
-          p_user_id: user.id
-        }).then(({ error }) => {
-          if (error) {
-            if (error.message?.includes('timeout')) {
-              console.log('Rebuild RPC timeout (expected - rebuild continues on server):', error.message)
-            } else {
-              console.error('Rebuild RPC error:', error.message)
-            }
-          } else {
-            console.log('Rebuild completed successfully')
+        // Queue the expensive BUA rebuild instead of tying it to this already-long
+        // import request. The cron is the backstop; the extra request below usually
+        // starts it immediately in a separate server invocation.
+        console.log('Queueing BUA summary rebuild...')
+        const rebuildClient = adminClient()
+        const { error: queueError } = await rebuildClient
+          .from('cache_rebuild_queue')
+          .insert({ reason: 'store_import' })
+
+        // 23505 means another pending row already covers this import.
+        if (queueError && queueError.code !== '23505') {
+          console.error('Failed to queue BUA summary rebuild:', queueError.message)
+        } else {
+          rebuildTriggered = true
+
+          const rebuildUrl = process.env.NEXT_PUBLIC_SITE_URL
+            || process.env.NEXT_PUBLIC_BASE_URL
+            || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+
+          if (rebuildUrl && process.env.CRON_SECRET) {
+            fetch(`${rebuildUrl}/api/cron/process-cache-rebuilds`, {
+              headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+            }).catch((err) => {
+              console.warn('Immediate BUA rebuild trigger failed; the cron will retry:', err?.message)
+            })
           }
-        })
-
-        // Verify rebuild started
-        await sleep(2000)
-        const { data: lockData } = await supabase
-          .from('rebuild_lock')
-          .select('*')
-          .eq('lock_name', 'bua_summary_rebuild')
-          .maybeSingle()
-
-        rebuildTriggered = !!lockData
+        }
       }
     }
 
