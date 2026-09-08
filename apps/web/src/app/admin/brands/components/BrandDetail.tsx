@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ImageUpload } from '@/components/ui/image-upload'
 import { normalizeDomain, validateDomain } from '@/lib/clearbit-logo'
+import { FloorAreasSection } from './FloorAreasSection'
 
-type Tab = 'details' | 'stores' | 'requirements' | 'contacts' | 'agents' | 'activity'
+type Tab = 'details' | 'stores' | 'floor-areas' | 'requirements' | 'contacts' | 'agents' | 'activity'
 
 interface BrandData {
   id: string
@@ -29,6 +30,7 @@ interface BrandData {
 const TABS: { key: Tab; label: string }[] = [
   { key: 'details', label: 'Details' },
   { key: 'stores', label: 'Stores' },
+  { key: 'floor-areas', label: 'Floor areas' },
   { key: 'requirements', label: 'Requirements' },
   { key: 'contacts', label: 'Contacts' },
   // Directory-only sections.
@@ -114,6 +116,7 @@ export function BrandDetail({ brandId }: { brandId: string }) {
 
       {tab === 'details' && <DetailsSection brand={brand} onSaved={load} />}
       {tab === 'stores' && <StoresSection brandId={brandId} />}
+      {tab === 'floor-areas' && <FloorAreasSection brandId={brandId} />}
       {tab === 'requirements' && <RequirementsSection brandId={brandId} brandName={brand.name} />}
       {tab === 'contacts' && <ContactsSection brandId={brandId} onSaved={load} />}
       {tab === 'agents' && <AgentsSection brandId={brandId} />}

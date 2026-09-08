@@ -2,7 +2,7 @@ import { requireAdmin } from '@/lib/auth'
 import { AdminService } from '@/lib/admin'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Shield, Users, Activity, FileCheck, AlertTriangle, Building2, FileText, Database, Upload, Layers, ClipboardList, Tag } from 'lucide-react'
+import { Shield, Users, Activity, FileCheck, AlertTriangle, Building2, FileText, Database, Upload, Layers, ClipboardList, Tag, Ruler } from 'lucide-react'
 import Link from 'next/link'
 
 export const dynamic = 'force-dynamic';
@@ -135,6 +135,12 @@ export default async function AdminDashboard() {
             <Link href="/admin/stores/import">
               <Upload className="h-4 w-4 mr-2" />
               Import Stores
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/stores/floor-areas">
+              <Ruler className="h-4 w-4 mr-2" />
+              Floor Areas
             </Link>
           </Button>
           <Button variant="outline" asChild>

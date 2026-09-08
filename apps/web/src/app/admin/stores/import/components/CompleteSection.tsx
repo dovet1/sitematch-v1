@@ -138,6 +138,37 @@ export function CompleteSection({ data, onReset }: CompleteSectionProps) {
         </div>
       </div>
 
+      {/* Floor-area handover. The import hands new stores to a matcher that runs outside
+          this request, so the screen has to say where they went and where to watch. */}
+      {(data.queuedForFloorArea ?? 0) > 0 && (
+        <div className="bg-violet-50 border border-violet-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <svg
+              className="w-5 h-5 text-violet-600 mt-0.5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            <div>
+              <p className="font-semibold text-violet-900">
+                {data.queuedForFloorArea} store{data.queuedForFloorArea !== 1 ? 's' : ''} queued for floor-area matching
+              </p>
+              <p className="text-sm text-violet-700 mt-1">
+                Matching has been triggered and usually finishes within a minute; the daily
+                run catches anything it misses. Sizes are matched from the EPC register, so
+                not every store will get one.{' '}
+                <a href="/admin/stores/floor-areas" className="underline font-medium">
+                  Floor-area health
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Rebuild Status */}
       {data.rebuildTriggered ? (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

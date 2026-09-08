@@ -46,6 +46,9 @@ interface ProcessedRow {
   // Geocoding results
   mapboxLat?: number
   mapboxLon?: number
+  // What Mapbox said about the quality of that hit. Null for a row whose coordinates
+  // came from the CSV, because nothing graded those.
+  mapboxAccuracy?: string | null
   // Google validation results
   googleLat?: number
   googleLon?: number
@@ -75,6 +78,7 @@ interface UploadResponse {
   insertedCount: number
   failedCount: number
   rebuildTriggered: boolean
+  queuedForFloorArea: number
 }
 
 // Utility: Validate UK coordinates
@@ -98,6 +102,11 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c
 }
 
+// Mapbox accuracies that put the point on the building rather than near it. Anything
+// else — interpolated along a street, or a `place` result with no accuracy at all — is
+// a coordinate a human should look at before it is trusted for anything spatial.
+const PRECISE_GEOCODE = new Set(['rooftop', 'parcel', 'point'])
+
 // Utility: Sleep helper
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -106,7 +115,7 @@ async function geocodeAddress(
   address: string,
   town?: string,
   postcode?: string
-): Promise<{ lat: number; lon: number }> {
+): Promise<{ lat: number; lon: number; accuracy: string | null }> {
   const queryParts = [address, town || '', postcode || '', 'UK'].filter(
     part => part.trim() !== ''
   )
@@ -125,7 +134,12 @@ async function geocodeAddress(
   }
 
   const [lon, lat] = data.features[0].center
-  return { lat, lon }
+  // Mapbox grades its own hit: rooftop, parcel, point, interpolated, street. A `place`
+  // result carries no accuracy at all, which is itself the answer — that coordinate is a
+  // town centre, not a shop. Recorded verbatim, in Mapbox's own vocabulary; see the note
+  // where it is written to `pqi`.
+  const accuracy: string | null = data.features[0].properties?.accuracy ?? null
+  return { lat, lon, accuracy }
 }
 
 async function batchGeocodeMapbox(rows: ProcessedRow[]): Promise<void> {
@@ -148,6 +162,7 @@ async function batchGeocodeMapbox(rows: ProcessedRow[]): Promise<void> {
       if (result.status === 'fulfilled') {
         row.mapboxLat = result.value.coords.lat
         row.mapboxLon = result.value.coords.lon
+        row.mapboxAccuracy = result.value.coords.accuracy
       } else {
         row.failed = true
         row.failureReason = 'Geocoding failed'
@@ -686,6 +701,7 @@ export async function POST(request: NextRequest) {
 
     let insertedCount = 0
     let rebuildTriggered = false
+    let queuedForFloorArea = 0
 
     if (successfulRows.length > 0) {
       console.log('Phase 2: Creating entities and inserting stores...')
@@ -750,11 +766,24 @@ export async function POST(request: NextRequest) {
           county: null,
           address_line_1: row.address,
           address_line_2: null,
-          pqi: null,
+          // What the geocoder actually said, in the geocoder's own words. NOT normalised
+          // to the existing 'Rooftop' / 'Third Party' / 'Building' values: those came
+          // from a different source, and the 25m spatial radius was calibrated on that
+          // population alone (plan §4.5). Writing Mapbox's 'rooftop' as 'Rooftop' would
+          // silently enrol these stores in a calibration never measured for them — the
+          // exact mistake §4.5 talks us out of. Lower case keeps the two populations
+          // distinguishable, and the health page groups whatever it finds.
+          pqi: row.mapboxAccuracy ?? null,
           open_date: null,
           size_band: null,
           google_place_id: row.googlePlaceId || null,
-          geocode_needs_review: false
+          // Was there an independent check on this point, and was the geocode precise?
+          // A row whose coordinates came from the CSV skipped Google validation, and a
+          // coarse Mapbox hit is a street or a town centre rather than a building. Either
+          // is worth a human's eye; both were previously recorded as `false` regardless,
+          // which is what made the column read as a signal while carrying none.
+          geocode_needs_review:
+            row.skipGoogleValidation === true || !PRECISE_GEOCODE.has(row.mapboxAccuracy ?? '')
         }))
 
         // Batch insert stores
@@ -769,7 +798,8 @@ export async function POST(request: NextRequest) {
           insertedCount += batch.length
         }
 
-        console.log(`Inserted ${insertedCount} stores`)
+        queuedForFloorArea = insertData.filter((r) => (r.postcode || '').trim() !== '').length
+        console.log(`Inserted ${insertedCount} stores (${queuedForFloorArea} queued for floor-area matching)`)
 
         // Insert import log
         await supabase.from('store_import_logs').insert({
@@ -792,6 +822,30 @@ export async function POST(request: NextRequest) {
           is_dry_run: false
         })
 
+        // Kick floor-area matching for the stores just inserted, fire-and-forget.
+        //
+        // The daily cron would pick these up anyway — the queue is derived, so nothing is
+        // lost if this request never lands — but "anyway" can be up to 24 hours, and an
+        // admin who has just imported 400 stores should not have to wait a day to see
+        // whether they got sizes. This makes the cron a backstop rather than the only
+        // route, which is the same shape as the existing cache_rebuild_queue and its
+        // sweeper.
+        //
+        // Deliberately not awaited and deliberately not inline: this route already spends
+        // its 300s budget on geocoding, Google validation and entity resolution, and a
+        // matching failure inside it would be hard to see and harder to retry. Failure
+        // here costs latency, never correctness.
+        const matchUrl = process.env.NEXT_PUBLIC_SITE_URL
+          || process.env.NEXT_PUBLIC_BASE_URL
+          || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+        if (matchUrl && process.env.CRON_SECRET) {
+          fetch(`${matchUrl}/api/cron/match-store-floor-areas`, {
+            headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+          }).catch((err) => {
+            console.warn('Floor-area match trigger failed; the daily cron will catch it:', err?.message)
+          })
+        }
+
         // Queue the expensive BUA rebuild instead of tying it to this already-long
         // import request. The cron is the backstop; the extra request below usually
         // starts it immediately in a separate server invocation.
@@ -807,12 +861,8 @@ export async function POST(request: NextRequest) {
         } else {
           rebuildTriggered = true
 
-          const rebuildUrl = process.env.NEXT_PUBLIC_SITE_URL
-            || process.env.NEXT_PUBLIC_BASE_URL
-            || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
-
-          if (rebuildUrl && process.env.CRON_SECRET) {
-            fetch(`${rebuildUrl}/api/cron/process-cache-rebuilds`, {
+          if (matchUrl && process.env.CRON_SECRET) {
+            fetch(`${matchUrl}/api/cron/process-cache-rebuilds`, {
               headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
             }).catch((err) => {
               console.warn('Immediate BUA rebuild trigger failed; the cron will retry:', err?.message)
@@ -844,7 +894,12 @@ export async function POST(request: NextRequest) {
       failedStoresCSV: failedCSV,
       insertedCount,
       failedCount: finalFailedRows.length,
-      rebuildTriggered
+      rebuildTriggered,
+      // Every inserted store with a postcode is in the floor-area queue by construction:
+      // the queue is derived from having no match row, and a new store has none. A store
+      // without a postcode is not queued, because the matcher looks up candidates by
+      // postcode and has nothing to offer it.
+      queuedForFloorArea
     }
 
     const elapsed = Date.now() - startTime

@@ -103,6 +103,9 @@ export interface UploadResponse {
   insertedCount: number
   failedCount: number
   rebuildTriggered: boolean
+  // Inserted stores that carry a postcode, and so are in the floor-area matching queue.
+  // Optional because a response from a deploy that predates it will not carry the field.
+  queuedForFloorArea?: number
   error?: string
 }
 

@@ -1,5 +1,12 @@
 # Store Import Pipeline - Implementation Summary
 
+> **Corrected 2026-09-08.** This document described Google Places validation as running
+> in dry-run mode only, and as flagging rather than rejecting. Both were wrong, and the
+> error mattered: it is what led the first draft of `docs/store-floor-areas-import-plan.md`
+> to under-rate the quality of our own coordinates. Sections 4.4 and 4.5 of that plan
+> record the measurement that followed. Rule 8, the pipeline steps and the environment
+> notes below are now what the code does.
+
 ## Overview
 
 Successfully implemented a complete admin-only CSV import tool for bulk store uploads with validation, geocoding, entity resolution, and summary table rebuilds.
@@ -100,12 +107,14 @@ Comprehensive type definitions:
   - Improved query: `${address}, ${town}, ${postcode}, UK`
   - Rate limit: 600 requests/minute
   - Cost: $5 per 1,000 after 100,000 free requests/month
-- **Google Places Validation** (dry-run mode only):
+- **Google Places Validation** (every import, not dry runs only):
   - Validates Mapbox coordinates by comparing with Google Places Text Search
-  - Only runs if `GOOGLE_PLACES_API_KEY` configured
-  - Stops validation gracefully if quota exceeded (continues import)
-  - Flags stores for review if distance >10m between Mapbox/Google
-  - Stores only `place_id` and boolean flag (no Google coordinates cached)
+  - Runs unconditionally on every import (`batchValidateGoogle`, step 3 of the pipeline)
+  - **Rejects** the row if the distance is >=10m, or if Google cannot resolve it — the
+    row fails the import and lands in the failed-rows CSV. It is not a warning flag.
+  - Consequence: every store that reaches the table has been positively confirmed by
+    Google to within 10m, and its `google_place_id` is persisted
+  - Stores only `place_id` (no Google coordinates cached)
   - Free tier: 5,000 validations/month
 - Entity resolution (brands, fascias, categories) with find-or-create pattern
 - Category conflict detection (blocks if fascia has different primary category)
@@ -203,10 +212,13 @@ Features:
 - Detection: Coordinates outside UK bounds (lat 49-61, lon -8 to 2)
 - Action: Block row, show error
 
-### Rule 8: Google Places Validation → WARNING (Dry-run only)
-- Detection: Distance between Mapbox and Google coordinates >10m
-- Action: Flag store with `geocode_needs_review = true`, show warning
-- Note: Store still imported with Mapbox coordinates (Google used for validation only)
+### Rule 8: Google Places Validation → AUTO-BLOCK (every import)
+- Detection: Distance between Mapbox and Google coordinates >=10m, or Google cannot
+  resolve the store at all
+- Action: Block the row. It does not reach the table and is returned in the failed CSV
+- Note: `geocode_needs_review` is NOT what carries this. Nothing survives the check to be
+  flagged by it; the column instead records a coordinate that skipped Google validation
+  (supplied in the CSV) or came from a coarse Mapbox hit
 
 ## Technical Details
 
@@ -232,9 +244,9 @@ Optional: fascia, postcode, town, suburb, county, lat, lon
   - Maximum: 500 rows requiring geocoding per import
   - Cost: $5 per 1,000 (after 100,000 free requests/month)
   - Compliance: Coordinates stored permanently in database, no restrictions
-- **Optional Validation**: Google Places Text Search (dry-run mode only)
+- **Validation**: Google Places Text Search (every import)
   - Validates Mapbox results by comparing coordinates
-  - Distance threshold: 10 meters (triggers review flag)
+  - Distance threshold: 10 meters (>=10m fails the row outright)
   - Graceful degradation: Import continues if quota exceeded or validation fails
   - Stores only `place_id` and boolean flag (ToS compliant)
   - Cost: Free for up to 5,000 validations/month, $32 per 1,000 after
@@ -251,9 +263,10 @@ Optional: fascia, postcode, town, suburb, county, lat, lon
 - `NEXT_PUBLIC_MAPBOX_TOKEN` - Mapbox API token for geocoding (permanent geocoding)
 
 ### Optional
-- `GOOGLE_PLACES_API_KEY` - Google Places API key for coordinate validation during dry-run imports
+- `GOOGLE_PLACES_API_KEY` - Google Places API key for coordinate validation
   - **Purpose**: Validates Mapbox geocoding results by comparing with Google Places coordinates
-  - **When used**: Only during dry-run mode (not during real imports)
+  - **When used**: Every import. A row Google disagrees with by >=10m, or cannot resolve,
+    fails the import
   - **Free tier**: 5,000 Text Search Pro requests/month
   - **Cost after free tier**: $32 per 1,000 requests
   - **Quota management**: Set quota limit to 5,000/month in Google Cloud Console to prevent exceeding free tier
@@ -384,18 +397,21 @@ Optional: fascia, postcode, town, suburb, county, lat, lon
 - After free tier: $5 per 1,000 requests
 - Significantly cheaper than Google Places ($5/1k vs $32/1k)
 
-### Google Places Validation (Optional Layer)
+### Google Places Validation (Every Import)
 
-**Purpose**: Validate Mapbox geocoding accuracy by comparing with Google Places coordinates
+**Purpose**: Confirm the Mapbox coordinate against Google's record of the business, and
+reject the row if they disagree
 
 **When used**:
-- Only during dry-run imports (`?dryRun=true`)
-- Never during real imports (keeps production fast)
-- Optional - works fine without API key
+- Every import, unconditionally (`batchValidateGoogle`, step 3)
+- Not optional in effect: without `GOOGLE_PLACES_API_KEY` the validation cannot succeed,
+  and rows that cannot be validated fail
 
 **What's stored**:
 - `google_place_id` - Google Places reference ID (ToS compliant)
-- `geocode_needs_review` - Boolean flag (true if distance >200m)
+- `geocode_needs_review` - true when the coordinate skipped Google validation (supplied
+  in the CSV on a retry row) or came from a coarse Mapbox hit. It does **not** record a
+  distance disagreement: those rows never reach the table
 - **NOT stored**: Google coordinates, distance metrics, or any Google-derived data
 
 **Compliance**:
@@ -405,36 +421,29 @@ Optional: fascia, postcode, town, suburb, county, lat, lon
 - ✅ No map display restriction violated (displaying Mapbox coordinates on Mapbox maps)
 
 **How validation works**:
-1. Import runs with `?dryRun=true` parameter
-2. Each address geocoded with Mapbox (as normal)
-3. If `GOOGLE_PLACES_API_KEY` configured: Also query Google Places Text Search
-4. Calculate distance between Mapbox and Google results using Haversine formula
-5. If distance >10m: Set `geocode_needs_review = true` and show warning
-6. Store is imported with Mapbox coordinates (Google used only for validation)
+1. Each address geocoded with Mapbox (as normal), recording Mapbox's own accuracy grade
+2. Query Google Places Text Search for the same store
+3. Calculate distance between Mapbox and Google results using Haversine formula
+4. If distance >=10m, or Google returns nothing: the row **fails** and is returned in the
+   failed-rows CSV for correction
+5. Surviving stores are imported with Mapbox coordinates and their `google_place_id`
+
+This is why §4.4 of `docs/store-floor-areas-import-plan.md` can say every imported store
+has been positively confirmed to within 10m: it is a gate, not a warning.
 
 **Error handling**:
-- **Quota exceeded**: Stop attempting validation for remaining rows, continue import
-- **API error**: Log warning, continue with Mapbox coordinates
-- **No results**: Add info message, continue with Mapbox coordinates
-- **Network error**: Catch exception, continue with Mapbox coordinates
+- **Quota exceeded**: Remaining rows fail validation rather than importing unchecked
+- **API error / no results / network error**: The row fails and is returned for retry
 
 **Cost**:
 - Free tier: 5,000 Text Search Pro requests/month
 - After free tier: $32 per 1,000 requests
 - Recommended: Set quota limit to 5,000/month in Google Cloud Console
 
-**Response fields** (dry-run mode only):
-```typescript
-{
-  validationWarnings: RowIssue[]  // Stores flagged for review
-  googleValidationsAttempted: number
-  googleValidationsSucceeded: number
-}
-```
-
 ### Manual Review Workflow
 
-For stores flagged with `geocode_needs_review = true`:
+For stores flagged with `geocode_needs_review = true` — coordinates that skipped the
+Google check or came from a coarse geocode:
 
 1. Query flagged stores:
 ```sql
@@ -465,17 +474,15 @@ curl -X POST https://your-domain.com/api/admin/stores/rebuild-summaries \
 
 For 10,000 store import:
 
-**Without Google validation**:
-- Mapbox: $0 (within 100k free tier)
-- Google: $0
-- **Total: $0**
+Google validation is not optional, so this is the cost of importing at all:
 
-**With Google validation (dry-run)**:
 - Mapbox: $0 (within 100k free tier)
 - Google: $160 (10k - 5k free tier = 5k × $32/1k)
 - **Total: $160**
 
-**Value**: For $160, you get confidence that 10,000 store coordinates are accurate and can identify the few that need manual review. This is a one-time validation cost during import preparation.
+**Value**: every coordinate that reaches the table has been confirmed against Google's
+record of that business to within 10m, and the ones that could not be are handed back as
+a CSV to correct rather than imported unchecked.
 
 ## Support
 
