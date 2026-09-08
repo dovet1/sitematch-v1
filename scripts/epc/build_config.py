@@ -14,16 +14,59 @@ used across 226 brands:
      dictionary words but perfectly distinctive), so noise is measured instead:
      how often the alias appears on certificates nationally, relative to how many
      stores the brand has.
+
+[2026-09-07] Aliases are now normalised with matchlib.norm_tokens, the same function
+that normalises the certificate text they are matched against. They previously used a
+local normaliser that folded no street suffixes and used a shorter noise list, so any
+alias containing one of matchlib's folded or dropped tokens could never match anything.
+
+Nine aliases were dead, and four brands had no working alias at all — Pets at Home
+(PETS|AT|HOME: matchlib drops AT), Dunnes Stores (drops STORES), Rocks Lane (LANE->LN),
+Blank Street Coffee (STREET->ST). Pets at Home is a substantial estate that was matching
+on address text alone, with no brand signal, which is the strongest evidence available
+and the one that separates a store from the concession trading inside it.
+
+The rule is now simply: both sides of a comparison are normalised by the same function.
 """
-import csv, json, re, glob, pickle
+import csv, json, glob, pickle
 from collections import defaultdict, Counter
+from matchlib import norm_tokens
 csv.field_size_limit(10**7)
 
-NOISE_TOKENS = {"THE","AND","OF","CO","LTD","LIMITED","PLC","GROUP","UK","GB"}
+# The single token build_config's old noise list carried that matchlib's does not.
+# "The Co-operative Group" and "The Gym Group" trade as Co-op and The Gym; "Group" is a
+# corporate suffix that never appears on a shopfront or a certificate. Dropping it from
+# the ALIAS side only is safe and strictly more permissive, because an alias matches as a
+# contiguous run of tokens inside the certificate text: a shorter alias still matches
+# longer text, never the reverse.
+#
+# Without this, normalising aliases with matchlib cost The Co-operative Group its bare
+# OPERATIVE alias (2,384 stores) to gain four small brands a working one (56 stores) —
+# a fix that was a net loss by a factor of fifty.
+ALIAS_ONLY_NOISE = {"GROUP"}
 
 def norm(s):
-    s = (s or "").upper().replace("&", " AND ").replace("'", "")
-    return [t for t in re.sub(r"[^A-Z0-9 ]+", " ", s).split() if t and t not in NOISE_TOKENS]
+    toks = norm_tokens(s or "")
+    trimmed = [t for t in toks if t not in ALIAS_ONLY_NOISE]
+    # Never let the trim empty an alias outright — a brand actually called "Group" keeps it.
+    return trimmed or toks
+
+# Hand-curated: ordinary English that occurs in address text. An ambiguous alias may
+# corroborate a match but may not carry one alone.
+#
+# Held here as the words themselves rather than as normalised phrases, and re-normalised
+# on every build. The list previously lived only in the generated brand_config.json,
+# where build_config.py could not see it — so regenerating the file silently dropped it,
+# and any change to normalisation silently invalidated every entry. Both are now
+# impossible.
+#
+# scripts/epc/README.md asks that this list be reviewed rather than extended silently.
+AMBIGUOUS_RAW = [
+    "Blank Street Coffee", "Boom Battle Bar", "Byron", "Centra", "Coffee House", "Cook",
+    "EE", "Entertainer", "Escape Hunt", "Free People", "Gravity", "Gym", "Hop", "Next",
+    "Odyssey", "Pure", "Range", "Revolution", "Six", "Superbowl", "Three", "Toni and Guy",
+    "Zone",
+]
 
 ref = json.load(open("brand_reference.json"))
 brands, brand_fascias = ref["brands"], ref["brand_fascias"]
@@ -86,11 +129,15 @@ for p, n in hits.items():
     est = sum(store_counts.get(b, 0) for b in owners) or 1
     alias_noise["|".join(p)] = {"hits": n, "stores": est, "ratio": round(n/est, 2)}
 
+ambiguous = sorted({"|".join(norm(a)) for a in AMBIGUOUS_RAW if norm(a)})
+
 json.dump({
     "aliases": {b: ["|".join(p) for p in ps] for b, ps in aliases.items()},
     "family":  {b: sorted(v) for b, v in family.items()},
     "alias_noise": alias_noise,
+    "ambiguous_aliases": ambiguous,
 }, open("brand_config.json", "w"))
+print(f"{len(ambiguous)} ambiguous aliases carried through")
 
 print(f"{len(aliases)} brands aliased; families >1 member: {fam_sizes.get(1,0)} singletons, "
       f"{sum(v for k,v in fam_sizes.items() if k>1)} brands in shared families")

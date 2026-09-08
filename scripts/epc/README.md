@@ -98,7 +98,7 @@ here rather than by hand:
   that appears in address text. A dictionary test over-flags (Iceland, Subway and
   KFC are dictionary words but perfectly distinctive) and a frequency test
   conflates a common word with an incomplete store estate. 23 aliases are
-  therefore **hand-listed** in `brand_config.json` under `ambiguous_aliases`: they
+  therefore **hand-listed**, as plain words, in `build_config.py` under `AMBIGUOUS_RAW`: they
   may corroborate a match but may not carry one alone. This is the one place
   automation was abandoned; it is deliberate and should be reviewed, not extended
   silently.
@@ -116,6 +116,30 @@ find a warehouse if it only ever looked at retail.
 **`finalise_all.py`** applies a size plausibility gate (a match outside 3× the
 brand/fascia median from brand-named anchors is demoted) and validates against
 `stores.size_band`, which is independent of the register.
+
+### [2026-09-07] Aliases now use matchlib's normaliser
+
+Aliases are normalised by `matchlib.norm_tokens`, the same function that normalises the
+certificate text they are compared against. They previously used a local normaliser that
+folded no street suffixes, so nine aliases could never match anything and four brands had
+no working alias at all — Pets at Home, Dunnes Stores, Rocks Lane and Blank Street Coffee
+were matching on address text alone, with no brand signal.
+
+Two things about that fix are worth knowing before touching it again:
+
+- **One token is trimmed from aliases beyond what matchlib removes: `GROUP`.** Without
+  it, "The Co-operative Group" loses its bare `OPERATIVE` alias — 2,384 stores — to gain
+  four brands totalling 56. The first version of the fix did exactly that, and it only
+  surfaced because the store counts were checked afterwards.
+- **`ambiguous_aliases` moved out of the generated JSON into the script.** It had only
+  ever lived in `brand_config.json`, which `build_config.py` overwrites — so regenerating
+  silently dropped it, and any change to normalisation silently invalidated every entry
+  (`BLANK|STREET|COFFEE` became `BLANK|ST|COFFEE`). Held as words and re-normalised on
+  each build, neither can happen again.
+
+The change alters `brand_config.json` only. It reaches the data at the next full run;
+the TypeScript matcher (`apps/web/src/lib/epc/aliases.ts`) already derives aliases under
+the same rule.
 
 ---
 
@@ -170,5 +194,5 @@ data (199 stores); the Channel Islands and Isle of Man have no register.
 | `finalise_all.py` | Size gate, validation, CSV outputs, profiles. |
 | `write_summary.py` | Generates the run summary. |
 | `load_to_db.py` | Writes to Supabase. Dry run unless `--apply`. |
-| `brand_config.json` | Generated config, committed for review. Contains the hand-listed ambiguous aliases. |
+| `brand_config.json` | Generated config, committed for review. Ambiguous aliases are emitted here but authored in `build_config.py`. |
 | `brand_profiles.csv` | Aggregate output of run `epc-2026.09.05-allbrands`. Aggregates only — no addresses. Superseded in the database by any later corrective migration. |

@@ -34,3 +34,6 @@ SUMMARY_*.md
 # python bytecode
 __pycache__/
 *.pyc
+
+# holdout harness working files
+holdout_cache.pkl

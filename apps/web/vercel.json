@@ -19,6 +19,10 @@
     {
       "path": "/api/cron/snapshot-brand-stores",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/match-store-floor-areas",
+      "schedule": "0 4 * * *"
     }
   ],
   "functions": {
@@ -38,6 +42,9 @@
       "maxDuration": 300
     },
     "app/api/cron/snapshot-brand-stores/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/cron/match-store-floor-areas/route.ts": {
       "maxDuration": 300
     }
   },
