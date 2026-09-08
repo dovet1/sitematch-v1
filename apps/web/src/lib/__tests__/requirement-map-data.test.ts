@@ -1,5 +1,6 @@
 import {
   getRequirementMapFeatures,
+  getRequirementMapDataFromRequirements,
   getRequirementMapFeaturesFromRequirements,
   normalizeRequirementCoordinates,
 } from '@/lib/requirement-map-data'
@@ -161,5 +162,33 @@ describe('getRequirementMapFeaturesFromRequirements', () => {
     expect(feature.properties.uploaded_logo_url).toBeNull()
     // ...but the existing resolved field still serves consumers via logo.dev.
     expect(feature.properties.logo_url).toContain('img.logo.dev/acme.com')
+  })
+
+  it('returns requirements without locations in the nationwide collection only', async () => {
+    const supabase = supabaseWith([
+      requirementRow({
+        id: 'req-nationwide',
+        brand_id: 'brand-nationwide',
+        company_name: 'Nationwide Coffee',
+        site_size_min: 1200,
+        site_size_max: 2500,
+        requirement_locations: [],
+      }),
+    ])
+
+    const data = await getRequirementMapDataFromRequirements(supabase, {
+      isFreeTier: false,
+    })
+
+    expect(data.features).toEqual([])
+    expect(data.nationwide).toEqual([
+      expect.objectContaining({
+        id: 'req-nationwide',
+        brand_id: 'brand-nationwide',
+        company_name: 'Nationwide Coffee',
+        site_size_min: 1200,
+        site_size_max: 2500,
+      }),
+    ])
   })
 })

@@ -1,9 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { fetchRequirementLocations } from '../services/requirements-service'
+import { fetchRequirementData } from '../services/requirements-service'
 import { haversineMeters, isInCatchment } from '../geo'
-import type { RequirementLocation } from '../../types/unified-workspace'
+import type {
+  NationwideRequirement,
+  RequirementLocation,
+  RequirementSummary,
+} from '../../types/unified-workspace'
 
 export interface Requirements {
   // Requirement locations inside the active catchment (isochrone polygon for
@@ -13,6 +17,8 @@ export interface Requirements {
   // The deduped-per-listing counterpart (nearest location per listing) of
   // withinCatchment. Powers the Summary promoted rows.
   local: RequirementLocation[]
+  // Coordinate-free requirements that apply to every assessed location.
+  nationwide: NationwideRequirement[]
   // brand_id match over the *whole UK* set — the brand modal's "is any occupier
   // after this brand anywhere?" resolution. Matching on brand_id (not company_name)
   // avoids misses when a requirement's company_name differs from brands.name and
@@ -21,7 +27,7 @@ export interface Requirements {
   // requirements they're allowed to see. Intentionally NOT scoped to the catchment.
   findActiveRequirementByBrandId: (
     brandId: string | null | undefined
-  ) => RequirementLocation | undefined
+  ) => RequirementSummary | undefined
   loading: boolean
 }
 
@@ -34,6 +40,7 @@ export function useRequirements(
   isochrone?: GeoJSON.Geometry | null
 ): Requirements {
   const [all, setAll] = useState<RequirementLocation[]>([])
+  const [nationwide, setNationwide] = useState<NationwideRequirement[]>([])
   const [loading, setLoading] = useState(false)
 
   // Stable signature so a fresh-but-equal isochrone object doesn't re-trigger.
@@ -46,8 +53,11 @@ export function useRequirements(
   useEffect(() => {
     const controller = new AbortController()
     setLoading(true)
-    fetchRequirementLocations(controller.signal)
-      .then(setAll)
+    fetchRequirementData(controller.signal)
+      .then((data) => {
+        setAll(data.locations)
+        setNationwide(data.nationwide)
+      })
       .catch((err) => {
         if (err?.name !== 'AbortError') console.error('Requirements error', err)
       })
@@ -110,10 +120,10 @@ export function useRequirements(
   const findActiveRequirementByBrandId = useCallback(
     (brandId: string | null | undefined) => {
       if (!brandId) return undefined
-      return all.find((r) => r.brandId === brandId)
+      return all.find((r) => r.brandId === brandId) ?? nationwide.find((r) => r.brandId === brandId)
     },
-    [all]
+    [all, nationwide]
   )
 
-  return { withinCatchment, local, findActiveRequirementByBrandId, loading }
+  return { withinCatchment, local, nationwide, findActiveRequirementByBrandId, loading }
 }

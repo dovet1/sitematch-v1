@@ -349,6 +349,13 @@ export function UnifiedWorkspace() {
   }, [refData, fasciaCategoryIds])
 
   const reqLocal = requirements.local
+  const reqNationwide = requirements.nationwide
+  const requirementBrandIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const r of reqLocal) if (r.brandId) ids.add(r.brandId)
+    for (const r of reqNationwide) if (r.brandId) ids.add(r.brandId)
+    return ids
+  }, [reqLocal, reqNationwide])
 
   const categoryOptions = useMemo(() => {
     const catName = new Map<string, string>()
@@ -359,6 +366,9 @@ export function UnifiedWorkspace() {
     for (const r of reqLocal)
       if (r.brandId)
         for (const c of brandCategoryIds.get(r.brandId) ?? []) ids.add(c)
+    for (const r of reqNationwide)
+      if (r.brandId)
+        for (const c of brandCategoryIds.get(r.brandId) ?? []) ids.add(c)
     const opts: { id: string; name: string }[] = []
     for (const id of Array.from(ids)) {
       const name = catName.get(id)
@@ -366,7 +376,7 @@ export function UnifiedWorkspace() {
     }
     opts.sort((a, b) => a.name.localeCompare(b.name))
     return opts
-  }, [present, missing, reqLocal, brandCategoryIds, refData])
+  }, [present, missing, reqLocal, reqNationwide, brandCategoryIds, refData])
 
   const brandOptions = useMemo(() => {
     const byId = new Map<string, string>()
@@ -374,10 +384,12 @@ export function UnifiedWorkspace() {
     for (const b of missing) if (!byId.has(b.brandId)) byId.set(b.brandId, b.brandName)
     for (const r of reqLocal)
       if (r.brandId && !byId.has(r.brandId)) byId.set(r.brandId, r.companyName)
+    for (const r of reqNationwide)
+      if (r.brandId && !byId.has(r.brandId)) byId.set(r.brandId, r.companyName)
     const opts = Array.from(byId, ([id, name]) => ({ id, name }))
     opts.sort((a, b) => a.name.localeCompare(b.name))
     return opts
-  }, [present, missing, reqLocal])
+  }, [present, missing, reqLocal, reqNationwide])
 
   const catSet = useMemo(
     () => new Set(brandFilterCategoryIds),
@@ -399,10 +411,11 @@ export function UnifiedWorkspace() {
     () =>
       missing.filter(
         (b) =>
+          !requirementBrandIds.has(b.brandId) &&
           (catSet.size === 0 || b.categoryIds.some((c) => catSet.has(c))) &&
           (brandSet.size === 0 || brandSet.has(b.brandId))
       ),
-    [missing, catSet, brandSet]
+    [missing, catSet, brandSet, requirementBrandIds]
   )
 
   const filteredRequirements = useMemo(
@@ -419,6 +432,20 @@ export function UnifiedWorkspace() {
     [reqLocal, catSet, brandSet, brandCategoryIds]
   )
 
+  const filteredNationwideRequirements = useMemo(
+    () =>
+      reqNationwide.filter((r) => {
+        if (catSet.size === 0 && brandSet.size === 0) return true
+        if (!r.brandId) return false
+        const cats = brandCategoryIds.get(r.brandId) ?? []
+        return (
+          (catSet.size === 0 || cats.some((c) => catSet.has(c))) &&
+          (brandSet.size === 0 || brandSet.has(r.brandId))
+        )
+      }),
+    [reqNationwide, catSet, brandSet, brandCategoryIds]
+  )
+
   // Observed floor areas for every brand the panel could show — requirements
   // included, since a requirement card also carries its estate-today block.
   // Fetched off the unfiltered lists so the popover's "N brands fit" counts
@@ -428,8 +455,9 @@ export function UnifiedWorkspace() {
     for (const b of present) ids.add(b.brandId)
     for (const b of missing) ids.add(b.brandId)
     for (const r of reqLocal) if (r.brandId) ids.add(r.brandId)
+    for (const r of reqNationwide) if (r.brandId) ids.add(r.brandId)
     return Array.from(ids)
-  }, [present, missing, reqLocal])
+  }, [present, missing, reqLocal, reqNationwide])
 
   const floorAreaProfiles = useFloorAreaProfiles(floorAreaBrandIds)
 
@@ -550,6 +578,7 @@ export function UnifiedWorkspace() {
             presentBrands={filteredPresent}
             missingBrands={filteredMissing}
             requirements={filteredRequirements}
+            nationwideRequirements={filteredNationwideRequirements}
             catchment={catchmentData}
             categoryOptions={categoryOptions}
             brandOptions={brandOptions}

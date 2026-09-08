@@ -6,6 +6,7 @@
 
 import type {
   RequirementLocation,
+  NationwideRequirement,
   RequirementDetail,
   StoreEstate,
   BrandInfo,
@@ -39,38 +40,81 @@ interface RequirementMapFeature {
   }
 }
 
-export async function fetchRequirementLocations(
+interface NationwideRequirementItem {
+  id: string
+  company_name: string
+  title: string | null
+  listing_type: string | null
+  site_size_min: number | null
+  site_size_max: number | null
+  site_acreage_min: number | null
+  site_acreage_max: number | null
+  dwelling_count_min: number | null
+  dwelling_count_max: number | null
+  company_domain: string | null
+  uploaded_logo_url: string | null
+  brand_id: string | null
+}
+
+export interface RequirementFeed {
+  locations: RequirementLocation[]
+  nationwide: NationwideRequirement[]
+}
+
+export async function fetchRequirementData(
   signal?: AbortSignal
-): Promise<RequirementLocation[]> {
+): Promise<RequirementFeed> {
   const { north, south, east, west } = UK_BOUNDS
-  // Admin-curated requirements for /sitematcher-unified (the `requirements` table),
-  // not the public `listings` directory map.
   const url = `/api/public/requirements/map?north=${north}&south=${south}&east=${east}&west=${west}&clustering=false`
   const res = await fetch(url, { signal })
   if (!res.ok) throw new Error(`requirement map failed (${res.status})`)
-  // The route returns { geojson: { features }, ... }; the mock fallback returns
-  // { results }. Normal operation returns geojson.
   const data = await res.json()
   const features = (data.geojson?.features ?? []) as RequirementMapFeature[]
-  return features.map((f) => ({
-    id: f.properties.location_id,
-    requirementId: f.properties.id,
-    brandId: f.properties.brand_id ?? null,
-    companyName: f.properties.company_name,
-    title: f.properties.title,
-    listingType: f.properties.listing_type,
-    siteSizeMin: f.properties.site_size_min,
-    siteSizeMax: f.properties.site_size_max,
-    siteAcreageMin: f.properties.site_acreage_min,
-    siteAcreageMax: f.properties.site_acreage_max,
-    dwellingCountMin: f.properties.dwelling_count_min,
-    dwellingCountMax: f.properties.dwelling_count_max,
-    placeName: f.properties.place_name,
-    formattedAddress: f.properties.formatted_address,
-    companyDomain: f.properties.company_domain ?? null,
-    logoUrl: f.properties.uploaded_logo_url ?? null,
-    coordinates: { lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] },
-  }))
+  const nationwide = (data.nationwide ?? []) as NationwideRequirementItem[]
+
+  return {
+    locations: features.map((f) => ({
+      id: f.properties.location_id,
+      requirementId: f.properties.id,
+      brandId: f.properties.brand_id ?? null,
+      companyName: f.properties.company_name,
+      title: f.properties.title,
+      listingType: f.properties.listing_type,
+      siteSizeMin: f.properties.site_size_min,
+      siteSizeMax: f.properties.site_size_max,
+      siteAcreageMin: f.properties.site_acreage_min,
+      siteAcreageMax: f.properties.site_acreage_max,
+      dwellingCountMin: f.properties.dwelling_count_min,
+      dwellingCountMax: f.properties.dwelling_count_max,
+      placeName: f.properties.place_name,
+      formattedAddress: f.properties.formatted_address,
+      companyDomain: f.properties.company_domain ?? null,
+      logoUrl: f.properties.uploaded_logo_url ?? null,
+      coordinates: { lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] },
+    })),
+    nationwide: nationwide.map((r) => ({
+      id: r.id,
+      requirementId: r.id,
+      brandId: r.brand_id ?? null,
+      companyName: r.company_name,
+      title: r.title,
+      listingType: r.listing_type,
+      siteSizeMin: r.site_size_min,
+      siteSizeMax: r.site_size_max,
+      siteAcreageMin: r.site_acreage_min,
+      siteAcreageMax: r.site_acreage_max,
+      dwellingCountMin: r.dwelling_count_min,
+      dwellingCountMax: r.dwelling_count_max,
+      companyDomain: r.company_domain ?? null,
+      logoUrl: r.uploaded_logo_url ?? null,
+    })),
+  }
+}
+
+export async function fetchRequirementLocations(
+  signal?: AbortSignal
+): Promise<RequirementLocation[]> {
+  return (await fetchRequirementData(signal)).locations
 }
 
 export async function fetchRequirementDetail(

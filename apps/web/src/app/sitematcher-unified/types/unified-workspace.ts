@@ -172,8 +172,8 @@ export interface MapSubSelection {
   id: string
 }
 
-// A live occupier requirement location, from /api/public/gapfinder/requirement-locations.
-export interface RequirementLocation {
+// The fields shared by location-specific and nationwide occupier requirements.
+export interface RequirementSummary {
   id: string
   requirementId: string
   brandId: string | null
@@ -186,12 +186,20 @@ export interface RequirementLocation {
   siteAcreageMax: number | null
   dwellingCountMin: number | null
   dwellingCountMax: number | null
-  placeName: string | null
-  formattedAddress: string | null
   companyDomain: string | null
   logoUrl: string | null
+}
+
+// A live occupier requirement location, from /api/public/requirements/map.
+export interface RequirementLocation extends RequirementSummary {
+  placeName: string | null
+  formattedAddress: string | null
   coordinates: { lng: number; lat: number }
 }
+
+// A requirement with no named target locations. These appear in every Assess
+// result panel, but never on the map because they have no honest point geometry.
+export type NationwideRequirement = RequirementSummary
 
 // A single acquiring contact on a requirement. `kind` distinguishes the retailer's own
 // team ('in-house') from an appointed agent ('agency'); null when unspecified.

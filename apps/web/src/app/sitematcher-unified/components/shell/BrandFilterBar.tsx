@@ -15,11 +15,13 @@ function FilterDropdown({
   options,
   selected,
   onChange,
+  align = 'trigger',
 }: {
   label: string
   options: FilterOption[]
   selected: string[]
   onChange: (ids: string[]) => void
+  align?: 'trigger' | 'filter-row'
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -30,8 +32,15 @@ function FilterDropdown({
     const onDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
   }, [open])
 
   const filtered = useMemo(() => {
@@ -53,6 +62,8 @@ function FilterDropdown({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
         className={
           'flex h-8 w-full items-center gap-1.5 rounded-lg border px-2.5 text-[12px] transition-colors ' +
           (count > 0
@@ -73,27 +84,38 @@ function FilterDropdown({
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 rounded-lg border border-sm-border bg-sm-surface shadow-lg">
-          <div className="flex h-9 items-center gap-2 border-b border-sm-border-soft px-2.5">
-            <Search size={13} className="text-sm-ink3" />
+        <div
+          style={
+            align === 'filter-row'
+              ? { left: 'calc(-100% - 0.5rem)' }
+              : undefined
+          }
+          className={
+            'absolute left-0 top-[calc(100%+4px)] z-30 w-[276px] overflow-hidden rounded-xl border border-sm-border bg-sm-surface shadow-[0_20px_44px_-12px_rgba(0,0,0,0.19)]'
+          }
+        >
+          <div className="flex h-10 items-center gap-2 border-b border-sm-border-soft px-3">
+            <Search size={14} className="shrink-0 text-sm-ink3" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search ${label.toLowerCase()}…`}
-              className="w-full bg-transparent text-xs text-sm-ink placeholder:text-sm-ink3 focus:outline-none"
+              aria-label={`Search ${label.toLowerCase()}`}
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-sm-ink placeholder:text-sm-ink3 focus:outline-none"
             />
             {count > 0 && (
               <button
                 type="button"
                 onClick={() => onChange([])}
                 title="Clear"
+                aria-label={`Clear ${label.toLowerCase()} filter`}
                 className="shrink-0 text-sm-ink3 hover:text-sm-ink2"
               >
                 <X size={13} />
               </button>
             )}
           </div>
-          <div className="max-h-48 overflow-y-auto">
+          <div className="max-h-60 overflow-y-auto" role="menu" aria-label={`${label} options`}>
             {filtered.length === 0 && (
               <div className="px-3 py-2.5 text-xs text-sm-ink3">No matches</div>
             )}
@@ -104,14 +126,16 @@ function FilterDropdown({
                   key={o.id}
                   type="button"
                   onClick={() => toggle(o.id)}
+                  role="menuitemcheckbox"
+                  aria-checked={on}
                   className={
-                    'flex w-full items-center gap-2 border-b border-sm-border-soft px-3 py-1.5 text-left text-xs ' +
+                    'flex min-h-10 w-full items-start gap-2.5 border-b border-sm-border-soft px-3 py-2.5 text-left text-[13px] leading-5 ' +
                     (on ? 'bg-sm-violet-tint-soft' : 'hover:bg-sm-bg')
                   }
                 >
                   <span
                     className={
-                      'flex h-4 w-4 shrink-0 items-center justify-center rounded border ' +
+                      'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ' +
                       (on
                         ? 'border-sm-violet bg-sm-violet text-white'
                         : 'border-sm-border')
@@ -121,7 +145,8 @@ function FilterDropdown({
                   </span>
                   <span
                     className={
-                      'truncate ' + (on ? 'font-semibold text-sm-ink' : 'text-sm-ink')
+                      'min-w-0 whitespace-normal break-words ' +
+                      (on ? 'font-semibold text-sm-ink' : 'text-sm-ink')
                     }
                   >
                     {o.name}
@@ -181,6 +206,7 @@ export function BrandFilterBar({
           options={brandOptions}
           selected={selectedBrandIds}
           onChange={onBrandChange}
+          align="filter-row"
         />
         {showSizeFilter && (
           <SizeFilterControl

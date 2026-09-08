@@ -22,11 +22,13 @@ import type {
   InspectorTab,
   MissingFascia,
   MissingBrand,
+  NationwideRequirement,
   PlanningApplication,
   PlanningProgress,
   PlanningTruncationReason,
   PresentBrand,
   RequirementLocation,
+  RequirementSummary,
 } from '../../types/unified-workspace'
 import type { CatchmentData } from '../../lib/hooks/useCatchment'
 import type { Landscape } from '../../lib/hooks/useAreaData'
@@ -544,13 +546,15 @@ function MissingRow({
 // sits below it under its own label, never merged into the same figure.
 function RequirementRow({
   req,
+  nationwide = false,
   profiles,
   measured,
   band,
   fit,
   onOpen,
 }: {
-  req: RequirementLocation
+  req: RequirementSummary
+  nationwide?: boolean
   profiles: FloorAreaProfile[]
   measured: MeasuredEstate | null
   band: SizeBand | null
@@ -572,7 +576,7 @@ function RequirementRow({
           Requirement
         </span>
         <span className="font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-violet-deep">
-          Wants to open here
+          {nationwide ? 'Searching nationwide' : 'Wants to open here'}
         </span>
       </div>
       <div className="grid grid-cols-[36px_1fr_auto] items-start gap-3">
@@ -604,7 +608,7 @@ function RequirementRow({
   )
 }
 
-function formatRequirementSizeRange(req: RequirementLocation): string | null {
+function formatRequirementSizeRange(req: RequirementSummary): string | null {
   if (req.siteSizeMin != null || req.siteSizeMax != null) {
     return formatRange(req.siteSizeMin, req.siteSizeMax, 'sq ft')
   }
@@ -785,7 +789,13 @@ function DemotedGroup({
 // One row of the Missing tab before the size filter has had its say: either a
 // live requirement or an established brand with no presence here.
 type MissingItem =
-  | { kind: 'req'; key: string; req: RequirementLocation; brandId: string | null }
+  | {
+      kind: 'req'
+      key: string
+      req: RequirementSummary
+      brandId: string | null
+      nationwide: boolean
+    }
   | { kind: 'brand'; key: string; brand: MissingBrand; brandId: string }
 
 function missingEntry(
@@ -863,6 +873,7 @@ export function MissingBody({
   loading,
   missing,
   requirements,
+  nationwideRequirements,
   areaName,
   band,
   profilesFor,
@@ -873,6 +884,7 @@ export function MissingBody({
   loading: boolean
   missing: MissingBrand[]
   requirements: RequirementLocation[]
+  nationwideRequirements: NationwideRequirement[]
   areaName: string
   band: SizeBand | null
   profilesFor: (brandId: string | null) => FloorAreaProfile[]
@@ -880,7 +892,7 @@ export function MissingBody({
   onOpenReq: (requirementId: string) => void
   onOpenBrand: (m: MissingFascia) => void
 }) {
-  const gapCount = requirements.length + missing.length
+  const gapCount = requirements.length + nationwideRequirements.length + missing.length
   const [unknownOpen, setUnknownOpen] = useState(true)
   const [outsideOpen, setOutsideOpen] = useState(false)
 
@@ -897,6 +909,14 @@ export function MissingBody({
         key: `req:${r.id}`,
         req: r,
         brandId: r.brandId,
+        nationwide: false,
+      })),
+      ...nationwideRequirements.map((r) => ({
+        kind: 'req' as const,
+        key: `req:nationwide:${r.id}`,
+        req: r,
+        brandId: r.brandId,
+        nationwide: true,
       })),
       ...missing.map((m) => ({
         kind: 'brand' as const,
@@ -905,7 +925,7 @@ export function MissingBody({
         brandId: m.brandId,
       })),
     ],
-    [requirements, missing]
+    [requirements, nationwideRequirements, missing]
   )
 
   const { main, unknown, outside, fits } = useMemo(() => {
@@ -944,9 +964,13 @@ export function MissingBody({
           <span className="font-mono text-[12px] text-sm-ink2">{gapCount}</span>
         </div>
         <p className="mt-1 text-[12.5px] leading-relaxed text-sm-ink3">
-          {requirements.length > 0
-            ? `Occupiers with a live requirement naming ${areaName} show first, then established brands with no presence here.`
-            : 'Established brands with no presence nearby that fit this location.'}
+          {requirements.length > 0 && nationwideRequirements.length > 0
+            ? `Occupiers naming ${areaName} show first, followed by occupiers searching nationwide, then established brands with no presence here.`
+            : requirements.length > 0
+              ? `Occupiers with a live requirement naming ${areaName} show first, then established brands with no presence here.`
+              : nationwideRequirements.length > 0
+                ? 'Occupiers searching nationwide show first, then established brands with no presence nearby.'
+                : 'Established brands with no presence nearby that fit this location.'}
           {band ? ' Sized against your unit.' : ' Set a size to match your unit.'}
         </p>
       </div>
@@ -963,6 +987,7 @@ export function MissingBody({
             <RequirementRow
               key={item.key}
               req={item.req}
+              nationwide={item.nationwide}
               profiles={profilesFor(item.brandId)}
               measured={measuredFor(item.brandId)}
               band={band}
@@ -998,7 +1023,7 @@ export function MissingBody({
                 }
                 meta={
                   item.kind === 'req'
-                    ? 'Live requirement · no size stated'
+                    ? `${item.nationwide ? 'Nationwide requirement' : 'Live requirement'} · no size stated`
                     : missingMeta(item.brand)
                 }
                 domain={
@@ -1391,6 +1416,7 @@ function Opportunity({
   presentBrands,
   missingBrands,
   requirements,
+  nationwideRequirements,
   catchmentData,
   categoryOptions,
   brandOptions,
@@ -1414,6 +1440,7 @@ function Opportunity({
   presentBrands: PresentBrand[]
   missingBrands: MissingBrand[]
   requirements: RequirementLocation[]
+  nationwideRequirements: NationwideRequirement[]
   catchmentData: CatchmentData
   categoryOptions: FilterOption[]
   brandOptions: FilterOption[]
@@ -1474,7 +1501,26 @@ function Opportunity({
     return [
       ...requirements.map((r) =>
         missingEntry(
-          { kind: 'req', key: `req:${r.id}`, req: r, brandId: r.brandId },
+          {
+            kind: 'req',
+            key: `req:${r.id}`,
+            req: r,
+            brandId: r.brandId,
+            nationwide: false,
+          },
+          profilesFor,
+          measuredFor
+        )
+      ),
+      ...nationwideRequirements.map((r) =>
+        missingEntry(
+          {
+            kind: 'req',
+            key: `req:nationwide:${r.id}`,
+            req: r,
+            brandId: r.brandId,
+            nationwide: true,
+          },
           profilesFor,
           measuredFor
         )
@@ -1487,7 +1533,15 @@ function Opportunity({
         )
       ),
     ]
-  }, [tab, presentBrands, missingBrands, requirements, profilesFor, measuredFor])
+  }, [
+    tab,
+    presentBrands,
+    missingBrands,
+    requirements,
+    nationwideRequirements,
+    profilesFor,
+    measuredFor,
+  ])
 
   const sizeFitCounts = useMemo(() => bandFitCounts(sizeEntries), [sizeEntries])
   const sizeUnknownCount = useMemo(() => unknownCount(sizeEntries), [sizeEntries])
@@ -1624,6 +1678,7 @@ function Opportunity({
             loading={landscape.loading}
             missing={missingBrands}
             requirements={requirements}
+            nationwideRequirements={nationwideRequirements}
             areaName={areaName}
             band={band}
             profilesFor={profilesFor}
@@ -1650,6 +1705,7 @@ export function UInspector({
   presentBrands,
   missingBrands,
   requirements,
+  nationwideRequirements,
   catchment,
   categoryOptions,
   brandOptions,
@@ -1671,6 +1727,7 @@ export function UInspector({
   presentBrands: PresentBrand[]
   missingBrands: MissingBrand[]
   requirements: RequirementLocation[]
+  nationwideRequirements: NationwideRequirement[]
   catchment: CatchmentData
   categoryOptions: FilterOption[]
   brandOptions: FilterOption[]
@@ -1720,6 +1777,7 @@ export function UInspector({
         presentBrands={presentBrands}
         missingBrands={missingBrands}
         requirements={requirements}
+        nationwideRequirements={nationwideRequirements}
         catchmentData={catchment}
         categoryOptions={categoryOptions}
         brandOptions={brandOptions}
@@ -1756,6 +1814,7 @@ export function UInspector({
         presentBrands={presentBrands}
         missingBrands={missingBrands}
         requirements={requirements}
+        nationwideRequirements={nationwideRequirements}
         catchmentData={catchment}
         categoryOptions={categoryOptions}
         brandOptions={brandOptions}

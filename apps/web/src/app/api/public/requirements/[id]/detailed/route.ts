@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase';
+import { createAdminClient } from '@/lib/supabase-admin';
 import { requirementRowToDetail } from '@/lib/requirement-detail';
 import type { RequirementDetailRow } from '@/lib/requirement-detail';
 

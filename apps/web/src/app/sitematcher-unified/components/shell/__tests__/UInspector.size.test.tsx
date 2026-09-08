@@ -159,6 +159,14 @@ function renderMissing(bandId: string | null) {
       loading={false}
       missing={[NANDOS, RANGE, ALLEY, GRAVITY, CENTRA, TESCO]}
       requirements={[requirement()]}
+      nationwideRequirements={[
+        requirement({
+          id: 'nationwide-1',
+          requirementId: 'nationwide-1',
+          brandId: 'nationwide',
+          companyName: 'Nationwide Coffee',
+        }),
+      ]}
       areaName="Luton"
       band={bandById(bandId as never)}
       profilesFor={profilesFor}
@@ -177,6 +185,8 @@ describe('Missing Brands panel — no band selected', () => {
       .map((b) => b.textContent ?? '')
       .filter((t) => t.length > 0)
     expect(names[0]).toContain('Taco Bell')
+    expect(names[1]).toContain('Nationwide Coffee')
+    expect(screen.getByText('Searching nationwide')).toBeInTheDocument()
     expect(screen.getByText('Alley Cats Pizza')).toBeInTheDocument()
     // Observed sizes are still shown, quietly.
     expect(screen.getAllByTitle('Gross internal area').length).toBeGreaterThan(0)
@@ -265,6 +275,7 @@ describe('Missing Brands panel — a band selected', () => {
         loading={false}
         missing={[CENTRA]}
         requirements={[]}
+        nationwideRequirements={[]}
         areaName="Luton"
         band={bandById('50+')}
         profilesFor={profilesFor}

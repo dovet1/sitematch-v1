@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createStoreService } from '@/lib/stores-service'
+import { enrichStores } from '@/lib/store-enrichment'
 import { requireGapFinderAccess } from '@/lib/gapfinder-access'
 import { isRetailCentreGapsEnabled } from '@/lib/feature-flags'
 
@@ -23,7 +24,8 @@ export async function GET(request: NextRequest) {
     const stores = geography === 'town'
       ? await service.getStoresInBua(areaId)
       : await service.getStoresInRetailCentre(areaId)
-    return NextResponse.json({ stores })
+    const enrichedStores = await enrichStores(stores)
+    return NextResponse.json({ stores: enrichedStores })
   } catch (error) {
     console.error('Selected gap-area stores error:', error)
     return NextResponse.json({ error: 'Failed to load stores' }, { status: 500 })

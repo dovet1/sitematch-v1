@@ -1,4 +1,7 @@
-import { fetchRequirementLocations } from '../requirements-service'
+import {
+  fetchRequirementData,
+  fetchRequirementLocations,
+} from '../requirements-service'
 
 function feature(props: Record<string, unknown>) {
   return {
@@ -57,5 +60,43 @@ describe('fetchRequirementLocations', () => {
     const [loc] = await fetchRequirementLocations()
     expect(loc.companyDomain).toBeNull()
     expect(loc.logoUrl).toBeNull()
+  })
+
+  it('maps coordinate-free nationwide requirements separately from map locations', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        geojson: { features: [feature({})] },
+        nationwide: [
+          {
+            id: 'req-nationwide',
+            company_name: 'Nationwide Coffee',
+            title: null,
+            listing_type: 'commercial',
+            site_size_min: 1200,
+            site_size_max: 2500,
+            site_acreage_min: null,
+            site_acreage_max: null,
+            dwelling_count_min: null,
+            dwelling_count_max: null,
+            company_domain: 'nationwide.coffee',
+            uploaded_logo_url: null,
+            brand_id: 'brand-nationwide',
+          },
+        ],
+      }),
+    }) as unknown as typeof fetch
+
+    const data = await fetchRequirementData()
+
+    expect(data.locations).toHaveLength(1)
+    expect(data.nationwide).toEqual([
+      expect.objectContaining({
+        id: 'req-nationwide',
+        requirementId: 'req-nationwide',
+        companyName: 'Nationwide Coffee',
+        brandId: 'brand-nationwide',
+      }),
+    ])
   })
 })

@@ -48,6 +48,27 @@ export type RequirementMapFeature = {
   }
 }
 
+export type NationwideRequirementMapItem = {
+  id: string
+  company_name: string
+  title: string | null
+  listing_type: string
+  company_domain: string | null
+  uploaded_logo_url: string | null
+  site_size_min: number | null
+  site_size_max: number | null
+  site_acreage_min: number | null
+  site_acreage_max: number | null
+  dwelling_count_min: number | null
+  dwelling_count_max: number | null
+  brand_id: string | null
+}
+
+export type RequirementMapData = {
+  features: RequirementMapFeature[]
+  nationwide: NationwideRequirementMapItem[]
+}
+
 type ListingLocationRow = {
   id?: string | null
   place_name?: string | null
@@ -401,6 +422,17 @@ export async function getRequirementMapFeaturesFromRequirements(
     filters?: RequirementMapFilters
   }
 ): Promise<RequirementMapFeature[]> {
+  const data = await getRequirementMapDataFromRequirements(supabase, options)
+  return data.features
+}
+
+export async function getRequirementMapDataFromRequirements(
+  supabase: any,
+  options: {
+    isFreeTier: boolean
+    filters?: RequirementMapFilters
+  }
+): Promise<RequirementMapData> {
   const filters = options.filters || {}
   const validRequirementIds = await getValidRequirementIdsForReferenceFilters(supabase, filters)
   const requirements = await fetchRequirements(supabase, {
@@ -409,19 +441,41 @@ export async function getRequirementMapFeaturesFromRequirements(
     validRequirementIds,
   })
 
-  return requirements.flatMap((requirement) => {
+  const features: RequirementMapFeature[] = []
+  const nationwide: NationwideRequirementMapItem[] = []
+
+  for (const requirement of requirements) {
     const locations = requirement.requirement_locations || []
     const primarySector = requirement.requirement_sectors?.[0]?.sector?.name || null
     const primaryUseClass = requirement.requirement_use_classes?.[0]?.use_class?.name || null
     const logoUrl = requirementLogoUrl(requirement)
 
-    return locations.flatMap((location) => {
+    if (locations.length === 0) {
+      nationwide.push({
+        id: requirement.id,
+        company_name: requirement.company_name || 'Unknown Company',
+        title: requirement.title || null,
+        listing_type: requirement.listing_type || 'commercial',
+        company_domain: requirement.company_domain || null,
+        uploaded_logo_url: requirement.logo_url || null,
+        site_size_min: requirement.site_size_min ?? null,
+        site_size_max: requirement.site_size_max ?? null,
+        site_acreage_min: requirement.site_acreage_min ?? null,
+        site_acreage_max: requirement.site_acreage_max ?? null,
+        dwelling_count_min: requirement.dwelling_count_min ?? null,
+        dwelling_count_max: requirement.dwelling_count_max ?? null,
+        brand_id: requirement.brand_id || null,
+      })
+      continue
+    }
+
+    for (const location of locations) {
       const coordinates = normalizeRequirementCoordinates(location.coordinates)
       if (!coordinates) {
-        return []
+        continue
       }
 
-      return [{
+      features.push({
         type: 'Feature' as const,
         geometry: {
           type: 'Point' as const,
@@ -449,9 +503,11 @@ export async function getRequirementMapFeaturesFromRequirements(
           formatted_address: location.formatted_address || null,
           brand_id: requirement.brand_id || null,
         },
-      }]
-    })
-  })
+      })
+    }
+  }
+
+  return { features, nationwide }
 }
 
 async function getValidRequirementIdsForReferenceFilters(

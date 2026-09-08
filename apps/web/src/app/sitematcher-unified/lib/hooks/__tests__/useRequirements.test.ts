@@ -1,12 +1,15 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { useRequirements } from '../useRequirements'
-import { fetchRequirementLocations } from '../../services/requirements-service'
-import type { RequirementLocation } from '../../../types/unified-workspace'
+import { fetchRequirementData } from '../../services/requirements-service'
+import type {
+  NationwideRequirement,
+  RequirementLocation,
+} from '../../../types/unified-workspace'
 
 jest.mock('../../services/requirements-service')
 
-const mockFetch = fetchRequirementLocations as jest.MockedFunction<
-  typeof fetchRequirementLocations
+const mockFetch = fetchRequirementData as jest.MockedFunction<
+  typeof fetchRequirementData
 >
 
 // Centre ~ central London.
@@ -49,6 +52,22 @@ const D = loc('d', 'L3', 'BrandThree', 51.52, -0.12, 'brand-3')
 const C = loc('c', 'L2', 'FarBrand', 52.5, -0.12, 'brand-far')
 
 const FIXTURES = [A, B, D, C]
+const NATIONWIDE: NationwideRequirement = {
+  id: 'nationwide-1',
+  requirementId: 'nationwide-1',
+  brandId: 'brand-nationwide',
+  companyName: 'Nationwide Brand',
+  title: null,
+  listingType: null,
+  siteSizeMin: null,
+  siteSizeMax: null,
+  siteAcreageMin: null,
+  siteAcreageMax: null,
+  dwellingCountMin: null,
+  dwellingCountMax: null,
+  companyDomain: null,
+  logoUrl: null,
+}
 
 // A small polygon covering only D (excludes A/B, and the far-away C).
 const isochroneAroundD: GeoJSON.Polygon = {
@@ -66,7 +85,7 @@ const isochroneAroundD: GeoJSON.Polygon = {
 
 beforeEach(() => {
   mockFetch.mockReset()
-  mockFetch.mockResolvedValue(FIXTURES)
+  mockFetch.mockResolvedValue({ locations: FIXTURES, nationwide: [NATIONWIDE] })
 })
 
 describe('useRequirements — distance mode (no isochrone)', () => {
@@ -112,5 +131,14 @@ describe('useRequirements — findActiveRequirementByBrandId stays UK-wide', () 
     await waitFor(() => expect(result.current.withinCatchment).toHaveLength(3))
     expect(result.current.findActiveRequirementByBrandId(null)).toBeUndefined()
     expect(result.current.findActiveRequirementByBrandId('nope')).toBeUndefined()
+  })
+
+  it('returns nationwide requirements for every assessed location', async () => {
+    const { result } = renderHook(() => useRequirements(center, 5))
+    await waitFor(() => expect(result.current.nationwide).toHaveLength(1))
+    expect(result.current.nationwide[0].companyName).toBe('Nationwide Brand')
+    expect(
+      result.current.findActiveRequirementByBrandId('brand-nationwide')?.requirementId
+    ).toBe('nationwide-1')
   })
 })

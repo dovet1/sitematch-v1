@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { checkSubscriptionAccess } from '@/lib/subscription';
-import { getRequirementMapFeaturesFromRequirements } from '@/lib/requirement-map-data';
+import { getRequirementMapDataFromRequirements } from '@/lib/requirement-map-data';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const hasAccess = user ? await checkSubscriptionAccess(user.id) : false;
     const isFreeTier = !hasAccess;
 
-    const features = await getRequirementMapFeaturesFromRequirements(supabase, {
+    const { features, nationwide } = await getRequirementMapDataFromRequirements(supabase, {
       isFreeTier,
       filters: {
         companyName,
@@ -50,9 +50,10 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    if (features.length === 0) {
+    if (features.length === 0 && nationwide.length === 0) {
       return NextResponse.json({
         geojson: { type: 'FeatureCollection', features: [] },
+        nationwide: [],
         total: 0,
         bounds: { north, south, east, west },
         message: 'No active requirements with specific locations found for these filters',
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       geojson: { type: 'FeatureCollection', features },
+      nationwide,
       total: features.length,
       bounds: { north, south, east, west },
       metadata: {

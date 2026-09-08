@@ -27,7 +27,7 @@ import type {
   PlanningApplication,
   RequirementContact,
   RequirementDetail,
-  RequirementLocation,
+  RequirementSummary,
   StoreEstate,
 } from '../../types/unified-workspace'
 import { Avatar, Kicker, planningStateBadgeClass } from './UInspector'
@@ -762,7 +762,7 @@ export function UBrandModal({
   missing: MissingFascia
   areaName: string
   // A live requirement whose companyName matches this brand, if any.
-  liveRequirement: RequirementLocation | undefined
+  liveRequirement: RequirementSummary | undefined
   onClose: () => void
 }) {
   const { detail, loading } = useRequirementDetail(
