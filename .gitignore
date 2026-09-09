@@ -90,3 +90,4 @@ apps/web/src/lib/epc/__tests__/fixtures/normalise-estate.json
 
 # Generated planning audit output: live record data, rebuilt by its script on demand.
 /apps/web/reports/
+/planning-reasons*.html

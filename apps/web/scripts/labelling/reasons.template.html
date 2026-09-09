@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>window.__REASONS_REMOTE__ = /*__REMOTE__*/null/*__REMOTE__*/;window.__REASONS_LABELLER__ = /*__LABELLER__*/"rob"/*__LABELLER__*/;</script>
+</head>
+<body style="margin:0">
+<title>Where Rob and the Classifier Part</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper:      #EFF2F1;
+    --surface:    #FFFFFF;
+    --sunken:     #E4E9E7;
+    --ink:        #17262B;
+    --ink-soft:   #4E6169;
+    --ink-faint:  #7E9098;
+    --rule:       #D2DBD9;
+    --accent:     #16605C;
+    --accent-ink: #FFFFFF;
+    --missed:     #A8412B;
+    --missed-wash:#F7E7E2;
+    --wasted:     #8A6A1F;
+    --wasted-wash:#F6EFDD;
+    --near:       #3C5A78;
+    --near-wash:  #E5EBF2;
+    --shadow:     0 1px 1px rgba(23,38,43,.04), 0 10px 30px -18px rgba(23,38,43,.35);
+
+    --ui:   "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --doc:  "Newsreader", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #10181B;
+      --surface:    #172126;
+      --sunken:     #131C20;
+      --ink:        #E4EAE8;
+      --ink-soft:   #9DAEB4;
+      --ink-faint:  #71838A;
+      --rule:       #26343A;
+      --accent:     #6FC3B8;
+      --accent-ink: #0C1416;
+      --missed:     #E39079;
+      --missed-wash:#2C1B16;
+      --wasted:     #D6B45F;
+      --wasted-wash:#26200F;
+      --near:       #8FB2D3;
+      --near-wash:  #16212C;
+      --shadow:     0 1px 1px rgba(0,0,0,.4), 0 12px 32px -18px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:      #10181B;
+    --surface:    #172126;
+    --sunken:     #131C20;
+    --ink:        #E4EAE8;
+    --ink-soft:   #9DAEB4;
+    --ink-faint:  #71838A;
+    --rule:       #26343A;
+    --accent:     #6FC3B8;
+    --accent-ink: #0C1416;
+    --missed:     #E39079;
+    --missed-wash:#2C1B16;
+    --wasted:     #D6B45F;
+    --wasted-wash:#26200F;
+    --near:       #8FB2D3;
+    --near-wash:  #16212C;
+    --shadow:     0 1px 1px rgba(0,0,0,.4), 0 12px 32px -18px rgba(0,0,0,.8);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--ui); font-size: 15px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 50rem; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
+
+  header h1 {
+    font-size: clamp(1.6rem, 4vw, 2.15rem); font-weight: 600; letter-spacing: -.02em;
+    margin: 0; text-wrap: balance;
+  }
+  .lede { color: var(--ink-soft); margin: .6rem 0 0; max-width: 62ch; }
+  .lede strong { color: var(--ink); font-weight: 500; }
+
+  .meter { display: flex; align-items: center; gap: .8rem; margin: 1.6rem 0 0; }
+  .meter .track { flex: 1; height: 4px; background: var(--sunken); border-radius: 2px; overflow: hidden; }
+  .meter .fill { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s ease; }
+  .meter .count { font-family: var(--mono); font-size: .8rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  .band { margin-top: 2.75rem; }
+  .band-head { display: flex; align-items: baseline; gap: .7rem; flex-wrap: wrap; padding-bottom: .5rem; border-bottom: 1px solid var(--rule); }
+  .band-head h2 { font-size: 1.02rem; font-weight: 600; margin: 0; letter-spacing: -.01em; }
+  .band-head .cost { font-size: .82rem; color: var(--ink-soft); }
+  .band-head .n { font-family: var(--mono); font-size: .74rem; color: var(--ink-faint); margin-left: auto; }
+
+  .rec {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+    box-shadow: var(--shadow); padding: 1.3rem 1.4rem 1.15rem; margin-top: 1rem;
+    border-left: 3px solid var(--edge);
+  }
+  .rec.missed { --edge: var(--missed); }
+  .rec.wasted { --edge: var(--wasted); }
+  .rec.near   { --edge: var(--near); }
+
+  .eyebrow { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; font-size: .7rem;
+    text-transform: uppercase; letter-spacing: .09em; color: var(--ink-faint); }
+  .eyebrow .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+  .ref { font-family: var(--mono); font-size: .78rem; color: var(--accent); text-transform: none; letter-spacing: 0; }
+  .desc { font-family: var(--doc); font-size: 1.14rem; line-height: 1.5; margin: .7rem 0 0; max-width: 60ch; }
+  .addr { font-size: .82rem; color: var(--ink-soft); margin: .45rem 0 0; }
+
+  .facts { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: .95rem; padding-top: .8rem; border-top: 1px solid var(--rule); }
+  .facts div { display: flex; flex-direction: column; gap: .1rem; }
+  .facts dt { font-size: .64rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-faint); }
+  .facts dd { margin: 0; font-family: var(--mono); font-size: .8rem; }
+
+  .split { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-top: .9rem; }
+  .verdict { display: inline-flex; align-items: baseline; gap: .4rem; font-size: .78rem;
+    padding: .28rem .55rem; border-radius: 2px; background: var(--sunken); }
+  .verdict b { font-weight: 600; text-transform: uppercase; letter-spacing: .05em; font-size: .72rem; }
+  .verdict.you { background: var(--wash); color: var(--edge); }
+  .rec.missed .verdict.you { --wash: var(--missed-wash); }
+  .rec.wasted .verdict.you { --wash: var(--wasted-wash); }
+  .rec.near   .verdict.you { --wash: var(--near-wash); }
+  .verdict span { color: var(--ink-soft); }
+  .verdict.you span { color: inherit; opacity: .85; }
+
+  .ask { margin-top: 1rem; }
+  .ask label { display: block; font-size: .78rem; color: var(--ink-soft); margin-bottom: .4rem; }
+  .ask textarea {
+    width: 100%; min-height: 4.6rem; resize: vertical; font: inherit; font-size: .92rem;
+    color: var(--ink); background: var(--sunken); border: 1px solid var(--rule);
+    border-radius: 3px; padding: .6rem .7rem; line-height: 1.5;
+  }
+  .ask textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; background: var(--surface); }
+  .ask textarea::placeholder { color: var(--ink-faint); }
+  .state { font-size: .72rem; color: var(--ink-faint); margin-top: .35rem; min-height: 1em;
+    font-variant-numeric: tabular-nums; }
+  .state.saved { color: var(--accent); }
+
+  .link { font-size: .76rem; }
+  .link a { color: var(--accent); }
+
+  .notice { margin-top: 1.5rem; border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+    background: var(--surface); border-radius: 3px; padding: .7rem .9rem; font-size: .85rem; color: var(--ink-soft); }
+  .notice[hidden] { display: none !important; }
+
+  footer { margin-top: 3.5rem; padding-top: 1.2rem; border-top: 1px solid var(--rule);
+    font-size: .8rem; color: var(--ink-faint); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<style>
+  .controls { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .btn { font: inherit; font-size: .82rem; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--rule); border-radius: 3px; padding: .45rem .8rem; cursor: pointer; }
+  .btn:hover { border-color: var(--accent); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .copied { font-size: .78rem; color: var(--accent); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Where Rob and the classifier part</h1>
+    <p class="lede">Fourteen planning applications where the automated relevance judgement
+      disagrees with yours. Your verdict stands — we are not asking you to change it. What the
+      classifier is missing is <strong>the reasoning behind it</strong>, and a sentence from you
+      on each of these teaches it more than any amount of rewriting from our side.</p>
+    <div class="meter">
+      <span class="track"><i class="fill" id="fill"></i></span>
+      <span class="count" id="count">0 of 14</span>
+    </div>
+    <div class="notice" id="notice" hidden></div>
+  </header>
+
+  <main id="bands"></main>
+
+  <footer>
+    <div class="controls">
+      <button class="btn" id="copy" type="button">Copy all answers</button>
+      <span class="copied" id="copied"></span>
+    </div>
+    Answers send as you type, and are kept in this browser as well. Drawn only from the records
+    used for tuning, never from the held-back set that tests whether any of this generalises.
+  </footer>
+</div>
+
+<script>
+const RECORDS = /*__RECORDS__*/[]/*__RECORDS__*/;
+</script>
+<script>
+const BANDS = [
+  { key: 'missed', title: 'It said low, you said high',
+    cost: 'The expensive kind: an opportunity nobody ever looks at.' },
+  { key: 'wasted', title: 'It said high, you said low',
+    cost: 'Sends a record to paid research that you would have skipped.' },
+  { key: 'near',   title: 'It said medium, you said high',
+    cost: 'A near miss. Falls just below the bar that triggers research.' },
+];
+
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+/* Rob is outside the organisation, so there is no signed-in path and no shared store: a page
+   that declares one is organisation-internal by construction. This posts with the public anon
+   key exactly as the labelling page does, and that key only ever grants INSERT -- so the page
+   can write a reason but can never read anyone's back. The local copy is therefore the only
+   thing that survives a reload here, and the export at the bottom is the safety net. */
+const REMOTE = window.__REASONS_REMOTE__ || null;
+const LABELLER = window.__REASONS_LABELLER__ || 'rob';
+const answers = new Map();     // id -> text
+const timers = new Map();
+
+function render() {
+  const root = document.getElementById('bands');
+  root.innerHTML = BANDS.map((band) => {
+    const items = RECORDS.filter((r) => r.group === band.key);
+    if (items.length === 0) return '';
+    return `
+      <section class="band">
+        <div class="band-head">
+          <h2>${esc(band.title)}</h2>
+          <span class="cost">${esc(band.cost)}</span>
+          <span class="n">${items.length}</span>
+        </div>
+        ${items.map((r) => `
+          <article class="rec ${band.key}">
+            <div class="eyebrow">
+              <span>${esc(r.authority || 'Unknown authority')}</span><i class="dot"></i>
+              <span class="ref">${esc(r.reference)}</span>
+            </div>
+            <p class="desc">${esc(r.description)}</p>
+            ${r.address ? `<p class="addr">${esc(r.address)}</p>` : ''}
+            <dl class="facts">
+              ${r.commercialWork ? `<div><dt>Commercial work</dt><dd>${esc(r.commercialWork)}</dd></div>` : ''}
+              ${r.useClass ? `<div><dt>Use class</dt><dd>${esc(r.useClass)}</dd></div>` : ''}
+              ${r.councilUrl ? `<div><dt>Source</dt><dd class="link"><a href="${esc(r.councilUrl)}" target="_blank" rel="noopener">Council record &#8599;</a></dd></div>` : ''}
+            </dl>
+            <div class="split">
+              <span class="verdict you"><b>You</b><span>${esc(r.rob)}</span></span>
+              <span class="verdict"><b>Classifier</b><span>${esc(r.model)}</span></span>
+            </div>
+            <div class="ask">
+              <label for="t-${r.id}">Why is this ${esc(r.rob)}?</label>
+              <textarea id="t-${r.id}" data-id="${r.id}" spellcheck="true"
+                placeholder="One sentence is plenty. What is it about this application that decides it for you?"></textarea>
+              <p class="state" id="s-${r.id}"></p>
+            </div>
+          </article>`).join('')}
+      </section>`;
+  }).join('');
+
+  for (const el of root.querySelectorAll('textarea')) {
+    el.value = answers.get(el.dataset.id) ?? '';
+    el.addEventListener('input', () => queueSave(el.dataset.id, el.value));
+  }
+  updateMeter();
+}
+
+function updateMeter() {
+  let done = 0;
+  for (const r of RECORDS) if ((answers.get(r.id) ?? '').trim().length > 0) done++;
+  document.getElementById('count').textContent = `${done} of ${RECORDS.length}`;
+  document.getElementById('fill').style.width = (done / RECORDS.length) * 100 + '%';
+}
+
+function setState(id, text, saved) {
+  const el = document.getElementById('s-' + id);
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('saved', !!saved);
+}
+
+/* Typing should not fire a write per keystroke, so each box settles for a moment first.
+   The local copy updates immediately either way, so the meter never lags behind the page. */
+function queueSave(id, value) {
+  answers.set(id, value);
+  writeLocal();
+  updateMeter();
+  clearTimeout(timers.get(id));
+  if (!value.trim()) { setState(id, '', false); return; }
+  if (!REMOTE) { setState(id, 'Saved in this browser', true); return; }
+  setState(id, 'Saving…', false);
+  timers.set(id, setTimeout(async () => {
+    const ok = await post(id, value);
+    if (ok) { setState(id, 'Sent', true); void flush(); }
+    else { queue(id, value); setState(id, 'Saved here — will send when the connection returns', false); }
+  }, 900));
+}
+
+async function post(id, value) {
+  const record = RECORDS.find((r) => r.id === id);
+  try {
+    const res = await fetch(REMOTE.url + '/rest/v1/planning_label_reasons', {
+      method: 'POST',
+      headers: {
+        apikey: REMOTE.key, Authorization: 'Bearer ' + REMOTE.key,
+        'Content-Type': 'application/json', Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        labeller: LABELLER, record_id: id, reference: record.reference,
+        verdict: record.rob, model_verdict: record.model, reason: value,
+      }),
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
+const pending = {
+  read() { try { return JSON.parse(localStorage.getItem('reasons-pending') || '[]'); } catch { return []; } },
+  write(v) { try { localStorage.setItem('reasons-pending', JSON.stringify(v)); } catch {} },
+};
+function queue(id, value) {
+  const q = pending.read().filter((e) => e.id !== id);
+  q.push({ id, value });
+  pending.write(q);
+}
+async function flush() {
+  const q = pending.read();
+  if (q.length === 0) return;
+  const left = [];
+  for (const e of q) if (!(await post(e.id, e.value))) left.push(e);
+  pending.write(left);
+}
+
+function writeLocal() {
+  try { localStorage.setItem('reasons-answers', JSON.stringify(Object.fromEntries(answers))); } catch {}
+}
+function readLocal() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('reasons-answers') || '{}');
+    for (const [k, v] of Object.entries(raw)) if (typeof v === 'string') answers.set(k, v);
+  } catch {}
+}
+
+/* The page cannot read back what the database holds, so this is how the work leaves the
+   browser if anything goes wrong with sending. It is always accurate, offline included. */
+function exportText() {
+  return RECORDS.filter((r) => (answers.get(r.id) ?? '').trim())
+    .map((r) => `${r.reference} (you: ${r.rob}, classifier: ${r.model})\n${answers.get(r.id).trim()}`)
+    .join('\n\n');
+}
+
+function notice(text) {
+  const el = document.getElementById('notice');
+  el.textContent = text;
+  el.hidden = false;
+}
+
+/* Render first from nothing, so the page is readable the instant it opens, then fill in
+   whatever has already been written once the store answers. */
+readLocal();
+render();
+void flush();
+if (!REMOTE) {
+  notice('This copy has no connection details, so your answers stay in this browser. Use “Copy all answers” at the bottom when you are done.');
+}
+
+document.getElementById('copy').addEventListener('click', async () => {
+  const text = exportText();
+  const status = document.getElementById('copied');
+  if (!text) { status.textContent = 'Nothing written yet.'; return; }
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch { ok = false; }
+  status.textContent = ok ? 'Copied. Paste it into an email or a message.' : 'Copy did not work — select the text and copy it manually.';
+});
+</script>
+
+</body>
+</html>
