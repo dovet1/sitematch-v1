@@ -38,6 +38,12 @@
     "associate:candidate-constraints": "tsx scripts/associate-candidate-constraints.ts",
     "inspect:candidate-constraints": "tsx scripts/inspect-candidate-constraints.ts",
     "export:constraint-debug-map": "tsx scripts/export-constraint-debug-map.ts",
+    "smoke:planning-llm": "tsx scripts/smoke-openrouter-planning.ts",
+    "settle:planning-reservations": "tsx scripts/settle-orphaned-planning-reservations.ts",
+    "measure:planning-research": "tsx scripts/measure-planning-research.ts",
+    "audit:planning-document-coverage": "tsx scripts/audit-planning-document-coverage.ts",
+    "test:planning-research-one": "tsx scripts/test-one-planning-research.ts",
+    "probe:plota-archive": "tsx scripts/probe-plota-archive-filters.ts",
     "find-sites-search": "tsx scripts/find-sites-search.ts",
     "export:find-sites-results-map": "tsx scripts/export-find-sites-results-map.ts"
   },

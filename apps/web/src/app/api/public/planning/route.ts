@@ -6,6 +6,7 @@ import {
   validateBoundary,
   type Boundary,
 } from './planit'
+import { fetchStoredPlanningApplications } from './stored'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,9 +70,11 @@ export async function POST(request: NextRequest) {
         controller.enqueue(encoder.encode(JSON.stringify(payload) + '\n'))
       }
       try {
-        const result = await fetchPlanningApplications(boundary as Boundary, {
-          onProgress: (progress) => send({ type: 'progress', ...progress }),
-        })
+        const result = process.env.PLANNING_STORED_READ_ENABLED === 'true'
+          ? await fetchStoredPlanningApplications(boundary as Boundary)
+          : await fetchPlanningApplications(boundary as Boundary, {
+              onProgress: (progress) => send({ type: 'progress', ...progress }),
+            })
         send({ type: 'result', ...result })
       } catch (error) {
         // The stream has already returned 200, so failures are terminal lines

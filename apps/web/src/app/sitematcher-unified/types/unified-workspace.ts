@@ -164,6 +164,11 @@ export interface PlanningApplication {
   nDwellings: number | null
   applicantAddress: string | null
   agentAddress: string | null
+  provider?: 'planit' | 'plota'
+  developmentId?: string | null
+  intelligenceTier?: boolean
+  locationProvenance?: 'source_exact' | 'source_centroid' | 'postcode_centroid' | 'missing'
+  commercialWork?: string | null
 }
 
 // Map sub-selection (a store dot, etc.). Requirements are deferred in v1.

@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>window.__CALIBRATION_STANDALONE__ = true;window.__CALIBRATION_REMOTE__ = /*__REMOTE__*/null/*__REMOTE__*/;</script>
+</head>
+<body style="margin:0">
+<title>Planning Calibration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper:      #F4F5F3;
+    --surface:    #FFFFFF;
+    --sunken:     #EAECE9;
+    --ink:        #16191C;
+    --ink-soft:   #545C62;
+    --ink-faint:  #868E94;
+    --rule:       #D8DCD8;
+    --accent:     #2D5D7C;
+    --accent-ink: #FFFFFF;
+    --accent-wash:#E3EBF1;
+    --agree:      #3F7A57;
+    --agree-wash: #E2EFE7;
+    --differ:     #A8452F;
+    --differ-wash:#F6E4DF;
+    --shadow:     0 1px 2px rgba(22,25,28,.06), 0 8px 24px -12px rgba(22,25,28,.18);
+
+    --step--1: .78rem;
+    --step-0:  .95rem;
+    --step-1:  1.12rem;
+    --step-2:  1.45rem;
+    --step-3:  1.9rem;
+
+    --ui: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --doc: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #121517;
+      --surface:    #1A1E21;
+      --sunken:     #15181A;
+      --ink:        #E8EBE9;
+      --ink-soft:   #A3ABB0;
+      --ink-faint:  #767E84;
+      --rule:       #2A3035;
+      --accent:     #7FB0D0;
+      --accent-ink: #10161B;
+      --accent-wash:#1E2B35;
+      --agree:      #7FBF98;
+      --agree-wash: #1B2922;
+      --differ:     #E08A75;
+      --differ-wash:#2E1E1A;
+      --shadow:     0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:      #121517;
+    --surface:    #1A1E21;
+    --sunken:     #15181A;
+    --ink:        #E8EBE9;
+    --ink-soft:   #A3ABB0;
+    --ink-faint:  #767E84;
+    --rule:       #2A3035;
+    --accent:     #7FB0D0;
+    --accent-ink: #10161B;
+    --accent-wash:#1E2B35;
+    --agree:      #7FBF98;
+    --agree-wash: #1B2922;
+    --differ:     #E08A75;
+    --differ-wash:#2E1E1A;
+    --shadow:     0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--ui);
+    font-size: var(--step-0);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 60rem; margin: 0 auto; padding: 1.75rem 1.25rem 4rem; }
+
+  /* ---- masthead ---- */
+  .masthead { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  h1 { font-size: var(--step-2); font-weight: 700; letter-spacing: -.015em; margin: 0; text-wrap: balance; }
+  .standfirst { color: var(--ink-soft); font-size: var(--step--1); margin: .3rem 0 0; max-width: 46ch; }
+  .tally { display: flex; gap: 1.4rem; font-variant-numeric: tabular-nums; }
+  .tally div { text-align: right; }
+  .tally b { display: block; font-size: var(--step-1); font-weight: 600; line-height: 1.2; }
+  .tally span { font-size: .68rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-faint); }
+
+  .rail { height: 3px; background: var(--sunken); border-radius: 2px; margin: 1.1rem 0 1.5rem; overflow: hidden; }
+  .rail i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .25s ease; }
+
+  /* ---- the record under judgement ---- */
+  .record {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    padding: 1.5rem 1.6rem 1.35rem;
+  }
+  .eyebrow {
+    display: flex; gap: .55rem; align-items: center; flex-wrap: wrap;
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint);
+  }
+  .eyebrow .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+  .ref { font-family: var(--mono); font-size: var(--step--1); color: var(--accent); letter-spacing: -.01em; }
+  .addr { margin: .5rem 0 0; font-size: var(--step--1); color: var(--ink-soft); }
+  .desc {
+    font-family: var(--doc);
+    font-size: var(--step-1);
+    line-height: 1.55;
+    margin: .95rem 0 0;
+    max-width: 62ch;
+  }
+  .facts {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: .1rem 1.4rem; margin-top: 1.15rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+  }
+  .facts div { padding: .25rem 0; }
+  .facts dt { font-size: .66rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-faint); }
+  .facts dd { margin: .1rem 0 0; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+  .facts dd.mono { font-family: var(--mono); }
+
+  /* ---- choices ---- */
+  .ask { margin-top: 1.5rem; }
+  .ask[hidden] { display: none !important; }
+  .ask-label {
+    display: flex; align-items: baseline; gap: .6rem;
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint);
+    margin-bottom: .55rem;
+  }
+  .ask-label em { font-style: normal; color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .opts { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .opt {
+    display: inline-flex; align-items: center; gap: .55rem;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 3px;
+    padding: .55rem .8rem; font: inherit; font-size: var(--step--1); cursor: pointer;
+    transition: border-color .12s, background .12s, transform .06s;
+  }
+  .opt:hover { border-color: var(--accent); }
+  .opt:active { transform: translateY(1px); }
+  .opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .opt kbd {
+    font-family: var(--mono); font-size: .7rem; min-width: 1.1rem; text-align: center;
+    background: var(--sunken); border-radius: 2px; padding: .1rem .25rem; color: var(--ink-faint);
+  }
+  .opt .hint { color: var(--ink-faint); font-size: .72rem; }
+  .opt[aria-pressed="true"] { background: var(--accent-wash); border-color: var(--accent); }
+  .opt[aria-pressed="true"] kbd { background: var(--accent); color: var(--accent-ink); }
+
+  /* ---- the dwelling count, which is a number rather than a choice ---- */
+  .count { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+  .count input {
+    font: inherit; font-family: var(--mono); font-size: var(--step--1); color: var(--ink);
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+    padding: .55rem .7rem; width: 11rem;
+  }
+  .count input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .count input.bad { border-color: var(--differ); }
+
+  /* ---- verdict reveal ---- */
+  .verdict { margin-top: 1.4rem; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+  .verdict[hidden] { display: none !important; }
+  .verdict-head {
+    background: var(--sunken); padding: .5rem .85rem;
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-faint);
+  }
+  .verdict-body { padding: .85rem; display: grid; gap: .7rem; }
+  .cmp { display: grid; grid-template-columns: 7.5rem 1fr; gap: .5rem 1rem; align-items: center; }
+  .cmp dt { font-size: .68rem; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-faint); }
+  .cmp dd { margin: 0; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: var(--step--1); }
+  .chip {
+    font-size: .68rem; letter-spacing: .04em; padding: .16rem .45rem; border-radius: 2px;
+    text-transform: uppercase; font-weight: 600;
+  }
+  .chip.agree { background: var(--agree-wash); color: var(--agree); }
+  .chip.differ { background: var(--differ-wash); color: var(--differ); }
+  .model-summary { font-family: var(--doc); color: var(--ink-soft); font-size: var(--step--1); margin: 0; }
+
+  /* ---- controls ---- */
+  .controls { display: flex; align-items: center; gap: .6rem; margin-top: 1.25rem; flex-wrap: wrap; }
+  .btn {
+    background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-radius: 3px;
+    padding: .5rem .8rem; font: inherit; font-size: var(--step--1); cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn[disabled] { opacity: .4; cursor: default; }
+  .spacer { flex: 1; }
+  .note { font-size: .72rem; color: var(--ink-faint); }
+  .note a { color: var(--accent); }
+
+  .banner {
+    border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+    background: var(--surface); padding: .6rem .8rem; border-radius: 3px;
+    font-size: var(--step--1); color: var(--ink-soft); margin-bottom: 1.1rem;
+  }
+  .banner[hidden] { display: none !important; }
+
+  /* ---- who is labelling ---- */
+  .gate { max-width: 30rem; margin: 2rem auto 0; }
+  .gate h2 { font-size: var(--step-2); margin: 0 0 .5rem; letter-spacing: -.015em; }
+  .gate p { color: var(--ink-soft); font-size: var(--step--1); margin: 0 0 1.2rem; }
+  .gate form { display: flex; gap: .5rem; flex-wrap: wrap; }
+  .gate input {
+    flex: 1 1 12rem; font: inherit; font-size: var(--step-0); color: var(--ink);
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 3px; padding: .6rem .7rem;
+  }
+  .gate input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .who { display: flex; align-items: center; gap: .45rem; font-size: .72rem; color: var(--ink-faint); }
+  .who b { color: var(--ink); font-weight: 600; }
+  .who button {
+    background: none; border: 0; padding: 0; font: inherit; font-size: .72rem;
+    color: var(--accent); cursor: pointer; text-decoration: underline;
+  }
+
+  /* ---- handing results back ---- */
+  .export { margin-top: 1.5rem; }
+  .export h2 { font-size: var(--step-1); margin: 0 0 .3rem; }
+  .export p { color: var(--ink-soft); font-size: var(--step--1); margin: 0 0 .8rem; max-width: 58ch; }
+  .export textarea {
+    width: 100%; min-height: 15rem; font-family: var(--mono); font-size: .72rem; line-height: 1.5;
+    color: var(--ink); background: var(--sunken); border: 1px solid var(--rule); border-radius: 3px;
+    padding: .7rem; resize: vertical; white-space: pre; overflow-wrap: normal; overflow-x: auto;
+  }
+  .export textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .done { text-align: center; padding: 3rem 1rem; }
+  .done h2 { font-size: var(--step-3); margin: 0 0 .4rem; }
+  .done p { color: var(--ink-soft); max-width: 44ch; margin: 0 auto; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (max-width: 34rem) {
+    .cmp { grid-template-columns: 1fr; gap: .2rem; }
+    .tally { gap: 1rem; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <div>
+      <h1>Planning Calibration</h1>
+      <p class="standfirst">Three questions per application, judged as a commercial property professional would. The model's answer stays hidden until you commit, so your label is independent of it.</p>
+      <p class="who" id="who" hidden></p>
+    </div>
+    <div class="tally">
+      <div><b id="t-done">0</b><span>Labelled</span></div>
+      <div><b id="t-left">0</b><span>Remaining</span></div>
+      <div><b id="t-agree">—</b><span>Agreement</span></div>
+    </div>
+  </header>
+
+  <div class="rail"><i id="rail"></i></div>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <main id="stage"></main>
+</div>
+
+<script>
+const RECORDS = /*__RECORDS__*/[]/*__RECORDS__*/;
+
+/* Three questions, and the wording matters more than it looks.
+   Relevance is no longer "is there commercial space here" but "is this worth paying to
+   investigate", because that is what the answer is used for: it gates the expensive
+   document and web-search pass. The other two are deliberately independent, so a block of
+   flats with a shop underneath is answered without anyone deciding which half dominates. */
+const RELEVANCE = [
+  { key: "high",   label: "High",   hint: "worth paying to research who is behind it" },
+  { key: "medium", label: "Medium", hint: "some commercial effect, too small or thin to chase" },
+  { key: "low",    label: "Low",    hint: "not worth spending money on" },
+];
+
+/* The wording is deliberately "create or change", not "would the result be occupiable".
+   This answer gates the expensive document and web-search pass, and that pass is looking for
+   an occupier to identify. A trading shop getting a new shopfront contains occupiable space
+   but has no occupier to find, so paying to research it returns nothing. */
+const COMMERCIAL = [
+  { key: "yes",     label: "Yes",     hint: "a unit is built, or changes to a different use" },
+  { key: "no",      label: "No",      hint: "the unit carries on as it is, or there is none" },
+  { key: "unclear", label: "Unclear", hint: "the description does not settle it" },
+];
+
+const STEPS = ["relevance", "commercial", "dwellings", "verdict"];
+
+const state = {
+  index: 0,
+  step: "relevance",
+  labels: new Map(),   // keyed by "<labellerSlug>__<recordId>"
+  draft: { relevance: null, createsCommercialSpace: null, dwellingCount: null },
+  labeller: null,      // { name, slug }
+  db: null,
+  persist: "memory",
+};
+
+/* Each labeller writes under their own key, so two people can work through the same
+   sample without overwriting one another — and where both label a record, the pair is
+   kept, which is what makes an inter-rater comparison possible. There is no viewer
+   identity available to the page, so the name is self-declared. */
+function slugify(name) {
+  const s = String(name).toLowerCase().normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 24);
+  return s || "anon";
+}
+const docIdFor = (recordId) => state.labeller.slug + "__" + recordId;
+const labelFor = (recordId) => (state.labeller ? state.labels.get(docIdFor(recordId)) : undefined);
+
+/* ---------- persistence ---------- */
+const local = {
+  read() {
+    try { return JSON.parse(localStorage.getItem("planning-labels") || "{}"); }
+    catch { return {}; }
+  },
+  write(all) {
+    try { localStorage.setItem("planning-labels", JSON.stringify(all)); } catch {}
+  },
+};
+
+function rememberLabeller(labeller) {
+  try { localStorage.setItem("planning-labeller", JSON.stringify(labeller)); } catch {}
+}
+function recallLabeller() {
+  try {
+    const raw = localStorage.getItem("planning-labeller");
+    if (!raw) return null;
+    const v = JSON.parse(raw);
+    return v && v.name && v.slug ? v : null;
+  } catch { return null; }
+}
+
+const STANDALONE = typeof window !== "undefined" && window.__CALIBRATION_STANDALONE__ === true;
+
+/* When the page carries database details it posts every judgement straight to the shared
+   table. The local copy is still written first and is what the page reads back, so a
+   dropped connection costs nothing: unsent rows queue and go on the next successful post. */
+const REMOTE = (typeof window !== "undefined" && window.__CALIBRATION_REMOTE__) || null;
+
+const pending = {
+  read() { try { return JSON.parse(localStorage.getItem("planning-pending") || "[]"); } catch { return []; } },
+  write(v) { try { localStorage.setItem("planning-pending", JSON.stringify(v)); } catch {} },
+};
+
+async function postLabel(entry) {
+  if (!REMOTE) return true;
+  try {
+    const res = await fetch(REMOTE.url + "/rest/v1/planning_label_submissions", {
+      method: "POST",
+      headers: {
+        apikey: REMOTE.key,
+        Authorization: "Bearer " + REMOTE.key,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(entry),
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
+function entryFor(recordId, label) {
+  const rec = RECORDS.find((r) => r.id === recordId);
+  return {
+    labeller: state.labeller.slug,
+    record_id: recordId,
+    reference: rec ? rec.reference : null,
+    relevance: label.relevance,
+    creates_commercial_space: label.createsCommercialSpace,
+    // null and 0 mean different things here and the column is built to keep them apart:
+    // null is "the application does not say", 0 is "it says there are none".
+    dwelling_count: label.dwellingCount === undefined ? null : label.dwellingCount,
+  };
+}
+
+async function flushPending() {
+  if (!REMOTE) return;
+  const queue = pending.read();
+  if (queue.length === 0) return;
+  const stillPending = [];
+  for (const entry of queue) {
+    const ok = await postLabel(entry);
+    if (!ok) stillPending.push(entry);
+  }
+  pending.write(stillPending);
+}
+
+async function loadLabels() {
+  state.labels.clear();
+  try {
+    const db = STANDALONE ? null : await window.claude?.use?.("db");
+    if (db) {
+      state.db = db;
+      state.persist = "db";
+      const snap = await db.collection("labels").limit(1000).get();
+      for (const d of snap.docs) state.labels.set(d.id, d.data());
+      return;
+    }
+  } catch (e) { /* fall through to this browser only */ }
+  state.persist = "local";
+  const all = local.read();
+  for (const [id, v] of Object.entries(all)) state.labels.set(id, v);
+}
+
+async function saveLabel(recordId, label) {
+  const id = docIdFor(recordId);
+  state.labels.set(id, label);
+
+  // The local copy is written unconditionally and first: it is what resume reads, and it
+  // is the copy that survives a failed network call.
+  const all = local.read();
+  all[id] = label;
+  local.write(all);
+
+  if (REMOTE) {
+    const entry = entryFor(recordId, label);
+    const ok = await postLabel(entry);
+    if (!ok) {
+      const queue = pending.read();
+      queue.push(entry);
+      pending.write(queue);
+    } else {
+      await flushPending();
+    }
+    return;
+  }
+
+  if (state.db) {
+    try { await state.db.doc("labels/" + id).set(label); }
+    catch (e) { showBanner("That label is held in this browser only — saving to the shared store failed."); }
+  }
+}
+
+function showBanner(text) {
+  const b = document.getElementById("banner");
+  b.textContent = text;
+  b.hidden = false;
+}
+
+/* ---------- helpers ---------- */
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const homes = (n) => (n === null || n === undefined ? "not stated" : (n === 0 ? "none" : String(n)));
+
+function myLabelCount() {
+  if (!state.labeller) return 0;
+  const prefix = state.labeller.slug + "__";
+  let n = 0;
+  for (const k of state.labels.keys()) if (k.startsWith(prefix)) n++;
+  return n;
+}
+
+function updateTally() {
+  const done = myLabelCount();
+  document.getElementById("t-done").textContent = done;
+  document.getElementById("t-left").textContent = Math.max(0, RECORDS.length - done);
+  document.getElementById("rail").style.width = (RECORDS.length ? (done / RECORDS.length) * 100 : 0) + "%";
+
+  let compared = 0, agreed = 0;
+  for (const r of RECORDS) {
+    const l = labelFor(r.id);
+    if (!l || !r.model || l.relevance === "skipped") continue;
+    compared++;
+    if (l.relevance === r.model.relevance) agreed++;
+  }
+  document.getElementById("t-agree").textContent = compared ? Math.round((agreed / compared) * 100) + "%" : "—";
+
+  const who = document.getElementById("who");
+  if (state.labeller) {
+    who.hidden = false;
+    who.innerHTML = `Labelling as <b>${esc(state.labeller.name)}</b> <button id="switch" type="button">switch</button>`;
+    document.getElementById("switch").addEventListener("click", switchLabeller);
+  } else {
+    who.hidden = true;
+  }
+}
+
+function syncNote() {
+  if (REMOTE) {
+    const queued = pending.read().length;
+    return queued === 0
+      ? "Saved to the shared database as you go."
+      : `Saved here, but ${queued} judgement${queued === 1 ? "" : "s"} could not reach the database yet — they will be sent automatically, and Export results always holds everything.`;
+  }
+  return state.persist === "db" ? "Saved as you go." : "Held in this browser only.";
+}
+
+function optionRow(list, chosen, name) {
+  return list.map((o, i) => `
+    <button class="opt" data-choice="${o.key}" data-group="${name}" aria-pressed="${chosen === o.key}">
+      <kbd>${i + 1}</kbd><span>${esc(o.label)}</span>
+      ${o.hint ? `<span class="hint">${esc(o.hint)}</span>` : ""}
+    </button>`).join("");
+}
+
+/* ---------- render ---------- */
+function render() {
+  const stage = document.getElementById("stage");
+
+  if (!state.labeller) {
+    stage.innerHTML = `
+      <div class="gate">
+        <h2>Who's labelling?</h2>
+        <p>Your name keeps your judgements separate from anyone else working through the same
+           ${RECORDS.length} records, so both sets can be scored — and compared with each other.</p>
+        <form id="gate-form">
+          <input id="gate-name" type="text" placeholder="First name or initials" autocomplete="name" required>
+          <button class="btn primary" type="submit">Start labelling</button>
+        </form>
+      </div>`;
+    const form = document.getElementById("gate-form");
+    const field = document.getElementById("gate-name");
+    // Enter inside the field should start the session; not every browser fires a native
+    // submit for a synthesised keypress, and this is the very first thing a new labeller does.
+    field.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") { ev.preventDefault(); form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event("submit", { cancelable: true })); }
+    });
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = field.value.trim();
+      if (!name) return;
+      state.labeller = { name, slug: slugify(name) };
+      rememberLabeller(state.labeller);
+      await loadLabels();
+      state.index = firstUnlabelled();
+      render();
+    });
+    document.getElementById("gate-name").focus();
+    updateTally();
+    return;
+  }
+
+  if (state.index >= RECORDS.length) {
+    stage.innerHTML = `
+      <div class="done">
+        <h2>Sample complete</h2>
+        <p>All ${RECORDS.length} records carry a label from ${esc(state.labeller.name)}.</p>
+        <div class="controls" style="justify-content:center">
+          <button class="btn primary" id="export-done">Export results</button>
+        </div>
+      </div>`;
+    document.getElementById("export-done").addEventListener("click", showExport);
+    updateTally();
+    return;
+  }
+
+  const r = RECORDS[state.index];
+  const existing = labelFor(r.id);
+  const showVerdict = state.step === "verdict";
+  const facts = [
+    ["Commercial work", r.commercialWork, false],
+    ["Use class", r.useClass, false],
+    ["Dwellings", r.dwellings, true],
+    ["Floorspace", r.floorspace ? r.floorspace + " m²" : null, true],
+    ["Route", r.planningRoute, false],
+    ["Limbs", (r.limbs || []).join(" ") || null, true],
+  ].filter(([, v]) => v !== null && v !== undefined && v !== "");
+
+  stage.innerHTML = `
+    <article class="record">
+      <div class="eyebrow">
+        <span>${esc(r.authority)}</span><i class="dot"></i>
+        <span>${esc(r.dateReceived || "no date")}</span><i class="dot"></i>
+        <span>${esc(r.categoryLabel || "uncategorised")}</span><i class="dot"></i>
+        <span>${state.index + 1} of ${RECORDS.length}</span>
+      </div>
+      <div class="ref">${esc(r.reference)}</div>
+      <p class="addr">${esc(r.address || "No address given")}${
+        r.postcode && !String(r.address || "").toUpperCase().includes(String(r.postcode).toUpperCase())
+          ? " · " + esc(r.postcode) : ""}</p>
+      <p class="desc">${esc(r.description)}</p>
+      ${facts.length ? `<dl class="facts">${facts.map(([k, v, m]) =>
+        `<div><dt>${esc(k)}</dt><dd class="${m ? "mono" : ""}">${esc(v)}</dd></div>`).join("")}</dl>` : ""}
+    </article>
+
+    <section class="ask" ${state.step === "relevance" ? "" : "hidden"}>
+      <div class="ask-label"><em>Step 1</em> Is this worth paying to investigate further?</div>
+      <div class="opts">${optionRow(RELEVANCE, state.draft.relevance, "relevance")}</div>
+    </section>
+
+    <section class="ask" ${state.step === "commercial" ? "" : "hidden"}>
+      <div class="ask-label"><em>Step 2</em> Does this create or change commercial space someone could occupy?</div>
+      <div class="opts">${optionRow(COMMERCIAL, state.draft.createsCommercialSpace, "createsCommercialSpace")}</div>
+      <p class="note" style="margin-top:.6rem">
+        <b>Yes</b> where a unit is built, or an existing one moves to a different use.
+        <b>No</b> where the unit carries on as it is: extensions, shopfronts, signage, plant and repairs
+        to a business that keeps trading as before. The question is whether an occupier could be
+        arriving, not whether the finished building contains usable space.
+      </p>
+    </section>
+
+    <section class="ask" ${state.step === "dwellings" ? "" : "hidden"}>
+      <div class="ask-label"><em>Step 3</em> How many homes does this create?</div>
+      <div class="count">
+        <input id="dw" type="text" inputmode="numeric" autocomplete="off" placeholder="Number of homes">
+        <button class="btn primary" id="dw-ok">Save ⏎</button>
+        <button class="opt" data-count="0"><kbd>0</kbd><span>None</span></button>
+        <button class="opt" data-count="null"><kbd>⏎</kbd><span>Homes, but no number given</span></button>
+      </div>
+      <p class="note" style="margin-top:.6rem">
+        Enter <b>0</b> when the proposal creates no homes, which is most commercial applications.
+        Leave the box empty only when it clearly does create homes but never says how many, such as
+        "change of use to residential" with no number. Count what the proposal creates, not what is there now.
+      </p>
+    </section>
+
+    <section class="verdict" ${showVerdict ? "" : "hidden"}>
+      <div class="verdict-head">What the model said</div>
+      <div class="verdict-body">${verdictBody(r, existing)}</div>
+    </section>
+
+    <div class="controls">
+      <button class="btn" id="back" ${state.index === 0 ? "disabled" : ""}>← Back</button>
+      <button class="btn" id="skip">Skip <kbd>s</kbd></button>
+      <button class="btn" id="export">Export results</button>
+      <div class="spacer"></div>
+      ${r.councilUrl ? `<span class="note"><a href="${esc(r.councilUrl)}" target="_blank" rel="noopener">Open on council site ↗</a></span>` : ""}
+      ${showVerdict ? `<button class="btn primary" id="next">Next record ⏎</button>` : ""}
+    </div>
+    <p class="note" style="margin-top:.9rem">
+      ${syncNote()}
+      Keys: number to choose, <kbd>s</kbd> to skip, <kbd>⏎</kbd> to advance, <kbd>←</kbd> to go back.
+    </p>`;
+
+  wire();
+  updateTally();
+  // The count step is typed rather than chosen, so it takes the caret. This also parks the
+  // digit shortcuts safely: the global handler ignores keys aimed at an input.
+  if (state.step === "dwellings") {
+    const field = document.getElementById("dw");
+    if (field) field.focus();
+  }
+}
+
+/* The model has no v4 answer for the two new questions, so only relevance is a genuine
+   comparison. The homes row is checked against Plota's own figure instead, which catches a
+   misread far more often than it flatters the labeller — Plota leaves it empty on most
+   records, and disagreeing with it is frequently correct. */
+function verdictBody(r, label) {
+  const rows = [];
+  if (r.model) {
+    const relAgree = label && label.relevance === r.model.relevance;
+    rows.push(`
+      <dt>Relevance</dt>
+      <dd>
+        <strong>${esc(r.model.relevance)}</strong>
+        <span class="chip ${relAgree ? "agree" : "differ"}">${relAgree ? "matches you" : "differs from you: " + esc(label ? label.relevance : "—")}</span>
+        <span class="note">confidence ${esc(r.model.confidence ?? "—")}</span>
+      </dd>`);
+  }
+  const yours = label ? label.dwellingCount : undefined;
+  const plota = r.dwellings;
+  const note = plota === null || plota === undefined
+    ? "Plota gives no figure"
+    : (Number(plota) === Number(yours) ? "Plota agrees" : "Plota says " + esc(plota));
+  rows.push(`
+    <dt>Homes</dt>
+    <dd><strong>${esc(homes(yours))}</strong><span class="note">${note}</span></dd>`);
+
+  const summary = r.model && r.model.summary
+    ? `<p class="model-summary">${esc(r.model.summary)}</p>`
+    : (r.model ? "" : `<p class="model-summary">This record has no model verdict yet, so relevance cannot be compared.</p>`);
+  return `<dl class="cmp">${rows.join("")}</dl>${summary}`;
+}
+
+/* ---------- interaction ---------- */
+function wire() {
+  document.querySelectorAll(".opt[data-group]").forEach((b) => {
+    b.addEventListener("click", () => choose(b.dataset.group, b.dataset.choice));
+  });
+  document.querySelectorAll(".opt[data-count]").forEach((b) => {
+    b.addEventListener("click", () => commitCount(b.dataset.count === "null" ? null : Number(b.dataset.count)));
+  });
+  const field = document.getElementById("dw");
+  if (field) {
+    field.addEventListener("keydown", (ev) => {
+      if (ev.key !== "Enter") return;
+      ev.preventDefault();
+      submitCount();
+    });
+    field.addEventListener("input", () => field.classList.remove("bad"));
+  }
+  const ok = document.getElementById("dw-ok");
+  if (ok) ok.addEventListener("click", submitCount);
+  const back = document.getElementById("back");
+  if (back) back.addEventListener("click", goBack);
+  const skip = document.getElementById("skip");
+  if (skip) skip.addEventListener("click", () => { void commit("skipped", "skipped", null); });
+  const next = document.getElementById("next");
+  if (next) next.addEventListener("click", advance);
+  const exp = document.getElementById("export");
+  if (exp) exp.addEventListener("click", showExport);
+}
+
+/* An empty box is "not stated", which is a real answer and the commonest one. Anything
+   that is not a whole number is rejected rather than coerced: Number("") is 0, and a
+   silent 0 here would assert that the application says it creates no homes. */
+function submitCount() {
+  const field = document.getElementById("dw");
+  if (!field) return;
+  const raw = field.value.trim();
+  if (raw === "") { commitCount(null); return; }
+  if (!/^\d{1,5}$/.test(raw)) { field.classList.add("bad"); field.select(); return; }
+  commitCount(Number(raw));
+}
+
+function commitCount(value) {
+  state.draft.dwellingCount = value;
+  void commit(state.draft.relevance, state.draft.createsCommercialSpace, value);
+}
+
+function choose(group, value) {
+  if (group === "relevance") {
+    state.draft.relevance = value;
+    state.step = "commercial";
+    render();
+    return;
+  }
+  state.draft.createsCommercialSpace = value;
+  state.step = "dwellings";
+  render();
+}
+
+async function commit(relevance, createsCommercialSpace, dwellingCount) {
+  const r = RECORDS[state.index];
+  await saveLabel(r.id, {
+    relevance,
+    createsCommercialSpace,
+    dwellingCount: dwellingCount === undefined ? null : dwellingCount,
+    by: state.labeller.name,
+    at: new Date().toISOString(),
+  });
+  state.step = "verdict";
+  render();
+}
+
+function resetDraft() {
+  state.step = "relevance";
+  state.draft = { relevance: null, createsCommercialSpace: null, dwellingCount: null };
+}
+
+function advance() {
+  state.index++;
+  resetDraft();
+  render();
+}
+
+function goBack() {
+  if (state.index === 0) return;
+  state.index--;
+  resetDraft();
+  render();
+}
+
+/* A compact hand-back format. One row per judgement, so it survives being pasted into an
+   email or a message without a file attachment or an account anywhere. An empty
+   dwelling_count cell is "not stated"; a 0 is a stated none. */
+function toCsv() {
+  const rows = [["labeller", "record_id", "reference", "relevance", "creates_commercial_space", "dwelling_count", "at"]];
+  const byId = new Map(RECORDS.map((r) => [r.id, r]));
+  for (const [docId, label] of state.labels) {
+    const split = docId.indexOf("__");
+    const who = split === -1 ? "unknown" : docId.slice(0, split);
+    const recordId = split === -1 ? docId : docId.slice(split + 2);
+    const rec = byId.get(recordId);
+    rows.push([
+      who, recordId, rec ? rec.reference : "",
+      label.relevance || "",
+      label.createsCommercialSpace || "",
+      label.dwellingCount === null || label.dwellingCount === undefined ? "" : label.dwellingCount,
+      label.at || "",
+    ]);
+  }
+  return rows.map((r) => r.map((c) => (/[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : String(c))).join(",")).join("\n");
+}
+
+function showExport() {
+  const stage = document.getElementById("stage");
+  const csv = toCsv();
+  const count = state.labels.size;
+  stage.innerHTML = `
+    <section class="export">
+      <h2>Hand your results back</h2>
+      <p>${count} judgement${count === 1 ? "" : "s"} so far. Copy everything below and send it back —
+         that is the whole result, nothing else is needed. You can keep labelling afterwards and
+         export again; a later copy replaces an earlier one.</p>
+      <textarea id="csv" readonly spellcheck="false">${esc(csv)}</textarea>
+      <div class="controls">
+        <button class="btn primary" id="copy">Copy to clipboard</button>
+        <button class="btn" id="resume">Back to labelling</button>
+        <span class="note" id="copied"></span>
+      </div>
+    </section>`;
+  const area = document.getElementById("csv");
+  document.getElementById("copy").addEventListener("click", async () => {
+    area.select();
+    let ok = false;
+    try { await navigator.clipboard.writeText(csv); ok = true; }
+    catch { try { ok = document.execCommand("copy"); } catch { ok = false; } }
+    document.getElementById("copied").textContent = ok
+      ? "Copied."
+      : "Copy did not work — select the text above and copy it manually.";
+  });
+  document.getElementById("resume").addEventListener("click", () => { state.step = "relevance"; render(); });
+  updateTally();
+}
+
+function firstUnlabelled() {
+  const i = RECORDS.findIndex((r) => !labelFor(r.id));
+  return i === -1 ? RECORDS.length : i;
+}
+
+function switchLabeller() {
+  state.labeller = null;
+  state.index = 0;
+  resetDraft();
+  try { localStorage.removeItem("planning-labeller"); } catch {}
+  render();
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!state.labeller) return;
+  if (state.index >= RECORDS.length) return;
+  const target = e.target;
+  // The count step owns the keyboard while its field has focus, so digits become the
+  // number rather than triggering a choice.
+  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+  const k = e.key;
+  if (k === "ArrowLeft") { e.preventDefault(); goBack(); return; }
+  if (k === "s" || k === "S") { e.preventDefault(); void commit("skipped", "skipped", null); return; }
+  if (state.step === "verdict" && (k === "Enter" || k === " ")) { e.preventDefault(); advance(); return; }
+  const n = parseInt(k, 10);
+  if (!Number.isFinite(n)) return;
+  if (state.step === "relevance" && n >= 1 && n <= RELEVANCE.length) {
+    e.preventDefault(); choose("relevance", RELEVANCE[n - 1].key);
+  } else if (state.step === "commercial" && n >= 1 && n <= COMMERCIAL.length) {
+    e.preventDefault(); choose("createsCommercialSpace", COMMERCIAL[n - 1].key);
+  }
+});
+
+/* ---------- boot ---------- */
+(async () => {
+  state.labeller = recallLabeller();
+  render();
+  if (!state.labeller) return;
+  await loadLabels();
+  state.index = firstUnlabelled();
+  void flushPending();
+  if (!REMOTE && state.persist === "local") {
+    showBanner("Shared saving is unavailable in this view, so labels are kept in this browser only.");
+  }
+  render();
+})();
+</script>
+
+</body>
+</html>
