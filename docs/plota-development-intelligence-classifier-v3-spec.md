@@ -298,6 +298,45 @@ modelling one: the gate now catches roughly six of every seven records he wants,
 an opportunity is likely worse than a wasted lookup. Improving it further needs either more
 labels or a decision about that trade.
 
+## The v6 reclassification, 9 September 2026
+
+All 164 records reclassified through the real worker path and scored against the expert's
+labels. **Zero failures**, against roughly 5% under the previous model. Every development row
+carries the v3 fields; 156 of 164 carry a dwelling count.
+
+| | v4 (previous model) | v6 (current) |
+|---|---|---|
+| relevance agreement | 64.0% | 62.2% |
+| creates commercial space | not asked | **87.2%** |
+| dwelling count, exact | not asked | **87.2%** |
+| dwelling 16+ cut | not asked | **164/164** |
+| classification failures | ~5% | **0** |
+| run-to-run flip rate | 32.3% | **0.0%** |
+
+**Raw relevance agreement did not improve, and that needs saying plainly.** But v4's 64.0% is
+a single sample from a distribution 13 points wide, so it is not a number the new one has to
+beat; re-running v4 could as easily have produced 51%. What changed is that 62.2% is now
+repeatable, and that two of the three questions the product actually asks are answered at all.
+
+The prediction held: the tuning split scored 59.1% and the held-out third 70.4%, so the full
+set was expected to land between them, and did.
+
+### The persisted escalation gate
+
+This is what the research pass will select, read from `developments.escalate_for_research`
+rather than recomputed.
+
+| | |
+|---|---|
+| records the expert called high | 52 |
+| gate fires on | 72 |
+| of those, wanted | 44 (61.1% precision) |
+| of the expert's highs, caught | 44 (84.6% recall) |
+
+**`medium` is effectively unlearned** at 7.4% precision and 8.3% recall. It does not affect
+the gate, which turns on `high` alone, so it is not currently worth fixing. It would matter if
+`medium` ever became a product surface.
+
 ## How to measure anything here
 
 Two scripts, both read-only. Neither writes to the database, so a measurement can be repeated
