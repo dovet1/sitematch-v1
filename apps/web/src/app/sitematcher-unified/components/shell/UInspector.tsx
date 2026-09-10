@@ -1257,6 +1257,64 @@ export function planningStateBadgeClass(state: string): string {
   return 'bg-amber-600'
 }
 
+// Relevance is the classifier's answer to "is this worth paying to investigate", which is
+// close enough to "worth looking at" to rank a list by, and not identical to it. The badge
+// is deliberately quieter than the decision-state badge beside it: the state is a fact from
+// the council, this is a judgement.
+export function planningRelevanceBadge(
+  relevance: PlanningApplication['relevance']
+): { label: string; className: string } | null {
+  switch (relevance) {
+    case 'high':
+      return { label: 'High', className: 'border-violet-300 bg-violet-50 text-violet-700' }
+    case 'medium':
+      return { label: 'Medium', className: 'border-sky-200 bg-sky-50 text-sky-700' }
+    case 'low':
+      return { label: 'Low', className: 'border-sm-border bg-sm-bg text-sm-ink3' }
+    default:
+      // Unclassified is not "low". It sorts last and says nothing, because claiming a
+      // judgement we have not made is worse than showing none.
+      return null
+  }
+}
+
+/**
+ * How many homes an application proposes, and where the number came from.
+ *
+ * The provider's figure is empty on most records while the description states the number
+ * plainly, so the model recovers what the source lacks. Where both speak they can disagree,
+ * and both are evidence -- so the source figure wins the label and the model's is marked as
+ * read from the description rather than presented as fact.
+ */
+export function planningDwellingLabel(app: PlanningApplication): string | null {
+  if (app.nDwellings != null) {
+    return `${app.nDwellings} ${app.nDwellings === 1 ? 'home' : 'homes'}`
+  }
+  if (app.modelDwellingCount != null && app.modelDwellingCount > 0) {
+    return `${app.modelDwellingCount} ${app.modelDwellingCount === 1 ? 'home' : 'homes'} in the description`
+  }
+  return null
+}
+
+/** True when the record is shown only because an approximate position might be inside. */
+export function isApproximatelyLocated(app: PlanningApplication): boolean {
+  return app.insideBoundary === false || (app.locationUncertaintyM ?? 0) > 0
+}
+
+/**
+ * The caption under the count, when some positions are not real site locations.
+ *
+ * Plota places many applications at the centre of their ward or parish, so the tab includes
+ * them when that area could overlap the one drawn. That buys back real sites that exact
+ * matching hid, at the cost of some records that turn out to be outside -- and the only
+ * honest way to spend that is to say so where the count is read.
+ */
+export function planningApproximateNote(applications: PlanningApplication[]): string | null {
+  const approximate = applications.filter(isApproximatelyLocated).length
+  if (approximate === 0) return null
+  return `${approximate} of these are placed by ward, parish or postcode centre rather than the site itself, so they may sit outside this area.`
+}
+
 export function planningTruncationMessage(
   reason: PlanningTruncationReason
 ): string | null {
@@ -1326,7 +1384,9 @@ function PlanningRow({
 }) {
   const date =
     formatPlanningDate(app.decidedDate) ?? formatPlanningDate(app.dateValidated)
-  const subline = [app.appType, app.appSize, date].filter(Boolean).join(' · ')
+  const dwellings = planningDwellingLabel(app)
+  const subline = [app.appType, app.appSize, dwellings, date].filter(Boolean).join(' · ')
+  const relevance = planningRelevanceBadge(app.relevance)
   return (
     <button
       type="button"
@@ -1343,10 +1403,37 @@ function PlanningRow({
           >
             {app.appState}
           </span>
+          {relevance && (
+            <span
+              className={
+                'rounded-full border px-2 py-[2px] font-mono text-[9.5px] font-semibold uppercase tracking-wider ' +
+                relevance.className
+              }
+            >
+              {relevance.label}
+            </span>
+          )}
+          {/* An approximate position is marked on the record itself, not only in the
+              caption under the count, because a single row is often read on its own. */}
+          {isApproximatelyLocated(app) && (
+            <span
+              title="Placed by ward, parish or postcode centre rather than the site itself"
+              className="rounded-full border border-sm-border bg-sm-bg px-2 py-[2px] font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3"
+            >
+              Approx
+            </span>
+          )}
         </div>
         <div className="truncate text-[13px] font-medium text-sm-ink2">
           {app.address || app.name}
         </div>
+        {/* The classifier's one sentence is what makes a ranked list readable rather than
+            merely sorted, so it sits above the metadata line and is allowed two lines. */}
+        {app.summary && (
+          <div className="mt-1 line-clamp-2 text-[12px] leading-snug text-sm-ink3">
+            {app.summary}
+          </div>
+        )}
         {subline && (
           <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-sm-ink3">
             {subline}
@@ -1390,6 +1477,10 @@ function PlanningBody({
 }) {
   const warning = planningTruncationMessage(truncationReason)
   const staleness = planningFreshnessMessage(freshness)
+  // Freshness is the honest signal for which path answered: only the stored census has
+  // anything to be out of date about, and it is present even when the area is empty.
+  const fromStore = freshness !== null
+  const approximateNote = fromStore ? planningApproximateNote(applications) : null
   return (
     <>
       {loading && (
@@ -1409,8 +1500,14 @@ function PlanningBody({
           </span>
         </div>
         <p className="mt-1 text-[12.5px] leading-relaxed text-sm-ink3">
-          Large planning applications inside this area from the last two years.
+          {fromStore
+            ? 'Planning applications in this area, most relevant first.'
+            : 'Large planning applications inside this area from the last two years.'}
         </p>
+        {/* Where the count is read is the only place this caveat does any work. */}
+        {approximateNote && !loading && !error && (
+          <p className="mt-1 text-[12px] leading-relaxed text-sm-ink4">{approximateNote}</p>
+        )}
       </div>
       <div className="flex flex-col gap-2 px-[18px] pb-[18px] pt-2.5">
         {error && !loading && (
@@ -1436,7 +1533,9 @@ function PlanningBody({
             there is nothing here. */}
         {!loading && !error && !truncated && applications.length === 0 && (
           <div className="rounded-xl border border-dashed border-sm-border bg-sm-bg px-3 py-3.5 text-center text-[12.5px] text-sm-ink3">
-            No large planning applications found in this area.
+            {fromStore
+              ? 'No planning applications found in this area.'
+              : 'No large planning applications found in this area.'}
           </div>
         )}
         {!error &&

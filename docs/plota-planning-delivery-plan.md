@@ -4,8 +4,8 @@ Date: 10 September 2026
 Revised after an audit against the code. Six gaps found; all six verified and folded in.
 Sequence: the planning tab first, then the Planning Monitor mode.
 
-Status: **Phase 0 built** (10 September 2026), pending the migration and the flags.
-Phase 1, the ranked planning tab, is next.
+Status: **Phases 0 and 1 built** (10 September 2026), pending the migrations, the flags and a
+coverage measurement on live data. Phase 2, making the data support the Monitor, is next.
 
 The classification pipeline is built and working. What follows is about getting it in front of
 users, in the order that ships something usable soonest and learns most per week of work.
@@ -72,7 +72,44 @@ their Demo-key defaults of 10 and 1, and `PLOTA_REFRESH_COHORTS` with them. Thre
 one page each cannot keep a national store current, and the refresh-overdue threshold is
 calculated for a weekly pass over three cohorts — recalculate it if either number changes.
 
-## Phase 1 — The planning tab, ranked by relevance
+## Phase 1 — The planning tab, ranked by relevance. **Built, not cut over.**
+
+Two questions this section left open were decided on 10 September 2026, and both are now
+implemented. They are recorded here because each changes what a user sees.
+
+**Coverage: show everything stored, and change the copy.** The tab no longer claims "large
+applications from the last two years" on the stored path; it says applications in this area,
+most relevant first. The alternative was mirroring PlanIt's size, state and type filters to
+make the cutover like-for-like. Rejected: the classifier's ranking now does the work those
+filters did, and discarding stored records to imitate the old tab would throw away the
+coverage the census was bought for. The cost is that the cutover comparison measures a
+coverage change and a filter change at once, so it must be read as a product change rather
+than a like-for-like migration.
+
+**Approximate positions are included when they might be inside.** A record whose position is
+a ward, parish or postcode centre is admitted when that uncertainty overlaps the drawn area,
+flagged on the row, and counted in a caption under the total. The alternative was keeping
+exact-point matching. Rejected because it fails silently: a real site inside the area stays
+hidden whenever its ward centre falls outside, and nothing on screen can say so. This buys
+recall at the cost of showing some records that turn out to be outside, which is why the
+caption sits where the count is read.
+
+The uncertainty radii — 1,500 m for a ward or parish centre, 200 m for a postcode centre —
+are **assumptions, not measurements**, and they live in one database function so there is a
+single place to correct them. Revisit them the moment a stored point can be compared against
+a known site address.
+
+What is built: the classification joins through to the tab, ranking happens in the database
+before the record cap, each row carries a relevance badge and the classifier's sentence, and
+dwelling counts show which figure they came from. The client's own boundary guard was taught
+about overlap-admitted records, which it would otherwise have stripped straight back out.
+
+**What remains is the cutover itself**, and it needs live data: measure coverage on more than
+one boundary, prove the ordering survives the 2,000-record cap on a boundary that exceeds it,
+then turn on `PLANNING_STORED_READ_ENABLED`.
+
+### The original plan for this phase
+
 
 The tab exists in the unified workspace inspector. `stored.ts` already reads the new store
 behind `PLANNING_STORED_READ_ENABLED`, joins each application to its Development, and carries
