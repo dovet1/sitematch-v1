@@ -140,19 +140,29 @@ description. This has always been blocked on a deep backfill, which Phase 0 unbl
 
 ## Phase 3 — The Monitor mode
 
-Only once Phase 2 has made the three categories real. Three views, per the handoff:
+Only once Phase 2 has made the three categories real. **Two views, not the handoff's three** —
+Market change moves to Phase 4:
 
 - **Monitor** — the map-first landing view with the patch, the categorised markers, the
   application list and the AI summary card.
 - **Set criteria** — patch geometry, estate proximity, application types, dates and status,
   brand watch. This needs new persistence: criteria are per user and editable.
-- **Market change** — the zoomed view, and **its Phase 3 scope needs a decision**. With spend
-  excluded and population projections deferred to Phase 4, what remains is the consented-but-
-  unbuilt build footprints on the map and the dwellings pipeline chart, which is dwelling counts
-  grouped by year. That is real but thin, and the before/after population pair and catchment
-  uplift card — the two things that make the view feel like an answer — both depend on Phase 4.
-  Either ship the footprints and pipeline as a modest view, or hold the whole view until
-  Phase 4. Worth deciding deliberately rather than discovering halfway through.
+**Market change is deliberately not in Phase 3.** Decided 10 September 2026. With spend
+excluded and population projections deferred, the view would reduce to build footprints and a
+dwellings-by-year chart; the before/after population pair and the catchment uplift card, which
+are the parts that make it an answer rather than a chart, both need Phase 4 data. It ships with
+that data or not at all.
+
+Two consequences to build to, so nothing is made that leads nowhere:
+
+- **Leave the "Market change: On/Off" map toggle out of Phase 3.** A control whose only purpose
+  is to reveal a view that does not exist is worse than its absence.
+- **Zooming a cluster just zooms.** The design has it transition into Market change; in Phase 3
+  it stays on the map and opens the applications behind the cluster.
+
+Done when: a user can draw a patch, save criteria, and see matching applications on the map and
+in the list, categorised, with the summary card — and nothing on the screen promises a view that
+has not been built.
 
 **The AI summary card is new work and worth calling out.** It writes a short weekly narrative
 across a patch, which is a different job from classifying one application. It is also the most
@@ -163,10 +173,18 @@ coordinates, and the design quotes distances like "0.8 mi from nearest store". E
 positions via postcode lookup, or show provenance honestly on the marker. Do not quote a
 precise distance from a centroid.
 
-## Phase 4 — Population growth from census
+## Phase 4 — Market change, with the data that makes it meaningful
 
-Join census population to the dwelling pipeline to project catchment change. Explicitly later,
-and explicitly without spend modelling.
+Join census population to the dwelling pipeline to project catchment change, then build the
+zoomed Market change view on top of it: build footprints, the before/after population pair, the
+dwellings pipeline chart and the catchment uplift card. The map toggle and the cluster
+transition arrive here too.
+
+**Spend modelling stays out**, including at this phase. The grocery spend figure in the concept
+is illustrative and nothing in this plan produces it.
+
+Done when: a user can zoom into a location and see projected population change grounded in real
+census data and real consented dwellings, with the provenance of both visible.
 
 ## Running alongside: the admin review surface
 
