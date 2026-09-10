@@ -1,6 +1,7 @@
 # Planning: delivery plan
 
 Date: 10 September 2026
+Revised after an audit against the code. Six gaps found; all six verified and folded in.
 Sequence: the planning tab first, then the Planning Monitor mode.
 
 The classification pipeline is built and working. What follows is about getting it in front of
@@ -22,8 +23,16 @@ about whether the classification is useful in practice, at a fraction of the cos
 
 **Buy the Plota subscription.** 465 requests remain and the demo key stops after one request
 per run regardless of configuration. No amount of work downstream changes this, and every
-phase below is starved without it. Once it is in place, run ingest at volume once and look at
-what arrives before committing to anything else.
+phase below is starved without it.
+
+**One ingest is not a pipeline.** There is no Plota or classification schedule in
+`vercel.json` at all, and the sync endpoint exposes discovery and backfill only. Its 14-day
+discovery window finds new applications; it does not revisit older ones whose decision changes,
+and a decision changing is exactly the event a monitoring product exists to catch.
+
+Done when: ingest and classification run on a schedule; a separate pass refreshes the status of
+applications already stored; queue depth and data freshness are observable; and the tab has a
+defined behaviour when data is stale rather than silently showing an old world.
 
 ## Phase 1 — The planning tab, ranked by relevance
 
@@ -38,15 +47,28 @@ orders by `date_received`.
 1. **Join the classification through.** Add relevance, the plain-English summary, the model's
    dwelling count and the commercial-space answer to the projection and to the
    `PlanningApplication` type.
-2. **Order by relevance, then date.** Applications outside the intelligence tier have no
-   relevance at all, so rank classified ones first and leave the rest in date order beneath.
-   That preserves the tab's existing contract, which is to show everything in the boundary up
-   to 2,000 records, rather than quietly hiding the unclassified majority.
-3. **Show why.** A relevance badge, the one-sentence summary the classifier already writes,
+2. **Agree the coverage contract before switching providers.** The tab does not currently show
+   everything, and this plan previously said it did. The PlanIt path requests
+   `app_size: Large`, `app_state: Undecided,Permitted,Rejected`,
+   `app_type: Full,Outline,Amendment` and a start date. The stored path applies **none** of
+   those and returns whatever happens to have been ingested. Switching providers therefore
+   changes what a user sees, in both directions, and comparing one boundary would not detect
+   it. Write down the intended filters and the historical window first, then measure against
+   them.
+3. **Order in the database, before the cap.** `stored.ts` takes the newest 2,000 rows and only
+   then loads Development links, so sorting the result would permanently drop older
+   high-relevance applications that never made the first 2,000. Ordering has to happen in the
+   query, as a join, with an explicit `high → medium → low → unclassified` sequence, a date
+   tie-break within each band, and a stable final tie-break on id.
+4. **Show why.** A relevance badge, the one-sentence summary the classifier already writes,
    and the dwelling count where there is one. The summary is the part that makes a ranked list
    readable rather than merely sorted.
-4. **Flip the flag** and compare against the PlanIt-backed path on the same boundary before
-   removing anything.
+5. **Cut over against the written contract**, not against a single boundary. Measure coverage
+   on several, including at least one where the two providers are expected to disagree.
+
+Done when: a user sees classified applications ranked high to low with a readable reason;
+coverage against the agreed contract is measured and accepted on more than one boundary; and
+the ordering is proven to survive the 2,000-record cap on a boundary that exceeds it.
 
 **Known caveat, stated rather than solved.** Relevance is currently calibrated as "worth
 paying to investigate", which is a spending question, not "useful to look at", which is what a
@@ -65,22 +87,39 @@ The eligibility filter was built to catch commercial supply. Residential schemes
 tier only through the dwelling-count limb, which reads Plota's `dwelling_count` — **empty on
 130 of 164 records**. Meanwhile the classifier reads counts out of the description reliably.
 
-So the filter is rejecting exactly the schemes the Monitor leads with. Options, cheapest
-first: widen the limb to admit applications whose description mentions dwellings even when the
-count is absent, and let the classifier supply the number; or run a cheap pre-pass. Either way
-the threshold should be **configurable, not fixed** — the Monitor concept shows 50 units, the
-expert works to 15, and a user toggle is the obvious answer.
+**The bigger exclusion is upstream, not local.** Reduced-scope ingestion searches residential
+records with `dmin: '1'`, so a purely residential application with no stated count is dropped
+at ingest and the local filter never sees it. Widening the eligibility limb alone would change
+nothing for those records.
 
-### 2b. Point the research pass at news, not just documents
+So this is two changes in order: make full-census ingestion (or a demonstrably wide enough
+search) a prerequisite, then re-evaluate what is already stored under a widened limb that
+admits applications whose description mentions dwellings without a count, letting the
+classifier supply the number.
 
-The expectation is that a brand match will be rare, and that most brand intelligence comes
-from **news coverage of a development** rather than the application forms. `research-sources.ts`
-is currently built around council pages and document links.
+Keep two thresholds apart, because they are different things. The **ingestion and
+classification floor** is global and decides what the system knows about. A **display
+threshold** is per user and decides what they see — the Monitor concept shows 50 units, the
+expert works to 15, and that is a toggle, not a constant.
 
-Nothing here is disproven yet: the 164 records were classified but never put through the
-research pass, which has only run five times. So the honest position is untested, not failed.
-The work is to widen the sources toward news and run it on a real batch, then measure the hit
-rate and cost per identified operator before scaling.
+Done when: a residential scheme with no stated count in the source reaches the tier and
+carries a model-supplied count, and the display threshold is user-controlled.
+
+### 2b. Measure the research pass before changing it
+
+An earlier version of this plan said the research pass needed pointing at news rather than
+documents. **That was wrong.** `research-openrouter.ts` already runs a web search and its
+prompt already asks for "reputable property and local-news coverage" alongside first-party
+applicant, occupier, developer and agent pages. Retrieval is not the known problem.
+
+The real unknown is the hit rate, and it is genuinely unknown: the 164 records were classified
+but never put through research, which has only run five times in total. So run the batch first
+and read what comes back — which sources were retrieved, and where grounding failed — before
+deciding anything needs to change. Changing retrieval before measuring it would be guessing at
+a problem that may not exist.
+
+Done when: a real batch has run; hit rate and cost per identified operator are known; and the
+failures have been read rather than counted.
 
 ### 2c. Stop re-reading what has already been read
 
@@ -107,8 +146,13 @@ Only once Phase 2 has made the three categories real. Three views, per the hando
   application list and the AI summary card.
 - **Set criteria** — patch geometry, estate proximity, application types, dates and status,
   brand watch. This needs new persistence: criteria are per user and editable.
-- **Market change** — the zoomed view. **Spend figures are out of scope**; population growth
-  from census data joined to the dwelling pipeline is Phase 4.
+- **Market change** — the zoomed view, and **its Phase 3 scope needs a decision**. With spend
+  excluded and population projections deferred to Phase 4, what remains is the consented-but-
+  unbuilt build footprints on the map and the dwellings pipeline chart, which is dwelling counts
+  grouped by year. That is real but thin, and the before/after population pair and catchment
+  uplift card — the two things that make the view feel like an answer — both depend on Phase 4.
+  Either ship the footprints and pipeline as a modest view, or hold the whole view until
+  Phase 4. Worth deciding deliberately rather than discovering halfway through.
 
 **The AI summary card is new work and worth calling out.** It writes a short weekly narrative
 across a patch, which is a different job from classifying one application. It is also the most
@@ -131,11 +175,22 @@ Not a phase, because it is needed as soon as anything is user-facing.
 The review API is transactional and audited, and records the model's answer beside the human's.
 **There is no screen.** It is an API route and nothing else.
 
-One design note before building it: the review triggers in the original goal — flag where
-commercial floorspace or the brand behind an application is missing — would currently fire on
-almost every record. Floorspace is empty on 162 of 164, and no incoming occupier has been
-identified at all. Until Phase 2 changes that, review should key on the classifier's own
-`unanswered_questions` and its confidence, not on the absence of fields that are always absent.
+**The API cannot correct everything the tab will show.** It accepts relevance, summary, brand
+signals and observations. It does **not** accept `model_dwelling_count` or
+`creates_commercial_space`, and correcting an observation does not propagate to those
+Development fields. So the moment the tab displays a dwelling count, it displays a number no
+reviewer can fix. Extend the audited correction path to cover every field the tab consumes, and
+decide explicitly which value the tab reads when the source figure, the model figure and a
+human correction disagree.
+
+One design note: the review triggers in the original goal — flag where commercial floorspace or
+the brand behind an application is missing — would currently fire on almost every record.
+Floorspace is empty on 162 of 164, and no incoming occupier has been identified. Until Phase 2
+changes that, review should key on the classifier's own `unanswered_questions` and its
+confidence, not on the absence of fields that are always absent.
+
+Done when: every field the tab shows can be corrected and audited, and the precedence between
+source, model and human values is written down.
 
 ## What is deliberately not in this plan
 
