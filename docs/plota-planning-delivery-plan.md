@@ -118,8 +118,23 @@ and read what comes back — which sources were retrieved, and where grounding f
 deciding anything needs to change. Changing retrieval before measuring it would be guessing at
 a problem that may not exist.
 
-Done when: a real batch has run; hit rate and cost per identified operator are known; and the
-failures have been read rather than counted.
+**Fix the counter before running the batch, or the experiment reports a false positive.**
+`operatorsFound` adds `signals.length` for every researched record. A signal is any brand
+mention, so an applicant's name, a former occupier and a passing reference all count, and one
+scheme can contribute several. The counter would happily report a dozen operators found on a
+batch that identified no incoming occupier at all — which is precisely the number the batch
+exists to establish.
+
+Success is **distinct Developments carrying an evidenced proposed occupier or operator**, not
+signals. Count that.
+
+**Measure brand matching separately.** Research stores an observed name and no canonical brand
+id, so "we found an operator" and "we matched it to a brand the user is watching" are different
+results with different failure modes. The Monitor's brand watch depends on the second.
+
+Done when: the counter measures distinct Developments with an evidenced proposed occupier; a
+real batch has run; hit rate, brand-match rate and cost per identified operator are known
+separately; and the failures have been read rather than counted.
 
 ### 2c. Stop re-reading what has already been read
 
@@ -128,15 +143,43 @@ per source. Nothing records that a particular application form has already been 
 re-run pays to read it again. Web search can reasonably repeat, since coverage changes; a
 scanned PDF should not.
 
-This needs a per-source record: what was fetched, when, its hash, and what came out. It also
-unlocks incremental improvement of a Development over time, which is the stated goal: new
-sources add to what is known rather than replacing it.
+This needs a per-source record: what was fetched, when, its hash, and what came out.
+
+**Caching sources is not enough on its own, because persistence currently replaces rather than
+accumulates.** Each research run deletes the pending brand signals and floorspace observations
+it previously wrote for an application, then inserts whatever the new run produced, and
+overwrites the use-class arrays outright. It is careful not to touch the initial classifier's
+rows or a human decision, but it does not protect its own earlier findings. So processing only
+the new sources on a second run would delete what the first run established and replace it with
+less.
+
+The stated goal is a Development that improves over time, and that requires evidence to
+accumulate. Acceptance case: **run research twice, where the second run's sources yield
+nothing, and the evidence from the first run must still be there.**
+
+Done when: a source already scanned is not paid for again; a second, uninformative run leaves
+earlier findings intact; and every stored finding names the source it came from.
 
 ### 2d. Merge related applications into one Development
 
 One real site currently becomes several Developments. `development_applications` already allows
 `cited_reference` as a relationship, and detail submissions carry the parent's reference in the
 description. This has always been blocked on a deep backfill, which Phase 0 unblocks.
+
+**Merging without precedence rules would make the answer depend on classification order.** The
+classifier writes the Development's relevance, summary, dwelling count, commercial-space answer
+and research eligibility from whichever application it is currently processing, scoped only by
+development id. Link five applications to one scheme and whichever finishes last decides what
+the whole scheme says — and a re-run in a different order silently changes it.
+
+So merging is two pieces of work, not one. Define which application is authoritative for each
+fact: a primary application, superseded by later amendments for some fields but not others, and
+a rule for dwelling counts that does not sum a figure the parent and its detail submissions each
+restate. The second, cheaper piece is a test that classifying the same set in a different order
+produces the same totals.
+
+Done when: one real site is one Development, each fact names the application it came from, and
+classification order provably cannot change the result.
 
 ## Phase 3 — The Monitor mode
 
@@ -168,10 +211,19 @@ has not been built.
 across a patch, which is a different job from classifying one application. It is also the most
 visible thing on the screen.
 
-**Map accuracy will show.** 71 of 164 positions are ward or parish centroids rather than real
-coordinates, and the design quotes distances like "0.8 mi from nearest store". Either improve
-positions via postcode lookup, or show provenance honestly on the marker. Do not quote a
-precise distance from a centroid.
+**Approximate locations decide what is shown at all, not just how it is labelled.** 71 of 164
+stored positions are ward or parish centroids. The boundary query tests that stored point
+against the patch with `ST_Intersects`, so a centroid falling outside the patch hides an
+application whose real site is inside it — and the estate-radius filter has the same problem. A
+disclaimer on a marker cannot explain a record that was excluded before rendering, and the
+criteria modal's live match count would be quietly wrong.
+
+So this needs a decision, not a caption: whether an approximate point is included when its
+uncertainty overlaps the patch, how that is reflected in the count, and what the user is told.
+Improving positions by postcode lookup narrows the problem but does not remove it.
+
+Done when: inclusion behaviour for approximate locations is defined and implemented, the match
+count reflects it, and a distance is only quoted where the position supports it.
 
 ## Phase 4 — Market change, with the data that makes it meaningful
 
@@ -179,6 +231,24 @@ Join census population to the dwelling pipeline to project catchment change, the
 zoomed Market change view on top of it: build footprints, the before/after population pair, the
 dwellings pipeline chart and the catchment uplift card. The map toggle and the cluster
 transition arrive here too.
+
+**A dwelling count and a census figure do not make a projection.** Four inputs are missing and
+each is a separate problem:
+
+| Needed | Why the current data does not give it |
+|---|---|
+| Net additional homes | A proposal's count is gross; a conversion or redevelopment may remove existing homes |
+| Delivery years | Nothing records when a consented scheme is expected to complete |
+| Completion status | Consented is not built; a pipeline that assumes it will be is a forecast, not a fact |
+| Occupancy assumption | Residents per dwelling varies by scheme type and area |
+| Footprint geometry | The design draws site outlines; a point is not a footprint |
+
+Either source those inputs, or **reduce the deliverable to a clearly labelled potential-impact
+scenario** — "if every consented scheme completes and is occupied at the local average" — which
+is honest and still useful, provided the label is on the screen and not only in this document.
+
+Done when: either the inputs above are sourced and the projection states its assumptions, or
+the view presents a scenario that says so where a user reads it.
 
 **Spend modelling stays out**, including at this phase. The grocery spend figure in the concept
 is illustrative and nothing in this plan produces it.
