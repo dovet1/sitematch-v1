@@ -412,6 +412,87 @@ more prompt work: it is more labels.
 **`medium` is now never returned at all** — 0 of 110, against the expert's 17. It does not
 affect the gate, which turns on `high` alone, so it stays a known gap rather than a defect.
 
+## Corrections from the 10 September audit
+
+An independent audit checked this work and three claims recorded above do not survive it. All
+three were verified against the data before being accepted.
+
+### The dwelling threshold was never solved
+
+Recorded here as 110/110 and 54/54 and described as effectively solved. **Only 1 of the 110
+tuning records has 15 or more homes.** Always answering "below 15" scores 109/110, or 99.1%.
+The measurement is almost entirely true negatives and says nothing about whether large schemes
+are found.
+
+The single positive is worse than it looks: the expert labels it **1,030** and the model
+**556**, because the description reads 556 dwellings plus 474 co-living units. The one real
+test in the set is an unresolved counting definition that the threshold hides, since both
+answers clear it.
+
+Housing needs its own challenge set with several real positives and cases at 14, 15 and 16
+homes, reporting positive recall, false positives, exact counts and unknowns separately. A
+challenge set cannot then be used to estimate production prevalence.
+
+### The commercial-loss rule saves nothing
+
+Recorded as a free structural win predicting `low` on 42 of 44 records. **All 26 loss records
+in the tuning set are already scored low**, so forcing them low changes no metric at all:
+relevance, gate precision and gate recall are identical either way. The human labels also
+include two exceptions a blanket rule would hard-code as wrong: a Class E premises becoming an
+independent school, and MOD Bicester asylum accommodation.
+
+Skipping the model call entirely does not follow either, because the same call produces
+`dwellings` and the other outputs.
+
+### The held-out split leaks, and one leak was self-inflicted
+
+The same scheme appears under several authority names with different provider ids: one
+application is present as Cambridge, Greater Cambridge and South Cambridgeshire. The SHA-256
+split on provider id therefore scatters copies across both sides. **Three duplicate groups
+straddle the split.**
+
+Worse, one worked example in the prompt was word-for-word a held-out record, put there by a
+generator that excluded on identifier when the comment above it said to exclude on membership.
+Fixed: the generator now rejects any candidate whose description matches any held-out record,
+and `--verify` re-checks the live prompt and exits non-zero on a match.
+
+**Every held-out figure recorded above is unreliable and none should be quoted as evidence.**
+Reshuffling the existing data and calling it a fresh test would be self-deception. The split
+and its published scores stand as historical results; a genuinely new sample, grouped by
+scheme and labelled blind, is the only fix.
+
+### A human correction does not stop a paid research job
+
+`/api/admin/planning/review` never touches `escalate_for_research` or `research_state`, and
+the research queue selects on that flag. Correcting a record from high to low leaves it queued
+for paid research, and no audit event records that a correction happened. Pre-release.
+
+### Two humans agree less often than the model does
+
+Of the 12 records both labellers graded, they agree on 7. The model agrees with the primary
+labeller on 80.0%. That comparison is uncontrolled — the second labeller worked under earlier
+question wording — but it is the first evidence that further tuning may be chasing noise
+rather than an achievable ceiling, and it is a strong argument for a second blind labeller on
+any new sample.
+
+## Where the tuning numbers stand after the fix
+
+Uncontaminated examples, tuning split. **The held-out column is deliberately absent**: that set
+is compromised until a new one exists.
+
+| | before examples | contaminated examples | clean examples |
+|---|---|---|---|
+| relevance | 60.0% | 73.6% | **80.0%** |
+| creates commercial space | 88.2% | 87.3% | **88.2%** |
+| gate recall | 84.2% | 84.2% | **97.4%** (37 of 38) |
+| gate precision | 64.0% | 66.7% | **69.8%** |
+
+Removing the contaminated examples improved every measure. The replacements happen to cover
+boundary cases the model was failing, such as a bare "Use as class E (Cafe)".
+
+**Do not read 97.4% as a production expectation.** The examples come from these records, and
+the only set that could test generalisation is the broken one.
+
 ## How to measure anything here
 
 Two scripts, both read-only. Neither writes to the database, so a measurement can be repeated

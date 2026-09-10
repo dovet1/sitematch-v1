@@ -6,8 +6,15 @@
  * their decisions encode are not the same thing. So these examples carry a description and a
  * verdict, and no rationale.
  *
- * TUNING SPLIT ONLY. An example drawn from the held-out third would put the answer to a test
- * record directly into the prompt, and that set is the only evidence any of this generalises.
+ * TUNING SPLIT ONLY -- and "tuning split" means by CONTENT, not by identifier.
+ *
+ * The same scheme appears in this data under several authority names with different provider
+ * ids: one application shows up as Cambridge, Greater Cambridge and South Cambridgeshire. A
+ * hash split on the id therefore scatters copies of one scheme across both sides. An earlier
+ * version of this script split on the id alone and emitted an example whose description is
+ * word-for-word a held-out record, which puts a test answer straight into the prompt. So a
+ * candidate is rejected when its description matches ANY held-out record, not merely when its
+ * own id falls in the held-out third.
  *
  * Balanced on purpose: examples only from records the model gets wrong would teach it that
  * its instinct is always inverted. Half reinforce what it already does, half correct it.
@@ -23,8 +30,13 @@ loadEnvConfig(process.cwd())
 const isHoldout = (id: string) =>
   createHash('sha256').update(`holdout:${id}`).digest().readUInt32BE(0) / 0xffffffff < 1 / 3
 
+/** Descriptions differ only in whitespace and case between copies of the same scheme. */
+const canonical = (description: string) => description.replace(/\s+/g, ' ').trim().toLowerCase()
+
 async function main() {
-  const cachePath = process.argv[2] ?? 'runs/fl-ops.json'
+  const args = process.argv.slice(2)
+  const verifyOnly = args.includes('--verify')
+  const cachePath = args.find((a) => !a.startsWith('--')) ?? 'runs/fl-ops.json'
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
@@ -36,6 +48,26 @@ async function main() {
   for (const l of lab ?? []) rob.set(String(l.record_id), String(l.relevance))
   const cache = JSON.parse(readFileSync(cachePath, 'utf8'))
 
+  // Every description on the held-out side, whatever id carries it. Anything matching one of
+  // these is unusable as an example even if its own id sits in the tuning third.
+  const heldOutText = new Set<string>()
+  for (const a of apps ?? []) {
+    if (!isHoldout(a.provider_id as string)) continue
+    const d = String((a.raw as { description?: string }).description ?? '')
+    if (d.trim()) heldOutText.add(canonical(d))
+  }
+
+  if (verifyOnly) {
+    const src = readFileSync('src/lib/planning-intelligence/openrouter.ts', 'utf8')
+    const block = src.slice(src.indexOf('const RELEVANCE_EXAMPLES'), src.indexOf("].join(' | ')"))
+    const inPrompt = [...block.matchAll(/'(.+?) -> (?:high|medium|low)'/g)]
+      .map((m) => canonical(m[1].replace(/\\'/g, "'")))
+    const bad = inPrompt.filter((d) => heldOutText.has(d))
+    console.log(`${inPrompt.length} example(s) in the prompt; ${bad.length} match a held-out record`)
+    for (const d of bad) console.log(`  LEAKED: ${d.slice(0, 90)}`)
+    process.exit(bad.length === 0 ? 0 : 1)
+  }
+
   type Row = { id: string; desc: string; rob: string; model: string; right: boolean }
   const rows: Row[] = []
   for (const a of apps ?? []) {
@@ -46,6 +78,7 @@ async function main() {
     const desc = String((a.raw as { description?: string }).description ?? '').trim()
     // A description too long to quote teaches nothing a shorter one does not.
     if (!r || !m || r === 'skipped' || desc.length < 20 || desc.length > 190) continue
+    if (heldOutText.has(canonical(desc))) continue   // a duplicate of a held-out scheme
     rows.push({ id, desc, rob: r, model: m, right: r === m })
   }
 

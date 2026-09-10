@@ -47,24 +47,27 @@ const confidence = z.number().min(0).max(1)
  * currently gets wrong; drawn only from its mistakes, they would teach it that its instinct
  * is always inverted.
  *
- * Never regenerate these from the held-out third. That set is the only evidence any of this
- * generalises, and an example drawn from it puts a test answer straight into the prompt.
+ * Never regenerate these from the held-out third, and note that "held-out" means by CONTENT.
+ * The same scheme appears under several authority names with different provider ids, so an
+ * id-based split scatters copies across both sides: an earlier version of this list contained
+ * a description word-for-word identical to a held-out record. `--verify` re-checks the live
+ * prompt against every held-out description and exits non-zero if any matches.
  */
 const RELEVANCE_EXAMPLES = [
   'Construction of artificial grass football with including fencing and floodlights -> high',
+  'Change of use from school (Class F1a) to a children\'s day nursery (Class Ef), with alterations internally and externally and to parking areas and pedestrian paths. -> high',
   'Demolition of an existing building and erection of a new building for uses falling within Class E. -> high',
   'Prior approval for proposed change of use of a traditional agricultural building to office accommodation (use class E). -> high',
-  'Internal fit out and refurbishment of the premisies for use as a medical aesthetics and wellness salon -> high',
-  'Change of use from school (Class F1a) to a children\'s day nursery (Class Ef), with alterations internally and externally and to parking areas and pedestrian paths. -> high',
-  'Proposed change of use to wildlife and conservation facilities, with one ancillary barn, 15 wildlife buildings, 17 holiday lodges and a single dwellinghouse -> high',
-  'Works to facilitate a change of use to office accommodation -> high',
-  'Change of use of commercial premises (Class E) to residential (Class C3) -> low',
+  'Use as class E (Cafe) -> high',
+  'Change of use of the front section of the existing building from a tyre and exha -> high',
+  '(Retrospective) Change of use from sports pavilion to mixed use as Class F2 sports pavilion and Class E(b) cafe -> high',
   'Change of Use from Commercial (Use Class E / Warehouse B8) to 2 x Studio Residential Units (Use Class C3) -> low',
-  'PART FRONT & REAR EXTENSION, RAISED ROOF AND CHANGE OF USE FROM FORMER AMBULANC -> low',
-  'Siting of Parcel Locker -> low',
   'Change of use of first-floor flat (Class C3) to short-term holiday accommodation. -> low',
+  'PART FRONT & REAR EXTENSION, RAISED ROOF AND CHANGE OF USE FROM FORMER AMBULANC -> low',
   'Erection of outbuilding for use as a dog grooming business and office (partially retrospective) -> low',
-  'Change of use of dwellinghouse and outbuildings to sui generis use, residential recording studio with temporary accommodation and ancillary facilities, with associated operational works. -> low',
+  'Operational development to existing buildings to facilitate their conversion and re-use for storage and distribution purposes, and resurfacing of associated yard. -> low',
+  'Replacement of existing gazebo food stall with a kiosk for hot food takeaways -> low',
+  'Erection of a building for use as a virtual cricket lane and associated works. -> low',
 ].join(' | ')
 
 export const planningClassificationSchema = z.object({
