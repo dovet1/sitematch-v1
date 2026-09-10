@@ -9,7 +9,7 @@ import type {
 import type { ResearchSource } from './research-sources'
 
 export const DEFAULT_OPENROUTER_RESEARCH_MODEL = 'openai/gpt-5.2'
-export const PLANNING_RESEARCH_PROMPT_VERSION = 'planning-research-v3'
+export const PLANNING_RESEARCH_PROMPT_VERSION = 'planning-research-v4'
 export const PLANNING_RESEARCH_SCHEMA_VERSION = 'planning-research-v2'
 export const RESEARCH_REQUEST_TIMEOUT_MS = 240_000
 
@@ -217,6 +217,22 @@ function relevantOcrMemo(sources: ResearchSource[]): string {
   return passages.join('\n\n').slice(0, 14_000)
 }
 
+function citedWebEvidence(
+  annotations: NonNullable<NonNullable<OpenRouterResearchBody['choices']>[number]['message']>['annotations'] = []
+): string {
+  const passages: string[] = []
+  let remaining = 18_000
+  for (const annotation of annotations ?? []) {
+    const citation = annotation.url_citation
+    if (!citation?.url || !citation.content?.trim() || remaining <= 0) continue
+    const header = `[WEB SOURCE; url=${citation.url}${citation.title ? `; title=${citation.title}` : ''}]\n`
+    const passage = `${header}${citation.content.trim().slice(0, 4_000)}`.slice(0, remaining)
+    passages.push(passage)
+    remaining -= passage.length
+  }
+  return passages.join('\n\n')
+}
+
 function evidenceMap(
   sources: ResearchSource[],
   annotations: NonNullable<NonNullable<OpenRouterResearchBody['choices']>[number]['message']>['annotations'] = []
@@ -362,7 +378,15 @@ export async function researchOperatorWithOpenRouter(input: {
       // The newer server tool is discretionary: GPT-5.2 skipped it in a live run despite an
       // explicit instruction. The plugin always performs one bounded search. Exa replaced
       // Parallel after the latter returned repeatable 500s for North Warwickshire evidence.
-      plugins: [{ id: 'web', engine: 'exa', mode: 'auto', max_results: 6 }],
+      plugins: [{
+        id: 'web', engine: 'exa', mode: 'auto', max_results: 6,
+        // Search mirrors usually repeat the application description and crowd out sources
+        // that add genuinely useful company, developer, construction or letting context.
+        exclude_domains: [
+          'planning.org.uk', 'planning-records.uk', 'planindex.co.uk', 'plotedge.uk',
+          'plota.co.uk', 'towncrierapp.uk', 'planningalerts.org.uk',
+        ],
+      }],
       messages: [
         {
           role: 'system',
@@ -379,7 +403,10 @@ export async function researchOperatorWithOpenRouter(input: {
             'Never calculate floor area from drawings or dimensions. Do not confuse site area, residential area, parking, or employment figures with commercial floor area.',
             'For document evidence, include the PDF page number in the memo when it is visible.',
             'If no source explicitly names one, state that plainly.',
-            'Use web search to look for the application reference, address, and proposal. Produce a concise evidence memo.',
+            'Use web search to look beyond planning-list mirrors for evidence about this exact application and site.',
+            'Prioritise first-party applicant, occupier, developer, agent and contractor pages, then reputable property and local-news coverage.',
+            'Search distinctive company, site and address terms as well as the application reference. Treat older or unconnected development phases as context only.',
+            'Produce a concise evidence memo.',
           ].join(' '),
         },
         {
@@ -399,6 +426,7 @@ export async function researchOperatorWithOpenRouter(input: {
   if (!researchMessage?.content) throw new Error('OpenRouter returned no research memo')
   // Unlike the discretionary server tool, the plugin always runs once per request.
   const webSearchRequests = researchBody.usage?.server_tool_use?.web_search_requests ?? 1
+  const webEvidenceText = citedWebEvidence(researchMessage.annotations)
   const extractionSourceText = input.sources.map((source, index) =>
     `[SOURCE ${index + 1}; kind=${source.kind}; url=${source.url}]\n${source.text}`
   ).join('\n\n') + (ocrMemo ? `\n\n[PDF OCR EVIDENCE MEMO]\n${ocrMemo}` : '')
@@ -431,7 +459,8 @@ export async function researchOperatorWithOpenRouter(input: {
         {
           role: 'user',
           content: `Application:\n${applicationEvidence}\n\nResearch memo:\n${researchMessage.content}`
-            + (extractionSourceText ? `\n\nFetched evidence:\n${extractionSourceText}` : ''),
+            + (extractionSourceText ? `\n\nFetched evidence:\n${extractionSourceText}` : '')
+            + (webEvidenceText ? `\n\nCited web evidence:\n${webEvidenceText}` : ''),
         },
       ],
     }),

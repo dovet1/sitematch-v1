@@ -24,6 +24,7 @@ import { dirname } from 'path'
 import { classifyWithOpenRouter, PLANNING_PROMPT_VERSION } from '../src/lib/planning-intelligence/openrouter'
 import { shouldEscalate } from '../src/lib/planning-intelligence/classify'
 import type { PlanningClassification, PlotaApplication } from '../src/lib/planning-intelligence/types'
+import { MAJOR_HOUSING_DWELLINGS } from '../src/lib/planning-intelligence/eligibility'
 
 loadEnvConfig(process.cwd())
 
@@ -245,11 +246,11 @@ async function main() {
 
   console.log('\n--- DWELLING COUNT ---')
   if (dwell.length) {
-    const big = (n: number | null) => n !== null && n >= 16
+    const big = (n: number | null) => n !== null && n >= MAJOR_HOUSING_DWELLINGS
     console.log(table([
       ['reading', 'count', 'of', 'rate'],
       ['exact match', String(dwell.filter((p) => p.human === p.model).length), String(dwell.length), ''],
-      ['agrees on the 16+ cut', String(dwell.filter((p) => big(p.human) === big(p.model)).length), String(dwell.length), ''],
+      ['agrees on the 15+ cut', String(dwell.filter((p) => big(p.human) === big(p.model)).length), String(dwell.length), ''],
       ['model 0 where you said a number', String(dwell.filter((p) => p.model === 0 && p.human !== 0 && p.human !== null).length), String(dwell.length), ''],
       ['model null where you said 0', String(dwell.filter((p) => p.model === null && p.human === 0).length), String(dwell.length), ''],
     ]).split('\n').map((l) => '  ' + l).join('\n'))

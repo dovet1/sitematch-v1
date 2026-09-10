@@ -49,7 +49,10 @@ describe('OpenRouter planning research', () => {
     const researchBody = JSON.parse(String((global.fetch as jest.Mock).mock.calls[0][1].body))
     const extractionBody = JSON.parse(String((global.fetch as jest.Mock).mock.calls[1][1].body))
     expect(researchBody.messages[0].content).toContain('untrusted data')
-    expect(researchBody.plugins[0]).toEqual(expect.objectContaining({ id: 'web', max_results: 6 }))
+    expect(researchBody.plugins[0]).toEqual(expect.objectContaining({
+      id: 'web', engine: 'exa', max_results: 6,
+      exclude_domains: expect.arrayContaining(['planning.org.uk', 'planning-records.uk']),
+    }))
     expect(extractionBody.response_format.json_schema.strict).toBe(true)
     expect(result.webSearchRequests).toBe(1)
   })
@@ -80,6 +83,11 @@ describe('OpenRouter planning research', () => {
     const result = await researchOperatorWithOpenRouter({
       application, sources: [], apiKey: 'key',
     })
+    const extractionBody = JSON.parse(String((global.fetch as jest.Mock).mock.calls[1][1].body))
+    expect(extractionBody.messages[1].content).toContain('Cited web evidence:')
+    expect(extractionBody.messages[1].content).toContain(`[WEB SOURCE; url=${webUrl}]`)
+    expect(extractionBody.messages[1].content)
+      .toContain('Example Gym has signed for the new unit at 1 High Street.')
     expect(result.signals).toHaveLength(1)
     expect(result.costUsd).toBe(0.024)
   })

@@ -1,5 +1,5 @@
 import { buildAliasIndex } from '@/lib/epc/aliases'
-import { classificationInputHash, decideEligibility, isDetailSubmission } from '../eligibility'
+import { MAJOR_HOUSING_DWELLINGS, classificationInputHash, decideEligibility, isDetailSubmission } from '../eligibility'
 import type { PlotaApplication } from '../types'
 
 const aliases = buildAliasIndex(
@@ -28,9 +28,12 @@ describe('planning intelligence eligibility', () => {
     }
   )
 
-  it('promotes 16 dwellings but not 15', () => {
-    expect(decideEligibility(application({ dwelling_count: 15 }), aliases).intelligenceTier).toBe(false)
-    expect(decideEligibility(application({ dwelling_count: 16 }), aliases).limbs).toEqual(['B'])
+  // The boundary moved from 16 to 15 on the domain expert's own wording: not interested
+  // "below 15 dwellings" puts a 15-unit scheme inside the net. Asserted against the shared
+  // constant rather than a literal, so the filter and the evaluation scripts cannot drift apart.
+  it('promotes a scheme at the major-housing threshold but not one below it', () => {
+    expect(decideEligibility(application({ dwelling_count: MAJOR_HOUSING_DWELLINGS - 1 }), aliases).intelligenceTier).toBe(false)
+    expect(decideEligibility(application({ dwelling_count: MAJOR_HOUSING_DWELLINGS }), aliases).limbs).toEqual(['B'])
   })
 
   it('keeps commercial loss as its own limb', () => {

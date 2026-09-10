@@ -8,6 +8,20 @@ import type {
   PlotaApplication,
 } from './types'
 
+/**
+ * Where a housing scheme becomes large enough to move market size.
+ *
+ * Was 16, from an original brief reading "greater than 15 dwellings". The domain expert
+ * writes the rule as not interested "below 15 dwellings", which puts a 15-unit scheme inside
+ * the net rather than outside it, and that reading is the one adopted. No record in the
+ * 164-record sample sits at 15 or 16, so nothing was decided wrongly under either; the
+ * difference only ever shows up on new data.
+ *
+ * Exported because the evaluation scripts measure agreement on exactly this cut, and a
+ * threshold written out twice is a threshold that eventually disagrees with itself.
+ */
+export const MAJOR_HOUSING_DWELLINGS = 15
+
 const COMMERCIAL_SUPPLY = new Set(['new', 'to-commercial', 'between'])
 
 function hitsFor(
@@ -78,7 +92,7 @@ export function decideEligibility(
 
   const limbs: EligibilityLimb[] = []
   if (application.commercial_work && COMMERCIAL_SUPPLY.has(application.commercial_work)) limbs.push('A')
-  if ((application.dwelling_count ?? 0) >= 16) limbs.push('B')
+  if ((application.dwelling_count ?? 0) >= MAJOR_HOUSING_DWELLINGS) limbs.push('B')
   if (
     options.brandLimbEnabled &&
     brandHits.some((hit) => hit.source === 'description' && !hit.ambiguous)

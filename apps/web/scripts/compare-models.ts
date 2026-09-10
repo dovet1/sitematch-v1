@@ -13,6 +13,7 @@ import { loadEnvConfig } from '@next/env'
 import { createClient } from '@supabase/supabase-js'
 import { createHash } from 'crypto'
 import { existsSync, readFileSync } from 'fs'
+import { MAJOR_HOUSING_DWELLINGS } from '../src/lib/planning-intelligence/eligibility'
 loadEnvConfig(process.cwd())
 
 const isHoldout = (id: string) =>
@@ -40,7 +41,7 @@ async function main() {
   for (const r of lab ?? []) rob.set(String(r.record_id), r)
 
   const rows: string[][] = [[
-    'model', 'runs', 'flip rate', 'failed', 'rel A', 'rel B', 'swing', '16+ cut', '$/80',
+    'model', 'runs', 'flip rate', 'failed', 'rel A', 'rel B', 'swing', '15+ cut', '$/80',
   ]]
 
   for (const name of names) {
@@ -58,8 +59,8 @@ async function main() {
     const agree = (run: any) => ids.filter((id) => relOf(run, id) === rob.get(id).relevance).length
     const pc = (n: number) => ((n / ids.length) * 100).toFixed(1) + '%'
 
-    // The 16+ dwelling cut is what objective 3 actually acts on, averaged over both runs.
-    const big = (n: number | null) => n !== null && n >= 16
+    // The major-housing cut is what objective 3 actually acts on, averaged over both runs.
+    const big = (n: number | null) => n !== null && n >= MAJOR_HOUSING_DWELLINGS
     const cutHits = [a, b].flatMap((run) => ids.map((id) => {
       const human = rob.get(id).dwelling_count
       return big(human === null || human === undefined ? null : Number(human))

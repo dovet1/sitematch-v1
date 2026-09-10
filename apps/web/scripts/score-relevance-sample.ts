@@ -18,6 +18,7 @@ import { loadEnvConfig } from '@next/env'
 import { createClient } from '@supabase/supabase-js'
 import { readdirSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
+import { MAJOR_HOUSING_DWELLINGS } from '../src/lib/planning-intelligence/eligibility'
 
 /**
  * Labels arrive by two routes, because a collaborator outside the organisation cannot open
@@ -162,7 +163,7 @@ function report(name: string, pairs: Array<{ human: string; model: string }>, cl
  * about them. Three readings matter, in increasing order of what they cost us:
  *
  *   exact      did the model read the same number off the page
- *   threshold  did it agree on the only cut the product acts on, 16 or more homes
+ *   threshold  did it agree on the only cut the product acts on, 15 or more homes
  *   false zero did it write 0 where the application states no figure at all
  *
  * The last one is the specific regression this exercise exists to catch. Session 2 found
@@ -175,7 +176,7 @@ function reportDwellings(pairs: Array<{ human: number | null; model: number | nu
 
   const same = (a: number | null, b: number | null) => a === b
   const exact = pairs.filter((p) => same(p.human, p.model)).length
-  const big = (n: number | null) => n !== null && n >= 16
+  const big = (n: number | null) => n !== null && n >= MAJOR_HOUSING_DWELLINGS
   const threshold = pairs.filter((p) => big(p.human) === big(p.model)).length
   const falseZero = pairs.filter((p) => p.human === null && p.model === 0).length
   const missedCount = pairs.filter((p) => p.human !== null && p.model === null).length
@@ -184,7 +185,7 @@ function reportDwellings(pairs: Array<{ human: number | null; model: number | nu
   console.log(table([
     ['reading', 'count', 'of', 'rate'],
     ['exact match', String(exact), String(pairs.length), pct(exact)],
-    ['agrees on the 16+ cut', String(threshold), String(pairs.length), pct(threshold)],
+    ['agrees on the 15+ cut', String(threshold), String(pairs.length), pct(threshold)],
     ['model wrote 0 for "not stated"', String(falseZero), String(pairs.length), pct(falseZero)],
     ['model missed a count you found', String(missedCount), String(pairs.length), pct(missedCount)],
   ]).split('\n').map((l) => '  ' + l).join('\n'))
