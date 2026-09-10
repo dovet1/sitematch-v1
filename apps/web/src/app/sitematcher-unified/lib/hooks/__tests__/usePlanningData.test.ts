@@ -66,6 +66,7 @@ describe('usePlanningData', () => {
       applications: [app('IN/1', 0.5, 0.5), app('OUT/1', 5, 5)],
       truncated: true,
       truncationReason: 'authority_cap',
+        freshness: null,
     })
     const { result } = renderHook(() => usePlanningData(boundary, true))
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -91,6 +92,7 @@ describe('usePlanningData', () => {
         applications: [app('IN/1', 0.5, 0.5)],
         truncated: false,
         truncationReason: null,
+        freshness: null,
       }
     })
     const { result } = renderHook(() => usePlanningData(boundary, true))
@@ -106,6 +108,7 @@ describe('usePlanningData', () => {
       applications: [app('IN/1', 0.5, 0.5)],
       truncated: false,
       truncationReason: null,
+        freshness: null,
     })
     const { result, rerender } = renderHook(
       ({ enabled }: { enabled: boolean }) => usePlanningData(boundary, enabled),

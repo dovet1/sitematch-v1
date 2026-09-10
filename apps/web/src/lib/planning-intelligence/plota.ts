@@ -4,6 +4,19 @@ export const PLOTA_BASE_URL = 'https://api.plota.co.uk/v1'
 export const PLOTA_INTERNAL_MONTHLY_LIMIT = 15_000
 export const PLOTA_REQUEST_RESERVE = 5_000
 
+/**
+ * Plota's derived filters -- commercial_work and dmin -- are documented as live-only, and a
+ * reduced-scope search of an earlier window returns an incomplete answer rather than an
+ * error. Both the backfill and refresh paths refuse to search before this date under reduced
+ * scope, because reading fewer records than we already hold and reporting success is worse
+ * than not running.
+ *
+ * This is a fact about the provider, so it sits here rather than in the ingest driver: the
+ * cron routes that enforce it mock the driver in their tests and would otherwise be
+ * comparing against undefined.
+ */
+export const REDUCED_SCOPE_ARCHIVE_FLOOR = '2026-01-01'
+
 export class PlotaError extends Error {
   constructor(
     message: string,

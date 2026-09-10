@@ -24,6 +24,7 @@ import type {
   MissingBrand,
   NationwideRequirement,
   PlanningApplication,
+  PlanningFreshness,
   PlanningProgress,
   PlanningTruncationReason,
   PresentBrand,
@@ -1277,6 +1278,34 @@ export function planningTruncationMessage(
   }
 }
 
+/**
+ * What to tell someone when the planning store may not be current.
+ *
+ * Null means there is nothing to say: either the answer came from the live source, or the
+ * data is as current as the schedule promises. The two stale cases are separated because
+ * they mean different things to a reader. Discovery falling behind means recent applications
+ * are missing altogether. Refresh falling behind means the applications listed are real but
+ * their decisions may have moved on, which is the more dangerous of the two precisely
+ * because the list looks complete.
+ */
+export function planningFreshnessMessage(
+  freshness: PlanningFreshness | null
+): string | null {
+  if (!freshness || !freshness.stale) return null
+  switch (freshness.staleReason) {
+    case 'never_ingested':
+      return 'Planning data has not been collected yet, so this area may be incomplete.'
+    case 'discovery_overdue':
+      return 'Planning data has not updated recently, so newer applications may be missing.'
+    case 'refresh_overdue':
+      return 'Some decisions have not been re-checked recently and may be out of date.'
+    case 'freshness_unavailable':
+      return "We couldn't confirm how current this planning data is."
+    default:
+      return null
+  }
+}
+
 function formatPlanningDate(iso: string | null): string | null {
   if (!iso) return null
   const d = new Date(iso)
@@ -1345,6 +1374,7 @@ function PlanningBody({
   error,
   truncated,
   truncationReason,
+  freshness,
   progress,
   applications,
   onOpen,
@@ -1353,11 +1383,13 @@ function PlanningBody({
   error: string | null
   truncated: boolean
   truncationReason: PlanningTruncationReason
+  freshness: PlanningFreshness | null
   progress: PlanningProgress | null
   applications: PlanningApplication[]
   onOpen: (app: PlanningApplication) => void
 }) {
   const warning = planningTruncationMessage(truncationReason)
+  const staleness = planningFreshnessMessage(freshness)
   return (
     <>
       {loading && (
@@ -1384,6 +1416,14 @@ function PlanningBody({
         {error && !loading && (
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-3.5 text-[12.5px] text-rose-700">
             {error}
+          </div>
+        )}
+        {/* Staleness qualifies whatever is listed, so unlike the empty state it shows
+            alongside results rather than instead of them. It sits above truncation because
+            "this data may be old" changes how you read "and there is more of it". */}
+        {staleness && !loading && !error && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12.5px] text-amber-800">
+            {staleness}
           </div>
         )}
         {truncated && warning && !loading && !error && (
@@ -1426,6 +1466,7 @@ function Opportunity({
   planningError,
   planningTruncated,
   planningTruncationReason,
+  planningFreshness,
   planningProgress,
   onClose,
   onCollapse,
@@ -1450,6 +1491,7 @@ function Opportunity({
   planningError: string | null
   planningTruncated: boolean
   planningTruncationReason: PlanningTruncationReason
+  planningFreshness: PlanningFreshness | null
   planningProgress: PlanningProgress | null
   onClose: () => void
   onCollapse: () => void
@@ -1661,6 +1703,7 @@ function Opportunity({
             error={planningError}
             truncated={planningTruncated}
             truncationReason={planningTruncationReason}
+            freshness={planningFreshness}
             progress={planningProgress}
             applications={planningApplications}
             onOpen={onOpenPlanning}
@@ -1715,6 +1758,7 @@ export function UInspector({
   planningError,
   planningTruncated,
   planningTruncationReason,
+  planningFreshness,
   planningProgress,
 }: {
   hidden: boolean
@@ -1737,6 +1781,7 @@ export function UInspector({
   planningError: string | null
   planningTruncated: boolean
   planningTruncationReason: PlanningTruncationReason
+  planningFreshness: PlanningFreshness | null
   planningProgress: PlanningProgress | null
 }) {
   const view = useWorkspaceStore((s) => s.view)
@@ -1787,6 +1832,7 @@ export function UInspector({
         planningError={planningError}
         planningTruncated={planningTruncated}
         planningTruncationReason={planningTruncationReason}
+        planningFreshness={planningFreshness}
         planningProgress={planningProgress}
         onClose={() => selectArea(null)}
         onCollapse={onToggle}
@@ -1824,6 +1870,7 @@ export function UInspector({
         planningError={planningError}
         planningTruncated={planningTruncated}
         planningTruncationReason={planningTruncationReason}
+        planningFreshness={planningFreshness}
         planningProgress={planningProgress}
         onClose={() => setAssessPoint(null)}
         onCollapse={onToggle}

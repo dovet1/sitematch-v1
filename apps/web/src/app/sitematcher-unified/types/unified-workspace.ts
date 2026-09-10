@@ -139,6 +139,14 @@ export type PlanningTruncationReason =
   | 'upstream_error'
   | null
 
+// How current the stored planning data is. Defined with the ingest thresholds that decide
+// it, and re-exported here so the workspace keeps one import path for its own types while
+// the server and the client judge staleness by exactly the same rule.
+export type {
+  PlanningFreshness,
+  PlanningStaleReason,
+} from '@/lib/planning-intelligence/freshness'
+
 // Progress while a planning lookup fans out across planning authorities. A
 // lookup can span ~20 authorities at concurrency 2, so the tab reports which
 // one it is on rather than showing an unqualified spinner for minutes.

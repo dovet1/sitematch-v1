@@ -588,6 +588,7 @@ export function UnifiedWorkspace() {
             planningError={planningError}
             planningTruncated={planning.truncated}
             planningTruncationReason={planning.truncationReason}
+            planningFreshness={planning.freshness}
             planningProgress={planning.progress}
           />
         )}

@@ -5,6 +5,7 @@
 
 import type {
   PlanningApplication,
+  PlanningFreshness,
   PlanningProgress,
   PlanningTruncationReason,
 } from '../../types/unified-workspace'
@@ -13,6 +14,11 @@ export interface PlanningFetchResult {
   applications: PlanningApplication[]
   truncated: boolean
   truncationReason: PlanningTruncationReason
+  /**
+   * How current the stored data is, or null when the answer came from the live PlanIt path,
+   * which has nothing to be out of date about.
+   */
+  freshness: PlanningFreshness | null
 }
 
 export async function fetchPlanningApplications(
@@ -64,6 +70,7 @@ export async function fetchPlanningApplications(
         truncated: Boolean(msg.truncated),
         truncationReason:
           (msg.truncationReason as PlanningTruncationReason) ?? null,
+        freshness: (msg.freshness as PlanningFreshness | null) ?? null,
       }
     } else if (msg.type === 'error') {
       streamError = msg.error || 'Planning data failed'

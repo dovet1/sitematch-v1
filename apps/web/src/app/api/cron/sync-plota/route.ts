@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPlanningAdminClient } from '@/lib/planning-intelligence/db'
 import { runPlotaSync } from '@/lib/planning-intelligence/ingest'
-import { PlotaClient, type CensusScope } from '@/lib/planning-intelligence/plota'
+import {
+  PlotaClient,
+  REDUCED_SCOPE_ARCHIVE_FLOOR,
+  type CensusScope,
+} from '@/lib/planning-intelligence/plota'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -36,7 +40,7 @@ export async function GET(request: NextRequest) {
   }
 
   const scope: CensusScope = process.env.PLOTA_CENSUS_SCOPE === 'full' ? 'full' : 'reduced'
-  if (kind === 'backfill' && scope === 'reduced' && dateFrom < '2026-01-01') {
+  if (kind === 'backfill' && scope === 'reduced' && dateFrom < REDUCED_SCOPE_ARCHIVE_FLOOR) {
     return NextResponse.json({
       error: [
         'Plota commercial_work and dmin filters apply to live records only.',

@@ -1,5 +1,6 @@
 import type { PlanningApplication } from '@/app/sitematcher-unified/types/unified-workspace'
 import { createPlanningAdminClient } from '@/lib/planning-intelligence/db'
+import { FRESHNESS_UNAVAILABLE, readPlanningFreshness } from '@/lib/planning-intelligence/freshness'
 import type { Boundary, PlanningResult } from './planit'
 
 interface StoredRow {
@@ -34,6 +35,18 @@ function coordinates(location: StoredRow['location']): [number, number] | null {
 
 export async function fetchStoredPlanningApplications(boundary: Boundary): Promise<PlanningResult> {
   const db = createPlanningAdminClient()
+  // Read freshness alongside the applications, not after them. A caller that has to ask a
+  // second time is a caller that can forget to, and then the tab shows stale data as though
+  // it were current -- the one failure this path exists to make impossible.
+  //
+  // A failed status read degrades to "unknown, treat as stale" rather than failing the
+  // lookup. Freshness is a caption on the answer; losing the caption should not lose the
+  // answer, and the planning tab going dark because an aggregate query broke is a worse
+  // outcome than showing applications under an honest warning.
+  const freshnessPromise = readPlanningFreshness(db).catch((error: unknown) => {
+    console.error('[planning-stored] Freshness read failed', error)
+    return FRESHNESS_UNAVAILABLE
+  })
   // Supabase's API caps each response at 1,000 rows. Two full pages and a one-row
   // sentinel preserve the Planning tab's existing 2,000-record truncation contract.
   const rows: StoredRow[] = []
@@ -95,5 +108,6 @@ export async function fetchStoredPlanningApplications(boundary: Boundary): Promi
     total: applications.length,
     truncated: rows.length > 2000,
     truncationReason: rows.length > 2000 ? 'record_cap' : null,
+    freshness: await freshnessPromise,
   }
 }

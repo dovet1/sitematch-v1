@@ -4,6 +4,9 @@ Date: 10 September 2026
 Revised after an audit against the code. Six gaps found; all six verified and folded in.
 Sequence: the planning tab first, then the Planning Monitor mode.
 
+Status: **Phase 0 built** (10 September 2026), pending the migration and the flags.
+Phase 1, the ranked planning tab, is next.
+
 The classification pipeline is built and working. What follows is about getting it in front of
 users, in the order that ships something usable soonest and learns most per week of work.
 
@@ -19,20 +22,55 @@ The Monitor is a much larger build, and two of its three application categories 
 today's data. Doing the tab first buys the thing the Monitor most needs, which is evidence
 about whether the classification is useful in practice, at a fraction of the cost.
 
-## Phase 0 — Unblock the data. Do this first, it gates everything.
+## Phase 0 — Unblock the data. Do this first, it gates everything. **Built.**
 
-**Buy the Plota subscription.** 465 requests remain and the demo key stops after one request
-per run regardless of configuration. No amount of work downstream changes this, and every
-phase below is starved without it.
+**Buy the Plota subscription.** Done, 10 September 2026. Every phase below was starved
+without it: 465 requests remained and the demo key stopped after one request per run
+regardless of configuration.
 
-**One ingest is not a pipeline.** There is no Plota or classification schedule in
-`vercel.json` at all, and the sync endpoint exposes discovery and backfill only. Its 14-day
+**One ingest is not a pipeline.** There was no Plota or classification schedule in
+`vercel.json` at all, and the sync endpoint exposed discovery and backfill only. Its 14-day
 discovery window finds new applications; it does not revisit older ones whose decision changes,
 and a decision changing is exactly the event a monitoring product exists to catch.
 
-Done when: ingest and classification run on a schedule; a separate pass refreshes the status of
-applications already stored; queue depth and data freshness are observable; and the tab has a
-defined behaviour when data is stale rather than silently showing an old world.
+What was built, and the decisions inside it:
+
+- **A schedule.** Discovery daily, refresh weekly, classification every six hours.
+- **A refresh pass** (`/api/cron/refresh-plota`) that re-searches the received-date months
+  still holding undecided applications, least recently checked first. It is a separate route,
+  not a query parameter on the sync endpoint, because a cron entry that lost its query string
+  would silently run discovery instead — and discovery succeeding looks exactly like refresh
+  working.
+- **Cohorts are months, not authorities.** The original ingest plan proposed authority plus
+  received-date window. Plota's search is only proven here for nation, census filter and date
+  range, so narrowing by authority would mean sending a parameter this codebase has never
+  sent. Month windows reuse what discovery runs daily. Narrow later, once that parameter is
+  confirmed against the live API.
+- **Refusing the archive under reduced scope.** Plota documents its derived filters as
+  live-only, so re-searching a pre-2026 window under reduced scope would read fewer records
+  than we already hold and report success. Refresh now refuses those windows for the same
+  reason backfill already did, and both read one constant.
+- **Checkpoints are keyed by cycle.** A finished checkpoint is skipped, which is what makes
+  discovery resumable — and would have made refresh a no-op for ever on the second pass.
+- **Observability** through `planning_pipeline_status`, surfaced at
+  `/api/admin/planning/status`: classification and research queue depth, the last run of each
+  kind including failures, store freshness, and the remaining provider allowance.
+- **A defined stale behaviour.** The tab now carries freshness with every result and names
+  two failures separately, because they mean different things to a reader. Discovery falling
+  behind means recent applications are missing altogether. Refresh falling behind means the
+  applications listed are real but their decisions may have moved on, which is the more
+  dangerous of the two precisely because the list looks complete. A status read that itself
+  fails degrades to "we could not confirm this is current", never to silence.
+
+**Research is deliberately left unscheduled.** It is the paid document and web pass, and
+Phase 2b says to fix its counter and read a real batch before changing anything about it. A
+cron would start spending against a measure already known to be wrong.
+
+**What is left is operational, not code.** Apply the migration; set `PLOTA_SYNC_ENABLED` and
+`PLANNING_CLASSIFICATION_ENABLED`; raise `PLOTA_PAGE_SIZE` and `PLOTA_MAX_PAGES_PER_RUN` from
+their Demo-key defaults of 10 and 1, and `PLOTA_REFRESH_COHORTS` with them. Three months at
+one page each cannot keep a national store current, and the refresh-overdue threshold is
+calculated for a weekly pass over three cohorts — recalculate it if either number changes.
 
 ## Phase 1 — The planning tab, ranked by relevance
 

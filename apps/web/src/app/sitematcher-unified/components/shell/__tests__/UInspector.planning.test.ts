@@ -1,7 +1,63 @@
 import {
+  planningFreshnessMessage,
   planningProgressMessage,
   planningTruncationMessage,
 } from '../UInspector'
+import type { PlanningFreshness } from '../../../types/unified-workspace'
+
+function freshness(overrides: Partial<PlanningFreshness> = {}): PlanningFreshness {
+  return {
+    lastDiscoveryAt: '2026-09-10T06:00:00.000Z',
+    lastRefreshAt: '2026-09-08T05:00:00.000Z',
+    oldestLiveCheckedAt: '2026-09-01T05:00:00.000Z',
+    latestApplicationDate: '2026-09-09',
+    stale: false,
+    staleReason: null,
+    ...overrides,
+  }
+}
+
+describe('planningFreshnessMessage', () => {
+  it('says nothing when the data is current', () => {
+    expect(planningFreshnessMessage(freshness())).toBeNull()
+  })
+
+  // The live PlanIt path has no store behind it, so there is nothing to be out of date.
+  it('says nothing when there is no stored data behind the answer', () => {
+    expect(planningFreshnessMessage(null)).toBeNull()
+  })
+
+  it('warns that newer applications may be missing when discovery is behind', () => {
+    const message = planningFreshnessMessage(
+      freshness({ stale: true, staleReason: 'discovery_overdue' })
+    )
+    expect(message).toBe(
+      'Planning data has not updated recently, so newer applications may be missing.'
+    )
+  })
+
+  // Refresh falling behind is the more dangerous case: the list looks complete and the
+  // decisions on it are the part that has moved on, so the copy must name decisions.
+  it('warns about decisions, not coverage, when refresh is behind', () => {
+    const message = planningFreshnessMessage(
+      freshness({ stale: true, staleReason: 'refresh_overdue' })
+    )
+    expect(message).toContain('decisions')
+    expect(message).not.toContain('missing')
+  })
+
+  it('admits when currency could not be established at all', () => {
+    expect(planningFreshnessMessage(
+      freshness({ stale: true, staleReason: 'freshness_unavailable' })
+    )).toBe("We couldn't confirm how current this planning data is.")
+  })
+
+  it('warns before anything has been ingested', () => {
+    expect(planningFreshnessMessage(
+      freshness({ stale: true, staleReason: 'never_ingested' })
+    )).toContain('has not been collected yet')
+  })
+})
 
 describe('planningTruncationMessage', () => {
   it('returns no warning when there is no truncation reason', () => {

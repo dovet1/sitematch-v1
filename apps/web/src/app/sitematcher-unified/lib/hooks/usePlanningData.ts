@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { fetchPlanningApplications } from '../services/planning-service'
 import type {
   PlanningApplication,
+  PlanningFreshness,
   PlanningProgress,
   PlanningTruncationReason,
 } from '../../types/unified-workspace'
@@ -16,6 +17,11 @@ export interface PlanningData {
   truncated: boolean
   truncationReason: PlanningTruncationReason
   progress: PlanningProgress | null
+  /**
+   * How current the stored data is, or null when the answer came from the live PlanIt path.
+   * Null and "fresh" are different states and the tab renders them differently.
+   */
+  freshness: PlanningFreshness | null
 }
 
 // Planning applications inside the active boundary (BUA polygon, radius circle
@@ -33,6 +39,7 @@ export function usePlanningData(
   const [truncationReason, setTruncationReason] =
     useState<PlanningTruncationReason>(null)
   const [progress, setProgress] = useState<PlanningProgress | null>(null)
+  const [freshness, setFreshness] = useState<PlanningFreshness | null>(null)
   const reqId = useRef(0)
 
   // Stable signature so a fresh-but-equal boundary object doesn't re-trigger.
@@ -46,6 +53,7 @@ export function usePlanningData(
       setTruncated(false)
       setTruncationReason(null)
       setProgress(null)
+      setFreshness(null)
       setLoading(false)
       return
     }
@@ -58,7 +66,12 @@ export function usePlanningData(
     fetchPlanningApplications(boundary, controller.signal, (next) => {
       if (id === reqId.current) setProgress(next)
     })
-      .then(({ applications: apps, truncated: wasTruncated, truncationReason }) => {
+      .then(({
+        applications: apps,
+        truncated: wasTruncated,
+        truncationReason,
+        freshness: dataFreshness,
+      }) => {
         if (id !== reqId.current) return
         // The server already filters to the boundary; re-filter as a cheap
         // belt-and-braces guard so a pin can never render outside the outline.
@@ -67,6 +80,7 @@ export function usePlanningData(
         )
         setTruncated(wasTruncated)
         setTruncationReason(truncationReason)
+        setFreshness(dataFreshness)
       })
       .catch((err) => {
         if (err?.name === 'AbortError') return
@@ -92,5 +106,6 @@ export function usePlanningData(
     truncated,
     truncationReason,
     progress,
+    freshness,
   }
 }

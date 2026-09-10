@@ -33,6 +33,7 @@ import type {
   PlanningProgress,
   PlanningTruncationReason,
 } from '@/app/sitematcher-unified/types/unified-workspace'
+import type { PlanningFreshness } from '@/lib/planning-intelligence/freshness'
 
 export const PLANIT_BASE = 'https://www.planit.org.uk/api/applics/json'
 export const PLANIT_AREAS_BASE = 'https://www.planit.org.uk/api/areas/json'
@@ -71,6 +72,11 @@ export interface PlanningResult {
   total: number
   truncated: boolean
   truncationReason: PlanningTruncationReason
+  /**
+   * How current the underlying store is. Null on the PlanIt path, which queries the source
+   * live and so has nothing to be out of date about; the stored path always supplies it.
+   */
+  freshness: PlanningFreshness | null
 }
 
 export class RateLimitError extends Error {
@@ -660,6 +666,7 @@ export async function fetchPlanningApplications(
     total: applications.length,
     truncated: Boolean(finalReason),
     truncationReason: finalReason,
+    freshness: null,
   }
   // A truncated result (rate limit, timeout, authority cap) is not cached — a
   // later retry may complete where this request could not.

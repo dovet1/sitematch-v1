@@ -8,6 +8,7 @@ import { classificationInputHash, decideEligibility } from './eligibility'
 import {
   buildSearchSpecs,
   maySpendPlotaRequest,
+  REDUCED_SCOPE_ARCHIVE_FLOOR,
   type CensusScope,
   type PlotaClient,
 } from './plota'
@@ -25,6 +26,14 @@ export interface SyncInput {
   maxPages: number
   nations?: string[]
   brandLimbEnabled?: boolean
+  /**
+   * Distinguishes one pass over a window from the next. Checkpoints are keyed by the window
+   * they walk, and a finished checkpoint is skipped, which is what makes discovery resumable.
+   * Refresh re-walks a window it has already completed, so without this it would find its own
+   * `complete` checkpoint and do nothing, for ever. Two runs sharing a cycle key resume the
+   * same walk; a new key starts a new one.
+   */
+  cycleKey?: string
 }
 
 export interface SyncResult {
@@ -237,7 +246,14 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
 
     for (const spec of specs) {
       if (pagesLeft <= 0 || stats.stoppedForReserve) break
-      const scopeKey = [input.kind, input.scope, input.dateFrom, input.dateTo, spec.key].join(':')
+      const scopeKey = [
+        input.kind,
+        input.scope,
+        input.dateFrom,
+        input.dateTo,
+        ...(input.cycleKey ? [input.cycleKey] : []),
+        spec.key,
+      ].join(':')
       const { data: checkpoint, error: checkpointError } = await input.db
         .from('planning_ingest_checkpoints')
         .select('next_cursor,status,pages_complete,records_seen')
@@ -354,4 +370,111 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
       .eq('id', run.id)
     throw error
   }
+}
+
+export interface RefreshCohort {
+  windowStart: string
+  windowEnd: string
+  liveRecords: number
+  oldestCheckedAt: string | null
+}
+
+export interface RefreshInput extends Omit<SyncInput, 'kind' | 'dateFrom' | 'dateTo'> {
+  /** How many received-date months one run may re-walk. */
+  cohortLimit: number
+  cycleKey?: string
+}
+
+export interface RefreshResult {
+  cycleKey: string
+  cohorts: Array<RefreshCohort & { runId: string; status: SyncResult['status'] }>
+  skipped: Array<RefreshCohort & { reason: string }>
+  requestsMade: number
+  recordsSeen: number
+  recordsUpserted: number
+  intelligenceRecords: number
+  stoppedForReserve: boolean
+}
+
+/**
+ * The received-date months holding undecided applications, least recently checked first.
+ * See `planning_refresh_cohorts` for why cohorts are months rather than authorities.
+ */
+export async function selectRefreshCohorts(
+  db: PlanningAdminClient,
+  cohortLimit: number
+): Promise<RefreshCohort[]> {
+  const { data, error } = await db.rpc('planning_refresh_cohorts', { p_limit: cohortLimit })
+  if (error) throw error
+  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    windowStart: String(row.window_start),
+    windowEnd: String(row.window_end),
+    liveRecords: Number(row.live_records) || 0,
+    oldestCheckedAt: (row.oldest_checked_at as string | null) ?? null,
+  }))
+}
+
+/**
+ * Re-search the windows we already hold live records in, so a decision arriving after
+ * discovery has moved on is still seen.
+ *
+ * Cohorts share one page budget rather than each getting a slice. A month with three
+ * pages of results should not leave the next month unread because its allocation was spent
+ * on empty pages, and the stalest cohort is first precisely so a short run helps most.
+ */
+export async function runPlotaRefresh(input: RefreshInput): Promise<RefreshResult> {
+  // The cycle key is the UTC date. Two refreshes on the same day resume one walk; tomorrow's
+  // starts a fresh one over whatever is stalest then.
+  const cycleKey = input.cycleKey ?? new Date().toISOString().slice(0, 10)
+  const cohorts = await selectRefreshCohorts(input.db, input.cohortLimit)
+
+  const result: RefreshResult = {
+    cycleKey,
+    cohorts: [],
+    skipped: [],
+    requestsMade: 0,
+    recordsSeen: 0,
+    recordsUpserted: 0,
+    intelligenceRecords: 0,
+    stoppedForReserve: false,
+  }
+
+  let pagesLeft = input.maxPages
+  for (const cohort of cohorts) {
+    if (pagesLeft <= 0 || result.stoppedForReserve) break
+    // Plota documents commercial_work and dmin as live-only, and a reduced-scope search of a
+    // pre-2026 window returns an incomplete answer rather than an error. Re-checking such a
+    // window would read fewer records than we already hold and report success, so the
+    // backfill path refuses it and refresh refuses it for the same reason. A full census has
+    // no derived filter to lose, so it is allowed through.
+    if (input.scope === 'reduced' && cohort.windowStart < REDUCED_SCOPE_ARCHIVE_FLOOR) {
+      result.skipped.push({
+        ...cohort,
+        reason: `Reduced census cannot reliably re-search before ${REDUCED_SCOPE_ARCHIVE_FLOOR}`,
+      })
+      continue
+    }
+    const run = await runPlotaSync({
+      db: input.db,
+      client: input.client,
+      kind: 'refresh',
+      scope: input.scope,
+      dateFrom: cohort.windowStart,
+      dateTo: cohort.windowEnd,
+      pageSize: input.pageSize,
+      maxPages: pagesLeft,
+      nations: input.nations,
+      brandLimbEnabled: input.brandLimbEnabled,
+      cycleKey,
+    })
+    result.cohorts.push({ ...cohort, runId: run.runId, status: run.status })
+    result.requestsMade += run.requestsMade
+    result.recordsSeen += run.recordsSeen
+    result.recordsUpserted += run.recordsUpserted
+    result.intelligenceRecords += run.intelligenceRecords
+    result.stoppedForReserve = run.stoppedForReserve
+    pagesLeft -= run.requestsMade
+  }
+
+  return result
 }
