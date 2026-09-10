@@ -337,6 +337,38 @@ rather than recomputed.
 the gate, which turns on `high` alone, so it is not currently worth fixing. It would matter if
 `medium` ever became a product surface.
 
+## What the expert's own reasoning turned out to be worth
+
+10 September 2026. The expert wrote a sentence explaining each of the 14 records where he and
+the classifier disagreed. Two rubrics were then measured against the same corrected labels:
+the one inferred from his 164 verdicts, and one rebuilt from his 14 written reasons.
+
+| | inferred from his verdicts | built from his words |
+|---|---|---|
+| relevance agreement | **60.0%** | 59.6% |
+| gate catches | 32 | 32 |
+| gate fires on | **50** | 64 |
+| gate precision | **64.0%** | 50.0% |
+
+**The same 32 records, for 14 fewer paid lookups.** The inferred rubric won, and the reason is
+worth holding on to: what someone says their rule is and what 164 of their decisions encode
+are not the same thing. His stated test is "a change of planning use class", which is true but
+far too broad — nearly every record in this tier has one — and the four exclusions he named
+from 14 examples are narrower than the discrimination his full label set actually contains.
+
+**Ask for labels to tune against; ask for reasons to understand, not to transcribe.** The
+reasons were still worth collecting. They produced a self-correction on one record, confirmed
+two exclusions that had been guesses, and supplied the 15-dwelling threshold on the
+residential rule that the inferred version states as a blanket. But pasting them in as the
+rubric made the classifier worse.
+
+A first attempt was worse still, at 44.0%, because it opened with the use class test in
+capitals and told the model to apply it first. Nearly everything then scored high. That is the
+third time in this work that placement and emphasis beat content with this model: leading with
+`low` and making it decisive has produced the best result every time it has been tried.
+
+The tuned rubric is unchanged as a result of this exercise, which is itself the finding.
+
 ## How to measure anything here
 
 Two scripts, both read-only. Neither writes to the database, so a measurement can be repeated

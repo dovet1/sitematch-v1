@@ -1,9 +1,9 @@
 # Codex hand-over: worker reliability, and the research escalation pass
 
-Date: 9 September 2026
+Date: 10 September 2026
 Two independent work packages. **A is small and urgent. B is substantial.**
 
-## Continuation status — Codex, 9 September 2026
+## Continuation status — Codex, 10 September 2026
 
 - **Package A is implemented.** Migration `20260921000000_add_classification_lease.sql`
   has been applied. Classification claims are atomic, stale work is reclaimed, provider
@@ -73,7 +73,18 @@ Two independent work packages. **A is small and urgent. B is substantial.**
 - OpenRouter's Parallel web engine returned repeatable internal errors for this application.
   That failed prompt-v2 attempt was conservatively charged its full `$0.10` reservation and
   remains in the audit ledger. The bounded web pass now uses Exa auto mode and prompt version
-  `planning-research-v3`, preserving the failed v2 run rather than overwriting it.
+  `planning-research-v4`, preserving the failed v2 run rather than overwriting it.
+- The v4 web-enrichment change has a real before/after measurement on high-priority North
+  Yorkshire application `26/05506/SCREEN` (Labman Automation, Seamer). The v3 baseline cost
+  `$0.03971625`, returned mostly planning mirrors/generic pages and produced no grounded
+  commercial facts. V4 excludes known planning-list mirrors, asks for first-party company,
+  developer, contractor and reputable news/property sources, and passes the returned citation
+  text into the final grounded extractor. The read-only rerun cost `$0.039753`, surfaced a
+  July 2026 Labman post about a "new extension" at the same headquarters, and still correctly
+  emitted no operator, floor-area or use-class claims because none of the retrieved evidence
+  explicitly tied those facts to this exact application. It still missed Labman's older
+  first-party expansion article and the HACS contractor project page, so one generic search is
+  useful context enrichment but not reliable exhaustive discovery.
 - This is not universal Idox support. Plymouth's public portal presented an incomplete TLS
   certificate chain to Node and Tendring's `robots.txt` disallowed the application route; the
   worker correctly did not bypass either restriction. Those portal variants still need a
