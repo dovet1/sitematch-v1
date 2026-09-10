@@ -81,53 +81,27 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid review', details: parsed.error.flatten() }, { status: 400 })
     }
     const review = parsed.data
-    const db = adminClient()
-    const developmentUpdate: Record<string, unknown> = {
-      review_state: review.decision,
-      updated_at: new Date().toISOString(),
-    }
-    if (review.relevance !== undefined) developmentUpdate.relevance = review.relevance
-    if (review.summary !== undefined) developmentUpdate.summary = review.summary
-    const { error: developmentError } = await db
-      .from('developments')
-      .update(developmentUpdate)
-      .eq('id', review.developmentId)
-    if (developmentError) throw developmentError
 
-    for (const signal of review.brandSignals ?? []) {
-      const update: Record<string, unknown> = { review_state: signal.reviewState, updated_at: new Date().toISOString() }
-      if ('brandId' in signal) update.brand_id = signal.brandId ?? null
-      if (signal.role) update.role = signal.role
-      const { error } = await db.from('development_brand_signals')
-        .update(update).eq('id', signal.id).eq('development_id', review.developmentId)
-      if (error) throw error
-    }
-    for (const observation of review.observations ?? []) {
-      const update: Record<string, unknown> = { review_state: observation.reviewState }
-      if (observation.scope !== undefined) update.scope = observation.scope
-      if (observation.value !== undefined) update.value = observation.value
-      if (observation.confidence !== undefined) update.confidence = observation.confidence
-      const { error } = await db.from('development_observations')
-        .update(update).eq('id', observation.id).eq('development_id', review.developmentId)
-      if (error) throw error
-    }
+    // One call, one transaction, one row lock. This used to be five or more separate writes
+    // that touched neither the research queue nor any audit trail, so a correction from high
+    // to low returned 200 and left the record queued for a paid research pass, and nothing
+    // recorded that a person had disagreed with the model.
+    const { data, error } = await adminClient().rpc('apply_planning_review', {
+      p_development_id: review.developmentId,
+      p_reviewer_id: gate.user!.id,
+      p_decision: review.decision,
+      p_relevance: review.relevance ?? null,
+      p_summary: review.summary ?? null,
+      p_brand_signals: review.brandSignals ?? [],
+      p_observations: review.observations ?? [],
+    })
+    if (error) throw error
 
-    // Application review state mirrors the Development decision. This is useful for the
-    // evaluation export and prevents a reviewed item returning to the queue.
-    const { data: links, error: linksError } = await db
-      .from('development_applications')
-      .select('planning_application_id')
-      .eq('development_id', review.developmentId)
-    if (linksError) throw linksError
-    const applicationIds = (links ?? []).map((row) => row.planning_application_id as string)
-    if (applicationIds.length > 0) {
-      const { error } = await db.from('planning_applications')
-        .update({ review_state: review.decision }).in('id', applicationIds)
-      if (error) throw error
-    }
-    return NextResponse.json({ success: true })
+    // Returned so the caller can see what happened to the queue rather than having to guess:
+    // a correction that leaves research `processing` has not stopped a call already in
+    // flight, and that is worth showing a reviewer.
+    return NextResponse.json({ success: true, ...(data as Record<string, unknown>) })
   } catch (error) {
     return adminError('Error saving planning review', error)
   }
 }
-

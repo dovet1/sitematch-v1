@@ -137,6 +137,10 @@ async function persistClassification(
       review_state: 'pending',
       updated_at: now,
     }).eq('id', application.id),
+    // Never overwrite a human. Reclassification would otherwise replace a reviewer's verdict
+    // with the model's and reset the row to pending, silently discarding the decision AND the
+    // only free label the product produces. The machine answer is not lost: it stays in the
+    // run output, and the review event records the pair.
     db.from('developments').update({
       relevance: classification.relevance,
       confidence: classification.confidence,
@@ -153,7 +157,7 @@ async function persistClassification(
       unanswered_questions: [...classification.unansweredQuestions, ...gaps],
       review_state: 'pending',
       updated_at: now,
-    }).eq('id', developmentId),
+    }).eq('id', developmentId).eq('review_state', 'pending'),
   ])
   if (appError) throw appError
   if (developmentError) throw developmentError
