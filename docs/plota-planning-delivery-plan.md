@@ -63,12 +63,23 @@ orders by `date_received`.
 4. **Show why.** A relevance badge, the one-sentence summary the classifier already writes,
    and the dwelling count where there is one. The summary is the part that makes a ranked list
    readable rather than merely sorted.
-5. **Cut over against the written contract**, not against a single boundary. Measure coverage
+5. **Decide how approximate locations affect inclusion.** This belongs here, not later. 71 of
+   164 stored positions are ward or parish centroids, and the boundary query tests that stored
+   point with `ST_Intersects` — the same query the tab already uses. So a centroid falling
+   outside a boundary hides an application whose real site is inside it, today, before the
+   Monitor exists. A caption cannot explain a record excluded before rendering.
+
+   Decide whether an approximate point is included when its uncertainty overlaps the boundary,
+   what the record count then means, and what the user is told. The richer map treatment —
+   marker provenance, distance labels — can wait for Phase 3; **inclusion cannot**, because it
+   silently changes what the tab shows.
+6. **Cut over against the written contract**, not against a single boundary. Measure coverage
    on several, including at least one where the two providers are expected to disagree.
 
 Done when: a user sees classified applications ranked high to low with a readable reason;
-coverage against the agreed contract is measured and accepted on more than one boundary; and
-the ordering is proven to survive the 2,000-record cap on a boundary that exceeds it.
+coverage against the agreed contract is measured and accepted on more than one boundary; the
+ordering is proven to survive the 2,000-record cap on a boundary that exceeds it; and inclusion
+of approximate locations is defined, implemented and reflected in the count.
 
 **Known caveat, stated rather than solved.** Relevance is currently calibrated as "worth
 paying to investigate", which is a spending question, not "useful to look at", which is what a
@@ -119,11 +130,12 @@ deciding anything needs to change. Changing retrieval before measuring it would 
 a problem that may not exist.
 
 **Fix the counter before running the batch, or the experiment reports a false positive.**
-`operatorsFound` adds `signals.length` for every researched record. A signal is any brand
-mention, so an applicant's name, a former occupier and a passing reference all count, and one
-scheme can contribute several. The counter would happily report a dozen operators found on a
-batch that identified no incoming occupier at all — which is precisely the number the batch
-exists to establish.
+`operatorsFound` adds `signals.length` for every researched record. The research schema is
+narrower than the classifier's and permits only three roles — proposed occupier, proposed
+operator and applicant/developer — so it does not admit former occupiers or passing references.
+It does admit **developers, who are not occupiers**, and one scheme can contribute several
+signals. So the counter can still report a dozen operators found on a batch that identified no
+incoming occupier at all, which is precisely the number the batch exists to establish.
 
 Success is **distinct Developments carrying an evidenced proposed occupier or operator**, not
 signals. Count that.
@@ -211,19 +223,14 @@ has not been built.
 across a patch, which is a different job from classifying one application. It is also the most
 visible thing on the screen.
 
-**Approximate locations decide what is shown at all, not just how it is labelled.** 71 of 164
-stored positions are ward or parish centroids. The boundary query tests that stored point
-against the patch with `ST_Intersects`, so a centroid falling outside the patch hides an
-application whose real site is inside it — and the estate-radius filter has the same problem. A
-disclaimer on a marker cannot explain a record that was excluded before rendering, and the
-criteria modal's live match count would be quietly wrong.
+**Map treatment of approximate locations.** The inclusion rule is settled in Phase 1; what is
+left here is showing it honestly. Marker provenance, and a distance quoted only where the
+position supports it — the design's "0.8 mi from nearest store" is not sayable from a ward
+centroid. The estate-radius filter in Set criteria inherits the Phase 1 inclusion rule and must
+apply it consistently, or the live match count contradicts the tab.
 
-So this needs a decision, not a caption: whether an approximate point is included when its
-uncertainty overlaps the patch, how that is reflected in the count, and what the user is told.
-Improving positions by postcode lookup narrows the problem but does not remove it.
-
-Done when: inclusion behaviour for approximate locations is defined and implemented, the match
-count reflects it, and a distance is only quoted where the position supports it.
+Done when: a marker shows how precisely it is placed, no distance is quoted from an approximate
+point, and the criteria match count agrees with the tab on the same area.
 
 ## Phase 4 — Market change, with the data that makes it meaningful
 
@@ -243,12 +250,23 @@ each is a separate problem:
 | Occupancy assumption | Residents per dwelling varies by scheme type and area |
 | Footprint geometry | The design draws site outlines; a point is not a footprint |
 
-Either source those inputs, or **reduce the deliverable to a clearly labelled potential-impact
-scenario** — "if every consented scheme completes and is occupied at the local average" — which
-is honest and still useful, provided the label is on the screen and not only in this document.
+**A completion-and-occupancy scenario does not rescue the other gaps**, and an earlier draft of
+this plan implied it did. Assuming every scheme completes at average occupancy says nothing
+about gross versus net: replacing 20 homes with 30 creates capacity for **10** additional
+households, not 30, and a scenario built on the gross figure overstates growth by threefold on
+that site.
 
-Done when: either the inputs above are sourced and the projection states its assumptions, or
-the view presents a scenario that says so where a user reads it.
+So the fallback is narrower than "label it a scenario":
+
+- **Population growth requires net counts.** Without them, do not present population growth at
+  all — present **gross proposed capacity**, named as such on the screen.
+- **Omit yearly delivery** unless delivery years are sourced. A bar chart per year invents a
+  schedule the data does not contain.
+- **Omit footprints** unless geometry is sourced. A point is not a site outline.
+
+Done when: either the inputs are sourced and the projection states its assumptions where a user
+reads them, or the view shows only what the data supports, labelled as gross proposed capacity,
+with the unsupported elements absent rather than estimated.
 
 **Spend modelling stays out**, including at this phase. The grocery spend figure in the concept
 is illustrative and nothing in this plan produces it.
