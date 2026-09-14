@@ -41,14 +41,14 @@ that are superseded by this snapshot. All figures below are observations, not li
   runs **full** census (`census_scope: full`), 20 requests at 09:00. No late, deep or refresh run
   since the 07:46 deploy yet: the late lane is next due 12:45 and deep 13:05 UTC. Late, deep and
   refresh cannot spend the reserve, so they share only ~540 requests for the rest of September.
-- **Lane gap measured and fixed locally, not deployed.** Six weeks of the full census (4 May-14
+- **Lane gap measured and fixed (deployed 15:13 UTC, see below).** Six weeks of the full census (4 May-14
   Jun 2026, 73,474 records): the reduced specs miss 238 of 4,724 intelligence-tier records (5.0%),
   all uncounted housing. 167 are amendments/discharges quoting a parent permission; of the 71 real
   proposals, `category=new-homes` returns 63 for ~266 extra records a week. `buildSearchSpecs`
   now adds a `<nation>:new-homes` reduced spec. Plota's `category` filter matches any category,
   not only the primary (Wiltshire, 2-15 Mar 2026: 21 returned = stored any-category count, 6
   primary); 2 probe requests spent. Estimated cost: roughly +90 requests per late pass and +100 per
-  deep pass at page size 50. **Needs a workers repackage and deploy to take effect.**
+  deep pass at page size 50.
 - **Double-counting risk for the residential view.** All 238 are classified `low` (expected). The
   model supplied a count on 185, and 134 are >= 15 homes, mostly amendments/discharges repeating
   the parent scheme's figure. Not changed: it belongs with Phase 2d merging (`development_applications`
@@ -67,7 +67,7 @@ that are superseded by this snapshot. All figures below are observations, not li
   live discovery, so no family fetches until October.)
 - **User decisions, 14 Sep:** pilot councils South Norfolk Broadland, Wandsworth and Glasgow;
   companion consents merge into one Development.
-- **Linking step 1 done** (uncommitted): `linking.ts` + `report-planning-links.ts`. 99.2% correct as
+- **Linking step 1 done:** `linking.ts` + `report-planning-links.ts`. 99.2% correct as
   judged by Claude on 243 sampled links (reference reading only; 44 parents stored), 90% of
   recognised follow-ons linked, 72,049 families nationally, 5,535 overlooked
   families. Results in the linking plan. Next is step 2, a description-based commercial test for
@@ -75,8 +75,7 @@ that are superseded by this snapshot. All figures below are observations, not li
 - **Pushed:** `c2bbcda` new-homes lane search, `48b0d3b` linker, `319c34b` refresh fix,
   `26e931b` plan revision. Pilot request limit of 300 agreed. Linking plan
   revised after Astra's second review: linking in normal ingestion, reused Plota family lookups,
-  backlog recovery without a backfill rerun, three validation levels, a 300-request pilot limit
-  (proposed).
+  backlog recovery without a backfill rerun, three validation levels.
 - **Workers deployed by the user, 14 Sep 15:13 UTC, as `dpl_8ghmWYE4rL5JFhao3XbvquFzMiyq`**, from
   `/private/tmp/planning-workers-20260914b` (built `--scheduled` from `c2bbcda`; the only
   difference from `dpl_HXCfXPLGjgfAFaTSeKZUTKGn2Fp1` is the new-homes lane spec). Lanes still
