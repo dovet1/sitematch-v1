@@ -19,7 +19,7 @@ export interface CouncilResearchSources {
 
 const USER_AGENT = 'CommercialDirectoryPlanningResearch/1.0 (+https://thecommercialdirectory.co.uk)'
 const MAX_COUNCIL_CHARACTERS = 12_000
-const MAX_DOCUMENT_CHARACTERS = 12_000
+const MAX_DOCUMENT_CHARACTERS = 24_000
 const MAX_DOCUMENT_BYTES = 3_000_000
 const MAX_DOCUMENTS = 2
 const REQUEST_TIMEOUT_MS = 15_000
@@ -141,6 +141,21 @@ function documentLinks(html: string, base: URL): DocumentCandidate[] {
       // Ignore malformed links on council pages.
     }
   }
+  // Northgate portals also use a labelled button containing a literal window.open URL.
+  // Parse that URL only; never execute page JavaScript.
+  for (const match of html.matchAll(/<input\b[^>]*>/gi)) {
+    const tag = match[0]
+    const label = attribute(tag, 'value') ?? ''
+    if (!/\bdocuments?\b/i.test(label)) continue
+    const target = tag.match(/window\.open\(\s*['"]([^'"]+)['"]/i)?.[1]
+    if (!target) continue
+    try {
+      const url = new URL(target.replace(/&amp;/gi, '&'), base)
+      if (!publicHttpUrl(url.href) || seen.has(url.href)) continue
+      seen.add(url.href)
+      links.push({ url, label })
+    } catch { /* Ignore malformed button URLs. */ }
+  }
   return links.sort((a, b) => documentPriority(a) - documentPriority(b))
 }
 
@@ -200,24 +215,45 @@ function onlineRegisterDocumentRows(html: string): OnlineRegisterDocument[] {
   })
 }
 
+async function continueUnsupportedBrowser(input: {
+  councilUrl: URL; html: string; response: Response; rules: RobotsRule[]
+}): Promise<{ html: string; cookies: string } | null> {
+  if (!/<title>\s*UnsupportedWebBrowser\s*<\/title>/i.test(input.html)) return null
+  const button = input.html.match(/<button\b[^>]*id=["']ContinueBrowsing["'][^>]*>/i)?.[0]
+  const target = button ? attribute(button, 'data-url-ignore') : null
+  if (!target) return null
+  const action = new URL(target, input.councilUrl)
+  if (action.origin !== input.councilUrl.origin || !action.pathname.endsWith('/Home/IgnoreBrowserValidation')
+    || !allowedByRobots(action, input.rules)) return null
+  // The portal's own Continue Browsing button performs this GET and reloads the page.
+  const initial = responseCookies(input.response)
+  const response = await pacedFetch(action, { headers: { Cookie: mergeCookies(initial) } })
+  if (!response.ok) return null
+  const cookies = mergeCookies(initial, responseCookies(response))
+  const page = await pacedFetch(input.councilUrl, { headers: { Cookie: cookies } })
+  if (!page.ok) return null
+  return { html: await page.text(), cookies }
+}
+
 async function acceptOnlineRegisterDisclaimer(input: {
   councilUrl: URL
   response: Response
   html: string
   warnings: string[]
 }): Promise<{ html: string; cookies: string } | null> {
-  if (!/\/Disclaimer\/AcceptDisclaimer/i.test(input.html)) return null
+  const simpleAction = input.html.match(/<form\b[^>]*action=["'](\/Disclaimer\/Accept\?[^"']+)["'][^>]*method=["']post["']/i)?.[1]
+  if (!simpleAction && !/\/Disclaimer\/AcceptDisclaimer/i.test(input.html)) return null
   const token = input.html.match(/name=["']__RequestVerificationToken["'][^>]*value=["']([^"']+)["']/i)?.[1]
-  if (!token) {
+  if (!token && !simpleAction) {
     input.warnings.push('Online Register disclaimer had no verification token')
     return null
   }
   const initialCookies = responseCookies(input.response)
   const form = new URLSearchParams({
     returnURL: `${input.councilUrl.pathname}${input.councilUrl.search}`,
-    __RequestVerificationToken: token,
+    ...(token ? { __RequestVerificationToken: token } : {}),
   })
-  const acceptResponse = await pacedFetch(new URL('/Disclaimer/AcceptDisclaimer', input.councilUrl), {
+  const acceptResponse = await pacedFetch(new URL(simpleAction?.replace(/&amp;/gi, '&') ?? '/Disclaimer/AcceptDisclaimer', input.councilUrl), {
     method: 'POST', redirect: 'manual', body: form,
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -302,10 +338,11 @@ async function pdfText(bytes: ArrayBuffer): Promise<string> {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
   const document = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise
   const parts: string[] = []
-  for (let pageNumber = 1; pageNumber <= Math.min(document.numPages, 12); pageNumber++) {
+  for (let pageNumber = 1; pageNumber <= Math.min(document.numPages, 20); pageNumber++) {
     const page = await document.getPage(pageNumber)
     const content = await page.getTextContent()
-    parts.push(content.items.map((item) => 'str' in item ? item.str : '').join(' '))
+    const pageText = content.items.map((item) => 'str' in item ? item.str : '').join(' ').trim()
+    if (pageText) parts.push(`[PDF page ${pageNumber}] ${pageText}`)
     if (parts.join(' ').length >= MAX_DOCUMENT_CHARACTERS) break
   }
   return parts.join(' ').replace(/\s+/g, ' ').trim().slice(0, MAX_DOCUMENT_CHARACTERS)
@@ -375,12 +412,16 @@ async function planPortalDocuments(
 async function readDocument(
   candidate: DocumentCandidate,
   rules: RobotsRule[],
-  warnings: string[]
-): Promise<ResearchSource | null> {
+  warnings: string[],
+  cookies = ''
+): Promise<(ResearchSource & { linkedDocuments?: DocumentCandidate[] }) | null> {
   if (!allowedByRobots(candidate.url, rules)) return null
   try {
-    const response = await pacedFetch(candidate.url)
-    if (!response.ok) return null
+    const response = await pacedFetch(candidate.url, cookies ? { headers: { Cookie: cookies } } : {})
+    if (!response.ok) {
+      warnings.push(`Document returned ${response.status}: ${candidate.url.href}`)
+      return null
+    }
     const length = Number(response.headers.get('content-length'))
     if (Number.isFinite(length) && length > MAX_DOCUMENT_BYTES) {
       warnings.push(`Skipped oversized document: ${candidate.url.href}`)
@@ -405,9 +446,10 @@ async function readDocument(
       kind: 'document', url: candidate.url.href,
       text: text || `Scanned planning document: ${candidate.label}`,
       title: candidate.label,
+      ...(!isPdf ? { linkedDocuments: documentLinks(new TextDecoder().decode(bytes), candidate.url) } : {}),
       mediaType: isPdf ? 'application/pdf' : contentType || 'text/html',
       ...(isPdf && text.length < 100
-        ? { ocrFile: { filename: safeFilename.toLowerCase().endsWith('.pdf') ? safeFilename : `${safeFilename}.pdf`, url: candidate.url.href } }
+        ? { ocrFile: { filename: safeFilename.toLowerCase().endsWith('.pdf') ? safeFilename : `${safeFilename}.pdf`, url: cookies ? `data:application/pdf;base64,${Buffer.from(bytes).toString('base64')}` : candidate.url.href } }
         : {}),
     }
   } catch (error) {
@@ -433,17 +475,25 @@ export async function collectCouncilResearchSources(
     if (!response.ok) return { sources: [], warnings: [...warnings, `Council page returned ${response.status}`] }
     let html = await response.text()
     let onlineRegisterCookies = ''
+    const continued = await continueUnsupportedBrowser({ councilUrl, html, response, rules })
+    if (continued) { html = continued.html; onlineRegisterCookies = continued.cookies }
     const accepted = await acceptOnlineRegisterDisclaimer({ councilUrl, response, html, warnings })
     if (accepted) {
       html = accepted.html
       onlineRegisterCookies = accepted.cookies
+    }
+    if (/<title>\s*UnsupportedWebBrowser\s*<\/title>/i.test(html)) {
+      return { sources: [], warnings: [...warnings, 'Council portal returned an unsupported-browser page, not an application record'] }
+    }
+    if (/<form\b[^>]*action=["']\/Disclaimer\/Accept/i.test(html)) {
+      return { sources: [], warnings: [...warnings, 'Council disclaimer remains; application record was not retrieved'] }
     }
     const sources: ResearchSource[] = [{
       kind: 'council_page', url: councilUrl.href, text: htmlText(html, MAX_COUNCIL_CHARACTERS),
       mediaType: 'text/html',
     }]
 
-    if (onlineRegisterCookies && onlineRegisterDocumentRows(html).length > 0) {
+    if (onlineRegisterDocumentRows(html).length > 0) {
       sources.push(...await onlineRegisterSources({
         councilUrl, html, cookies: onlineRegisterCookies, warnings,
       }))
@@ -455,7 +505,10 @@ export async function collectCouncilResearchSources(
       if (link.url.origin === councilUrl.origin) candidates.push(link)
       else {
         const externalRules = await rulesFor(link.url, warnings)
-        if (!allowedByRobots(link.url, externalRules)) continue
+        if (!allowedByRobots(link.url, externalRules)) {
+          warnings.push(`Document portal is disallowed by robots.txt: ${link.url.host}`)
+          continue
+        }
         const portalCandidates = await planPortalDocuments(link.url, warnings)
         if (portalCandidates.length > 0) {
           for (const portalCandidate of portalCandidates) {
@@ -473,8 +526,29 @@ export async function collectCouncilResearchSources(
       if (sources.length - 1 >= MAX_DOCUMENTS) break
       const candidateRules = candidate.url.origin === councilUrl.origin
         ? rules : await rulesFor(candidate.url, warnings)
-      const source = await readDocument(candidate, candidateRules, warnings)
-      if (source) sources.push(source)
+      const source = await readDocument(candidate, candidateRules, warnings, candidate.url.origin === councilUrl.origin ? onlineRegisterCookies : '')
+      if (!source) continue
+      // A Documents link often opens a listing rather than a PDF. Follow one bounded
+      // level and prioritise forms/statements instead of treating the menu as evidence.
+      const children = (source.linkedDocuments ?? []).filter(link => link.url.href !== candidate.url.href)
+      if (children.length > 0) {
+        for (const child of children.slice(0, MAX_DOCUMENTS)) {
+          if (sources.length - 1 >= MAX_DOCUMENTS) break
+          const childRules = child.url.origin === candidate.url.origin
+            ? candidateRules : await rulesFor(child.url, warnings)
+          const document = await readDocument(child, childRules, warnings, child.url.origin === councilUrl.origin ? onlineRegisterCookies : '')
+          if (document) {
+            const { linkedDocuments: ignored, ...evidence } = document
+            sources.push(evidence)
+          }
+        }
+      } else {
+        const { linkedDocuments: ignored, ...evidence } = source
+        sources.push(evidence)
+      }
+    }
+    if (!sources.some(source => source.mediaType === 'application/pdf')) {
+      warnings.push('No application PDF retrieved; floor area and site area may be missing')
     }
     return { sources, warnings }
   } catch (error) {

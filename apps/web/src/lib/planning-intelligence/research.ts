@@ -27,6 +27,7 @@ export interface ResearchBatchResult {
   researched: number
   failed: number
   deferredBudget: number
+  /** Distinct developments with a proposed occupier/operator found in this batch. */
   operatorsFound: number
   commercialFactsFound: number
 }
@@ -135,6 +136,7 @@ export async function researchPlanningBatch(input: {
     considered: 0, researched: 0, failed: 0, deferredBudget: 0,
     operatorsFound: 0, commercialFactsFound: 0,
   }
+  const developmentsWithOperators = new Set<string>()
 
   for (let index = 0; index < limit; index++) {
     const { data, error } = await input.db.rpc('claim_next_planning_research', {
@@ -213,6 +215,9 @@ export async function researchPlanningBatch(input: {
             status: 'complete', model: researched.model,
             output: {
               signals: researched.signals,
+              siteAreas: researched.siteAreas ?? [],
+              partyClues: researched.partyClues ?? [],
+              researchWarnings: researched.researchWarnings ?? [],
               commercialFloorspace: researched.commercialFloorspace,
               useClasses: researched.useClasses,
               noOperatorReason: researched.noOperatorReason,
@@ -234,7 +239,12 @@ export async function researchPlanningBatch(input: {
       if (finishRunError) throw finishRunError
       if (finishUsageError) throw finishUsageError
       result.researched++
-      result.operatorsFound += researched.signals.length
+      if (researched.signals.some(signal =>
+        signal.role === 'proposed_occupier' || signal.role === 'proposed_operator'
+      )) {
+        developmentsWithOperators.add(row.development_id)
+      }
+      result.operatorsFound = developmentsWithOperators.size
       result.commercialFactsFound += researched.commercialFloorspace.length + researched.useClasses.length
     } catch (researchError) {
       const message = researchError instanceof Error ? researchError.message : 'Unknown research failure'
@@ -253,6 +263,9 @@ export async function researchPlanningBatch(input: {
         }).eq('id', usageId),
       ])
       result.failed++
+      // Failed items remain eligible for the SQL queue. Stop this invocation so
+      // it cannot immediately reclaim the same item and spend again on a failure.
+      break
     } finally {
       requestDeadline.cleanup()
     }

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { standardFormFloorspace, standardFormApplicants } from './research-form-facts'
 import type {
   PlanningResearchFloorspace,
   PlanningResearchResult,
@@ -9,8 +10,8 @@ import type {
 import type { ResearchSource } from './research-sources'
 
 export const DEFAULT_OPENROUTER_RESEARCH_MODEL = 'openai/gpt-5.2'
-export const PLANNING_RESEARCH_PROMPT_VERSION = 'planning-research-v4'
-export const PLANNING_RESEARCH_SCHEMA_VERSION = 'planning-research-v2'
+export const PLANNING_RESEARCH_PROMPT_VERSION = 'planning-research-v6'
+export const PLANNING_RESEARCH_SCHEMA_VERSION = 'planning-research-v3'
 export const RESEARCH_REQUEST_TIMEOUT_MS = 240_000
 
 const signalSchema = z.object({
@@ -43,8 +44,46 @@ const useClassSchema = z.object({
   confidence: z.number().min(0).max(1),
 }).strict()
 
+const evidenceFields = {
+  evidenceSource: z.enum(['council_page', 'document', 'web']),
+  evidenceUrl: z.string().url(), evidenceExcerpt: z.string().trim().min(8),
+  evidencePage: z.string().nullable(), confidence: z.number().min(0).max(1),
+}
+const siteAreaSchema = z.object({
+  ...evidenceFields, phase: z.enum(['existing', 'proposed', 'unspecified']),
+  value: z.number().nonnegative(), unit: z.enum(['sqm', 'sqft', 'hectares', 'acres']),
+}).strict()
+const partyClueSchema = z.object({
+  ...evidenceFields, name: z.string().trim().min(2),
+  role: z.enum(['applicant', 'developer', 'agent']),
+}).strict()
+const evidenceJsonProperties = {
+  evidenceSource: { type: 'string', enum: ['council_page', 'document', 'web'] },
+  evidenceUrl: { type: 'string' }, evidenceExcerpt: { type: 'string', minLength: 8 },
+  evidencePage: { type: ['string', 'null'] }, confidence: { type: 'number', minimum: 0, maximum: 1 },
+}
+const siteAreaJson = {
+  type: 'array', items: { type: 'object', additionalProperties: false,
+    required: [...Object.keys(evidenceJsonProperties), 'phase', 'value', 'unit'],
+    properties: { ...evidenceJsonProperties,
+      phase: { type: 'string', enum: ['existing', 'proposed', 'unspecified'] },
+      value: { type: 'number', minimum: 0 }, unit: { type: 'string', enum: ['sqm', 'sqft', 'hectares', 'acres'] },
+    },
+  },
+}
+const partyClueJson = {
+  type: 'array', items: { type: 'object', additionalProperties: false,
+    required: [...Object.keys(evidenceJsonProperties), 'name', 'role'],
+    properties: { ...evidenceJsonProperties, name: { type: 'string', minLength: 2 },
+      role: { type: 'string', enum: ['applicant', 'developer', 'agent'] },
+    },
+  },
+}
+
 const responseSchema = z.object({
   signals: z.array(signalSchema),
+  siteAreas: z.array(siteAreaSchema).default([]),
+  partyClues: z.array(partyClueSchema).default([]),
   commercialFloorspace: z.array(floorspaceSchema),
   useClasses: z.array(useClassSchema),
   noOperatorReason: z.string(),
@@ -52,8 +91,9 @@ const responseSchema = z.object({
 
 const jsonSchema = {
   type: 'object', additionalProperties: false,
-  required: ['signals', 'commercialFloorspace', 'useClasses', 'noOperatorReason'],
+  required: ['signals', 'commercialFloorspace', 'useClasses', 'noOperatorReason', 'siteAreas', 'partyClues'],
   properties: {
+    siteAreas: siteAreaJson, partyClues: partyClueJson,
     signals: {
       type: 'array',
       items: {
@@ -109,6 +149,8 @@ const jsonSchema = {
 interface OpenRouterResearchBody {
   model?: string
   choices?: Array<{
+    finish_reason?: string
+    native_finish_reason?: string
     message?: {
       content?: string | null
       annotations?: Array<{
@@ -142,7 +184,7 @@ function normalizedText(value: string) {
 function normalizedUrl(value: string): string | null {
   try {
     const url = new URL(value)
-    url.hash = ''
+    // Document fragments identify individual files in council portals; preserve them.
     return url.href.replace(/\/$/, '')
   } catch {
     return null
@@ -208,7 +250,7 @@ function relevantOcrMemo(sources: ResearchSource[]): string {
   const passages: string[] = []
   for (const source of sources.filter((candidate) => candidate.ocrFile)) {
     const text = source.text
-    const pattern = /(?:.{0,500}\b(?:floor ?space|gross internal|net internal|use class|existing use|proposed use|operator|occupier|applicant|developer)\b.{0,900})/gi
+    const pattern = /(?:.{0,500}\b(?:site area|site size|hectares|acres|floor ?space|gross internal|net internal|use class|existing use|proposed use|operator|occupier|applicant|developer)\b.{0,900})/gi
     const matches = [...text.matchAll(pattern)].map((match) => match[0].trim())
     if (matches.length > 0) {
       passages.push(`[document url=${source.url}]\n${[...new Set(matches)].join('\n…\n')}`)
@@ -249,6 +291,34 @@ function evidenceMap(
     })
   }
   return evidence
+}
+
+function groundedSiteAreas(findings: z.infer<typeof siteAreaSchema>[], sources: ResearchSource[], annotations: Parameters<typeof evidenceMap>[1]) {
+  const evidence = evidenceMap(sources, annotations)
+  const units = { sqm: /\b(?:sqm|m2|square metres?|square meters?|sq metres?|sq meters?)\b/i,
+    sqft: /\b(?:sqft|ft2|square feet|sq ft)\b/i, hectares: /\b(?:ha|hectares?)\b/i, acres: /\bacres?\b/i }
+  return findings.filter(finding => {
+    const source = evidence.get(normalizedUrl(finding.evidenceUrl) ?? '')
+    const excerpt = normalizedText(finding.evidenceExcerpt.replace(/²/g, '2'))
+    const numbers = finding.evidenceExcerpt.replace(/,/g, '').match(/\d+(?:\.\d+)?/g) ?? []
+    return finding.confidence >= 0.75 && source?.kind === finding.evidenceSource
+      && normalizedText(source.text).includes(normalizedText(finding.evidenceExcerpt))
+      && /\b(?:site|plot|land)\s+(?:area|size)\b/.test(excerpt)
+      && numbers.some(number => Number(number) === finding.value) && units[finding.unit].test(excerpt)
+      && (finding.phase === 'unspecified' || new RegExp(`\\b${finding.phase}\\b`).test(excerpt))
+  })
+}
+
+function groundedPartyClues(findings: z.infer<typeof partyClueSchema>[], sources: ResearchSource[], annotations: Parameters<typeof evidenceMap>[1]) {
+  const evidence = evidenceMap(sources, annotations)
+  return findings.filter(finding => {
+    const source = evidence.get(normalizedUrl(finding.evidenceUrl) ?? '')
+    const excerpt = normalizedText(finding.evidenceExcerpt)
+    return finding.confidence >= 0.75 && source?.kind === finding.evidenceSource
+      && normalizedText(source.text).includes(excerpt)
+      && excerpt.includes(normalizedText(finding.name))
+      && new RegExp(`\\b${finding.role}\\b`).test(excerpt)
+  })
 }
 
 function groundedFloorspace(
@@ -406,6 +476,7 @@ export async function researchOperatorWithOpenRouter(input: {
             'Use web search to look beyond planning-list mirrors for evidence about this exact application and site.',
             'Prioritise first-party applicant, occupier, developer, agent and contractor pages, then reputable property and local-news coverage.',
             'Search distinctive company, site and address terms as well as the application reference. Treat older or unconnected development phases as context only.',
+            'Report explicitly stated site area separately from commercial floor space, retaining its original unit and existing/proposed/unspecified phase. Record named applicants, developers and agents as separate clues with their exact stated role, including private applicants; an applicant is not automatically a developer or operator.',
             'Produce a concise evidence memo.',
           ].join(' '),
         },
@@ -423,10 +494,18 @@ export async function researchOperatorWithOpenRouter(input: {
     throw new Error(`OpenRouter web research failed: ${researchBody.error?.message ?? researchResponse.status}`)
   }
   const researchMessage = researchBody.choices?.[0]?.message
-  if (!researchMessage?.content) throw new Error('OpenRouter returned no research memo')
+  const researchWarnings: string[] = []
+  const researchMemo = researchMessage?.content?.trim() || ''
+  if (!researchMemo) {
+    const reason = researchBody.choices?.[0]?.finish_reason ?? 'unknown'
+    researchWarnings.push(`Empty web memo; finish_reason=${reason}; completion_tokens=${researchBody.usage?.completion_tokens ?? 'unknown'}`)
+    if (!resolvedSources.some(source => source.text.trim()) && !citedWebEvidence(researchMessage?.annotations)) {
+      throw new Error(`OpenRouter returned no research memo or retrievable evidence (${researchWarnings[0]})`)
+    }
+  }
   // Unlike the discretionary server tool, the plugin always runs once per request.
   const webSearchRequests = researchBody.usage?.server_tool_use?.web_search_requests ?? 1
-  const webEvidenceText = citedWebEvidence(researchMessage.annotations)
+  const webEvidenceText = citedWebEvidence(researchMessage?.annotations)
   const extractionSourceText = input.sources.map((source, index) =>
     `[SOURCE ${index + 1}; kind=${source.kind}; url=${source.url}]\n${source.text}`
   ).join('\n\n') + (ocrMemo ? `\n\n[PDF OCR EVIDENCE MEMO]\n${ocrMemo}` : '')
@@ -434,7 +513,7 @@ export async function researchOperatorWithOpenRouter(input: {
   const extractionResponse = await fetch(baseUrl, {
     method: 'POST', headers,
     body: JSON.stringify({
-      model, temperature: 0, max_tokens: 1_600,
+      model, temperature: 0, max_tokens: 3_200,
       response_format: {
         type: 'json_schema',
         json_schema: { name: 'planning_commercial_research', strict: true, schema: jsonSchema },
@@ -453,12 +532,14 @@ export async function researchOperatorWithOpenRouter(input: {
             'Never use site area, plot area, residential area, parking, employee counts, or dimensions. Never calculate an area.',
             'useClasses may contain only explicitly stated previous/existing and proposed planning use classes. Do not infer them from the described activity.',
             'For document evidence, set evidencePage to the PDF page number when stated or visible; otherwise use null.',
+            'siteAreas contains only explicit site/plot/land area, never building floorspace. Preserve the original value and unit (sqm, sqft, hectares, acres); use unspecified phase unless existing/proposed is stated. Do not infer or calculate an area.',
+            'partyClues retains explicitly named applicants, developers and agents, including individuals, with their exact stated role. This is separate from signals: applicants and agents are not operator successes. Include the name and role in the supporting excerpt.',
             'Copy each exact evidence excerpt and the exact supplied or cited URL. Return empty arrays when evidence is absent.',
           ].join(' '),
         },
         {
           role: 'user',
-          content: `Application:\n${applicationEvidence}\n\nResearch memo:\n${researchMessage.content}`
+          content: `Application:\n${applicationEvidence}\n\nResearch memo:\n${researchMemo}`
             + (extractionSourceText ? `\n\nFetched evidence:\n${extractionSourceText}` : '')
             + (webEvidenceText ? `\n\nCited web evidence:\n${webEvidenceText}` : ''),
         },
@@ -473,14 +554,19 @@ export async function researchOperatorWithOpenRouter(input: {
   const message = extractionBody.choices?.[0]?.message
   if (!message?.content) throw new Error('OpenRouter returned no structured research content')
   let parsed: unknown
-  try { parsed = JSON.parse(message.content) } catch { throw new Error('OpenRouter returned invalid research JSON') }
+  try { parsed = JSON.parse(message.content) } catch {
+    throw new Error(`OpenRouter returned invalid research JSON (finish_reason=${extractionBody.choices?.[0]?.finish_reason ?? 'unknown'}; completion_tokens=${extractionBody.usage?.completion_tokens ?? 'unknown'})`)
+  }
   const validated = responseSchema.parse(parsed)
-  const signals = groundedSignals(validated.signals, resolvedSources, researchMessage.annotations)
+  const signals = groundedSignals(validated.signals, resolvedSources, researchMessage?.annotations)
   const commercialFloorspace = groundedFloorspace(
-    validated.commercialFloorspace, resolvedSources, researchMessage.annotations
+    [...validated.commercialFloorspace, ...standardFormFloorspace(resolvedSources)].filter((finding, index, all) =>
+      all.findIndex(other => other.scope === finding.scope && other.sqm === finding.sqm
+        && other.measurementBasis === finding.measurementBasis && other.evidenceUrl === finding.evidenceUrl) === index),
+    resolvedSources, researchMessage?.annotations
   )
-  const useClasses = groundedUseClasses(validated.useClasses, resolvedSources, researchMessage.annotations)
-  const webCitations = (researchMessage.annotations ?? []).flatMap((annotation) => {
+  const useClasses = groundedUseClasses(validated.useClasses, resolvedSources, researchMessage?.annotations)
+  const webCitations = (researchMessage?.annotations ?? []).flatMap((annotation) => {
     const citation = annotation.url_citation
     if (!citation?.url) return []
     return [{
@@ -497,13 +583,18 @@ export async function researchOperatorWithOpenRouter(input: {
     + (Number.isFinite(extractionCost) ? extractionCost : 0)
   return {
     signals,
+    siteAreas: groundedSiteAreas(validated.siteAreas, resolvedSources, researchMessage?.annotations),
+    partyClues: groundedPartyClues([...validated.partyClues, ...standardFormApplicants(resolvedSources)].filter((finding, index, all) =>
+      all.findIndex(other => other.role === finding.role && normalizedText(other.name) === normalizedText(finding.name)
+        && other.evidenceUrl === finding.evidenceUrl) === index), resolvedSources, researchMessage?.annotations),
+    researchWarnings,
     commercialFloorspace,
     useClasses,
     noOperatorReason: validated.noOperatorReason
       || (signals.length === 0 ? 'No operator claim passed evidence validation.' : ''),
     researchMemo: ocrMemo
-      ? `PDF evidence memo:\n${ocrMemo}\n\nWeb research memo:\n${researchMessage.content}`
-      : researchMessage.content,
+      ? `PDF evidence memo:\n${ocrMemo}\n\nWeb research memo:\n${researchMemo}`
+      : researchMemo,
     webCitations,
     webSearchRequests,
     model: extractionBody.model ?? researchBody.model ?? model,

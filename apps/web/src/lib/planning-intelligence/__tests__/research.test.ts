@@ -138,6 +138,48 @@ describe('planning research batch', () => {
     }))
   })
 
+  it.each([
+    { roles: ['applicant_developer'], developmentIds: ['one'], expected: 0 },
+    { roles: ['proposed_occupier', 'proposed_operator', 'applicant_developer'], developmentIds: ['one'], expected: 1 },
+    { roles: ['proposed_operator'], developmentIds: ['one', 'one'], expected: 1 },
+    { roles: ['proposed_occupier'], developmentIds: ['one', 'two'], expected: 2 },
+  ])('counts distinct developments with occupiers/operators: $roles, $developmentIds', async ({ roles, developmentIds, expected }) => {
+    mockResearchOperator.mockResolvedValue({
+      signals: roles.map((role, index) => ({
+        name: `Business ${index}`, role, evidenceSource: 'document',
+        evidenceUrl: 'https://council.test/operator.pdf',
+        evidenceExcerpt: 'The proposed business is named in the application.', confidence: 0.96,
+      })),
+      commercialFloorspace: [], useClasses: [], noOperatorReason: '',
+      researchMemo: '', webCitations: [], webSearchRequests: 1,
+      model: 'openai/gpt-5.2', inputTokens: 500, outputTokens: 100, costUsd: 0.01,
+    })
+    const { db } = makeDb(developmentIds.map((developmentId, index) => ({
+      ...row(String(index)), development_id: developmentId,
+    })))
+    const result = await researchPlanningBatch({ db, apiKey: 'key', limit: developmentIds.length })
+    expect(result.researched).toBe(developmentIds.length)
+    expect(result.operatorsFound).toBe(expected)
+  })
+
+  it('persists site area and applicant clues in the research run without creating operator signals', async () => {
+    const siteAreas = [{ phase: 'unspecified', value: 0.25, unit: 'hectares' }]
+    const partyClues = [{ name: 'Mr Test Person', role: 'applicant' }]
+    mockResearchOperator.mockResolvedValue({
+      signals: [], commercialFloorspace: [], useClasses: [], siteAreas, partyClues,
+      researchWarnings: ['Empty web memo; finish_reason=length'],
+      noOperatorReason: 'No operator named', researchMemo: '', webCitations: [], webSearchRequests: 1,
+      model: 'openai/gpt-5.2', inputTokens: 500, outputTokens: 100, costUsd: 0.01,
+    })
+    const { db, writes } = makeDb([row('1')])
+    const result = await researchPlanningBatch({ db, apiKey: 'key', limit: 1 })
+    expect(result.operatorsFound).toBe(0)
+    expect(writes).toContainEqual(expect.objectContaining({ table: 'planning_classification_runs', op: 'update',
+      payload: expect.objectContaining({ output: expect.objectContaining({ siteAreas, partyClues,
+        researchWarnings: ['Empty web memo; finish_reason=length'] }) }),
+    }))
+  })
+
   it('stores grounded floor area and directional use classes without touching initial rows', async () => {
     mockResearchOperator.mockResolvedValue({
       signals: [], noOperatorReason: 'No operator named.',
@@ -188,11 +230,20 @@ describe('planning research batch', () => {
     expect(result.failed).toBe(1)
     expect(writes).toContainEqual({
       table: 'planning_ai_usage', op: 'update',
-      payload: { status: 'complete', actual_usd: 0.1 },
+      payload: { status: 'complete', actual_usd: 0.2 },
     })
     expect(writes).toContainEqual({
       table: 'developments', op: 'update',
       payload: { research_state: 'failed', research_started_at: null },
     })
+  })
+
+  it('stops after a failure instead of paying to retry an immediately reclaimable item', async () => {
+    mockResearchOperator.mockRejectedValue(new Error('OpenRouter returned no research memo'))
+    const { db, rpcCalls } = makeDb([row('1'), row('1'), row('2')])
+    const result = await researchPlanningBatch({ db, apiKey: 'key', limit: 3 })
+    expect(result).toMatchObject({ considered: 1, failed: 1, researched: 0 })
+    expect(mockResearchOperator).toHaveBeenCalledTimes(1)
+    expect(rpcCalls.filter(name => name === 'claim_next_planning_research')).toHaveLength(1)
   })
 })

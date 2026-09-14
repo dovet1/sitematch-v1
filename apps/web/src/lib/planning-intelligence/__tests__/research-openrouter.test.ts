@@ -35,6 +35,54 @@ describe('OpenRouter planning research', () => {
     }
   }
 
+  it('retains site areas and private applicant clues separately from operator signals', async () => {
+    const text = 'Existing site area 0.25 hectares. Proposed site area 3000 Sq. metres. Applicant Mr Test Person. Agent Example Planning Ltd.'
+    const findings = {
+      signals: [], commercialFloorspace: [], useClasses: [], noOperatorReason: 'No operator named',
+      siteAreas: [
+        { phase: 'existing', value: 0.25, unit: 'hectares', evidenceExcerpt: 'Existing site area 0.25 hectares' },
+        { phase: 'proposed', value: 3000, unit: 'sqm', evidenceExcerpt: 'Proposed site area 3000 Sq. metres' },
+        { phase: 'proposed', value: 25, unit: 'acres', evidenceExcerpt: 'Existing site area 0.25 hectares' },
+      ].map(finding => ({ ...finding, evidenceSource: source.kind, evidenceUrl: source.url, evidencePage: null, confidence: 0.9 })),
+      partyClues: [
+        { name: 'Mr Test Person', role: 'applicant', evidenceExcerpt: 'Applicant Mr Test Person' },
+        { name: 'Example Planning Ltd', role: 'agent', evidenceExcerpt: 'Agent Example Planning Ltd' },
+        { name: 'Mr Test Person', role: 'developer', evidenceExcerpt: 'Applicant Mr Test Person' },
+      ].map(finding => ({ ...finding, evidenceSource: source.kind, evidenceUrl: source.url, evidencePage: null, confidence: 0.9 })),
+    }
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({
+      choices: [{ message: { content: JSON.stringify(findings) } }],
+    }) }) as unknown as typeof fetch
+    const result = await researchOperatorWithOpenRouter({ application, sources: [{ ...source, text }], apiKey: 'key' })
+    expect(result.siteAreas?.map(area => [area.phase, area.value, area.unit])).toEqual([
+      ['existing', 0.25, 'hectares'], ['proposed', 3000, 'sqm'],
+    ])
+    expect(result.partyClues?.map(clue => clue.role)).toEqual(['applicant', 'agent'])
+    expect(result.signals).toEqual([])
+  })
+
+  it('uses retrieved evidence when the web memo is empty without repeating the web request', async () => {
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        choices: [{ finish_reason: 'length', message: { content: null } }],
+        usage: { completion_tokens: 1000, cost: 0.01 },
+      }) })
+      .mockResolvedValueOnce(response([])) as unknown as typeof fetch
+    const result = await researchOperatorWithOpenRouter({ application, sources: [source], apiKey: 'key' })
+    expect(global.fetch).toHaveBeenCalledTimes(2)
+    expect(result.researchWarnings?.[0]).toContain('finish_reason=length')
+    expect(result.costUsd).toBeCloseTo(0.022)
+  })
+
+  it('fails with diagnostics when neither a memo nor retrievable evidence exists', async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({
+      choices: [{ finish_reason: 'length', message: { content: null } }],
+    }) }) as unknown as typeof fetch
+    await expect(researchOperatorWithOpenRouter({ application, sources: [], apiKey: 'key' }))
+      .rejects.toThrow('finish_reason=length')
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+  })
+
   it('grounds a signal in the fetched council text', async () => {
     global.fetch = jest.fn().mockResolvedValue(response([{
       name: 'Example Fitness Limited', role: 'proposed_operator',

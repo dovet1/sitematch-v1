@@ -32,6 +32,75 @@ describe('council research source collection', () => {
     return Buffer.from(pdf).toString('base64')
   }
 
+  it('follows a document listing to the application form before unrelated drawings', async () => {
+    const htmlResponse = (html: string) => ({ ok: true, status: 200,
+      headers: new Headers({ 'content-type': 'text/html' }),
+      text: async () => html, arrayBuffer: async () => new Uint8Array(Buffer.from(html)).buffer,
+    })
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce(htmlResponse('User-agent: *'))
+      .mockResolvedValueOnce(htmlResponse('<a href="/documents/list">Documents</a>'))
+      .mockResolvedValueOnce(htmlResponse('<a href="/files/drawing">Drawing</a><a href="/files/form">Application Form</a>'))
+      .mockResolvedValueOnce(htmlResponse('Existing commercial floorspace 200 sqm; site area 0.5 hectares'))
+      .mockResolvedValueOnce(htmlResponse('Site drawing'))
+    global.fetch = fetchMock as unknown as typeof fetch
+    const result = await collectCouncilResearchSources(application)
+    expect(String(fetchMock.mock.calls[3][0])).toBe('https://council.test/files/form')
+    expect(result.sources[1].text).toContain('site area 0.5 hectares')
+    expect(result.sources.some(source => source.url.endsWith('/documents/list'))).toBe(false)
+    expect(result.sources).toHaveLength(3)
+  })
+
+  it('follows a labelled document button without executing its JavaScript', async () => {
+    const html = `<input type="button" value="View Documents" onclick="window.open('/documents/list', '_top')">`
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({ ok: true, text: async () => 'User-agent: *' })
+      .mockResolvedValueOnce({ ok: true, text: async () => html })
+      .mockResolvedValueOnce({ ok: true, headers: new Headers({ 'content-type': 'text/html' }),
+        arrayBuffer: async () => new Uint8Array(Buffer.from('Document listing')).buffer })
+    global.fetch = fetchMock as unknown as typeof fetch
+    await collectCouncilResearchSources(application)
+    expect(String(fetchMock.mock.calls[2][0])).toBe('https://council.test/documents/list')
+  })
+
+  it('uses the portal’s public Continue Browsing flow and retains its session', async () => {
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({ ok: true, text: async () => 'User-agent: *' })
+      .mockResolvedValueOnce({ ok: true, headers: new Headers(), text: async () =>
+        '<title>UnsupportedWebBrowser</title><button id="ContinueBrowsing" data-url-ignore="/NECSWS/ES/Presentation/Home/IgnoreBrowserValidation">Continue Browsing</button>' })
+      .mockResolvedValueOnce({ ok: true, headers: new Headers({ 'set-cookie': 'IgnoreBrowserValidation=true; Path=/' }) })
+      .mockResolvedValueOnce({ ok: true, text: async () => '<main>Planning reference REF/1</main>' })
+    global.fetch = fetchMock as unknown as typeof fetch
+    const result = await collectCouncilResearchSources(application)
+    expect(String(fetchMock.mock.calls[2][0])).toContain('/Home/IgnoreBrowserValidation')
+    expect(fetchMock.mock.calls[3][1].headers.Cookie).toBe('IgnoreBrowserValidation=true')
+    expect(result.sources[0].text).toBe('Planning reference REF/1')
+  })
+
+  it('does not count an unsupported-browser screen as an application page', async () => {
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: true, text: async () => 'User-agent: *' })
+      .mockResolvedValueOnce({ ok: true, text: async () => '<title>UnsupportedWebBrowser</title>' }) as unknown as typeof fetch
+    const result = await collectCouncilResearchSources(application)
+    expect(result.sources).toEqual([])
+    expect(result.warnings[0]).toContain('unsupported-browser')
+  })
+
+  it('carries the accepted public session into same-origin document downloads', async () => {
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({ ok: true, text: async () => 'User-agent: *' })
+      .mockResolvedValueOnce({ ok: true, headers: new Headers(), text: async () =>
+        '<form action="/Disclaimer/Accept?returnUrl=%2FPlanning" method="post"><button>Agree</button></form>' })
+      .mockResolvedValueOnce({ status: 302, headers: new Headers({ 'set-cookie': 'DisclaimerAccepted=true; Path=/' }) })
+      .mockResolvedValueOnce({ ok: true, text: async () => '<a href="/Document/Download?id=1">Application Form</a>' })
+      .mockResolvedValueOnce({ ok: true, headers: new Headers({ 'content-type': 'text/html' }),
+        arrayBuffer: async () => new Uint8Array(Buffer.from('Public application form evidence')).buffer })
+    global.fetch = fetchMock as unknown as typeof fetch
+    const result = await collectCouncilResearchSources(application)
+    expect(fetchMock.mock.calls[4][1].headers.Cookie).toBe('DisclaimerAccepted=true')
+    expect(result.sources[1].text).toContain('Public application form evidence')
+  })
+
   it('does not fetch a council page disallowed by robots.txt', async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true, status: 200, text: async () => 'User-agent: *\nDisallow: /application/',
@@ -129,14 +198,17 @@ describe('council research source collection', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it('accepts an Online Register disclaimer and reads its base64 application form', async () => {
+  it.each([
+    '<form method="post" action="/Disclaimer/AcceptDisclaimer"><input name="__RequestVerificationToken" type="hidden" value="form-token"></form>',
+    '<form action="/Disclaimer/Accept?returnUrl=%2FPlanning%2FDisplay%2FREF" method="post"><button>Agree</button></form>',
+  ])('accepts an Online Register disclaimer and reads its base64 application form: %s', async disclaimer => {
     const formText = 'Existing gross internal floorspace 450 square metres'
     const fetchMock = jest.fn()
       .mockResolvedValueOnce({ ok: true, status: 200, text: async () => 'User-agent: *\nAllow: /' })
       .mockResolvedValueOnce({
         ok: true, status: 200,
         headers: new Headers({ 'set-cookie': '.AspNetCore.Antiforgery=test-cookie; Path=/; Secure' }),
-        text: async () => '<form method="post" action="/Disclaimer/AcceptDisclaimer"><input name="__RequestVerificationToken" type="hidden" value="form-token"></form>',
+        text: async () => disclaimer,
       })
       .mockResolvedValueOnce({
         ok: false, status: 302,

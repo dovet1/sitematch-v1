@@ -210,7 +210,29 @@ export interface PlanningResearchUseClass {
   confidence: number
 }
 
+export interface PlanningResearchSiteArea {
+  phase: 'existing' | 'proposed' | 'unspecified'
+  value: number
+  unit: 'sqm' | 'sqft' | 'hectares' | 'acres'
+  evidenceSource: PlanningResearchEvidenceSource
+  evidenceUrl: string
+  evidenceExcerpt: string
+  evidencePage: string | null
+  confidence: number
+}
+export interface PlanningResearchPartyClue {
+  name: string
+  role: 'applicant' | 'developer' | 'agent'
+  evidenceSource: PlanningResearchEvidenceSource
+  evidenceUrl: string
+  evidenceExcerpt: string
+  evidencePage: string | null
+  confidence: number
+}
 export interface PlanningResearchResult {
+  siteAreas?: PlanningResearchSiteArea[]
+  partyClues?: PlanningResearchPartyClue[]
+  researchWarnings?: string[]
   signals: PlanningResearchSignal[]
   commercialFloorspace: PlanningResearchFloorspace[]
   useClasses: PlanningResearchUseClass[]

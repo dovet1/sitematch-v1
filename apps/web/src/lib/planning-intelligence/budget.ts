@@ -16,9 +16,12 @@ export const DEFAULT_CLASSIFICATION_RESERVATION_USD = 0.002
 export const DEFAULT_RESEARCH_STAGE_BUDGET_USD = 2
 // Re-measured 9 Sep 2026 on scanned-form application RB2026/1058 with openai/gpt-5.2.
 // PDF OCR, one web search and strict extraction used 11,010 input / 2,144 output tokens and
-// cost $0.089675. Source collection now prioritises a single application form when one is
-// available; $0.10 remains a conservative per-item upper bound, not an average.
-export const DEFAULT_RESEARCH_RESERVATION_USD = 0.1
+// cost $0.089675. That earlier measurement used a smaller extraction contract and
+// supported the previous $0.10 reservation; it does not bound the expanded contract.
+// Expanded site/party fields and longer documents require more structured-output room.
+// Reserve more per item against the SAME $2 stage/$20 monthly budgets; this permits fewer
+// concurrent items, not more spending. Settle the reservation to actual cost after success.
+export const DEFAULT_RESEARCH_RESERVATION_USD = 0.2
 
 export interface UsageRow {
   stage: string
