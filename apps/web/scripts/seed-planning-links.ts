@@ -41,7 +41,7 @@ async function councilRows(council: string): Promise<Row[]> {
     const page = (await retry(`${council}@${from}`, () => db.from('planning_applications')
       // A dry run works before the migration is applied; the key columns only exist after it.
       .select(`id,authority_slug,reference,description,procedure,address,postcode,uprn${commit ? ',reference_normalised,reference_core' : ''}`)
-      .eq('authority_slug', council).order('id').range(from, from + 999))) as Row[]
+      .eq('authority_slug', council).order('id').range(from, from + 999))) as unknown as Row[]
     rows.push(...page)
     if (page.length < 1000) return rows
   }
