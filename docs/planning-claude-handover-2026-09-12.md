@@ -3,6 +3,60 @@
 Snapshot updated: 14 September 2026. Read this first; the longer handover contains historical states
 that are superseded by this snapshot. All figures below are observations, not live counters.
 
+## Start here — 14 September 2026, night (next chat)
+
+Read `docs/planning-pilot-completion-plan.md` first. It is the lead plan and holds the pilot
+results, the grouped-assessment counts, the council access check and the **Unfinished** list.
+Everything below this section is older context.
+
+**Standing rules (unchanged):**
+- The user applies migrations; give file paths only.
+- Never print `.env.local`.
+- The live main site stays unchanged (production branch is `main`).
+- Claude is sole pipeline operator.
+- Plota reserve 3,500. Pilot limit is 300 family lookups from October; no family fetches before
+  then.
+- The user deploys the workers.
+- Do not commit `.claude/worktrees/*` or `docs/brand-centric-model-sketch.md`.
+
+**Decisions made on 14 September:**
+- OpenRouter budget: $20 monthly, $12.50 initial, $6 research. Workers env confirmed; code defaults
+  match.
+- **Group related applications before any bulk classification or re-grade; classify each
+  development once.** No bulk classification runs until the grouped classification worker exists.
+  The 1 October scheduled task is report-only.
+- Operator research stays in the product.
+
+**State:**
+- Migrations through `20261009000000_planning_development_facts.sql` are applied.
+- Five-scheme pilot researched ($0.31) and browser-verified signed in on the local app.
+- 19 open facts await the user in `/admin/planning/completion`, plus 2 Claude decisions to confirm
+  (Crawley Parkour CIC operator; Wandsworth proposed use E(g)(i)/F1) and 1 stale use class to check.
+- Wandsworth family 2025/3409 + 2026/2600 was grouped by `scripts/group-pilot-family.ts`. The undo
+  file is `apps/web/reports/pilot-family-wandsworth-2025-3409.json`.
+- **Council access check:** documents readable for 22 councils, about 5% of tier applications;
+  page-only 19%; blocked 76% (204 of 209 Idox councils disallow in robots.txt).
+
+**Proposed next steps, awaiting the user's go-ahead:**
+1. Route research by council access label.
+2. Retry the ~20 councils where robots.txt fetch failed.
+3. Test web-only operator research on 10–15 blocked schemes.
+4. Draft a question to Plota about application-form or floor-area data for councils we can't read.
+
+**Still unfinished (do not report as done):**
+- Grouped classification worker. Only the member guard is built, and it is undeployed.
+- Selection rewrite and filter test, including extensions.
+- Step-5 transactional merge/detach, and the trigger's stage overwrite.
+- One pin per development.
+- Agent usefulness check.
+
+**Known defects:**
+- Form reader sometimes records "Address" as an applicant.
+- Excerpts can contain private applicants' home addresses (admin-only).
+- "Detached ArrayBuffer" document read bug.
+- Dense London planning read timed out once.
+- 13 unrelated failing test suites: leads, gap finder, requirement locations, consultant profile.
+
 ## Current position — 14 September 2026: Claude owns operations
 
 - **The 3,500 reserve is the user's decision, not an unexplained change.** The user approved
