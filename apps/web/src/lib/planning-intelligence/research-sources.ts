@@ -1,5 +1,6 @@
 import { isIP } from 'node:net'
 import { TextDecoder } from 'node:util'
+import { fetchCompletingChain, isIncompleteChainError } from './incomplete-chain-fetch'
 import type { PlotaApplication } from './types'
 
 export interface ResearchSource {
@@ -52,13 +53,20 @@ async function pacedFetch(url: URL, init: RequestInit = {}): Promise<Response> {
   nextRequestAt.set(url.host, Date.now() + HOST_INTERVAL_MS)
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(new Error('Council request timed out')), REQUEST_TIMEOUT_MS)
+  const request: RequestInit = {
+    ...init,
+    headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/pdf;q=0.9,*/*;q=0.5', ...init.headers },
+    signal: controller.signal,
+    redirect: init.redirect ?? 'follow',
+  }
   try {
-    return await fetch(url, {
-      ...init,
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/pdf;q=0.9,*/*;q=0.5', ...init.headers },
-      signal: controller.signal,
-      redirect: init.redirect ?? 'follow',
-    })
+    return await fetch(url, request)
+  } catch (error) {
+    // Many council servers omit their intermediate certificate; complete it as a browser would.
+    if (!isIncompleteChainError(error)) throw error
+    const completed = await fetchCompletingChain(url, request)
+    if (!completed) throw error
+    return completed
   } finally {
     clearTimeout(timeout)
   }
@@ -319,6 +327,12 @@ async function onlineRegisterSources(input: {
     }
     const evidenceUrl = new URL(input.councilUrl)
     evidenceUrl.hash = `document=${encodeURIComponent(document.fileName)}`
+    // Most submitted PDFs carry a text layer; pay for OCR only when free extraction finds none.
+    const text = await pdfText(new Uint8Array(bytes).buffer).catch(() => '')
+    if (text.length >= 100) {
+      sources.push({ kind: 'document', url: evidenceUrl.href, text, title: document.label, mediaType: 'application/pdf' })
+      continue
+    }
     const safeFilename = document.fileName.replace(/[^a-z0-9._-]+/gi, '-').slice(0, 100) || 'planning-document.pdf'
     sources.push({
       kind: 'document', url: evidenceUrl.href,
@@ -336,7 +350,9 @@ async function onlineRegisterSources(input: {
 
 async function pdfText(bytes: ArrayBuffer): Promise<string> {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  const document = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise
+  // PDF.js transfers the buffer it is given, detaching it. Hand it a copy so the caller can
+  // still read the bytes (for example to build an OCR payload).
+  const document = await pdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)) }).promise
   const parts: string[] = []
   for (let pageNumber = 1; pageNumber <= Math.min(document.numPages, 20); pageNumber++) {
     const page = await document.getPage(pageNumber)
@@ -359,10 +375,16 @@ interface PlanPortalDocument {
 async function rulesFor(url: URL, warnings: string[]): Promise<RobotsRule[]> {
   try {
     const robots = await pacedFetch(new URL('/robots.txt', url))
-    return robots.ok ? robotsRules(await robots.text()) : []
+    if (robots.ok) return robotsRules(await robots.text())
+    // RFC 9309: a missing robots.txt (4xx) allows everything; a server error means assume disallowed.
+    if (robots.status >= 500) {
+      warnings.push(`robots.txt could not be read for ${url.host}: returned ${robots.status}`)
+      return [{ allow: false, path: '/' }]
+    }
+    return []
   } catch (error) {
     warnings.push(`robots.txt could not be read for ${url.host}: ${error instanceof Error ? error.message : 'unknown error'}`)
-    return []
+    return [{ allow: false, path: '/' }]
   }
 }
 
@@ -436,6 +458,11 @@ async function readDocument(
     const signature = new TextDecoder().decode(bytes.slice(0, 5))
     const isPdf = contentType.includes('pdf') || candidate.url.pathname.toLowerCase().endsWith('.pdf')
       || signature === '%PDF-'
+    // Word files and images are binary; decoding them as HTML produces junk evidence.
+    if (!isPdf && (signature.startsWith('PK\u0003\u0004') || /^(?:image|audio|video)\/|officedocument|msword|octet-stream|zip/i.test(contentType))) {
+      warnings.push(`Skipped unsupported document format (${contentType || 'binary'}): ${candidate.url.href}`)
+      return null
+    }
     const text = isPdf
       ? await pdfText(bytes)
       : htmlText(new TextDecoder().decode(bytes), MAX_DOCUMENT_CHARACTERS)
@@ -501,6 +528,9 @@ export async function collectCouncilResearchSources(
     }
 
     const candidates: DocumentCandidate[] = []
+    // Several links (a Documents tab and a button, say) often open the same listing.
+    const read = new Set<string>()
+    const firstVisit = (url: URL) => !read.has(url.href) && Boolean(read.add(url.href))
     for (const link of documentLinks(html, councilUrl)) {
       if (link.url.origin === councilUrl.origin) candidates.push(link)
       else {
@@ -513,6 +543,7 @@ export async function collectCouncilResearchSources(
         if (portalCandidates.length > 0) {
           for (const portalCandidate of portalCandidates) {
             if (sources.length - 1 >= MAX_DOCUMENTS) break
+            if (!firstVisit(portalCandidate.url)) continue
             const source = await readDocument(portalCandidate, externalRules, warnings)
             if (source) sources.push(source)
           }
@@ -524,6 +555,7 @@ export async function collectCouncilResearchSources(
     }
     for (const candidate of candidates.sort((a, b) => documentPriority(a) - documentPriority(b))) {
       if (sources.length - 1 >= MAX_DOCUMENTS) break
+      if (!firstVisit(candidate.url)) continue
       const candidateRules = candidate.url.origin === councilUrl.origin
         ? rules : await rulesFor(candidate.url, warnings)
       const source = await readDocument(candidate, candidateRules, warnings, candidate.url.origin === councilUrl.origin ? onlineRegisterCookies : '')
@@ -534,6 +566,7 @@ export async function collectCouncilResearchSources(
       if (children.length > 0) {
         for (const child of children.slice(0, MAX_DOCUMENTS)) {
           if (sources.length - 1 >= MAX_DOCUMENTS) break
+          if (!firstVisit(child.url)) continue
           const childRules = child.url.origin === candidate.url.origin
             ? candidateRules : await rulesFor(child.url, warnings)
           const document = await readDocument(child, childRules, warnings, child.url.origin === councilUrl.origin ? onlineRegisterCookies : '')

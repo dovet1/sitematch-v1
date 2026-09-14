@@ -1,0 +1,4427 @@
+{
+  "methodology": {
+    "seed": "london-unseen-2026-09-14-v1",
+    "at": "2026-09-14T00:00:00Z",
+    "adapterSha256": "98121bf1a9991611c194098ee9381c1e40b90afb97690ee07fe3254224166042",
+    "factsSha256": "8263d7ccfa271ed3f4714823af78b0c0f0c1979ed801c5124d06c00d67d88c23",
+    "excluded": [
+      "Barking_&_Dagenham-26_00990_FULL",
+      "Barking_&_Dagenham-26_01051_CLUP",
+      "Barking_&_Dagenham-26_01044_FULL",
+      "Barking_&_Dagenham-26_00783_FULL",
+      "Barking_&_Dagenham-26_00028_FULL",
+      "Barking_&_Dagenham-26_00046_FULL",
+      "Barking_&_Dagenham-26_00826_CLUP",
+      "Barking_&_Dagenham-26_00832_FULL",
+      "Barking_&_Dagenham-26_00755_FULL",
+      "Barking_&_Dagenham-26_00802_FULL",
+      "Barking_&_Dagenham-26_00684_FULL",
+      "Barnet-26_2844_FUL",
+      "Barnet-26_2814_FUL",
+      "Barnet-26_2804_FUL",
+      "Barnet-26_2774_PNE",
+      "Barnet-26_2785_FUL",
+      "Barnet-26_2766_FUL",
+      "Barnet-26_2740_FUL",
+      "Barnet-26_2696_PNE",
+      "Barnet-26_2675_FUL",
+      "Barnet-26_2654_FUL",
+      "Barnet-26_2509_FUL",
+      "Barnet-26_2490_191",
+      "Bexley-26_01481_FUL",
+      "Bexley-26_01448_FUL",
+      "Bexley-26_01421_FUL",
+      "Bexley-26_01413_FUL",
+      "Bexley-26_01402_SCREEN",
+      "Bexley-26_01362_PRIORM",
+      "Bexley-26_01359_FULM",
+      "Bexley-26_01238_FUL",
+      "Bexley-26_01230_FUL",
+      "Bexley-26_01214_FUL",
+      "Bexley-26_01172_FUL",
+      "Bexley-26_01162_FUL",
+      "Camden-2026_3019_P",
+      "Camden-2026_3010_P",
+      "Camden-2026_3177_P",
+      "Camden-2026_3124_P",
+      "Camden-2026_3113_P",
+      "Camden-2026_3112_P",
+      "Camden-2026_2919_P",
+      "Camden-2026_2888_P",
+      "Camden-2026_2744_P",
+      "City_of_London-26_00938_FULL",
+      "City_of_London-26_00936_FULL",
+      "City_of_London-26_00884_ADVT",
+      "City_of_London-26_00865_FULL",
+      "City_of_London-26_00822_FULL",
+      "City_of_London-26_00823_FULL",
+      "City_of_London-26_00761_FULL",
+      "City_of_London-26_00719_FULL",
+      "City_of_London-26_00705_FULL",
+      "City_of_London-26_00704_FULL",
+      "City_of_London-26_00591_FULMAJ",
+      "City_of_London-26_00448_FULL",
+      "Croydon-26_02183_AUT",
+      "Croydon-26_02120_FUL",
+      "Croydon-26_02102_FUL",
+      "Croydon-26_02056_GPDO",
+      "Croydon-26_02033_FUL",
+      "Croydon-26_02017_FUL",
+      "Croydon-26_01954_FUL",
+      "Croydon-26_01937_FUL",
+      "Croydon-26_01943_GPDO",
+      "Croydon-26_01942_GPDO",
+      "Croydon-26_01912_FUL",
+      "Croydon-26_01916_OUT",
+      "Ealing-262900FUL",
+      "Ealing-262804FUL",
+      "Ealing-262744FUL",
+      "Ealing-262743PACBSD",
+      "Ealing-262728CPL",
+      "Ealing-262575FUL",
+      "Ealing-262469PACBSD",
+      "Ealing-262405FUL",
+      "Ealing-262396FUL",
+      "Ealing-262400CONS",
+      "Ealing-262331PACBSD",
+      "Ealing-262317CPL",
+      "Enfield-26_03237_PMA",
+      "Enfield-26_03162_PMA",
+      "Enfield-26_03085_FUL",
+      "Enfield-26_03084_PIA",
+      "Enfield-26_02980_FUL",
+      "Enfield-26_02944_PRG",
+      "Enfield-26_02893_FUL",
+      "Enfield-26_02846_FUL",
+      "Enfield-26_02828_CEA",
+      "Enfield-26_02775_FUL",
+      "Enfield-26_02732_FUL",
+      "Enfield-26_02683_FUL",
+      "Greenwich-26_2279_F",
+      "Greenwich-26_2227_PN2",
+      "Greenwich-26_2139_PN2",
+      "Greenwich-26_2116_F",
+      "Greenwich-26_2050_F",
+      "Greenwich-26_1945_F",
+      "Greenwich-26_1830_F",
+      "Greenwich-26_1738_F",
+      "Greenwich-26_1686_F",
+      "Greenwich-26_1669_F",
+      "Hackney-2020_1442",
+      "Hackney-2026_1585",
+      "Hackney-2026_1326",
+      "Hackney-2026_1536",
+      "Hackney-2026_1500",
+      "Hackney-2026_1510",
+      "Hackney-2026_1564",
+      "Hackney-2026_1332",
+      "Hackney-2026_1355",
+      "Hackney-2026_1096",
+      "Hackney-2026_1337",
+      "Hackney-2026_1245",
+      "Hammersmith_&_Fulham-P_2026_01904_PACU1",
+      "Hammersmith_&_Fulham-P_2026_01774_PACU1",
+      "Hammersmith_&_Fulham-P_2026_01884_FUL",
+      "Hammersmith_&_Fulham-P_2026_01632_CLP",
+      "Hammersmith_&_Fulham-P_2026_01836_OBS",
+      "Hammersmith_&_Fulham-P_2026_01835_OBS",
+      "Hammersmith_&_Fulham-P_2026_01635_CLP",
+      "Hammersmith_&_Fulham-P_2026_01603_FUL",
+      "Hammersmith_&_Fulham-P_2026_00874_FUL",
+      "Hammersmith_&_Fulham-P_2026_01203_FUL",
+      "Hammersmith_&_Fulham-P_2026_01759_PACU1",
+      "Hammersmith_&_Fulham-P_2026_01440_FUL",
+      "Haringey-HGY_2026_1923",
+      "Haringey-HGY_2026_1659",
+      "Haringey-HGY_2026_1175",
+      "Haringey-HGY_2026_1355",
+      "Haringey-HGY_2026_1242",
+      "Haringey-HGY_2026_0755",
+      "Haringey-HGY_2026_1107",
+      "Haringey-HGY_2026_0671",
+      "Haringey-HGY_2026_1111",
+      "Haringey-HGY_2025_3312",
+      "Harrow-PL_1560_26",
+      "Harrow-PL_1678_26",
+      "Harrow-PL_1695_26",
+      "Harrow-PL_1680_26",
+      "Harrow-PL_1059_26",
+      "Harrow-PL_1597_26",
+      "Harrow-PL_0924_26",
+      "Harrow-PL_1376_26",
+      "Harrow-PL_0055_26",
+      "Harrow-PL_1404_26",
+      "Havering-D0312.26",
+      "Havering-P0891.26",
+      "Havering-D0299.26",
+      "Havering-P0850.26",
+      "Havering-P0841.26",
+      "Havering-P0836.26",
+      "Havering-P0784.26",
+      "Havering-P0775.26",
+      "Havering-P0769.26",
+      "Hillingdon-16483_APP_2026_1751",
+      "Hillingdon-80172_APP_2026_1717",
+      "Hillingdon-7139_APP_2026_1688",
+      "Hillingdon-7402_APP_2026_1610",
+      "Hillingdon-72098_APP_2026_1591",
+      "Hillingdon-76641_APP_2026_1411",
+      "Hillingdon-2216_APP_2026_1388",
+      "Hillingdon-59872_APP_2026_1389",
+      "Hillingdon-59872_APP_2026_1345",
+      "Hillingdon-46456_APP_2026_1234",
+      "Hillingdon-382_APP_2026_1238",
+      "Hounslow-P_2026_2133",
+      "Hounslow-SC_2026_2149",
+      "Hounslow-P_2026_1875",
+      "Hounslow-P_2026_1984",
+      "Hounslow-P_2026_2041",
+      "Hounslow-P_2026_0035",
+      "Hounslow-PAC_2026_2008",
+      "Hounslow-P_2026_1648",
+      "Hounslow-P_2026_1498",
+      "Hounslow-P_2026_1898",
+      "Hounslow-PAC_2026_1853",
+      "Hounslow-PAC_2026_1850",
+      "Islington-P2026_1509_FUL",
+      "Islington-P2026_1808_FUL",
+      "Islington-P2026_1892_FUL",
+      "Islington-P2026_1539_FUL",
+      "Islington-P2026_1577_FUL",
+      "Islington-P2026_1911_LBC",
+      "Islington-P2026_1910_FUL",
+      "Islington-P2026_1691_FUL",
+      "Islington-P2026_1703_PRA",
+      "Islington-P2026_1689_PRA",
+      "Islington-P2026_1392_COL",
+      "Islington-P2026_1560_FUL",
+      "Kingston-26_01675_FUL",
+      "Kingston-26_01633_FUL",
+      "Kingston-26_01630_FUL",
+      "Kingston-26_01624_PAMA",
+      "Kingston-26_01609_PACOU",
+      "Kingston-26_01583_CEU",
+      "Kingston-26_01560_CREG3",
+      "Kingston-26_01526_PACOU",
+      "Kingston-26_01515_AAC",
+      "Kingston-26_01452_PACND",
+      "Kingston-26_01364_PAMA",
+      "Kingston-26_01351_FUL",
+      "Lambeth-26_02030_FUL",
+      "Lambeth-26_02033_FUL",
+      "Lambeth-26_02009_OBS",
+      "Lambeth-26_01884_FUL",
+      "Lambeth-26_01880_FUL",
+      "Lambeth-26_01821_LDCP",
+      "Lambeth-26_01850_RG3",
+      "Lambeth-26_01735_FUL",
+      "Lambeth-26_01715_FUL",
+      "Lambeth-26_01682_FUL",
+      "Lambeth-26_01579_P3MA",
+      "Lambeth-26_01577_P3G",
+      "Lewisham-DC_26_144928",
+      "Lewisham-DC_26_144893",
+      "Lewisham-DC_26_144597",
+      "Lewisham-DC_26_144523",
+      "Lewisham-DC_26_144305",
+      "Lewisham-DC_26_144314",
+      "Lewisham-DC_26_144312",
+      "Merton-26_FULL_0550",
+      "Merton-26_FULL_1328",
+      "Merton-26_FULL_1303",
+      "Merton-26_FULL_1345",
+      "Merton-26_FULL_1184",
+      "Merton-26_LDCP_0837",
+      "Merton-26_FULL_0887",
+      "Newham-26_01351_FUL",
+      "Newham-26_01334_FUL",
+      "Newham-26_01417_PRECOU",
+      "Newham-26_01609_FUL",
+      "Newham-25_00704_FUL",
+      "Newham-26_01460_CLP",
+      "Newham-26_01574_CLP",
+      "Newham-26_01499_FUL",
+      "Newham-26_01515_FUL",
+      "Newham-26_01413_FUL",
+      "Newham-26_01119_FUL",
+      "Newham-26_01388_COU",
+      "OPDC-26_0116_DELBRE",
+      "OPDC-26_0073_FULOPDC",
+      "OPDC-26_0105_LDCOPDC",
+      "OPDC-26_0099_SCROPDC",
+      "OPDC-26_0088_DELBRE",
+      "OPDC-26_0081_FULOPDC",
+      "OPDC-26_0074_FUMOPDC",
+      "OPDC-26_0072_FUMOPDC",
+      "OPDC-26_0068_FULOPDC",
+      "OPDC-26_0045_SCROPDC",
+      "Redbridge-1924_26",
+      "Redbridge-1753_26",
+      "Redbridge-1667_26",
+      "Redbridge-1454_26",
+      "Redbridge-1131_26",
+      "Redbridge-1376_26",
+      "Redbridge-1516_26",
+      "Redbridge-1225_26",
+      "Redbridge-1496_26",
+      "Redbridge-1556_26",
+      "Redbridge-3367_25",
+      "Redbridge-1397_26",
+      "Richmond-PA26_2446",
+      "Richmond-PA26_2209",
+      "Richmond-PA26_2594",
+      "Richmond-PA26_2528",
+      "Richmond-PA26_2296",
+      "Richmond-PA26_2430",
+      "Richmond-PA26_2423",
+      "Richmond-PA26_2420",
+      "Richmond-PA26_0917",
+      "Richmond-PA26_2189",
+      "Richmond-PA26_1630",
+      "Richmond-PA26_2237",
+      "Southwark-26_AP_2300",
+      "Southwark-26_AP_2277",
+      "Southwark-26_AP_2258",
+      "Southwark-26_AP_2209",
+      "Southwark-26_AP_2104",
+      "Southwark-26_AP_2052",
+      "Southwark-26_AP_2051",
+      "Southwark-26_AP_1988",
+      "Southwark-26_AP_1999",
+      "Southwark-26_EES_0030",
+      "Southwark-26_AP_1928",
+      "Southwark-26_AP_1923",
+      "Sutton-DM2026_00898",
+      "Sutton-DM2026_00848",
+      "Sutton-DM2026_00842",
+      "Sutton-DM2026_00830",
+      "Sutton-DM2026_00822",
+      "Sutton-DM2026_00807",
+      "Sutton-DM2026_00759",
+      "Sutton-DM2026_00723",
+      "Sutton-DM2026_00665",
+      "Sutton-DM2026_00664",
+      "Sutton-DM2026_00591",
+      "Sutton-DM2026_00578",
+      "Tower_Hamlets-PA_26_01071_A1",
+      "Tower_Hamlets-PA_26_01286_NC",
+      "Tower_Hamlets-PA_26_00975_NC",
+      "Tower_Hamlets-PA_26_01217_NC",
+      "Tower_Hamlets-PA_26_00939_NC",
+      "Tower_Hamlets-PA_26_01135_NC",
+      "Tower_Hamlets-PA_26_01134_NC",
+      "Tower_Hamlets-PA_26_01133_NC",
+      "Tower_Hamlets-PA_26_00990_A1",
+      "Tower_Hamlets-PA_26_01172_NC",
+      "Tower_Hamlets-PA_26_00854_NC",
+      "Waltham_Forest-261691",
+      "Waltham_Forest-261717",
+      "Waltham_Forest-261668",
+      "Waltham_Forest-261714",
+      "Waltham_Forest-261701",
+      "Waltham_Forest-261514",
+      "Waltham_Forest-261642",
+      "Waltham_Forest-261246",
+      "Waltham_Forest-261217",
+      "Waltham_Forest-261273",
+      "Waltham_Forest-261411",
+      "Wandsworth-2026_2757",
+      "Wandsworth-2026_2692",
+      "Wandsworth-2026_2691",
+      "Wandsworth-2026_2606",
+      "Wandsworth-2026_2605",
+      "Wandsworth-2026_2598",
+      "Wandsworth-2026_2582",
+      "Wandsworth-2026_2571",
+      "Wandsworth-2026_2560",
+      "Wandsworth-2026_2543",
+      "Wandsworth-2026_2509",
+      "Westminster-26_05087_CLOPUD",
+      "Westminster-26_04958_CLEUD",
+      "Westminster-26_04929_P3JPA",
+      "Westminster-26_04776_OBS",
+      "Westminster-26_04673_FULL",
+      "Westminster-26_04605_FULL",
+      "Westminster-26_04606_LBC",
+      "Westminster-26_04649_FULL",
+      "Westminster-26_04623_LBC",
+      "Westminster-26_04616_PACU2F",
+      "Westminster-26_04622_FULL",
+      "Westminster-26_04446_CLEUD",
+      "Camden-2026_3371_P",
+      "Wandsworth-2026_2930",
+      "Hounslow-SC_2026_2357",
+      "Lambeth-26_02338_FUL",
+      "Camden-2026_3272_P",
+      "Lambeth-26_02343_FUL",
+      "Camden-2026_3418_P",
+      "Lambeth-26_02335_P3MA",
+      "Wandsworth-2026_2937",
+      "Southwark-26_AP_2342",
+      "Southwark-26_AP_2417",
+      "Westminster-26_05405_FULL",
+      "Westminster-26_05424_P3JPA",
+      "Westminster-26_05392_FULL",
+      "Southwark-26_AP_2404",
+      "Wandsworth-2019_4915",
+      "Wandsworth-2022_2709",
+      "Wandsworth-2025_3651"
+    ],
+    "poolSize": 175,
+    "limitation": "Recent public London records with commercial-class rows, not a random sample of our eligible developments. No independent application-form verification yet. Selection fixed before human labels."
+  },
+  "review": {
+    "reviewer": "Codex",
+    "method": "Frozen predictions compared manually against all 40 descriptions and internal row consistency. Contradicted means inconsistent with stated application scope, not a verified replacement value. Unverified never counts as correct. No field has independent numerical verification in this first pass. Additional public-source checks saved separately.",
+    "summary": {
+      "existing_use_class": {
+        "unverified": 27,
+        "contradicted": 0,
+        "needs_review": 3,
+        "not_emitted": 10
+      },
+      "proposed_use_class": {
+        "unverified": 26,
+        "contradicted": 4,
+        "needs_review": 2,
+        "not_emitted": 8
+      },
+      "existing_floorspace": {
+        "unverified": 26,
+        "contradicted": 1,
+        "needs_review": 2,
+        "not_emitted": 11
+      },
+      "proposed_floorspace": {
+        "unverified": 17,
+        "contradicted": 6,
+        "needs_review": 5,
+        "not_emitted": 12
+      },
+      "net_floorspace": {
+        "unverified": 17,
+        "contradicted": 7,
+        "needs_review": 5,
+        "not_emitted": 11
+      },
+      "site_area": {
+        "unverified": 37,
+        "contradicted": 0,
+        "needs_review": 1,
+        "not_emitted": 2
+      }
+    },
+    "labels": [
+      {
+        "index": 1,
+        "id": "Wandsworth-2026_3110",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "The description gives extensions without the affected uses. The commercial row could describe retained ground-floor space; none of its measurements is independently verified.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Wandsworth-2026_3110",
+          "description": "Alterations including erection of two storey rear extension; single storey rear extension; erection of rear roof extension to main roof and extension above existing two-storey back addtion including formation of third floor level rear roof terrace with 1.7m glazed safety screen surround."
+        }
+      },
+      {
+        "index": 2,
+        "id": "Haringey-HGY_2026_2303",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "contradicted",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "contradicted",
+          "net_floorspace": "contradicted",
+          "site_area": "unverified"
+        },
+        "reason": "The proposal adds a Class C3 dwelling, but the adapter publishes 64 m\u00b2 of commercial gain and a proposed E(c)(ii) use. The description-to-class parser did not protect this case.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Haringey-HGY_2026_2303",
+          "description": "Erection of an additional set-back storey at roof level to provide 1 no. one-bedroom, two-person residential dwelling (Use Class C3), increasing the development approved under planning permission HGY/2025/2512 from four to five residential units, together with amendments to the approved scheme."
+        }
+      },
+      {
+        "index": 3,
+        "id": "Tower_Hamlets-PA_26_01444_A1",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "Demolition for housing is consistent with loss of the existing non-residential building. The F1 designation and 320 m\u00b2 require source verification.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Tower_Hamlets-PA_26_01444_A1",
+          "description": "Redevelopment of the site comprising demolition of the existing building and erection of a 6-storey building to provide residential dwellings (Use Class C3) alongside associated public realm and ancillary works."
+        }
+      },
+      {
+        "index": 4,
+        "id": "Merton-26_FULL_1740",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "Lock-up garages are demolished for a house. The direction of the commercial loss is plausible; the B8 designation and 173 m\u00b2 are not independently verified.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Merton-26_FULL_1740",
+          "description": "DEMOLITION OF SINGLE STOREY LOCK UP GARAGES (3 BUILDINGS)\r\nAND ERECTION OF 1 X TWO STOREY DETACHED DWELLING HOUSE (RENEWAL OF PERMISSION\r\n24/P0158)"
+        }
+      },
+      {
+        "index": 5,
+        "id": "Bexley-26_00874_FUL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "not_emitted",
+          "net_floorspace": "not_emitted",
+          "site_area": "unverified"
+        },
+        "reason": "The no-loss safeguard correctly withholds proposed and net area for a Class E-to-C3 conversion. Existing 150 m\u00b2 and the finer E(c)(iii) class remain unverified.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Bexley-26_00874_FUL",
+          "description": "Change of Use of first floor unit from Class E to Class C3 along with first floor rear extension and erection of second floor to provide 4 additional residential units."
+        }
+      },
+      {
+        "index": 6,
+        "id": "Camden-2026_3543_P",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "needs_review",
+          "proposed_floorspace": "needs_review",
+          "net_floorspace": "needs_review",
+          "site_area": "unverified"
+        },
+        "reason": "One temporary shipping container is described. Existing and gained are both 14.78 m\u00b2, producing 29.56 m\u00b2 proposed. This appears to double-count the container but requires plans to establish scope.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Camden-2026_3543_P",
+          "description": "Temporary planning permission (6 months from the date of permission) for a shipping container on site. The container will support a programme of free-to-access children's play sessions "
+        }
+      },
+      {
+        "index": 7,
+        "id": "Hackney-2026_1709",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "An extension is described, consistent with a gain. The F1 designation and all numerical values require independent evidence.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Hackney-2026_1709",
+          "description": "Erection of a two storey rear extension at lower ground and ground floor levels; erection of a two storey side extension at first floor and roof levels, formation of front and rear roof dormers"
+        }
+      },
+      {
+        "index": 8,
+        "id": "Hammersmith_&_Fulham-P_2026_01962_FUL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "contradicted",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "contradicted",
+          "net_floorspace": "contradicted",
+          "site_area": "unverified"
+        },
+        "reason": "Conversion of ancillary retail basement storage to a flat is described; the rows omit residential use and any commercial loss, yet publish an E(b) gain of 5 m\u00b2. Proposed use and commercial change are contradicted by the described scope.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Hammersmith_&_Fulham-P_2026_01962_FUL",
+          "description": "Erection of a single storey rear extension to the side of the existing back addition at ground floor level; infilling of 2no existing windows and installation of a new window at ground floor level to the rear elevation; infilling of the existing windows and door, and installation of new sliding doors and 1no window at basement level to the rear elevation; change of use of the basement floor level from storage (ancillary to retail unit Class E use) into 1 x 1 bedroom self-contained flat (Class C3)."
+        }
+      },
+      {
+        "index": 9,
+        "id": "Sutton-DM2026_00922",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "not_emitted",
+          "proposed_use_class": "needs_review",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "A new mixed office/retail/storage building is described. B8 alone does not establish the complete use mix; 329 m\u00b2 is unverified. One implausible site figure is held, while the alternative 0.12 ha is not independently verified.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Sutton-DM2026_00922",
+          "description": "Demolition of existing detached garage and erection of a single storey building to rear, mixed use (office, retail and storage), provision of solar panels to roof and associated landscaping."
+        }
+      },
+      {
+        "index": 10,
+        "id": "Bexley-26_01714_FUL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "Warehouse demolition for a dwelling is consistent with a complete commercial loss. The 84 m\u00b2 amount is not independently verified.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Bexley-26_01714_FUL",
+          "description": "Erection of a detached single storey dwelling with refuse/cycle storage and parking to the front following demolition of existing warehouse."
+        }
+      },
+      {
+        "index": 11,
+        "id": "Newham-26_01753_FUL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "The work concerns flats; the unchanged retail row may be retained space outside the work. Figures are not independently verified and do not establish a substantive commercial scheme.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Newham-26_01753_FUL",
+          "description": "Conversion into three self-contained flats (Use Class C3) including rear dormer roof extension with 3 front roof lights and rear balcony with external alterations/landscaping works and associated waste/cycle storage. (This application is in the Forest Gate Town Centre Conservation Area.)"
+        }
+      },
+      {
+        "index": 12,
+        "id": "Hammersmith_&_Fulham-P_2026_02171_FUL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "needs_review",
+          "net_floorspace": "needs_review",
+          "site_area": "unverified"
+        },
+        "reason": "Shopfront and door works do not establish an additional 1.2 m\u00b2. This small dimensional change might be real, so flag for review rather than call it a proven error.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Hammersmith_&_Fulham-P_2026_02171_FUL",
+          "description": "Replacement of 1no existing door with a new steel door to eastern and western elevations of the building at ground floor level; installation of a new shopfront comprising of curtain walling, cladding and a new door."
+        }
+      },
+      {
+        "index": 13,
+        "id": "Tower_Hamlets-PA_26_01456_NC",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "Residential roof work with unchanged commercial space in the rows. Does not itself establish a commercial scheme or verify 98.32 m\u00b2.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Tower_Hamlets-PA_26_01456_NC",
+          "description": "Internal reconfiguration and mansard roof extension to provide 1x1 bedroom flat with associated roof terrace at first floor level and 1x3 bedroom duplex flat at second and third floor with associated roof terrace. (amended description)"
+        }
+      },
+      {
+        "index": 14,
+        "id": "Greenwich-26_2463_F",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "Explicit F2-to-C3 conversion supports use classes and direction of loss. The 133 m\u00b2 is not independently verified.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Greenwich-26_2463_F",
+          "description": "Change of use of the existing building on site from a local community facility (Use Class F2) to residential (Use Class C3) to provide 3 x 1 bedroom 1 person apartments; construction of single-storey rear extension and rear dormer extensions; installation of side rooflights, PV panels and air source heat pumps; associated landscaping, minor reconfiguration of adjacent car park, cycle parking, bin storage and other associated alterations."
+        }
+      },
+      {
+        "index": 15,
+        "id": "Barnet-26_2978_FUL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "Partial conversion supports a retained commercial area and a loss. The precise 38 m\u00b2 retained figure and E(c)(iii) subclass need verification.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Barnet-26_2978_FUL",
+          "description": "Partial conversion of the ground floor commercial unit, construction of rear extension at first and second floor levels with a terrace at second floor level, alterations to roof including raising of ridge height to provide 4no. self-contained flats. Provision of new bin and cycle stores. Associated alterations to rear ground floor fenestration"
+        }
+      },
+      {
+        "index": 16,
+        "id": "Southwark-26_AP_2559",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "Additional office accommodation supports the use and direction of gain. The listed-building consent should also be grouped with its planning twin; the 41 m\u00b2 needs documents.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Southwark-26_AP_2559",
+          "description": "Listed building consent for alterations to the Grade II listed building at 59-61 Union Street comprising adaptation of the existing\rroof space to provide additional office accommodation; formation of a stair from second-floor level;\rerection of a rear dormer; localised alterations to the roof structure; installation of glazed screens,\rpartitions and balustrading; introduction of glazing to the existing roof hatch; and associated works."
+        }
+      },
+      {
+        "index": 17,
+        "id": "Tower_Hamlets-PA_26_01376_NC",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "not_emitted",
+          "proposed_floorspace": "not_emitted",
+          "net_floorspace": "needs_review",
+          "site_area": "unverified"
+        },
+        "reason": "Recorded loss (885.2 m\u00b2) exceeds recorded existing area (855.2 m\u00b2). The adapter suppresses existing but still publishes the inconsistent loss as net. One of these source values requires resolution.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Tower_Hamlets-PA_26_01376_NC",
+          "description": "Temporary change of use of the restaurant unit at ground and first floor level to residential amenity space for a period of 5 years."
+        }
+      },
+      {
+        "index": 18,
+        "id": "Westminster-26_05869_FULL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "not_emitted",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "needs_review",
+          "net_floorspace": "needs_review",
+          "site_area": "unverified"
+        },
+        "reason": "Replacement shopfront alone does not establish a 1 m\u00b2 loss. Could reflect wall dimensions; requires plans, not automatic acceptance.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Westminster-26_05869_FULL",
+          "description": "Replacement shopfront."
+        }
+      },
+      {
+        "index": 19,
+        "id": "Ealing-262975FUL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "contradicted",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "contradicted",
+          "net_floorspace": "contradicted",
+          "site_area": "unverified"
+        },
+        "reason": "Storage is demolished and flats built, but the adapter reports B8 gained and proposed commercial floor area 193.5 m\u00b2. Proposed use and gain contradict the description.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Ealing-262975FUL",
+          "description": "Construction of two one-bedroom flats over three levels following demolition of existing outbuilding and storage, provision of associated cycle storage and refuse storage facilities."
+        }
+      },
+      {
+        "index": 20,
+        "id": "Hackney-2026_0763",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "needs_review",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "Office-to-flat conversion supports commercial loss. E(c)(ii) is not a demonstrated office classification and the detailed mixed-building scope and figures need checking.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Hackney-2026_0763",
+          "description": "Change of use from offices on first and second floors to two studio flats, erection of two storey rear extension at first and second floor and new front access and new shopfront"
+        }
+      },
+      {
+        "index": 21,
+        "id": "Lewisham-DC_26_144631",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "Domestic C3-to-C4 conversion; retained commercial row may describe another part of the building. The 33 m\u00b2 is not proof this is a commercially relevant scheme.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Lewisham-DC_26_144631",
+          "description": "Change of use of the upper floors from a dwellinghouse (Use Class C3) to a small House in Multiple Occupation (HMO Use Class C4) at 5A Wastdale Road, SE23"
+        }
+      },
+      {
+        "index": 22,
+        "id": "Wandsworth-2026_3057",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "Upper-floor conversion with retained ground-floor commercial space supports a loss. Precise retained area 177 m\u00b2 and subclass are not independently verified.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Wandsworth-2026_3057",
+          "description": "Alteration including erection of rear extensions and front mansard roof extension to; existing ground floor commercial space, and in connection with change of use at upper floors to residential to create 4 x studio flats, 3 x 2 bedroom units."
+        }
+      },
+      {
+        "index": 23,
+        "id": "Camden-2026_3440_P",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "needs_review",
+          "net_floorspace": "needs_review",
+          "site_area": "unverified"
+        },
+        "reason": "Phased demolition and office extensions are described, but zero loss is recorded. The gain may actually be a net figure; proposed and net should be reviewed against phase totals.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Camden-2026_3440_P",
+          "description": "Phase 1: erection of three storey office extension (Use Class E(g)) at 13 Leeke Street following demolition of 13 Leeke Street (existing office floorspace) and external alterations to 5-11 Leeke Street, comprising partial rear upward extension, alterations to fenestration, and external facade upgrades; and, Phase 2: erection of additional office storey at roof level (Use Class E(g)), at 5-13 Leeke Street, with roof terrace above, plant and associated works "
+        }
+      },
+      {
+        "index": 24,
+        "id": "Kingston-26_01705_FUL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "Workshop/office extension supports commercial gain. The 57.83 m\u00b2 and total require verification; offices may be ancillary, so B2 alone is not necessarily wrong. Competing site units also require care.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Kingston-26_01705_FUL",
+          "description": "Erection of upper floor extension and associated material alterations for use as automobile car workshop and offices."
+        }
+      },
+      {
+        "index": 25,
+        "id": "Lewisham-DC_26_145319",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "contradicted",
+          "net_floorspace": "contradicted",
+          "site_area": "unverified"
+        },
+        "reason": "Works are shopfront/signage to an already amalgamated shop. Existing and gained both 105 m\u00b2 cause a doubled proposed area of 210 m\u00b2, unsupported by the stated work.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Lewisham-DC_26_145319",
+          "description": "Shopfront alterations and installation of new fascia signage associated with the existing amalgamated shopfront at 5B and 7A Dartmouth Road."
+        }
+      },
+      {
+        "index": 26,
+        "id": "Merton-26_FULL_0998",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "contradicted",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "contradicted",
+          "net_floorspace": "contradicted",
+          "site_area": "unverified"
+        },
+        "reason": "Class E-to-C3 conversion is explicit, but the adapter reports new office space and +21 m\u00b2 commercial gain. The malformed description defeats the conversion safeguard.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Merton-26_FULL_0998",
+          "description": "CHANGE OF USE OF THE CLASS E USE CONSENTEDUNDER PLANNING PERMISSION REFERENCE 23/P2893TO ONE X TWO BEDROOM C3 USE AND ASSOCIATEDEXTERNAL ALTERATIONS."
+        }
+      },
+      {
+        "index": 27,
+        "id": "Hackney-2026_1430",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "not_emitted",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "needs_review",
+          "proposed_floorspace": "needs_review",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "The application is an extension, but existing is entered as zero. Proposed 15 m\u00b2 is labelled whole-development area even though it may only be extension area. Verify extent before completion.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Hackney-2026_1430",
+          "description": "Erection of a rear ground floor extension."
+        }
+      },
+      {
+        "index": 28,
+        "id": "Haringey-HGY_2026_2465",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "contradicted",
+          "net_floorspace": "contradicted",
+          "site_area": "unverified"
+        },
+        "reason": "Front-elevation alterations and a dropped kerb are described. The adapter doubles 350 m\u00b2 existing to 700 m\u00b2 proposed using another 350 m\u00b2 as gain, contradicted by the stated scope.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Haringey-HGY_2026_2465",
+          "description": "alterations to the front elevation and proposed dropped kerb"
+        }
+      },
+      {
+        "index": 29,
+        "id": "Newham-26_01694_FUL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "not_emitted",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "contradicted",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "contradicted",
+          "site_area": "unverified"
+        },
+        "reason": "Three existing classrooms are removed and two replacements erected. Existing/lost are both zero, so an existing area of zero and a net gain equal to all new space are inconsistent with the description.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Newham-26_01694_FUL",
+          "description": "Removal of three existing single-storey portakabin classroom buildings and erection of two single-storey modular classroom buildings (Use Class F1) for a temporary period of five years. (Retrospective Application) (Application site is adjoining University Conservation Area and affects the setting of Listed Buildings)."
+        }
+      },
+      {
+        "index": 30,
+        "id": "Havering-P1060.26",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "unverified",
+          "proposed_floorspace": "unverified",
+          "net_floorspace": "unverified",
+          "site_area": "unverified"
+        },
+        "reason": "Domestic garage to salon supports zero existing commercial area and commercial gain. The 26 m\u00b2 value and precise subclass remain unverified.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Havering-P1060.26",
+          "description": "Retrospective change of use of a domestic garage (Class C3 curtilage) to a nail and beauty salon (Use Class E)."
+        }
+      },
+      {
+        "index": 31,
+        "id": "City_of_London-26_01207_FULL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "not_emitted",
+          "proposed_use_class": "not_emitted",
+          "existing_floorspace": "not_emitted",
+          "proposed_floorspace": "not_emitted",
+          "net_floorspace": "not_emitted",
+          "site_area": "needs_review"
+        },
+        "reason": "Terrace works, no floor change recorded: floor figures are held. Site area exactly equals office GIA; that is suspicious for a ninth-floor terrace and requires the red-line boundary, not automatic publication.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/City_of_London-26_01207_FULL",
+          "description": "Works to the ninth floor terrace comprising: (i) improvements to access, (ii) installation of planters and seating, (iii) installation of a new glazed balustrade, (iv) installation of LED lighting, and (v) other associated works."
+        }
+      },
+      {
+        "index": 32,
+        "id": "Tower_Hamlets-PA_26_01422_A1",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "needs_review",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "not_emitted",
+          "proposed_floorspace": "not_emitted",
+          "net_floorspace": "not_emitted",
+          "site_area": "unverified"
+        },
+        "reason": "Office-to-HMO conversion: floors are held due to Sui Generis. Broad uses are supported, but E(c)(ii) specificity is not established by the description.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Tower_Hamlets-PA_26_01422_A1",
+          "description": "Change of use from office space (Use Class E) into a large HMO (Sui Generis) for a maximum of seven people. Associated minor internal alteration."
+        }
+      },
+      {
+        "index": 33,
+        "id": "Camden-2026_3681_P",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "not_emitted",
+          "proposed_use_class": "not_emitted",
+          "existing_floorspace": "not_emitted",
+          "proposed_floorspace": "not_emitted",
+          "net_floorspace": "not_emitted",
+          "site_area": "unverified"
+        },
+        "reason": "Shopfront works: unchanged floor figure is held. Site area is unverified.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Camden-2026_3681_P",
+          "description": "Replacement of the existing shopfront, including the installation of a new awning and roller shutter."
+        }
+      },
+      {
+        "index": 34,
+        "id": "Croydon-26_02428_FUL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "not_emitted",
+          "proposed_use_class": "not_emitted",
+          "existing_floorspace": "not_emitted",
+          "proposed_floorspace": "not_emitted",
+          "net_floorspace": "not_emitted",
+          "site_area": "unverified"
+        },
+        "reason": "Replacement storage outbuilding: no gain/loss entered, so floor figure correctly held. Site area is unverified.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Croydon-26_02428_FUL",
+          "description": "Erection of a replacement single-storey outbuilding for storage"
+        }
+      },
+      {
+        "index": 35,
+        "id": "Newham-26_01821_ADV",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "needs_review",
+          "proposed_use_class": "needs_review",
+          "existing_floorspace": "not_emitted",
+          "proposed_floorspace": "not_emitted",
+          "net_floorspace": "not_emitted",
+          "site_area": "unverified"
+        },
+        "reason": "Advertisement-only proposal carries apparent building-wide change of use/areas. Floor figures are held, but published use changes may belong to a parent scheme, not the signs.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Newham-26_01821_ADV",
+          "description": "Display of 1 externally illuminated canopy sign and 2 externally illuminated 'REX' logo signs."
+        }
+      },
+      {
+        "index": 36,
+        "id": "Merton-26_LBCAE_1864",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "not_emitted",
+          "proposed_use_class": "not_emitted",
+          "existing_floorspace": "not_emitted",
+          "proposed_floorspace": "not_emitted",
+          "net_floorspace": "not_emitted",
+          "site_area": "not_emitted"
+        },
+        "reason": "Listed-building works with empty template use rows. Nothing completed, appropriately.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Merton-26_LBCAE_1864",
+          "description": "INVESTIGATIVE WORKS INCLUDING TRIAL PITS AND INTERNAL\r\nOPENING-UP. INTERNAL ALTERATIONS INCLUDING REPLACEMENT OF ELECTRICS, REMOVAL OF\r\nMODERN BUILT-IN JOINERY, MODERN BATHROOM, KITCHEN AND UTILITY FITTINGS."
+        }
+      },
+      {
+        "index": 37,
+        "id": "Tower_Hamlets-PA_26_01452_A1",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "unverified",
+          "proposed_use_class": "unverified",
+          "existing_floorspace": "not_emitted",
+          "proposed_floorspace": "not_emitted",
+          "net_floorspace": "not_emitted",
+          "site_area": "unverified"
+        },
+        "reason": "Hotel replacing petrol station: blanket Sui Generis guard withholds all floor facts, including the potentially useful 6,049 m\u00b2 hotel figure. A missed candidate, not a verified floor value.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Tower_Hamlets-PA_26_01452_A1",
+          "description": "Demolition of existing petrol filling station and associated retail store, and erection of building with basement, ground and three, four and five upper storeys for hotel use, with ancillary landscaping and cycle parking, together with relocation of TfL cycle hire docking station."
+        }
+      },
+      {
+        "index": 38,
+        "id": "Southwark-26_AP_2622",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "not_emitted",
+          "proposed_use_class": "not_emitted",
+          "existing_floorspace": "not_emitted",
+          "proposed_floorspace": "not_emitted",
+          "net_floorspace": "not_emitted",
+          "site_area": "unverified"
+        },
+        "reason": "CCTV installation: no floor change and floors held. The site figure is not independently verified.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Southwark-26_AP_2622",
+          "description": "Installation of 11 no. external CCTV cameras at sixth-floor terrace level"
+        }
+      },
+      {
+        "index": 39,
+        "id": "Croydon-26_02483_FUL",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "not_emitted",
+          "proposed_use_class": "not_emitted",
+          "existing_floorspace": "not_emitted",
+          "proposed_floorspace": "not_emitted",
+          "net_floorspace": "not_emitted",
+          "site_area": "unverified"
+        },
+        "reason": "Replacement hotel plant: no floor change and floors held. The site figure is not independently verified.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Croydon-26_02483_FUL",
+          "description": "Installation of new plant equipment including associated pipework, vents and screening following removal of items of existing plant"
+        }
+      },
+      {
+        "index": 40,
+        "id": "Richmond-PA26_3074",
+        "fields": {
+          "operator": "not_emitted",
+          "existing_use_class": "not_emitted",
+          "proposed_use_class": "not_emitted",
+          "existing_floorspace": "not_emitted",
+          "proposed_floorspace": "not_emitted",
+          "net_floorspace": "not_emitted",
+          "site_area": "not_emitted"
+        },
+        "reason": "Office-to-dwellings conversion but the same commercial area is lost and regained. The guard withholds all findings, appropriately pending source clarification.",
+        "evidence": {
+          "kind": "dataset_description_and_internal_consistency",
+          "url": "https://planningdata.london.gov.uk/api-guest/applications/_source/Richmond-PA26_3074",
+          "description": "Change of use of the existing office building from Class E to Class C3, to create 3No.  new dwellings"
+        }
+      }
+    ]
+  },
+  "selected": [
+    {
+      "borough": "wandsworth",
+      "record": {
+        "lpa_name": "Wandsworth",
+        "last_updated": "2026-09-08T01:08:45.861Z",
+        "valid_date": "03/09/2026",
+        "url_planning_app": "http://planning.wandsworth.gov.uk/Northgate/PlanningExplorer/DisplayAppDetails.aspx?AppNo=2026/3110",
+        "lpa_app_no": "2026/3110",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 71.4,
+              "gia_gained": 0,
+              "use_class": "EC2",
+              "gia_lost": 9
+            },
+            {
+              "gia_existing": 91.6,
+              "gia_gained": 97.2,
+              "use_class": "C3",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.0117,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 97.2,
+            "total_gia_existing": 163,
+            "total_gia_lost": 9
+          }
+        },
+        "description": "Alterations including erection of two storey rear extension; single storey rear extension; erection of rear roof extension to main roof and extension above existing two-storey back addtion including formation of third floor level rear roof terrace with 1.7m glazed safety screen surround.",
+        "id": "Wandsworth-2026_3110",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(c)(ii)",
+              "C3"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 71.4,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 62.4,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": -9,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 117,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.0117,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "haringey",
+      "record": {
+        "lpa_name": "Haringey",
+        "last_updated": "2026-09-12T01:05:40.514Z",
+        "valid_date": "11/09/2026",
+        "url_planning_app": "https://publicregister.haringey.gov.uk/pr/s/detail/a0iP200000IBN8c",
+        "lpa_app_no": "HGY/2026/2303",
+        "description": "Erection of an additional set-back storey at roof level to provide 1 no. one-bedroom, two-person residential dwelling (Use Class C3), increasing the development approved under planning permission HGY/2025/2512 from four to five residential units, together with amendments to the approved scheme.",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 286,
+              "gia_gained": 64,
+              "use_class": "EC2",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.013900000000000001,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 64,
+            "total_gia_lost": 0,
+            "total_gia_existing": 286
+          }
+        },
+        "id": "Haringey-HGY_2026_2303",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(c)(ii)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(c)(ii)"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 286,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 350,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 64,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 139,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.013900000000000001,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "tower-hamlets",
+      "record": {
+        "lpa_name": "Tower Hamlets",
+        "last_updated": "2026-09-13T20:02:44.986Z",
+        "valid_date": "14/08/2026",
+        "url_planning_app": "https://development.towerhamlets.gov.uk/online-applications/applicationDetails.do?keyVal=DCAPR151351&activeTab=summary",
+        "lpa_app_no": "PA/26/01444/A1",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 320,
+              "gia_gained": 0,
+              "use_class": "F1",
+              "gia_lost": 320
+            },
+            {
+              "gia_existing": 0,
+              "gia_gained": 1737,
+              "use_class": "C3",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.06,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 1737,
+            "total_gia_existing": 320,
+            "total_gia_lost": 320
+          }
+        },
+        "description": "Redevelopment of the site comprising demolition of the existing building and erection of a 6-storey building to provide residential dwellings (Use Class C3) alongside associated public realm and ancillary works.",
+        "id": "Tower_Hamlets-PA_26_01444_A1",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "F1"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 320,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 0,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": -320,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 600,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.06,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "merton",
+      "record": {
+        "lpa_name": "Merton",
+        "last_updated": "2026-09-03T01:13:00.877Z",
+        "valid_date": "12/08/2026",
+        "url_planning_app": "https://rspandlp.merton.gov.uk//planning/index.html?fa=getApplication&id=274024",
+        "lpa_app_no": "26/FULL/1740",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 173,
+              "gia_gained": 0,
+              "use_class": "B8",
+              "gia_lost": 173
+            },
+            {
+              "gia_existing": 0,
+              "gia_gained": 278.7,
+              "use_class": "C3",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.050100000000000006,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 173,
+            "total_gia_gained": 278.7,
+            "total_gia_existing": 173,
+            "total_gia_lost": 173
+          }
+        },
+        "description": "DEMOLITION OF SINGLE STOREY LOCK UP GARAGES (3 BUILDINGS)\r\nAND ERECTION OF 1 X TWO STOREY DETACHED DWELLING HOUSE (RENEWAL OF PERMISSION\r\n24/P0158)",
+        "id": "Merton-26_FULL_1740",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "B8"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 173,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 0,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": -173,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 501,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.050100000000000006,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "bexley",
+      "record": {
+        "lpa_name": "Bexley",
+        "last_updated": "2026-09-11T20:00:58.162Z",
+        "valid_date": "25/08/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "26/00874/FUL",
+        "description": "Change of Use of first floor unit from Class E to Class C3 along with first floor rear extension and erection of second floor to provide 4 additional residential units.",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 150,
+              "gia_gained": 0,
+              "use_class": "EC3",
+              "gia_lost": 0
+            },
+            {
+              "gia_existing": 0,
+              "gia_gained": 150,
+              "use_class": "C3",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.007500000000000001,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 150,
+            "total_gia_lost": 0,
+            "total_gia_existing": 150
+          }
+        },
+        "id": "Bexley-26_00874_FUL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(c)(iii)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 150,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": null,
+        "net_floorspace": null,
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 75,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.007500000000000001,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "camden",
+      "record": {
+        "lpa_name": "Camden",
+        "last_updated": "2026-09-03T01:13:03.217Z",
+        "valid_date": "18/08/2026",
+        "url_planning_app": "https://planningrecords.camden.gov.uk/Northgate/PlanningExplorer/DisplayAppDetails.aspx?AppNo=2026/3543/P",
+        "lpa_app_no": "2026/3543/P",
+        "description": "Temporary planning permission (6 months from the date of permission) for a shipping container on site. The container will support a programme of free-to-access children's play sessions ",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 14.78,
+              "gia_gained": 14.78,
+              "use_class": "F2",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.001478,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 14.78,
+            "total_gia_lost": 0,
+            "total_gia_existing": 14.78
+          }
+        },
+        "id": "Camden-2026_3543_P",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "F2"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "F2"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 14.78,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 29.56,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 14.78,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 14.78,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.001478,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "hackney",
+      "record": {
+        "lpa_name": "Hackney",
+        "last_updated": "2026-09-10T01:08:41.278Z",
+        "valid_date": "01/09/2026",
+        "url_planning_app": "https://developmentandhousing.hackney.gov.uk//planning/index.html?fa=getApplication&id=86044",
+        "lpa_app_no": "2026/1709",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 566.41,
+              "gia_gained": 114.9,
+              "use_class": "F1",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.1384,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 114.9,
+            "total_gia_existing": 566.41,
+            "total_gia_lost": 0
+          }
+        },
+        "description": "Erection of a two storey rear extension at lower ground and ground floor levels; erection of a two storey side extension at first floor and roof levels, formation of front and rear roof dormers",
+        "id": "Hackney-2026_1709",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "F1"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "F1"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 566.41,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 681.31,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 114.9,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 1384,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.1384,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "hammersmith-and-fulham",
+      "record": {
+        "lpa_name": "Hammersmith & Fulham",
+        "last_updated": "2026-09-11T01:05:24.105Z",
+        "valid_date": "08/09/2026",
+        "url_planning_app": "https://property.lbhf.gov.uk/NECSWS/ES/Presentation/Planning/OnlinePlanning/OnlinePlanningOverview?applicationNumber=P/2026/01962/FUL",
+        "lpa_app_no": "P/2026/01962/FUL",
+        "description": "Erection of a single storey rear extension to the side of the existing back addition at ground floor level; infilling of 2no existing windows and installation of a new window at ground floor level to the rear elevation; infilling of the existing windows and door, and installation of new sliding doors and 1no window at basement level to the rear elevation; change of use of the basement floor level from storage (ancillary to retail unit Class E use) into 1 x 1 bedroom self-contained flat (Class C3).",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 95,
+              "use_class": "EB",
+              "gia_gained": 5,
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.006,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 5,
+            "total_gia_lost": 0,
+            "total_gia_existing": 95
+          }
+        },
+        "id": "Hammersmith_&_Fulham-P_2026_01962_FUL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(b)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(b)"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 95,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 100,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 5,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 60,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.006,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "sutton",
+      "record": {
+        "lpa_name": "Sutton",
+        "last_updated": "2026-09-11T20:04:00.936Z",
+        "valid_date": "17/08/2026",
+        "url_planning_app": "https://planningregister.sutton.gov.uk/online-applications/applicationDetails.do?activeTab=summary&keyVal=TJ8IFTKCINH00",
+        "lpa_app_no": "DM2026/00922",
+        "description": "Demolition of existing detached garage and erection of a single storey building to rear, mixed use (office, retail and storage), provision of solar panels to roof and associated landscaping.",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 0,
+              "gia_gained": 329,
+              "use_class": "B8",
+              "gia_lost": 0
+            }
+          ],
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 329,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 329,
+            "site_area": 0.12,
+            "total_gia_existing": 0,
+            "total_gia_lost": 0
+          },
+          "site_area": 1209
+        },
+        "id": "Sutton-DM2026_00922",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": null,
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "B8"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 0,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 329,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 329,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 1200,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.12,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "bexley",
+      "record": {
+        "lpa_name": "Bexley",
+        "last_updated": "2026-09-11T20:01:09.423Z",
+        "valid_date": "09/09/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "26/01714/FUL",
+        "description": "Erection of a detached single storey dwelling with refuse/cycle storage and parking to the front following demolition of existing warehouse.",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 84,
+              "gia_gained": 0,
+              "use_class": "B8",
+              "gia_lost": 84
+            },
+            {
+              "gia_existing": 0,
+              "gia_gained": 70,
+              "use_class": "C3",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.018500000000000003,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 84,
+            "total_gia_gained": 70,
+            "total_gia_lost": 84,
+            "total_gia_existing": 84
+          }
+        },
+        "id": "Bexley-26_01714_FUL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "B8"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 84,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 0,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": -84,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 185,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.018500000000000003,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "newham",
+      "record": {
+        "lpa_name": "Newham",
+        "last_updated": "2026-09-11T04:01:29.120Z",
+        "valid_date": "18/08/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "26/01753/FUL",
+        "description": "Conversion into three self-contained flats (Use Class C3) including rear dormer roof extension with 3 front roof lights and rear balcony with external alterations/landscaping works and associated waste/cycle storage. (This application is in the Forest Gate Town Centre Conservation Area.)",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 156.9,
+              "gia_gained": 44.9,
+              "use_class": "C3",
+              "gia_lost": 0
+            },
+            {
+              "gia_existing": 108.7,
+              "gia_gained": 0,
+              "use_class": "EA",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.01836,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 44.9,
+            "total_gia_lost": 0,
+            "total_gia_existing": 265.6
+          }
+        },
+        "id": "Newham-26_01753_FUL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3",
+              "E(a)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 108.7,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 108.7,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 0,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 183.6,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.01836,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "hammersmith-and-fulham",
+      "record": {
+        "lpa_name": "Hammersmith & Fulham",
+        "last_updated": "2026-09-09T11:50:01.954Z",
+        "valid_date": "21/08/2026",
+        "url_planning_app": "https://property.lbhf.gov.uk/NECSWS/ES/Presentation/Planning/OnlinePlanning/OnlinePlanningOverview?applicationNumber=P/2026/02171/FUL",
+        "lpa_app_no": "P/2026/02171/FUL",
+        "description": "Replacement of 1no existing door with a new steel door to eastern and western elevations of the building at ground floor level; installation of a new shopfront comprising of curtain walling, cladding and a new door.",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 369.3,
+              "gia_gained": 1.2,
+              "use_class": "EA",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.047040000000000005,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 1.2,
+            "total_gia_lost": 0,
+            "total_gia_existing": 369.3
+          }
+        },
+        "id": "Hammersmith_&_Fulham-P_2026_02171_FUL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(a)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(a)"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 369.3,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 370.5,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 1.2,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 470.4,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.047040000000000005,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "tower-hamlets",
+      "record": {
+        "lpa_name": "Tower Hamlets",
+        "last_updated": "2026-09-13T20:02:43.927Z",
+        "valid_date": "17/08/2026",
+        "url_planning_app": "https://development.towerhamlets.gov.uk/online-applications/applicationDetails.do?keyVal=DCAPR151363&activeTab=summary",
+        "lpa_app_no": "PA/26/01456/NC",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 113.46,
+              "gia_gained": 34.45,
+              "use_class": "C3",
+              "gia_lost": 0
+            },
+            {
+              "gia_existing": 98.32,
+              "gia_gained": 0,
+              "use_class": "EB",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.01149,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 34.45,
+            "total_gia_existing": 211.78,
+            "total_gia_lost": 0
+          }
+        },
+        "description": "Internal reconfiguration and mansard roof extension to provide 1x1 bedroom flat with associated roof terrace at first floor level and 1x3 bedroom duplex flat at second and third floor with associated roof terrace. (amended description)",
+        "id": "Tower_Hamlets-PA_26_01456_NC",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3",
+              "E(b)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 98.32,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 98.32,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 0,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 114.9,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.01149,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "greenwich",
+      "record": {
+        "lpa_name": "Greenwich",
+        "last_updated": "2026-09-13T22:03:52.678Z",
+        "valid_date": "18/08/2026",
+        "url_planning_app": "https://planning.royalgreenwich.gov.uk/online-applications/applicationDetails.do?activeTab=summary&keyVal=_GRNW_DCAPR_129660&activeTab=summary",
+        "lpa_app_no": "26/2463/F",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 133,
+              "gia_gained": 0,
+              "use_class": "F2",
+              "gia_lost": 133
+            },
+            {
+              "gia_existing": 0,
+              "gia_gained": 127.8,
+              "use_class": "C3",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.06,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 127.8,
+            "total_gia_existing": 133,
+            "total_gia_lost": 133
+          }
+        },
+        "description": "Change of use of the existing building on site from a local community facility (Use Class F2) to residential (Use Class C3) to provide 3 x 1 bedroom 1 person apartments; construction of single-storey rear extension and rear dormer extensions; installation of side rooflights, PV panels and air source heat pumps; associated landscaping, minor reconfiguration of adjacent car park, cycle parking, bin storage and other associated alterations.",
+        "id": "Greenwich-26_2463_F",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "F2"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 133,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 0,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": -133,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 600,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.06,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "barnet",
+      "record": {
+        "lpa_name": "Barnet",
+        "last_updated": "2026-09-11T20:01:19.956Z",
+        "valid_date": "02/09/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "26/2978/FUL",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 232.9,
+              "gia_gained": 0,
+              "use_class": "EC3",
+              "gia_lost": 194.9
+            },
+            {
+              "gia_existing": 0,
+              "gia_gained": 194.9,
+              "use_class": "C3",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.01102,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 194.9,
+            "total_gia_existing": 232.9,
+            "total_gia_lost": 194.9
+          }
+        },
+        "description": "Partial conversion of the ground floor commercial unit, construction of rear extension at first and second floor levels with a terrace at second floor level, alterations to roof including raising of ridge height to provide 4no. self-contained flats. Provision of new bin and cycle stores. Associated alterations to rear ground floor fenestration",
+        "id": "Barnet-26_2978_FUL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(c)(iii)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 232.9,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 38,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": -194.9,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 110.2,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.01102,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "southwark",
+      "record": {
+        "lpa_name": "Southwark",
+        "last_updated": "2026-09-11T20:02:23.149Z",
+        "valid_date": "08/09/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "26/AP/2559",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 119,
+              "gia_gained": 0,
+              "use_class": "C3",
+              "gia_lost": 0
+            },
+            {
+              "gia_existing": 238,
+              "gia_gained": 41,
+              "use_class": "EG1",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.0165,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 41,
+            "total_gia_existing": 357,
+            "total_gia_lost": 0
+          }
+        },
+        "description": "Listed building consent for alterations to the Grade II listed building at 59-61 Union Street comprising adaptation of the existing\rroof space to provide additional office accommodation; formation of a stair from second-floor level;\rerection of a rear dormer; localised alterations to the roof structure; installation of glazed screens,\rpartitions and balustrading; introduction of glazing to the existing roof hatch; and associated works.",
+        "id": "Southwark-26_AP_2559",
+        "application_type_full": "Full planning & listed building consent"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3",
+              "E(g)(i)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(g)(i)"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 238,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 279,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 41,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 165,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.0165,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "tower-hamlets",
+      "record": {
+        "lpa_name": "Tower Hamlets",
+        "last_updated": "2026-09-13T20:02:19.810Z",
+        "valid_date": "06/08/2026",
+        "url_planning_app": "https://development.towerhamlets.gov.uk/online-applications/applicationDetails.do?keyVal=DCAPR151273&activeTab=summary",
+        "lpa_app_no": "PA/26/01376/NC",
+        "description": "Temporary change of use of the restaurant unit at ground and first floor level to residential amenity space for a period of 5 years.",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 855.2,
+              "gia_gained": 0,
+              "use_class": "EB",
+              "gia_lost": 885.2
+            },
+            {
+              "gia_existing": 0,
+              "gia_gained": 855.2,
+              "use_class": "C3",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.08852,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 855.2,
+            "total_gia_lost": 885.2,
+            "total_gia_existing": 855.2
+          }
+        },
+        "id": "Tower_Hamlets-PA_26_01376_NC",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(b)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "existing_floorspace": null,
+        "proposed_floorspace": null,
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": -885.2,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 885.2,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.08852,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "westminster",
+      "record": {
+        "lpa_name": "Westminster",
+        "last_updated": "2026-09-11T20:06:37.398Z",
+        "valid_date": "08/09/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "26/05869/FULL",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 56,
+              "gia_gained": 0,
+              "use_class": "EC3",
+              "gia_lost": 1
+            }
+          ],
+          "site_area": 0.0056,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 0,
+            "total_gia_existing": 56,
+            "total_gia_lost": 1
+          }
+        },
+        "description": "Replacement shopfront.",
+        "id": "Westminster-26_05869_FULL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(c)(iii)"
+            ]
+          }
+        },
+        "proposed_use_class": null,
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 56,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 55,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": -1,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 56,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.0056,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "ealing",
+      "record": {
+        "lpa_name": "Ealing",
+        "last_updated": "2026-09-13T04:11:44.814Z",
+        "valid_date": "03/08/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "262975FUL",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 80,
+              "gia_gained": 113.5,
+              "use_class": "B8",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.02,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 113.5,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 113.5,
+            "total_gia_lost": 0,
+            "total_gia_existing": 80
+          }
+        },
+        "description": "Construction of two one-bedroom flats over three levels following demolition of existing outbuilding and storage, provision of associated cycle storage and refuse storage facilities.",
+        "id": "Ealing-262975FUL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "B8"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "B8"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 80,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 193.5,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 113.5,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 200,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.02,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "hackney",
+      "record": {
+        "lpa_name": "Hackney",
+        "last_updated": "2026-08-27T01:20:44.097Z",
+        "valid_date": "17/08/2026",
+        "url_planning_app": "https://developmentandhousing.hackney.gov.uk//planning/index.html?fa=getApplication&id=85977",
+        "lpa_app_no": "2026/0763",
+        "description": "Change of use from offices on first and second floors to two studio flats, erection of two storey rear extension at first and second floor and new front access and new shopfront",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 146.15,
+              "use_class": "EC2",
+              "gia_gained": 0,
+              "gia_lost": 89.85
+            },
+            {
+              "gia_existing": 32.5,
+              "use_class": "C3",
+              "gia_gained": 110.15,
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.007500000000000001,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 110.15,
+            "total_gia_lost": 89.85,
+            "total_gia_existing": 178.65
+          }
+        },
+        "id": "Hackney-2026_0763",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(c)(ii)",
+              "C3"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 146.15,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 56.3,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": -89.85,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 75,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.007500000000000001,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "lewisham",
+      "record": {
+        "lpa_name": "Lewisham",
+        "last_updated": "2026-09-12T09:03:37.904Z",
+        "valid_date": "10/09/2026",
+        "url_planning_app": "https://planning.lewisham.gov.uk/online-applications/applicationDetails.do?keyVal=_LEWIS_DCAPR_132554&activeTab=summary",
+        "lpa_app_no": "DC/26/144631",
+        "description": "Change of use of the upper floors from a dwellinghouse (Use Class C3) to a small House in Multiple Occupation (HMO Use Class C4) at 5A Wastdale Road, SE23",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 149,
+              "gia_gained": 0,
+              "use_class": "C3",
+              "gia_lost": 149
+            },
+            {
+              "gia_existing": 0,
+              "gia_gained": 149,
+              "use_class": "C4",
+              "gia_lost": 0
+            },
+            {
+              "gia_existing": 33,
+              "gia_gained": 0,
+              "use_class": "EC3",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.012,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 149,
+            "total_gia_lost": 149,
+            "total_gia_existing": 182
+          }
+        },
+        "id": "Lewisham-DC_26_144631",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3",
+              "E(c)(iii)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C4"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 33,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 33,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 0,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 120,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.012,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "wandsworth",
+      "record": {
+        "lpa_name": "Wandsworth",
+        "last_updated": "2026-09-10T01:08:43.070Z",
+        "valid_date": "07/09/2026",
+        "url_planning_app": "http://planning.wandsworth.gov.uk/Northgate/PlanningExplorer/DisplayAppDetails.aspx?AppNo=2026/3057",
+        "lpa_app_no": "2026/3057",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 538,
+              "gia_gained": 0,
+              "use_class": "EC1",
+              "gia_lost": 361
+            },
+            {
+              "gia_existing": 0,
+              "gia_gained": 522,
+              "use_class": "C3",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.0258,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 522,
+            "total_gia_existing": 538,
+            "total_gia_lost": 361
+          }
+        },
+        "description": "Alteration including erection of rear extensions and front mansard roof extension to; existing ground floor commercial space, and in connection with change of use at upper floors to residential to create 4 x studio flats, 3 x 2 bedroom units.",
+        "id": "Wandsworth-2026_3057",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(c)(i)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 538,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 177,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": -361,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 258,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.0258,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "camden",
+      "record": {
+        "lpa_name": "Camden",
+        "last_updated": "2026-09-03T01:13:02.922Z",
+        "valid_date": "12/08/2026",
+        "url_planning_app": "https://planningrecords.camden.gov.uk/Northgate/PlanningExplorer/DisplayAppDetails.aspx?AppNo=2026/3440/P",
+        "lpa_app_no": "2026/3440/P",
+        "description": "Phase 1: erection of three storey office extension (Use Class E(g)) at 13 Leeke Street following demolition of 13 Leeke Street (existing office floorspace) and external alterations to 5-11 Leeke Street, comprising partial rear upward extension, alterations to fenestration, and external facade upgrades; and, Phase 2: erection of additional office storey at roof level (Use Class E(g)), at 5-13 Leeke Street, with roof terrace above, plant and associated works ",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 844.7,
+              "gia_gained": 254.05,
+              "use_class": "EG1",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.0367,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 254.05,
+            "total_gia_lost": 0,
+            "total_gia_existing": 844.7
+          }
+        },
+        "id": "Camden-2026_3440_P",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(g)(i)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(g)(i)"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 844.7,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 1098.75,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 254.05,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 367,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.0367,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "kingston-upon-thames",
+      "record": {
+        "lpa_name": "Kingston",
+        "last_updated": "2026-09-11T17:03:02.057Z",
+        "valid_date": "24/08/2026",
+        "url_planning_app": "https://publicaccess.kingston.gov.uk/online-applications/applicationDetails.do?activeTab=summary&keyVal=TJ6WT9NHII600",
+        "lpa_app_no": "26/01705/FUL",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 196.3,
+              "gia_gained": 57.83,
+              "use_class": "B2",
+              "gia_lost": 0
+            }
+          ],
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 57.83,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 57.83,
+            "site_area": 0.02,
+            "total_gia_existing": 196.3,
+            "total_gia_lost": 0
+          },
+          "site_area": 215
+        },
+        "description": "Erection of upper floor extension and associated material alterations for use as automobile car workshop and offices.",
+        "id": "Kingston-26_01705_FUL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "B2"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "B2"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 196.3,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 254.13,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 57.83,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 200,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.02,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "lewisham",
+      "record": {
+        "lpa_name": "Lewisham",
+        "last_updated": "2026-09-13T01:37:54.160Z",
+        "valid_date": "10/09/2026",
+        "url_planning_app": "https://planning.lewisham.gov.uk/online-applications/applicationDetails.do?keyVal=_LEWIS_DCAPR_133242&activeTab=summary",
+        "lpa_app_no": "DC/26/145319",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 105,
+              "gia_gained": 105,
+              "use_class": "ED",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.015600000000000001,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 105,
+            "total_gia_lost": 0,
+            "total_gia_existing": 105
+          }
+        },
+        "description": "Shopfront alterations and installation of new fascia signage associated with the existing amalgamated shopfront at 5B and 7A Dartmouth Road.",
+        "id": "Lewisham-DC_26_145319",
+        "application_type_full": "Full planning & display of advertisements"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(d)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(d)"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 105,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 210,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 105,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 156,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.015600000000000001,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "merton",
+      "record": {
+        "lpa_name": "Merton",
+        "last_updated": "2026-08-27T01:20:47.171Z",
+        "valid_date": "04/08/2026",
+        "url_planning_app": "https://rspandlp.merton.gov.uk//planning/index.html?fa=getApplication&id=273926",
+        "lpa_app_no": "26/FULL/0998",
+        "description": "CHANGE OF USE OF THE CLASS E USE CONSENTEDUNDER PLANNING PERMISSION REFERENCE 23/P2893TO ONE X TWO BEDROOM C3 USE AND ASSOCIATEDEXTERNAL ALTERATIONS.",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 45,
+              "use_class": "EG1",
+              "gia_gained": 21,
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.0437,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 21,
+            "total_gia_lost": 0,
+            "total_gia_existing": 45
+          }
+        },
+        "id": "Merton-26_FULL_0998",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(g)(i)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(g)(i)"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 45,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 66,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 21,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 437,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.0437,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "hackney",
+      "record": {
+        "lpa_name": "Hackney",
+        "last_updated": "2026-09-10T01:08:41.337Z",
+        "valid_date": "01/09/2026",
+        "url_planning_app": "https://developmentandhousing.hackney.gov.uk//planning/index.html?fa=getApplication&id=86064",
+        "lpa_app_no": "2026/1430",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 0,
+              "gia_gained": 15,
+              "use_class": "EB",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.0015,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 15,
+            "total_gia_existing": 0,
+            "total_gia_lost": 0
+          }
+        },
+        "description": "Erection of a rear ground floor extension.",
+        "id": "Hackney-2026_1430",
+        "application_type_full": "Full planning & demolition in a conservation area"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": null,
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(b)"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 0,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 15,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 15,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 15,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.0015,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "haringey",
+      "record": {
+        "lpa_name": "Haringey",
+        "last_updated": "2026-09-12T01:05:40.484Z",
+        "valid_date": "03/09/2026",
+        "url_planning_app": "https://publicregister.haringey.gov.uk/pr/s/detail/a0iP200000IfX0r",
+        "lpa_app_no": "HGY/2026/2465",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 350,
+              "gia_gained": 350,
+              "use_class": "EA",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.035,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 350,
+            "total_gia_lost": 0,
+            "total_gia_existing": 350
+          }
+        },
+        "description": "alterations to the front elevation and proposed dropped kerb",
+        "id": "Haringey-HGY_2026_2465",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(a)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(a)"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 350,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 700,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 350,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 350,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.035,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "newham",
+      "record": {
+        "lpa_name": "Newham",
+        "last_updated": "2026-09-11T04:01:28.155Z",
+        "valid_date": "18/08/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "26/01694/FUL",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 0,
+              "gia_gained": 109.16,
+              "use_class": "F1",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.010916,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 109.16,
+            "total_gia_existing": 0,
+            "total_gia_lost": 0
+          }
+        },
+        "description": "Removal of three existing single-storey portakabin classroom buildings and erection of two single-storey modular classroom buildings (Use Class F1) for a temporary period of five years. (Retrospective Application) (Application site is adjoining University Conservation Area and affects the setting of Listed Buildings).",
+        "id": "Newham-26_01694_FUL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": null,
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "F1"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 0,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 109.16,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 109.16,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 109.16,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.010916,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "havering",
+      "record": {
+        "lpa_name": "Havering",
+        "last_updated": "2026-09-13T04:00:11.698Z",
+        "valid_date": "08/09/2026",
+        "url_planning_app": "http://development.havering.gov.uk/OcellaWeb/planningDetails?reference=P1060.26",
+        "lpa_app_no": "P1060.26",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 26,
+              "gia_gained": 0,
+              "use_class": "C3",
+              "gia_lost": 26
+            },
+            {
+              "gia_existing": 0,
+              "gia_gained": 26,
+              "use_class": "EC3",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.0026000000000000003,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 26,
+            "total_gia_lost": 26,
+            "total_gia_existing": 26
+          }
+        },
+        "description": "Retrospective change of use of a domestic garage (Class C3 curtilage) to a nail and beauty salon (Use Class E).",
+        "id": "Havering-P1060.26",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C3"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(c)(iii)"
+            ]
+          }
+        },
+        "existing_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 0,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "proposed_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 26,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "net_floorspace": {
+          "state": "found",
+          "value": {
+            "sqm": 26,
+            "basis": "gross_internal",
+            "extent": "whole_development"
+          }
+        },
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 26,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.0026000000000000003,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": true
+    },
+    {
+      "borough": "city-of-london",
+      "record": {
+        "lpa_name": "City of London",
+        "last_updated": "2026-09-11T20:05:27.433Z",
+        "valid_date": "25/08/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "26/01207/FULL",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 15968,
+              "gia_gained": 0,
+              "use_class": "EG1",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 1.5968,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 0,
+            "total_gia_existing": 15968,
+            "total_gia_lost": 0
+          }
+        },
+        "description": "Works to the ninth floor terrace comprising: (i) improvements to access, (ii) installation of planters and seating, (iii) installation of a new glazed balustrade, (iv) installation of LED lighting, and (v) other associated works.",
+        "id": "City_of_London-26_01207_FULL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": null,
+        "proposed_use_class": null,
+        "existing_floorspace": null,
+        "proposed_floorspace": null,
+        "net_floorspace": null,
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 15968,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 1.5968,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": false
+    },
+    {
+      "borough": "tower-hamlets",
+      "record": {
+        "lpa_name": "Tower Hamlets",
+        "last_updated": "2026-09-13T20:02:19.216Z",
+        "valid_date": "11/08/2026",
+        "url_planning_app": "https://development.towerhamlets.gov.uk/online-applications/applicationDetails.do?keyVal=DCAPR151323&activeTab=summary",
+        "lpa_app_no": "PA/26/01422/A1",
+        "description": "Change of use from office space (Use Class E) into a large HMO (Sui Generis) for a maximum of seven people. Associated minor internal alteration.",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 154.37,
+              "gia_gained": 0,
+              "use_class": "EC2",
+              "gia_lost": 154.37
+            },
+            {
+              "gia_existing": 0,
+              "gia_gained": 154.37,
+              "use_class": "SG",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.013708,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 154.37,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 154.37,
+            "total_gia_lost": 154.37,
+            "total_gia_existing": 154.37
+          }
+        },
+        "id": "Tower_Hamlets-PA_26_01422_A1",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "E(c)(ii)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "Sui Generis"
+            ]
+          }
+        },
+        "existing_floorspace": null,
+        "proposed_floorspace": null,
+        "net_floorspace": null,
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 137.08,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.013708,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": false
+    },
+    {
+      "borough": "camden",
+      "record": {
+        "lpa_name": "Camden",
+        "last_updated": "2026-09-05T01:07:43.390Z",
+        "valid_date": "27/08/2026",
+        "url_planning_app": "https://planningrecords.camden.gov.uk/Northgate/PlanningExplorer/DisplayAppDetails.aspx?AppNo=2026/3681/P",
+        "lpa_app_no": "2026/3681/P",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 193.5,
+              "gia_gained": 0,
+              "use_class": "EB",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.026600000000000002,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 0,
+            "total_gia_existing": 193.5,
+            "total_gia_lost": 0
+          }
+        },
+        "description": "Replacement of the existing shopfront, including the installation of a new awning and roller shutter.",
+        "id": "Camden-2026_3681_P",
+        "application_type_full": "Full planning & display of advertisements"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": null,
+        "proposed_use_class": null,
+        "existing_floorspace": null,
+        "proposed_floorspace": null,
+        "net_floorspace": null,
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 266,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.026600000000000002,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": false
+    },
+    {
+      "borough": "croydon",
+      "record": {
+        "lpa_name": "Croydon",
+        "last_updated": "2026-09-11T22:10:23.576Z",
+        "valid_date": "26/08/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "26/02428/FUL",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 31,
+              "gia_gained": 0,
+              "use_class": "B8",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.0352,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 0,
+            "total_gia_existing": 31,
+            "total_gia_lost": 0
+          }
+        },
+        "description": "Erection of a replacement single-storey outbuilding for storage",
+        "id": "Croydon-26_02428_FUL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": null,
+        "proposed_use_class": null,
+        "existing_floorspace": null,
+        "proposed_floorspace": null,
+        "net_floorspace": null,
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 352,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.0352,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": false
+    },
+    {
+      "borough": "newham",
+      "record": {
+        "lpa_name": "Newham",
+        "last_updated": "2026-09-07T04:02:19.806Z",
+        "valid_date": "17/08/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "26/01821/ADV",
+        "description": "Display of 1 externally illuminated canopy sign and 2 externally illuminated 'REX' logo signs.",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 3127.9,
+              "gia_gained": 3779.7,
+              "use_class": "SG",
+              "gia_lost": 0
+            },
+            {
+              "gia_existing": 210,
+              "gia_gained": 0,
+              "use_class": "EA",
+              "gia_lost": 210
+            },
+            {
+              "gia_existing": 359.3,
+              "gia_gained": 0,
+              "use_class": "EB",
+              "gia_lost": 359.3
+            }
+          ],
+          "site_area": 0.13992000000000002,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 3779.7,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 3779.7,
+            "total_gia_lost": 569.3,
+            "total_gia_existing": 3697.2
+          }
+        },
+        "id": "Newham-26_01821_ADV",
+        "application_type_full": "Full planning & display of advertisements"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "Sui Generis",
+              "E(a)",
+              "E(b)"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "Sui Generis"
+            ]
+          }
+        },
+        "existing_floorspace": null,
+        "proposed_floorspace": null,
+        "net_floorspace": null,
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 1399.2,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.13992000000000002,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": false
+    },
+    {
+      "borough": "merton",
+      "record": {
+        "lpa_name": "Merton",
+        "last_updated": "2026-09-10T01:08:41.757Z",
+        "valid_date": "26/08/2026",
+        "url_planning_app": "https://rspandlp.merton.gov.uk//planning/index.html?fa=getApplication&id=274109",
+        "lpa_app_no": "26/LBCAE/1864",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "use_class": "A1"
+            },
+            {
+              "use_class": "A1"
+            },
+            {
+              "use_class": "A2"
+            },
+            {
+              "use_class": "A3"
+            },
+            {
+              "use_class": "B1a"
+            },
+            {
+              "use_class": "B1b"
+            },
+            {
+              "use_class": "B1c"
+            },
+            {
+              "use_class": "B2"
+            },
+            {
+              "use_class": "B8"
+            },
+            {
+              "use_class": "C1"
+            },
+            {
+              "use_class": "C2"
+            },
+            {
+              "use_class": "D1"
+            },
+            {
+              "use_class": "D2"
+            }
+          ]
+        },
+        "description": "INVESTIGATIVE WORKS INCLUDING TRIAL PITS AND INTERNAL\r\nOPENING-UP. INTERNAL ALTERATIONS INCLUDING REPLACEMENT OF ELECTRICS, REMOVAL OF\r\nMODERN BUILT-IN JOINERY, MODERN BATHROOM, KITCHEN AND UTILITY FITTINGS.",
+        "id": "Merton-26_LBCAE_1864",
+        "application_type_full": "Listed building consent"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": null,
+        "proposed_use_class": null,
+        "existing_floorspace": null,
+        "proposed_floorspace": null,
+        "net_floorspace": null,
+        "site_area": null
+      },
+      "floor": false
+    },
+    {
+      "borough": "tower-hamlets",
+      "record": {
+        "lpa_name": "Tower Hamlets",
+        "last_updated": "2026-09-13T20:02:45.613Z",
+        "valid_date": "17/08/2026",
+        "url_planning_app": "https://development.towerhamlets.gov.uk/online-applications/applicationDetails.do?keyVal=DCAPR151359&activeTab=summary",
+        "lpa_app_no": "PA/26/01452/A1",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 145,
+              "gia_gained": 0,
+              "use_class": "SG",
+              "gia_lost": 145
+            },
+            {
+              "gia_existing": 0,
+              "gia_gained": 6049,
+              "use_class": "C1",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.14300000000000002,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 6049,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 145,
+            "total_gia_gained": 6049,
+            "total_gia_existing": 145,
+            "total_gia_lost": 145
+          }
+        },
+        "description": "Demolition of existing petrol filling station and associated retail store, and erection of building with basement, ground and three, four and five upper storeys for hotel use, with ancillary landscaping and cycle parking, together with relocation of TfL cycle hire docking station.",
+        "id": "Tower_Hamlets-PA_26_01452_A1",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "Sui Generis"
+            ]
+          }
+        },
+        "proposed_use_class": {
+          "state": "found",
+          "value": {
+            "useClasses": [
+              "C1"
+            ]
+          }
+        },
+        "existing_floorspace": null,
+        "proposed_floorspace": null,
+        "net_floorspace": null,
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 1430,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.14300000000000002,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": false
+    },
+    {
+      "borough": "southwark",
+      "record": {
+        "lpa_name": "Southwark",
+        "last_updated": "2026-09-11T20:02:26.554Z",
+        "valid_date": "10/09/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "26/AP/2622",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 1882,
+              "gia_gained": 0,
+              "use_class": "EG1",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.12,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 0,
+            "total_gia_existing": 1882,
+            "total_gia_lost": 0
+          }
+        },
+        "description": "Installation of 11 no. external CCTV cameras at sixth-floor terrace level",
+        "id": "Southwark-26_AP_2622",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": null,
+        "proposed_use_class": null,
+        "existing_floorspace": null,
+        "proposed_floorspace": null,
+        "net_floorspace": null,
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 1200,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.12,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": false
+    },
+    {
+      "borough": "croydon",
+      "record": {
+        "lpa_name": "Croydon",
+        "last_updated": "2026-09-11T22:10:25.204Z",
+        "valid_date": "02/09/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "26/02483/FUL",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 13164,
+              "gia_gained": 0,
+              "use_class": "C1",
+              "gia_lost": 0
+            }
+          ],
+          "site_area": 0.9,
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 0,
+            "total_gia_existing": 13164,
+            "total_gia_lost": 0
+          }
+        },
+        "description": "Installation of new plant equipment including associated pipework, vents and screening following removal of items of existing plant",
+        "id": "Croydon-26_02483_FUL",
+        "application_type_full": "Full planning permission"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": null,
+        "proposed_use_class": null,
+        "existing_floorspace": null,
+        "proposed_floorspace": null,
+        "net_floorspace": null,
+        "site_area": {
+          "state": "found",
+          "value": {
+            "sqm": 9000,
+            "basis": "unspecified",
+            "extent": "whole_development",
+            "original": {
+              "value": 0.9,
+              "unit": "hectares"
+            }
+          }
+        }
+      },
+      "floor": false
+    },
+    {
+      "borough": "richmond-upon-thames",
+      "record": {
+        "lpa_name": "Richmond",
+        "last_updated": "2026-09-10T00:00:40.870Z",
+        "valid_date": "04/09/2026",
+        "url_planning_app": null,
+        "lpa_app_no": "PA26/3074",
+        "application_details": {
+          "existing_proposed_floorspace_details": [
+            {
+              "gia_existing": 188.5,
+              "gia_gained": 188.5,
+              "use_class": "EC2",
+              "gia_lost": 188.5
+            }
+          ],
+          "non_residential_details": {
+            "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+            "total_non_resi_gross_internal_floor_area_to_be_lost": 0,
+            "total_gia_gained": 188.5,
+            "total_gia_existing": 188.5,
+            "total_gia_lost": 188.5
+          }
+        },
+        "description": "Change of use of the existing office building from Class E to Class C3, to create 3No.  new dwellings",
+        "id": "Richmond-PA26_3074",
+        "application_type_full": "Prior Approval: Change of use from Commercial, Business and Service (Use Class E) to Dwellinghouses (Use Class C3)"
+      },
+      "outcomes": {
+        "operator": null,
+        "existing_use_class": null,
+        "proposed_use_class": null,
+        "existing_floorspace": null,
+        "proposed_floorspace": null,
+        "net_floorspace": null,
+        "site_area": null
+      },
+      "floor": false
+    }
+  ]
+}

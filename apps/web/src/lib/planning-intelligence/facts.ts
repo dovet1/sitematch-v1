@@ -41,7 +41,8 @@ export type MeasurementBasis = 'gross_internal' | 'net_internal' | 'gross_extern
 export type AreaUnit = 'sqm' | 'sqft' | 'hectares' | 'acres'
 
 export interface FactSource {
-  kind: 'description' | 'council_page' | 'document' | 'web' | 'derived' | 'manual'
+  /** `dataset`: an official structured record, such as the London Datahub. */
+  kind: 'description' | 'council_page' | 'document' | 'web' | 'dataset' | 'derived' | 'manual'
   url: string | null
   excerpt: string | null
   page: string | null

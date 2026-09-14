@@ -287,6 +287,93 @@ robots.txt, and made no AI or Plota requests. Report: `apps/web/reports/council-
   the rest, the description and the page (where readable) feed the checklist, operator research
   becomes web-only at most, and floor areas go to admin or need another source.
 
+### Corrected after Astra's access investigation (14 September, night)
+
+Astra's review (`docs/astra-planning-access-investigation-2026-09-14.md`) questioned four labels.
+Each was checked in code and on live portals, the collector fixed, and the 161 affected councils
+re-run. Report: `apps/web/reports/council-access-2026-09-14-corrected.json` (base audit plus
+`council-access-recheck-2026-09-14.json`).
+
+| Label | Councils | Share of tier applications |
+| --- | --- | --- |
+| Documents readable | 22 | 5.2% |
+| Application page only (the page names the reference) | 39 | 8.7% |
+| Page is a script shell or check, not the application | 49 | 11.8% |
+| Blocked | 280 | 74.2% |
+| No council link | 3 | 0.1% |
+
+What changed and why:
+- **"Needs OCR" was the code path, not the documents.** Online Register PDFs went straight to OCR.
+  Free text extraction now runs first; all four councils (Exmoor, North Warwickshire, South
+  Oxfordshire, Vale of White Horse) are documents readable.
+- **"Page only" overstated what research reads.** 43 of 81 pages never name the application's
+  reference. Checked by eye: Northern Ireland's shared portal and the Salesforce "Arcus" registers
+  (Wiltshire, Reading, Bromley, Manchester and others) return a JavaScript shell; Hounslow returns
+  an "Are you human?" check, which is not ours to pass. The audit now requires the reference.
+- **74 "blocked" councils were a TLS fault, not a refusal.** Their servers omit the intermediate
+  certificate; browsers fetch it, Node did not. `incomplete-chain-fetch.ts` completes the chain as a
+  browser does (still verified against Node's roots). Most of these hosts then serve `Disallow: /`,
+  so they stay blocked, now for the right reason; 7 moved to page or shell.
+- **robots.txt now fails closed.** An unreachable robots.txt or a server error previously allowed
+  everything; RFC 9309 says to assume disallowed.
+- **Detached ArrayBuffer (Bridgend, Wealden) fixed.** PDF.js detaches the buffer it reads; the OCR
+  payload was built from it afterwards. Those PDFs are genuine scans ("Scanner System"). Also
+  fixed: Word files decoded as text, and one document read twice via two listings.
+
+Portal families, not built: Northern Ireland (11 councils) disallows its script bundles in
+robots.txt and loads data from a separate undocumented API, so an official open-data feed is the
+route to ask about. Arcus registers allow all crawling, but reading them means reproducing
+Salesforce page-data calls for what is usually only page text; scope it before building.
+
+## London Datahub, 14 September (night)
+
+The GLA's Planning London Datahub publishes each London application's form answers: gross
+internal area existing, lost and gained per use class, and site area. `london-datahub.ts` looks an
+application up by exact borough and reference and turns the record into checklist findings with
+source `dataset`. Nothing is wired into research or written to the database yet.
+
+**Verified before writing any fact:** areas are GIA m² and site areas hectares (GLA schema v2.1);
+`gia_existing = -1` means not supplied (43% of rows); post-2020 codes EA…EF, EG1…EG3 are the Class E
+sub-classes (absent from the schema, checked against descriptions for every code); references
+repeat across boroughs, so lookups are pinned to the borough. Bromley, Kensington & Chelsea and
+LLDC have no 2026 applications in the Datahub and Brent none after May.
+
+**The applicant-entered figures are often wrong, so the adapter holds back anything inconsistent.**
+A random spot check of 25 matched records found about 9 with a problem. Guards added, each with a
+live example as its test: a zero existing area beside a loss; one space listed under alternative
+uses; the same area lost and regained in one class; a changed use whose row loses nothing; a gain
+equal to all existing space; Sui Generis or unrecognised rows (betting shops, pubs and gaming
+centres are Sui Generis); classes contradicting the description; condition and amendment records;
+site areas above 50 ha or in square metres. Held-back findings stay attached for the admin.
+
+**Measured** (`scripts/report-london-datahub.ts`, 12 tier applications per borough received
+45–200 days ago; `apps/web/reports/london-datahub-2026-09-14.json`):
+
+- Matched: 343 of 406 applications (84%); 343 of 370 (93%) excluding Brent, Bromley and
+  Kensington & Chelsea, which matched none.
+- Per matched record, with the guards applied (found / held back for admin / absent; conflicts
+  under 1%):
+
+| Fact | Found | Held back | Absent |
+| --- | --- | --- | --- |
+| Existing use class | 145 | 71 | 127 |
+| Proposed use class | 136 | 29 | 178 |
+| Existing commercial floor area | 102 | 85 | 156 |
+| Proposed commercial floor area | 98 | 59 | 186 |
+| Net change | 95 | 103 | 142 |
+| Site area | 227 | 8 | 107 |
+
+- 102 records (30% of matches) complete at least one commercial floor area. "Found" counts the
+  Datahub alone, before merging with the description or research; nothing checks its correctness
+  beyond the spot checks below.
+
+**Not yet shown:** correctness at scale. A fresh sample of 25, taken after the first round of
+guards, had 5 records completing a floor area; 4 were right and 1 (a unit merger entered as its
+total) wrong, which the last guard now catches but no unseen sample has tested. Next: a blind sample
+of 40 matched records judged against their descriptions and, where a council page or document is
+readable, the application form; then wire the lookup in as an evidence source before paid research
+for London schemes.
+
 ## Unfinished, not to be reported as done
 
 - **Grouped classification worker.** Only the guard is built: a grouped member is never classified on
@@ -364,3 +451,26 @@ bounds.
 - National family lookups and a standing lookup allowance.
 - One pin and history for every Development nationally.
 - Scheduled research.
+
+
+### Codex takeover: frozen Datahub evaluation, 14 September
+
+The user asked Codex to carry out the next steps. The 40-record check is now complete: 21
+boroughs, 30 records with completing floor candidates and 10 without. All earlier report IDs
+and fixture IDs were excluded. Selection used recent public commercial-class rows, so this is
+an adversarially useful stratified check, **not** a national or eligible-development accuracy rate.
+
+**The publication gate failed:** seven of the 30 floor-completing records contradict the stated
+proposal; others contain unresolved scope/data inconsistencies. Eight public-source checks
+provided no independent numerical verification. No percentage of the remainder is claimed correct.
+Read `docs/london-datahub-evaluation-2026-09-14.md` for separate existing/proposed/net/site results.
+
+`findingsFromDatahub` now holds every candidate for review; the original experimental
+calculations are available only through the explicitly named `candidateFindingsFromDatahub`.
+The research worker remains disconnected. Do not ask to switch it on or count these candidate
+figures as completed facts. Preserve this failed evaluation; any future revised rules need a new
+unseen sample, with forms or equivalent independent numerical evidence for a publication claim.
+
+The Plota capability email is drafted in `docs/plota-data-capabilities-email.md` and has not been
+sent. No Plota/AI requests, live database writes, migrations, budget changes or worker deployments
+were performed for this evaluation. The live research queue has not received these 40 records.

@@ -1075,7 +1075,7 @@ function SchemeFacts({ facts }: { facts: PublicFact[] }) {
               {fact.state === 'found' ? fact.value : FACT_STATE_TEXT[fact.state]}
               {fact.state === 'found' && fact.sources.map((source, index) => source.url && (
                 <a key={index} href={source.url} target="_blank" rel="noopener noreferrer" className="ml-1.5 text-sm-violet underline underline-offset-2">
-                  {source.kind === 'document' ? 'document' : source.kind === 'web' ? 'web' : source.kind === 'manual' ? 'source' : 'council'}{source.page ? ` p.${source.page}` : ''}
+                  {source.kind === 'document' ? 'document' : source.kind === 'web' ? 'web' : source.kind === 'dataset' ? 'London Datahub' : source.kind === 'manual' ? 'source' : 'council'}{source.page ? ` p.${source.page}` : ''}
                 </a>
               ))}
               {fact.confirmedByAdmin && fact.state === 'found' && <span className="ml-1.5 text-sm-ink4">· reviewed</span>}

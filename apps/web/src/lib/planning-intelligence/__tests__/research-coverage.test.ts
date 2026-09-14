@@ -1,4 +1,5 @@
 import {
+  pageMentionsReference,
   planningDocumentCoverageRecord,
   summarizePlanningDocumentCoverage,
 } from '../research-coverage'
@@ -9,6 +10,11 @@ const application = {
 }
 
 describe('planning document coverage', () => {
+  it('does not accept a longer application reference as a match for its prefix', () => {
+    expect(pageMentionsReference('Application REF/1B', 'REF/1')).toBe(false)
+    expect(pageMentionsReference('Application 26/1234/FULL', '26/123')).toBe(false)
+    expect(pageMentionsReference('Application 26 - 123 / FULL received', '26/123/FULL')).toBe(true)
+  })
   it('distinguishes a downloaded scanned application form from locally readable text', () => {
     const record = planningDocumentCoverageRecord({
       application,
@@ -83,5 +89,18 @@ describe('planning document coverage', () => {
       outcome: 'no_document_retrieved', documentsRetrieved: 0, htmlCandidatePagesRetrieved: 1,
       applicationFormRetrieved: false,
     }))
+  })
+
+  it.each([
+    ['names a similar but different reference', 'Application ref 1 received', false],
+    ['names the reference, whatever its punctuation', 'Planning application ref-1 Change of use', true],
+    ['is a script shell', 'Loading… Please enable JavaScript', false],
+  ])('only treats a council page as the application record when it %s', (_, text, expected) => {
+    const record = planningDocumentCoverageRecord({
+      application: { ...application, reference: text === 'Application ref 1 received' ? 'REF-1B' : 'REF/1' },
+      collected: { warnings: [], sources: [{ kind: 'council_page', url: application.links.council, text }] },
+    })
+    expect(record.councilPageAccessible).toBe(true)
+    expect(record.councilPageMentionsReference).toBe(expected)
   })
 })

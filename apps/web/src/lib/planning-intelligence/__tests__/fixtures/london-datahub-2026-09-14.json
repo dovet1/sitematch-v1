@@ -1,0 +1,576 @@
+{
+ "_source": "Planning London Datahub guest API, retrieved 14 Sep 2026 (apps/web/reports/astra-planning-access-evidence-2026-09-14.json); fields trimmed to those the adapter reads.",
+ "records": {
+  "Hounslow-P_2026_2133": {
+   "id": "Hounslow-P_2026_2133",
+   "lpa_name": "Hounslow",
+   "lpa_app_no": "P/2026/2133",
+   "description": "Change of use of the ground floor flat (Flat A) from a residential unit (Use Class C3) to a commercial office space (Use Class E(g) (i)).",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2026-07-31T01:11:20.369Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "C3",
+      "gia_existing": 52,
+      "gia_gained": 0,
+      "gia_lost": 0
+     },
+     {
+      "use_class": "EC2",
+      "gia_existing": 52,
+      "gia_gained": 0,
+      "gia_lost": 0
+     }
+    ],
+    "site_area": 0.005200000000000001,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Camden-2026_3371_P": {
+   "id": "Camden-2026_3371_P",
+   "lpa_name": "Camden",
+   "lpa_app_no": "2026/3371/P",
+   "description": "Erection of single-storey rear extension and rear part-reconfiguration of the ground floor retail unit to provide a new studio flat (Use class C3)",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2026-08-19T01:10:31.803Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "C4",
+      "gia_existing": 133.6,
+      "gia_gained": 0,
+      "gia_lost": 0
+     },
+     {
+      "use_class": "EA",
+      "gia_existing": 69.98,
+      "gia_gained": 0,
+      "gia_lost": 17.62
+     },
+     {
+      "use_class": "C3",
+      "gia_existing": 0,
+      "gia_gained": 39.03,
+      "gia_lost": 0
+     }
+    ],
+    "site_area": 0.011673999999999999,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Wandsworth-2026_2930": {
+   "id": "Wandsworth-2026_2930",
+   "lpa_name": "Wandsworth",
+   "lpa_app_no": "2026/2930",
+   "description": "Partial redevelopment of mixed use property to provide 3 additional residential units (1 x 3-bedroom and 2 x 2-bedroom).",
+   "application_type_full": "Full planning & demolition in a conservation area",
+   "last_updated": "2026-08-25T01:05:58.553Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "B2",
+      "gia_existing": 134.89,
+      "gia_gained": 0,
+      "gia_lost": 134.89
+     },
+     {
+      "use_class": "C3",
+      "gia_existing": 75.5,
+      "gia_gained": 295.95,
+      "gia_lost": 27
+     },
+     {
+      "use_class": "EA",
+      "gia_existing": 60,
+      "gia_gained": 0,
+      "gia_lost": 15
+     }
+    ],
+    "site_area": 0.033656,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 134.89
+    }
+   }
+  },
+  "Hounslow-SC_2026_2357": {
+   "id": "Hounslow-SC_2026_2357",
+   "lpa_name": "Hounslow",
+   "lpa_app_no": "SC/2026/2357",
+   "description": "Scoping opinion for the outline application with all matters reserved except access for residential development (Use Class C3) with new sports provision, new commercial / community floorspace (Use Class F2/E), new access arrangements, and enhancements to public open space and ecology",
+   "application_type_full": null,
+   "last_updated": "2026-08-27T15:10:14.551Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": null,
+    "site_area": null,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": null,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": null
+    }
+   }
+  },
+  "Lambeth-26_02338_FUL": {
+   "id": "Lambeth-26_02338_FUL",
+   "lpa_name": "Lambeth",
+   "lpa_app_no": "26/02338/FUL",
+   "description": "Retrospective consent for existing cold room and installation of new cold room in ancillary yard.",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2026-09-01T20:01:29.440Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "B2",
+      "gia_existing": 36.1,
+      "gia_gained": 22.8,
+      "gia_lost": 23.4
+     }
+    ],
+    "site_area": 0.015300000000000001,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 22.8,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 23.4
+    }
+   }
+  },
+  "Camden-2026_3272_P": {
+   "id": "Camden-2026_3272_P",
+   "lpa_name": "Camden",
+   "lpa_app_no": "2026/3272/P",
+   "description": "Internal and external alterations, including internal strip out, installation of a replacement mezzanine, new arch linings and new ground floor slabs, external infill repairs and alterations, together with the demolition of existing courtyard building and erection of replacement building, and associated works for the continued use of the Site for Class E(g)(iii) and / or B8 uses",
+   "application_type_full": "Full planning & listed building consent",
+   "last_updated": "2026-09-03T01:13:03.045Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "SpecifiedOther",
+      "gia_existing": 1979,
+      "gia_gained": 1148,
+      "gia_lost": 678
+     }
+    ],
+    "site_area": 0.17500000000000002,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Lambeth-26_02343_FUL": {
+   "id": "Lambeth-26_02343_FUL",
+   "lpa_name": "Lambeth",
+   "lpa_app_no": "26/02343/FUL",
+   "description": "Temporary use of part of Brockwell Park for funfair events to occur twice a calendar year over a five-year period from 2027 to 2031, involving the installation and de-installation of temporary infrastructure including fencing, rides, lighting, and other temporary structures and ancillary works.\r",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2026-09-08T01:08:46.433Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": null,
+    "site_area": 1.3945,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Camden-2026_3418_P": {
+   "id": "Camden-2026_3418_P",
+   "lpa_name": "Camden",
+   "lpa_app_no": "2026/3418/P",
+   "description": "Use of the premises as a 24 hour a day, 7 days a week gymnasium, falling within Use Class E.",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2026-09-09T12:01:25.408Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "EB",
+      "gia_existing": 516.82,
+      "gia_gained": 0,
+      "gia_lost": 516.82
+     },
+     {
+      "use_class": "ED",
+      "gia_existing": 0,
+      "gia_gained": 516.82,
+      "gia_lost": 0
+     }
+    ],
+    "site_area": 0.051682,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Lambeth-26_02335_P3MA": {
+   "id": "Lambeth-26_02335_P3MA",
+   "lpa_name": "Lambeth",
+   "lpa_app_no": "26/02335/P3MA",
+   "description": "Prior approval for the change of use from Class E space (commercial, business and service) at 1st floor to Class C3 (residential) to comprise 2 residential units.",
+   "application_type_full": "Prior Approval: Change of use from Commercial, Business and Service (Use Class E) to Dwellinghouses (Use Class C3)",
+   "last_updated": "2026-09-09T20:01:13.171Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "C3",
+      "gia_existing": 109.96,
+      "gia_gained": 109.96,
+      "gia_lost": 109.96
+     }
+    ],
+    "site_area": null,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Wandsworth-2026_2937": {
+   "id": "Wandsworth-2026_2937",
+   "lpa_name": "Wandsworth",
+   "lpa_app_no": "2026/2937",
+   "description": "Application under Section 73 of the Town and County Planning Act (as amended) for the variation of Condition 2 (Approved drawings) of planning permission ref. 2021/4900 dated 07/10/2024 (Phased development to provide two hotel buildings (north building 11 storeys and south building 15 storeys) with ancillary facilities including restaurant use to south building (14th Floor). Plus basement, cycle parking, plant, public realm and other associated works).",
+   "application_type_full": "Removal/Variation of a condition",
+   "last_updated": "2026-09-11T01:05:15.717Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": null,
+    "site_area": null,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": null,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": null
+    }
+   }
+  },
+  "Southwark-26_AP_2342": {
+   "id": "Southwark-26_AP_2342",
+   "lpa_name": "Southwark",
+   "lpa_app_no": "26/AP/2342",
+   "description": "Change of use of office space to 1 self build dwelling",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2026-09-11T20:02:09.483Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "EG1",
+      "gia_existing": 278,
+      "gia_gained": 0,
+      "gia_lost": 278
+     }
+    ],
+    "site_area": 0.1,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Southwark-26_AP_2417": {
+   "id": "Southwark-26_AP_2417",
+   "lpa_name": "Southwark",
+   "lpa_app_no": "26/AP/2417",
+   "description": "Erection of a mixed-use development incorporating a flexible commercial unit at ground and basement floors (Use Class E) with 8 residential units at first to fifth floors (Use Class C3), including associated cycle parking and refuse storage.",
+   "application_type_full": "Full planning & listed building consent",
+   "last_updated": "2026-09-11T20:02:14.288Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "C3",
+      "gia_existing": 0,
+      "gia_gained": 501,
+      "gia_lost": 0
+     },
+     {
+      "use_class": "SpecifiedOther",
+      "gia_existing": 0,
+      "gia_gained": 175,
+      "gia_lost": 0
+     }
+    ],
+    "site_area": 0.0199,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Hounslow-SC_2026_2149": {
+   "id": "Hounslow-SC_2026_2149",
+   "lpa_name": "Hounslow",
+   "lpa_app_no": "SC/2026/2149",
+   "description": "Scoping opinion for redevelopment of the site to provide 496 co-living units and 60 C3 affordable units alongside retail offering, play space and a roof level external amenity space, with a maximum height of 24 storeys",
+   "application_type_full": null,
+   "last_updated": "2026-09-11T10:40:10.250Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": null,
+    "site_area": null,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": null,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": null
+    }
+   }
+  },
+  "Westminster-26_05405_FULL": {
+   "id": "Westminster-26_05405_FULL",
+   "lpa_name": "Westminster",
+   "lpa_app_no": "26/05405/FULL",
+   "description": "Use of the ground floor for Dual Use as Retail (Class E (a)) and Caf/e (Class E (b)) for a temporary period of 20 years.",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2026-09-11T20:06:10.442Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "EG1",
+      "gia_existing": 243.68,
+      "gia_gained": 0,
+      "gia_lost": 69.13
+     },
+     {
+      "use_class": "SpecifiedOther",
+      "gia_existing": 0,
+      "gia_gained": 69.13,
+      "gia_lost": 0
+     }
+    ],
+    "site_area": 0.017922,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Westminster-26_05424_P3JPA": {
+   "id": "Westminster-26_05424_P3JPA",
+   "lpa_name": "Westminster",
+   "lpa_app_no": "26/05424/P3JPA",
+   "description": "Application for Prior approval under Schedule 2, Part 3, Class MA of the Town and Country Planning (General Permitted Development Order 2015 ( as amended) for change of use from Class E to 3 dwellings at part ground, and all of first and second floors.",
+   "application_type_full": "Prior Approval: Change of use from Commercial, Business and Service (Use Class E) to Dwellinghouses (Use Class C3)",
+   "last_updated": "2026-09-11T20:06:11.674Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "EC2",
+      "gia_existing": 164,
+      "gia_gained": 0,
+      "gia_lost": 142
+     }
+    ],
+    "site_area": null,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Westminster-26_05392_FULL": {
+   "id": "Westminster-26_05392_FULL",
+   "lpa_name": "Westminster",
+   "lpa_app_no": "26/05392/FULL",
+   "description": "Temporary change of use of the Parade Ground at Chelsea College of Arts from 10 September 2026 to 26 September 2026 for a Fashion Show, taking place on 21 September 2026, including the erection and dismantling of a temporary marquee and other associated works ancillary to the event.",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2026-09-12T01:05:39.830Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "SpecifiedOther",
+      "gia_existing": 0,
+      "gia_gained": 1800,
+      "gia_lost": 0
+     }
+    ],
+    "site_area": 0.18,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Southwark-26_AP_2404": {
+   "id": "Southwark-26_AP_2404",
+   "lpa_name": "Southwark",
+   "lpa_app_no": "26/AP/2404",
+   "description": "Non-material amendment of planning permission 24/AP/2385 (as amended) which gave consent for:\r\"Variation of Condition 1 (Approved Plans) for planning permission ref no. 23/AP/1991 'Minor material amendment by variation of Conditions 1 (Approved Plans), 36 (Approved Building Height), 37 (Approved Quantum of Work/Maker Space) and 38 (Approved Number of Hotel Rooms) of planning permission 19/AP/5389, the development description for which was:\rDemolition of existing warehouse building and erection of a part 3, part 6 and part 9 storey building providing 200 hotel rooms (Class C1) and 1,354sqm of work/maker space at ground floor (and mezzanine) (Flexible Class B1) as well as ancillary cafe/restaurant and bar facilities (Class A3/A4), along with associated landscaping, servicing yard and access works.\r\rThe amendments sought by this application are:\r- Facade alterations\r- Alteration to accessible room sizes\r- Alterations to room positions, sizes and layouts\r- Alterations to floor plans across all levels\r- Alterations to the roof, including relocation of the biodiverse roof and provision of railings above the mezzanine for safe maintenance.\"\r\rThe amendments sought by this application are:\r\r- Revisions to back-of-house areas and the reconfiguration of internal layouts at ground floor and basement levels.\r- Amendments to the mezzanine-level hotel amenity area, including the relocation of accessible rooms.\r- Amendments to the first and second floor layouts to provide accessible hotel rooms, and amendments to the hotel amenity area on the eighth floor.\r- Extension of the second escape stair to the eighth floor.\r- Amendments to roof plant at first and ninth floor levels, together with an extension of the plant screen.\r- Revisions to the wording of Condition 13 (Wheelchair Accessible Rooms), Condition 14 (Cycle Storage Facilities), and the condition relating to the number of hotel rooms",
+   "application_type_full": "Non-Material Amendment",
+   "last_updated": "2026-09-12T01:05:40.165Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": null,
+    "site_area": null,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": null,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": null
+    }
+   }
+  },
+  "Hillingdon-80172_APP_2026_1717": {
+   "id": "Hillingdon-80172_APP_2026_1717",
+   "lpa_name": "Hillingdon",
+   "lpa_app_no": "80172/APP/2026/1717",
+   "description": "Change of use from Class B8 to Class E retail",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2026-09-13T22:00:13.319Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "B8",
+      "gia_existing": 143,
+      "gia_gained": 0,
+      "gia_lost": 0
+     }
+    ],
+    "site_area": 0.0211,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Hillingdon-7139_APP_2026_1688": {
+   "id": "Hillingdon-7139_APP_2026_1688",
+   "lpa_name": "Hillingdon",
+   "lpa_app_no": "7139/APP/2026/1688",
+   "description": "Erection of a detached single storey building (nursery)",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2026-09-13T22:00:09.944Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "EF",
+      "gia_existing": 0,
+      "gia_gained": 60.4,
+      "gia_lost": 0
+     }
+    ],
+    "site_area": 0.0245,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Hillingdon-16483_APP_2026_1751": {
+   "id": "Hillingdon-16483_APP_2026_1751",
+   "lpa_name": "Hillingdon",
+   "lpa_app_no": "16483/APP/2026/1751",
+   "description": "Change of use from Class E(g)(i) to Class C3 (2 x dwellinghouses and 3 x flats), which includes the demolition of the existing single storey commercial office building, and the erection of 3 new flats (1 x 3-bed and 2 x 1-bed) and two dwellinghouses (2 x 2-bed) with associated car parking, cycle and bin storage.",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2026-09-13T22:00:02.509Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "EC3",
+      "gia_existing": 232,
+      "gia_gained": 429,
+      "gia_lost": 232
+     }
+    ],
+    "site_area": 0.05355000000000001,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 0
+    }
+   }
+  },
+  "Wandsworth-2019_4915": {
+   "id": "Wandsworth-2019_4915",
+   "lpa_name": null,
+   "lpa_app_no": "2019/4915",
+   "description": "Demolition of the existing second floor extension to Buildings 1 & 2. Alterations including erection of two-storey extension above Buildings 1 & 2 at second and third floor levels; installation of replacement electricity substation; installation of new link bridge between Building 2 and Building 3; installation of new and replacement external access staircases, in connection with the provision of five new residential units (4 x 3-bedroom units and 1 x 4-bedroom unit) and use of basement for flexible B1/D1 uses, with associated new cycle parking at ground floor level.",
+   "application_type_full": null,
+   "last_updated": "2025-03-19T22:19:15.128+00:00",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "B1a",
+      "gia_existing": 0.0,
+      "gia_gained": 369.0,
+      "gia_lost": 351.0
+     }
+    ],
+    "site_area": 0.2790000000000001,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 369.0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 351.0
+    }
+   }
+  },
+  "Wandsworth-2022_2709": {
+   "id": "Wandsworth-2022_2709",
+   "lpa_name": null,
+   "lpa_app_no": "2022/2709",
+   "description": "Demolition of the existing units and erection of 2no. 3-storey and 1no. 1-storey buildings to provide purpose-built modern industrial floorspace for uses within Class E(g)(ii)(iii) (light industry) and Class B8 (storage and distribution).",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2025-03-19T21:07:16.884+00:00",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "B8",
+      "gia_existing": 0.0,
+      "gia_gained": 1452.0,
+      "gia_lost": 1100.0
+     },
+     {
+      "use_class": "B1c",
+      "gia_existing": 0.0,
+      "gia_gained": 1451.0,
+      "gia_lost": 1100.0
+     }
+    ],
+    "site_area": 0.3436,
+    "non_residential_details": {
+     "site_area": 3245.0,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 2903.0,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 2200.0
+    }
+   }
+  },
+  "Wandsworth-2025_3651": {
+   "id": "Wandsworth-2025_3651",
+   "lpa_name": null,
+   "lpa_app_no": "2025/3651",
+   "description": "Demolition of existing buildings and site redevelopment to provide replacement care accommodation (Use Class C2), within a part 4, 5 and 7 storey building plus basement level, providing care beds and suites, with associated communal, wellness and ancillary facilities, hard and soft landscaping and associated car parking, and servicing, cycle parking, substation and plant equipment.",
+   "application_type_full": "Full planning permission",
+   "last_updated": "2026-07-01T07:15:24.819Z",
+   "application_details": {
+    "existing_proposed_floorspace_details": [
+     {
+      "use_class": "C2",
+      "gia_existing": 6135.67,
+      "gia_gained": 13734.9,
+      "gia_lost": 6135.67
+     }
+    ],
+    "site_area": 0.46,
+    "non_residential_details": {
+     "site_area": null,
+     "total_non_resi_gross_internal_floor_area_to_be_gained": 13734.9,
+     "total_non_resi_gross_internal_floor_area_to_be_lost": 6135.67
+    }
+   }
+  }
+ }
+}

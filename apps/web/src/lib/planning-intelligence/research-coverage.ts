@@ -23,6 +23,8 @@ export interface PlanningDocumentCoverageRecord {
   portalFamily: PlanningPortalFamily
   declaredDocumentCount: number | null
   councilPageAccessible: boolean
+  /** The retrieved page names this application's reference, so it is the record, not a shell or landing page. */
+  councilPageMentionsReference: boolean
   documentsRetrieved: number
   htmlCandidatePagesRetrieved: number
   applicationFormRetrieved: boolean
@@ -75,6 +77,16 @@ function portalFamily(application: PlotaApplication, collected: CouncilResearchS
   return councilUrl ? 'generic' : 'unknown'
 }
 
+const compactReference = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+export function pageMentionsReference(text: string, reference: string): boolean {
+  const wanted = compactReference(reference)
+  if (!wanted) return false
+  // Permit punctuation differences, but not a prefix of another application's reference.
+  const pattern = wanted.split('').join('[^a-z0-9]*')
+  return new RegExp(`(?:^|[^a-z0-9])${pattern}(?=$|[^a-z0-9])`, 'i').test(text)
+}
+
 function failureReason(application: PlotaApplication, collected: CouncilResearchSources): string | null {
   if (!safeUrl(application.links?.council)) return 'No safe public council URL'
   const warning = collected.warnings.find((value) =>
@@ -113,6 +125,8 @@ export function planningDocumentCoverageRecord(input: {
   const needsOcr = documents.filter((source) => Boolean(source.ocrFile))
   const readableText = readable.map((source) => source.text).join('\n')
   const pageAccessible = collected.sources.some((source) => source.kind === 'council_page')
+  const pageMentionsApplication = collected.sources.some((source) => source.kind === 'council_page'
+    && pageMentionsReference(source.text, application.reference))
   const applicationFormRetrieved = documents.some((source) => {
     const evidence = `${source.title ?? ''} ${source.url} ${source.ocrFile?.filename ?? ''} ${source.text.slice(0, 2_000)}`
     return /application\s*(?:form|submission)|planning portal reference/i.test(evidence)
@@ -135,6 +149,7 @@ export function planningDocumentCoverageRecord(input: {
     portalFamily: portalFamily(application, collected),
     declaredDocumentCount: input.declaredDocumentCount ?? application.documents_count ?? null,
     councilPageAccessible: pageAccessible,
+    councilPageMentionsReference: pageMentionsApplication,
     documentsRetrieved: documents.length,
     htmlCandidatePagesRetrieved: htmlCandidatePages.length,
     applicationFormRetrieved,

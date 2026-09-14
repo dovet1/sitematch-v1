@@ -3,6 +3,24 @@
 Snapshot updated: 14 September 2026. Read this first; the longer handover contains historical states
 that are superseded by this snapshot. All figures below are observations, not live counters.
 
+## Latest: Codex completed the delegated Datahub check, 14 September
+
+The user explicitly asked Codex to take over these next steps. That authorises this local
+review/evaluation and branch commit/push; the production pipeline ownership, deployments,
+budgets and paused backfill are unchanged.
+
+- Frozen 40-record evaluation completed across 21 boroughs, including 30 records with proposed
+  completing floor facts. Seven of those 30 conflict with their descriptions; the others are
+  unverified, not proven correct. This is a deliberately stratified public-data sample, not an
+  estimate of accuracy across our eligible developments.
+- Independent public council checks on eight examples yielded no numerical verification.
+- **Do not connect Datahub to automatic fact completion.** `findingsFromDatahub` now returns
+  review evidence only (`completes: false`). Experimental calculations have an explicitly named
+  `candidateFindingsFromDatahub` function for offline reports/tests. Research remains disconnected.
+- Full findings and next decision: `docs/london-datahub-evaluation-2026-09-14.md`.
+- Frozen inputs, outputs and 40 manual labels are committed as the blind-evaluation fixture.
+- Plota email is ready in `docs/plota-data-capabilities-email.md`, still unsent.
+
 ## Start here — 14 September 2026, night (next chat)
 
 Read `docs/planning-pilot-completion-plan.md` first. It is the lead plan and holds the pilot
@@ -37,11 +55,17 @@ Everything below this section is older context.
 - **Council access check:** documents readable for 22 councils, about 5% of tier applications;
   page-only 19%; blocked 76% (204 of 209 Idox councils disallow in robots.txt).
 
+**Later the same night (after Astra's access investigation):** collector fixes and the corrected
+access table (readable 5.2%, real page 8.7%, script shell 11.8%, blocked 74.2%), and a tested
+London Datahub adapter that is not yet wired into research. Both are in the lead plan's
+"Corrected after Astra's access investigation" and "London Datahub" sections.
+
 **Proposed next steps, awaiting the user's go-ahead:**
-1. Route research by council access label.
-2. Retry the ~20 councils where robots.txt fetch failed.
-3. Test web-only operator research on 10–15 blocked schemes.
-4. Draft a question to Plota about application-form or floor-area data for councils we can't read.
+1. Route research by council access label (now using the corrected labels).
+2. Blind-check 40 London Datahub records, then add the lookup as an evidence source before paid
+   research for London schemes.
+3. Test web-only research for operator, use and size on 10–15 blocked schemes.
+4. Send Plota the capability question (draft in Astra's note, not sent; the user sends it).
 
 **Still unfinished (do not report as done):**
 - Grouped classification worker. Only the member guard is built, and it is undeployed.
@@ -53,7 +77,7 @@ Everything below this section is older context.
 **Known defects:**
 - Form reader sometimes records "Address" as an applicant.
 - Excerpts can contain private applicants' home addresses (admin-only).
-- "Detached ArrayBuffer" document read bug.
+- "Detached ArrayBuffer" document read bug: fixed in the reviewed collector changes.
 - Dense London planning read timed out once.
 - 13 unrelated failing test suites: leads, gap finder, requirement locations, consultant profile.
 

@@ -1,4 +1,24 @@
+import { fetchCompletingChain } from '../incomplete-chain-fetch'
 import { collectCouncilResearchSources } from '../research-sources'
+
+jest.mock('../incomplete-chain-fetch', () => ({
+  ...jest.requireActual('../incomplete-chain-fetch'),
+  fetchCompletingChain: jest.fn(),
+}))
+
+// PDF.js is ESM and does not load under Jest. This stand-in keeps its behaviour that matters here:
+// it detaches the buffer it is given, and reads the text drawn by the test PDFs below.
+jest.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
+  getDocument: ({ data }: { data: Uint8Array }) => {
+    const source = Buffer.from(data).toString('latin1')
+    ;(data.buffer as ArrayBuffer & { transfer: () => ArrayBuffer }).transfer()
+    const text = source.match(/\((.*)\) Tj/)?.[1] ?? ''
+    return { promise: Promise.resolve({
+      numPages: 1,
+      getPage: async () => ({ getTextContent: async () => ({ items: text ? [{ str: text }] : [] }) }),
+    }) }
+  },
+}), { virtual: true })
 
 describe('council research source collection', () => {
   const originalFetch = global.fetch
@@ -243,5 +263,99 @@ describe('council research source collection', () => {
       'X-Requested-With': 'XMLHttpRequest',
       Cookie: expect.stringContaining('DisclaimerAccepted=true'),
     }))
+  })
+
+  const byUrl = (responses: Record<string, () => unknown>) => jest.fn(async (url: URL | string) => {
+    const key = String(url).replace('https://council.test', '')
+    const respond = responses[key]
+    if (!respond) throw new Error(`Unexpected fetch ${key}`)
+    return respond()
+  })
+  const html = (body: string) => () => ({ ok: true, status: 200, headers: new Headers({ 'content-type': 'text/html' }),
+    text: async () => body, arrayBuffer: async () => new Uint8Array(Buffer.from(body)).buffer })
+  const pdf = (text: string) => () => ({ ok: true, status: 200, headers: new Headers({ 'content-type': 'application/pdf' }),
+    arrayBuffer: async () => new Uint8Array(Buffer.from(pdfBase64(text), 'base64')).buffer })
+
+  it('builds the OCR payload for a scanned PDF downloaded inside a public session', async () => {
+    // PDF.js detaches the buffer it reads; the session download must still be encodable afterwards.
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: true, text: async () => 'User-agent: *' })
+      .mockResolvedValueOnce({ ok: true, headers: new Headers(), text: async () =>
+        '<form action="/Disclaimer/Accept?returnUrl=%2FPlanning" method="post"><button>Agree</button></form>' })
+      .mockResolvedValueOnce({ status: 302, headers: new Headers({ 'set-cookie': 'DisclaimerAccepted=true; Path=/' }) })
+      .mockResolvedValueOnce({ ok: true, text: async () => '<a href="/Document/Download?id=1">Planning Statement</a>' })
+      .mockImplementationOnce(pdf('')) as unknown as typeof fetch
+    const result = await collectCouncilResearchSources(application)
+    expect(result.warnings.filter(warning => /could not be read/.test(warning))).toEqual([])
+    expect(result.sources[1].ocrFile?.url).toMatch(/^data:application\/pdf;base64,JVBERi0/)
+  })
+
+  it('reads an Online Register PDF’s text layer instead of sending it to OCR', async () => {
+    const formText = 'Existing gross internal floorspace 450 square metres. Proposed gross internal floorspace 900 square metres. Site area 0.2 hectares.'
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => 'User-agent: *' })
+      .mockResolvedValueOnce({ ok: true, status: 200, headers: new Headers(), text: async () =>
+        '<main>Storage proposal</main><table><tr data-module="PLA" data-recordNumber="1" data-planID="2" data-imageID="3" data-storedInDatabase="True" data-fileName="form.pdf"><td>Application Form</td></tr></table>' })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => pdfBase64(formText) }) as unknown as typeof fetch
+    const result = await collectCouncilResearchSources(application)
+    expect(result.sources[1]).toEqual(expect.objectContaining({ kind: 'document', text: expect.stringContaining('Site area 0.2 hectares') }))
+    expect(result.sources[1].ocrFile).toBeUndefined()
+  })
+
+  it('skips a Word document instead of reading its bytes as text', async () => {
+    const zipSignature = Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('binary')])
+    global.fetch = byUrl({
+      '/robots.txt': html('User-agent: *'),
+      '/application/1': html('<a href="/Document/Download?id=9">Site Notice document</a>'),
+      '/Document/Download?id=9': () => ({ ok: true, status: 200,
+        headers: new Headers({ 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }),
+        arrayBuffer: async () => new Uint8Array(zipSignature).buffer }),
+    }) as unknown as typeof fetch
+    const result = await collectCouncilResearchSources(application)
+    expect(result.sources).toHaveLength(1)
+    expect(result.warnings.some(warning => warning.startsWith('Skipped unsupported document format'))).toBe(true)
+  })
+
+  it('reads a document once when two listings link to it', async () => {
+    const fetchMock = byUrl({
+      '/robots.txt': html('User-agent: *'),
+      '/application/1': html('<a href="/documents/list">Documents</a><a href="/documents/all">All documents</a>'),
+      '/documents/list': html('<a href="/files/statement.pdf">Planning Statement</a>'),
+      '/documents/all': html('<a href="/files/statement.pdf">Planning Statement</a>'),
+      '/files/statement.pdf': pdf('Planning statement text describing the proposed commercial floorspace of 300 square metres in detail.'),
+    })
+    global.fetch = fetchMock as unknown as typeof fetch
+    const result = await collectCouncilResearchSources(application)
+    expect(result.sources.filter(source => source.url.endsWith('/files/statement.pdf'))).toHaveLength(1)
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/files/statement.pdf'))).toHaveLength(1)
+  })
+
+  it('completes a council server’s missing intermediate certificate and still obeys its robots.txt', async () => {
+    const chainError = Object.assign(new TypeError('fetch failed'), { cause: { code: 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' } })
+    global.fetch = jest.fn().mockRejectedValue(chainError) as unknown as typeof fetch
+    jest.mocked(fetchCompletingChain).mockResolvedValueOnce({ ok: true, status: 200, text: async () => 'User-agent: *\nDisallow: /' } as unknown as Response)
+    const result = await collectCouncilResearchSources(application)
+    expect(String(jest.mocked(fetchCompletingChain).mock.calls[0][0])).toBe('https://council.test/robots.txt')
+    expect(result.warnings).toEqual(['Council page is disallowed by robots.txt'])
+  })
+
+  it.each([
+    ['cannot be reached', () => Promise.reject(new TypeError('fetch failed'))],
+    ['returns a server error', () => Promise.resolve({ ok: false, status: 503 })],
+  ])('treats a council as disallowed when its robots.txt %s', async (_, robots) => {
+    const fetchMock = jest.fn().mockImplementationOnce(robots)
+    global.fetch = fetchMock as unknown as typeof fetch
+    const result = await collectCouncilResearchSources(application)
+    expect(result.sources).toEqual([])
+    expect(result.warnings).toContain('Council page is disallowed by robots.txt')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('allows a council whose robots.txt does not exist', async () => {
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce({ ok: false, status: 404 })
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => '<main>Proposal REF/1</main>' }) as unknown as typeof fetch
+    const result = await collectCouncilResearchSources(application)
+    expect(result.sources[0].text).toContain('Proposal REF/1')
   })
 })

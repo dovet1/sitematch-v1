@@ -8,13 +8,14 @@
  * Each council is labelled:
  * - documents_readable: an application PDF was read as text (the source of floor and site areas);
  * - documents_need_ocr: PDFs retrieved but scanned, so research would pay for OCR;
- * - page_only: the application page was read but no document;
+ * - page_only: the application page was read (it names the reference) but no document;
+ * - page_unverified: a page was fetched but never names the reference (a script shell or landing page);
  * - blocked: robots.txt disallows the page or documents, or the page could not be retrieved;
  * - no_council_url / no_sample.
  *
  * Progress is appended to a JSONL file, so an interrupted run resumes where it stopped.
  * Run from apps/web:
- *   ../../node_modules/.bin/tsx scripts/audit-council-access.ts [--councils=a,b] [--per-council=3] [--concurrency=8]
+ *   ../../node_modules/.bin/tsx scripts/audit-council-access.ts [--councils=a,b] [--per-council=3] [--concurrency=8] [--out=name]
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { loadEnvConfig } from '@next/env'
@@ -29,20 +30,22 @@ const args = new Map(process.argv.slice(2).map(arg => arg.replace(/^--/, '').spl
 const PER_COUNCIL = Number(args.get('per-council') ?? 3)
 const CONCURRENCY = Number(args.get('concurrency') ?? 8)
 const DAY = new Date().toISOString().slice(0, 10)
-const progressFile = `reports/council-access-${DAY}.jsonl`
+const OUT = args.get('out') ?? `council-access-${DAY}`
+const progressFile = `reports/${OUT}.jsonl`
 
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
   auth: { persistSession: false },
   global: { fetch: (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(60000) }) },
 })
 
-type Label = 'documents_readable' | 'documents_need_ocr' | 'page_only' | 'blocked' | 'no_council_url' | 'no_sample'
+type Label = 'documents_readable' | 'documents_need_ocr' | 'page_only' | 'page_unverified' | 'blocked' | 'no_council_url' | 'no_sample'
 
 interface CouncilResult {
   council: string
   label: Label
   sampled: number
   pagesRead: number
+  pagesNamingReference: number
   pdfsRead: number
   formsRead: number
   needOcr: number
@@ -74,7 +77,8 @@ function label(records: PlanningDocumentCoverageRecord[], hadUrl: boolean): { la
   if (records.some(r => r.documentsNeedingOcr > 0)) return { label: 'documents_need_ocr', blockedBy: null }
   const reason = records.map(r => r.failureReason).find(Boolean) ?? null
   // The application page alone still gives research the proposal, parties and often use classes.
-  if (records.some(r => r.councilPageAccessible)) return { label: 'page_only', blockedBy: reason }
+  if (records.some(r => r.councilPageMentionsReference)) return { label: 'page_only', blockedBy: reason }
+  if (records.some(r => r.councilPageAccessible)) return { label: 'page_unverified', blockedBy: reason }
   return { label: 'blocked', blockedBy: reason }
 }
 
@@ -97,6 +101,7 @@ async function auditCouncil(council: string): Promise<CouncilResult> {
   return {
     council, label: councilLabel, sampled: records.length,
     pagesRead: records.filter(r => r.councilPageAccessible).length,
+    pagesNamingReference: records.filter(r => r.councilPageMentionsReference).length,
     pdfsRead: records.filter(r => r.locallyReadableDocuments > 0).length,
     formsRead: records.filter(r => r.applicationFormRetrieved).length,
     needOcr: records.filter(r => r.documentsNeedingOcr > 0).length,
@@ -155,7 +160,7 @@ async function main() {
     applicationsWithReadablePdf: results.reduce((n, r) => n + r.pdfsRead, 0),
     applicationsWithForm: results.reduce((n, r) => n + r.formsRead, 0),
   }
-  writeFileSync(`reports/council-access-${DAY}.json`, JSON.stringify({ summary, councils: results }, null, 2))
+  writeFileSync(`reports/${OUT}.json`, JSON.stringify({ summary, councils: results }, null, 2))
   console.log(JSON.stringify(summary, null, 2))
 }
 
