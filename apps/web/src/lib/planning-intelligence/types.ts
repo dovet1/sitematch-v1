@@ -230,6 +230,8 @@ export interface PlanningResearchFloorspace {
   scope: 'existing' | 'lost' | 'proposed' | 'net'
   sqm: number
   measurementBasis: 'gross_internal' | 'net_internal' | 'gross_external' | 'unspecified'
+  /** What the figure describes; absent on runs before research schema v4. */
+  extent?: 'whole_development' | 'building' | 'unit' | 'phase' | 'unspecified'
   evidenceSource: PlanningResearchEvidenceSource
   evidenceUrl: string
   evidenceExcerpt: string
@@ -249,6 +251,7 @@ export interface PlanningResearchUseClass {
 
 export interface PlanningResearchSiteArea {
   phase: 'existing' | 'proposed' | 'unspecified'
+  extent?: 'whole_development' | 'building' | 'unit' | 'phase' | 'unspecified'
   value: number
   unit: 'sqm' | 'sqft' | 'hectares' | 'acres'
   evidenceSource: PlanningResearchEvidenceSource

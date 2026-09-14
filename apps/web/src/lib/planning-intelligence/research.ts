@@ -12,14 +12,28 @@ import {
   RESEARCH_REQUEST_TIMEOUT_MS,
   researchOperatorWithOpenRouter,
 } from './research-openrouter'
+import {
+  attemptOutcome,
+  findingsFromResearch,
+  nextFactRows,
+  type FactAttempt,
+  type FactKey,
+  type FactFinding,
+  type FactRow,
+} from './facts'
 import { collectCouncilResearchSources } from './research-sources'
 import type { PlotaApplication } from './types'
+
+/** Attempts per development, counted at claim time. The last failure hands the scheme to admin. */
+export const RESEARCH_ATTEMPT_LIMIT = 2
 
 interface ResearchQueueRow {
   development_id: string
   planning_application_id: string
   input_hash: string
   raw: PlotaApplication
+  attempt?: number
+  attempt_limit?: number
 }
 
 export interface ResearchBatchResult {
@@ -40,20 +54,28 @@ function deadline(): { signal: AbortSignal; cleanup: () => void } {
   return { signal: controller.signal, cleanup: () => clearTimeout(timeout) }
 }
 
-async function replacePendingResearchSignals(
+/**
+ * Research evidence is additive. A repeat run used to delete pending research rows before
+ * inserting its own, so a run that found nothing erased what an earlier run had found. Rows are
+ * now inserted only when the same evidence is not already stored.
+ */
+async function addResearchSignals(
   db: PlanningAdminClient,
   row: ResearchQueueRow,
   signals: Awaited<ReturnType<typeof researchOperatorWithOpenRouter>>['signals']
 ) {
-  const { error: deleteError } = await db.from('development_brand_signals')
-    .delete()
-    .eq('planning_application_id', row.planning_application_id)
-    .eq('review_state', 'pending')
-    .in('evidence_source', ['council_page', 'document', 'web'])
-  if (deleteError) throw deleteError
   if (signals.length === 0) return
+  const { data: stored, error: readError } = await db.from('development_brand_signals')
+    .select('observed_name,role,evidence_url')
+    .eq('development_id', row.development_id)
+    .in('evidence_source', ['council_page', 'document', 'web'])
+  if (readError) throw readError
+  const seen = new Set((stored ?? []).map((signal: { observed_name: string; role: string; evidence_url: string | null }) =>
+    `${signal.observed_name.toLowerCase()}|${signal.role}|${signal.evidence_url}`))
+  const fresh = signals.filter(signal => !seen.has(`${signal.name.toLowerCase()}|${signal.role}|${signal.evidenceUrl}`))
+  if (fresh.length === 0) return
 
-  const { error } = await db.from('development_brand_signals').insert(signals.map((signal) => ({
+  const { error } = await db.from('development_brand_signals').insert(fresh.map((signal) => ({
     development_id: row.development_id,
     planning_application_id: row.planning_application_id,
     brand_id: null,
@@ -69,26 +91,27 @@ async function replacePendingResearchSignals(
   if (error) throw error
 }
 
-async function replacePendingResearchFloorspace(
+async function addResearchFloorspace(
   db: PlanningAdminClient,
   row: ResearchQueueRow,
   findings: Awaited<ReturnType<typeof researchOperatorWithOpenRouter>>['commercialFloorspace']
 ) {
-  // Initial-classifier rows have no evidence URL. Research owns only URL-grounded pending
-  // rows, so rerunning it cannot delete a human decision or the cheaper model's evidence.
-  const { error: deleteError } = await db.from('development_observations')
-    .delete()
-    .eq('planning_application_id', row.planning_application_id)
-    .eq('metric', 'commercial_floorspace')
-    .eq('review_state', 'pending')
-    .not('evidence_url', 'is', null)
-  if (deleteError) throw deleteError
   if (findings.length === 0) return
+  const { data: stored, error: readError } = await db.from('development_observations')
+    .select('scope,value,measurement_basis,evidence_url')
+    .eq('development_id', row.development_id)
+    .eq('metric', 'commercial_floorspace')
+    .not('evidence_url', 'is', null)
+  if (readError) throw readError
+  const seen = new Set((stored ?? []).map((o: { scope: string; value: number | string; measurement_basis: string | null; evidence_url: string }) =>
+    `${o.scope}|${Number(o.value)}|${o.measurement_basis}|${o.evidence_url}`))
+  const fresh = findings.filter(f => !seen.has(`${f.scope}|${f.sqm}|${f.measurementBasis}|${f.evidenceUrl}`))
+  if (fresh.length === 0) return
 
   const actionByScope = {
     existing: 'retain', lost: 'remove', proposed: 'create', net: 'change',
   } as const
-  const { error } = await db.from('development_observations').insert(findings.map((finding) => ({
+  const { error } = await db.from('development_observations').insert(fresh.map((finding) => ({
     development_id: row.development_id,
     planning_application_id: row.planning_application_id,
     metric: 'commercial_floorspace',
@@ -105,6 +128,30 @@ async function replacePendingResearchFloorspace(
   })))
   if (error) throw error
 }
+
+const FACT_COLUMNS = 'fact,state,reason,value,findings,attempts,decided_by,decided_at'
+
+/** Merge this attempt into the checklist. Returns the rows written. */
+async function recordFacts(
+  db: PlanningAdminClient,
+  developmentId: string,
+  incoming: Record<FactKey, FactFinding[]>,
+  attempt: FactAttempt
+): Promise<FactRow[]> {
+  const { data: stored, error } = await db.from('development_facts').select(FACT_COLUMNS).eq('development_id', developmentId)
+  if (error) throw error
+  const rows = nextFactRows({ stored: (stored ?? []) as FactRow[], incoming, attempt })
+  const { error: writeError } = await db.rpc('planning_record_development_facts', {
+    p_development_id: developmentId, p_rows: rows,
+  })
+  if (writeError) throw writeError
+  return rows
+}
+
+const NO_FINDINGS = findingsFromResearch(
+  { signals: [], useClasses: [], commercialFloorspace: [], siteAreas: [], partyClues: [] },
+  { runId: null, at: new Date(0).toISOString() }
+)
 
 export async function researchPlanningBatch(input: {
   db: PlanningAdminClient
@@ -141,6 +188,7 @@ export async function researchPlanningBatch(input: {
   for (let index = 0; index < limit; index++) {
     const { data, error } = await input.db.rpc('claim_next_planning_research', {
       p_stale_before: new Date(Date.now() - RESEARCH_LEASE_MS).toISOString(),
+      p_attempt_limit: RESEARCH_ATTEMPT_LIMIT,
     })
     if (error) throw error
     if (!data) break
@@ -186,8 +234,9 @@ export async function researchPlanningBatch(input: {
     }
 
     const requestDeadline = deadline()
+    let collected: Awaited<ReturnType<typeof collectCouncilResearchSources>> | null = null
     try {
-      const collected = await collectCouncilResearchSources(row.raw)
+      collected = await collectCouncilResearchSources(row.raw)
       const researched = await researchOperatorWithOpenRouter({
         application: row.raw,
         sources: collected.sources,
@@ -195,20 +244,36 @@ export async function researchPlanningBatch(input: {
         model,
         signal: requestDeadline.signal,
       })
-      await replacePendingResearchSignals(input.db, row, researched.signals)
-      await replacePendingResearchFloorspace(input.db, row, researched.commercialFloorspace)
+      await addResearchSignals(input.db, row, researched.signals)
+      await addResearchFloorspace(input.db, row, researched.commercialFloorspace)
       const actualCost = researched.costUsd ?? reservation
       const now = new Date().toISOString()
-      const existingUseClasses = [...new Set(researched.useClasses
-        .filter((finding) => finding.phase === 'existing').map((finding) => finding.useClass))]
-      const proposedUseClasses = [...new Set(researched.useClasses
-        .filter((finding) => finding.phase === 'proposed').map((finding) => finding.useClass))]
+      const documentsRetrieved = collected.sources.filter(source => source.kind === 'document').length
+      const facts = await recordFacts(input.db, row.development_id, findingsFromResearch(researched, { runId: run.id, at: now }), {
+        runId: run.id, at: now,
+        outcome: attemptOutcome({
+          documentsRetrieved,
+          councilPageRetrieved: collected.sources.some(source => source.kind === 'council_page'),
+          failed: false, attemptLimitReached: false,
+        }),
+        documentsRetrieved, retrievalWarnings: collected.warnings, webSearches: researched.webSearchRequests,
+      })
+      const factValue = (fact: FactKey) => {
+        const found = facts.find(row => row.fact === fact)
+        return found?.state === 'found' && found.value && 'useClasses' in found.value ? found.value.useClasses : null
+      }
+      const existingUseClasses = factValue('existing_use_class')
+      const proposedUseClasses = factValue('proposed_use_class')
+      const unresolved = facts.some(fact => fact.state === 'not_found_after_research' || fact.state === 'conflicting')
       const [{ error: developmentError }, { error: finishRunError }, { error: finishUsageError }] =
         await Promise.all([
           input.db.from('developments').update({
             research_state: 'complete', research_started_at: null,
-            existing_commercial_use_classes: existingUseClasses,
-            proposed_commercial_use_classes: proposedUseClasses,
+            research_outcome: unresolved ? 'facts_unresolved' : 'all_found', research_finished_at: now,
+            // Written only when the checklist holds a value, which accumulates across runs, so a
+            // run that finds nothing no longer blanks what an earlier run found.
+            ...(existingUseClasses ? { existing_commercial_use_classes: existingUseClasses } : {}),
+            ...(proposedUseClasses ? { proposed_commercial_use_classes: proposedUseClasses } : {}),
             last_enriched_at: now, updated_at: now,
           }).eq('id', row.development_id),
           input.db.from('planning_classification_runs').update({
@@ -249,10 +314,26 @@ export async function researchPlanningBatch(input: {
     } catch (researchError) {
       const message = researchError instanceof Error ? researchError.message : 'Unknown research failure'
       const now = new Date().toISOString()
+      // The last attempt ends research and hands every unanswered fact to admin with the reason;
+      // an earlier one stays failed for the queue to retry. If the hand-off itself cannot be
+      // written, the row stays failed and the claim function finishes it on the next pass.
+      let attemptLimitReached = (row.attempt ?? 1) >= (row.attempt_limit ?? RESEARCH_ATTEMPT_LIMIT)
+      if (attemptLimitReached) {
+        const documentsRetrieved = collected?.sources.filter(source => source.kind === 'document').length ?? 0
+        try {
+          await recordFacts(input.db, row.development_id, NO_FINDINGS, {
+            runId: run.id, at: now, outcome: 'attempt_limit',
+            documentsRetrieved, retrievalWarnings: [...(collected?.warnings ?? []), message], webSearches: 0,
+          })
+        } catch {
+          attemptLimitReached = false
+        }
+      }
       await Promise.all([
-        input.db.from('developments').update({
-          research_state: 'failed', research_started_at: null,
-        }).eq('id', row.development_id),
+        input.db.from('developments').update(attemptLimitReached
+          ? { research_state: 'complete', research_started_at: null, research_outcome: 'attempt_limit', research_finished_at: now }
+          : { research_state: 'failed', research_started_at: null }
+        ).eq('id', row.development_id),
         input.db.from('planning_classification_runs').update({
           status: 'failed', error: message, cost_usd: reservation, finished_at: now,
         }).eq('id', run.id),
@@ -263,8 +344,8 @@ export async function researchPlanningBatch(input: {
         }).eq('id', usageId),
       ])
       result.failed++
-      // Failed items remain eligible for the SQL queue. Stop this invocation so
-      // it cannot immediately reclaim the same item and spend again on a failure.
+      // Failed items remain eligible for the SQL queue until their attempt limit. Stop this
+      // invocation so it cannot immediately reclaim the same item and spend again on a failure.
       break
     } finally {
       requestDeadline.cleanup()

@@ -20,7 +20,7 @@ class Builder implements PromiseLike<Result> {
   insert(payload: unknown) { this.op = 'insert'; this.writes.push({ table: this.table, op: this.op, payload }); return this }
   upsert(payload: unknown) { this.op = 'upsert'; this.writes.push({ table: this.table, op: this.op, payload }); return this }
   update(payload: unknown) { this.op = 'update'; this.writes.push({ table: this.table, op: this.op, payload }); return this }
-  delete() { this.op = 'delete'; return this }
+  delete() { this.op = 'delete'; this.writes.push({ table: this.table, op: this.op, payload: null }); return this }
   eq() { return this }
   in() { return this }
   not() { return this }
@@ -48,17 +48,20 @@ function row(id: string, escalated = true) {
   }
 }
 
-function makeDb(rows: ReturnType<typeof row>[], refuseReservation = false) {
+function makeDb(rows: Array<ReturnType<typeof row> & { attempt?: number; attempt_limit?: number }>, refuseReservation = false) {
   const writes: Write[] = []
   let queueIndex = 0
   const rpcCalls: string[] = []
+  const rpcArgs: Array<{ name: string; args: Record<string, unknown> }> = []
   const db = {
     from: (table: string) => new Builder(table, writes),
-    rpc: async (name: string) => {
+    rpc: async (name: string, args: Record<string, unknown> = {}) => {
       rpcCalls.push(name)
+      rpcArgs.push({ name, args })
       if (name === 'reserve_planning_ai_usage') {
         return { data: refuseReservation ? null : 'usage-1', error: null }
       }
+      if (name !== 'claim_next_planning_research') return { data: 1, error: null }
       while (queueIndex < rows.length) {
         const candidate = rows[queueIndex++]
         if (candidate.escalated) return { data: candidate, error: null }
@@ -66,7 +69,7 @@ function makeDb(rows: ReturnType<typeof row>[], refuseReservation = false) {
       return { data: null, error: null }
     },
   }
-  return { db: db as never, writes, rpcCalls }
+  return { db: db as never, writes, rpcCalls, rpcArgs }
 }
 
 describe('planning research batch', () => {
@@ -236,6 +239,42 @@ describe('planning research batch', () => {
       table: 'developments', op: 'update',
       payload: { research_state: 'failed', research_started_at: null },
     })
+  })
+
+  it('hands every unanswered fact to admin when the last attempt fails', async () => {
+    mockResearchOperator.mockRejectedValue(new Error('provider timeout'))
+    mockCollectSources.mockResolvedValue({ sources: [], warnings: ['Council page is disallowed by robots.txt'] })
+    const { db, writes, rpcArgs } = makeDb([{ ...row('1'), attempt: 2, attempt_limit: 2 }])
+    await researchPlanningBatch({ db, apiKey: 'key', limit: 1 })
+    expect(writes).toContainEqual(expect.objectContaining({
+      table: 'developments', op: 'update',
+      payload: expect.objectContaining({ research_state: 'complete', research_outcome: 'attempt_limit' }),
+    }))
+    const recorded = rpcArgs.find(call => call.name === 'planning_record_development_facts')!
+    const rows = recorded.args.p_rows as Array<{ fact: string; state: string; reason: string }>
+    expect(rows).toHaveLength(7)
+    expect(rows.every(fact => fact.state === 'not_found_after_research' && fact.reason === 'attempt_limit')).toBe(true)
+  })
+
+  it('names inaccessible documents as the reason when research finds nothing', async () => {
+    mockCollectSources.mockResolvedValue({ sources: [], warnings: ['Council page is disallowed by robots.txt'] })
+    const { db, writes, rpcArgs } = makeDb([row('1')])
+    await researchPlanningBatch({ db, apiKey: 'key', limit: 1 })
+    const rows = rpcArgs.find(call => call.name === 'planning_record_development_facts')!.args.p_rows as Array<{ reason: string }>
+    expect(rows.every(fact => fact.reason === 'documents_inaccessible')).toBe(true)
+    expect(writes).toContainEqual(expect.objectContaining({
+      table: 'developments', op: 'update',
+      payload: expect.objectContaining({ research_state: 'complete', research_outcome: 'facts_unresolved' }),
+    }))
+  })
+
+  it('never deletes earlier research evidence or blanks use classes on an empty run', async () => {
+    const { db, writes } = makeDb([row('1')])
+    await researchPlanningBatch({ db, apiKey: 'key', limit: 1 })
+    expect(writes.some(write => write.op === 'delete')).toBe(false)
+    const update = writes.find(write => write.table === 'developments' && (write.payload as Record<string, unknown>)?.research_state === 'complete')!
+    expect(update.payload).not.toHaveProperty('existing_commercial_use_classes')
+    expect(update.payload).not.toHaveProperty('proposed_commercial_use_classes')
   })
 
   it('stops after a failure instead of paying to retry an immediately reclaimable item', async () => {

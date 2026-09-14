@@ -25,7 +25,8 @@ export function standardFormFloorspace(sources: ResearchSource[]): PlanningResea
       if (!match) continue
       const before = source.text.slice(0, start + totalsAt + (match.index ?? 0))
       const pages = [...before.matchAll(/\[PDF page (\d+)\]/g)]
-      findings.push({ scope, sqm: Number(match[1]), measurementBasis: 'gross_internal',
+      // The form's totals cover the whole application.
+      findings.push({ scope, sqm: Number(match[1]), measurementBasis: 'gross_internal', extent: 'whole_development',
         evidenceSource: 'document', evidenceUrl: source.url, evidenceExcerpt: match[0],
         evidencePage: pages.at(-1)?.[1] ?? null, confidence: 1,
       })

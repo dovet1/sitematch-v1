@@ -10,9 +10,12 @@ import type {
 import type { ResearchSource } from './research-sources'
 
 export const DEFAULT_OPENROUTER_RESEARCH_MODEL = 'openai/gpt-5.2'
-export const PLANNING_RESEARCH_PROMPT_VERSION = 'planning-research-v6'
-export const PLANNING_RESEARCH_SCHEMA_VERSION = 'planning-research-v3'
+export const PLANNING_RESEARCH_PROMPT_VERSION = 'planning-research-v7'
+export const PLANNING_RESEARCH_SCHEMA_VERSION = 'planning-research-v4'
 export const RESEARCH_REQUEST_TIMEOUT_MS = 240_000
+
+// What a figure describes. A unit or phase figure must never complete a whole-development fact.
+const EXTENTS = ['whole_development', 'building', 'unit', 'phase', 'unspecified'] as const
 
 const signalSchema = z.object({
   name: z.string().trim().min(2),
@@ -27,6 +30,7 @@ const floorspaceSchema = z.object({
   scope: z.enum(['existing', 'lost', 'proposed', 'net']),
   sqm: z.number().min(0),
   measurementBasis: z.enum(['gross_internal', 'net_internal', 'gross_external', 'unspecified']),
+  extent: z.enum(EXTENTS).default('unspecified'),
   evidenceSource: z.enum(['council_page', 'document', 'web']),
   evidenceUrl: z.string().url(),
   evidenceExcerpt: z.string().trim().min(8),
@@ -51,6 +55,7 @@ const evidenceFields = {
 }
 const siteAreaSchema = z.object({
   ...evidenceFields, phase: z.enum(['existing', 'proposed', 'unspecified']),
+  extent: z.enum(EXTENTS).default('unspecified'),
   value: z.number().nonnegative(), unit: z.enum(['sqm', 'sqft', 'hectares', 'acres']),
 }).strict()
 const partyClueSchema = z.object({
@@ -64,9 +69,10 @@ const evidenceJsonProperties = {
 }
 const siteAreaJson = {
   type: 'array', items: { type: 'object', additionalProperties: false,
-    required: [...Object.keys(evidenceJsonProperties), 'phase', 'value', 'unit'],
+    required: [...Object.keys(evidenceJsonProperties), 'phase', 'extent', 'value', 'unit'],
     properties: { ...evidenceJsonProperties,
       phase: { type: 'string', enum: ['existing', 'proposed', 'unspecified'] },
+      extent: { type: 'string', enum: [...EXTENTS] },
       value: { type: 'number', minimum: 0 }, unit: { type: 'string', enum: ['sqm', 'sqft', 'hectares', 'acres'] },
     },
   },
@@ -113,11 +119,12 @@ const jsonSchema = {
       type: 'array',
       items: {
         type: 'object', additionalProperties: false,
-        required: ['scope', 'sqm', 'measurementBasis', 'evidenceSource', 'evidenceUrl', 'evidenceExcerpt', 'evidencePage', 'confidence'],
+        required: ['scope', 'sqm', 'measurementBasis', 'extent', 'evidenceSource', 'evidenceUrl', 'evidenceExcerpt', 'evidencePage', 'confidence'],
         properties: {
           scope: { type: 'string', enum: ['existing', 'lost', 'proposed', 'net'] },
           sqm: { type: 'number', minimum: 0 },
           measurementBasis: { type: 'string', enum: ['gross_internal', 'net_internal', 'gross_external', 'unspecified'] },
+          extent: { type: 'string', enum: [...EXTENTS] },
           evidenceSource: { type: 'string', enum: ['council_page', 'document', 'web'] },
           evidenceUrl: { type: 'string' },
           evidenceExcerpt: { type: 'string', minLength: 8 },
@@ -529,6 +536,7 @@ export async function researchOperatorWithOpenRouter(input: {
             'Use applicant_developer only for an organisation explicitly identified as applicant or developer.',
             'Copy the exact supporting excerpt and exact source URL. Otherwise return signals as an empty array.',
             'commercialFloorspace may contain only explicitly stated commercial floor-area measurements in square metres. Preserve existing, lost, proposed, and net as separate findings and identify the measurement basis.',
+            'Set extent to what each area figure describes: whole_development for a total covering the whole application (such as the application form totals), building, unit or phase when the source limits it to one, and unspecified when the source does not say.',
             'Never use site area, plot area, residential area, parking, employee counts, or dimensions. Never calculate an area.',
             'useClasses may contain only explicitly stated previous/existing and proposed planning use classes. Do not infer them from the described activity.',
             'For document evidence, set evidencePage to the PDF page number when stated or visible; otherwise use null.',
