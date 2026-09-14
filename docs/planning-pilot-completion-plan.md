@@ -105,9 +105,9 @@ Each fact has one state:
 Each state records its value and scope, sources (URL, excerpt, page), who set it (classifier,
 research, admin) and what was attempted (documents tried, retrieval failures, searches run).
 
-Storage: one row per Development and fact, pointing at the evidence rows that support it. Site area
-becomes its own observation metric, lifted out of run JSON. This is one migration for the user to
-apply.
+Storage: `development_facts`, one row per Development and fact, holding every finding with its
+source, plus the attempts. Site area is read from there rather than from run JSON. Migration
+`20261009000000_planning_development_facts.sql` (built 14 September).
 
 **Precedence.** Admin decisions (a fact added, a conflict chosen, `unavailable`) are never
 overwritten or reopened by later research or classification. New machine evidence that disagrees
