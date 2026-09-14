@@ -183,7 +183,8 @@ export function findingsFromResearch(
       ...base({ kind: finding.evidenceSource, url: finding.evidenceUrl, excerpt: finding.evidenceExcerpt, page: finding.evidencePage }, finding.confidence),
       key: findingKey('site_area', [finding.value, finding.unit, finding.phase, extent, finding.evidenceUrl]),
       completes: COMPLETING_EXTENTS.has(extent),
-      sqm: toSquareMetres(finding.value, finding.unit), original: { value: finding.value, unit: finding.unit },
+      sqm: toSquareMetres(finding.value, finding.unit),
+      ...(finding.unit === 'sqm' ? {} : { original: { value: finding.value, unit: finding.unit } }),
       extent, basis: 'unspecified',
       note: finding.phase === 'unspecified' ? undefined : `Stated as the ${finding.phase} site area`,
     })
@@ -460,6 +461,20 @@ export function chosenFactValue(row: Pick<FactRow, 'fact' | 'findings'>, key: st
   return { value: resolved.value, rejectKeys }
 }
 
+/**
+ * The machine state a fact returns to when an admin reopens it: recomputed from research findings
+ * only, with the admin's own findings and rejections set aside, and the last attempt's reason. The
+ * database function alone would leave it `not_checked`, which drops it out of the open queue.
+ */
+export function reopenedFactState(row: Pick<FactRow, 'fact' | 'findings' | 'attempts'>): Pick<FactRow, 'state' | 'value' | 'reason'> {
+  const machine = row.findings.filter(f => f.origin !== 'admin').map(f => ({ ...f, rejected: false }))
+  const resolved = resolveFindings(row.fact, machine)
+  if (resolved) return { ...resolved, reason: null }
+  const last = row.attempts.at(-1)
+  if (!last) return { state: 'not_checked', value: null, reason: null }
+  return { state: 'not_found_after_research', value: null, reason: last.outcome === 'found' ? 'documents_silent' : last.outcome }
+}
+
 export interface PublicFact {
   fact: FactKey
   label: string
@@ -483,7 +498,8 @@ export function publicFacts(rows: Array<Pick<FactRow, 'fact' | 'state' | 'value'
     const sources = state === 'found'
       ? (row?.findings ?? []).filter(f => f.completes && !f.rejected)
         .map(f => ({ kind: f.source.kind, url: f.source.url && /^https?:\/\//i.test(f.source.url) ? f.source.url : null, page: f.source.page }))
-        .filter((source, index, all) => all.findIndex(o => o.url === source.url && o.page === source.page && o.kind === source.kind) === index)
+        // One link per document and page: the description and the council page share a URL.
+        .filter((source, index, all) => all.findIndex(o => (o.url ?? o.kind) === (source.url ?? source.kind) && o.page === source.page) === index)
         .slice(0, 5)
       : []
     return {
@@ -499,7 +515,7 @@ export function formatFactValue(value: FactValue | null): string | null {
   if (!value) return null
   if ('names' in value) return value.names.join(', ')
   if ('useClasses' in value) return value.useClasses.join(', ')
-  const original = value.original ? ` (stated as ${value.original.value.toLocaleString('en-GB')} ${value.original.unit})` : ''
+  const original = value.original && value.original.unit !== 'sqm' ? ` (stated as ${value.original.value.toLocaleString('en-GB')} ${value.original.unit})` : ''
   const extent = value.extent === 'unspecified' ? '' : ` — ${value.extent.replaceAll('_', ' ')}`
   const basis = value.basis === 'unspecified' ? '' : `, ${value.basis.replaceAll('_', ' ')}`
   return `${value.sqm.toLocaleString('en-GB')} m²${original}${extent}${basis}`

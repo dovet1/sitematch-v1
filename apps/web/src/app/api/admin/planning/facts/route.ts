@@ -5,6 +5,7 @@ import {
   FACT_KEYS,
   adminFactValue,
   chosenFactValue,
+  reopenedFactState,
   type FactRow,
 } from '@/lib/planning-intelligence/facts'
 
@@ -25,12 +26,14 @@ export async function GET(request: NextRequest) {
     const requested = Number.parseInt(request.nextUrl.searchParams.get('limit') ?? '20', 10)
     const limit = Math.max(1, Math.min(Number.isFinite(requested) ? requested : 20, 50))
     const db = adminClient()
+    // 'decided' lists schemes with admin decisions, newest first, so a decision can be checked or
+    // reopened after its scheme has left the open queue.
+    const view = request.nextUrl.searchParams.get('view') === 'decided' ? 'decided' : 'open'
 
-    const { data: open, error: openError } = await db.from('development_facts')
-      .select('development_id,updated_at')
-      .in('state', OPEN_STATES)
-      .is('decided_by', null)
-      .order('updated_at', { ascending: false })
+    const openQuery = db.from('development_facts').select('development_id,updated_at')
+    const { data: open, error: openError } = await (view === 'decided'
+      ? openQuery.not('decided_by', 'is', null).order('decided_at', { ascending: false })
+      : openQuery.in('state', OPEN_STATES).is('decided_by', null).order('updated_at', { ascending: false }))
       .limit(500)
     if (openError) throw openError
     const ids = [...new Set((open ?? []).map(row => row.development_id as string))].slice(0, limit)
@@ -59,7 +62,10 @@ export async function GET(request: NextRequest) {
           ...development,
           facts: FACT_KEYS.map(fact => (facts.data ?? []).find(row => row.development_id === development.id && row.fact === fact)
             ?? { development_id: development.id, fact, state: 'not_checked', reason: null, value: null, findings: [], attempts: [], decided_by: null, decided_at: null, admin_note: null, updated_at: null }),
-          applications: (links.data ?? []).filter(row => row.development_id === development.id),
+          // The scheme's own application first, then its amendments and paperwork oldest first.
+          applications: (links.data ?? []).filter(row => row.development_id === development.id)
+            .sort((a, b) => Number(!['primary', 'principal'].includes(a.role)) - Number(!['primary', 'principal'].includes(b.role))
+              || String((a.planning_applications as { date_received?: string } | null)?.date_received ?? '').localeCompare(String((b.planning_applications as { date_received?: string } | null)?.date_received ?? ''))),
         })),
     })
   } catch (error) {
@@ -148,6 +154,19 @@ export async function POST(request: NextRequest) {
     if (error?.code === '22023') return NextResponse.json({ error: error.message }, { status: 400 })
     if (error?.code === 'PGRST202') return NextResponse.json({ error: 'The facts database update has not been applied yet.' }, { status: 503 })
     if (error) throw error
+
+    if (body.action === 'reopen') {
+      const reopened = data as FactRow
+      const machine = reopenedFactState(reopened)
+      // The row is no longer admin-decided, so this machine write sets its state; findings are unioned
+      // with the stored row, so nothing is lost.
+      const { error: restoreError } = await db.rpc('planning_record_development_facts', {
+        p_development_id: body.developmentId,
+        p_rows: [{ fact: body.fact, ...machine, findings: [], attempts: reopened.attempts }],
+      })
+      if (restoreError) throw restoreError
+      return NextResponse.json({ success: true, fact: { ...reopened, ...machine } })
+    }
     return NextResponse.json({ success: true, fact: data })
   } catch (error) {
     return adminError('Error saving the planning fact', error)

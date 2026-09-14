@@ -39,6 +39,12 @@ export type CompletionDevelopment = {
   applications: Application[]
 }
 
+const ROLE_TEXT: Record<string, string> = {
+  primary: 'this scheme', principal: 'this scheme', amendment: 'amendment read with the scheme',
+  member: 'read with the scheme', condition: 'condition paperwork on the timeline', related: 'follow-up paperwork on the timeline',
+}
+const application_label = (count: number) => (count > 1 ? `${count} applications grouped · ` : '')
+
 const inputClass = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
 const AREA_FACTS = new Set<FactKey>(['existing_floorspace', 'proposed_floorspace', 'net_floorspace', 'site_area'])
 const OPEN = new Set(['not_found_after_research', 'conflicting'])
@@ -251,20 +257,21 @@ function FactCard({ developmentId, fact, onChanged }: {
 export default function PlanningCompletion() {
   const [developments, setDevelopments] = useState<CompletionDevelopment[] | null>(null)
   const [error, setError] = useState('')
+  const [view, setView] = useState<'open' | 'decided'>('open')
 
   const load = useCallback(async () => {
     setError('')
     try {
-      const response = await fetch('/api/admin/planning/facts?limit=20', { cache: 'no-store' })
+      const response = await fetch(`/api/admin/planning/facts?limit=20&view=${view}`, { cache: 'no-store' })
       const json = await response.json()
       if (!response.ok) throw new Error(json.error ?? 'Could not load the queue')
       setDevelopments(json.developments)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Could not load the queue')
     }
-  }, [])
+  }, [view])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { setDevelopments(null); load() }, [load])
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
@@ -276,9 +283,13 @@ export default function PlanningCompletion() {
           choose between conflicting figures, or mark it unavailable. Each fact publishes on its own.
         </p>
       </header>
+      <div className="flex gap-2">
+        <Button size="sm" variant={view === 'open' ? 'default' : 'outline'} onClick={() => setView('open')}>Open facts</Button>
+        <Button size="sm" variant={view === 'decided' ? 'default' : 'outline'} onClick={() => setView('decided')}>Decided by admin</Button>
+      </div>
       {error && <p className="rounded-md border border-red-300 p-3 text-red-700">{error}</p>}
       {developments === null && !error && <p>Loading…</p>}
-      {developments?.length === 0 && <p className="text-muted-foreground">Nothing waiting. Research has not left any open facts.</p>}
+      {developments?.length === 0 && <p className="text-muted-foreground">{view === 'open' ? 'Nothing waiting. Research has not left any open facts.' : 'No admin decisions yet.'}</p>}
       {developments?.map(development => {
         const open = development.facts.filter(fact => OPEN.has(fact.state) && !fact.decided_by).length
         return (
@@ -287,7 +298,7 @@ export default function PlanningCompletion() {
               <h2 className="text-xl font-semibold">{development.canonical_name}</h2>
               {development.site_address && <p className="text-muted-foreground">{development.site_address}</p>}
               <p className="mt-1 text-sm">
-                {open} open fact{open === 1 ? '' : 's'} · research {development.research_outcome === 'attempt_limit' ? 'stopped at its attempt limit' : 'finished'}
+                {application_label(development.applications.length)}{open} open fact{open === 1 ? '' : 's'} · research {development.research_outcome === 'attempt_limit' ? 'stopped at its attempt limit' : 'finished'}
                 {development.research_finished_at ? ` on ${new Date(development.research_finished_at).toLocaleDateString('en-GB')}` : ''}
               </p>
               {development.summary && <p className="mt-2 text-sm">{development.summary}</p>}
@@ -297,7 +308,7 @@ export default function PlanningCompletion() {
               {development.applications.map(({ role, planning_applications: application }) => application && (
                 <div key={application.id} className="rounded border p-3 text-sm">
                   <p className="font-medium">
-                    {application.reference} · {application.authority_name} · {role}
+                    {application.reference} · {application.authority_name} · {ROLE_TEXT[role] ?? role}
                     {safeUrl(application.links?.council) && <> · <a className="text-primary underline" href={safeUrl(application.links?.council)!} target="_blank" rel="noopener noreferrer">council record ↗</a></>}
                   </p>
                   <p className="mt-1 text-muted-foreground">{application.description}</p>

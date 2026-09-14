@@ -5,6 +5,7 @@ import {
   findingsFromDescription,
   findingsFromResearch,
   refreshFactRows,
+  reopenedFactState,
   nextFactRows,
   publicFacts,
   toSquareMetres,
@@ -100,6 +101,7 @@ describe('fact completeness', () => {
       siteAreas: [{ phase: 'unspecified', value: 0.5, unit: 'hectares', evidenceSource: 'document', evidenceUrl: FORM, evidenceExcerpt: 'Site area 0.5 hectares', evidencePage: '4', confidence: 1 }],
     }))
     expect(facts.site_area).toMatchObject({ state: 'found', value: { sqm: 5000, original: { value: 0.5, unit: 'hectares' } } })
+    expect(publicFacts(Object.values(facts)).find(f => f.fact === 'site_area')!.value).toBe('5,000 m² (stated as 0.5 hectares)')
     expect(facts.proposed_floorspace.state).toBe('not_found_after_research')
     expect(toSquareMetres(6792, 'sqft')).toBeCloseTo(631, 0)
   })
@@ -234,5 +236,18 @@ describe('use classes from the description', () => {
     const refreshed = refreshFactRows(stored, findingsFromDescription('Change of use from former garage (Class B2) to indoor parkour facility (Class E(d))', { councilUrl: 'https://council.test/app', at }))
     expect(refreshed.find(r => r.fact === 'proposed_use_class')).toMatchObject({ state: 'found', value: { useClasses: ['E(d)'] } })
     expect(refreshed.find(r => r.fact === 'existing_use_class')).toMatchObject({ state: 'found', value: { useClasses: ['B2'] } })
+  })
+})
+
+describe('reopening an admin decision', () => {
+  it('returns to the research state, setting aside the admin finding and rejections', () => {
+    const research = result({ commercialFloorspace: [floor('proposed', 500), floor('proposed', 800, { evidenceUrl: 'https://council.test/statement.pdf' })] })
+    const row = rows(research).proposed_floorspace
+    const rejectedOne = { ...row, findings: row.findings.map(f => f.sqm === 800 ? { ...f, rejected: true } : f) }
+    expect(reopenedFactState(rejectedOne)).toEqual({ state: 'conflicting', value: null, reason: null })
+
+    const operator = rows(result(), [], 'documents_inaccessible').operator
+    const { finding } = adminFactValue({ fact: 'operator', names: ['Costco'], source: { url: FORM, excerpt: null, page: null } }, 'admin-1', at)
+    expect(reopenedFactState({ ...operator, findings: [finding] })).toEqual({ state: 'not_found_after_research', value: null, reason: 'documents_inaccessible' })
   })
 })
