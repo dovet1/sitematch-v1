@@ -49,7 +49,13 @@ stored-data product read are off by default.
 
 Both routes require `Authorization: Bearer <CRON_SECRET>`.
 
-- `GET /api/cron/sync-plota` runs a 14-day rolling discovery window.
+- `GET /api/cron/sync-plota` runs a 7-day rolling discovery window (14 days until 13 Sep 2026).
+- `GET /api/cron/sync-plota-late` re-reads receipt dates 7-120 days old under reduced scope,
+  because Plota lists applications only once validated and a fifth of intelligence-tier
+  applications are validated more than 14 days after receipt. It stops at the reserve.
+- `GET /api/cron/sync-plota-deep` (01:05 and 13:05) re-reads receipt dates 120-365 days old,
+  also reduced and reserve-limited: 3.6% of schemes with 10+ homes or 1,000+ sqm were validated
+  more than 180 days after receipt. Both lanes share `discovery-lane-route.ts` and floor at 2026-01-01.
 - `GET /api/cron/sync-plota?kind=backfill&date_from=2026-08-01&date_to=2026-08-31`
   runs or resumes that backfill window.
 - `GET /api/cron/classify-planning?limit=5` processes at most five queued intelligence

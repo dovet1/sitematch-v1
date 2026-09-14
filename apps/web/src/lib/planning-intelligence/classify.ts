@@ -377,6 +377,9 @@ export async function classifyPlanningBatch(input: {
         }).eq('id', usageId),
       ])
       result.failed++
+      // The provider already exhausted its per-item retries. Do not immediately
+      // reclaim a failed item and repeat the same billed attempts in this batch.
+      break
     } finally {
       deadline.cleanup()
     }

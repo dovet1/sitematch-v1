@@ -69,8 +69,13 @@ async function main() {
     .order('authority_name').order('reference')
   if (applicationsError) throw applicationsError
 
+  const selectedApplications = argument('reference')
+    ? (storedApplications ?? []).filter(row => row.reference === argument('reference'))
+    : storedApplications ?? []
+  if (selectedApplications.length === 0) throw new Error('No applications matched the selected sample/reference')
+  const evidence: Array<{ reference: string; sources: Array<{ url: string; title?: string; text: string }> }> = []
   const records: PlanningDocumentCoverageRecord[] = []
-  for (const [index, stored] of (storedApplications ?? []).entries()) {
+  for (const [index, stored] of selectedApplications.entries()) {
     const raw = stored.raw as PlotaApplication | null
     if (!raw) continue
     const application: PlotaApplication = {
@@ -78,8 +83,12 @@ async function main() {
       reference: raw.reference || String(stored.reference),
       authority: raw.authority ?? { slug: '', name: String(stored.authority_name ?? 'Unknown authority') },
     }
-    console.info(`[${index + 1}/${storedApplications!.length}] ${application.authority.name}: ${application.reference}`)
+    console.info(`[${index + 1}/${selectedApplications.length}] ${application.authority.name}: ${application.reference}`)
     const collected = await collectCouncilResearchSources(application)
+    if (process.argv.includes('--include-evidence')) evidence.push({ reference: application.reference,
+      sources: collected.sources.filter(source => source.kind === 'document' && !source.ocrFile)
+        .map(({ url, title, text }) => ({ url, title, text })),
+    })
     records.push(planningDocumentCoverageRecord({
       application,
       declaredDocumentCount: stored.documents_count as number | null,
@@ -129,6 +138,7 @@ async function main() {
     failureReasons,
     groups,
     applications: records,
+    ...(process.argv.includes('--include-evidence') ? { evidence } : {}),
   }
   mkdirSync(dirname(outBase), { recursive: true })
   writeFileSync(`${outBase}.json`, JSON.stringify(report, null, 2) + '\n')

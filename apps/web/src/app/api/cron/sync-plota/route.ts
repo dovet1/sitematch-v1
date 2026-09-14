@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPlanningAdminClient } from '@/lib/planning-intelligence/db'
-import { runPlotaSync } from '@/lib/planning-intelligence/ingest'
+import { runPlotaDiscovery, runPlotaSync } from '@/lib/planning-intelligence/ingest'
 import {
+  discoveryWindow,
   PlotaClient,
   REDUCED_SCOPE_ARCHIVE_FLOOR,
   type CensusScope,
@@ -19,7 +20,7 @@ function utcDate(daysAgo: number): string {
 }
 
 export async function GET(request: NextRequest) {
-  if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   if (process.env.PLOTA_SYNC_ENABLED !== 'true') {
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
 
   const params = request.nextUrl.searchParams
   const kind = params.get('kind') === 'backfill' ? 'backfill' : 'discovery'
-  const dateFrom = params.get('date_from') ?? utcDate(kind === 'backfill' ? 31 : 14)
+  const dateFrom = params.get('date_from') ?? (kind === 'backfill' ? utcDate(31) : discoveryWindow().dateFrom)
   const dateTo = params.get('date_to') ?? utcDate(0)
   if (!ISO_DATE.test(dateFrom) || !ISO_DATE.test(dateTo) || dateFrom > dateTo) {
     return NextResponse.json({ error: 'date_from/date_to must be a valid ordered YYYY-MM-DD range' }, { status: 400 })
@@ -57,7 +58,9 @@ export async function GET(request: NextRequest) {
   const pageSize = Math.max(1, Math.min(Number.isFinite(configuredPageSize) ? configuredPageSize : 10, 50))
 
   try {
-    const result = await runPlotaSync({
+    const sync = kind === 'discovery' && !params.has('date_from') && !params.has('date_to')
+      ? runPlotaDiscovery : runPlotaSync
+    const result = await sync({
       db: createPlanningAdminClient(),
       client: new PlotaClient(process.env.PLOTA_API_KEY),
       kind,

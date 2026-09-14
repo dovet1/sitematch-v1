@@ -8,9 +8,11 @@ jest.mock('next/server', () => ({
 }))
 
 const runPlotaSync = jest.fn()
+const runPlotaDiscovery = jest.fn()
 const createPlanningAdminClient = jest.fn(() => ({}))
 jest.mock('@/lib/planning-intelligence/ingest', () => ({
   runPlotaSync: (...args: unknown[]) => runPlotaSync(...args),
+  runPlotaDiscovery: (...args: unknown[]) => runPlotaDiscovery(...args),
 }))
 jest.mock('@/lib/planning-intelligence/db', () => ({
   createPlanningAdminClient: () => createPlanningAdminClient(),
@@ -48,6 +50,33 @@ describe('GET /api/cron/sync-plota', () => {
     const response = await GET(request())
     expect(response.status).toBe(503)
     expect(runPlotaSync).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when the cron secret is missing', async () => {
+    delete process.env.CRON_SECRET
+    expect((await GET(request('undefined'))).status).toBe(401)
+  })
+
+  it('uses resumable discovery for scheduled requests without explicit dates', async () => {
+    process.env.PLOTA_SYNC_ENABLED = 'true'
+    runPlotaDiscovery.mockResolvedValue({ runId: 'run-1', status: 'partial' })
+    expect((await GET(request())).status).toBe(200)
+    expect(runPlotaDiscovery).toHaveBeenCalledWith(expect.objectContaining({ kind: 'discovery' }))
+    expect(runPlotaSync).not.toHaveBeenCalled()
+  })
+
+  it('schedules discovery over the latest week of receipt dates', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-13T07:00:00Z'))
+    try {
+      process.env.PLOTA_SYNC_ENABLED = 'true'
+      runPlotaDiscovery.mockResolvedValue({ runId: 'run-1', status: 'partial' })
+      await GET(request())
+      expect(runPlotaDiscovery).toHaveBeenCalledWith(expect.objectContaining({
+        dateFrom: '2026-09-06', dateTo: '2026-09-13',
+      }))
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   it('defaults a Demo run to one page of ten and reduced scope', async () => {

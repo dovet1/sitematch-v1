@@ -15,6 +15,8 @@ import {
 import type { PlanningAdminClient } from './db'
 import type { PlotaApplication } from './types'
 
+export type DiscoveryLane = 'late' | 'deep'
+
 export interface SyncInput {
   db: PlanningAdminClient
   client: PlotaClient
@@ -25,6 +27,7 @@ export interface SyncInput {
   pageSize: number
   maxPages: number
   nations?: string[]
+  councils?: string[]
   brandLimbEnabled?: boolean
   /**
    * Distinguishes one pass over a window from the next. Checkpoints are keyed by the window
@@ -34,6 +37,14 @@ export interface SyncInput {
    * same walk; a new key starts a new one.
    */
   cycleKey?: string
+  /**
+   * A discovery lane re-reading older receipt dates for applications councils published late.
+   * Each keeps checkpoints under its own prefix, so no lane resumes another's window, and each
+   * stops at the protected reserve like refresh: a record paused by the reserve is still inside
+   * the lookback next month. Lanes log their own run kind and never count as main discovery for
+   * freshness, so a stopped main discovery cannot be hidden by a healthy lane.
+   */
+  lane?: DiscoveryLane
 }
 
 export interface SyncResult {
@@ -140,43 +151,84 @@ async function upsertApplications(
   brandLimbEnabled: boolean
 ): Promise<{ upserted: number; intelligence: number }> {
   if (applications.length === 0) return { upserted: 0, intelligence: 0 }
+  const identity = (authority: string, reference: string) => JSON.stringify([authority, reference])
+  // One council reference can occur as both a live id and an archive id in a page.
+  const unique = new Map<string, PlotaApplication>()
+  for (const application of applications) {
+    const key = identity(application.authority.slug, application.reference)
+    const previous = unique.get(key)
+    if (!previous || previous.source === 'historical' || application.source !== 'historical') {
+      unique.set(key, application)
+    }
+  }
+  applications = [...unique.values()]
   const providerIds = applications.map((application) => application.id)
+  const columns = 'provider_id,authority_slug,reference,input_hash,classification_state,source:raw->>source'
   const { data: existing, error: existingError } = await db
     .from('planning_applications')
-    .select('provider_id,input_hash,classification_state')
+    .select(columns)
     .eq('provider', 'plota')
     .in('provider_id', providerIds)
   if (existingError) throw existingError
   const byId = new Map(
     (existing ?? []).map((row) => [row.provider_id as string, row as {
       provider_id: string
+      authority_slug: string
+      reference: string
+      source: string | null
       input_hash: string
       classification_state: string
     }])
   )
+  const unknown = applications.filter(application => !byId.has(application.id))
+  const { data: sameReferences, error: referencesError } = unknown.length
+    ? await db.from('planning_applications').select(columns).eq('provider', 'plota')
+      .in('authority_slug', [...new Set(unknown.map(application => application.authority.slug))])
+      .in('reference', [...new Set(unknown.map(application => application.reference))])
+    : { data: [], error: null }
+  if (referencesError) throw referencesError
+  const byReference = new Map((sameReferences ?? []).map(row =>
+    [identity(row.authority_slug, row.reference), row]))
 
   let intelligence = 0
-  const rows = applications.map((application) => {
+  const byProviderRows: ReturnType<typeof rowFor>[] = []
+  const byReferenceRows: ReturnType<typeof rowFor>[] = []
+  for (const application of applications) {
+    const providerMatch = byId.get(application.id)
+    const referenceMatch = byReference.get(identity(application.authority.slug, application.reference))
+    const prior = providerMatch ?? referenceMatch
+    // The archive is sparser and can carry an older decision. Keep the existing live
+    // record and its classification; receiving its historical twin is not an update.
+    if (application.source === 'historical' && prior && prior.source !== 'historical') continue
     const decision = decideEligibility(application, aliases, { brandLimbEnabled })
     if (decision.intelligenceTier) intelligence++
     const hash = classificationInputHash(application)
-    const prior = byId.get(application.id)
     const preserveClassified = prior?.input_hash === hash && prior.classification_state === 'classified'
-    return rowFor(application, decision, hash, preserveClassified)
-  })
+    const row = rowFor(application, decision, hash, preserveClassified)
+    if (!providerMatch && referenceMatch) byReferenceRows.push(row)
+    else byProviderRows.push(row)
+  }
 
-  const { error } = await db
-    .from('planning_applications')
-    .upsert(rows, { onConflict: 'provider,provider_id' })
-  if (error) throw error
-  return { upserted: rows.length, intelligence }
+  // Updating by the natural key retains the application's UUID and all Development
+  // links when a live id replaces its archive id. Ordinary provider-id updates still
+  // support corrected council references without inserting a duplicate application.
+  for (const [rows, onConflict] of [
+    [byProviderRows, 'provider,provider_id'],
+    [byReferenceRows, 'authority_slug,reference'],
+  ] as const) {
+    if (!rows.length) continue
+    const { error } = await db.from('planning_applications').upsert(rows, { onConflict })
+    if (error) throw error
+  }
+  return { upserted: byProviderRows.length + byReferenceRows.length, intelligence }
 }
 
 async function recordCoverage(
   db: PlanningAdminClient,
   applications: PlotaApplication[],
-  kind: SyncInput['kind']
+  input: Pick<SyncInput, 'kind' | 'lane'>
 ) {
+  const { kind } = input
   const authorities = new Map<string, { name: string; latest: string | null; count: number }>()
   for (const application of applications) {
     const current = authorities.get(application.authority.slug) ?? {
@@ -201,7 +253,7 @@ async function recordCoverage(
       last_error: null,
       updated_at: now,
     }
-    if (kind === 'discovery' || kind === 'backfill') row.last_discovery_at = now
+    if ((kind === 'discovery' && !input.lane) || kind === 'backfill') row.last_discovery_at = now
     if (kind === 'refresh') row.last_refresh_at = now
     const { error } = await db
       .from('planning_authority_coverage')
@@ -210,12 +262,56 @@ async function recordCoverage(
   }
 }
 
+function checkpointKind(input: Pick<SyncInput, 'kind' | 'lane'>): string {
+  return input.lane ? `${input.kind}-${input.lane}` : input.kind
+}
+
+/** Finish a saved discovery window before advancing its dates after midnight. */
+async function resumeDiscovery(input: Omit<SyncInput, 'kind'>): Promise<SyncResult> {
+  const kind = checkpointKind({ kind: 'discovery', lane: input.lane })
+  const { data, error } = await input.db.from('planning_ingest_checkpoints')
+    .select('scope_key,status').like('scope_key', `${kind}:${input.scope}:%`)
+    .order('scope_key', { ascending: false }).limit(1000)
+  if (error) throw error
+  const rows = (data ?? []) as Array<{ scope_key: string; status: string }>
+  const latest = rows[0]?.scope_key.split(':')
+  if (latest) {
+    const [, , dateFrom, dateTo] = latest
+    const prefix = `${kind}:${input.scope}:${dateFrom}:${dateTo}:`
+    const specs = buildSearchSpecs({ ...input, dateFrom, dateTo })
+    if (!specs.every(spec => rows.some(row => row.scope_key === prefix + spec.key && row.status === 'complete'))) {
+      input = { ...input, dateFrom, dateTo }
+    }
+  }
+  return runPlotaSync({ ...input, kind: 'discovery' })
+}
+
+export function runPlotaDiscovery(input: Omit<SyncInput, 'kind' | 'lane'>): Promise<SyncResult> {
+  return resumeDiscovery(input)
+}
+
+/**
+ * Re-read older receipt dates for late-published applications. Plota's commercial, residential
+ * and brand-evidence filters matched 95.8% of intelligence-tier records in a March-May sample
+ * (the misses were amendments and condition discharges) at about a seventh of the full census,
+ * so the lanes always run reduced.
+ */
+export function runPlotaLaneDiscovery(
+  lane: DiscoveryLane,
+  input: Omit<SyncInput, 'kind' | 'lane' | 'scope' | 'councils'>
+): Promise<SyncResult> {
+  return resumeDiscovery({ ...input, scope: 'reduced', lane })
+}
+
 export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
+  if (input.lane && input.kind !== 'discovery') throw new Error('Only discovery has lanes')
+  const useDiscoveryReserve = input.kind === 'discovery' && !input.lane
   const { data: run, error: runError } = await input.db
     .from('planning_ingest_runs')
     .insert({
       provider: 'plota',
-      kind: input.kind,
+      // Checkpoint keys use a hyphen; run kinds follow the table's underscore convention.
+      kind: input.lane ? `discovery_${input.lane}` : input.kind,
       census_scope: input.scope,
       date_from: input.dateFrom,
       date_to: input.dateTo,
@@ -233,12 +329,24 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
   }
 
   try {
+    // Consult the latest allowance before spending, including on repeated invocations
+    // after the reserve is reached. Ignore the previous month's reading after reset.
+    const monthStart = new Date()
+    monthStart.setUTCDate(1)
+    monthStart.setUTCHours(0, 0, 0, 0)
+    const { data: allowance, error: allowanceError } = await input.db.from('planning_provider_usage')
+      .select('monthly_remaining').eq('provider', 'plota').gte('occurred_at', monthStart.toISOString())
+      .order('occurred_at', { ascending: false }).limit(1).maybeSingle()
+    if (allowanceError) throw allowanceError
+    const available = typeof allowance?.monthly_remaining === 'number' ? allowance.monthly_remaining : null
+    stats.stoppedForReserve = !maySpendPlotaRequest(available, useDiscoveryReserve)
     const specs = buildSearchSpecs({
       scope: input.scope,
       dateFrom: input.dateFrom,
       dateTo: input.dateTo,
       pageSize: input.pageSize,
       nations: input.nations,
+      councils: input.councils,
     })
     const aliases = await loadAliasIndex(input.db)
     let pagesLeft = input.maxPages
@@ -247,7 +355,7 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
     for (const spec of specs) {
       if (pagesLeft <= 0 || stats.stoppedForReserve) break
       const scopeKey = [
-        input.kind,
+        checkpointKind(input),
         input.scope,
         input.dateFrom,
         input.dateTo,
@@ -256,13 +364,17 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
       ].join(':')
       const { data: checkpoint, error: checkpointError } = await input.db
         .from('planning_ingest_checkpoints')
-        .select('next_cursor,status,pages_complete,records_seen')
+        .select('next_cursor,status,pages_complete,records_seen,parameters')
         .eq('scope_key', scopeKey)
         .maybeSingle()
       if (checkpointError) throw checkpointError
       if (checkpoint?.status === 'complete') {
         completeSpecs++
         continue
+      }
+      const savedLimit = Number(checkpoint?.parameters?.limit)
+      if (Number.isInteger(savedLimit) && savedLimit > 0 && savedLimit < input.pageSize) {
+        spec.params.limit = String(savedLimit)
       }
 
       let cursor = checkpoint?.next_cursor as string | null | undefined
@@ -297,6 +409,34 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
         })
         if (usageError) throw usageError
 
+        // Live pages can advertise history before the archive is merged on a later page.
+        // Only the terminal page can establish that the query omitted its archive. Never
+        // mark that truncated census complete, but do follow a supplied continuation cursor.
+        if (input.scope === 'full' && result.page.meta.historical_available === true &&
+          !result.page.meta.next_cursor && result.page.meta.historical_included !== true) {
+          const limit = Number(spec.params.limit)
+          if (limit > 1 && result.page.data.length === limit) {
+            // Plota can lose the archive continuation when the final live page is
+            // exactly full. Re-read this cursor with one fewer row, without accepting
+            // or advancing the ambiguous page. Persist the size for a bounded run's
+            // next invocation; every attempt still counts against quota and page cap.
+            spec.params = { ...spec.params, limit: String(limit - 1) }
+            const { error: retryError } = await input.db.from('planning_ingest_checkpoints')
+              .upsert({ scope_key: scopeKey, provider: 'plota', parameters: spec.params,
+                next_cursor: cursor ?? null, status: 'pending', pages_complete: pagesComplete,
+                records_seen: checkpointRecords, last_run_id: run.id,
+                last_error: null, updated_at: new Date().toISOString(),
+              }, { onConflict: 'scope_key' })
+            if (retryError) throw retryError
+            if (!maySpendPlotaRequest(result.usage.monthlyRemaining, useDiscoveryReserve)) {
+              stats.stoppedForReserve = true
+              break
+            }
+            continue
+          }
+          throw new Error('Plota withheld historical records at the end of this query. Check archive coverage or key entitlement before continuing.')
+        }
+
         stats.recordsSeen += result.page.data.length
         const written = await upsertApplications(
           input.db,
@@ -306,7 +446,7 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
         )
         stats.recordsUpserted += written.upserted
         stats.intelligenceRecords += written.intelligence
-        await recordCoverage(input.db, result.page.data, input.kind)
+        await recordCoverage(input.db, result.page.data, input)
 
         const next = result.page.meta.next_cursor ?? null
         const complete = next === null
@@ -329,7 +469,7 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
           }, { onConflict: 'scope_key' })
         if (saveError) throw saveError
 
-        if (!maySpendPlotaRequest(result.usage.monthlyRemaining)) {
+        if (!maySpendPlotaRequest(result.usage.monthlyRemaining, useDiscoveryReserve)) {
           stats.stoppedForReserve = true
           break
         }
@@ -387,7 +527,7 @@ export interface RefreshInput extends Omit<SyncInput, 'kind' | 'dateFrom' | 'dat
 
 export interface RefreshResult {
   cycleKey: string
-  cohorts: Array<RefreshCohort & { runId: string; status: SyncResult['status'] }>
+  cohorts: Array<RefreshCohort & { cycleKey: string; runId: string; status: SyncResult['status'] }>
   skipped: Array<RefreshCohort & { reason: string }>
   requestsMade: number
   recordsSeen: number
@@ -423,8 +563,8 @@ export async function selectRefreshCohorts(
  * on empty pages, and the stalest cohort is first precisely so a short run helps most.
  */
 export async function runPlotaRefresh(input: RefreshInput): Promise<RefreshResult> {
-  // The cycle key is the UTC date. Two refreshes on the same day resume one walk; tomorrow's
-  // starts a fresh one over whatever is stalest then.
+  // New walks start with today's key; unfinished walks retain their original key and
+  // date range, even after midnight or when the current month has grown another day.
   const cycleKey = input.cycleKey ?? new Date().toISOString().slice(0, 10)
   const cohorts = await selectRefreshCohorts(input.db, input.cohortLimit)
 
@@ -454,20 +594,25 @@ export async function runPlotaRefresh(input: RefreshInput): Promise<RefreshResul
       })
       continue
     }
+    const councils = input.councils
+    const continuation = input.cycleKey ? null : await unfinishedRefresh({ ...input, councils }, cohort)
+    const windowEnd = continuation?.windowEnd ?? cohort.windowEnd
     const run = await runPlotaSync({
       db: input.db,
       client: input.client,
       kind: 'refresh',
       scope: input.scope,
       dateFrom: cohort.windowStart,
-      dateTo: cohort.windowEnd,
+      dateTo: windowEnd,
       pageSize: input.pageSize,
       maxPages: pagesLeft,
       nations: input.nations,
+      councils,
       brandLimbEnabled: input.brandLimbEnabled,
-      cycleKey,
+      cycleKey: continuation?.cycleKey ?? cycleKey,
     })
-    result.cohorts.push({ ...cohort, runId: run.runId, status: run.status })
+    result.cohorts.push({ ...cohort, windowEnd, cycleKey: continuation?.cycleKey ?? cycleKey,
+      runId: run.runId, status: run.status })
     result.requestsMade += run.requestsMade
     result.recordsSeen += run.recordsSeen
     result.recordsUpserted += run.recordsUpserted
@@ -477,4 +622,28 @@ export async function runPlotaRefresh(input: RefreshInput): Promise<RefreshResul
   }
 
   return result
+}
+
+/** Check the latest walk, including specs not started when its page budget ran out. */
+async function unfinishedRefresh(input: RefreshInput, cohort: RefreshCohort) {
+  const { data, error } = await input.db.from('planning_ingest_checkpoints')
+    .select('scope_key,status')
+    .like('scope_key', `refresh:${input.scope}:${cohort.windowStart}:%`)
+    .order('scope_key', { ascending: false })
+    .limit(1000)
+  if (error) throw error
+  const rows = (data ?? []) as Array<{ scope_key: string; status: string }>
+  const walks = rows.map(row => {
+    const parts = row.scope_key.split(':')
+    return { windowEnd: parts[3], cycleKey: parts[4] }
+  }).filter(walk => /^\d{4}-\d{2}-\d{2}$/.test(walk.cycleKey ?? ''))
+  walks.sort((a, b) => b.cycleKey.localeCompare(a.cycleKey) || b.windowEnd.localeCompare(a.windowEnd))
+  const latest = walks[0]
+  if (!latest) return null
+  const prefix = `refresh:${input.scope}:${cohort.windowStart}:${latest.windowEnd}:${latest.cycleKey}:`
+  const expected = buildSearchSpecs({ scope: input.scope, dateFrom: cohort.windowStart,
+    dateTo: latest.windowEnd, pageSize: input.pageSize, nations: input.nations, councils: input.councils })
+  const complete = expected.every(spec => rows.some(row =>
+    row.scope_key === prefix + spec.key && row.status === 'complete'))
+  return complete ? null : latest
 }

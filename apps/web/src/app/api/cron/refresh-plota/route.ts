@@ -19,7 +19,7 @@ export const maxDuration = 300
  * succeeding is indistinguishable from refresh working.
  */
 export async function GET(request: NextRequest) {
-  if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   if (process.env.PLOTA_SYNC_ENABLED !== 'true') {

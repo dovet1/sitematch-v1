@@ -2,7 +2,11 @@ import type { PlotaPage, SearchSpec } from './types'
 
 export const PLOTA_BASE_URL = 'https://api.plota.co.uk/v1'
 export const PLOTA_INTERNAL_MONTHLY_LIMIT = 15_000
-export const PLOTA_REQUEST_RESERVE = 5_000
+// Only discovery may spend below this. The user approved lowering it from 5,000 to 3,500 on
+// 13 Sep 2026, and reconfirmed on 14 Sep after it was reverted as an unexplained change:
+// measured discovery use is ~160 requests a day, so 3,500 covers the rest of a month with
+// headroom for provider errors and retries. Do not change it without the user's approval.
+export const PLOTA_REQUEST_RESERVE = 3_500
 
 /**
  * Plota's derived filters -- commercial_work and dmin -- are documented as live-only, and a
@@ -16,6 +20,49 @@ export const PLOTA_REQUEST_RESERVE = 5_000
  * comparing against undefined.
  */
 export const REDUCED_SCOPE_ARCHIVE_FLOOR = '2026-01-01'
+
+/**
+ * Plota filters on receipt date but only lists an application once the council has validated
+ * it, so a record can appear long after the dates discovery is reading. In Oct 2025-Feb 2026
+ * records, 23.6% of intelligence-tier applications were validated more than 14 days after
+ * receipt, 5.5% more than 60 days and 0.9% more than 120 days.
+ *
+ * Main discovery therefore reads only the latest week, which a 20-page run finishes in about a
+ * day. A late lane re-reads receipt dates from one to seventeen weeks ago, and a slower deep
+ * lane reads from seventeen weeks to a year: large schemes are validated late far more often,
+ * with 3.6% of those with 10+ homes or 1,000+ sqm validated more than 180 days after receipt.
+ * Adjacent windows share their boundary day so a record validated on it cannot fall between.
+ */
+export const DISCOVERY_LOOKBACK_DAYS = 7
+export const LATE_DISCOVERY_OLDEST_DAYS = 120
+export const DEEP_DISCOVERY_OLDEST_DAYS = 365
+
+function utcDaysAgo(now: Date, days: number): string {
+  const date = new Date(now)
+  date.setUTCDate(date.getUTCDate() - days)
+  return date.toISOString().slice(0, 10)
+}
+
+export function discoveryWindow(now = new Date()): { dateFrom: string; dateTo: string } {
+  return { dateFrom: utcDaysAgo(now, DISCOVERY_LOOKBACK_DAYS), dateTo: utcDaysAgo(now, 0) }
+}
+
+/**
+ * The lanes are reduced scope, so neither reads before the live-only filter floor. A lane whose
+ * whole window predates the floor has nothing it can read correctly and returns null.
+ */
+function reducedWindow(dateFrom: string, dateTo: string): { dateFrom: string; dateTo: string } | null {
+  const floored = dateFrom < REDUCED_SCOPE_ARCHIVE_FLOOR ? REDUCED_SCOPE_ARCHIVE_FLOOR : dateFrom
+  return floored > dateTo ? null : { dateFrom: floored, dateTo }
+}
+
+export function lateDiscoveryWindow(now = new Date()): { dateFrom: string; dateTo: string } | null {
+  return reducedWindow(utcDaysAgo(now, LATE_DISCOVERY_OLDEST_DAYS), utcDaysAgo(now, DISCOVERY_LOOKBACK_DAYS))
+}
+
+export function deepDiscoveryWindow(now = new Date()): { dateFrom: string; dateTo: string } | null {
+  return reducedWindow(utcDaysAgo(now, DEEP_DISCOVERY_OLDEST_DAYS), utcDaysAgo(now, LATE_DISCOVERY_OLDEST_DAYS))
+}
 
 export class PlotaError extends Error {
   constructor(
@@ -115,6 +162,7 @@ export function buildSearchSpecs(input: {
   dateTo: string
   pageSize: number
   nations?: string[]
+  councils?: string[]
 }): SearchSpec[] {
   const nations = input.nations ?? ['england', 'scotland', 'wales', 'northern-ireland']
   const common = {
@@ -123,6 +171,16 @@ export function buildSearchSpecs(input: {
     limit: String(input.pageSize),
   }
   const specs: SearchSpec[] = []
+  // Council-scoped archive paging was verified live. Independent cursors allow a
+  // measured pilot to expand to the national catalogue without repeating its councils.
+  if (input.councils) {
+    if (input.scope !== 'full' || input.councils.length === 0) {
+      throw new Error('Council-scoped ingestion requires a non-empty full census')
+    }
+    return [...new Set(input.councils)].sort().map(council => ({
+      key: `council:${council}:all`, params: { ...common, council },
+    }))
+  }
   for (const nation of nations) {
     if (input.scope === 'full') {
       specs.push({ key: `${nation}:all`, params: { ...common, nation } })
@@ -147,8 +205,8 @@ export function buildSearchSpecs(input: {
   return specs
 }
 
-export function maySpendPlotaRequest(monthlyRemaining: number | null): boolean {
+export function maySpendPlotaRequest(monthlyRemaining: number | null, useDiscoveryReserve = false): boolean {
   // Unknown on the first request is unavoidable. After a response exposes the allowance,
   // the worker stops optional/backfill work before the protected reserve is touched.
-  return monthlyRemaining === null || monthlyRemaining > PLOTA_REQUEST_RESERVE
+  return monthlyRemaining === null || monthlyRemaining > (useDiscoveryReserve ? 0 : PLOTA_REQUEST_RESERVE)
 }

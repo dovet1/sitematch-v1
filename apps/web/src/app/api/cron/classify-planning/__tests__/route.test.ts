@@ -41,6 +41,14 @@ describe('GET /api/cron/classify-planning', () => {
     expect(classifyPlanningBatch).not.toHaveBeenCalled()
   })
 
+  it('uses the configured catch-up batch size', async () => {
+    process.env.PLANNING_CLASSIFICATION_ENABLED = 'true'
+    process.env.PLANNING_CLASSIFICATION_BATCH_SIZE = '50'
+    classifyPlanningBatch.mockResolvedValue({ considered: 0, classified: 0, failed: 0, deferredBudget: 0 })
+    await GET(request())
+    expect(classifyPlanningBatch).toHaveBeenCalledWith(expect.objectContaining({ limit: 50 }))
+  })
+
   it('passes a bounded batch to the worker when enabled', async () => {
     process.env.PLANNING_CLASSIFICATION_ENABLED = 'true'
     classifyPlanningBatch.mockResolvedValue({ considered: 2, classified: 2, failed: 0, deferredBudget: 0 })

@@ -1,4 +1,4 @@
-import { runPlotaRefresh, selectRefreshCohorts } from '../ingest'
+import { runPlotaDiscovery, runPlotaRefresh, selectRefreshCohorts } from '../ingest'
 
 type Result = { data: unknown; error: unknown }
 
@@ -8,6 +8,7 @@ type Result = { data: unknown; error: unknown }
  */
 class Builder implements PromiseLike<Result> {
   private op = ''
+  private list = false
   constructor(
     private readonly table: string,
     private readonly writes: Array<{ table: string; op: string; payload: unknown }>,
@@ -18,7 +19,11 @@ class Builder implements PromiseLike<Result> {
   upsert(payload: unknown) { this.op = 'upsert'; this.writes.push({ table: this.table, op: 'upsert', payload }); return this }
   update(payload: unknown) { this.op = 'update'; this.writes.push({ table: this.table, op: 'update', payload }); return this }
   eq() { return this }
+  gte() { return this }
   in() { return this }
+  like() { this.list = true; return this }
+  order() { return this }
+  limit() { return this }
   range() { return this }
   maybeSingle() { return this }
   single() { return this }
@@ -26,7 +31,7 @@ class Builder implements PromiseLike<Result> {
     onfulfilled?: ((value: Result) => A | PromiseLike<A>) | null,
     onrejected?: ((reason: unknown) => B | PromiseLike<B>) | null
   ): PromiseLike<A | B> {
-    const key = `${this.table}:${this.op}`
+    const key = `${this.table}:${this.op}${this.list ? ':list' : ''}`
     return Promise.resolve(this.results[key] ?? { data: [], error: null }).then(onfulfilled, onrejected)
   }
 }
@@ -45,13 +50,14 @@ function makeDb(cohorts: unknown[]) {
   const results: Record<string, Result> = {
     'planning_ingest_runs:insert': { data: { id: 'run-1' }, error: null },
     'planning_ingest_checkpoints:select': { data: null, error: null },
+    'planning_ingest_checkpoints:select:list': { data: [], error: null },
     'planning_applications:select': { data: [], error: null },
     'brands:select': { data: [], error: null },
     'fascias:select': { data: [], error: null },
   }
   const rpc = jest.fn().mockResolvedValue({ data: cohorts, error: null })
   const db = { from: (table: string) => new Builder(table, writes, results), rpc }
-  return { db: db as never, writes, rpc }
+  return { db: db as never, writes, rpc, results }
 }
 
 function client() {
@@ -70,6 +76,32 @@ const base = {
   nations: ['england'],
   cohortLimit: 3,
 }
+
+describe('runPlotaDiscovery', () => {
+  it('keeps the previous date window and cursor after midnight', async () => {
+    const { db, results } = makeDb([])
+    results['planning_ingest_checkpoints:select:list'] = { data: [
+      { scope_key: 'discovery:full:2026-08-27:2026-09-10:england:all', status: 'pending' },
+    ], error: null }
+    results['planning_ingest_checkpoints:select'] = { data: { next_cursor: 'saved', pages_complete: 1 }, error: null }
+    const plota = client()
+    await runPlotaDiscovery({ ...base, db, client: plota as never, dateFrom: '2026-08-28', dateTo: '2026-09-11' })
+    expect(plota.search).toHaveBeenCalledWith(expect.objectContaining({ date_from: '2026-08-27', date_to: '2026-09-10', cursor: 'saved' }))
+  })
+
+  it('advances the window only once every nation completed', async () => {
+    const { db, results } = makeDb([])
+    results['planning_ingest_checkpoints:select:list'] = { data: [
+      { scope_key: 'discovery:full:2026-08-27:2026-09-10:england:all', status: 'complete' },
+    ], error: null }
+    const plota = client()
+    await runPlotaDiscovery({ ...base, db, client: plota as never, dateFrom: '2026-08-28', dateTo: '2026-09-11' })
+    expect(plota.search).toHaveBeenCalledWith(expect.objectContaining({ date_to: '2026-09-11' }))
+    plota.search.mockClear()
+    await runPlotaDiscovery({ ...base, nations: ['england', 'wales'], db, client: plota as never, dateFrom: '2026-08-28', dateTo: '2026-09-11' })
+    expect(plota.search).toHaveBeenCalledWith(expect.objectContaining({ date_to: '2026-09-10' }))
+  })
+})
 
 describe('selectRefreshCohorts', () => {
   it('reads the cohort function and maps its rows', async () => {
@@ -94,6 +126,38 @@ describe('selectRefreshCohorts', () => {
 })
 
 describe('runPlotaRefresh', () => {
+  it('resumes an older partial cycle using its frozen end date and cursor', async () => {
+    const { db, writes, results } = makeDb([cohortRow('2026-09-01', '2026-09-17')])
+    const prior = [{ scope_key: 'refresh:full:2026-09-01:2026-09-10:2026-09-10:england:all', status: 'pending' }]
+    results['planning_ingest_checkpoints:select:list'] = { data: prior, error: null }
+    results['planning_ingest_checkpoints:select'] = { data: { next_cursor: 'saved-cursor', pages_complete: 2 }, error: null }
+    const plota = client()
+    await runPlotaRefresh({ ...base, db, client: plota as never })
+    expect(plota.search).toHaveBeenCalledWith(expect.objectContaining({ date_to: '2026-09-10', cursor: 'saved-cursor' }))
+    expect(writes.filter(w => w.table === 'planning_ingest_checkpoints').every(w =>
+      (w.payload as { scope_key: string }).scope_key.includes(':2026-09-10:2026-09-10:'))).toBe(true)
+  })
+
+  it('resumes when the last started spec completed but another nation never started', async () => {
+    const { db, writes, results } = makeDb([cohortRow('2026-08-01', '2026-08-31')])
+    results['planning_ingest_checkpoints:select:list'] = { data: [
+      { scope_key: 'refresh:full:2026-08-01:2026-08-31:2026-09-01:england:all', status: 'complete' },
+    ], error: null }
+    await runPlotaRefresh({ ...base, nations: ['england', 'wales'], db, client: client() as never })
+    expect(writes.filter(w => w.table === 'planning_ingest_checkpoints').every(w =>
+      (w.payload as { scope_key: string }).scope_key.includes(':2026-09-01:'))).toBe(true)
+  })
+
+  it('starts a fresh cycle once every expected search in the prior cycle completed', async () => {
+    const { db, writes, results } = makeDb([cohortRow('2026-08-01', '2026-08-31')])
+    results['planning_ingest_checkpoints:select:list'] = { data: [
+      { scope_key: 'refresh:full:2026-08-01:2026-08-31:2026-09-01:england:all', status: 'complete' },
+    ], error: null }
+    await runPlotaRefresh({ ...base, db, client: client() as never })
+    expect(writes.filter(w => w.table === 'planning_ingest_checkpoints').every(w =>
+      !(w.payload as { scope_key: string }).scope_key.includes(':2026-09-01:'))).toBe(true)
+  })
+
   it('re-searches each stale window in its own run', async () => {
     const { db } = makeDb([
       cohortRow('2026-07-01', '2026-07-31'),

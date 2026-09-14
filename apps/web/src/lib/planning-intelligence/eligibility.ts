@@ -24,6 +24,19 @@ export const MAJOR_HOUSING_DWELLINGS = 15
 
 const COMMERCIAL_SUPPLY = new Set(['new', 'to-commercial', 'between'])
 
+// This is a recall gate for classification, not an inferred dwelling count or a
+// display threshold. Full-census ingestion is required to see these source rows.
+// Require a proposal to create housing; a mention of existing homes alone is not
+// enough (for example replacement windows to flats or a fence beside new homes).
+const HOUSING_PROPOSAL = /\b(?:erection|construction|conversion|redevelopment|development|creation|provision|subdivision|sub-division|change\s+of\s+use)\s+(?:of\s+|to\s+|for\s+|into\s+)?(?:up\s+to\s+)?(?:a\s+|an\s+|new\s+|proposed\s+|replacement\s+|additional\s+|residential\s+|\d+\s+|[a-z]+-bed(?:room)?\s+|\d+-bed(?:room)?\s+)*(?:dwellings|dwellinghouses|houses|homes|flats|apartments|residential\s+units|housing(?!\s+(?:manager|officer|association\s+offices)(?:[’'s]*\b)))\b/i
+const RESIDENTIAL_SCHEME = /^\s*(?:(?:outline|full|hybrid)\s+(?:planning\s+)?(?:application|permission)\s+(?:for\s+)?)?(?:(?:proposed|new)\s+)?(?:residential|housing)\s+(?:development|redevelopment|scheme)\b/i
+
+export function hasUncountedHousingProposal(application: PlotaApplication): boolean {
+  if (application.dwelling_count != null) return false
+  const description = application.description ?? ''
+  return HOUSING_PROPOSAL.test(description) || RESIDENTIAL_SCHEME.test(description)
+}
+
 function hitsFor(
   text: string | null | undefined,
   source: BrandAliasHit['source'],
@@ -61,13 +74,15 @@ function hitsFor(
  * proper and section 73 variations stay eligible -- both can change what actually gets built.
  */
 const DETAIL_SUBMISSION_LEAD =
-  /^\s*(?:details?\b|discharge\s+of\s+conditions?\b|submission\s+of\s+details\b|approval\s+of\s+details\b|compliance\s+with\s+conditions?\b)/i
+  /^\s*(?:details?\b|(?:part(?:ial)?\s+)?discharge\s+of\s+conditions?\b|submission\s+of\s+details\b|approval\s+of\s+details\b|compliance\s+with\s+conditions?\b)/i
 
 const EXISTING_CONSENT_REFERENCE =
   /\b(?:pursuant\s+to|reserved\s+by\s+conditions?|discharge\s+of\s+conditions?|conditions?\s+\d+|planning\s+permission\s+(?:dated|ref(?:erence)?))\b/i
 
 export function isDetailSubmission(application: PlotaApplication): boolean {
-  const description = application.description ?? ''
+  const description = (application.description ?? '').replace(
+    /^\s*(?:residential|housing)\s+(?:development|redevelopment|scheme)\b[^\n]{0,300}?\s[-:]\s*(?=(?:part(?:ial)?\s+)?discharge\s+of\s+conditions?\b|(?:submission|approval)\s+of\s+details\b)/i, ''
+  )
   return (
     DETAIL_SUBMISSION_LEAD.test(description) && EXISTING_CONSENT_REFERENCE.test(description)
   )
@@ -92,7 +107,8 @@ export function decideEligibility(
 
   const limbs: EligibilityLimb[] = []
   if (application.commercial_work && COMMERCIAL_SUPPLY.has(application.commercial_work)) limbs.push('A')
-  if ((application.dwelling_count ?? 0) >= MAJOR_HOUSING_DWELLINGS) limbs.push('B')
+  if ((application.dwelling_count ?? 0) >= MAJOR_HOUSING_DWELLINGS ||
+    hasUncountedHousingProposal(application)) limbs.push('B')
   if (
     options.brandLimbEnabled &&
     brandHits.some((hit) => hit.source === 'description' && !hit.ambiguous)
@@ -130,4 +146,3 @@ export function classificationInputHash(application: PlotaApplication): string {
   }
   return createHash('sha256').update(JSON.stringify(input)).digest('hex')
 }
-

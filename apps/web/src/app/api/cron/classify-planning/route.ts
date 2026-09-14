@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 export async function GET(request: NextRequest) {
-  if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   if (process.env.PLANNING_CLASSIFICATION_ENABLED !== 'true') {
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'OPENROUTER_API_KEY is not configured' }, { status: 500 })
   }
 
-  const requestedLimit = Number.parseInt(request.nextUrl.searchParams.get('limit') ?? '20', 10)
+  const requestedLimit = Number.parseInt(request.nextUrl.searchParams.get('limit') ?? process.env.PLANNING_CLASSIFICATION_BATCH_SIZE ?? '20', 10)
   try {
     const result = await classifyPlanningBatch({
       db: createPlanningAdminClient(),
@@ -32,4 +32,3 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
-

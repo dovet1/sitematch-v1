@@ -40,6 +40,60 @@ describe('planning intelligence eligibility', () => {
     expect(decideEligibility(application({ commercial_work: 'loss' }), aliases).limbs).toEqual(['D'])
   })
 
+  it.each([
+    'Erection of residential dwellings with associated access and landscaping',
+    'Construction of 30 new homes',
+    'Conversion into flats',
+    'Outline planning application for residential development with access',
+    'Proposed housing scheme',
+    'Construction of housing association homes',
+    'Change of use to residential units',
+  ])('admits an uncounted housing proposal for classification: %s', description => {
+    const app = application({ description, dwelling_count: null })
+    expect(decideEligibility(app, aliases)).toMatchObject({ intelligenceTier: true, limbs: ['B'] })
+    expect(app.dwelling_count).toBeNull()
+  })
+
+  it.each([
+    "Erection of a Housing Manager's Flat",
+    "Change of use of Housing Manager's Flat to be used as an age-restricted dwelling",
+    'Erection of housing association offices',
+    'Replacement windows to existing flats',
+    'Erection of a fence beside residential dwellings',
+    'Erection of a rear extension to a dwellinghouse',
+    'Alterations to the access serving a residential development',
+    'Tree works adjacent to new homes',
+  ])('does not promote a housing mention without a housing proposal: %s', description => {
+    expect(decideEligibility(application({ description, dwelling_count: null }), aliases).intelligenceTier).toBe(false)
+  })
+
+  it('does not override a known below-floor count with description matching', () => {
+    expect(decideEligibility(application({ description: 'Construction of new homes', dwelling_count: 2 }), aliases).intelligenceTier).toBe(false)
+  })
+
+  it('still excludes details of an uncounted parent housing proposal', () => {
+    expect(decideEligibility(application({ description: 'Details pursuant to condition 4 of planning permission ref 123 for erection of residential dwellings' }), aliases))
+      .toMatchObject({ intelligenceTier: false, detailSubmission: true, limbs: ['B'] })
+  })
+
+  it('excludes a housing-titled condition discharge found in the stored audit', () => {
+    expect(decideEligibility(application({ description: 'Residential Development - Partial Discharge of Conditions 10 (Contamination), 18 (Construction Site Waste Management Plan) of Planning Permission 2015/1584 granted 13th May 2016 in respect of Plot D5b' }), aliases))
+      .toMatchObject({ intelligenceTier: false, detailSubmission: true })
+  })
+
+  it('excludes partial condition discharge quoting an uncounted parent scheme', () => {
+    expect(decideEligibility(application({ description: 'Part Discharge of Condition 14 (On-Site Habitat Management and Monitoring Plan) (Phase 1) of application 22/01324/FUL (Construction of 191 dwellings (Class C3), public open space, landscaping, sustainable urban drainage, access and associated infrastructure).' }), aliases))
+      .toMatchObject({ intelligenceTier: false, detailSubmission: true })
+  })
+
+  it('excludes a condition discharge after a longer residential title', () => {
+    expect(decideEligibility(application({ description: 'Residential Development of 40 dwellings with access and landscaping - Discharge of conditions 4 and 8 of planning permission ref 123', dwelling_count: 40 }))).toMatchObject({ intelligenceTier: false, detailSubmission: true })
+  })
+
+  it('excludes the exact Swansea title-prefixed discharge', () => {
+    expect(decideEligibility(application({ description: 'Residential redevelopment of the site including conversion of 1912 building - Discharge of condition 34 relating to 1912 building (Scheme to restrict flow of sound energy) of planning permission 2018/2698/FUL granted 8th October 2019' }))).toMatchObject({ intelligenceTier: false, detailSubmission: true })
+  })
+
   it('records brand hits before enabling limb C', () => {
     const result = decideEligibility(application({ description: 'New Aldi foodstore' }), aliases)
     expect(result.intelligenceTier).toBe(false)

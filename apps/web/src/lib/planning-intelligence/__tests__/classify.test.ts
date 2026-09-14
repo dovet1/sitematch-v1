@@ -135,11 +135,12 @@ describe('classification worker leases', () => {
     const timeout = new Error('OpenRouter classification request timed out')
     timeout.name = 'TimeoutError'
     mockClassifyWithOpenRouter.mockRejectedValue(timeout)
-    const { db, writes } = makeDb([application('queued')])
+    const { db, writes } = makeDb([application('queued'), application('queued')])
 
-    const batch = await classifyPlanningBatch({ db, apiKey: 'key', limit: 1 })
+    const batch = await classifyPlanningBatch({ db, apiKey: 'key', limit: 2 })
 
     expect(batch.failed).toBe(1)
+    expect(mockClassifyWithOpenRouter).toHaveBeenCalledTimes(1)
     expect(writes).toContainEqual(expect.objectContaining({
       table: 'planning_classification_runs', op: 'update',
       payload: expect.objectContaining({ status: 'failed', finished_at: expect.any(String) }),
