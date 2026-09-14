@@ -1,6 +1,6 @@
 # Planning intelligence: Claude takeover handover
 
-Snapshot updated: 13 September 2026, 11:14 UTC check. Read this first; the longer handover contains historical states
+Snapshot updated: 14 September 2026. Read this first; the longer handover contains historical states
 that are superseded by this snapshot. All figures below are observations, not live counters.
 
 ## Current position — 14 September 2026: Claude owns operations
@@ -24,10 +24,31 @@ that are superseded by this snapshot. All figures below are observations, not li
 - **Supabase compute upgraded from Nano to Micro** on 14 September; Nano could not serve the
   national store (ranked reads and the status report timed out). The status report still counts
   every row and may time out; the tab's freshness no longer depends on it.
-- **Phase 1 cutover measured** and recorded in the delivery plan. The tab code (local only) now
+- **Phase 1 cutover measured** and recorded in the delivery plan. The tab code now
   calls `planning_tab_applications_v3` and reads freshness from four indexed values.
-- **PlanIt removed from the codebase** (local, 14 September). The planning tab reads only stored
+- **PlanIt removed from the codebase** (14 September). The planning tab reads only stored
   data; there is no stored-read flag any more, so deploying the main website is the cutover.
+
+- **All work is committed and pushed** to `july-sitematcher-upgrade` (commits `527ef96` pipeline,
+  `49b4589` research, `6781c46` review screen, `428583a` tab cutover). Vercel's production branch
+  for `sitematch-v1-web` is `main`, so branch pushes only create previews. Left uncommitted on
+  purpose: `docs/brand-centric-model-sketch.md` and the three `.claude/worktrees` entries.
+- All migrations through `20261005000000_planar_prefilter_planning_tab_read.sql` are applied.
+
+### Next in the plan
+
+1. **Phase 1 decisions (user):** keep, narrow or separate the 1,500 m allowance for ward and
+   parish centres (21-53% of city-centre results are admitted only by it); then plan the main
+   website deployment, which carries other unreleased changes on this branch. Consider Small
+   compute before launch if the live site shares this database.
+2. **Phase 2a:** admit housing applications that mention dwellings without a count (and fix the
+   late/deep lanes, which search with `dmin=1` and so miss them); per-user display threshold.
+3. **Phase 2b-2d:** fix the research operator counter and run a measured batch (document access
+   is the known problem); per-source research caching that accumulates evidence; merging related
+   applications into one Development with precedence rules.
+4. **Operations:** confirm the late and deep lanes' first runs and spend (look for
+   `discovery_late` / `discovery_deep` in `planning_ingest_runs`); keep the classification queue
+   drained within the $10/$12 caps; 35 classifications are held as failed for review.
 
 ## Superseded: position at 13 September 2026, 11:14 UTC check
 
