@@ -72,23 +72,24 @@ that are superseded by this snapshot. All figures below are observations, not li
   recognised follow-ons linked, 72,049 families nationally, 5,535 overlooked
   families. Results in the linking plan. Next is step 2, a description-based commercial test for
   archive records.
-- **Committed, not pushed:** `c2bbcda` new-homes lane search, `48b0d3b` linker. Linking plan
+- **Pushed:** `c2bbcda` new-homes lane search, `48b0d3b` linker, `319c34b` refresh fix,
+  `26e931b` plan revision. Pilot request limit of 300 agreed. Linking plan
   revised after Astra's second review: linking in normal ingestion, reused Plota family lookups,
   backlog recovery without a backfill rerun, three validation levels, a 300-request pilot limit
   (proposed).
-- **New-homes worker deploy prepared, not deployed:** `/private/tmp/planning-workers-20260914b`
-  (built `--scheduled` from `c2bbcda`; diff against the live package is only the new-homes spec in
-  `plota.ts`; `.vercel/project.json` copied). The production deploy was blocked by the session's
-  permission check and needs the user's approval. Request impact: lanes still spend at most 20 per
-  run and stop at the reserve, so daily spend is unchanged.
+- **Workers deployed by the user, 14 Sep 15:13 UTC, as `dpl_8ghmWYE4rL5JFhao3XbvquFzMiyq`**, from
+  `/private/tmp/planning-workers-20260914b` (built `--scheduled` from `c2bbcda`; the only
+  difference from `dpl_HXCfXPLGjgfAFaTSeKZUTKGn2Fp1` is the new-homes lane spec). Lanes still
+  spend at most 20 requests per run and stop at the reserve.
 - **Lanes confirmed running:** late 12:45 (20 requests, 652 tier records) and deep 13:05 (20, 760).
   **Refresh has been failing since 12 Sep 06:30 UTC** (last recorded run):
   `planning_refresh_cohorts` groups every undecided application nationally and hits the statement
-  timeout (8.2 s, 57014), so each call fails before recording a run. Fix authored, **not applied**:
+  timeout (8.2 s, 57014), so each call fails before recording a run. Fix **applied by the user
+  14 Sep**; the function now returns in 373 ms (first cohorts July, June, May 2026):
   `supabase/migrations/20261006000000_fix_planning_refresh_cohorts_timeout.sql`. It probes the last
   24 months through the existing index (~60 ms each) and ranks by last refresh run;
-  `live_records` becomes NULL. No worker change is needed. After applying, confirm a `refresh` row
-  appears at the next :30 run.
+  `live_records` becomes NULL. No worker change is needed. Still to confirm: a `refresh` row in
+  `planning_ingest_runs` from the next scheduled run (18:30 UTC).
 
 ### Next in the plan
 

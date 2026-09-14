@@ -378,7 +378,7 @@ It measures:
 
 The one-pin view and history are part of the pilot, not a later stage.
 
-**Request limit:** agree before running. Proposed: **300 requests**, covering those families, a
+**Request limit:** **300 requests** (agreed 14 September), covering those families, a
 validation sample of about 50, and refreshes. Taken from October's allowance, never below the
 discovery reserve. National expansion is proposed from the measured value per request.
 
@@ -405,13 +405,15 @@ endpoint, so the answer changes cost, not design.
 
 ## Decisions
 
-Made on 14 September: pilot councils South Norfolk Broadland, Wandsworth and Glasgow; companion
-consents merge into one Development.
+Made on 14 September:
+- Pilot councils: South Norfolk Broadland, Wandsworth and Glasgow.
+- Companion consents merge into one Development.
+- **Pilot request limit: 300 Plota requests**, from October's allowance and never below the
+  discovery reserve.
 
 Still needed:
-1. **Pilot request limit.** 300 proposed.
-2. **Standing lookup allowance** after the pilot, set from its measured value.
-3. **Whether to ask Plota** about parent references in the bulk feed.
+1. **Standing lookup allowance** after the pilot, set from its measured value.
+2. **Whether to ask Plota** about parent references in the bulk feed.
 
 ## Relationship to the grading fix
 
