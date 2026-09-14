@@ -7,6 +7,12 @@ export const dynamic = 'force-dynamic'
 const updateSchema = z.object({
   developmentId: z.string().uuid(),
   decision: z.enum(['approved', 'corrected', 'rejected']),
+  expectedUpdatedAt: z.string().datetime({ offset: true }).optional(),
+  fields: z.object({
+    dwellingCount: z.number().int().min(0).max(1000000).nullable().optional(),
+    createsCommercialSpace: z.enum(['yes', 'no', 'unclear']).optional(),
+    commercialUseClasses: z.array(z.string().trim().min(1).max(40)).max(30).optional(),
+  }).strict().optional(),
   relevance: z.enum(['high', 'medium', 'low']).optional(),
   summary: z.string().max(4000).optional(),
   brandSignals: z.array(z.object({
@@ -23,7 +29,7 @@ const updateSchema = z.object({
     id: z.string().uuid(),
     reviewState: z.enum(['approved', 'corrected', 'rejected']),
     scope: z.enum(['existing', 'proposed', 'lost', 'net', 'stated_unspecified']).optional(),
-    value: z.number().nonnegative().optional(),
+    value: z.number().finite().optional(),
     confidence: z.number().min(0).max(1).optional(),
   }).strict()).max(100).optional(),
 }).strict()
@@ -35,14 +41,23 @@ export async function GET(request: NextRequest) {
     const requested = Number.parseInt(request.nextUrl.searchParams.get('limit') ?? '25', 10)
     const limit = Math.max(1, Math.min(Number.isFinite(requested) ? requested : 25, 100))
     const db = adminClient()
+    const offset = Math.max(0, Math.min(Number.parseInt(request.nextUrl.searchParams.get('offset') ?? '0', 10) || 0, 10000))
+    const filter = request.nextUrl.searchParams.get('filter') ?? 'all'
 
-    const { data: developments, error } = await db
+    let query = db
       .from('developments')
       .select('*')
       .eq('review_state', 'pending')
-      .order('relevance', { ascending: true, nullsFirst: false })
+      .not('relevance', 'is', null)
+      .order('confidence', { ascending: true, nullsFirst: true })
       .order('last_seen_at', { ascending: false })
-      .limit(limit)
+      .order('id')
+      .range(offset, offset + limit)
+    if (filter === 'uncertain') query = query.or('confidence.lt.0.7,confidence.is.null')
+    if (filter === 'questions') query = query.neq('unanswered_questions', '[]')
+    const { data: rows, error } = await query
+    const hasMore = (rows?.length ?? 0) > limit
+    const developments = rows?.slice(0, limit)
     if (error) throw error
 
     const ids = (developments ?? []).map((row) => row.id as string)
@@ -60,6 +75,7 @@ export async function GET(request: NextRequest) {
     if (observationError) throw observationError
 
     return NextResponse.json({
+      hasMore,
       developments: (developments ?? []).map((development) => ({
         ...development,
         applications: (applicationLinks ?? []).filter((row) => row.development_id === development.id),
@@ -86,7 +102,7 @@ export async function PATCH(request: NextRequest) {
     // that touched neither the research queue nor any audit trail, so a correction from high
     // to low returned 200 and left the record queued for a paid research pass, and nothing
     // recorded that a person had disagreed with the model.
-    const { data, error } = await adminClient().rpc('apply_planning_review', {
+    const { data, error } = await adminClient().rpc('apply_planning_review_v2', {
       p_development_id: review.developmentId,
       p_reviewer_id: gate.user!.id,
       p_decision: review.decision,
@@ -94,7 +110,12 @@ export async function PATCH(request: NextRequest) {
       p_summary: review.summary ?? null,
       p_brand_signals: review.brandSignals ?? [],
       p_observations: review.observations ?? [],
+      p_fields: review.fields ?? {},
+      p_expected_updated_at: review.expectedUpdatedAt ?? null,
     })
+    if (error && ['40001', 'PT409'].includes(error.code)) return NextResponse.json({ error: 'This development changed. Reload before saving.' }, { status: 409 })
+    if (error?.code === '22023') return NextResponse.json({ error: error.message }, { status: 400 })
+    if (error?.code === 'PGRST202') return NextResponse.json({ error: 'The review database update has not been applied yet.' }, { status: 503 })
     if (error) throw error
 
     // Returned so the caller can see what happened to the queue rather than having to guess:

@@ -53,7 +53,7 @@ describe('planning review reconciliation', () => {
       brandSignals: [{ id: '22222222-2222-4222-8222-222222222222', reviewState: 'rejected' }],
     }))
     expect(mockRpc).toHaveBeenCalledTimes(1)
-    expect(mockRpc).toHaveBeenCalledWith('apply_planning_review', expect.objectContaining({
+    expect(mockRpc).toHaveBeenCalledWith('apply_planning_review_v2', expect.objectContaining({
       p_development_id: DEVELOPMENT,
       p_decision: 'corrected',
       p_relevance: 'low',
@@ -96,4 +96,16 @@ describe('planning review reconciliation', () => {
     expect(response.status).toBe(400)
     expect(mockRpc).not.toHaveBeenCalled()
   })
+})
+
+it('passes explicit unknown counts and commercial corrections atomically', async () => {
+ mockRequireAdminUser.mockResolvedValue({user:{id:'reviewer-7'}})
+ mockRpc.mockResolvedValue({data:{},error:null})
+ await PATCH(asRequest({developmentId:DEVELOPMENT,decision:'corrected',fields:{dwellingCount:null,createsCommercialSpace:'no',commercialUseClasses:[]},expectedUpdatedAt:'2026-09-12T00:00:00Z'}))
+ expect(mockRpc).toHaveBeenLastCalledWith('apply_planning_review_v2',expect.objectContaining({p_fields:{dwellingCount:null,createsCommercialSpace:'no',commercialUseClasses:[]},p_expected_updated_at:'2026-09-12T00:00:00Z'}))
+})
+it.each(['40001', 'PT409'])('returns a conflict for %s when the loaded version has changed',async(code)=>{
+ mockRequireAdminUser.mockResolvedValue({user:{id:'reviewer-7'}})
+ mockRpc.mockResolvedValue({data:null,error:{code}})
+ expect((await PATCH(asRequest({developmentId:DEVELOPMENT,decision:'approved'}))).status).toBe(409)
 })

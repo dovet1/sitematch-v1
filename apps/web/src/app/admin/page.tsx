@@ -114,6 +114,7 @@ export default async function AdminDashboard() {
               Agency Management
             </Link>
           </Button>
+          <Button asChild><Link href="/admin/planning">Planning Review</Link></Button>
           {/*
             Named distinctly from "Agency Management" above: that page manages the legacy
             `agencies` tables tied to listings, this one manages the directory's own
