@@ -63,11 +63,21 @@ describe('buildSearchSpecs', () => {
       nations: ['england'],
     })
     expect(specs.map((spec) => spec.key)).toEqual([
-      'england:commercial', 'england:residential', 'england:brand-evidence-routes',
+      'england:commercial', 'england:residential', 'england:new-homes', 'england:brand-evidence-routes',
     ])
     expect(specs[0].params.commercial_work).toContain('loss')
     expect(specs[1].params.dmin).toBe('1')
-    expect(specs[2].params.procedure).toContain('advert-consent')
+    expect(specs[3].params.procedure).toContain('advert-consent')
+  })
+
+  it('reaches housing schemes with no stated count, which dmin cannot return', () => {
+    const specs = buildSearchSpecs({
+      scope: 'reduced', dateFrom: '2026-08-01', dateTo: '2026-08-31', pageSize: 50,
+      nations: ['england'],
+    })
+    const newHomes = specs.find((spec) => spec.key === 'england:new-homes')
+    expect(newHomes?.params).toEqual(expect.objectContaining({ nation: 'england', category: 'new-homes' }))
+    expect(newHomes?.params).not.toHaveProperty('dmin')
   })
 })
 

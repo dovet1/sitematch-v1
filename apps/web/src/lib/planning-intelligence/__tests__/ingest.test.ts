@@ -273,10 +273,11 @@ describe('late-published discovery lanes', () => {
   it('walks the reduced filters under its own checkpoint prefix', async () => {
     const { db, writes } = makeDb()
     const result = await runPlotaLaneDiscovery('late', { ...lateBase, db, client: client(application(), 9000) })
-    expect(result).toMatchObject({ requestsMade: 3, status: 'complete' })
+    expect(result).toMatchObject({ requestsMade: 4, status: 'complete' })
     expect(checkpointKeys(writes)).toEqual([
       'discovery-late:reduced:2026-05-16:2026-09-06:england:commercial',
       'discovery-late:reduced:2026-05-16:2026-09-06:england:residential',
+      'discovery-late:reduced:2026-05-16:2026-09-06:england:new-homes',
       'discovery-late:reduced:2026-05-16:2026-09-06:england:brand-evidence-routes',
     ])
     expect(writes.find(w => w.table === 'planning_ingest_runs' && w.op === 'insert')?.payload)

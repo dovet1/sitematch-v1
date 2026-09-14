@@ -155,6 +155,15 @@ export type CensusScope = 'full' | 'reduced'
  * Search specs are intentionally overlapping; upsert by Plota ID removes duplicates.
  * With reduced scope, advert/listed routes preserve brand-opening evidence that often
  * has no change-of-use application.
+ *
+ * `dmin` only returns records with a stated dwelling count, so a housing scheme described
+ * without one ("Residential development with access") never reached the uncounted-housing
+ * limb under reduced scope. Measured on six weeks of the full census (May-June 2026), those
+ * were 5.0% of the intelligence tier and every tier record the reduced specs missed. Most
+ * were amendments and condition discharges quoting a parent permission; of the 71 real
+ * proposals, `category=new-homes` returned 63 for about 266 extra records a week nationally.
+ * Plota matches `category` against any of a record's categories, not only the primary one
+ * (verified on Wiltshire, March 2026), and does not document it as live-only.
  */
 export function buildSearchSpecs(input: {
   scope: CensusScope
@@ -196,6 +205,7 @@ export function buildSearchSpecs(input: {
         },
       },
       { key: `${nation}:residential`, params: { ...common, nation, dmin: '1' } },
+      { key: `${nation}:new-homes`, params: { ...common, nation, category: 'new-homes' } },
       {
         key: `${nation}:brand-evidence-routes`,
         params: { ...common, nation, procedure: 'advert-consent,listed-building' },
