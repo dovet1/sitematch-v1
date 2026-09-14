@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import {
   FACT_LABELS,
   REASON_LABELS,
+  formatFactValue,
   type FactFinding,
   type FactKey,
   type FactRow,
@@ -63,21 +64,18 @@ function safeUrl(url: string | null | undefined): string | null {
   return url && /^https?:\/\//i.test(url) ? url : null
 }
 
-export function formatFactValue(value: FactValue | null): string {
+function formatAdminValue(value: FactValue | null): string {
   if (!value) return ''
-  if ('names' in value) return value.names.join(', ')
-  if ('useClasses' in value) return value.useClasses.join(', ')
-  const original = value.original ? ` (stated as ${value.original.value.toLocaleString('en-GB')} ${value.original.unit})` : ''
-  const extent = value.extent === 'unspecified' ? 'extent not stated' : value.extent.replaceAll('_', ' ')
-  const basis = value.basis === 'unspecified' ? '' : `, ${value.basis.replaceAll('_', ' ')}`
-  return `${value.sqm.toLocaleString('en-GB')} m²${original} — ${extent}${basis}`
+  if ('names' in value || 'useClasses' in value) return formatFactValue(value) ?? ''
+  const extent = value.extent === 'unspecified' ? ' — extent not stated' : ''
+  return `${formatFactValue(value)}${extent}`
 }
 
 function findingText(finding: FactFinding): string {
   if (finding.name) return `${finding.name}${finding.role ? ` (${finding.role.replaceAll('_', ' ')})` : ''}`
   if (finding.useClass) return finding.useClass
   if (typeof finding.sqm === 'number') {
-    return formatFactValue({ sqm: finding.sqm, basis: finding.basis ?? 'unspecified', extent: finding.extent ?? 'unspecified', original: finding.original })
+    return formatAdminValue({ sqm: finding.sqm, basis: finding.basis ?? 'unspecified', extent: finding.extent ?? 'unspecified', original: finding.original })
   }
   return ''
 }
@@ -199,7 +197,7 @@ function FactCard({ developmentId, fact, onChanged }: {
         </span>
       </header>
 
-      {fact.value && <p className="text-sm">{formatFactValue(fact.value)}</p>}
+      {fact.value && <p className="text-sm">{formatAdminValue(fact.value)}</p>}
 
       {open && (
         <p className="text-sm">

@@ -385,3 +385,48 @@ export function chosenFactValue(row: Pick<FactRow, 'fact' | 'findings'>, key: st
     .map(finding => finding.key)
   return { value: resolved.value, rejectKeys }
 }
+
+export interface PublicFact {
+  fact: FactKey
+  label: string
+  state: 'found' | 'unavailable' | 'not_applicable' | 'not_established'
+  value: string | null
+  confirmedByAdmin: boolean
+  sources: Array<{ kind: FactSource['kind']; url: string | null; page: string | null }>
+}
+
+/**
+ * What the product shows for a scheme. Only the evidence that completes a fact is published, so an
+ * applicant's or agent's name recorded as context never appears. Open and conflicting facts read as
+ * not established; nothing is shown until research or an admin has looked at the scheme.
+ */
+export function publicFacts(rows: Array<Pick<FactRow, 'fact' | 'state' | 'value' | 'findings' | 'decided_by'>>): PublicFact[] {
+  if (!rows.some(row => row.state !== 'not_checked')) return []
+  return FACT_KEYS.map(fact => {
+    const row = rows.find(item => item.fact === fact)
+    const state: PublicFact['state'] = row && (row.state === 'found' || row.state === 'unavailable' || row.state === 'not_applicable')
+      ? row.state : 'not_established'
+    const sources = state === 'found'
+      ? (row?.findings ?? []).filter(f => f.completes && !f.rejected)
+        .map(f => ({ kind: f.source.kind, url: f.source.url && /^https?:\/\//i.test(f.source.url) ? f.source.url : null, page: f.source.page }))
+        .filter((source, index, all) => all.findIndex(o => o.url === source.url && o.page === source.page && o.kind === source.kind) === index)
+        .slice(0, 5)
+      : []
+    return {
+      fact, label: FACT_LABELS[fact], state,
+      value: state === 'found' ? formatFactValue(row?.value ?? null) : null,
+      confirmedByAdmin: Boolean(row?.decided_by),
+      sources,
+    }
+  })
+}
+
+export function formatFactValue(value: FactValue | null): string | null {
+  if (!value) return null
+  if ('names' in value) return value.names.join(', ')
+  if ('useClasses' in value) return value.useClasses.join(', ')
+  const original = value.original ? ` (stated as ${value.original.value.toLocaleString('en-GB')} ${value.original.unit})` : ''
+  const extent = value.extent === 'unspecified' ? '' : ` — ${value.extent.replaceAll('_', ' ')}`
+  const basis = value.basis === 'unspecified' ? '' : `, ${value.basis.replaceAll('_', ' ')}`
+  return `${value.sqm.toLocaleString('en-GB')} m²${original}${extent}${basis}`
+}

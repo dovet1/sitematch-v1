@@ -30,6 +30,7 @@ import type {
   RequirementSummary,
   StoreEstate,
 } from '../../types/unified-workspace'
+import type { PublicFact } from '@/lib/planning-intelligence/facts'
 import { Avatar, Kicker, planningStateBadgeClass } from './UInspector'
 import { UStoreEstateMap } from './UStoreEstateMap'
 
@@ -1038,6 +1039,54 @@ function BrandContactColumn({
   )
 }
 
+/** Researched and reviewed facts for the application's development; empty until anyone has looked. */
+function useSchemeFacts(developmentId: string | null | undefined) {
+  const [facts, setFacts] = useState<PublicFact[]>([])
+  useEffect(() => {
+    setFacts([])
+    if (!developmentId) return
+    const controller = new AbortController()
+    fetch(`/api/public/planning/facts?developmentId=${encodeURIComponent(developmentId)}`, { signal: controller.signal })
+      .then(response => (response.ok ? response.json() : { facts: [] }))
+      .then((body: { facts?: PublicFact[] }) => setFacts(body.facts ?? []))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [developmentId])
+  return facts
+}
+
+const FACT_STATE_TEXT: Record<PublicFact['state'], string> = {
+  found: '',
+  unavailable: 'Not available',
+  not_applicable: 'Not applicable',
+  not_established: 'Not yet established',
+}
+
+function SchemeFacts({ facts }: { facts: PublicFact[] }) {
+  if (facts.length === 0) return null
+  return (
+    <div>
+      <Kicker>Scheme facts</Kicker>
+      <dl className="mt-1.5 flex flex-col gap-2">
+        {facts.map(fact => (
+          <div key={fact.fact} className="grid grid-cols-[minmax(0,11rem)_1fr] gap-3 text-[12.5px]">
+            <dt className="text-sm-ink3">{fact.label}</dt>
+            <dd className={fact.state === 'found' ? 'text-sm-ink' : 'text-sm-ink4'}>
+              {fact.state === 'found' ? fact.value : FACT_STATE_TEXT[fact.state]}
+              {fact.state === 'found' && fact.sources.map((source, index) => source.url && (
+                <a key={index} href={source.url} target="_blank" rel="noopener noreferrer" className="ml-1.5 text-sm-violet underline underline-offset-2">
+                  {source.kind === 'document' ? 'document' : source.kind === 'web' ? 'web' : source.kind === 'manual' ? 'source' : 'council'}{source.page ? ` p.${source.page}` : ''}
+                </a>
+              ))}
+              {fact.confirmedByAdmin && fact.state === 'found' && <span className="ml-1.5 text-sm-ink4">· reviewed</span>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  )
+}
+
 /* ============================================================================
  * Planning application modal — opened from the Planning tab list or a map pin.
  * All text comes from council records via Plota and is rendered strictly as
@@ -1061,6 +1110,7 @@ export function UPlanningModal({
 
   const validated = formatFullDate(application.dateValidated)
   const decided = formatFullDate(application.decidedDate)
+  const facts = useSchemeFacts(application.developmentId)
 
   return (
     <Overlay onClose={onClose}>
@@ -1105,6 +1155,8 @@ export function UPlanningModal({
           </p>
         </div>
       )}
+
+      <SchemeFacts facts={facts} />
 
       {(application.applicantAddress || application.agentAddress) && (
         <div className="flex flex-col gap-2.5">

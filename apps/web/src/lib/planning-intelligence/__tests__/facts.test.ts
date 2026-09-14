@@ -4,6 +4,7 @@ import {
   chosenFactValue,
   findingsFromResearch,
   nextFactRows,
+  publicFacts,
   toSquareMetres,
   type FactAttempt,
   type FactRow,
@@ -173,5 +174,22 @@ describe('admin fact entry', () => {
     const { value, rejectKeys } = chosenFactValue(row, keep.key)
     expect(value).toMatchObject({ sqm: 800 })
     expect(rejectKeys).toEqual([row.findings.find(f => f.sqm === 500)!.key])
+  })
+})
+
+describe('publicFacts', () => {
+  it('publishes found facts with their sources and never an applicant or agent', () => {
+    const facts = rows(result({
+      commercialFloorspace: [floor('proposed', 500)],
+      partyClues: [{ name: 'Mr Private Person', role: 'applicant', evidenceSource: 'document', evidenceUrl: FORM, evidenceExcerpt: 'Applicant Mr Private Person', evidencePage: '2', confidence: 1 }],
+    }))
+    const published = publicFacts(Object.values(facts))
+    expect(published.find(f => f.fact === 'proposed_floorspace')).toMatchObject({ state: 'found', value: '500 m², gross internal', sources: [{ url: FORM, page: '10' }] })
+    expect(published.find(f => f.fact === 'operator')).toMatchObject({ state: 'not_established', value: null, sources: [] })
+    expect(JSON.stringify(published)).not.toContain('Private Person')
+  })
+
+  it('shows nothing before anyone has looked at the scheme', () => {
+    expect(publicFacts([{ fact: 'operator', state: 'not_checked', value: null, findings: [], decided_by: null }])).toEqual([])
   })
 })
