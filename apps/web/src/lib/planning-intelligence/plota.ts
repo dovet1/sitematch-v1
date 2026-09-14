@@ -1,4 +1,4 @@
-import type { PlotaPage, SearchSpec } from './types'
+import type { PlotaFamily, PlotaPage, SearchSpec } from './types'
 
 export const PLOTA_BASE_URL = 'https://api.plota.co.uk/v1'
 export const PLOTA_INTERNAL_MONTHLY_LIMIT = 15_000
@@ -103,6 +103,46 @@ export class PlotaClient {
   ) {
     if (!apiKey) throw new Error('PLOTA_API_KEY is not configured')
     this.baseUrl = options.baseUrl ?? PLOTA_BASE_URL
+  }
+
+  /**
+   * The whole family of related applications for one application: the principal, every member with
+   * its parent, and the condition ledger. One request, whatever the family's size.
+   */
+  async associated(id: string, options: { signal?: AbortSignal } = {}): Promise<{ family: PlotaFamily; usage: PlotaUsageHeaders }> {
+    const { body, usage } = await this.get(`/applications/${encodeURIComponent(id)}/associated`, options)
+    const family = ((body as { data?: unknown }).data ?? body) as PlotaFamily
+    if (!family || !family.principal || !Array.isArray(family.applications)) {
+      throw new PlotaError('Plota returned an invalid family shape', 502, usage.requestId, null)
+    }
+    return { family, usage }
+  }
+
+  private async get(path: string, options: { signal?: AbortSignal }): Promise<{ body: unknown; usage: PlotaUsageHeaders }> {
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        Accept: 'application/json',
+        'User-Agent': 'CommercialDirectory/1.0 planning-intelligence',
+      },
+      signal: options.signal,
+    })
+    const usage: PlotaUsageHeaders = {
+      requestId: response.headers.get('x-request-id'),
+      monthlyLimit: integerHeader(response.headers, 'x-ratelimit-limit-month'),
+      monthlyRemaining: integerHeader(response.headers, 'x-ratelimit-remaining-month'),
+    }
+    if (!response.ok) {
+      let message = `Plota request failed (${response.status})`
+      try {
+        const body = (await response.json()) as { error?: { message?: string } }
+        if (body.error?.message) message = body.error.message
+      } catch {
+        // Keep the status-only message; never include the request URL or API key.
+      }
+      throw new PlotaError(message, response.status, usage.requestId, integerHeader(response.headers, 'retry-after'))
+    }
+    return { body: await response.json(), usage }
   }
 
   async search(

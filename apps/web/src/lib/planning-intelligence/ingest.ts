@@ -138,6 +138,17 @@ function rowFor(
   }
 }
 
+/**
+ * The stored row for an application that arrives outside a search page, such as a member of a Plota
+ * family. Eligibility is recorded, but the row joins the intelligence tier only when asked:
+ * membership of a family decides that from step 5 of the linking plan, not each member alone.
+ */
+export function storageRowFor(application: PlotaApplication, options: { admitToTier: boolean }) {
+  const decision = decideEligibility(application)
+  const row = rowFor(application, decision, classificationInputHash(application), false, true)
+  return options.admitToTier ? row : { ...row, intelligence_tier: false, classification_state: 'not_eligible' }
+}
+
 async function allRows(db: PlanningAdminClient, table: string, columns: string) {
   const rows: Record<string, unknown>[] = []
   for (let from = 0; ; from += 1000) {

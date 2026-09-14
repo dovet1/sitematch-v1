@@ -64,6 +64,38 @@ export interface PlotaApplication {
   source?: string | null
 }
 
+/** A member of a Plota associated-application family, including the principal at depth 0. */
+export interface PlotaFamilyMember {
+  id: string
+  reference: string
+  authority: PlotaAuthority
+  address?: string | null
+  description?: string | null
+  planning_route?: string | null
+  procedure?: string | null
+  status?: string | null
+  stage?: PlanningStage | null
+  date_received?: string | null
+  date_decided?: string | null
+  links?: PlotaApplication['links']
+  source?: string | null
+  parent_id: string | null
+  parent_reference: string | null
+  linked_by: 'citation' | 'reference' | null
+  depth: number
+  is_this?: boolean
+}
+
+export interface PlotaFamily {
+  id: string
+  reference: string
+  role: string
+  principal: PlotaFamilyMember
+  conditions: Array<Record<string, unknown>>
+  count: number
+  applications: PlotaFamilyMember[]
+}
+
 export interface PlotaPage {
   data: PlotaApplication[]
   meta: {

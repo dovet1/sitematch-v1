@@ -76,6 +76,15 @@ that are superseded by this snapshot. All figures below are observations, not li
   `26e931b` plan revision. Pilot request limit of 300 agreed. Linking plan
   revised after Astra's second review: linking in normal ingestion, reused Plota family lookups,
   backlog recovery without a backfill rerun, three validation levels.
+- **Linking step 3 migration applied by the user; pilot councils seeded** (South Norfolk Broadland,
+  Wandsworth, Glasgow: 2,074 links, 934 lookups; idempotent on re-run). National seeding not yet run.
+- **Linking step 4 built (Plota family lookups):** migration `20261008000000_planning_family_lookups.sql`
+  **not applied**; `family-lookup.ts`, `family-priority.ts`, `scripts/run-family-lookups.ts` (dry-run
+  default), unscheduled cron route `lookup-plota-families`. Pilot priorities computed (Broadland
+  147/934). **No family requests spent**; the pilot runs from October within the agreed 300.
+- **Workers:** no deploy needed yet. The live workers run older code, which is fine. Plan one
+  deploy after step 5, preceded by national seeding, with `PLANNING_LINKING_ENABLED=true` set on
+  the `sitematch-planning-workers` Vercel project.
 - **Linking step 3 built (ingestion-time linking):** migration
   `20261007000000_planning_application_links.sql` **not applied**; `link-ingest.ts` behind
   `PLANNING_LINKING_ENABLED` (off); `scripts/seed-planning-links.ts` (dry-run default). Go-live order:

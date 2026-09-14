@@ -382,6 +382,49 @@ Done when:
 - a conflict produces a review item and no merge;
 - requests per recovered family are measured.
 
+**Built, 14 September 2026; migration `20261008000000_planning_family_lookups.sql` not yet applied;
+no requests spent.**
+- **Client:** `PlotaClient.associated(id)`.
+- **Storing a family** (`storeFamily` in `family-lookup.ts`):
+  - members we lack become applications recorded as eligible but not admitted to the tier until
+    step 5;
+  - a fetched member borrows a stored member's location, recorded as
+    `borrowed_from_family_member`, which is never treated as exact;
+  - Plota's relationships become `plota_associated` links, skipping any child and family a person
+    removed;
+  - waiting local follow-ons attach to the new members;
+  - the family, ledger and raw response go in `planning_families`;
+  - every queued lookup whose key is a family member's reference or case number closes;
+  - disagreements (local follow-ons Plota excludes, or members tied locally to a parent outside
+    the family) are stored with `review_state = 'pending'`.
+- **Running lookups** (`runFamilyLookups`):
+  - lookups are taken in priority order;
+  - it asks about the most recent live follow-on;
+  - usage is recorded under its own endpoint;
+  - it stops at the per-run limit, the monthly allowance (counting earlier runs), the discovery
+    reserve, or a 429 (deferred);
+  - it skips a lookup an earlier family in the same run already closed.
+- **Priority** (`family-priority.ts`), in this order:
+  - relevant Developments missing their original (high 4000, medium 3000, any tier follow-on 2000);
+  - a follow-on quoting a major proposal, commercial or 15+ homes (+1500);
+  - activity within 180 days (+500);
+  - family size (+100 each, up to 10).
+- **Tests:** 11, on the real Broadland family response.
+- **Operation:** `scripts/run-family-lookups.ts`, dry-run by default; a commit needs `--councils`,
+  `--limit` and `--allowance`. The cron route `lookup-plota-families` is packaged but unscheduled,
+  and off unless `PLOTA_FAMILY_LOOKUPS_ENABLED` and a monthly allowance are set.
+- **Pilot councils seeded** (14 Sep): 2,074 links and 934 lookups. Broadland's 2024/3141 lookup has
+  11 strong follow-ons.
+- **Priorities computed:**
+  - 24 lookups tied to high-relevance Developments, 7 to medium, 77 with a tier follow-on;
+  - 39 quoting a major scheme;
+  - 367 in the middle band;
+  - 420 low;
+  - Broadland ranks 147 of 934, inside the 300-request pilot.
+- **Open question for the pilot:** some families can only be asked about through an archive id
+  (`h_…`). Plota documents that single-record fetches of archive ids return 404; whether the
+  family endpoint does too is measured on the first such lookup.
+
 ### Step 5 — One Development per family, with rules that protect it
 
 Ship together with step 3's writes, never before:

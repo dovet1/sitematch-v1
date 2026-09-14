@@ -1,0 +1,468 @@
+{
+ "data": {
+  "id": "uy29jz34",
+  "reference": "2026/2652",
+  "role": "member",
+  "principal": {
+   "id": "h_07ea8ed7473e",
+   "reference": "2024/3141",
+   "authority": {
+    "slug": "south-norfolk-broadland",
+    "name": "South Norfolk Broadland"
+   },
+   "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+   "description": "Erection of a Warehouse Club (Sui Generis) including, tyre installation and sales, a petrol filling station, deck and surface car parking, accesses, landscaping, engineering, and associated works.",
+   "planning_route": "Full",
+   "procedure": "full",
+   "status": "approved",
+   "stage": "approved",
+   "date_received": "2024-10-23",
+   "date_decided": "2025-12-29",
+   "links": {
+    "plota": null,
+    "council": "https://info.southnorfolkandbroadland.gov.uk/online-applications/applicationDetails.do?activeTab=summary&keyVal=SLTEGQOQGV900",
+    "associated": null
+   },
+   "source": "historical",
+   "parent_id": null,
+   "parent_reference": null,
+   "linked_by": null,
+   "depth": 0,
+   "is_this": false
+  },
+  "conditions": [
+   {
+    "number": "7",
+    "label": null,
+    "status": "discharged",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "applications": [
+     "bu4uqtqq",
+     "oeekwuay"
+    ]
+   },
+   {
+    "number": "9",
+    "label": null,
+    "status": "discharged",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "applications": [
+     "7gdc72mt"
+    ]
+   },
+   {
+    "number": "10",
+    "label": null,
+    "status": "discharged",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "applications": [
+     "c3oezgkz"
+    ]
+   },
+   {
+    "number": "14",
+    "label": null,
+    "status": "discharged",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "applications": [
+     "3b3e1w7s"
+    ]
+   },
+   {
+    "number": "19",
+    "label": null,
+    "status": "discharged",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "applications": [
+     "7h9fgfsh"
+    ]
+   },
+   {
+    "number": "21",
+    "label": null,
+    "status": "discharged",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "applications": [
+     "1uy2l9bo"
+    ]
+   },
+   {
+    "number": "24",
+    "label": null,
+    "status": "discharged",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "applications": [
+     "w9re1g64"
+    ]
+   },
+   {
+    "number": "27",
+    "label": null,
+    "status": "discharged",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "applications": [
+     "tjve9vdi"
+    ]
+   },
+   {
+    "number": "28",
+    "label": null,
+    "status": "discharged",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "applications": [
+     "z2c54l86"
+    ]
+   },
+   {
+    "number": "30",
+    "label": null,
+    "status": "discharged",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "applications": [
+     "oeekwuay"
+    ]
+   }
+  ],
+  "count": 12,
+  "applications": [
+   {
+    "id": "h_07ea8ed7473e",
+    "reference": "2024/3141",
+    "authority": {
+     "slug": "south-norfolk-broadland",
+     "name": "South Norfolk Broadland"
+    },
+    "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+    "description": "Erection of a Warehouse Club (Sui Generis) including, tyre installation and sales, a petrol filling station, deck and surface car parking, accesses, landscaping, engineering, and associated works.",
+    "planning_route": "Full",
+    "procedure": "full",
+    "status": "approved",
+    "stage": "approved",
+    "date_received": "2024-10-23",
+    "date_decided": "2025-12-29",
+    "links": {
+     "plota": null,
+     "council": "https://info.southnorfolkandbroadland.gov.uk/online-applications/applicationDetails.do?activeTab=summary&keyVal=SLTEGQOQGV900",
+     "associated": null
+    },
+    "source": "historical",
+    "parent_id": null,
+    "parent_reference": null,
+    "linked_by": null,
+    "depth": 0,
+    "is_this": false
+   },
+   {
+    "id": "1uy2l9bo",
+    "reference": "2026/0941",
+    "authority": {
+     "slug": "south-norfolk-broadland",
+     "name": "South Norfolk Broadland"
+    },
+    "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+    "description": "Details for conditions 21 - installation of under ground tanks and 27 - piling and foundation designs of permission 2024/3141",
+    "planning_route": "Approval of Condition Details",
+    "procedure": "discharge",
+    "status": "Decided",
+    "stage": "approved",
+    "date_received": "2026-04-02",
+    "date_decided": "2026-07-06",
+    "links": {
+     "plota": "https://plota.co.uk/application/1uy2l9bo",
+     "council": null,
+     "associated": "https://api.plota.co.uk/v1/applications/1uy2l9bo/associated"
+    },
+    "source": "live",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "linked_by": "citation",
+    "depth": 1,
+    "is_this": false
+   },
+   {
+    "id": "c3oezgkz",
+    "reference": "2026/0935",
+    "authority": {
+     "slug": "south-norfolk-broadland",
+     "name": "South Norfolk Broadland"
+    },
+    "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+    "description": "Application for Approval of Details Reserved by Conditions 10 CEMP and 11 BEP of Planning Permission 2024/3141",
+    "planning_route": "Approval of Condition Details",
+    "procedure": "discharge",
+    "status": "Decided",
+    "stage": "approved",
+    "date_received": "2026-04-02",
+    "date_decided": "2026-06-11",
+    "links": {
+     "plota": "https://plota.co.uk/application/c3oezgkz",
+     "council": null,
+     "associated": "https://api.plota.co.uk/v1/applications/c3oezgkz/associated"
+    },
+    "source": "live",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "linked_by": "citation",
+    "depth": 1,
+    "is_this": false
+   },
+   {
+    "id": "7gdc72mt",
+    "reference": "2026/0994",
+    "authority": {
+     "slug": "south-norfolk-broadland",
+     "name": "South Norfolk Broadland"
+    },
+    "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+    "description": "Details for condition 9 - Travel Plan of permission 2024/3141",
+    "planning_route": "Approval of Condition Details",
+    "procedure": "discharge",
+    "status": "Decided",
+    "stage": "approved",
+    "date_received": "2026-04-09",
+    "date_decided": "2026-06-10",
+    "links": {
+     "plota": "https://plota.co.uk/application/7gdc72mt",
+     "council": null,
+     "associated": "https://api.plota.co.uk/v1/applications/7gdc72mt/associated"
+    },
+    "source": "live",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "linked_by": "citation",
+    "depth": 1,
+    "is_this": false
+   },
+   {
+    "id": "oeekwuay",
+    "reference": "2026/1157",
+    "authority": {
+     "slug": "south-norfolk-broadland",
+     "name": "South Norfolk Broadland"
+    },
+    "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+    "description": "Details for Condition 30 - Habitat Management Monitoring Plan of permission, Details for Condition 7 - Construction Management Plan (CMP) and Discharge of biodiversity gain plan condition of permission 2024/3141",
+    "planning_route": "Approval of Condition Details",
+    "procedure": "discharge",
+    "status": "Decided",
+    "stage": "approved",
+    "date_received": "2026-04-22",
+    "date_decided": "2026-06-29",
+    "links": {
+     "plota": "https://plota.co.uk/application/oeekwuay",
+     "council": null,
+     "associated": "https://api.plota.co.uk/v1/applications/oeekwuay/associated"
+    },
+    "source": "live",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "linked_by": "citation",
+    "depth": 1,
+    "is_this": false
+   },
+   {
+    "id": "7h9fgfsh",
+    "reference": "2026/1211",
+    "authority": {
+     "slug": "south-norfolk-broadland",
+     "name": "South Norfolk Broadland"
+    },
+    "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+    "description": "Details for condition 19 - Noise and Dust Management Plan of permission 2024/3141",
+    "planning_route": "Approval of Condition Details",
+    "procedure": "discharge",
+    "status": "Decided",
+    "stage": "approved",
+    "date_received": "2026-04-28",
+    "date_decided": "2026-05-28",
+    "links": {
+     "plota": "https://plota.co.uk/application/7h9fgfsh",
+     "council": null,
+     "associated": "https://api.plota.co.uk/v1/applications/7h9fgfsh/associated"
+    },
+    "source": "live",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "linked_by": "citation",
+    "depth": 1,
+    "is_this": false
+   },
+   {
+    "id": "bu4uqtqq",
+    "reference": "2026/1210",
+    "authority": {
+     "slug": "south-norfolk-broadland",
+     "name": "South Norfolk Broadland"
+    },
+    "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+    "description": "Details for condition 7 - Construction Management Plan (CMP) of permission 2024/3141",
+    "planning_route": "Approval of Condition Details",
+    "procedure": "discharge",
+    "status": "Decided",
+    "stage": "approved",
+    "date_received": "2026-04-28",
+    "date_decided": "2026-06-24",
+    "links": {
+     "plota": "https://plota.co.uk/application/bu4uqtqq",
+     "council": null,
+     "associated": "https://api.plota.co.uk/v1/applications/bu4uqtqq/associated"
+    },
+    "source": "live",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "linked_by": "citation",
+    "depth": 1,
+    "is_this": false
+   },
+   {
+    "id": "tjve9vdi",
+    "reference": "2026/1329",
+    "authority": {
+     "slug": "south-norfolk-broadland",
+     "name": "South Norfolk Broadland"
+    },
+    "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+    "description": "Details for condition 27 - Foundation Risk Assessment of permission 2024/3141",
+    "planning_route": "Approval of Condition Details",
+    "procedure": "discharge",
+    "status": "Decided",
+    "stage": "approved",
+    "date_received": "2026-05-08",
+    "date_decided": "2026-06-11",
+    "links": {
+     "plota": "https://plota.co.uk/application/tjve9vdi",
+     "council": null,
+     "associated": "https://api.plota.co.uk/v1/applications/tjve9vdi/associated"
+    },
+    "source": "live",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "linked_by": "citation",
+    "depth": 1,
+    "is_this": false
+   },
+   {
+    "id": "z2c54l86",
+    "reference": "2026/1699",
+    "authority": {
+     "slug": "south-norfolk-broadland",
+     "name": "South Norfolk Broadland"
+    },
+    "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+    "description": "Details for condition 28 - Archaeological written scheme of investigation, of permission 2024/3141",
+    "planning_route": "Approval of Condition Details",
+    "procedure": "discharge",
+    "status": "Decided",
+    "stage": "approved",
+    "date_received": "2026-06-15",
+    "date_decided": "2026-07-22",
+    "links": {
+     "plota": "https://plota.co.uk/application/z2c54l86",
+     "council": null,
+     "associated": "https://api.plota.co.uk/v1/applications/z2c54l86/associated"
+    },
+    "source": "live",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "linked_by": "citation",
+    "depth": 1,
+    "is_this": false
+   },
+   {
+    "id": "3b3e1w7s",
+    "reference": "2026/1998",
+    "authority": {
+     "slug": "south-norfolk-broadland",
+     "name": "South Norfolk Broadland"
+    },
+    "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+    "description": "Discharge of condition 14- PFS delivery times, of existing application 2024/3141.",
+    "planning_route": "Approval of Condition Details",
+    "procedure": "discharge",
+    "status": "Decided",
+    "stage": "approved",
+    "date_received": "2026-07-10",
+    "date_decided": "2026-08-26",
+    "links": {
+     "plota": "https://plota.co.uk/application/3b3e1w7s",
+     "council": null,
+     "associated": "https://api.plota.co.uk/v1/applications/3b3e1w7s/associated"
+    },
+    "source": "live",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "linked_by": "citation",
+    "depth": 1,
+    "is_this": false
+   },
+   {
+    "id": "w9re1g64",
+    "reference": "2026/2156",
+    "authority": {
+     "slug": "south-norfolk-broadland",
+     "name": "South Norfolk Broadland"
+    },
+    "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+    "description": "Details for condition 24 of 2024/3141 - (24) Site Layout Fire Hydrant Locations",
+    "planning_route": "Approval of Condition Details",
+    "procedure": "discharge",
+    "status": "Decided",
+    "stage": "approved",
+    "date_received": "2026-07-24",
+    "date_decided": "2026-08-26",
+    "links": {
+     "plota": "https://plota.co.uk/application/w9re1g64",
+     "council": null,
+     "associated": "https://api.plota.co.uk/v1/applications/w9re1g64/associated"
+    },
+    "source": "live",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "linked_by": "citation",
+    "depth": 1,
+    "is_this": false
+   },
+   {
+    "id": "uy29jz34",
+    "reference": "2026/2652",
+    "authority": {
+     "slug": "south-norfolk-broadland",
+     "name": "South Norfolk Broadland"
+    },
+    "address": "Broadland Business Park Old Chapel Way Postwick Norfolk",
+    "description": "Non material amendment of 2024/3141 - landscaping provision, relocation of gas meter, installation of gates at access points, minor amendments to sprinkler tank arrangement, increase to tank diameter and addition of maintenance doors, addition of safety rail to roof and orientation to be straightened at the south west corner, minor amendments to mezzanine sizes and additional of compressor, door positions adjusted on elevations minor changes to the glass canopy and revised internal layout, minor increases to the lift and stairs cores and minor amendments to the deck architectural and facade treatment",
+    "planning_route": "Non Material Amendment",
+    "procedure": "amendment",
+    "status": "Pending Consideration",
+    "stage": "pending",
+    "date_received": "2026-09-07",
+    "date_decided": null,
+    "links": {
+     "plota": "https://plota.co.uk/application/uy29jz34",
+     "council": "https://info.southnorfolkandbroadland.gov.uk/online-applications/applicationDetails.do?keyVal=TKZWB1OQIVG00&activeTab=summary",
+     "associated": "https://api.plota.co.uk/v1/applications/uy29jz34/associated"
+    },
+    "source": "live",
+    "parent_id": "h_07ea8ed7473e",
+    "parent_reference": "2024/3141",
+    "linked_by": "citation",
+    "depth": 1,
+    "is_this": true
+   }
+  ]
+ },
+ "meta": {
+  "how": "Members are linked two ways, both exact and within the same authority: by the references each application cites in its description, and by a shared reference core (e.g. 24/01355/FUL and 24/01355/COND1) where the council numbers follow-on applications off the principal application AND the two records share a site. Nothing is inferred from proximity alone. parent_id and depth reconstruct the tree; is_this marks the requested application.",
+  "historical_available": true
+ }
+}
