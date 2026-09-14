@@ -220,6 +220,14 @@ expert works to 15, and that is a toggle, not a constant.
 Done when: a residential scheme with no stated count in the source reaches the tier and
 carries a model-supplied count, and the display threshold is user-controlled.
 
+**Status, 14 September 2026.** Main discovery and the backfill run full census, and the widened
+limb is live: stored rows already carry it, and in six weeks of May-June data 238 uncounted
+housing records reached the tier, all classified, 185 with a model count. The late and deep lanes
+run reduced scope and missed every one of them; a `category=new-homes` spec now closes 63 of the 71
+real proposals among them (built, not deployed). Two things remain: the display threshold, and
+the 167 amendments and discharges that reach the tier by quoting a parent permission and carry
+the parent's dwelling count, which would double-count schemes in a residential view.
+
 ### 2b. Measure the research pass before changing it
 
 An earlier version of this plan said the research pass needed pointing at news rather than
@@ -277,6 +285,10 @@ Done when: a source already scanned is not paid for again; a second, uninformati
 earlier findings intact; and every stored finding names the source it came from.
 
 ### 2d. Merge related applications into one Development
+
+**Planned in detail on 14 September 2026, and moved ahead of the grading fix:** see
+`planning-development-linking-plan.md`, which measures linking on 12 councils and uses Plota's
+associated-family endpoint for parents older than the store.
 
 One real site currently becomes several Developments. `development_applications` already allows
 `cited_reference` as a relationship, and detail submissions carry the parent's reference in the

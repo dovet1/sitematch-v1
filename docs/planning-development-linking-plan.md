@@ -1,0 +1,321 @@
+# Planning: development linking plan
+
+Date: 14 September 2026. Revised the same day after Astra's review. Expands Phase 2d of
+`plota-planning-delivery-plan.md` and runs before the relevance-grading fix, at the user's request.
+Nothing here is built yet.
+
+## The idea
+
+Create a folder for each building project. The original permission, its amendments and its
+condition submissions go inside. The folder gets one map pin, one assessment and a history in date
+order.
+
+For Broadland Business Park, that means one entry reading "Warehouse club and petrol station:
+permission approved, 11 later applications", with the individual applications underneath.
+
+This changes the existing system rather than adding a new one. `developments` and the
+`development_applications` link table already exist. The missing work is deciding which
+applications belong together, and which application's information describes the project.
+
+## The problem, in one example
+
+Permission **2024/3141** (approved: "Erection of a Warehouse Club (Sui Generis) including tyre
+installation and sales, a petrol filling station, deck and surface car parking…") has eleven
+follow-on applications between April and September 2026:
+- ten condition submissions (construction management, foundation risk, archaeology, petrol
+  filling station delivery times, fire hydrants);
+- one non-material amendment to the mezzanines and glass canopy.
+
+We store all eleven follow-ons and none is classified: each one, read alone, is paperwork. We do
+not store the permission, which predates our twelve-month window. A warehouse club moving towards
+construction therefore shows as eleven unlabelled admin rows.
+
+In the other direction, related applications that each pass the filter each create their own
+Development, classification and research queue entry. A dwelling figure quoted from the parent is
+repeated on every one.
+
+## What exists today
+
+- A trigger (`ensure_development_for_planning_application`) creates one Development per
+  intelligence-tier application, always role `primary` and source `initial`. Nothing else writes
+  `development_applications`.
+- The link table already allows roles `principal`, `member`, `amendment`, `condition`, `related`
+  and sources `plota_associated`, `cited_reference`, `shared_uprn`, `address_name`, `manual`.
+  None is used.
+- Classification is per application and **writes the Development's summary and figures from
+  whichever application it processes**. Once applications are linked, a condition submission
+  could overwrite the main proposal.
+- Research is queued per Development, which is already the right unit.
+- The planning tab (`planning_tab_applications_v3`) returns one row per application.
+- Non-tier applications never get a Development, so they cannot appear in a history.
+
+## What the data says
+
+### Plota already builds families
+
+`GET /v1/applications/{id}/associated` returns:
+- the principal application;
+- every member, with `parent_reference`, `depth` and `linked_by` (`citation` or `reference`);
+- a condition ledger.
+
+Plota links only two exact ways, within one council: a member's description cites the parent's
+reference, or the references share a core (`24/01355/FUL`, `24/01355/COND1`) and the records share
+a site. Paid plans include archive members.
+
+Probed on Broadland: one request returned 12 applications, including the 2024 archive principal,
+and a 10-row ledger. The principal carries description, route, procedure, stage, dates, address
+and links. It does not carry location, UPRN, dwelling count or commercial work.
+
+**The ledger is not a list of outstanding conditions.** It is derived from the discharge and
+variation applications in the family. Statuses are `discharged`, `submitted`, `decided`,
+`refused`, `withdrawn`, `varied` and `variation_sought`. Where the council's decisions are not
+re-checked, only `submitted` and `variation_sought` appear. Ten condition applications do not mean
+ten conditions discharged, nor that construction has started.
+
+### Archive records cannot pass the commercial filter
+
+Plota's derived fields are live-only. In our own store:
+
+| Received | Source | Applications | `commercial_work` set | Intelligence tier |
+|---|---|---|---|---|
+| 15 Oct 2025 | historical | 2,416 | **0** | 26 (1.1%) |
+| 16 Mar 2026 | live | 3,315 | 235 | 206 (6.2%) |
+
+The eligibility filter's commercial limb reads `commercial_work`. So a recovered archive
+principal, such as the warehouse club, would be stored and still never assessed, even with its
+full record fetched. The same fault already applies to **our backfill from 10 September to 31
+December 2025**: commercial schemes received then rarely reach classification. Only dwelling
+count is backfilled onto the archive.
+
+### How much we can link for free
+
+Measured over the full twelve months for 12 councils in all four nations (47,330 applications:
+South Norfolk Broadland, Wandsworth, Westminster, Birmingham, Cardiff, Belfast, Glasgow,
+Edinburgh, Canterbury, Cornwall, Leeds, Manchester). This is not a random sample; national figures
+(×13) are rough.
+
+| Measure | Sample | Share |
+|---|---|---|
+| Applications citing another reference from their council | 9,411 | 20% of all |
+| …whose cited parent is stored | 2,326 | 25% of citing |
+| …whose cited parent is not stored | 7,085 | 75% of citing |
+| Distinct missing parents | 4,934 | |
+| …with 3+ follow-ons in our store | 535 | ~7,000 nationally |
+| …with at least one intelligence-tier follow-on | 146 | ~1,900 nationally |
+| Tier applications whose parent is also tier (Developments that would merge) | 27 | 1.3% of tier |
+| Non-tier follow-ons of a tier parent (history entries gained) | 79 | |
+
+All 40 random resolved links read were genuine. They were follow-ons, companions (the same
+proposal under planning plus listed-building or advert consent, often "Linked with …") and chains
+(a discharge of a condition "as amended by" an amendment). Reference cores are council-specific:
+Glasgow `DOCnn` are discharges and `NMVnn` non-material variations, but Westminster `TCA`/`TPO`
+pairs are tree works. **Shared UPRN alone joined different proposals for the same building**, such
+as unrelated short-term lets in one Edinburgh tenement.
+
+### Provider cost is requests only, on our key
+
+Plota's published plans meter records as well as requests. **Our key returns no `X-Records-*`
+headers**, only request limits (checked 14 September), and our usage far exceeds any published
+record allowance. So requests are the binding cost: one per family call. Both allowances reset per
+calendar month. The Plota dashboard on 14 September showed 16,020 of 20,000 requests used.
+**September's remainder is kept for live discovery**, so the pilot's family fetches wait for
+October.
+
+## Principles
+
+1. **A link is evidence, kept with its supporting text and reversible.** Store it separately from
+   Development membership, so a wrong link can be removed without losing anything.
+2. **Strong links only, automatically.** A description that says what it is doing to another
+   application ("discharge of condition 14 of 2024/3141", "variation of condition 2 of …",
+   "non-material amendment to …", "Linked with …"), a follow-on reference core for that council, or
+   a Plota family. An incidental mention ("adjacent to the site approved under …") is weak: it is
+   stored, but only a reviewer acts on it. UPRN and address are not used in the first release.
+3. **Related does not mean identical scope.** A 500-home outline permission can have reserved
+   matters for an 80-home phase. The phase belongs in the same history, but its 80 never replaces
+   the scheme's 500.
+4. **A section 73 approval is a new permission alongside the original, not a replacement.** It is
+   recorded in the history with its own figures. It does not overwrite the original's figures
+   automatically.
+5. **Paperwork can never overwrite what the scheme is.** Condition submissions and non-material
+   amendments add history entries only.
+6. **Every figure names its source application.** Figures are never summed across members.
+7. **Ambiguous families go to review, not automatic merge.** Examples: two candidate parents, a
+   weak link, phases whose figures conflict, or a Development a human has already reviewed.
+8. **Linking and the classification rules ship together.** There must be no period in which
+   linked applications write over one another.
+
+## First release
+
+Scope is deliberately small. It succeeds when Broadland appears as one correctly assessed scheme,
+its history is visible, and new paperwork cannot overwrite what the scheme is.
+
+### Step 1 — Link clear references in stored data, no writes to live records
+
+A pure linker per council produces edges, each with:
+- source and strength (strong or weak);
+- the matched text;
+- the resolved parent, or the unresolved reference.
+
+It uses citation phrases matched against that council's reference formats (excluding dates,
+`APP/…` appeal references and the application's own reference). It also applies follow-on core
+rules for councils that use them, excluding tree-work pairs, and resolves chains to the root.
+
+A read-only report covers the national store.
+
+Done when strong links reach at least 98% precision on 200 labelled examples.
+
+**Done, 14 September 2026.** Built in `apps/web/src/lib/planning-intelligence/linking.ts` (31 tests)
+with the read-only report `scripts/report-planning-links.ts`. The final national run is in
+`reports/planning-links-2026-09-14.json`, and the labels are in
+`reports/planning-links-labels-2026-09-14.json`.
+
+**Reference reading: Claude judged 241 of 243 sampled strong links correct (99.2%).**
+- Quoted-reference links: 212 of 213; these are 99.5% of all strong links.
+- Case-number links (condition, amendment, companion, 10 labelled each): 29 of 30.
+
+This is Claude's reading of stored descriptions, not proven accuracy. It checks one thing: whether
+each child genuinely follows on from, or is a companion of, the reference it was linked to. Only 44
+of the 243 parents are stored, so most verdicts rest on the child's wording alone. It does not
+measure whether whole families are complete and correctly grouped, or whether the resulting
+Developments are accurate. Each link's verdict and explanation are in the labels file.
+Validation of those three levels is set out below.
+
+It took six national runs to reach that, and three rules were rejected on the evidence:
+- **A follow-on's own number is not its parent's.** The first case-number rule was 3 of 43 correct
+  for conditions and 0 of 15 for amendments, because most councils number follow-ons
+  independently: Leeds `26/01686/COND` discharges `24/03592/FU`.
+- **A same-numbered sibling is not enough on its own.** Descriptions that repeat their own
+  reference, and councils that mix numbering, left those links at 8 and 6 of 10.
+- **Case-number reuse is measured per council and per suffix family.** Cambridge reuses the number
+  for `COND` and `NMA` but not `S73`; Falkirk reuses it for `COND` but not `MSC`.
+
+Recall: 116,583 of 129,457 applications *recognised as follow-ons by their wording or procedure*
+(90%) now have a strong link. This does not cover follow-ons the wording test misses, and it is
+not a share of all projects. Most of
+the rest quote no reference at all ("Construction of Dwellinghouse", or conditions listed with no
+permission named).
+
+National result, 393 councils and 614,390 applications:
+
+| Measure | Count |
+|---|---|
+| Families | 72,049, covering 128,157 applications |
+| …with 3+ applications | 9,308 (762 with 10+) |
+| …headed by a stored permission | 9,884 |
+| …missing their parent permission | 61,552 (67,897 distinct missing references) |
+| …with several missing parents (masterplans and chains, for review) | 4,877 |
+| Families with an intelligence-tier member | 2,755 |
+| Developments that would merge | 1,053 of 29,648 (3.6%) |
+| Non-tier applications joining a tier family's history | 6,385 |
+| **Overlooked families** (3+ applications, none assessed, parent missing, active since 14 March 2026) | **5,535**, covering 28,617 applications |
+
+Broadland Business Park comes out as one family of exactly the 11 follow-ons Plota lists, missing
+only 2024/3141. For the pilot councils:
+- South Norfolk Broadland: 465 families, 34 overlooked.
+- Wandsworth: 395 families, 39 overlooked.
+- Glasgow: 98 families, 1 overlooked.
+
+What this changes for later steps:
+- The overlooked families are the pilot's recovery pool. At one Plota request each, all 5,535
+  would be affordable over time. Their value is still unmeasured: step 4 measures it on the pilot
+  councils first.
+- Families with several missing parents are almost all phased masterplans or chains of variations
+  (the 49-application New Covent Garden Market family in Wandsworth). Principle 7 applies: review,
+  not automatic merge.
+
+### Step 2 — Let archive schemes be assessed
+
+Add a description-based commercial test for records without `commercial_work`, mirroring the
+existing uncounted-housing limb, so archive records and recovered principals can reach the tier.
+Calibrate it for free on 2026 live records, where `commercial_work` is known: measure agreement
+with limb A before using it.
+
+Done when:
+- its precision and recall against limb A are measured and accepted;
+- the Broadland principal's description passes it.
+
+### Step 3 — One Development per straightforward family, with rules that protect it
+
+Ship as one change:
+- **Schema:** a links table; `principal_application_id` and `latest_activity_at` on
+  `developments`; a `phase` or `scope` label on membership.
+- **Trigger:** a strongly linked application joins its family's Development, and non-tier members
+  join as history entries.
+- **Merge and undo:** transactional merge and detach functions that move members, observations,
+  brand signals and review history. They refuse Developments a human has reviewed.
+- **Eligibility:** computed per family. A family qualifies if its principal or any member does.
+- **Classification:** reads the principal's substantive proposal.
+  - Condition submissions and non-material amendments are marked `linked_member`. They are not
+    classified or researched on their own.
+  - Section 73 approvals and reserved matters keep their own figures, as described in the
+    principles.
+  - A test proves classification order cannot change a Development's output.
+
+Done when:
+- a condition submission arriving leaves the Development's summary and figures unchanged;
+- merge and detach pass the verification script;
+- ambiguous families are listed for review instead of merged.
+
+### Step 4 — End-to-end pilot, including overlooked schemes
+
+Run on a handful of councils: South Norfolk Broadland, Wandsworth, and Glasgow for reference
+cores. Include both kinds of family:
+- families that already have an assessed application;
+- **overlooked families like Broadland**: several recent follow-ons, none assessed, parent missing.
+
+Fetch each missing family once through Plota, within the existing budget controls, **from the
+October reset**. Store the principal, taking its location from a member because Plota
+guarantees a shared site. Store any members we lacked, and the ledger as reported. Then assess the
+family with steps 2 and 3.
+
+Record the requests actually used.
+
+Workers must be redeployed with the step 3 trigger and classification changes. Otherwise new
+applications in pilot councils arrive under the old per-application rules.
+
+### Step 5 — One pin and a basic history
+
+The planning tab shows one row and pin per Development: the principal's proposal, its stage, the
+latest activity date and the number of applications. The inspector lists the applications in date
+order with plain labels taken from procedure and stage:
+- "permission approved";
+- "amendment approved";
+- "condition details submitted";
+- "condition details approved".
+
+Unlinked applications are unchanged. The tab's ranking and 2,000-row cap must be re-proven on the
+new read.
+
+### Step 6 — Check the pilot before expanding
+
+Read and report:
+- incorrect merges;
+- relevant schemes newly recovered from overlooked families;
+- duplicate counts before and after;
+- dwelling or floor-space figures that changed and why;
+- provider requests used per family.
+
+Then propose a national rollout and a family-fetch budget from those numbers, not from the
+estimates above.
+
+## Deferred
+
+- Address and UPRN suggestions.
+- Progress scoring (for example "construction likely started").
+- Comprehensive condition tracking, beyond showing the ledger as Plota reports it.
+- National parent recovery beyond the pilot.
+- Manual attach and detach on the admin review screen. Detach exists as a database function for
+  corrections in the first release.
+
+## Decisions needed from the user
+
+1. **Pilot councils.** Confirm South Norfolk Broadland, Wandsworth and Glasgow, or name others.
+2. **Companions.** Treat a planning application and its listed-building or advert twin as one
+   Development in the first release (recommended), or defer them.
+
+## Relationship to the grading fix
+
+Linking changes what the classifier reads: the principal's proposal instead of a discharge's.
+Fixing the grading afterwards measures it on the inputs it will actually get. The grading problem
+remains meanwhile (10,009 high, 235 medium, discharges graded high), so **research stays off until
+both are done.**

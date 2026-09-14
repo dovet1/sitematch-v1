@@ -35,6 +35,44 @@ that are superseded by this snapshot. All figures below are observations, not li
   purpose: `docs/brand-centric-model-sketch.md` and the three `.claude/worktrees` entries.
 - All migrations through `20261005000000_planar_prefilter_planning_tab_read.sql` are applied.
 
+### Later on 14 September (second Claude session)
+
+- **Operations check, 10:25 UTC:** latest allowance **4,044** (544 above reserve); main discovery
+  runs **full** census (`census_scope: full`), 20 requests at 09:00. No late, deep or refresh run
+  since the 07:46 deploy yet: the late lane is next due 12:45 and deep 13:05 UTC. Late, deep and
+  refresh cannot spend the reserve, so they share only ~540 requests for the rest of September.
+- **Lane gap measured and fixed locally, not deployed.** Six weeks of the full census (4 May-14
+  Jun 2026, 73,474 records): the reduced specs miss 238 of 4,724 intelligence-tier records (5.0%),
+  all uncounted housing. 167 are amendments/discharges quoting a parent permission; of the 71 real
+  proposals, `category=new-homes` returns 63 for ~266 extra records a week. `buildSearchSpecs`
+  now adds a `<nation>:new-homes` reduced spec. Plota's `category` filter matches any category,
+  not only the primary (Wiltshire, 2-15 Mar 2026: 21 returned = stored any-category count, 6
+  primary); 2 probe requests spent. Estimated cost: roughly +90 requests per late pass and +100 per
+  deep pass at page size 50. **Needs a workers repackage and deploy to take effect.**
+- **Double-counting risk for the residential view.** All 238 are classified `low` (expected). The
+  model supplied a count on 185, and 134 are >= 15 homes, mostly amendments/discharges repeating
+  the parent scheme's figure. Not changed: it belongs with Phase 2d merging (`development_applications`
+  already has `amendment` and `condition` roles), or a narrower eligibility rule, for the user to decide.
+- Plota's Business plan allows `limit` up to 250; workers use 50. Unverified which plan we hold.
+- **Development linking planned before the grading fix** (user's order):
+  `docs/planning-development-linking-plan.md`. One `associated` probe spent (allowance 3,981 after).
+  Grading is also known to be inflated: 10,009 high, 235 medium, 19,364 low across 29,648
+  Developments; research is 9,973 queued, 2 complete, and should stay off until both are fixed.
+- **Plan revised after Astra's review**: first release is a small end-to-end pilot including
+  overlooked families. Two new facts: **archive records carry no `commercial_work`** (0 of 2,416 on
+  15 Oct 2025; tier 1.1% against 6.2% live), so Sep-Dec 2025 commercial schemes rarely reach
+  classification; and Plota's published plans meter **records** as well as requests, so the
+  account's record terms need checking before any family-fetch budget. (Checked later: our key
+  meters requests only; allowances reset per calendar month; September's remainder is kept for
+  live discovery, so no family fetches until October.)
+- **User decisions, 14 Sep:** pilot councils South Norfolk Broadland, Wandsworth and Glasgow;
+  companion consents merge into one Development.
+- **Linking step 1 done** (uncommitted): `linking.ts` + `report-planning-links.ts`. 99.2% correct as
+  judged by Claude on 243 sampled links (reference reading only; 44 parents stored), 90% of
+  recognised follow-ons linked, 72,049 families nationally, 5,535 overlooked
+  families. Results in the linking plan. Next is step 2, a description-based commercial test for
+  archive records.
+
 ### Next in the plan
 
 1. **Phase 1 decisions (user):** keep, narrow or separate the 1,500 m allowance for ward and
