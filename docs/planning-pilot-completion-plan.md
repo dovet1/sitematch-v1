@@ -164,15 +164,28 @@ grouped first and each development is assessed once.
 - schemes flagged for parent retrieval;
 - uncertain links kept separate.
 
-The report is re-run on the day, not taken from the preliminary figures below.
+The report is re-run on the day, not taken from the figures below.
 
-Preliminary, from the 14 September national linker report (step 1 rules):
-- 29,687 applications in the tier;
-- 3,808 of them sit in linked families, merging into 1,053 fewer developments;
-- 6,385 non-tier applications would join tier families as timeline entries.
+**Measured 14 September** (`scripts/report-grouped-assessments.ts`, rules in `assessment-groups.ts`,
+all 393 councils, 614,400 applications, read-only):
 
-The report still has to count follow-ons whose original is missing, which are the flag-for-retrieval
-cases. Those numbers will move once the grouped path's rules are applied.
+| | Tier today (re-grade) | Tier plus archive backlog |
+| --- | --- | --- |
+| Applications in scope | 29,804 | 38,088 |
+| Separate development assessments | **28,079** | **36,212** |
+| Read inside another application's assessment | 228 | 248 |
+| Routine paperwork joining a timeline, not assessed | 200 | 209 |
+| Waiting for parent retrieval, not assessed | 1,437 | 1,546 |
+| Assessments that also request their missing original | 992 | 1,104 |
+| Uncertain links kept as separate assessments | 1,063 | 1,216 |
+| Non-tier applications joining tier families' timelines | 5,584 | 6,573 |
+
+The archive backlog's 8,284 applications become 8,133 assessments.
+
+Grouping removes about 6% of assessments. The saving is small because the tier already excludes
+most condition submissions, but grouping still stops one scheme being assessed several times.
+The 1,437 schemes waiting for parent retrieval are far more than the 300-request pilot limit, so
+nationally they wait for a standing lookup allowance.
 
 **State on 14 September:**
 - No bulk classification is running. The hourly worker is classifying newly ingested applications
