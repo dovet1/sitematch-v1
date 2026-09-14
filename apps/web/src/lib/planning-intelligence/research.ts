@@ -14,6 +14,7 @@ import {
 } from './research-openrouter'
 import {
   attemptOutcome,
+  findingsFromDescription,
   findingsFromResearch,
   nextFactRows,
   type FactAttempt,
@@ -286,7 +287,11 @@ export async function researchPlanningBatch(input: {
       const actualCost = researched.costUsd ?? reservation
       const now = new Date().toISOString()
       const documentsRetrieved = collected.sources.filter(source => source.kind === 'document').length
-      const facts = await recordFacts(input.db, row.development_id, findingsFromResearch(researched, { runId: run.id, at: now }), {
+      const incoming = findingsFromResearch(researched, { runId: run.id, at: now })
+      const described = findingsFromDescription(row.raw.description, { councilUrl: row.raw.links?.council ?? null, at: now })
+      incoming.existing_use_class.push(...described.existing_use_class)
+      incoming.proposed_use_class.push(...described.proposed_use_class)
+      const facts = await recordFacts(input.db, row.development_id, incoming, {
         runId: run.id, at: now,
         outcome: attemptOutcome({
           documentsRetrieved,

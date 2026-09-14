@@ -191,6 +191,65 @@ export function findingsFromResearch(
   return out
 }
 
+// Use classes as written in UK planning descriptions. A bare single letter is too common to read as a
+// class, so "E" or "F" alone needs the word Class before it; coded forms such as B8 or E(g)(iii) do not.
+const CLASS_CODE = String.raw`(?:[A-G]\.?\d[A-Z]?(?:\([a-z]\))?|E\([a-g]\)(?:\([ivx]+\))?|Sui\s+Generis)`
+const CLASS_WORD = String.raw`(?:Use\s+)?Class(?:es)?\s+(?:[A-G](?:\.?\d[A-Z]?)?(?:\([a-z]\))?(?:\([ivx]+\))?|\d{1,2}[A-Z]?|Sui\s+Generis)`
+const CLASS_TOKEN = new RegExp(String.raw`\b${CLASS_WORD}|\b${CLASS_CODE}(?![\w(])`, 'gi')
+const EXISTING_CUE = /\b(?:existing|former|current|previous)\b[^.;]{0,60}$/i
+
+/**
+ * Use classes the application's own description states. The description is the applicant's legal
+ * wording of the proposal, so an explicit class there is evidence, and it is often the only
+ * evidence where council documents are blocked. Only explicit classes are read, never a class
+ * inferred from an activity. "from X to Y" wording splits existing from proposed; without it a
+ * class is existing only when an existing-use word precedes it.
+ */
+export function findingsFromDescription(
+  description: string | null | undefined,
+  context: { councilUrl: string | null; at: string }
+): Pick<Record<FactKey, FactFinding[]>, 'existing_use_class' | 'proposed_use_class'> {
+  const out = { existing_use_class: [] as FactFinding[], proposed_use_class: [] as FactFinding[] }
+  const text = (description ?? '').replace(/\s+/g, ' ')
+  const from = text.search(/\bfrom\b/i)
+  const to = from >= 0 ? text.slice(from).search(/\b(?:to|into)\b/i) : -1
+  const boundary = from >= 0 && to >= 0 ? from + to : -1
+  const seen = new Set<string>()
+  for (const match of text.matchAll(CLASS_TOKEN)) {
+    const index = match.index ?? 0
+    const useClass = match[0].replace(/^(?:Use\s+)?Class(?:es)?\s+/i, '').replace(/\s+/g, ' ')
+    const phase = boundary >= 0
+      ? (index > from && index < boundary ? 'existing' : index >= boundary ? 'proposed' : null)
+      : (EXISTING_CUE.test(text.slice(Math.max(0, index - 80), index)) ? 'existing' : 'proposed')
+    if (!phase) continue
+    const fact: FactKey = phase === 'existing' ? 'existing_use_class' : 'proposed_use_class'
+    const id = `${fact}|${normalUseClass(useClass)}`
+    if (seen.has(id)) continue
+    seen.add(id)
+    out[fact].push({
+      key: findingKey(fact, ['description', normalUseClass(useClass)]),
+      origin: 'research', completes: true, useClass,
+      source: { kind: 'description', url: context.councilUrl, excerpt: text.slice(Math.max(0, index - 90), index + match[0].length + 40).trim(), page: null },
+      confidence: 0.8, runId: null, observedAt: context.at,
+      note: 'Stated in the application description',
+    })
+  }
+  return out
+}
+
+/**
+ * Merge new findings into stored rows without recording a research attempt, and recompute states.
+ * A fact that stays unanswered keeps its previous state and reason; admin decisions are untouched.
+ */
+export function refreshFactRows(stored: FactRow[], incoming: Partial<Record<FactKey, FactFinding[]>>): FactRow[] {
+  return stored.map(row => {
+    const findings = mergeFindings(row.findings, incoming[row.fact] ?? [])
+    if (row.decided_by || row.state === 'not_applicable') return { ...row, findings }
+    const resolved = resolveFindings(row.fact, findings)
+    return resolved ? { ...row, ...resolved, reason: null, findings } : { ...row, findings }
+  })
+}
+
 /** Union by key. An existing finding wins, so an admin's rejection of it survives a repeat run. */
 export function mergeFindings(existing: FactFinding[], incoming: FactFinding[]): FactFinding[] {
   const seen = new Set(existing.map(finding => finding.key))
@@ -252,7 +311,20 @@ export function resolveFindings(fact: FactKey, findings: FactFinding[]): Resolut
     return names.length > 0 ? { state: 'found', value: { names } } : null
   }
   if (fact === 'existing_use_class' || fact === 'proposed_use_class') {
-    const classes = [...new Map(usable.filter(f => f.useClass).map(f => [normalUseClass(f.useClass!), f.useClass!])).values()]
+    const withClass = usable.filter(f => f.useClass)
+    // A scheme can have several classes, so one source listing two is not a conflict. Two sources
+    // that name no class in common are: a council's stale land-use field against the application's
+    // own wording, say.
+    const bySource = new Map<string, Set<string>>()
+    for (const finding of withClass) {
+      const source = `${finding.source.kind}|${finding.source.url ?? ''}`
+      bySource.set(source, (bySource.get(source) ?? new Set()).add(normalUseClass(finding.useClass!)))
+    }
+    const sets = [...bySource.values()]
+    if (sets.some((a, i) => sets.slice(i + 1).some(b => ![...a].some(item => b.has(item))))) {
+      return { state: 'conflicting', value: null }
+    }
+    const classes = [...new Map(withClass.map(f => [normalUseClass(f.useClass!), f.useClass!])).values()]
     return classes.length > 0 ? { state: 'found', value: { useClasses: classes } } : null
   }
   return resolveArea(findings)
@@ -376,13 +448,15 @@ export function adminFactValue(input: AdminFactInput, reviewerId: string, at: st
 export function chosenFactValue(row: Pick<FactRow, 'fact' | 'findings'>, key: string): { value: FactValue; rejectKeys: string[] } {
   const chosen = row.findings.find(finding => finding.key === key)
   if (!chosen || !chosen.completes) throw new Error('That finding cannot be chosen for this fact.')
-  const resolved = resolveFindings(row.fact, row.findings.map(finding => ({
-    ...finding, rejected: finding.completes && finding.key !== key && finding.sqm !== undefined ? true : finding.rejected,
-  })))
-  if (!resolved?.value) throw new Error('That finding does not give a value for this fact.')
-  const rejectKeys = chosen.sqm === undefined ? [] : row.findings
-    .filter(finding => finding.completes && finding.key !== key && finding.sqm !== undefined)
+  // An area is one figure, so every other figure is rejected. A use class is chosen by source: the
+  // chosen source's classes are kept together and other sources' classes rejected.
+  const sameSource = (finding: FactFinding) => finding.source.kind === chosen.source.kind && finding.source.url === chosen.source.url
+  const rejectKeys = row.findings
+    .filter(finding => finding.completes && !finding.rejected && finding.key !== key)
+    .filter(finding => chosen.sqm !== undefined ? finding.sqm !== undefined : !sameSource(finding))
     .map(finding => finding.key)
+  const resolved = resolveFindings(row.fact, row.findings.map(finding => rejectKeys.includes(finding.key) ? { ...finding, rejected: true } : finding))
+  if (!resolved?.value || resolved.state !== 'found') throw new Error('That finding does not give a value for this fact.')
   return { value: resolved.value, rejectKeys }
 }
 

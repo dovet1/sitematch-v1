@@ -2,7 +2,9 @@ import {
   adminFactValue,
   attemptOutcome,
   chosenFactValue,
+  findingsFromDescription,
   findingsFromResearch,
+  refreshFactRows,
   nextFactRows,
   publicFacts,
   toSquareMetres,
@@ -191,5 +193,46 @@ describe('publicFacts', () => {
 
   it('shows nothing before anyone has looked at the scheme', () => {
     expect(publicFacts([{ fact: 'operator', state: 'not_checked', value: null, findings: [], decided_by: null }])).toEqual([])
+  })
+})
+
+describe('use classes from the description', () => {
+  const read = (description: string) => {
+    const found = findingsFromDescription(description, { councilUrl: 'https://council.test/app', at })
+    return { existing: found.existing_use_class.map(f => f.useClass), proposed: found.proposed_use_class.map(f => f.useClass) }
+  }
+
+  it.each([
+    ['Change of use from former garage (Class B2 General Industry) to indoor parkour facility (Class E(d) Indoor sport, recreation and fitness)', ['B2'], ['E(d)']],
+    ['Change of use from B8 (storage and distribution) use to a flexible employment use comprising Classes E(g)(iii), B2 and B8', ['B8'], ['E(g)(iii)', 'B2', 'B8']],
+    ['Use of lower ground premises as public house (Sui Generis).', [], ['Sui Generis']],
+    ['Use of ground floor office (Class 4) as restaurant (Class 3), external alterations', [], ['4', '3']],
+    ['Change of use of former garage site to a self-storage facility including the siting of 11 storage containers', [], []],
+    ['Erection of a building to form an indoor padel facility for three padel courts', [], []],
+  ])('reads "%s"', (description, existing, proposed) => {
+    expect(read(description)).toEqual({ existing, proposed })
+  })
+
+  it('marks use classes from two sources with nothing in common as conflicting, and lets an admin choose a source', () => {
+    const research = result({ useClasses: [
+      { phase: 'proposed', useClass: 'A2', evidenceSource: 'council_page', evidenceUrl: 'https://council.test/app', evidenceExcerpt: 'Proposed Land Use A2, C3', evidencePage: null, confidence: 0.9 },
+      { phase: 'proposed', useClass: 'C3', evidenceSource: 'council_page', evidenceUrl: 'https://council.test/app', evidenceExcerpt: 'Proposed Land Use A2, C3', evidencePage: null, confidence: 0.9 },
+    ] })
+    const incoming = findingsFromResearch(research, { runId: 'run-1', at })
+    incoming.proposed_use_class.push(...findingsFromDescription('use of basement for flexible office (Class E(g)(i)) / gallery (Class F1) uses', { councilUrl: 'https://council.test/app', at }).proposed_use_class)
+    const [row] = nextFactRows({ stored: [], incoming, attempt: attempt() }).filter(r => r.fact === 'proposed_use_class')
+    expect(row.state).toBe('conflicting')
+    const office = row.findings.find(f => f.useClass === 'E(g)(i)')!
+    const { value, rejectKeys } = chosenFactValue(row, office.key)
+    expect(value).toEqual({ useClasses: ['E(g)(i)', 'F1'] })
+    expect(rejectKeys).toHaveLength(2)
+  })
+
+  it('agrees when the description and the council page name the same class', () => {
+    const research = result({ useClasses: [{ phase: 'proposed', useClass: 'E(d)', evidenceSource: 'council_page', evidenceUrl: 'https://council.test/app', evidenceExcerpt: 'to indoor parkour facility (Class E(d))', evidencePage: null, confidence: 0.9 }] })
+    const stored = nextFactRows({ stored: [], incoming: findingsFromResearch(research, { runId: 'run-1', at }), attempt: attempt() })
+    const refreshed = refreshFactRows(stored, findingsFromDescription('Change of use from former garage (Class B2) to indoor parkour facility (Class E(d))', { councilUrl: 'https://council.test/app', at }))
+    expect(refreshed.find(r => r.fact === 'proposed_use_class')).toMatchObject({ state: 'found', value: { useClasses: ['E(d)'] } })
+    expect(refreshed.find(r => r.fact === 'existing_use_class')).toMatchObject({ state: 'found', value: { useClasses: ['B2'] } })
   })
 })
