@@ -77,7 +77,12 @@ export interface PlotaPage {
   }
 }
 
-export type EligibilityLimb = 'A' | 'B' | 'C' | 'D'
+/**
+ * A: commercial supply, D: commercial loss, both from Plota's `commercial_work`. `A-described` and
+ * `D-described` are the same limbs read from the description, for records whose source carries no
+ * `commercial_work` (Plota's archive); the label keeps the weaker evidence visible on the stored row.
+ */
+export type EligibilityLimb = 'A' | 'A-described' | 'B' | 'C' | 'D' | 'D-described'
 
 export interface BrandAliasHit {
   brandId: string

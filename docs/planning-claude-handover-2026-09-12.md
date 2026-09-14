@@ -76,6 +76,13 @@ that are superseded by this snapshot. All figures below are observations, not li
   `26e931b` plan revision. Pilot request limit of 300 agreed. Linking plan
   revised after Astra's second review: linking in normal ingestion, reused Plota family lookups,
   backlog recovery without a backfill rerun, three validation levels.
+- **Linking step 2 built (archive commercial test):** `commercial-description.ts`, eligibility limbs
+  `A-described`/`D-described` for non-live sources, `scripts/requeue-archive-commercial.ts`
+  (dry-run default). Fresh live days: 86% agreement-precision and 70% recall vs Plota, 81% recall
+  on classifier-high. Clean November archive sample: 52/60 judged genuine. National dry run: 8,284
+  archive applications would newly reach the tier (~$1.90 of classification). **Not committed to
+  the store yet:** September's initial-classification spend was $8.18 of the $10 cap on 14 Sep, so
+  the run fits better from 1 October (or partly defers now). No worker deploy needed until step 4.
 - **Workers deployed by the user, 14 Sep 15:13 UTC, as `dpl_8ghmWYE4rL5JFhao3XbvquFzMiyq`**, from
   `/private/tmp/planning-workers-20260914b` (built `--scheduled` from `c2bbcda`; the only
   difference from `dpl_HXCfXPLGjgfAFaTSeKZUTKGn2Fp1` is the new-homes lane spec). Lanes still

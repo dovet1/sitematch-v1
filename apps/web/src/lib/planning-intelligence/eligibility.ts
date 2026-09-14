@@ -1,5 +1,6 @@
 import { createHash } from 'crypto'
 import { AMBIGUOUS_ALIASES, phrasesOn, type AliasIndex } from '@/lib/epc/aliases'
+import { describedCommercialWork } from './commercial-description'
 import { normTokens } from '@/lib/epc/normalise'
 import type {
   BrandAliasHit,
@@ -107,6 +108,12 @@ export function decideEligibility(
 
   const limbs: EligibilityLimb[] = []
   if (application.commercial_work && COMMERCIAL_SUPPLY.has(application.commercial_work)) limbs.push('A')
+  // Plota derives commercial_work only on live records, so an archive record could never meet the
+  // commercial limbs. For those the description is read instead; a live record's null stays a no.
+  const described = application.source && application.source !== 'live' && application.commercial_work == null
+    ? describedCommercialWork(application.description)
+    : null
+  if (described && COMMERCIAL_SUPPLY.has(described.work)) limbs.push('A-described')
   if ((application.dwelling_count ?? 0) >= MAJOR_HOUSING_DWELLINGS ||
     hasUncountedHousingProposal(application)) limbs.push('B')
   if (
@@ -116,6 +123,7 @@ export function decideEligibility(
     limbs.push('C')
   }
   if (application.commercial_work === 'loss') limbs.push('D')
+  if (described?.work === 'loss') limbs.push('D-described')
 
   // The limbs are reported even when excluded, so the stored row records what it would
   // have qualified under. Excluded rows are exactly those with limbs and no tier.

@@ -254,6 +254,49 @@ Done when:
 - the Broadland principal's description passes it;
 - re-evaluating the stored archive records is a measured, bounded job.
 
+**Built, 14 September 2026, not yet applied to stored records.**
+- **Test:** `apps/web/src/lib/planning-intelligence/commercial-description.ts` (38 tests).
+- **Eligibility:** applies it only when a record's source is known and not live, recording limbs
+  `A-described` and `D-described` so the weaker evidence stays visible on the stored row.
+- **Backlog job:** `scripts/requeue-archive-commercial.ts`, dry-run by default.
+- **Verdicts:** `reports/planning-archive-commercial-labels-2026-09-14.json`.
+
+**Calibration against Plota** (live records, where `commercial_work` is known), final rules on 15
+days not used for tuning (33,430 applications):
+- 86% of what it admits Plota also marks commercial.
+- It finds 70% of what Plota marks.
+- It finds 81% of Plota-commercial applications the classifier went on to grade high.
+
+Two earlier sets used for tuning scored 74% and 71% recall.
+
+**Reading what it admits (Claude's judgement, not council records):**
+- 55 of 60 on live holdout days;
+- 55 of 60 on the first archive sample;
+- 42 of 60 on a second archive sample drawn after the first fixes, which exposed overfitting (tree
+  works, householder "Class E outbuilding", caravan rally notices, cattle housing, sheds beside
+  existing warehouses);
+- **52 of 60 (87%) on a clean November 2025 sample** after those fixes. This is the figure to rely
+  on. Its errors were mostly paperwork phrasings and household or minor works, and small generic
+  fixes followed.
+
+**What it misses** is mostly Plota being broader than any wording test: screening opinions,
+demolition notices, street hubs, parcel lockers, and changes described without naming the new
+use.
+
+**Broadland:** the warehouse club permission (2024/3141) passes as new commercial space.
+
+**National dry run** over the stored archive (10 Sep – 31 Dec 2025):
+- 181,624 applications scanned;
+- **8,284 would newly reach the tier** (4.6%): 6,219 commercial supply and 2,065 commercial loss;
+- archive admission would rise from about 1.4% to about 6%, close to the live rate;
+- classification at about $0.00023 each is roughly $1.90;
+- at 87% judged precision, roughly 1,100 of those would be classified without being commercial,
+  and graded low.
+
+Not yet done: the committed backlog run, and a worker deploy so that future archive and
+recovered records use the new limbs. Recovered parents arrive only with step 4, so the deploy can
+wait for that.
+
 ### Step 3 — Linking in normal ingestion
 
 Every application, whether new or refreshed, is linked when it is stored. Ordinary imports never

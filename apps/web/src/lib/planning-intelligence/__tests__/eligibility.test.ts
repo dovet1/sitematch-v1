@@ -21,6 +21,29 @@ function application(overrides: Partial<PlotaApplication> = {}): PlotaApplicatio
 }
 
 describe('planning intelligence eligibility', () => {
+  describe('archive records, which carry no commercial_work', () => {
+    it('reads commercial supply from the description', () => {
+      const archived = application({ source: 'historical', description: 'Change of use of warehouse unit to boxing gym' })
+      expect(decideEligibility(archived, aliases)).toMatchObject({ intelligenceTier: true, limbs: ['A-described'] })
+    })
+
+    it('reads commercial loss from the description', () => {
+      const archived = application({ source: 'historical', description: 'Change of use from offices (Class E) into 2no. self-contained flats (Class C3)' })
+      expect(decideEligibility(archived, aliases)).toMatchObject({ intelligenceTier: true, limbs: ['D-described'] })
+    })
+
+    it('admits the Broadland warehouse club permission', () => {
+      const principal = application({ source: 'historical', reference: '2024/3141',
+        description: 'Erection of a Warehouse Club (Sui Generis) including, tyre installation and sales, a petrol filling station, deck and surface car parking' })
+      expect(decideEligibility(principal, aliases).intelligenceTier).toBe(true)
+    })
+
+    it('leaves a live record\'s missing commercial_work as a no', () => {
+      const live = application({ source: 'live', description: 'Change of use of warehouse unit to boxing gym' })
+      expect(decideEligibility(live, aliases)).toMatchObject({ intelligenceTier: false, limbs: [] })
+    })
+  })
+
   it.each(['new', 'to-commercial', 'between'] as const)(
     'promotes commercial supply limb A: %s',
     (commercial_work) => {
