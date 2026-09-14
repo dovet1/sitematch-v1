@@ -25,7 +25,6 @@ import type {
   NationwideRequirement,
   PlanningApplication,
   PlanningFreshness,
-  PlanningProgress,
   PlanningTruncationReason,
   PresentBrand,
   RequirementLocation,
@@ -1287,6 +1286,9 @@ export function planningRelevanceBadge(
  * read from the description rather than presented as fact.
  */
 export function planningDwellingLabel(app: PlanningApplication): string | null {
+  if (app.dwellingCountReviewed) {
+    return app.nDwellings == null ? 'Dwelling count unknown (reviewed)' : `${app.nDwellings} ${app.nDwellings === 1 ? 'home' : 'homes'} (reviewed)`
+  }
   if (app.nDwellings != null) {
     return `${app.nDwellings} ${app.nDwellings === 1 ? 'home' : 'homes'}`
   }
@@ -1318,29 +1320,16 @@ export function planningApproximateNote(applications: PlanningApplication[]): st
 export function planningTruncationMessage(
   reason: PlanningTruncationReason
 ): string | null {
-  switch (reason) {
-    case 'authority_cap':
-      return 'This area spans a lot of councils, so only part of it was checked.'
-    case 'rate_limited':
-      return 'PlanIt temporarily limited the search, so results may be incomplete.'
-    case 'upstream_busy':
-      return 'PlanIt was busy for some councils, so results may be incomplete.'
-    case 'upstream_timeout':
-    case 'upstream_error':
-      return "Some councils didn't respond, so results may be incomplete."
-    case 'page_cap':
-    case 'record_cap':
-      return 'There are more matching applications than we can show here.'
-    default:
-      return null
-  }
+  return reason === 'record_cap'
+    ? 'There are more matching applications than we can show here.'
+    : null
 }
 
 /**
  * What to tell someone when the planning store may not be current.
  *
- * Null means there is nothing to say: either the answer came from the live source, or the
- * data is as current as the schedule promises. The two stale cases are separated because
+ * Null means there is nothing to say: no lookup has answered yet, or the data is as current
+ * as the schedule promises. The two stale cases are separated because
  * they mean different things to a reader. Discovery falling behind means recent applications
  * are missing altogether. Refresh falling behind means the applications listed are real but
  * their decisions may have moved on, which is the more dangerous of the two precisely
@@ -1445,24 +1434,12 @@ function PlanningRow({
   )
 }
 
-// A lookup fans out across every council covering the area, which can take a
-// while, so the spinner reports how far through it is rather than sitting on a
-// bare "loading" for minutes.
-export function planningProgressMessage(
-  progress: PlanningProgress | null
-): string {
-  if (!progress || progress.total <= 0) return 'Reading planning applications…'
-  const { done, total } = progress
-  return `Checking council ${Math.min(done + 1, total)} of ${total}…`
-}
-
 function PlanningBody({
   loading,
   error,
   truncated,
   truncationReason,
   freshness,
-  progress,
   applications,
   onOpen,
 }: {
@@ -1471,22 +1448,18 @@ function PlanningBody({
   truncated: boolean
   truncationReason: PlanningTruncationReason
   freshness: PlanningFreshness | null
-  progress: PlanningProgress | null
   applications: PlanningApplication[]
   onOpen: (app: PlanningApplication) => void
 }) {
   const warning = planningTruncationMessage(truncationReason)
   const staleness = planningFreshnessMessage(freshness)
-  // Freshness is the honest signal for which path answered: only the stored census has
-  // anything to be out of date about, and it is present even when the area is empty.
-  const fromStore = freshness !== null
-  const approximateNote = fromStore ? planningApproximateNote(applications) : null
+  const approximateNote = planningApproximateNote(applications)
   return (
     <>
       {loading && (
         <div className="flex items-center gap-2 px-[18px] py-4 text-[12.5px] text-sm-ink3">
           <Loader2 size={13} className="animate-spin" />{' '}
-          {planningProgressMessage(progress)}
+          Reading planning applications…
         </div>
       )}
 
@@ -1500,9 +1473,7 @@ function PlanningBody({
           </span>
         </div>
         <p className="mt-1 text-[12.5px] leading-relaxed text-sm-ink3">
-          {fromStore
-            ? 'Planning applications in this area, most relevant first.'
-            : 'Large planning applications inside this area from the last two years.'}
+          Planning applications in this area, most relevant first.
         </p>
         {/* Where the count is read is the only place this caveat does any work. */}
         {approximateNote && !loading && !error && (
@@ -1533,9 +1504,7 @@ function PlanningBody({
             there is nothing here. */}
         {!loading && !error && !truncated && applications.length === 0 && (
           <div className="rounded-xl border border-dashed border-sm-border bg-sm-bg px-3 py-3.5 text-center text-[12.5px] text-sm-ink3">
-            {fromStore
-              ? 'No planning applications found in this area.'
-              : 'No large planning applications found in this area.'}
+            No planning applications found in this area.
           </div>
         )}
         {!error &&
@@ -1566,7 +1535,6 @@ function Opportunity({
   planningTruncated,
   planningTruncationReason,
   planningFreshness,
-  planningProgress,
   onClose,
   onCollapse,
   onOpenReq,
@@ -1591,7 +1559,6 @@ function Opportunity({
   planningTruncated: boolean
   planningTruncationReason: PlanningTruncationReason
   planningFreshness: PlanningFreshness | null
-  planningProgress: PlanningProgress | null
   onClose: () => void
   onCollapse: () => void
   onOpenReq: (requirementId: string) => void
@@ -1803,7 +1770,6 @@ function Opportunity({
             truncated={planningTruncated}
             truncationReason={planningTruncationReason}
             freshness={planningFreshness}
-            progress={planningProgress}
             applications={planningApplications}
             onOpen={onOpenPlanning}
           />
@@ -1858,7 +1824,6 @@ export function UInspector({
   planningTruncated,
   planningTruncationReason,
   planningFreshness,
-  planningProgress,
 }: {
   hidden: boolean
   onToggle: () => void
@@ -1881,7 +1846,6 @@ export function UInspector({
   planningTruncated: boolean
   planningTruncationReason: PlanningTruncationReason
   planningFreshness: PlanningFreshness | null
-  planningProgress: PlanningProgress | null
 }) {
   const view = useWorkspaceStore((s) => s.view)
   const area = useWorkspaceStore((s) => s.area)
@@ -1932,7 +1896,6 @@ export function UInspector({
         planningTruncated={planningTruncated}
         planningTruncationReason={planningTruncationReason}
         planningFreshness={planningFreshness}
-        planningProgress={planningProgress}
         onClose={() => selectArea(null)}
         onCollapse={onToggle}
         onOpenReq={setReqModal}
@@ -1970,7 +1933,6 @@ export function UInspector({
         planningTruncated={planningTruncated}
         planningTruncationReason={planningTruncationReason}
         planningFreshness={planningFreshness}
-        planningProgress={planningProgress}
         onClose={() => setAssessPoint(null)}
         onCollapse={onToggle}
         onOpenReq={setReqModal}

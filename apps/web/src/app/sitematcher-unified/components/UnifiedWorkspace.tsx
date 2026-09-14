@@ -589,7 +589,6 @@ export function UnifiedWorkspace() {
             planningTruncated={planning.truncated}
             planningTruncationReason={planning.truncationReason}
             planningFreshness={planning.freshness}
-            planningProgress={planning.progress}
           />
         )}
           </>

@@ -111,9 +111,40 @@ export const FRESHNESS_UNAVAILABLE: PlanningFreshness = {
  * per-boundary figure would be more precise and costs a second spatial aggregate on every
  * lookup; ingestion is national and runs on one schedule, so the national answer is the same
  * answer nearly always. Revisit this if coverage ever becomes regional.
+ *
+ * It reads the four values it needs directly instead of calling `planning_pipeline_status`.
+ * That report also counts every stored application exactly, and once the national backfill
+ * landed (~630,000 rows) it hit the statement timeout on every call, so every lookup showed
+ * "freshness unavailable". Measured on 14 Sep 2026: the report timed out at 8.1 s; these four
+ * index-backed reads took 87-310 ms each.
  */
 export async function readPlanningFreshness(
   db: PlanningAdminClient
 ): Promise<PlanningFreshness> {
-  return deriveFreshness(await readPipelineStatus(db))
+  const newest = (column: 'last_discovery_at' | 'last_refresh_at') => db
+    .from('planning_authority_coverage').select(column)
+    .not(column, 'is', null).order(column, { ascending: false }).limit(1)
+  const [discovery, refresh, liveChecked, latest] = await Promise.all([
+    newest('last_discovery_at'),
+    newest('last_refresh_at'),
+    // Matches planning_applications_live_checked_status_idx, so the minimum is an index endpoint.
+    db.from('planning_applications').select('last_checked_at')
+      .or('stage.is.null,stage.in.(pending,other)')
+      .order('last_checked_at', { ascending: true }).limit(1),
+    db.from('planning_applications').select('date_received')
+      .not('date_received', 'is', null)
+      .order('date_received', { ascending: false }).limit(1),
+  ])
+  for (const result of [discovery, refresh, liveChecked, latest]) if (result.error) throw result.error
+  const first = <T>(data: unknown) => ((data as T[] | null) ?? [])[0]
+  return deriveFreshness({
+    coverage: {
+      last_discovery_at: first<{ last_discovery_at: string | null }>(discovery.data)?.last_discovery_at ?? null,
+      last_refresh_at: first<{ last_refresh_at: string | null }>(refresh.data)?.last_refresh_at ?? null,
+    },
+    freshness: {
+      oldest_live_checked_at: first<{ last_checked_at: string | null }>(liveChecked.data)?.last_checked_at ?? null,
+      latest_application_date: first<{ date_received: string | null }>(latest.data)?.date_received ?? null,
+    },
+  })
 }

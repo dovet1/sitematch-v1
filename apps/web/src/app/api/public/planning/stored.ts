@@ -1,7 +1,22 @@
-import type { PlanningApplication } from '@/app/sitematcher-unified/types/unified-workspace'
+import type {
+  PlanningApplication,
+  PlanningTruncationReason,
+} from '@/app/sitematcher-unified/types/unified-workspace'
 import { createPlanningAdminClient } from '@/lib/planning-intelligence/db'
-import { FRESHNESS_UNAVAILABLE, readPlanningFreshness } from '@/lib/planning-intelligence/freshness'
-import type { Boundary, PlanningResult } from './planit'
+import {
+  FRESHNESS_UNAVAILABLE,
+  readPlanningFreshness,
+  type PlanningFreshness,
+} from '@/lib/planning-intelligence/freshness'
+import type { Boundary } from './boundary'
+
+export interface PlanningResult {
+  applications: PlanningApplication[]
+  total: number
+  truncated: boolean
+  truncationReason: PlanningTruncationReason
+  freshness: PlanningFreshness
+}
 
 /** The tab's long-standing contract: rank everything, then show at most this many. */
 const RECORD_CAP = 2000
@@ -34,6 +49,7 @@ interface StoredRow {
   development_id: string | null
   relevance: 'high' | 'medium' | 'low' | null
   summary: string | null
+  model_dwelling_basis?: string | null
   model_dwelling_count: number | null
   creates_commercial_space: 'yes' | 'no' | 'unclear' | null
 }
@@ -61,10 +77,15 @@ export async function fetchStoredPlanningApplications(boundary: Boundary): Promi
   // result that is already ordered, and asks for one row beyond the cap so a truncated answer
   // can say so. `sort_rank` is ordered explicitly: a function's row order stops being a
   // contract once PostgREST wraps a LIMIT and OFFSET around it.
+  //
+  // v3 returns v2's rows in v2's order but ranks narrow columns first and tests distance only
+  // for uncertain points outside the boundary. Measured 14 Sep 2026 on Micro compute: warm
+  // reads 0.1-1.0 s against v2's 0.2-5.1 s, identical apart from a few rows on the 1,500 m
+  // allowance line (see migration 20261005000000).
   const rows: StoredRow[] = []
   for (const [from, to] of [[0, 999], [1000, 1999], [2000, 2000]] as const) {
     const { data, error } = await db
-      .rpc('planning_tab_applications', { p_boundary: boundary, p_limit: RECORD_CAP + 1 })
+      .rpc('planning_tab_applications_v3', { p_boundary: boundary, p_limit: RECORD_CAP + 1 })
       .order('sort_rank', { ascending: true })
       .range(from, to)
     if (error) throw error
@@ -88,7 +109,8 @@ export async function fetchStoredPlanningApplications(boundary: Boundary): Promi
       lng: row.longitude,
       decidedDate: row.date_decided,
       dateValidated: row.date_validated,
-      nDwellings: row.stated_dwelling_count,
+      nDwellings: row.model_dwelling_basis === 'human_review' ? row.model_dwelling_count : row.stated_dwelling_count,
+      dwellingCountReviewed: row.model_dwelling_basis === 'human_review',
       applicantAddress: null,
       agentAddress: null,
       provider: 'plota',

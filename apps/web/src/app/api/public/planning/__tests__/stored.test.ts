@@ -4,7 +4,7 @@ jest.mock('@/lib/planning-intelligence/db', () => ({
 }))
 
 import { fetchStoredPlanningApplications } from '../stored'
-import type { Boundary } from '../planit'
+import type { Boundary } from '../boundary'
 
 const BOUNDARY: Boundary = {
   type: 'Polygon',
@@ -73,7 +73,7 @@ describe('fetchStoredPlanningApplications', () => {
   it('asks the database to rank and cap, rather than doing either here', async () => {
     pages({ data: [row()], error: null })
     await fetchStoredPlanningApplications(BOUNDARY)
-    expect(rpc).toHaveBeenCalledWith('planning_tab_applications', {
+    expect(rpc).toHaveBeenCalledWith('planning_tab_applications_v3', {
       p_boundary: BOUNDARY,
       p_limit: 2001,
     })
@@ -138,4 +138,11 @@ describe('fetchStoredPlanningApplications', () => {
     expect(result.applications).toHaveLength(1)
     expect(result.freshness?.staleReason).toBe('freshness_unavailable')
   })
+})
+
+it.each([0, null, 12])('gives a human correction precedence over the source, including %s', async (count) => {
+ pages({data:[row({stated_dwelling_count:40,model_dwelling_count:count,model_dwelling_basis:'human_review'})],error:null})
+ const [app]=(await fetchStoredPlanningApplications(BOUNDARY)).applications
+ expect(app.nDwellings).toBe(count)
+ expect(app.dwellingCountReviewed).toBe(true)
 })

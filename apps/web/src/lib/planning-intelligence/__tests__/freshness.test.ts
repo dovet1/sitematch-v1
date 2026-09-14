@@ -2,6 +2,7 @@ import {
   DISCOVERY_STALE_AFTER_HOURS,
   LIVE_CHECK_STALE_AFTER_DAYS,
   deriveFreshness,
+  readPlanningFreshness,
 } from '../freshness'
 
 const NOW = Date.parse('2026-09-10T12:00:00.000Z')
@@ -84,5 +85,52 @@ describe('deriveFreshness', () => {
 
   it('is stale when the status document is empty', () => {
     expect(deriveFreshness({}, NOW).staleReason).toBe('never_ingested')
+  })
+})
+
+describe('readPlanningFreshness', () => {
+  // Each chain resolves to the rows its table and ordered column would return.
+  function fakeDb(rows: Record<string, unknown[]>, failing?: string) {
+    const rpc = jest.fn()
+    const from = (table: string) => {
+      let column = ''
+      const chain = {
+        select: (selected: string) => { column = selected; return chain },
+        not: () => chain,
+        or: () => chain,
+        order: () => chain,
+        limit: () => Promise.resolve(failing === column
+          ? { data: null, error: new Error(`${column} timed out`) }
+          : { data: rows[`${table}.${column}`] ?? [], error: null }),
+      }
+      return chain
+    }
+    return { db: { from, rpc } as never, rpc }
+  }
+
+  it('reads the four values directly and never runs the full pipeline report', async () => {
+    const { db, rpc } = fakeDb({
+      'planning_authority_coverage.last_discovery_at': [{ last_discovery_at: '2026-09-14T07:30:00Z' }],
+      'planning_authority_coverage.last_refresh_at': [{ last_refresh_at: '2026-09-12T06:31:00Z' }],
+      'planning_applications.last_checked_at': [{ last_checked_at: '2026-09-10T14:58:00Z' }],
+      'planning_applications.date_received': [{ date_received: '2026-09-13' }],
+    })
+    const result = await readPlanningFreshness(db)
+    expect(rpc).not.toHaveBeenCalled()
+    expect(result).toMatchObject({
+      lastDiscoveryAt: '2026-09-14T07:30:00Z',
+      lastRefreshAt: '2026-09-12T06:31:00Z',
+      oldestLiveCheckedAt: '2026-09-10T14:58:00Z',
+      latestApplicationDate: '2026-09-13',
+    })
+  })
+
+  it('reports an empty store as never ingested', async () => {
+    const result = await readPlanningFreshness(fakeDb({}).db)
+    expect(result.staleReason).toBe('never_ingested')
+  })
+
+  it('fails rather than guessing when one of the reads fails', async () => {
+    await expect(readPlanningFreshness(fakeDb({}, 'last_checked_at').db)).rejects.toThrow('last_checked_at timed out')
   })
 })

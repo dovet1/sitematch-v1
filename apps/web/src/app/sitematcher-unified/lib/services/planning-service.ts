@@ -1,12 +1,10 @@
 // Client-side fetch wrapper for the planning-applications route.
 //
-// The route streams NDJSON — progress lines while it fans out across planning
-// authorities, then exactly one terminal `result` or `error` line.
+// The route answers in NDJSON with exactly one terminal `result` or `error` line.
 
 import type {
   PlanningApplication,
   PlanningFreshness,
-  PlanningProgress,
   PlanningTruncationReason,
 } from '../../types/unified-workspace'
 
@@ -14,17 +12,13 @@ export interface PlanningFetchResult {
   applications: PlanningApplication[]
   truncated: boolean
   truncationReason: PlanningTruncationReason
-  /**
-   * How current the stored data is, or null when the answer came from the live PlanIt path,
-   * which has nothing to be out of date about.
-   */
+  /** How current the stored data is; null only if a response omits it. */
   freshness: PlanningFreshness | null
 }
 
 export async function fetchPlanningApplications(
   boundary: GeoJSON.Geometry,
-  signal?: AbortSignal,
-  onProgress?: (progress: PlanningProgress) => void
+  signal?: AbortSignal
 ): Promise<PlanningFetchResult> {
   const res = await fetch('/api/public/planning', {
     method: 'POST',
@@ -58,13 +52,7 @@ export async function fetchPlanningApplications(
     } catch {
       return // ignore a partial or malformed line rather than failing the run
     }
-    if (msg.type === 'progress') {
-      onProgress?.({
-        done: Number(msg.done) || 0,
-        total: Number(msg.total) || 0,
-        authority: (msg.authority as string | null) ?? null,
-      })
-    } else if (msg.type === 'result') {
+    if (msg.type === 'result') {
       result = {
         applications: (msg.applications as PlanningApplication[]) ?? [],
         truncated: Boolean(msg.truncated),

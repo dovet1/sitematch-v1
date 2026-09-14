@@ -1040,7 +1040,7 @@ function BrandContactColumn({
 
 /* ============================================================================
  * Planning application modal — opened from the Planning tab list or a map pin.
- * All text comes from PlanIt (third-party councils) and is rendered strictly as
+ * All text comes from council records via Plota and is rendered strictly as
  * React children, never as HTML.
  * ==========================================================================*/
 

@@ -5,7 +5,6 @@ import { fetchPlanningApplications } from '../services/planning-service'
 import type {
   PlanningApplication,
   PlanningFreshness,
-  PlanningProgress,
   PlanningTruncationReason,
 } from '../../types/unified-workspace'
 import { pointInGeometry } from '../geo'
@@ -16,11 +15,7 @@ export interface PlanningData {
   error: string | null
   truncated: boolean
   truncationReason: PlanningTruncationReason
-  progress: PlanningProgress | null
-  /**
-   * How current the stored data is, or null when the answer came from the live PlanIt path.
-   * Null and "fresh" are different states and the tab renders them differently.
-   */
+  /** How current the stored data is; null until a lookup has answered. */
   freshness: PlanningFreshness | null
 }
 
@@ -38,7 +33,6 @@ export function usePlanningData(
   const [truncated, setTruncated] = useState(false)
   const [truncationReason, setTruncationReason] =
     useState<PlanningTruncationReason>(null)
-  const [progress, setProgress] = useState<PlanningProgress | null>(null)
   const [freshness, setFreshness] = useState<PlanningFreshness | null>(null)
   const reqId = useRef(0)
 
@@ -52,7 +46,6 @@ export function usePlanningData(
       setError(null)
       setTruncated(false)
       setTruncationReason(null)
-      setProgress(null)
       setFreshness(null)
       setLoading(false)
       return
@@ -60,12 +53,9 @@ export function usePlanningData(
     const id = ++reqId.current
     setLoading(true)
     setError(null)
-    setProgress(null)
     const controller = new AbortController()
 
-    fetchPlanningApplications(boundary, controller.signal, (next) => {
-      if (id === reqId.current) setProgress(next)
-    })
+    fetchPlanningApplications(boundary, controller.signal)
       .then(({
         applications: apps,
         truncated: wasTruncated,
@@ -98,10 +88,7 @@ export function usePlanningData(
         setError(err instanceof Error ? err.message : 'Planning data failed')
       })
       .finally(() => {
-        if (id === reqId.current) {
-          setLoading(false)
-          setProgress(null)
-        }
+        if (id === reqId.current) setLoading(false)
       })
     return () => controller.abort()
     // boundaryKey captures boundary changes.
@@ -115,7 +102,6 @@ export function usePlanningData(
     error,
     truncated,
     truncationReason,
-    progress,
     freshness,
   }
 }

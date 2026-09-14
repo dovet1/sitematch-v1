@@ -125,19 +125,9 @@ export interface MissingBrand {
   logoUrl: string | null
 }
 
-// A commercial-relevant planning application from the PlanIt API
-// (/api/public/planning). Keyed on `name` (Council/uid) — `uid` alone is only
-// council-scoped. Applicant/agent names are omitted: PlanIt only ever returns
-// the placeholder "See source"; the `url` link-out reaches the real parties.
-export type PlanningTruncationReason =
-  | 'authority_cap'
-  | 'page_cap'
-  | 'record_cap'
-  | 'upstream_timeout'
-  | 'upstream_busy'
-  | 'rate_limited'
-  | 'upstream_error'
-  | null
+// The stored census ranks everything and returns at most 2,000 applications, so a capped
+// result is the only way a planning answer can be partial.
+export type PlanningTruncationReason = 'record_cap' | null
 
 // How current the stored planning data is. Defined with the ingest thresholds that decide
 // it, and re-exported here so the workspace keeps one import path for its own types while
@@ -147,15 +137,8 @@ export type {
   PlanningStaleReason,
 } from '@/lib/planning-intelligence/freshness'
 
-// Progress while a planning lookup fans out across planning authorities. A
-// lookup can span ~20 authorities at concurrency 2, so the tab reports which
-// one it is on rather than showing an unqualified spinner for minutes.
-export interface PlanningProgress {
-  done: number
-  total: number
-  authority: string | null
-}
-
+// A planning application from the stored Plota census (/api/public/planning). Keyed on
+// `name` (Council/reference) — the reference alone is only council-scoped.
 export interface PlanningApplication {
   name: string
   uid: string
@@ -170,9 +153,10 @@ export interface PlanningApplication {
   decidedDate: string | null
   dateValidated: string | null
   nDwellings: number | null
+  dwellingCountReviewed?: boolean
   applicantAddress: string | null
   agentAddress: string | null
-  provider?: 'planit' | 'plota'
+  provider?: 'plota'
   developmentId?: string | null
   intelligenceTier?: boolean
   locationProvenance?: 'source_exact' | 'source_centroid' | 'postcode_centroid' | 'missing'

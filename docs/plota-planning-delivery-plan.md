@@ -4,8 +4,12 @@ Date: 10 September 2026
 Revised after an audit against the code. Six gaps found; all six verified and folded in.
 Sequence: the planning tab first, then the Planning Monitor mode.
 
-Status: **Phases 0 and 1 built** (10 September 2026), pending the migrations, the flags and a
-coverage measurement on live data. Phase 2, making the data support the Monitor, is next.
+Status, 14 September 2026: **Phases 0 and 1 built; Phase 1 cutover measured and ready apart from
+two product decisions and the main-website deployment.** The national twelve-month backfill is
+complete across all 389 councils. Separate Vercel workers run discovery (7-day window), late and
+deep late-publication lanes, refresh and hourly classification (`dpl_HXCfXPLGjgfAFaTSeKZUTKGn2Fp1`).
+Stored reads remain off on the live website. Phase 2a remains partially complete.
+See `planning-claude-handover-2026-09-12.md` for current operations.
 
 The classification pipeline is built and working. What follows is about getting it in front of
 users, in the order that ships something usable soonest and learns most per week of work.
@@ -107,6 +111,31 @@ about overlap-admitted records, which it would otherwise have stripped straight 
 **What remains is the cutover itself**, and it needs live data: measure coverage on more than
 one boundary, prove the ordering survives the 2,000-record cap on a boundary that exceeds it,
 then turn on `PLANNING_STORED_READ_ENABLED`.
+
+**Cutover measurement, 14 September 2026 (national store, tab code path, Micro compute).**
+`scripts/check-planning-cutover.ts` over eleven boxes in all four nations. Every result was in
+order; every capped area matched an independent full sort (Balham 5,112 matches, Bristol 3,124,
+Edinburgh 2,459, wider Wandsworth 23,310, where a newest-2,000 cut would drop 538 ranked records).
+Tab lookups took 0.15-1.7 s with freshness reported current. PlanIt returned 7-32 applications in
+the boxes it answered before rate-limiting, against 383-2,000 stored.
+
+Three fixes were needed first. Freshness read the full pipeline report, which timed out on every
+call once the store reached ~630,000 rows; it now reads four indexed values. The ranked read moved
+to `planning_tab_applications_v3` (migrations `20261004000000`, `20261005000000`): a planar inside
+test and distance checks only for uncertain points outside the boundary, identical to v2 apart from
+a handful of rows on the 1,500 m allowance line; `verify-planning-review.ts` passes all 13 checks
+on v3. And the database was on Nano compute, too small for the store; on Micro the Wandsworth box
+went from timing out to about 1 s.
+
+**PlanIt removed, 14 September 2026.** At the user's decision the planning route now reads only
+the stored census: `planit.ts`, its tests and `PLANNING_STORED_READ_ENABLED` are gone, boundary
+validation lives in `boundary.ts`, and the tab lost its per-council progress and PlanIt-only
+warnings. There is no longer a switch: the stored read goes live when the main website deploys,
+and rolling back means redeploying an earlier build.
+
+Still open: whether to keep the 1,500 m allowance for ward and parish centres (21-53% of results in
+city-centre boxes are admitted only by it), and the main-website deployment, which carries
+unrelated unreleased changes on this branch.
 
 ### The original plan for this phase
 
@@ -354,9 +383,13 @@ census data and real consented dwellings, with the provenance of both visible.
 Not a phase, because it is needed as soon as anything is user-facing.
 
 The review API is transactional and audited, and records the model's answer beside the human's.
-**There is no screen.** It is an API route and nothing else.
+**Screen built in the working branch on 12 September:** `/admin/planning`. The new audited
+correction migration `20261001000000_extend_planning_review_fields.sql` is applied and core
+save/audit checks pass. Follow-up `20261002000000_harden_planning_review.sql` is also applied; all 13 live database
+verification checks pass. The review screen is available locally; the live website is unchanged.
+See `planning-classification-quality-2026-09-12.md` for implemented scope and validation.
 
-**The API cannot correct everything the tab will show.** It accepts relevance, summary, brand
+**Original gap (now partly addressed by review v2): the API could not correct everything the tab will show.** It accepts relevance, summary, brand
 signals and observations. It does **not** accept `model_dwelling_count` or
 `creates_commercial_space`, and correcting an observation does not propagate to those
 Development fields. So the moment the tab displays a dwelling count, it displays a number no
