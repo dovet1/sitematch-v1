@@ -138,6 +138,51 @@ Then selection. Replace the escalation rule and the rubric's operator framing wi
   the current rule filters out (medium relevance, commercial loss, extensions, no nameable
   operator), plus clear negatives. Report accuracy before and after, on a held-out split.
 
+### 3a. Group before classifying (user, 14 September)
+
+No bulk classification or re-grade runs application by application. Related applications are
+grouped first and each development is assessed once.
+
+- **Grouping** uses stored links only, with no Plota requests.
+- **The assessment** reads the original proposal together with its relevant amendments (section
+  73 variations, reserved matters, material amendments).
+- **Routine paperwork** (condition submissions, non-material amendments) joins the development's
+  timeline and triggers no classification.
+- **An unclear scheme whose original is missing** is flagged for parent retrieval, not graded low.
+  It joins the family lookup queue with a raised priority.
+- **Uncertain links** (weak, several missing parents, conflicting) stay separate developments,
+  assessed on their own.
+- **Future ingestion follows the same sequence:** link, then join or assess. An existing
+  development is reassessed only when new information materially changes the scheme: a new
+  section 73 or material amendment, reserved matters, or a changed description on the principal.
+  Paperwork and status changes update the timeline only.
+
+**Before any national run,** a dry-run report gives:
+- applications in scope;
+- separate development assessments after grouping;
+- paperwork joining timelines without assessment;
+- schemes flagged for parent retrieval;
+- uncertain links kept separate.
+
+The report is re-run on the day, not taken from the preliminary figures below.
+
+Preliminary, from the 14 September national linker report (step 1 rules):
+- 29,687 applications in the tier;
+- 3,808 of them sit in linked families, merging into 1,053 fewer developments;
+- 6,385 non-tier applications would join tier families as timeline entries.
+
+The report still has to count follow-ons whose original is missing, which are the flag-for-retrieval
+cases. Those numbers will move once the grouped path's rules are applied.
+
+**State on 14 September:**
+- No bulk classification is running. The hourly worker is classifying newly ingested applications
+  (89 queued, about 50 an hour). That is routine ingestion, so it continues, and its results are
+  kept.
+- The 1 October archive backlog task was changed to report only: it produces the grouped count
+  and queues nothing.
+- The re-grade and the backlog queue wait for the grouped path.
+- Routine ingestion moves to the grouped path when linking is switched on in the workers.
+
 ### 4. Research that ends in a known state
 
 - Research starts from the checklist and only pursues unresolved facts.
@@ -192,13 +237,15 @@ existing classification review stays as a separate quality-control view.
    them in admin, show them to agents.
 4. In parallel, the filter test on rejected applications, the labelled set and the selection
    rewrite (3).
+5. The grouped classification path and its dry-run count report (3a).
 
 **From 1 October:**
 - expand to 20–30 schemes: family lookups for candidates missing their original (at most 30 of the
   300), step 5 merge for the pilot families, research, admin completion, measurement and agent
   review;
-- re-grade with the new selection question once it passes its test set;
-- the archive commercial backlog (already scheduled).
+- the grouped count report for the re-grade and the archive backlog. The 1 October task reports
+  only; queueing needs the user's go-ahead on the counts;
+- the re-grade through the grouped path, once the selection question passes its test set.
 
 ## Budget
 
@@ -224,8 +271,8 @@ research allowance. No September change is needed.
 | Headroom | | $1.50 |
 | **Total** | ~$14.65 | **$20 monthly: initial stage $12.50, research $6** |
 
-If $12 a month must hold, the re-grade moves to November and October is: initial $5, research $6,
-headroom $1.
+The backlog and re-grade estimates are per application. Grouping lowers them, so they are upper
+bounds.
 
 ## Decisions
 
