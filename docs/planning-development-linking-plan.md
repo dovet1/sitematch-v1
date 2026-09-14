@@ -1,5 +1,9 @@
 # Planning: development linking plan
 
+> **Refocused 14 September (evening).** [planning-pilot-completion-plan.md](planning-pilot-completion-plan.md)
+> now leads. Steps 1–4 below are built; steps 5 and 6 apply to the 20–30 pilot schemes first, and
+> national seeding, the linking worker deploy and national lookups wait until the pilot passes.
+
 Date: 14 September 2026. Revised twice the same day after Astra's reviews. Expands Phase 2d of
 `plota-planning-delivery-plan.md` and runs before the relevance-grading fix, at the user's request.
 Step 1 (the linker, measured nationally) is built and committed. Nothing writes linked families
