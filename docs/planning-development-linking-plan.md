@@ -1,8 +1,14 @@
 # Planning: development linking plan
 
-Date: 14 September 2026. Revised the same day after Astra's review. Expands Phase 2d of
+Date: 14 September 2026. Revised twice the same day after Astra's reviews. Expands Phase 2d of
 `plota-planning-delivery-plan.md` and runs before the relevance-grading fix, at the user's request.
-Nothing here is built yet.
+Step 1 (the linker, measured nationally) is built and committed. Nothing writes linked families
+to live records yet.
+
+**Scope: a complete fix for new imports and for the applications already stored.** Linking runs
+as part of normal ingestion, missing parents are recovered through Plota family lookups that are
+reused rather than repeated, and the same process works through the backlog. Implementation
+starts now; only paid lookups are bounded by budget and timing.
 
 ## The idea
 
@@ -143,11 +149,19 @@ October.
    weak link, phases whose figures conflict, or a Development a human has already reviewed.
 8. **Linking and the classification rules ship together.** There must be no period in which
    linked applications write over one another.
+9. **Alternative permissions are never added together.** Two schemes for the same site (a refused
+   and a resubmitted scheme, or competing permissions) stay distinct in the history.
+10. **Protect human decisions, and do not recreate a removed link.** Detaching a link records
+    that decision, so neither the linker nor a later Plota family puts it back automatically.
+11. **Plota is evidence, not the answer.** It uses similar clues. Where its family disagrees with
+    local evidence, the family goes to review.
 
-## First release
+## Steps
 
-Scope is deliberately small. It succeeds when Broadland appears as one correctly assessed scheme,
-its history is visible, and new paperwork cannot overwrite what the scheme is.
+Built in order. Steps 3 and 5 write to live records only together. Paid lookups (step 4) run only
+within an agreed request limit, starting with the pilot. The work succeeds when Broadland appears
+as one correctly assessed scheme with its history visible, and new paperwork joins it without
+overwriting what the scheme is or fetching the family again.
 
 ### Step 1 — Link clear references in stored data, no writes to live records
 
@@ -226,92 +240,178 @@ What this changes for later steps:
 ### Step 2 — Let archive schemes be assessed
 
 Add a description-based commercial test for records without `commercial_work`, mirroring the
-existing uncounted-housing limb, so archive records and recovered principals can reach the tier.
-Calibrate it for free on 2026 live records, where `commercial_work` is known: measure agreement
-with limb A before using it.
+existing uncounted-housing limb. This lets recovered parents, and the commercial applications we
+already store from September to December 2025, reach the tier.
+
+Calibrate it for free on 2026 live records, where `commercial_work` is known. Agreement with
+Plota's field is calibration, not proof, so also:
+- read a sample of what it catches that Plota does not;
+- read a sample of what Plota flags that it misses;
+- read a sample of archive-era records it would now admit.
 
 Done when:
-- its precision and recall against limb A are measured and accepted;
-- the Broadland principal's description passes it.
+- catches and misses are measured and read, not just agreement;
+- the Broadland principal's description passes it;
+- re-evaluating the stored archive records is a measured, bounded job.
 
-### Step 3 — One Development per straightforward family, with rules that protect it
+### Step 3 — Linking in normal ingestion
 
-Ship as one change:
-- **Schema:** a links table; `principal_application_id` and `latest_activity_at` on
-  `developments`; a `phase` or `scope` label on membership.
-- **Trigger:** a strongly linked application joins its family's Development, and non-tier members
+Every application, whether new or refreshed, is linked when it is stored. Ordinary imports never
+wait on a lookup.
+- **Parent already known:** the application joins that family, and so its Development (through
+  step 5).
+- **Parent missing:** the missing reference is queued for a Plota family lookup, with a priority
+  (step 4). The application is stored as usual.
+- **Council context:** reference formats and case-number reuse are learned per council, so they
+  are kept as a small per-council profile refreshed from stored data, not recomputed for every
+  application.
+- **Indexes:** lookups need an index on a stored reference case number alongside the existing
+  `(authority_slug, reference)` key.
+
+Done when:
+- a new application citing a stored permission joins its family at ingestion;
+- a new application citing a missing one creates one queue entry per missing family, not per
+  application;
+- ingestion latency and failure behaviour are unchanged when the queue is paused.
+
+### Step 4 — Plota family lookups, stored and reused
+
+One worker spends requests on `GET /applications/{id}/associated`:
+- **Storage:** the principal and every member returned, with their links, the condition ledger,
+  and when the family was fetched. Members we lacked are stored as partial records until
+  discovery supplies the full record. The principal's location comes from a member, because Plota
+  links shared numbers only on a shared site.
+- **Reuse:** a follow-on whose parent belongs to a fetched family joins it without another
+  request. The family is refreshed only when a new member cites a reference the stored family
+  does not contain, or when its outstanding ledger entries warrant it. Never on a timer alone.
+- **Priority:**
+  1. families attached to an already-relevant Development whose original is missing;
+  2. overlooked families with recent activity (5,535 nationally at 3+ applications);
+  3. potentially important single follow-ups, such as a condition submission for a scheme whose
+     wording names major development, a commercial use or many homes.
+  A family's size is a signal, not a gate.
+- **Conflicts:** where Plota's family and the local links disagree (a member in one and not the
+  other, a different principal), the family goes to review, not automatic merge.
+- **Budget:** a separate monthly allowance for lookups, never spending below the discovery
+  reserve, with a hard per-run cap. The queue simply waits when the allowance is spent.
+
+The backlog uses the same queue, seeded from the national report. There is no backfill rerun.
+
+Done when:
+- a second follow-up of a fetched family makes no request;
+- a conflict produces a review item and no merge;
+- requests per recovered family are measured.
+
+### Step 5 — One Development per family, with rules that protect it
+
+Ship together with step 3's writes, never before:
+- **Schema:** the links table (evidence, source, strength, created, removed-by with reason);
+  `principal_application_id` and `latest_activity_at` on `developments`; a `phase` or `scope`
+  label on membership.
+- **Membership:** strongly linked applications join the family's Development, and non-tier members
   join as history entries.
-- **Merge and undo:** transactional merge and detach functions that move members, observations,
-  brand signals and review history. They refuse Developments a human has reviewed.
+- **Merge and undo:** transactional merge and detach functions move members, observations, brand
+  signals and review history. They refuse Developments a human has reviewed, and a detach is
+  remembered.
 - **Eligibility:** computed per family. A family qualifies if its principal or any member does.
 - **Classification:** reads the principal's substantive proposal.
-  - Condition submissions and non-material amendments are marked `linked_member`. They are not
-    classified or researched on their own.
-  - Section 73 approvals and reserved matters keep their own figures, as described in the
-    principles.
+  - Condition submissions and non-material amendments are marked `linked_member`. They do not
+    change the Development's description, relevance or figures.
+  - Section 73 approvals and reserved matters keep their own figures and phase labels.
+  - Figures are never summed across members or alternative permissions.
   - A test proves classification order cannot change a Development's output.
+- **Ambiguity:** families with several missing parents, conflicting evidence or competing
+  permissions stay separate pending review.
 
 Done when:
-- a condition submission arriving leaves the Development's summary and figures unchanged;
-- merge and detach pass the verification script;
+- a condition submission arriving leaves the Development's description, relevance and figures
+  unchanged;
+- merge, detach and the non-recreation of a detached link pass the verification script;
 - ambiguous families are listed for review instead of merged.
 
-### Step 4 — End-to-end pilot, including overlooked schemes
-
-Run on a handful of councils: South Norfolk Broadland, Wandsworth, and Glasgow for reference
-cores. Include both kinds of family:
-- families that already have an assessed application;
-- **overlooked families like Broadland**: several recent follow-ons, none assessed, parent missing.
-
-Fetch each missing family once through Plota, within the existing budget controls, **from the
-October reset**. Store the principal, taking its location from a member because Plota
-guarantees a shared site. Store any members we lacked, and the ledger as reported. Then assess the
-family with steps 2 and 3.
-
-Record the requests actually used.
-
-Workers must be redeployed with the step 3 trigger and classification changes. Otherwise new
-applications in pilot councils arrive under the old per-application rules.
-
-### Step 5 — One pin and a basic history
+### Step 6 — One pin and a basic history
 
 The planning tab shows one row and pin per Development: the principal's proposal, its stage, the
 latest activity date and the number of applications. The inspector lists the applications in date
-order with plain labels taken from procedure and stage:
+order with plain labels from procedure and stage:
 - "permission approved";
-- "amendment approved";
-- "condition details submitted";
-- "condition details approved".
+- "amendment submitted" and "amendment approved";
+- "condition details submitted" and "condition details approved".
 
-Unlinked applications are unchanged. The tab's ranking and 2,000-row cap must be re-proven on the
-new read.
+No label claims construction has started. Unlinked applications are unchanged. The tab's ranking
+and 2,000-row cap must be re-proven on the new read.
 
-### Step 6 — Check the pilot before expanding
+## Validation
 
-Read and report:
-- incorrect merges;
-- relevant schemes newly recovered from overlooked families;
-- duplicate counts before and after;
-- dwelling or floor-space figures that changed and why;
-- provider requests used per family.
+Three levels, reported separately. None of them replaces the others.
 
-Then propose a national rollout and a family-fetch budget from those numbers, not from the
-estimates above.
+1. **Reference reading:** does each link point at the application the child acts on? Measured in
+   step 1 from descriptions, and repeated on a fresh sample once parents are fetched, so the parent
+   side is read too.
+2. **Family grouping:** is each family complete and free of strangers? Compared against Plota
+   families on a fresh sample that deliberately includes:
+   - missed follow-ups (applications worded as follow-ons with no link);
+   - masterplans with several missing parents;
+   - companion pairs and chains.
+   Council records are checked where Plota and local evidence disagree.
+3. **Development accuracy:** does each resulting Development describe the scheme correctly, with
+   figures attributed to the right application and nothing summed or overwritten? Checked in the
+   pilot on what users actually see.
+
+Every checked item keeps its own verdict and explanation.
+
+## Pilot
+
+South Norfolk Broadland, Wandsworth and Glasgow, testing the complete process on:
+- overlooked families (74 across the three councils at 3+ applications, plus eligible single
+  follow-ups);
+- known assessed Developments, including ones missing their originals;
+- ambiguous examples (masterplans, competing permissions, conflicts with Plota);
+- follow-ups arriving during the pilot, which must join automatically.
+
+It measures:
+- correct grouping;
+- useful schemes recovered;
+- accurate figures;
+- duplicates removed;
+- requests consumed per family.
+
+The one-pin view and history are part of the pilot, not a later stage.
+
+**Request limit:** agree before running. Proposed: **300 requests**, covering those families, a
+validation sample of about 50, and refreshes. Taken from October's allowance, never below the
+discovery reserve. National expansion is proposed from the measured value per request.
+
+**Acceptance example, Broadland:**
+- one correctly assessed warehouse-club Development;
+- 2024/3141 and its 11 follow-ups visible together;
+- the next condition application joins automatically, without a new Development and without
+  fetching the family again.
+
+## Simpler Plota integration (proposal, not a dependency)
+
+Ask Plota whether its bulk search feed can carry `parent_reference`, or a family id, on each
+application, the same links its associated endpoint already computes. That would let normal
+ingestion link without a separate lookup. Everything above is built against the existing family
+endpoint, so the answer changes cost, not design.
 
 ## Deferred
 
 - Address and UPRN suggestions.
 - Progress scoring (for example "construction likely started").
 - Comprehensive condition tracking, beyond showing the ledger as Plota reports it.
-- National parent recovery beyond the pilot.
 - Manual attach and detach on the admin review screen. Detach exists as a database function for
   corrections in the first release.
 
-## Decisions needed from the user
+## Decisions
 
-1. **Pilot councils.** Confirm South Norfolk Broadland, Wandsworth and Glasgow, or name others.
-2. **Companions.** Treat a planning application and its listed-building or advert twin as one
-   Development in the first release (recommended), or defer them.
+Made on 14 September: pilot councils South Norfolk Broadland, Wandsworth and Glasgow; companion
+consents merge into one Development.
+
+Still needed:
+1. **Pilot request limit.** 300 proposed.
+2. **Standing lookup allowance** after the pilot, set from its measured value.
+3. **Whether to ask Plota** about parent references in the bulk feed.
 
 ## Relationship to the grading fix
 
