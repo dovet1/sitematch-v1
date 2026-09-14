@@ -30,7 +30,7 @@ class Builder implements PromiseLike<Result> {
   ): PromiseLike<A | B> {
     let result: Result = { data: null, error: null }
     if (this.table === 'development_applications' && this.op === 'select') {
-      result = { data: { development_id: 'development-1' }, error: null }
+      result = { data: { development_id: 'development-1', role: membershipRole }, error: null }
     } else if (this.table === 'planning_classification_runs' && this.op === 'upsert') {
       result = { data: { id: 'run-1', status: 'running' }, error: null }
     }
@@ -49,6 +49,8 @@ function application(state: string, startedAt: string | null = null) {
     },
   }
 }
+
+let membershipRole = 'primary'
 
 function makeDb(candidates: ReturnType<typeof application>[]) {
   const writes: Write[] = []
@@ -93,6 +95,22 @@ const result = {
   },
   model: 'openai/gpt-oss-120b', inputTokens: 100, outputTokens: 50, costUsd: 0.0004,
 }
+
+describe('grouped members', () => {
+  beforeEach(() => { jest.clearAllMocks(); mockClassifyWithOpenRouter.mockResolvedValue(result) })
+  afterEach(() => { membershipRole = 'primary' })
+
+  it('never classifies an application grouped into another development, and leaves that development alone', async () => {
+    membershipRole = 'related'
+    const { db, writes, rpcCalls } = makeDb([application('queued')])
+    const batch = await classifyPlanningBatch({ db, apiKey: 'key', limit: 1 })
+    expect(batch.considered).toBe(1)
+    expect(mockClassifyWithOpenRouter).not.toHaveBeenCalled()
+    expect(rpcCalls.some(call => call.name === 'reserve_planning_ai_usage')).toBe(false)
+    expect(writes.some(write => write.table === 'developments')).toBe(false)
+    expect(writes).toContainEqual(expect.objectContaining({ table: 'planning_applications', payload: expect.objectContaining({ classification_state: 'classified' }) }))
+  })
+})
 
 describe('classification worker leases', () => {
   beforeEach(() => {

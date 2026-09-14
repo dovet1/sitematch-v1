@@ -1,5 +1,8 @@
+// User-approved 14 Sep 2026 for the pilot and grouped re-grade: $20 a month, $12.50 initial, $6
+// research. Defaults match so research gets the agreed allowance wherever it runs, even where the
+// environment does not set PLANNING_LLM_RESEARCH_BUDGET_USD. Do not change without approval.
 export const DEFAULT_MONTHLY_LLM_BUDGET_USD = 20
-export const DEFAULT_INITIAL_STAGE_BUDGET_USD = 2
+export const DEFAULT_INITIAL_STAGE_BUDGET_USD = 12.5
 // Charged verbatim when a classification fails, because the provider may already have
 // billed for an invalid answer. It must stay an upper bound on one queue item, not an
 // average -- and a queue item is now up to MAX_CLASSIFICATION_ATTEMPTS billed calls.
@@ -13,7 +16,7 @@ export const DEFAULT_INITIAL_STAGE_BUDGET_USD = 2
 // The previous model needed 0.003; anthropic/claude-haiku-4.5, the fallback, measured
 // $0.0054 a record and would need about 0.017.
 export const DEFAULT_CLASSIFICATION_RESERVATION_USD = 0.002
-export const DEFAULT_RESEARCH_STAGE_BUDGET_USD = 2
+export const DEFAULT_RESEARCH_STAGE_BUDGET_USD = 6
 // Re-measured 9 Sep 2026 on scanned-form application RB2026/1058 with openai/gpt-5.2.
 // PDF OCR, one web search and strict extraction used 11,010 input / 2,144 output tokens and
 // cost $0.089675. That earlier measurement used a smaller extraction contract and

@@ -60,4 +60,21 @@ describe('planCouncilAssessments', () => {
     const plan = planCouncilAssessments(apps)
     expect(countAssessments(apps, plan)).toMatchObject({ tierApplications: 1, assessments: 1 })
   })
+
+  it('groups a chain quoted in full, but keeps unrelated missing permissions separate', () => {
+    const wandsworth = (n: number) => `2026/${String(n).padStart(4, '0')}`
+    const fillers = Array.from({ length: 6 }, (_, n) => application(wandsworth(n + 900), 'Rear extension', { intelligence_tier: false }))
+    const s73 = application('2025/3409', 'Variation of conditions 2 and 14 of planning permission dated 01/03/2021 ref 2019/4915 (as varied by NMA 2025/2720) to allow reduction of office floorspace', { procedure: 'discharge' })
+    const nma = application('2026/2600', 'Non material amendment to planning permission dated 28/04/2026 ref 2025/3409 (Variation of conditions 2 and 14 of planning permission ref 2019/4915 (as varied by NMA 2025/2720)) to allow height of new core to be reduced', { procedure: 'amendment' })
+    const chain = planCouncilAssessments([s73, nma, ...fillers])
+    expect(chain.units).toEqual([expect.objectContaining({ headId: s73.id, timelineIds: [nma.id], uncertain: false })])
+    expect(chain.units[0].missingParentReferences.sort()).toEqual(['2019/4915', '2025/2720'])
+
+    // Joined only transitively: no one application quotes all three permissions.
+    const phaseOne = application('2026/0101', 'Variation of condition 2 of 2019/4915 and 2020/1111 to alter phase 1 layout', { procedure: 'amendment' })
+    const phaseTwo = application('2026/0102', 'Variation of condition 4 of 2020/1111 and 2021/2222 to alter phase 2 layout', { procedure: 'amendment' })
+    const separate = planCouncilAssessments([phaseOne, phaseTwo, ...fillers])
+    expect(separate.units).toHaveLength(2)
+    expect(separate.units.every(unit => unit.uncertain)).toBe(true)
+  })
 })

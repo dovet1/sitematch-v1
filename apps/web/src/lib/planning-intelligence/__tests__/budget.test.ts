@@ -40,7 +40,7 @@ describe('research reservation', () => {
   })
 
   it('uses a separate stage envelope from initial classification', () => {
-    expect(DEFAULT_RESEARCH_STAGE_BUDGET_USD).toBe(2)
+    expect(DEFAULT_RESEARCH_STAGE_BUDGET_USD).toBe(6)
     expect(DEFAULT_RESEARCH_RESERVATION_USD).toBeGreaterThan(DEFAULT_CLASSIFICATION_RESERVATION_USD)
   })
 })

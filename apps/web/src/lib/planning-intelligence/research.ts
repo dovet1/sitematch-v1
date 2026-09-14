@@ -131,6 +131,31 @@ async function addResearchFloorspace(
 
 const FACT_COLUMNS = 'fact,state,reason,value,findings,attempts,decided_by,decided_at'
 
+// Roles written when a family is grouped into one development: significant amendments are read
+// with documents; paperwork on the timeline is quoted as context only.
+const SIGNIFICANT_ROLES = new Set(['amendment', 'member'])
+const MAX_MEMBER_DOCUMENT_SETS = 2
+
+/** The rest of the development's family, so the scheme is researched once, not per application. */
+async function familyContext(db: PlanningAdminClient, row: ResearchQueueRow) {
+  const { data, error } = await db.from('development_applications')
+    .select('role,planning_applications(id,reference,description,raw)')
+    .eq('development_id', row.development_id)
+  if (error) throw error
+  type Member = { role: string; planning_applications: { id: string; reference: string; description: string | null; raw: PlotaApplication } | null }
+  const members = ((data ?? []) as unknown as Member[])
+    .filter(member => member.planning_applications && member.planning_applications.id !== row.planning_application_id)
+  return {
+    related: members.map(member => ({
+      reference: member.planning_applications!.reference,
+      relationship: SIGNIFICANT_ROLES.has(member.role) ? 'amendment to this scheme' : 'follow-up paperwork on this scheme',
+      description: (member.planning_applications!.description ?? '').slice(0, 1500),
+    })),
+    documentSubjects: members.filter(member => SIGNIFICANT_ROLES.has(member.role))
+      .slice(0, MAX_MEMBER_DOCUMENT_SETS).map(member => member.planning_applications!.raw),
+  }
+}
+
 /** Merge this attempt into the checklist. Returns the rows written. */
 async function recordFacts(
   db: PlanningAdminClient,
@@ -239,10 +264,19 @@ export async function researchPlanningBatch(input: {
     const requestDeadline = deadline()
     let collected: Awaited<ReturnType<typeof collectCouncilResearchSources>> | null = null
     try {
+      const family = await familyContext(input.db, row)
       collected = await collectCouncilResearchSources(row.raw)
+      for (const member of family.documentSubjects) {
+        const memberSources = await collectCouncilResearchSources(member)
+        collected = {
+          sources: [...collected.sources, ...memberSources.sources],
+          warnings: [...collected.warnings, ...memberSources.warnings.map(warning => `${member.reference}: ${warning}`)],
+        }
+      }
       const researched = await researchOperatorWithOpenRouter({
         application: row.raw,
         sources: collected.sources,
+        relatedApplications: family.related,
         apiKey: input.apiKey,
         model,
         signal: requestDeadline.signal,

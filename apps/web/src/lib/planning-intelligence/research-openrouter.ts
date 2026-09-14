@@ -375,6 +375,8 @@ function groundedUseClasses(
 export async function researchOperatorWithOpenRouter(input: {
   application: PlotaApplication
   sources: ResearchSource[]
+  /** The same scheme's other applications, read together so a family is researched once. */
+  relatedApplications?: Array<{ reference: string; relationship: string; description: string }>
   apiKey: string
   model?: string
   baseUrl?: string
@@ -396,6 +398,7 @@ export async function researchOperatorWithOpenRouter(input: {
     address: input.application.address ?? null,
     description: input.application.description ?? '',
     councilUrl: input.application.links?.council ?? null,
+    ...(input.relatedApplications?.length ? { relatedApplications: input.relatedApplications } : {}),
   })
 
   let ocrBody: OpenRouterResearchBody | null = null
@@ -484,6 +487,7 @@ export async function researchOperatorWithOpenRouter(input: {
             'Prioritise first-party applicant, occupier, developer, agent and contractor pages, then reputable property and local-news coverage.',
             'Search distinctive company, site and address terms as well as the application reference. Treat older or unconnected development phases as context only.',
             'Report explicitly stated site area separately from commercial floor space, retaining its original unit and existing/proposed/unspecified phase. Record named applicants, developers and agents as separate clues with their exact stated role, including private applicants; an applicant is not automatically a developer or operator.',
+            'relatedApplications, when present, are the same scheme\'s amendments and follow-up paperwork. Report facts about the scheme as it now stands, and say which application each figure comes from; an amendment that changes a figure supersedes the earlier one.',
             'Produce a concise evidence memo.',
           ].join(' '),
         },

@@ -1,4 +1,5 @@
 import {
+  familyKey,
   followOnKind,
   linkCouncilApplications,
   type ApplicationFamily,
@@ -65,6 +66,17 @@ export function isSignificantFollowOn(application: Pick<LinkableApplication, 'de
   return kind === 'reserved_matters' || (kind === 'amendment' && !NON_MATERIAL.test(application.description ?? ''))
 }
 
+function quotedAsOneChain(family: ApplicationFamily, links: ApplicationLink[]): boolean {
+  const members = new Set(family.applicationIds)
+  const missing = new Set(family.missingParentReferences)
+  const cited = new Map<string, Set<string>>()
+  for (const link of links) {
+    if (link.strength !== 'strong' || link.parentId || !members.has(link.childId)) continue
+    cited.set(link.childId, (cited.get(link.childId) ?? new Set()).add(link.parentReference))
+  }
+  return [...cited.values()].some(references => [...missing].every(reference => references.has(reference)))
+}
+
 // The family's own original first, then significant follow-ons oldest reference first.
 function headOrder(a: AssessableApplication, b: AssessableApplication): number {
   const rank = (application: AssessableApplication) => followOnKind(application) === null ? 0 : isSignificantFollowOn(application) ? 1 : 2
@@ -93,8 +105,10 @@ export function planCouncilAssessments(
     members.forEach(member => grouped.add(member.id))
 
     // A family citing several missing permissions is usually a phased masterplan or a mistake:
-    // keep each tier application separate until someone reviews it.
-    if (family.missingParentReferences.length > 1) {
+    // keep each tier application separate until someone reviews it. The exception is a chain that
+    // one member quotes in full ("permission 2019/4915 (as varied by NMA 2025/2720)"): that is one
+    // scheme's history, not competing permissions.
+    if (family.missingParentReferences.length > 1 && !quotedAsOneChain(family, links)) {
       for (const member of members.filter(m => m.intelligence_tier)) {
         roles.set(member.id, isRoutineFollowOn(member) ? 'await_parent' : 'assess')
         if (isRoutineFollowOn(member)) {
@@ -144,17 +158,25 @@ export function planCouncilAssessments(
 export interface AssessmentCounts {
   tierApplications: number
   assessments: number
+  /** Permanent savings: tier applications that are never assessed on their own. */
   tierReadInsideAnotherAssessment: number
   tierPaperworkOnTimeline: number
+  /** Deferred, not saved: tier applications waiting for their original before any assessment. */
   tierAwaitingParent: number
   assessmentsAlsoRequestingParent: number
   uncertainKeptSeparate: number
   nonTierInTierFamilies: number
+  /** Distinct missing originals (one lookup each), by case number within the council. */
+  distinctParentsBlockingDeferred: number
+  distinctParentsRequestedByAssessments: number
+  distinctParentsTotal: number
 }
 
 export function countAssessments(applications: AssessableApplication[], plan: AssessmentPlan): AssessmentCounts {
   const tier = new Set(applications.filter(a => a.intelligence_tier).map(a => a.id))
   const tierWithRole = (role: AssessmentRole) => [...plan.roles].filter(([id, r]) => r === role && tier.has(id)).length
+  const blocking = new Set(plan.awaitingParent.flatMap(entry => entry.missingParentReferences.map(familyKey)))
+  const requested = new Set(plan.units.flatMap(unit => unit.missingParentReferences.map(familyKey)))
   return {
     tierApplications: tier.size,
     assessments: plan.units.length,
@@ -163,6 +185,9 @@ export function countAssessments(applications: AssessableApplication[], plan: As
     tierAwaitingParent: tierWithRole('await_parent'),
     assessmentsAlsoRequestingParent: plan.units.filter(unit => unit.missingParentReferences.length > 0 && !unit.uncertain).length,
     uncertainKeptSeparate: plan.units.filter(unit => unit.uncertain).length,
-    nonTierInTierFamilies: [...plan.roles].filter(([id, r]) => !tier.has(id) && (r === 'timeline' || r === 'assess_with_family' || r === 'assess')).length,
+    nonTierInTierFamilies: [...plan.roles].filter(([id]) => !tier.has(id)).length,
+    distinctParentsBlockingDeferred: blocking.size,
+    distinctParentsRequestedByAssessments: requested.size,
+    distinctParentsTotal: new Set([...blocking, ...requested]).size,
   }
 }

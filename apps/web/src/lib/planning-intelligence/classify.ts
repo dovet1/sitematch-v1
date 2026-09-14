@@ -46,14 +46,24 @@ export interface ClassificationBatchResult {
   deferredBudget: number
 }
 
-async function linkedDevelopment(db: PlanningAdminClient, applicationId: string): Promise<string> {
+async function linkedDevelopment(db: PlanningAdminClient, applicationId: string): Promise<{ id: string; role: string }> {
   const { data, error } = await db
     .from('development_applications')
-    .select('development_id')
+    .select('development_id,role')
     .eq('planning_application_id', applicationId)
     .single()
   if (error) throw error
-  return data.development_id as string
+  return { id: data.development_id as string, role: (data.role as string | undefined) ?? 'primary' }
+}
+
+/**
+ * An application grouped into another application's development (a significant amendment read in
+ * the family's assessment, or paperwork on its timeline) is covered by that assessment. Classifying
+ * it on its own would overwrite the family's description, relevance and figures with a reading of
+ * one follow-up, so it is never sent to the model. See docs/planning-pilot-completion-plan.md, 3a.
+ */
+export function isGroupedMember(role: string): boolean {
+  return role !== 'primary' && role !== 'principal'
 }
 
 /**
@@ -268,7 +278,15 @@ export async function classifyPlanningBatch(input: {
     if (!data) break
     const application = data as QueueRow
     result.considered++
-    const developmentId = await linkedDevelopment(input.db, application.id)
+    const membership = await linkedDevelopment(input.db, application.id)
+    if (isGroupedMember(membership.role)) {
+      const { error: memberError } = await input.db.from('planning_applications').update({
+        classification_state: 'classified', classification_started_at: null, updated_at: new Date().toISOString(),
+      }).eq('id', application.id)
+      if (memberError) throw memberError
+      continue
+    }
+    const developmentId = membership.id
     const { data: run, error: runError } = await input.db
       .from('planning_classification_runs')
       .upsert({

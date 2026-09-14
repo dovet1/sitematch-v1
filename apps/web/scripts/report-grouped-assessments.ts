@@ -73,6 +73,7 @@ function add(total: AssessmentCounts, part: AssessmentCounts) {
 const zero = (): AssessmentCounts => ({
   tierApplications: 0, assessments: 0, tierReadInsideAnotherAssessment: 0, tierPaperworkOnTimeline: 0,
   tierAwaitingParent: 0, assessmentsAlsoRequestingParent: 0, uncertainKeptSeparate: 0, nonTierInTierFamilies: 0,
+  distinctParentsBlockingDeferred: 0, distinctParentsRequestedByAssessments: 0, distinctParentsTotal: 0,
 })
 
 async function main() {
