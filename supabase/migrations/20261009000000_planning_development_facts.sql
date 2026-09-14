@@ -177,7 +177,9 @@ END $$;
 -- scheme can sit in a retry loop outside it.
 CREATE OR REPLACE FUNCTION public.claim_next_planning_research(
   p_stale_before timestamptz,
-  p_attempt_limit integer
+  p_attempt_limit integer,
+  -- A pilot names its schemes; NULL claims from the whole queue.
+  p_development_ids uuid[]
 ) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
@@ -190,6 +192,7 @@ BEGIN
     SET research_state = 'complete', research_outcome = 'attempt_limit',
         research_started_at = NULL, research_finished_at = now(), updated_at = now()
     WHERE d.escalate_for_research
+      AND (p_development_ids IS NULL OR d.id = ANY(p_development_ids))
       AND d.research_attempts >= p_attempt_limit
       AND (
         d.research_state = 'failed'
@@ -225,6 +228,7 @@ BEGIN
   INTO v_development
   FROM public.developments d
   WHERE d.escalate_for_research
+    AND (p_development_ids IS NULL OR d.id = ANY(p_development_ids))
     AND d.research_attempts < p_attempt_limit
     AND (
       d.research_state IN ('queued', 'failed', 'deferred_budget')
@@ -297,7 +301,7 @@ END $$;
 -- on the two-argument version, so a one-argument call is never ambiguous.
 CREATE OR REPLACE FUNCTION public.claim_next_planning_research(p_stale_before timestamptz)
 RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
-  SELECT public.claim_next_planning_research(p_stale_before, 2);
+  SELECT public.claim_next_planning_research(p_stale_before, 2, NULL::uuid[]);
 $$;
 
 ALTER TABLE public.development_facts ENABLE ROW LEVEL SECURITY;
@@ -309,7 +313,7 @@ REVOKE ALL ON FUNCTION public.planning_record_development_facts(uuid, jsonb) FRO
 GRANT EXECUTE ON FUNCTION public.planning_record_development_facts(uuid, jsonb) TO service_role;
 REVOKE ALL ON FUNCTION public.planning_complete_development_fact(uuid, text, text, text, jsonb, jsonb, text[], text, timestamptz) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.planning_complete_development_fact(uuid, text, text, text, jsonb, jsonb, text[], text, timestamptz) TO service_role;
-REVOKE ALL ON FUNCTION public.claim_next_planning_research(timestamptz, integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.claim_next_planning_research(timestamptz, integer) TO service_role;
+REVOKE ALL ON FUNCTION public.claim_next_planning_research(timestamptz, integer, uuid[]) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_next_planning_research(timestamptz, integer, uuid[]) TO service_role;
 REVOKE ALL ON FUNCTION public.claim_next_planning_research(timestamptz) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_next_planning_research(timestamptz) TO service_role;

@@ -289,18 +289,24 @@ export function nextFactRows(input: {
 }
 
 /**
- * The attempt's outcome for facts it did not answer. Blocked documents are named as such only
- * when no document text was read at all; if documents were read and did not state the fact, the
- * documents were silent, which is a different task for the admin.
+ * The attempt's outcome for facts it did not answer. Documents count as inaccessible when none
+ * were read, or when the collector reports the application documents themselves were blocked or
+ * missing (a portal disallowed by robots.txt, or no application PDF): a council page alone rarely
+ * states areas. Otherwise documents were read and did not state the fact, which is a different
+ * task for the admin.
  */
+const DOCUMENTS_BLOCKED = /disallowed by robots\.txt|No application PDF retrieved|could not be read|returned [45]\d\d/i
+
 export function attemptOutcome(input: {
   documentsRetrieved: number
   councilPageRetrieved: boolean
   failed: boolean
   attemptLimitReached: boolean
+  warnings?: string[]
 }): FactAttempt['outcome'] {
   if (input.failed) return input.attemptLimitReached ? 'attempt_limit' : 'provider_failure'
   if (input.documentsRetrieved === 0) return 'documents_inaccessible'
+  if ((input.warnings ?? []).some(warning => DOCUMENTS_BLOCKED.test(warning))) return 'documents_inaccessible'
   return 'documents_silent'
 }
 

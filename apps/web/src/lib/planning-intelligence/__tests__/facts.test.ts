@@ -145,6 +145,8 @@ describe('fact completeness', () => {
     expect(attemptOutcome({ documentsRetrieved: 0, councilPageRetrieved: false, failed: false, attemptLimitReached: false })).toBe('documents_inaccessible')
     expect(attemptOutcome({ documentsRetrieved: 2, councilPageRetrieved: true, failed: false, attemptLimitReached: false })).toBe('documents_silent')
     expect(attemptOutcome({ documentsRetrieved: 0, councilPageRetrieved: false, failed: true, attemptLimitReached: true })).toBe('attempt_limit')
+    expect(attemptOutcome({ documentsRetrieved: 1, councilPageRetrieved: true, failed: false, attemptLimitReached: false,
+      warnings: ['Document portal is disallowed by robots.txt: planning2.wandsworth.gov.uk', 'No application PDF retrieved; floor area and site area may be missing'] })).toBe('documents_inaccessible')
     const blocked = rows(result(), [], 'documents_inaccessible')
     expect(blocked.proposed_floorspace).toMatchObject({ state: 'not_found_after_research', reason: 'documents_inaccessible' })
   })

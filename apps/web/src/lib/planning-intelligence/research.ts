@@ -158,6 +158,8 @@ export async function researchPlanningBatch(input: {
   apiKey: string
   model?: string
   limit?: number
+  /** Claim only these developments, for a pilot. Omitted claims from the whole queue. */
+  developmentIds?: string[]
 }): Promise<ResearchBatchResult> {
   const model = input.model ?? process.env.OPENROUTER_PLANNING_RESEARCH_MODEL
     ?? DEFAULT_OPENROUTER_RESEARCH_MODEL
@@ -189,6 +191,7 @@ export async function researchPlanningBatch(input: {
     const { data, error } = await input.db.rpc('claim_next_planning_research', {
       p_stale_before: new Date(Date.now() - RESEARCH_LEASE_MS).toISOString(),
       p_attempt_limit: RESEARCH_ATTEMPT_LIMIT,
+      p_development_ids: input.developmentIds ?? null,
     })
     if (error) throw error
     if (!data) break
@@ -254,7 +257,7 @@ export async function researchPlanningBatch(input: {
         outcome: attemptOutcome({
           documentsRetrieved,
           councilPageRetrieved: collected.sources.some(source => source.kind === 'council_page'),
-          failed: false, attemptLimitReached: false,
+          failed: false, attemptLimitReached: false, warnings: collected.warnings,
         }),
         documentsRetrieved, retrievalWarnings: collected.warnings, webSearches: researched.webSearchRequests,
       })
