@@ -317,6 +317,43 @@ Done when:
   application;
 - ingestion latency and failure behaviour are unchanged when the queue is paused.
 
+**Built, 14 September 2026; migration not yet applied, nothing seeded, flag off.**
+- **Migration** `20261007000000_planning_application_links.sql` adds:
+  - `reference_normalised` and `reference_core` on applications, as plain columns set by code
+    (a generated column would rewrite the 614k-row table under lock), with council-scoped indexes;
+  - `planning_council_link_profiles`;
+  - `planning_application_links` (evidence per child, family and source; a removal is kept);
+  - `planning_family_lookups` (one row per missing family; a completed or locally resolved family
+    is never re-queued);
+  - bulk functions `planning_set_reference_keys`, `planning_resolve_family_parents` and
+    `planning_request_family_lookups`.
+- **Linker** `linking.ts`: split into a council profile, a resolver and per-application links. The
+  national report's pilot-council figures are unchanged. A test proves that linking from only the
+  candidates an application's keys point to gives the same links as linking from the whole council.
+- **Ingestion** `link-ingest.ts`, called from `runPlotaSync` after each page when
+  `PLANNING_LINKING_ENABLED=true`. For each page it:
+  - stores the keys;
+  - loads only candidate parents;
+  - writes new evidence (never overwriting existing rows);
+  - attaches earlier follow-ons to a parent that has just arrived;
+  - requests one lookup per missing family.
+
+  A council without a profile is skipped rather than guessed. A linking failure is counted and
+  logged, never thrown, so the page is still stored.
+- **Seeding** `scripts/seed-planning-links.ts` (dry-run default, `--councils`, `--after`). Dry run on
+  the pilot councils: 10,024 applications, 2,074 links (1,895 strong, 231 resolved to a stored
+  parent), 934 missing families. Glasgow reuses case numbers for `DOC` and `NMV`.
+- The worker packager now includes `commercial-description.ts`, `linking.ts` and `link-ingest.ts`.
+  The step 2 eligibility change had left the package unable to build.
+
+To go live, in order:
+1. The user applies the migration.
+2. Seed the pilot councils with `--commit` and check Broadland's family rows.
+3. Seed nationally.
+4. Deploy the workers with the flag on.
+
+This writes only evidence and the lookup queue; Development membership waits for step 5.
+
 ### Step 4 — Plota family lookups, stored and reused
 
 One worker spends requests on `GET /applications/{id}/associated`:

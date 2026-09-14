@@ -235,95 +235,157 @@ function principalRank(application: LinkableApplication): number {
   return 0
 }
 
+/** Whether an application can head a family: a permission or companion consent, not a follow-on. */
+export function canHeadFamily(application: LinkableApplication): boolean {
+  return principalRank(application) < 2
+}
+
+/** The key a family is known by before its parent is found: its case number, else its reference. */
+export function familyKey(reference: string): string {
+  return referenceCore(reference)?.core ?? normaliseReference(reference)
+}
+
+/**
+ * What linking needs to know about a council as a whole: the reference formats it uses, and which
+ * follow-on suffix families reuse their parent's case number. Both depend on every stored
+ * reference, so ingestion reads a stored profile rather than recomputing it per page.
+ */
+export interface CouncilLinkProfile {
+  shapes: Set<string>
+  reusingFamilies: Set<string>
+}
+
+/** Answers "which stored application has this reference, or this case number?" for one council. */
+export interface LinkResolver {
+  byReference(reference: string): LinkableApplication | undefined
+  byCore(core: string): LinkableApplication[]
+}
+
+function coresByCase(applications: LinkableApplication[]): Map<string, LinkableApplication[]> {
+  const cores = new Map<string, LinkableApplication[]>()
+  for (const application of applications) {
+    const parts = referenceCore(application.reference)
+    if (parts) cores.set(parts.core, [...(cores.get(parts.core) ?? []), application])
+  }
+  return cores
+}
+
+export function resolverFor(applications: LinkableApplication[]): LinkResolver {
+  const references = new Map(applications.map(application => [normaliseReference(application.reference), application]))
+  const cores = coresByCase(applications)
+  return {
+    byReference: reference => references.get(reference),
+    byCore: core => cores.get(core) ?? [],
+  }
+}
+
+export function buildCouncilLinkProfile(applications: LinkableApplication[]): CouncilLinkProfile {
+  const shapes = councilReferenceShapes(applications.map(application => application.reference))
+  const byCore = coresByCase(applications)
+  const reusingFamilies = new Set(SUFFIX_FAMILIES.filter(family => councilReusesCaseNumbers(applications, shapes, byCore, family)))
+  return { shapes, reusingFamilies }
+}
+
+/**
+ * The references and case numbers a resolver must be able to answer for this application, so
+ * ingestion can load exactly those stored applications instead of the whole council.
+ */
+export function lookupKeysFor(application: LinkableApplication, profile: CouncilLinkProfile): { references: string[]; cores: string[] } {
+  const references = new Set<string>(), cores = new Set<string>()
+  for (const { token } of citations(application, profile.shapes)) {
+    references.add(token)
+    cores.add(referenceCore(token)?.core ?? token)
+  }
+  const own = referenceCore(application.reference)
+  if (own) cores.add(own.core)
+  return { references: [...references], cores: [...cores] }
+}
+
+/** Every link one application's own evidence supports, resolved against what the resolver holds. */
+export function linksForApplication(
+  application: LinkableApplication, profile: CouncilLinkProfile, resolver: LinkResolver
+): ApplicationLink[] {
+  const links: ApplicationLink[] = []
+  const resolve = (token: string, childId: string): LinkableApplication | null => {
+    const exact = resolver.byReference(token)
+    if (exact && exact.id !== childId) return exact
+    // "Condition 3 of 24/01333/FUL" where only 24/01333/CND2 is stored names a missing permission,
+    // not the sibling condition submission; resolving to the sibling would misplace the parent.
+    const core = referenceCore(token)?.core ?? token
+    const candidates = resolver.byCore(core).filter(candidate => candidate.id !== childId && principalRank(candidate) < 2)
+    return [...candidates].sort((a, b) => principalRank(a) - principalRank(b) || a.reference.localeCompare(b.reference))[0] ?? null
+  }
+
+  const description = application.description ?? ''
+  const kind = followOnKind(application)
+  const linkedParents = new Set<string>()
+  const citedCores = new Set<string>()
+
+  for (const { token, index, familiar } of citations(application, profile.shapes)) {
+    const before = description.slice(Math.max(0, index - 90), index)
+    // An unfamiliar format is only trusted as a follow-on's parent, never as a loose mention.
+    if (!familiar && !kind) continue
+    const parent = resolve(token, application.id)
+    let linkKind: LinkKind = 'cited'
+    let strength: LinkStrength = 'weak'
+    if (!INCIDENTAL_CUE.test(before)) {
+      if (COMPANION_CUE.test(before)) { linkKind = 'companion'; strength = 'strong' }
+      else if (kind && REFERENCE_CUE.test(before)) { linkKind = kind; strength = 'strong' }
+    }
+    if (parent) linkedParents.add(parent.id)
+    if (strength === 'strong') citedCores.add(referenceCore(token)?.core ?? token)
+    links.push({
+      childId: application.id, parentReference: token, parentId: parent?.id ?? null,
+      kind: linkKind, strength, source: 'cited_reference', evidence: evidenceAround(description, index, token.length),
+    })
+  }
+
+  const parts = referenceCore(application.reference)
+  if (!parts) return links
+  const suffixKind: LinkKind | null = CONDITION_SUFFIX.test(parts.suffix) ? 'condition'
+    : AMBIGUOUS_CONDITION_SUFFIX.test(parts.suffix) && kind === 'condition' ? 'condition'
+    : AMENDMENT_SUFFIX.test(parts.suffix) ? 'amendment'
+    : COMPANION_SUFFIX.test(parts.suffix) ? 'companion'
+    : null
+  if (!suffixKind) return links
+  const siblings = resolver.byCore(parts.core).filter(sibling => sibling.id !== application.id)
+  // Most councils give a condition submission or amendment its own running number with a type
+  // suffix (Leeds 26/01686/COND discharges 24/03592/FU); only some reuse the parent's (Oxford,
+  // Bromley, Wakefield). In the first national sample 58 of 61 unsupported case-number links were
+  // the application's own number, and even with a same-numbered sibling 6 of 20 still were
+  // (Bath, Breckland). So a follow-on's number links only at a council shown to reuse numbers, and
+  // only when another stored application shares it or the description quotes it -- never merely
+  // because the description repeats the application's own reference.
+  if (suffixKind !== 'companion') {
+    const quoted = description.toUpperCase().replace(/\s+/g, '').split(normaliseReference(application.reference)).join('').includes(parts.core)
+    const family = suffixFamily(parts.suffix)
+    if (!family || !profile.reusingFamilies.has(family) || (siblings.length === 0 && !quoted)) return links
+  }
+  const principal = siblings.find(sibling => PRINCIPAL_SUFFIX.test(referenceCore(sibling.reference)!.suffix))
+  // A companion consent needs its principal present to link: two listed-building consents with
+  // the same number say nothing on their own. A follow-on links to its missing parent's number.
+  if (suffixKind === 'companion' && !principal) return links
+  // The description already cites this parent; a second link would only repeat the evidence.
+  const alreadyCited = [...citedCores].some(cited => cited === parts.core || cited.endsWith(`/${parts.core}`))
+  if ((principal && linkedParents.has(principal.id)) || alreadyCited) return links
+  const site = principal ?? siblings[0]
+  links.push({
+    childId: application.id, parentReference: parts.core, parentId: principal?.id ?? null,
+    kind: suffixKind, strength: !site || sameSite(application, site) ? 'strong' : 'weak',
+    source: 'reference_core', evidence: `${normaliseReference(application.reference)} shares case number ${parts.core}`,
+  })
+  return links
+}
+
 export function linkCouncilApplications(applications: LinkableApplication[]): {
   links: ApplicationLink[]
   families: ApplicationFamily[]
 } {
   const byId = new Map(applications.map(application => [application.id, application]))
   const byReference = new Map(applications.map(application => [normaliseReference(application.reference), application]))
-  const byCore = new Map<string, LinkableApplication[]>()
-  for (const application of applications) {
-    const parts = referenceCore(application.reference)
-    if (parts) byCore.set(parts.core, [...(byCore.get(parts.core) ?? []), application])
-  }
-  const shapes = councilReferenceShapes(applications.map(application => application.reference))
-  const links: ApplicationLink[] = []
-  const reuseByFamily = new Map<string, boolean>()
-  const reuses = (family: string | null) => {
-    if (!family) return false
-    if (!reuseByFamily.has(family)) reuseByFamily.set(family, councilReusesCaseNumbers(applications, shapes, byCore, family))
-    return reuseByFamily.get(family)!
-  }
-
-  const resolve = (token: string, childId: string): LinkableApplication | null => {
-    const exact = byReference.get(token)
-    if (exact && exact.id !== childId) return exact
-    // "Condition 3 of 24/01333/FUL" where only 24/01333/CND2 is stored names a missing permission,
-    // not the sibling condition submission; resolving to the sibling would misplace the parent.
-    const core = referenceCore(token)?.core ?? token
-    const candidates = (byCore.get(core) ?? []).filter(candidate => candidate.id !== childId && principalRank(candidate) < 2)
-    return [...candidates].sort((a, b) => principalRank(a) - principalRank(b) || a.reference.localeCompare(b.reference))[0] ?? null
-  }
-
-  for (const application of applications) {
-    const description = application.description ?? ''
-    const kind = followOnKind(application)
-    const linkedParents = new Set<string>()
-    const citedCores = new Set<string>()
-
-    for (const { token, index, familiar } of citations(application, shapes)) {
-      const before = description.slice(Math.max(0, index - 90), index)
-      // An unfamiliar format is only trusted as a follow-on's parent, never as a loose mention.
-      if (!familiar && !kind) continue
-      const parent = resolve(token, application.id)
-      let linkKind: LinkKind = 'cited'
-      let strength: LinkStrength = 'weak'
-      if (!INCIDENTAL_CUE.test(before)) {
-        if (COMPANION_CUE.test(before)) { linkKind = 'companion'; strength = 'strong' }
-        else if (kind && REFERENCE_CUE.test(before)) { linkKind = kind; strength = 'strong' }
-      }
-      if (parent) linkedParents.add(parent.id)
-      if (strength === 'strong') citedCores.add(referenceCore(token)?.core ?? token)
-      links.push({
-        childId: application.id, parentReference: token, parentId: parent?.id ?? null,
-        kind: linkKind, strength, source: 'cited_reference', evidence: evidenceAround(description, index, token.length),
-      })
-    }
-
-    const parts = referenceCore(application.reference)
-    if (!parts) continue
-    const suffixKind: LinkKind | null = CONDITION_SUFFIX.test(parts.suffix) ? 'condition'
-      : AMBIGUOUS_CONDITION_SUFFIX.test(parts.suffix) && kind === 'condition' ? 'condition'
-      : AMENDMENT_SUFFIX.test(parts.suffix) ? 'amendment'
-      : COMPANION_SUFFIX.test(parts.suffix) ? 'companion'
-      : null
-    if (!suffixKind) continue
-    const siblings = (byCore.get(parts.core) ?? []).filter(sibling => sibling.id !== application.id)
-    // Most councils give a condition submission or amendment its own running number with a type
-    // suffix (Leeds 26/01686/COND discharges 24/03592/FU); only some reuse the parent's (Oxford,
-    // Bromley, Wakefield). In the first national sample 58 of 61 unsupported case-number links were
-    // the application's own number, and even with a same-numbered sibling 6 of 20 still were
-    // (Bath, Breckland). So a follow-on's number links only at a council shown to reuse numbers, and
-    // only when another stored application shares it or the description quotes it -- never merely
-    // because the description repeats the application's own reference.
-    if (suffixKind !== 'companion') {
-      const quoted = description.toUpperCase().replace(/\s+/g, '').split(normaliseReference(application.reference)).join('').includes(parts.core)
-      if (!reuses(suffixFamily(parts.suffix)) || (siblings.length === 0 && !quoted)) continue
-    }
-    const principal = siblings.find(sibling => PRINCIPAL_SUFFIX.test(referenceCore(sibling.reference)!.suffix))
-    // A companion consent needs its principal present to link: two listed-building consents with
-    // the same number say nothing on their own. A follow-on links to its missing parent's number.
-    if (suffixKind === 'companion' && !principal) continue
-    // The description already cites this parent; a second link would only repeat the evidence.
-    const alreadyCited = [...citedCores].some(cited => cited === parts.core || cited.endsWith(`/${parts.core}`))
-    if ((principal && linkedParents.has(principal.id)) || alreadyCited) continue
-    const site = principal ?? siblings[0]
-    links.push({
-      childId: application.id, parentReference: parts.core, parentId: principal?.id ?? null,
-      kind: suffixKind, strength: !site || sameSite(application, site) ? 'strong' : 'weak',
-      source: 'reference_core', evidence: `${normaliseReference(application.reference)} shares case number ${parts.core}`,
-    })
-  }
+  const profile = buildCouncilLinkProfile(applications)
+  const resolver = resolverFor(applications)
+  const links = applications.flatMap(application => linksForApplication(application, profile, resolver))
 
   const families = new UnionFind()
   const referenceKey = (reference: string) => `ref:${referenceCore(reference)?.core ?? normaliseReference(reference)}`

@@ -49,8 +49,12 @@ function makeDb() {
     'brands:select': { data: [], error: null },
     'fascias:select': { data: [], error: null },
   }
-  const db = { from: (table: string) => new Builder(table, writes, results) }
-  return { db: db as never, writes, results }
+  const rpcs: string[] = []
+  const db = {
+    from: (table: string) => new Builder(table, writes, results),
+    rpc: (name: string) => { rpcs.push(name); return Promise.resolve({ data: 0, error: null }) },
+  }
+  return { db: db as never, writes, results, rpcs }
 }
 
 // Shaped after a real Plota record observed on 8 Sep 2026: the provider states that its
@@ -261,6 +265,43 @@ describe('runPlotaSync census mapping', () => {
     expect(await runPlotaSync({ ...base, db, client: plota as never }))
       .toMatchObject({ requestsMade: 0, stoppedForReserve: true })
     expect(plota.search).not.toHaveBeenCalled()
+  })
+})
+
+describe('application linking during ingestion', () => {
+  const previous = process.env.PLANNING_LINKING_ENABLED
+  afterEach(() => { process.env.PLANNING_LINKING_ENABLED = previous })
+  const storedRow = { id: 'app-1', authority_slug: 'watford', reference: '26/00712/FULH', description: 'Erection of a new retail foodstore' }
+
+  it('leaves ingestion exactly as it was while linking is off', async () => {
+    delete process.env.PLANNING_LINKING_ENABLED
+    const { db, writes } = makeDb()
+    const result = await runPlotaSync({ ...base, db, client: client(application(), 9000) })
+    expect(upsertedApplication(writes)).not.toHaveProperty('reference_normalised')
+    expect(writes.some(w => w.table === 'planning_application_links')).toBe(false)
+    expect(result).not.toHaveProperty('linking')
+  })
+
+  it('stores the linking keys and links each page when linking is on', async () => {
+    process.env.PLANNING_LINKING_ENABLED = 'true'
+    const { db, writes, results, rpcs } = makeDb()
+    results['planning_applications:upsert'] = { data: [storedRow], error: null }
+    results['planning_council_link_profiles:select'] = { data: [{ authority_slug: 'watford', reference_shapes: ['99/99999/AAAA'], reusing_suffix_families: [] }], error: null }
+    const result = await runPlotaSync({ ...base, db, client: client(application(), 9000) })
+    expect(upsertedApplication(writes)).toMatchObject({ reference_normalised: '26/00712/FULH', reference_core: '26/00712' })
+    expect(rpcs).toContain('planning_resolve_family_parents')
+    expect(result.linking).toMatchObject({ pages: 1, failures: 0 })
+  })
+
+  it('never loses a page or stops ingestion when linking fails', async () => {
+    process.env.PLANNING_LINKING_ENABLED = 'true'
+    const { db, results } = makeDb()
+    results['planning_applications:upsert'] = { data: [storedRow], error: null }
+    results['planning_council_link_profiles:select'] = { data: null, error: new Error('profiles unavailable') }
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const result = await runPlotaSync({ ...base, db, client: client(application(), 9000) })
+    spy.mockRestore()
+    expect(result).toMatchObject({ status: 'complete', recordsUpserted: 1, linking: { pages: 0, failures: 1 } })
   })
 })
 

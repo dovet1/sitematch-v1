@@ -1,4 +1,4 @@
-import { followOnKind, linkCouncilApplications, referenceCore, type LinkableApplication } from '../linking'
+import { buildCouncilLinkProfile, followOnKind, linkCouncilApplications, linksForApplication, lookupKeysFor, normaliseReference, referenceCore, resolverFor, type LinkableApplication } from '../linking'
 
 let sequence = 0
 function application(reference: string, description: string, overrides: Partial<LinkableApplication> = {}): LinkableApplication {
@@ -239,5 +239,27 @@ describe('linkCouncilApplications', () => {
     expect(families).toHaveLength(1)
     expect(families[0]).toMatchObject({ rootId: null, missingParentReferences: ['2023/3727'] })
     expect(families[0].applicationIds.sort()).toEqual([amendment.id, discharge.id].sort())
+  })
+
+  it('links a new application identically from only the stored applications its keys point to', () => {
+    // Ingestion loads only candidates matching a page's cited references and case numbers, not the
+    // whole council; the links must be the same as the national report computes from everything.
+    const site = { postcode: 'G1 1AA' }
+    const applications = reusingCouncil((n: number) => `25/${String(n).padStart(5, '0')}`, [
+      application('25/02808/FUL', 'Erection of student accommodation', { procedure: 'full', ...site }),
+      application('25/02808/NMV01', 'Changes to window positions', { procedure: 'amendment', ...site }),
+      application('25/02808/DOC01', 'Contaminated land report', { procedure: 'discharge', ...site }),
+      application('25/03000/DOC01', 'Discharge of condition 4 of planning permission 25/02808/FUL', { procedure: 'discharge' }),
+      application('25/03001/FUL', 'Erection of a house. See 25/02808/FUL for access', { procedure: 'full' }),
+    ], ['DOC01', 'NMV01'])
+    const profile = buildCouncilLinkProfile(applications)
+    const everything = resolverFor(applications)
+    for (const candidate of applications) {
+      const keys = lookupKeysFor(candidate, profile)
+      const subset = applications.filter(other => other.id === candidate.id
+        || keys.references.includes(normaliseReference(other.reference))
+        || keys.cores.includes(referenceCore(other.reference)?.core ?? ''))
+      expect(linksForApplication(candidate, profile, resolverFor(subset))).toEqual(linksForApplication(candidate, profile, everything))
+    }
   })
 })

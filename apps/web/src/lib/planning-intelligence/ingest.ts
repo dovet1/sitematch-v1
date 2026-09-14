@@ -6,6 +6,14 @@ import {
 } from '@/lib/epc/aliases'
 import { classificationInputHash, decideEligibility } from './eligibility'
 import {
+  LINKING_COLUMNS,
+  linkStoredApplications,
+  planningLinkingEnabled,
+  referenceKeys,
+  type LinkIngestResult,
+  type StoredApplication,
+} from './link-ingest'
+import {
   buildSearchSpecs,
   maySpendPlotaRequest,
   REDUCED_SCOPE_ARCHIVE_FLOOR,
@@ -55,6 +63,8 @@ export interface SyncResult {
   recordsUpserted: number
   intelligenceRecords: number
   stoppedForReserve: boolean
+  /** Present only when PLANNING_LINKING_ENABLED is on. A linking failure is counted, never thrown. */
+  linking?: { pages: number; links: number; strongLinks: number; lookupsRequested: number; failures: number }
 }
 
 function geometry(application: PlotaApplication): string | null {
@@ -73,9 +83,11 @@ function rowFor(
   application: PlotaApplication,
   decision: ReturnType<typeof decideEligibility>,
   inputHash: string,
-  preserveClassified: boolean
+  preserveClassified: boolean,
+  withReferenceKeys: boolean
 ) {
   return {
+    ...(withReferenceKeys ? referenceKeys(application.reference) : {}),
     provider: 'plota',
     provider_id: application.id,
     authority_slug: application.authority.slug,
@@ -148,9 +160,10 @@ async function upsertApplications(
   db: PlanningAdminClient,
   applications: PlotaApplication[],
   aliases: AliasIndex,
-  brandLimbEnabled: boolean
-): Promise<{ upserted: number; intelligence: number }> {
-  if (applications.length === 0) return { upserted: 0, intelligence: 0 }
+  brandLimbEnabled: boolean,
+  linking = false
+): Promise<{ upserted: number; intelligence: number; stored: StoredApplication[] }> {
+  if (applications.length === 0) return { upserted: 0, intelligence: 0, stored: [] }
   const identity = (authority: string, reference: string) => JSON.stringify([authority, reference])
   // One council reference can occur as both a live id and an archive id in a page.
   const unique = new Map<string, PlotaApplication>()
@@ -204,7 +217,7 @@ async function upsertApplications(
     if (decision.intelligenceTier) intelligence++
     const hash = classificationInputHash(application)
     const preserveClassified = prior?.input_hash === hash && prior.classification_state === 'classified'
-    const row = rowFor(application, decision, hash, preserveClassified)
+    const row = rowFor(application, decision, hash, preserveClassified, linking)
     if (!providerMatch && referenceMatch) byReferenceRows.push(row)
     else byProviderRows.push(row)
   }
@@ -212,15 +225,23 @@ async function upsertApplications(
   // Updating by the natural key retains the application's UUID and all Development
   // links when a live id replaces its archive id. Ordinary provider-id updates still
   // support corrected council references without inserting a duplicate application.
+  const stored: StoredApplication[] = []
   for (const [rows, onConflict] of [
     [byProviderRows, 'provider,provider_id'],
     [byReferenceRows, 'authority_slug,reference'],
   ] as const) {
     if (!rows.length) continue
-    const { error } = await db.from('planning_applications').upsert(rows, { onConflict })
+    if (!linking) {
+      const { error } = await db.from('planning_applications').upsert(rows, { onConflict })
+      if (error) throw error
+      continue
+    }
+    // Linking needs the stored ids of what was just written.
+    const { data, error } = await db.from('planning_applications').upsert(rows, { onConflict }).select(LINKING_COLUMNS)
     if (error) throw error
+    stored.push(...((data ?? []) as StoredApplication[]))
   }
-  return { upserted: byProviderRows.length + byReferenceRows.length, intelligence }
+  return { upserted: byProviderRows.length + byReferenceRows.length, intelligence, stored }
 }
 
 async function recordCoverage(
@@ -320,7 +341,7 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
     .single()
   if (runError) throw runError
 
-  const stats = {
+  const stats: Omit<SyncResult, 'runId' | 'status'> = {
     requestsMade: 0,
     recordsSeen: 0,
     recordsUpserted: 0,
@@ -349,6 +370,8 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
       councils: input.councils,
     })
     const aliases = await loadAliasIndex(input.db)
+    const linking = planningLinkingEnabled()
+    if (linking) stats.linking = { pages: 0, links: 0, strongLinks: 0, lookupsRequested: 0, failures: 0 }
     let pagesLeft = input.maxPages
     let completeSpecs = 0
 
@@ -442,10 +465,24 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
           input.db,
           result.page.data,
           aliases,
-          input.brandLimbEnabled ?? false
+          input.brandLimbEnabled ?? false,
+          linking
         )
         stats.recordsUpserted += written.upserted
         stats.intelligenceRecords += written.intelligence
+        if (stats.linking) {
+          // Linking is evidence gathering; a failure here must not lose the page or stop ingestion.
+          try {
+            const linked: LinkIngestResult = await linkStoredApplications(input.db, written.stored)
+            stats.linking.pages++
+            stats.linking.links += linked.links
+            stats.linking.strongLinks += linked.strongLinks
+            stats.linking.lookupsRequested += linked.lookupsRequested
+          } catch (linkError) {
+            stats.linking.failures++
+            console.error('[planning-linking] Failed to link a page', linkError)
+          }
+        }
         await recordCoverage(input.db, result.page.data, input)
 
         const next = result.page.meta.next_cursor ?? null

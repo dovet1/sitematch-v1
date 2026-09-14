@@ -76,6 +76,13 @@ that are superseded by this snapshot. All figures below are observations, not li
   `26e931b` plan revision. Pilot request limit of 300 agreed. Linking plan
   revised after Astra's second review: linking in normal ingestion, reused Plota family lookups,
   backlog recovery without a backfill rerun, three validation levels.
+- **Linking step 3 built (ingestion-time linking):** migration
+  `20261007000000_planning_application_links.sql` **not applied**; `link-ingest.ts` behind
+  `PLANNING_LINKING_ENABLED` (off); `scripts/seed-planning-links.ts` (dry-run default). Go-live order:
+  apply migration → seed pilot councils `--commit` → check Broadland → seed nationally → deploy
+  workers with the flag on. Evidence and lookup queue only; membership waits for step 5.
+- **Archive commercial backlog run scheduled** for 1 Oct 09:00 local (scheduled task
+  `planning-archive-commercial-requeue`, runs while the app is open, else at next launch).
 - **Linking step 2 built (archive commercial test):** `commercial-description.ts`, eligibility limbs
   `A-described`/`D-described` for non-live sources, `scripts/requeue-archive-commercial.ts`
   (dry-run default). Fresh live days: 86% agreement-precision and 70% recall vs Plota, 81% recall

@@ -15,7 +15,7 @@ const write = async (file, content) => {
   await writeFile(path.join(destination, file), content)
 }
 const sources = [
-  ...['ingest', 'plota', 'eligibility', 'types', 'db', 'classify', 'budget', 'openrouter', 'discovery-lane-route']
+  ...['ingest', 'plota', 'eligibility', 'commercial-description', 'linking', 'link-ingest', 'types', 'db', 'classify', 'budget', 'openrouter', 'discovery-lane-route']
     .map(name => `src/lib/planning-intelligence/${name}.ts`),
   'src/lib/epc/aliases.ts', 'src/lib/epc/normalise.ts',
   ...['sync-plota', 'sync-plota-late', 'sync-plota-deep', 'refresh-plota', 'classify-planning']
