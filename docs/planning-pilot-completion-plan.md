@@ -167,25 +167,24 @@ grouped first and each development is assessed once.
 The report is re-run on the day, not taken from the figures below.
 
 **Measured 14 September** (`scripts/report-grouped-assessments.ts`, rules in `assessment-groups.ts`,
-all 393 councils, 614,400 applications, read-only):
+all 393 councils, 614,400 applications, read-only; re-run after a fully quoted chain of permissions
+was treated as one family):
 
 | | Tier today (re-grade) | Tier plus archive backlog |
 | --- | --- | --- |
 | Applications in scope | 29,804 | 38,088 |
-| Separate development assessments | **28,079** | **36,212** |
-| Read inside another application's assessment | 228 | 248 |
-| Routine paperwork joining a timeline, not assessed | 200 | 209 |
-| Waiting for parent retrieval, not assessed | 1,437 | 1,546 |
-| Assessments that also request their missing original | 992 | 1,104 |
-| Uncertain links kept as separate assessments | 1,063 | 1,216 |
-| Non-tier applications joining tier families' timelines | 5,584 | 6,573 |
+| Separate development assessments | **28,055** | **36,181** |
+| **Permanent savings**: read inside the family's assessment | 318 | 343 |
+| **Permanent savings**: paperwork on a timeline, never assessed | 353 | 364 |
+| **Deferred, not saved**: waiting for their original | 1,284 | 1,391 |
+| Uncertain links kept as separate assessments | 698 | 827 |
+| Assessments that go ahead and also request their original | 1,330 | 1,459 |
+| Distinct missing originals blocking deferred jobs | 1,411 | 1,508 |
+| Distinct missing originals overall (one lookup at most each) | 3,337 | 3,591 |
 
-The archive backlog's 8,284 applications become 8,133 assessments.
-
-Grouping removes about 6% of assessments. The saving is small because the tier already excludes
-most condition submissions, but grouping still stops one scheme being assessed several times.
-The 1,437 schemes waiting for parent retrieval are far more than the 300-request pilot limit, so
-nationally they wait for a standing lookup allowance.
+Permanent savings are 671 assessments (2.3%). The 1,284 deferred jobs are postponed, not removed: once
+an original arrives, its family is assessed once. Lookups are counted as distinct missing
+originals per council; one family fetch can answer several, so these are upper bounds.
 
 **State on 14 September:**
 - No bulk classification is running. The hourly worker is classifying newly ingested applications
@@ -239,6 +238,44 @@ existing classification review stays as a separate quality-control view.
   - **usefulness:** show commercial agents the completed records, blocked and incomplete ones
     included, and ask whether each helps them identify or understand an opportunity.
 - A national research queue needs its own sized allowance, proposed from these numbers.
+
+## Five-scheme pilot, 14 September
+
+Report: `apps/web/reports/pilot-research-2026-09-14T191958.json`. Research cost $0.31 across five
+schemes, with no failures or retries and no Plota requests.
+
+| Scheme | Documents | Found automatically | Open for admin |
+| --- | --- | --- | --- |
+| Crawley CR/2026/0173/FUL, garage to indoor parkour | Readable | Use classes B2 → E(d); existing and proposed 215.63 m² GIA; net 0; site 257.72 m² | Operator (added in the browser test from the form and the CIC's website) |
+| Crawley CR/2026/0279/FUL, B8 to flexible employment | Readable | Use classes B8 → E(g)(iii), B2, B8; 702.26 m² GIA both; net 0; site 702.26 m² | Operator |
+| Wandsworth 2025/3409 + NMA 2026/2600 (family, original 2019/4915 missing) | Portal blocked | Existing use A2, C3 (the council's land-use field); proposed conflict resolved in the browser test to E(g)(i), F1 from the description | Operator, existing/proposed/net floor area, site area; check the stale existing use |
+| South Norfolk Broadland 2026/2244, self-storage | Council site blocked | Nothing (web search found only the private applicant) | All seven |
+| Glasgow 26/01611/FUL, public house | Council site unreachable | Proposed Sui Generis, from the description | Six |
+
+The browser test was signed in against the local app. It added evidence, resolved a conflict, marked
+a fact unavailable and then reopened it, and confirmed each change persisted in the database, in the
+completion page, in the new "Decided by admin" view and in the map's planning modal. Grouping showed
+on both the admin page and the map: the amendment's modal shows its family's facts.
+
+Found and fixed during the pilot: use classes stated in the description were ignored; sources naming
+different classes were not flagged; reopening left a fact unchecked; decided schemes could not be
+reviewed; published facts showed duplicate links.
+
+## Unfinished, not to be reported as done
+
+- **Grouped classification worker.** Only the guard is built: a grouped member is never classified on
+  its own. Nothing yet assesses a family as one unit, and the guard is not deployed to the workers.
+  Bulk classification stays off.
+- **Selection rewrite and filter test (step 3).** Not started. That covers the new question, the
+  labelled set, admitting extensions and the rejected-application samples.
+- **Transactional merge and detach (step 5).** The pilot family was grouped by a script with an undo
+  file. The development trigger still lets a member's stage update its development.
+- **One pin per development.** A grouped family still shows one row and pin per application.
+- **Agent usefulness check (step 6).** Not done.
+- **Known defects.** The standard-form applicant reader can record "Address" as a name, and repeats an
+  applicant as agent. Evidence excerpts from application forms can contain private applicants' home
+  addresses (admin-only, never published). The planning tab read timed out once on a dense London
+  catchment and succeeded on retry.
 
 ## Order and timing
 
