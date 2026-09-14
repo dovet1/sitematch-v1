@@ -261,6 +261,32 @@ Found and fixed during the pilot: use classes stated in the description were ign
 different classes were not flagged; reopening left a fact unchecked; decided schemes could not be
 reviewed; published facts showed duplicate links.
 
+## Council document access, 14 September
+
+`apps/web/scripts/audit-council-access.ts` ran the research document collector on 3 recent tier
+applications per council: 1,164 applications at 393 councils. It fetched public pages only, obeyed
+robots.txt, and made no AI or Plota requests. Report: `apps/web/reports/council-access-2026-09-14.json`.
+
+| Label | Councils | Share of tier applications |
+| --- | --- | --- |
+| Documents readable | 18 | 4.6% |
+| Documents need OCR | 4 | 0.5% |
+| Application page only | 81 | 18.9% |
+| Blocked | 287 | 75.8% |
+| No council link | 3 | 0.1% |
+
+- **Idox Public Access blocks automated access:** 204 of the 209 Idox councils disallow the
+  application page in robots.txt. That is not ours to work around.
+- **Blocked but possibly recoverable (about 20 councils):** robots.txt could not be fetched ("fetch
+  failed"), which is worth one retry.
+- **Page only:** 70 of the 81 have no document link the collector recognises, so there is room for
+  more portal support there.
+- **Collector bug:** 4 documents failed with "detached ArrayBuffer".
+- **Implication:** council documents are the only automatic source of floor and site areas, and they
+  reach about 5% of schemes. Document research should run only where documents are readable. For
+  the rest, the description and the page (where readable) feed the checklist, operator research
+  becomes web-only at most, and floor areas go to admin or need another source.
+
 ## Unfinished, not to be reported as done
 
 - **Grouped classification worker.** Only the guard is built: a grouped member is never classified on
