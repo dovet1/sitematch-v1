@@ -1,5 +1,7 @@
 import {
+  adminFactValue,
   attemptOutcome,
+  chosenFactValue,
   findingsFromResearch,
   nextFactRows,
   toSquareMetres,
@@ -145,5 +147,29 @@ describe('fact completeness', () => {
     expect(attemptOutcome({ documentsRetrieved: 0, councilPageRetrieved: false, failed: true, attemptLimitReached: true })).toBe('attempt_limit')
     const blocked = rows(result(), [], 'documents_inaccessible')
     expect(blocked.proposed_floorspace).toMatchObject({ state: 'not_found_after_research', reason: 'documents_inaccessible' })
+  })
+})
+
+describe('admin fact entry', () => {
+  it('requires evidence and refuses a unit figure as a whole-development area', () => {
+    expect(() => adminFactValue({ fact: 'proposed_floorspace', area: { value: 500, unit: 'sqm', extent: 'unspecified', basis: 'gross_internal' }, source: { url: null, excerpt: '', page: null } }, 'admin-1', at))
+      .toThrow('source')
+    expect(() => adminFactValue({ fact: 'proposed_floorspace', area: { value: 500, unit: 'sqm', extent: 'unit', basis: 'gross_internal' }, source: { url: FORM, excerpt: null, page: null } }, 'admin-1', at))
+      .toThrow('cannot complete')
+  })
+
+  it('converts an entered area and keeps the original unit', () => {
+    const { value, finding } = adminFactValue({ fact: 'site_area', area: { value: 1.5, unit: 'acres', extent: 'whole_development', basis: 'unspecified' }, source: { url: FORM, excerpt: null, page: '4' } }, 'admin-1', at)
+    expect(value).toMatchObject({ sqm: 6070.28, original: { value: 1.5, unit: 'acres' } })
+    expect(finding).toMatchObject({ origin: 'admin', completes: true, source: { kind: 'manual', page: '4' } })
+  })
+
+  it('chooses one conflicting figure and rejects the rest', () => {
+    const research = result({ commercialFloorspace: [floor('proposed', 500), floor('proposed', 800, { evidenceUrl: 'https://council.test/statement.pdf' })] })
+    const row = rows(research).proposed_floorspace
+    const keep = row.findings.find(f => f.sqm === 800)!
+    const { value, rejectKeys } = chosenFactValue(row, keep.key)
+    expect(value).toMatchObject({ sqm: 800 })
+    expect(rejectKeys).toEqual([row.findings.find(f => f.sqm === 500)!.key])
   })
 })

@@ -568,6 +568,11 @@ export default function PlanningReview() {
           Check the evidence, correct the findings and approve useful
           applications.
         </p>
+        <p className="mt-2 text-sm">
+          <Link href="/admin/planning/completion" className="text-primary underline">
+            Planning completion: facts research could not establish →
+          </Link>
+        </p>
       </header>
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm">

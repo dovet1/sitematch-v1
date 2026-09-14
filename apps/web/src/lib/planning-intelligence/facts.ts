@@ -1,4 +1,3 @@
-import { createHash } from 'crypto'
 import type { PlanningResearchResult } from './types'
 
 /**
@@ -105,8 +104,20 @@ export function toSquareMetres(value: number, unit: AreaUnit): number {
   return Math.round(value * SQM_PER_UNIT[unit] * 100) / 100
 }
 
+// A plain FNV-1a hash rather than node's crypto, because the admin page imports this module in the
+// browser. Keys only need to be stable and unlikely to collide within one fact's findings.
+function fnv1a(text: string, seed: number): string {
+  let hash = seed >>> 0
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193) >>> 0
+  }
+  return hash.toString(16).padStart(8, '0')
+}
+
 function findingKey(fact: FactKey, parts: Array<string | number | null | undefined>): string {
-  return createHash('sha1').update(JSON.stringify([fact, ...parts])).digest('hex').slice(0, 20)
+  const text = JSON.stringify([fact, ...parts])
+  return fnv1a(text, 0x811c9dc5) + fnv1a(text, 0x050c5d1f)
 }
 
 function normalName(name: string): string {
@@ -308,4 +319,63 @@ export const REASON_LABELS: Record<UnresolvedReason, string> = {
   documents_silent: 'The documents that could be read did not state it.',
   provider_failure: 'The research attempt failed before it finished.',
   attempt_limit: 'Research stopped after reaching its attempt limit.',
+}
+
+export interface AdminFactInput {
+  fact: FactKey
+  names?: string[]
+  useClasses?: string[]
+  area?: { value: number; unit: AreaUnit; extent: FigureExtent; basis: MeasurementBasis }
+  source: { url: string | null; excerpt: string | null; page: string | null }
+}
+
+/**
+ * The value and evidence finding for a fact an admin adds. Evidence is required: a source URL or
+ * an excerpt naming where the figure came from. The same rules bind the admin as the machine, so a
+ * unit or phase area cannot be entered as a whole-development fact.
+ */
+export function adminFactValue(input: AdminFactInput, reviewerId: string, at: string): { value: FactValue; finding: FactFinding } {
+  if (!input.source.url && !input.source.excerpt?.trim()) {
+    throw new Error('Add a source link or quote the evidence for this fact.')
+  }
+  const base = {
+    origin: 'admin' as const, completes: true, confidence: 1, runId: null, observedAt: at,
+    source: { kind: 'manual' as const, ...input.source }, note: `Added by admin ${reviewerId}`,
+  }
+  if (input.fact === 'operator') {
+    const names = (input.names ?? []).map(name => name.trim()).filter(Boolean)
+    if (names.length === 0) throw new Error('Enter the operator or occupier name.')
+    return { value: { names }, finding: { ...base, key: findingKey('operator', ['admin', ...names.map(normalName), at]), name: names.join(', '), role: 'proposed_occupier' } }
+  }
+  if (input.fact === 'existing_use_class' || input.fact === 'proposed_use_class') {
+    const useClasses = (input.useClasses ?? []).map(value => value.trim()).filter(Boolean)
+    if (useClasses.length === 0) throw new Error('Enter at least one use class.')
+    return { value: { useClasses }, finding: { ...base, key: findingKey(input.fact, ['admin', ...useClasses.map(normalUseClass), at]), useClass: useClasses.join(', ') } }
+  }
+  const area = input.area
+  if (!area || !Number.isFinite(area.value)) throw new Error('Enter the area.')
+  if (area.value < 0 && input.fact !== 'net_floorspace') throw new Error('Only a net change can be negative.')
+  if (!COMPLETING_EXTENTS.has(area.extent)) {
+    throw new Error('A unit, building or phase figure cannot complete this fact. Record it as a note, or mark the fact unavailable.')
+  }
+  const sqm = toSquareMetres(area.value, area.unit)
+  const original = area.unit === 'sqm' ? undefined : { value: area.value, unit: area.unit }
+  return {
+    value: { sqm, basis: area.basis, extent: area.extent, ...(original ? { original } : {}) },
+    finding: { ...base, key: findingKey(input.fact, ['admin', sqm, area.basis, area.extent, at]), sqm, basis: area.basis, extent: area.extent, ...(original ? { original } : {}) },
+  }
+}
+
+/** The value an admin picks from conflicting findings; every other completing finding is rejected. */
+export function chosenFactValue(row: Pick<FactRow, 'fact' | 'findings'>, key: string): { value: FactValue; rejectKeys: string[] } {
+  const chosen = row.findings.find(finding => finding.key === key)
+  if (!chosen || !chosen.completes) throw new Error('That finding cannot be chosen for this fact.')
+  const resolved = resolveFindings(row.fact, row.findings.map(finding => ({
+    ...finding, rejected: finding.completes && finding.key !== key && finding.sqm !== undefined ? true : finding.rejected,
+  })))
+  if (!resolved?.value) throw new Error('That finding does not give a value for this fact.')
+  const rejectKeys = chosen.sqm === undefined ? [] : row.findings
+    .filter(finding => finding.completes && finding.key !== key && finding.sqm !== undefined)
+    .map(finding => finding.key)
+  return { value: resolved.value, rejectKeys }
 }
