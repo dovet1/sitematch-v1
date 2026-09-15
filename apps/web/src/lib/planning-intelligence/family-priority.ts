@@ -24,6 +24,33 @@ export interface LookupSignals {
   awaitingOriginal?: boolean
 }
 
+/** Follow-ons at or above this count make a family worth a request even when none is relevant on its own... */
+export const LOOKUP_MIN_FOLLOW_ONS = 3
+/** ...but only while the family is active: its latest follow-on arrived within this many days. */
+export const LOOKUP_ACTIVE_DAYS = 180
+
+/**
+ * Whether a missing original is worth a Plota request at all. The product only cares about
+ * commercial schemes and schemes of 15 or more homes, so a lookup qualifies when:
+ * - a follow-on is in the intelligence tier (the family has something relevant), or
+ * - a follow-on restates a commercial or major housing proposal, or
+ * - it has at least three follow-ons and the latest arrived in the last 180 days. Broadland's
+ *   warehouse club is eleven condition submissions, none relevant alone, and only its missing
+ *   original would be; size is the only clue. Without the activity test, size let in about 10,000
+ *   ordinary schemes nationally (15 Sep dry run: 13,867 lookups against about 3,300 relevant), most
+ *   of them old paperwork least likely to be a live opportunity.
+ * Everything else, mostly householder paperwork, is never fetched.
+ */
+export function lookupWorthFetching(
+  signals: Pick<LookupSignals, 'anyChildInTier' | 'quotesMajorProposal' | 'childCount' | 'awaitingOriginal' | 'latestChildReceived'>,
+  now = new Date()
+): boolean {
+  if (signals.anyChildInTier || signals.quotesMajorProposal || signals.awaitingOriginal === true) return true
+  if (signals.childCount < LOOKUP_MIN_FOLLOW_ONS || !signals.latestChildReceived) return false
+  const days = (now.getTime() - new Date(`${signals.latestChildReceived.slice(0, 10)}T00:00:00Z`).getTime()) / 86_400_000
+  return days <= LOOKUP_ACTIVE_DAYS
+}
+
 export function lookupPriority(signals: LookupSignals, now = new Date()): number {
   let score = 0
   if (signals.awaitingOriginal) score += 10000
@@ -118,7 +145,8 @@ export async function prioritiseFamilyLookups(db: PlanningAdminClient, councils?
         quotesMajorProposal: unique.some(id => quotesMajorProposal(children.get(id)?.description, lookup.parent_reference)),
         awaitingOriginal: unique.some(id => awaiting.has(id)),
       }
-      const priority = lookupPriority(signals)
+      // Priority 0 means "not worth a request": the lookup worker never takes it.
+      const priority = lookupWorthFetching(signals) ? lookupPriority(signals) : 0
       if (priority === lookup.priority) continue
       const { error: updateError } = await db.from('planning_family_lookups').update({ priority, updated_at: new Date().toISOString() }).eq('id', lookup.id)
       if (updateError) throw updateError

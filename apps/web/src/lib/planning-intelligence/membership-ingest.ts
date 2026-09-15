@@ -23,6 +23,16 @@ export function planningMembershipEnabled(): boolean {
   return planningLinkingEnabled() && process.env.PLANNING_MEMBERSHIP_ENABLED === 'true'
 }
 
+/**
+ * The councils where ingestion may group applications into families, from
+ * PLANNING_MEMBERSHIP_COUNCILS (comma-separated slugs). Linking evidence can run nationally while
+ * grouping stays on the pilot: grouping changes what the tab shows and can clear or re-queue
+ * grades, so it widens only when the user lists a council. Unset or empty means no council at all.
+ */
+export function membershipCouncils(value = process.env.PLANNING_MEMBERSHIP_COUNCILS): Set<string> {
+  return new Set((value ?? '').split(',').map(council => council.trim()).filter(Boolean))
+}
+
 const CHUNK = 200
 const APPLICATION_COLUMNS = 'id,authority_slug,reference,description,procedure,address,postcode,uprn,intelligence_tier,classification_state,date_received'
 const LINK_COLUMNS = 'id,authority_slug,child_application_id,parent_application_id,parent_reference,parent_key,kind,strength,source,evidence'
@@ -127,7 +137,11 @@ export async function planCouncilMemberships(db: PlanningAdminClient, council: s
  * them, until nothing new is found. Bounded, because a masterplan family can be large and the
  * planner holds those anyway.
  */
-export async function planMembershipsFor(db: PlanningAdminClient, applicationIds: string[]): Promise<Map<string, { input: MembershipInput; plans: FamilyPlan[] }>> {
+export async function planMembershipsFor(
+  db: PlanningAdminClient,
+  applicationIds: string[],
+  councils?: Set<string>
+): Promise<Map<string, { input: MembershipInput; plans: FamilyPlan[] }>> {
   const seen = new Map<string, LinkRow>()
   const visitedApplications = new Set<string>()
   const visitedKeys = new Set<string>()
@@ -156,7 +170,10 @@ export async function planMembershipsFor(db: PlanningAdminClient, applicationIds
   }
 
   const byCouncil = new Map<string, LinkRow[]>()
-  for (const row of seen.values()) byCouncil.set(row.authority_slug, [...(byCouncil.get(row.authority_slug) ?? []), row])
+  for (const row of seen.values()) {
+    if (councils && !councils.has(row.authority_slug)) continue
+    byCouncil.set(row.authority_slug, [...(byCouncil.get(row.authority_slug) ?? []), row])
+  }
   const out = new Map<string, { input: MembershipInput; plans: FamilyPlan[] }>()
   for (const [council, rows] of byCouncil) {
     const input = await inputForLinks(db, council, rows)
@@ -212,8 +229,13 @@ export async function clearLinkingPending(db: PlanningAdminClient, applicationId
 export async function assignMembershipsFor(db: PlanningAdminClient, applicationIds: string[], actor: string): Promise<ApplyResult> {
   const total: ApplyResult = { applied: 0, unchanged: 0, held: 0, failed: [], queuedClassifications: 0, awaitingOriginal: 0 }
   if (applicationIds.length === 0) return total
+  const allowed = membershipCouncils()
+  if (allowed.size === 0) {
+    console.warn('[planning-membership] PLANNING_MEMBERSHIP_COUNCILS is empty; no council is grouped')
+    return total
+  }
   const councilsWaiting: string[] = []
-  for (const [council, { plans }] of await planMembershipsFor(db, applicationIds)) {
+  for (const [council, { plans }] of await planMembershipsFor(db, applicationIds, allowed)) {
     const result = await applyFamilyPlans(db, plans, { actor, reason: 'linked at ingestion' })
     total.applied += result.applied
     total.unchanged += result.unchanged

@@ -320,7 +320,7 @@ export async function runFamilyLookups(
   if (budget <= 0) { result.stoppedFor = 'allowance'; return result }
 
   let query = db.from('planning_family_lookups').select('id,authority_slug,parent_key,parent_reference,status,attempts')
-    .in('status', ['queued', 'deferred']).order('priority', { ascending: false })
+    .in('status', ['queued', 'deferred']).gt('priority', 0).order('priority', { ascending: false })
     .order('last_requested_at', { ascending: false }).limit(budget)
   if (options.councils?.length) query = query.in('authority_slug', options.councils)
   const { data: lookups, error: lookupsError } = await query

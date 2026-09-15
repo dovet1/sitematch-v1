@@ -1,4 +1,5 @@
 import type { PlanningAdminClient } from './db'
+import { lookupWorthFetching, quotesMajorProposal } from './family-priority'
 import {
   canHeadFamily,
   familyKey,
@@ -28,9 +29,9 @@ export function referenceKeys(reference: string): { reference_normalised: string
   return { reference_normalised: normaliseReference(reference), reference_core: referenceCore(reference)?.core ?? null }
 }
 
-export const LINKING_COLUMNS = 'id,authority_slug,reference,description,procedure,address,postcode,uprn'
+export const LINKING_COLUMNS = 'id,authority_slug,reference,description,procedure,address,postcode,uprn,intelligence_tier,date_received'
 
-export type StoredApplication = LinkableApplication & { authority_slug: string }
+export type StoredApplication = LinkableApplication & { authority_slug: string; intelligence_tier?: boolean; date_received?: string | null }
 
 export interface LinkIngestResult {
   applications: number
@@ -38,6 +39,8 @@ export interface LinkIngestResult {
   strongLinks: number
   resolvedToStoredParent: number
   lookupsRequested: number
+  /** Missing originals not queued because nothing in their family is worth a request yet. */
+  lookupsNotWorthFetching: number
   lookupsResolvedLocally: number
   unprofiledCouncils: string[]
 }
@@ -79,6 +82,12 @@ async function loadCandidates(
   return found
 }
 
+function latestDate(a: string | null, b: string | null): string | null {
+  if (!a) return b
+  if (!b) return a
+  return a > b ? a : b
+}
+
 function linkRow(link: ApplicationLink, council: string) {
   return {
     authority_slug: council,
@@ -98,7 +107,7 @@ export async function linkStoredApplications(
 ): Promise<LinkIngestResult> {
   const result: LinkIngestResult = {
     applications: applications.length, links: 0, strongLinks: 0, resolvedToStoredParent: 0,
-    lookupsRequested: 0, lookupsResolvedLocally: 0, unprofiledCouncils: [],
+    lookupsRequested: 0, lookupsNotWorthFetching: 0, lookupsResolvedLocally: 0, unprofiledCouncils: [],
   }
   if (applications.length === 0) return result
 
@@ -109,7 +118,7 @@ export async function linkStoredApplications(
   const profiles = await loadProfiles(db, [...byCouncil.keys()])
 
   const rows: ReturnType<typeof linkRow>[] = []
-  const lookups: Array<{ authority_slug: string; parent_key: string; parent_reference: string }> = []
+  const lookups: Array<{ authority_slug: string; parent_key: string; parent_reference: string; child: StoredApplication }> = []
   for (const [council, councilApplications] of byCouncil) {
     const profile = profiles.get(council)
     // Without a profile the council's reference formats are unknown, and guessing them is what
@@ -139,7 +148,7 @@ export async function linkStoredApplications(
         if (link.strength !== 'strong') continue
         result.strongLinks++
         if (link.parentId) result.resolvedToStoredParent++
-        else lookups.push({ authority_slug: council, parent_key: row.parent_key, parent_reference: row.parent_reference })
+        else lookups.push({ authority_slug: council, parent_key: row.parent_key, parent_reference: row.parent_reference, child: application })
       }
     }
   }
@@ -167,12 +176,61 @@ export async function linkStoredApplications(
   }
 
   // One request per missing family, by its fullest cited form; the database enforces the same.
-  const families = new Map<string, (typeof lookups)[number]>()
+  const families = new Map<string, { authority_slug: string; parent_key: string; parent_reference: string }>()
+  const signals = new Map<string, { tier: boolean; quotes: boolean; children: Set<string>; latest: string | null }>()
   for (const lookup of lookups) {
     const key = `${lookup.authority_slug}|${lookup.parent_key}`
-    if ((families.get(key)?.parent_reference.length ?? -1) < lookup.parent_reference.length) families.set(key, lookup)
+    const current = families.get(key)
+    if (!current || current.parent_reference.length < lookup.parent_reference.length) {
+      families.set(key, { authority_slug: lookup.authority_slug, parent_key: lookup.parent_key, parent_reference: lookup.parent_reference })
+    }
+    const signal = signals.get(key) ?? { tier: false, quotes: false, children: new Set<string>(), latest: null }
+    signal.tier ||= lookup.child.intelligence_tier === true
+    signal.quotes ||= quotesMajorProposal(lookup.child.description, lookup.parent_reference)
+    signal.children.add(lookup.child.id)
+    signal.latest = latestDate(signal.latest, lookup.child.date_received ?? null)
+    signals.set(key, signal)
   }
-  for (const batch of chunks([...families.values()], 500)) {
+
+  // Only families worth a request are queued. Size counts every stored follow-on, not only this
+  // page's, so a family crosses the line when its third follow-on arrives and is queued then.
+  const byCouncilKeys = new Map<string, string[]>()
+  for (const family of families.values()) {
+    byCouncilKeys.set(family.authority_slug, [...(byCouncilKeys.get(family.authority_slug) ?? []), family.parent_key])
+  }
+  const storedChildren = new Map<string, string[]>()
+  for (const [council, keys] of byCouncilKeys) {
+    for (const batch of chunks(keys)) {
+      const { data, error } = await db.from('planning_application_links').select('child_application_id,parent_key,removed_at')
+        .eq('authority_slug', council).in('parent_key', batch).eq('strength', 'strong')
+      if (error) throw error
+      for (const row of (data ?? []) as Array<{ child_application_id: string; parent_key: string; removed_at: string | null }>) {
+        if (row.removed_at) continue
+        const key = `${council}|${row.parent_key}`
+        signals.get(key)?.children.add(row.child_application_id)
+        storedChildren.set(row.child_application_id, [...(storedChildren.get(row.child_application_id) ?? []), key])
+      }
+    }
+  }
+  // A family is active when any follow-on, stored earlier or arriving now, is recent.
+  for (const batch of chunks([...storedChildren.keys()])) {
+    const { data, error } = await db.from('planning_applications').select('id,date_received').in('id', batch)
+    if (error) throw error
+    for (const row of (data ?? []) as Array<{ id: string; date_received: string | null }>) {
+      for (const key of storedChildren.get(row.id) ?? []) {
+        const signal = signals.get(key)
+        if (signal) signal.latest = latestDate(signal.latest, row.date_received)
+      }
+    }
+  }
+  const worthwhile = [...families.entries()].filter(([key]) => {
+    const signal = signals.get(key)!
+    return lookupWorthFetching({
+      anyChildInTier: signal.tier, quotesMajorProposal: signal.quotes, childCount: signal.children.size, latestChildReceived: signal.latest,
+    })
+  }).map(([, family]) => family)
+  result.lookupsNotWorthFetching = families.size - worthwhile.length
+  for (const batch of chunks(worthwhile, 500)) {
     const { data, error } = await db.rpc('planning_request_family_lookups', { p_rows: batch })
     if (error) throw error
     result.lookupsRequested += Number(data) || 0

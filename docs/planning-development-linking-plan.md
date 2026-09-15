@@ -594,6 +594,26 @@ lookup, and it is why lookups go first.
 are missing), although the step 4 notes say it is. It must be applied before any family lookup, and
 before this migration. Step 5's code tolerates its absence (no stored family means no conflict).
 
+#### 5.6 Going national safely, and the month-end top-up (15 September)
+
+Decided with the user after the national seeding dry run (140,361 links, 67,964 missing originals):
+- **Grouping stays on a council list.** Workers group only councils in
+  `PLANNING_MEMBERSHIP_COUNCILS`; unset means none. Seeding creates a linking profile for every
+  council, and without the list grouping would have spread nationally within hours.
+- **Only families worth a request are queued or fetched** (`lookupWorthFetching` in
+  `family-priority.ts`): a relevant follow-on, a follow-on restating a commercial or 15+ home
+  proposal, or at least three follow-ons (Broadland's warehouse club is eleven condition
+  submissions, none relevant on its own). The rest get priority 0 and the worker never takes them.
+  Linking evidence itself still covers every application, because the connecting paperwork is
+  rarely relevant on its own.
+- **Month-end top-up** (`family-topup.ts`, route `top-up-plota-families`, hourly from the 26th,
+  off unless `PLOTA_FAMILY_TOPUP_ENABLED`). Each run reads the latest remaining allowance and
+  holds back the reserve (3,500) plus the scheduled workers' need to month end with a 25% margin.
+  The need is the higher of the schedule's ceiling (360 a day) and the last three days' measured
+  spend. It spends the rest on the highest-priority lookups, 40 per run by default.
+
+Measured 15 September: 3,615 requests left in September, so nothing would be spare this month.
+
 ### Step 6 — One pin and a basic history
 
 The planning tab shows one row and pin per Development: the principal's proposal, its stage, the

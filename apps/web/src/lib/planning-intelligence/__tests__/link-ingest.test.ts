@@ -59,10 +59,17 @@ describe('linkStoredApplications', () => {
   })
 
   it('requests one lookup for a missing parent however many follow-ons cite it, like Broadland Business Park', async () => {
-    const { db, calls, rpcs } = makeDb({ planning_council_link_profiles: [profile('south-norfolk-broadland')], planning_applications: [] })
+    const recent = new Date().toISOString().slice(0, 10)
+    const { db, calls, rpcs } = makeDb({
+      planning_council_link_profiles: [profile('south-norfolk-broadland')],
+      // A third follow-on stored earlier makes the family large enough to be worth a request, and
+      // recent follow-ons make it active.
+      planning_applications: [{ id: 'c0', authority_slug: 'elsewhere', reference: '2026/0001', date_received: '2026-01-01' }],
+      planning_application_links: [{ authority_slug: 'south-norfolk-broadland', child_application_id: 'c0', parent_key: '2024/3141', strength: 'strong', removed_at: null }],
+    })
     const followOns = [
-      stored('c1', '2026/0994', 'Details for condition 9 - Travel Plan of permission 2024/3141'),
-      stored('c2', '2026/2156', 'Details for condition 24 of 2024/3141 - (24) Site Layout Fire Hydrant Locations'),
+      stored('c1', '2026/0994', 'Details for condition 9 - Travel Plan of permission 2024/3141', { date_received: recent }),
+      stored('c2', '2026/2156', 'Details for condition 24 of 2024/3141 - (24) Site Layout Fire Hydrant Locations', { date_received: recent }),
     ]
 
     const result = await linkStoredApplications(db, followOns)
@@ -72,6 +79,21 @@ describe('linkStoredApplications', () => {
     const requests = rpcs.filter(call => call.name === 'planning_request_family_lookups').flatMap(call => call.args.p_rows)
     expect(requests).toEqual([{ authority_slug: 'south-norfolk-broadland', parent_key: '2024/3141', parent_reference: '2024/3141' }])
     expect(result.lookupsRequested).toBe(1)
+  })
+
+  it('queues a missing original only when its family is worth a request', async () => {
+    const run = async (applications: StoredApplication[]) => {
+      const { db, rpcs } = makeDb({ planning_council_link_profiles: [profile('south-norfolk-broadland')], planning_applications: [] })
+      const result = await linkStoredApplications(db, applications)
+      return { queued: rpcs.filter(call => call.name === 'planning_request_family_lookups').flatMap(call => call.args.p_rows).length, result }
+    }
+    const householder = await run([stored('c1', '2026/0101', 'Details of materials pursuant to condition 3 of 2025/5555 (rear extension)')])
+    expect(householder.queued).toBe(0)
+    expect(householder.result.lookupsNotWorthFetching).toBe(1)
+    const relevant = await run([stored('c2', '2026/0102', 'Details pursuant to condition 3 of 2025/6666', { intelligence_tier: true })])
+    expect(relevant.queued).toBe(1)
+    const quoted = await run([stored('c3', '2026/0103', 'Details pursuant to condition 14 of planning permission 2021/3958 (for erection of 392 dwellings)')])
+    expect(quoted.queued).toBe(1)
   })
 
   it('never overwrites existing evidence, so a removed link is not recreated', async () => {

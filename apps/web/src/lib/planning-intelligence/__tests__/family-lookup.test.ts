@@ -1,6 +1,6 @@
 import broadland from './fixtures/plota-family-broadland-2024-3141.json'
 import { FAMILY_ENDPOINT, runFamilyLookups, storeFamily, type LookupRow } from '../family-lookup'
-import { lookupPriority, quotesMajorProposal } from '../family-priority'
+import { lookupPriority, lookupWorthFetching, quotesMajorProposal } from '../family-priority'
 import { PlotaError } from '../plota'
 import type { PlotaFamily } from '../types'
 
@@ -27,6 +27,7 @@ function makeDb(tables: Record<string, Row[]>, rpcHandlers: Record<string, (args
     is(column: string, value: null) { this.filters.push(row => (row[column] ?? null) === value); return this }
     not(column: string, _op: string, _value: null) { this.filters.push(row => (row[column] ?? null) !== null); return this }
     gte(column: string, value: string) { this.filters.push(row => String(row[column] ?? '') >= value); return this }
+    gt(column: string, value: number) { this.filters.push(row => Number(row[column] ?? 0) > value); return this }
     order(column: string, options?: { ascending?: boolean }) { this.ordering.push([column, options?.ascending ?? true]); return this }
     limit(count: number) { this.max = count; return this }
     maybeSingle() { this.one = true; return this }
@@ -164,6 +165,13 @@ describe('runFamilyLookups', () => {
     expect(result.planned).toEqual([{ lookupId: 'lookup-1', council: COUNCIL, parentReference: '2024/3141', via: 'uy29jz34' }])
   })
 
+  it('never takes a lookup judged not worth a request', async () => {
+    const tables = broadlandStore()
+    tables.planning_family_lookups[0].priority = 0
+    const result = await runFamilyLookups(makeDb(tables).db, client(), { limit: 5, monthlyAllowance: 300, commit: false })
+    expect(result.planned).toEqual([])
+  })
+
   it('fetches, records usage against the lookup allowance and stores the family', async () => {
     const tables = broadlandStore()
     const plota = client()
@@ -219,6 +227,21 @@ describe('lookup priority', () => {
     const waiting = lookupPriority({ ...base, awaitingOriginal: true }, now)
     const everythingElse = lookupPriority({ ...base, bestRelevance: 'high', quotesMajorProposal: true, childCount: 10, latestChildReceived: '2026-09-07' }, now)
     expect(waiting).toBeGreaterThan(everythingElse)
+  })
+
+  it('fetches only families worth a request', () => {
+    expect(lookupWorthFetching({ ...base, childCount: 2, latestChildReceived: '2026-09-01' }, now)).toBe(false)
+    expect(lookupWorthFetching({ ...base, childCount: 3, latestChildReceived: '2026-09-01' }, now)).toBe(true)
+    expect(lookupWorthFetching({ ...base, anyChildInTier: true }, now)).toBe(true)
+    expect(lookupWorthFetching({ ...base, quotesMajorProposal: true }, now)).toBe(true)
+  })
+
+  it('counts a large family of paperwork only while it is active', () => {
+    expect(lookupWorthFetching({ ...base, childCount: 11, latestChildReceived: '2026-04-05' }, now)).toBe(true)
+    expect(lookupWorthFetching({ ...base, childCount: 11, latestChildReceived: '2026-03-01' }, now)).toBe(false)
+    expect(lookupWorthFetching({ ...base, childCount: 11, latestChildReceived: null }, now)).toBe(false)
+    // A relevant family is worth it however old.
+    expect(lookupWorthFetching({ ...base, anyChildInTier: true, latestChildReceived: '2025-10-01' }, now)).toBe(true)
   })
 
   it('reads a major proposal quoted by a single follow-on', () => {

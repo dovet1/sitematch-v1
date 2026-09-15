@@ -15,10 +15,10 @@ const write = async (file, content) => {
   await writeFile(path.join(destination, file), content)
 }
 const sources = [
-  ...['ingest', 'plota', 'eligibility', 'commercial-description', 'linking', 'link-ingest', 'family-lookup', 'family-priority', 'assessment-groups', 'development-membership', 'membership-ingest', 'types', 'db', 'classify', 'budget', 'openrouter', 'discovery-lane-route']
+  ...['ingest', 'plota', 'eligibility', 'commercial-description', 'linking', 'link-ingest', 'family-lookup', 'family-priority', 'assessment-groups', 'development-membership', 'membership-ingest', 'family-topup', 'types', 'db', 'classify', 'budget', 'openrouter', 'discovery-lane-route']
     .map(name => `src/lib/planning-intelligence/${name}.ts`),
   'src/lib/epc/aliases.ts', 'src/lib/epc/normalise.ts',
-  ...['sync-plota', 'sync-plota-late', 'sync-plota-deep', 'refresh-plota', 'classify-planning', 'lookup-plota-families']
+  ...['sync-plota', 'sync-plota-late', 'sync-plota-deep', 'refresh-plota', 'classify-planning', 'lookup-plota-families', 'top-up-plota-families']
     .map(name => `src/app/api/cron/${name}/route.ts`),
 ]
 for (const file of sources) {
@@ -47,6 +47,9 @@ await write('vercel.json', JSON.stringify({ framework: 'nextjs',
     { path: '/api/cron/sync-plota-late', schedule: '45 */6 * * *' },
     { path: '/api/cron/sync-plota-deep', schedule: '5 1,13 * * *' },
     { path: '/api/cron/classify-planning', schedule: '15 * * * *' },
+    // Month-end family lookup top-up: hourly from the 26th, off unless PLOTA_FAMILY_TOPUP_ENABLED.
+    // SCHEDULED_DAILY_REQUESTS in family-topup.ts must follow the discovery schedules above.
+    { path: '/api/cron/top-up-plota-families', schedule: '20 * 26-31 * *' },
   ] : [],
 }, null, 2) + '\n')
 await write('.gitignore', 'node_modules\n.next\n.vercel\n.env*\n')

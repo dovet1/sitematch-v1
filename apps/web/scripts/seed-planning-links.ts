@@ -12,6 +12,7 @@
 import { loadEnvConfig } from '@next/env'
 import { createClient } from '@supabase/supabase-js'
 import { referenceKeys, type StoredApplication } from '../src/lib/planning-intelligence/link-ingest'
+import { lookupWorthFetching, quotesMajorProposal } from '../src/lib/planning-intelligence/family-priority'
 import { buildCouncilLinkProfile, familyKey, linksForApplication, resolverFor } from '../src/lib/planning-intelligence/linking'
 
 loadEnvConfig(process.cwd())
@@ -33,14 +34,14 @@ async function retry<T>(label: string, run: () => PromiseLike<{ data: T | null; 
   }
 }
 
-type Row = StoredApplication & { reference_normalised: string | null; reference_core: string | null }
+type Row = StoredApplication & { reference_normalised: string | null; reference_core: string | null; intelligence_tier: boolean; date_received: string | null }
 
 async function councilRows(council: string): Promise<Row[]> {
   const rows: Row[] = []
   for (let from = 0; ; from += 1000) {
     const page = (await retry(`${council}@${from}`, () => db.from('planning_applications')
       // A dry run works before the migration is applied; the key columns only exist after it.
-      .select(`id,authority_slug,reference,description,procedure,address,postcode,uprn${commit ? ',reference_normalised,reference_core' : ''}`)
+      .select(`id,authority_slug,reference,description,procedure,address,postcode,uprn,intelligence_tier,date_received${commit ? ',reference_normalised,reference_core' : ''}`)
       .eq('authority_slug', council).order('id').range(from, from + 999))) as unknown as Row[]
     rows.push(...page)
     if (page.length < 1000) return rows
@@ -60,7 +61,8 @@ async function main() {
   const after = args.get('after')
   if (after) councils = councils.filter(council => council > after)
 
-  const totals = { councils: 0, applications: 0, keysToWrite: 0, keysWritten: 0, links: 0, strongLinks: 0, resolved: 0, missingFamilies: 0, lookupsRequested: 0 }
+  const totals = { councils: 0, applications: 0, keysToWrite: 0, keysWritten: 0, links: 0, strongLinks: 0, resolved: 0, missingFamilies: 0,
+    lookupsWorthFetching: 0, worthBecauseRelevant: 0, worthBecauseQuoted: 0, worthBecauseActiveSize: 0, lookupsRequested: 0 }
   for (const council of councils) {
     const rows = await councilRows(council)
     totals.councils++
@@ -76,6 +78,7 @@ async function main() {
     const seen = new Set<string>()
     const linkRows: Array<Record<string, unknown>> = []
     const families = new Map<string, { authority_slug: string; parent_key: string; parent_reference: string }>()
+    const signals = new Map<string, { tier: boolean; quotes: boolean; children: Set<string>; latest: string | null }>()
     for (const row of rows) {
       for (const link of linksForApplication(row, profile, resolver)) {
         const parentKey = familyKey(link.parentReference)
@@ -94,10 +97,31 @@ async function main() {
         if (!existing || existing.parent_reference.length < link.parentReference.length) {
           families.set(parentKey, { authority_slug: council, parent_key: parentKey, parent_reference: link.parentReference })
         }
+        const signal = signals.get(parentKey) ?? { tier: false, quotes: false, children: new Set<string>(), latest: null }
+        if (row.date_received && (!signal.latest || row.date_received > signal.latest)) signal.latest = row.date_received
+        signal.tier ||= row.intelligence_tier === true
+        signal.quotes ||= quotesMajorProposal(row.description, link.parentReference)
+        signal.children.add(row.id)
+        signals.set(parentKey, signal)
       }
     }
     totals.links += linkRows.length
     totals.missingFamilies += families.size
+    // Only families worth a Plota request are queued (family-priority.ts, lookupWorthFetching).
+    const worthwhile = [...families.entries()].filter(([key]) => {
+      const signal = signals.get(key)!
+      const worth = lookupWorthFetching({
+        anyChildInTier: signal.tier, quotesMajorProposal: signal.quotes, childCount: signal.children.size, latestChildReceived: signal.latest,
+      })
+      // Attributed to the first reason that qualifies it, in the rule's own order.
+      if (worth) {
+        if (signal.tier) totals.worthBecauseRelevant++
+        else if (signal.quotes) totals.worthBecauseQuoted++
+        else totals.worthBecauseActiveSize++
+      }
+      return worth
+    }).map(([, family]) => family)
+    totals.lookupsWorthFetching += worthwhile.length
 
     if (commit) {
       for (const batch of chunks(keyUpdates, 1000)) {
@@ -112,12 +136,12 @@ async function main() {
           .upsert(batch, { onConflict: 'child_application_id,parent_key,source', ignoreDuplicates: true }))
       }
       // After the links, so each request counts the follow-ons now stored against it.
-      for (const batch of chunks([...families.values()], 500)) {
+      for (const batch of chunks(worthwhile, 500)) {
         totals.lookupsRequested += Number(await retry(`${council} lookups`, () => db.rpc('planning_request_family_lookups', { p_rows: batch }))) || 0
       }
     }
     console.log(JSON.stringify({ commit, council, applications: rows.length, keysToWrite: keyUpdates.length, links: linkRows.length,
-      missingFamilies: families.size, reusingFamilies: [...profile.reusingFamilies] }))
+      missingFamilies: families.size, lookupsWorthFetching: worthwhile.length, reusingFamilies: [...profile.reusingFamilies] }))
   }
   console.log(JSON.stringify({ commit, ...totals }, null, 2))
 }
