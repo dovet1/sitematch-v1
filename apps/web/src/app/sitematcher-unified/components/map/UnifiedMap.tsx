@@ -5,6 +5,7 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { MAP_STYLES, MAPBOX_TOKEN } from '@/lib/sitesketcher-v2/constants'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
+import { planningPins, type PlanningGrouping } from '../../lib/planning-groups'
 import type { NearbyStore } from '../../lib/services/gaps-service'
 import type {
   PlanningApplication,
@@ -53,6 +54,11 @@ const REQ_LAYER = 'assess-requirements-dots'
 const PLANNING_SOURCE = 'planning-applications'
 const PLANNING_LAYER = 'planning-applications-dots'
 const PLANNING_COLOR = '#F26B1F'
+// A development pin's application count, and the ring around the pin of the card under the pointer.
+const PLANNING_COUNT_LAYER = 'planning-applications-count'
+const PLANNING_HIGHLIGHT_LAYER = 'planning-applications-highlight'
+const PLANNING_LAYERS = [PLANNING_HIGHLIGHT_LAYER, PLANNING_LAYER, PLANNING_COUNT_LAYER]
+const NO_DEVELOPMENT = '__none__'
 
 // LSOA catchment cells (Catchment tab) — reuses the SiteAnalyser tileset.
 const LSOA_TILESET_ID = 'dovet.3xo625k3'
@@ -176,14 +182,19 @@ function buildRoadPopup(props: Record<string, unknown>): HTMLDivElement {
 }
 
 function planningToGeoJSON(
-  apps: PlanningApplication[]
+  apps: PlanningApplication[],
+  grouping: PlanningGrouping
 ): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: apps.map((a) => ({
+    features: planningPins(apps, grouping).map((pin) => ({
       type: 'Feature',
-      geometry: { type: 'Point', coordinates: [a.lng, a.lat] },
-      properties: { name: a.name },
+      geometry: { type: 'Point', coordinates: [pin.lng, pin.lat] },
+      properties: {
+        name: pin.name,
+        development: pin.developmentKey ?? '',
+        label: pin.count > 1 ? String(pin.count) : '',
+      },
     })),
   }
 }
@@ -298,6 +309,8 @@ export function UnifiedMap({
   const comparePair = useWorkspaceStore((s) => s.comparePair)
   const activeCompareArm = useWorkspaceStore((s) => s.activeCompareArm)
   const hoveredBrandId = useWorkspaceStore((s) => s.hoveredBrandId)
+  const planningGrouping = useWorkspaceStore((s) => s.planningGrouping)
+  const hoveredPlanningKey = useWorkspaceStore((s) => s.hoveredPlanningKey)
   const overlaysRequirements = useWorkspaceStore((s) => s.overlays.requirements)
   const overlaysRoadTraffic = useWorkspaceStore((s) => s.overlays.roadTraffic)
   const overlaysTrafficHeatmap = useWorkspaceStore((s) => s.overlays.trafficHeatmap)
@@ -631,23 +644,54 @@ export function UnifiedMap({
         data: { type: 'FeatureCollection', features: [] },
       })
     }
+    if (!map.getLayer(PLANNING_HIGHLIGHT_LAYER)) {
+      map.addLayer({
+        id: PLANNING_HIGHLIGHT_LAYER,
+        type: 'circle',
+        source: PLANNING_SOURCE,
+        filter: ['==', ['get', 'development'], useWorkspaceStore.getState().hoveredPlanningKey ?? NO_DEVELOPMENT],
+        paint: {
+          'circle-radius': 16,
+          'circle-color': 'rgba(112, 51, 255, 0.18)',
+          'circle-stroke-color': '#7033FF',
+          'circle-stroke-width': 2,
+        },
+      })
+    }
     if (!map.getLayer(PLANNING_LAYER)) {
       map.addLayer({
         id: PLANNING_LAYER,
         type: 'circle',
         source: PLANNING_SOURCE,
         paint: {
-          'circle-radius': 7,
+          // A development pin is larger, so its count fits and it reads as more than one record.
+          'circle-radius': ['case', ['!=', ['get', 'label'], ''], 10, 7],
           'circle-color': PLANNING_COLOR,
           'circle-stroke-color': '#fff',
           'circle-stroke-width': 2,
         },
       })
     }
+    if (!map.getLayer(PLANNING_COUNT_LAYER)) {
+      map.addLayer({
+        id: PLANNING_COUNT_LAYER,
+        type: 'symbol',
+        source: PLANNING_SOURCE,
+        filter: ['!=', ['get', 'label'], ''],
+        layout: {
+          'text-field': ['get', 'label'],
+          'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+          'text-size': 10,
+          'text-allow-overlap': true,
+          'text-ignore-placement': true,
+        },
+        paint: { 'text-color': '#ffffff' },
+      })
+    }
     const planningSrc = map.getSource(PLANNING_SOURCE) as
       | mapboxgl.GeoJSONSource
       | undefined
-    planningSrc?.setData(planningToGeoJSON(planningRef.current))
+    planningSrc?.setData(planningToGeoJSON(planningRef.current, useWorkspaceStore.getState().planningGrouping))
 
     // LSOA catchment cells (Catchment tab).
     if (!map.getSource(LSOA_SOURCE_ID)) {
@@ -986,12 +1030,10 @@ export function UnifiedMap({
       map.setLayoutProperty(REQ_LAYER, 'visibility', reqVisible ? 'visible' : 'none')
     }
     // Planning pins own the map while their tab is open — and only then.
-    if (map.getLayer(PLANNING_LAYER)) {
-      map.setLayoutProperty(
-        PLANNING_LAYER,
-        'visibility',
-        tab === 'planning' ? 'visible' : 'none'
-      )
+    for (const id of PLANNING_LAYERS) {
+      if (map.getLayer(id)) {
+        map.setLayoutProperty(id, 'visibility', tab === 'planning' ? 'visible' : 'none')
+      }
     }
     const lsoaVisible = catchmentActive && showLsoa
     for (const id of [
@@ -1143,7 +1185,11 @@ export function UnifiedMap({
             : undefined,
         planning:
           st.tab === 'planning'
-            ? str(queryFirst([PLANNING_LAYER])?.name)
+            ? str(queryFirst([PLANNING_COUNT_LAYER, PLANNING_LAYER])?.name)
+            : undefined,
+        planningDevelopment:
+          st.tab === 'planning'
+            ? str(queryFirst([PLANNING_COUNT_LAYER, PLANNING_LAYER])?.development) || undefined
             : undefined,
         road: st.overlays.roadTraffic
           ? queryFirst([TRAFFIC_ROADS_LAYER])
@@ -1166,6 +1212,9 @@ export function UnifiedMap({
           if (app) st.setPlanningModal(app)
           return
         }
+        case 'focus-planning-development':
+          st.focusPlanningDevelopment(action.key)
+          return
         case 'open-road-popup':
           new mapboxgl.Popup({ closeButton: true, closeOnClick: false })
             .setLngLat(e.lngLat)
@@ -1508,8 +1557,15 @@ export function UnifiedMap({
     const src = map.getSource(PLANNING_SOURCE) as
       | mapboxgl.GeoJSONSource
       | undefined
-    src?.setData(planningToGeoJSON(planningApplications))
-  }, [planningApplications])
+    src?.setData(planningToGeoJSON(planningApplications, planningGrouping))
+  }, [planningApplications, planningGrouping])
+
+  // Ring the pin of the development card under the pointer.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !readyRef.current || !map.getLayer(PLANNING_HIGHLIGHT_LAYER)) return
+    map.setFilter(PLANNING_HIGHLIGHT_LAYER, ['==', ['get', 'development'], hoveredPlanningKey ?? NO_DEVELOPMENT])
+  }, [hoveredPlanningKey])
 
   // Re-evaluate overlay-layer visibility when any overlay toggle flips.
   useEffect(() => {

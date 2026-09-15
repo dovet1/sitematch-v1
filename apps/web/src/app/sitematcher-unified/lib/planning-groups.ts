@@ -128,3 +128,65 @@ export function latestPlanningApplication(
   }
   return latest
 }
+
+/**
+ * "11 applications", or "11 applications · 10 in this area" when the development holds more than
+ * the search listed. The full count comes from the tab's read; without it the listed count is all
+ * that can honestly be said.
+ */
+export function planningCountLabel(group: PlanningDevelopmentGroup): string {
+  const listed = group.applications.length
+  const total = Math.max(listed, group.applications[0]?.developmentApplicationCount ?? listed)
+  const noun = total === 1 ? 'application' : 'applications'
+  return total > listed ? `${total} ${noun} · ${listed} in this area` : `${total} ${noun}`
+}
+
+export interface PlanningPin {
+  /** The application the pin opens or stands for. */
+  name: string
+  lng: number
+  lat: number
+  /** Set only on a development pin standing for more than one application. */
+  developmentKey: string | null
+  count: number
+}
+
+/**
+ * The Planning tab's map pins. Applications view: one per application. Developments view: one per
+ * development, at the position of the application that leads its card, so a pin and its row always
+ * agree on where a scheme is.
+ */
+export function planningPins(applications: PlanningApplication[], grouping: PlanningGrouping): PlanningPin[] {
+  if (grouping === 'applications') {
+    return applications.map((app) => ({ name: app.name, lng: app.lng, lat: app.lat, developmentKey: null, count: 1 }))
+  }
+  return groupPlanningApplications(applications).map((group) => {
+    const lead = group.applications[0]
+    const count = Math.max(group.applications.length, lead.developmentApplicationCount ?? 0)
+    return {
+      name: lead.name,
+      lng: lead.lng,
+      lat: lead.lat,
+      developmentKey: group.applications.length > 1 ? group.key : null,
+      count: group.applications.length > 1 ? count : 1,
+    }
+  })
+}
+
+export type PlanningHistoryEntry = PlanningApplication & { inList: boolean }
+
+/**
+ * A development's full history joined with the applications the tab already listed. A listed
+ * application keeps the tab's own record; one only in the history is marked as outside this list.
+ * Before the history arrives, or if it fails, the listed applications are the whole timeline.
+ */
+export function mergeDevelopmentHistory(
+  listed: PlanningApplication[],
+  history: PlanningApplication[] | null
+): PlanningHistoryEntry[] {
+  const byName = new Map<string, PlanningHistoryEntry>(listed.map((app) => [app.name, { ...app, inList: true }]))
+  for (const app of history ?? []) {
+    if (!byName.has(app.name)) byName.set(app.name, { ...app, inList: false })
+  }
+  return [...byName.values()]
+}

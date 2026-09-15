@@ -108,6 +108,35 @@ async function readRanked(
   return rows
 }
 
+/**
+ * How many applications each listed development holds in total. The tab lists only what falls in
+ * the boundary and passes the scheme filter, so without this a card would say "10 applications" for
+ * a scheme of 11. Like freshness, a failed count degrades to "unknown" rather than failing the tab.
+ */
+async function countDevelopmentMembers(
+  db: ReturnType<typeof createPlanningAdminClient>,
+  developmentIds: string[]
+): Promise<Map<string, number> | null> {
+  try {
+    const counts = new Map<string, number>()
+    const batches = []
+    for (let i = 0; i < developmentIds.length; i += 200) batches.push(developmentIds.slice(i, i + 200))
+    // In parallel: a dense area lists about 700 developments, four batches.
+    const results = await Promise.all(batches.map((batch) =>
+      db.from('development_applications').select('development_id').in('development_id', batch)))
+    for (const { data, error } of results) {
+      if (error) throw error
+      for (const row of (data ?? []) as Array<{ development_id: string }>) {
+        counts.set(row.development_id, (counts.get(row.development_id) ?? 0) + 1)
+      }
+    }
+    return counts
+  } catch (error) {
+    console.error('[planning-stored] Development member count failed', error)
+    return null
+  }
+}
+
 export async function fetchStoredPlanningApplications(boundary: Boundary): Promise<PlanningResult> {
   const db = createPlanningAdminClient()
   // Read freshness alongside the applications, not after them. A caller that has to ask a
@@ -145,6 +174,11 @@ export async function fetchStoredPlanningApplications(boundary: Boundary): Promi
     return readRanked(db, TAB_READ_V3, boundary)
   })
 
+  const memberCounts = await countDevelopmentMembers(
+    db,
+    [...new Set(rows.slice(0, RECORD_CAP).map((row) => row.development_id).filter((id): id is string => Boolean(id)))]
+  )
+
   const applications: PlanningApplication[] = []
   for (const row of rows.slice(0, RECORD_CAP)) {
     if (row.longitude == null || row.latitude == null) continue
@@ -171,6 +205,7 @@ export async function fetchStoredPlanningApplications(boundary: Boundary): Promi
       developmentId: row.development_id,
       developmentRole: row.development_role ?? null,
       familyState: row.family_state ?? null,
+      developmentApplicationCount: row.development_id ? memberCounts?.get(row.development_id) ?? null : null,
       intelligenceTier: row.intelligence_tier,
       locationProvenance: row.location_provenance,
       commercialWork: row.commercial_work,

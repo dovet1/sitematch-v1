@@ -82,6 +82,11 @@ interface WorkspaceState {
   // Planning tab: applications folded into developments, or listed one by one. A reading
   // preference, so area and view resets leave it alone.
   planningGrouping: PlanningGrouping
+  // A development pin clicked on the map: its card opens and scrolls into view. `at` lets the same
+  // pin be clicked twice and still re-focus.
+  planningFocus: { key: string; at: number } | null
+  // The development card under the pointer, highlighted on the map.
+  hoveredPlanningKey: string | null
 
   // Assess brand-list filters (shared across the Missing/Present tabs).
   brandFilterCategoryIds: string[]
@@ -141,6 +146,8 @@ interface WorkspaceState {
   setBrandInfoId: (brandId: string | null) => void
   setPlanningModal: (app: PlanningApplication | null) => void
   setPlanningGrouping: (grouping: PlanningGrouping) => void
+  focusPlanningDevelopment: (key: string) => void
+  setHoveredPlanningKey: (key: string | null) => void
   setBrandFilterCategoryIds: (ids: string[]) => void
   setBrandFilterBrandIds: (ids: string[]) => void
   setBrandFilterSizeBandId: (id: SizeBandId | null) => void
@@ -189,6 +196,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   brandInfoId: null,
   planningModal: null,
   planningGrouping: 'developments',
+  planningFocus: null,
+  hoveredPlanningKey: null,
 
   brandFilterCategoryIds: [],
   brandFilterBrandIds: [],
@@ -282,6 +291,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setBrandInfoId: (brandInfoId) => set({ brandInfoId }),
   setPlanningModal: (planningModal) => set({ planningModal }),
   setPlanningGrouping: (planningGrouping) => set({ planningGrouping }),
+  focusPlanningDevelopment: (key) => set({ planningFocus: { key, at: Date.now() } }),
+  setHoveredPlanningKey: (hoveredPlanningKey) => set({ hoveredPlanningKey }),
   setBrandFilterCategoryIds: (brandFilterCategoryIds) =>
     set({ brandFilterCategoryIds }),
   setBrandFilterBrandIds: (brandFilterBrandIds) => set({ brandFilterBrandIds }),

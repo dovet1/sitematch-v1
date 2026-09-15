@@ -1,6 +1,15 @@
 const rpc = jest.fn()
+const memberRows: Array<{ development_id: string }> = []
+const from = jest.fn(() => {
+  const builder = {
+    select: () => builder,
+    in: () => builder,
+    then: (onfulfilled: (value: unknown) => unknown) => Promise.resolve({ data: memberRows, error: null }).then(onfulfilled),
+  }
+  return builder
+})
 jest.mock('@/lib/planning-intelligence/db', () => ({
-  createPlanningAdminClient: () => ({ rpc }),
+  createPlanningAdminClient: () => ({ rpc, from }),
 }))
 
 import { fetchStoredPlanningApplications } from '../stored'
@@ -100,6 +109,14 @@ describe('fetchStoredPlanningApplications', () => {
     const [app] = (await fetchStoredPlanningApplications(BOUNDARY)).applications
     expect(app.developmentRole).toBe('condition')
     expect(app.familyState).toBe('awaiting_original')
+  })
+
+  it('counts every application in a listed development, not only those in the search', async () => {
+    memberRows.splice(0, memberRows.length, ...Array.from({ length: 11 }, () => ({ development_id: 'dev-ram' })))
+    pages({ data: [row({ development_id: 'dev-ram' })], error: null })
+    const [app] = (await fetchStoredPlanningApplications(BOUNDARY)).applications
+    expect(app.developmentApplicationCount).toBe(11)
+    memberRows.splice(0, memberRows.length)
   })
 
   it('carries the classification through to the tab', async () => {

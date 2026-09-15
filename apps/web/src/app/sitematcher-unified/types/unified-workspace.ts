@@ -167,6 +167,11 @@ export interface PlanningApplication {
   developmentRole?: string | null
   /** 'awaiting_original' when the family's original permission has not been found yet. */
   familyState?: string | null
+  /**
+   * How many applications the development holds in total, including any outside this search.
+   * Null when unknown; the tab then counts only what it lists.
+   */
+  developmentApplicationCount?: number | null
   intelligenceTier?: boolean
   locationProvenance?: 'source_exact' | 'source_centroid' | 'postcode_centroid' | 'missing'
   commercialWork?: string | null

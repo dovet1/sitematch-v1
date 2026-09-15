@@ -1,5 +1,8 @@
 import type { PlanningApplication } from '../../types/unified-workspace'
 import {
+  mergeDevelopmentHistory,
+  planningCountLabel,
+  planningPins,
   groupPlanningApplications,
   latestPlanningApplication,
   planningKindLabel,
@@ -119,5 +122,53 @@ describe('latestPlanningApplication', () => {
 
   it('returns null for an empty list', () => {
     expect(latestPlanningApplication([])).toBeNull()
+  })
+})
+
+describe('development counts, pins and history', () => {
+  const ram = [
+    app('Wandsworth/2025/3189', { developmentId: 'ram', developmentRole: 'principal', developmentApplicationCount: 11, lat: 51.456, lng: -0.19 }),
+    app('Wandsworth/2026/2824', { developmentId: 'ram', developmentRole: 'condition', developmentApplicationCount: 11, lat: 51.457, lng: -0.191 }),
+  ]
+  const single = app('Wandsworth/2026/0001', { developmentId: 'solo', developmentRole: 'primary', developmentApplicationCount: 1, lat: 51.4, lng: -0.2 })
+
+  it('says how many applications a development holds, and how many of them this search lists', () => {
+    const [group] = groupPlanningApplications(ram)
+    expect(planningCountLabel(group)).toBe('11 applications · 2 in this area')
+    expect(planningCountLabel({ ...group, applications: group.applications.map(a => ({ ...a, developmentApplicationCount: 2 })) })).toBe('2 applications')
+    expect(planningCountLabel({ ...group, applications: group.applications.map(a => ({ ...a, developmentApplicationCount: null })) })).toBe('2 applications')
+  })
+
+  it('draws one pin per development at its lead application, and one per application otherwise', () => {
+    expect(planningPins([...ram, single], 'developments')).toEqual([
+      { name: 'Wandsworth/2025/3189', lng: -0.19, lat: 51.456, developmentKey: 'ram', count: 11 },
+      { name: 'Wandsworth/2026/0001', lng: -0.2, lat: 51.4, developmentKey: null, count: 1 },
+    ])
+    expect(planningPins([...ram, single], 'applications')).toHaveLength(3)
+  })
+
+  it('joins the full history with the list, marking what the search did not list', () => {
+    const history = [
+      { ...ram[0], lat: 0, lng: 0 },
+      app('Wandsworth/2026/0627', { developmentId: 'ram', developmentRole: 'related' }),
+    ]
+    const merged = mergeDevelopmentHistory(ram, history)
+    expect(merged.map(e => [e.name, e.inList])).toEqual([
+      ['Wandsworth/2025/3189', true], ['Wandsworth/2026/2824', true], ['Wandsworth/2026/0627', false],
+    ])
+    // The listed record wins, so its position and classification are kept.
+    expect(merged[0].lat).toBe(51.456)
+    expect(mergeDevelopmentHistory(ram, null)).toHaveLength(2)
+  })
+})
+
+describe('history wording', () => {
+  // Ten discharged conditions do not prove a building is going up, so no label may imply it.
+  it('never claims construction has started', () => {
+    const roles = ['principal', 'primary', 'amendment', 'member', 'condition', 'related', null]
+    const labels = roles.map(role => planningKindLabel(app('x', { developmentRole: role })) ?? '')
+    for (const label of labels) {
+      expect(label).not.toMatch(/construct|commenc|start|underway|built|build|progress|complete/i)
+    }
   })
 })

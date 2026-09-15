@@ -20,6 +20,8 @@ export interface MapClickState {
 export interface MapClickHits {
   lsoa?: string
   planning?: string
+  /** A development pin standing for several applications: focus its card rather than one application. */
+  planningDevelopment?: string
   road?: Record<string, unknown>
   bua?: {
     gsscode: string
@@ -36,6 +38,7 @@ export type MapClickAction =
   // visible change.
   | { kind: 'consume' }
   | { kind: 'open-planning-modal'; name: string }
+  | { kind: 'focus-planning-development'; key: string }
   | { kind: 'open-road-popup'; props: Record<string, unknown> }
   | { kind: 'select-bua'; bua: NonNullable<MapClickHits['bua']> }
   | { kind: 'open-requirement-modal'; requirementId: string }
@@ -52,6 +55,9 @@ export function decideMapClick(
   // it actually lands on one of their own features. A miss falls through to the
   // Assess pin-drop path below so the pin stays repositionable from either tab.
   if (st.tab === 'catchment' && hits.lsoa) return { kind: 'consume' }
+  if (st.tab === 'planning' && hits.planningDevelopment) {
+    return { kind: 'focus-planning-development', key: hits.planningDevelopment }
+  }
   if (st.tab === 'planning' && hits.planning) {
     return { kind: 'open-planning-modal', name: hits.planning }
   }

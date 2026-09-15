@@ -48,6 +48,12 @@ describe('decideMapClick', () => {
   })
 
   describe('planning tab', () => {
+    it('focuses a development card when its pin stands for several applications', () => {
+      expect(
+        decideMapClick(state({ tab: 'planning' }), { planning: 'Wandsworth/2025/3189', planningDevelopment: 'dev-ram' })
+      ).toEqual({ kind: 'focus-planning-development', key: 'dev-ram' })
+    })
+
     it('opens the modal for a planning pin hit', () => {
       expect(
         decideMapClick(state({ tab: 'planning' }), { planning: 'APP/2026/001' })

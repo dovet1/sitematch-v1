@@ -626,6 +626,24 @@ order with plain labels from procedure and stage:
 No label claims construction has started. Unlinked applications are unchanged. The tab's ranking
 and 2,000-row cap must be re-proven on the new read.
 
+**Built, 15 September 2026** (decisions agreed with the user the same day):
+- **Pins follow the Developments / Applications toggle.** Developments view draws one pin per
+  development at its lead application's position, with the application count on the pin; clicking
+  it scrolls the list to that development's card and opens its history. Hovering a card rings its
+  pin. Applications view is unchanged.
+- **Full history.** An opened card fetches every application in the development from
+  `/api/public/planning/development` (public record fields only, 200 at most), marking any outside
+  the searched area or scheme filter as "not in this area's list". RAM Brewery shows all 11.
+- **Honest counts.** The tab's read counts each listed development's applications in one extra
+  query (four parallel batches in a dense area); cards say "11 applications · 10 in this area".
+- **Timeline labels.** A test fails if any label implies construction has started.
+- **Checked** in the browser on Wandsworth: count pins, pin click opening the right card, hover
+  ring, RAM Brewery's 11-entry history. Warm tab reads 0.9 s (Wandsworth 5 km) and 1.7 s (central
+  London 5 km) with the count; one cold dense read timed out once and succeeded on retry, as
+  already recorded for the v3 read. At phone width the inspector panel is wider than the screen;
+  that predates this work.
+- Not done: a development detail window (a pin opens the card instead, by decision).
+
 ## Validation
 
 Three levels, reported separately. None of them replaces the others.

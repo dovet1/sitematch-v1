@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapPin,
   X,
@@ -14,15 +14,19 @@ import {
 } from 'lucide-react'
 import { getClearbitLogoUrl } from '@/lib/clearbit-logo'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
+import { useDevelopmentHistory } from '../../lib/hooks/useDevelopmentHistory'
 import {
   describesDevelopment,
   groupPlanningApplications,
   latestPlanningApplication,
+  mergeDevelopmentHistory,
+  planningCountLabel,
   planningKindLabel,
   planningPaperworkLabel,
   planningTimeline,
   planningTimelineDate,
   type PlanningDevelopmentGroup,
+  type PlanningHistoryEntry,
   type PlanningGrouping,
 } from '../../lib/planning-groups'
 import { toFilterSet } from '../../lib/services/gaps-service'
@@ -1474,10 +1478,10 @@ function PlanningTimeline({
   applications,
   onOpen,
 }: {
-  applications: PlanningApplication[]
+  applications: PlanningHistoryEntry[]
   onOpen: (app: PlanningApplication) => void
 }) {
-  const entries = planningTimeline(applications)
+  const entries = planningTimeline(applications) as PlanningHistoryEntry[]
   return (
     <div className="border-t border-sm-border-soft px-3 pb-2 pt-2.5">
       <div className="mb-1.5 flex items-baseline justify-between">
@@ -1520,13 +1524,18 @@ function PlanningTimeline({
                   </span>
                   <span className="shrink-0 font-mono text-[10.5px] text-sm-ink3">{date ?? 'No date'}</span>
                 </div>
-                <div className="mt-px flex items-center gap-1.5 text-[11.5px]">
+                <div className="mt-px flex flex-wrap items-center gap-x-1.5 text-[11.5px]">
                   <span className="font-mono text-sm-ink3">{reference}</span>
                   <span className="text-sm-ink4">·</span>
                   <span className={'capitalize ' + planningStateTextClass(app.appState)}>
                     {app.appState.toLowerCase() || 'status unknown'}
                     {decided && ` ${decided}`}
                   </span>
+                  {/* Part of the scheme's history, but outside the area searched or the tab's
+                      scheme filter, so it has no row or pin of its own here. */}
+                  {!app.inList && (
+                    <span className="text-sm-ink4">· not in this area&apos;s list</span>
+                  )}
                 </div>
                 {app.description && (
                   <div className={'mt-0.5 text-[11.5px] leading-snug text-sm-ink3 ' + (main ? 'line-clamp-2' : 'line-clamp-1')}>
@@ -1555,6 +1564,24 @@ function PlanningDevelopmentRow({
   onOpen: (app: PlanningApplication) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [flash, setFlash] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const focus = useWorkspaceStore((s) => s.planningFocus)
+  const setHoveredPlanningKey = useWorkspaceStore((s) => s.setHoveredPlanningKey)
+  const history = useDevelopmentHistory(group.developmentId, open)
+  const entries = useMemo(() => mergeDevelopmentHistory(group.applications, history), [group.applications, history])
+
+  // A pin clicked on the map opens this card and brings it into view, with a brief highlight so
+  // the eye can find it in a long list.
+  useEffect(() => {
+    if (!focus || focus.key !== group.key) return
+    setOpen(true)
+    setFlash(true)
+    const frame = requestAnimationFrame(() => cardRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }))
+    const timer = setTimeout(() => setFlash(false), 1600)
+    return () => { cancelAnimationFrame(frame); clearTimeout(timer) }
+  }, [focus, group.key])
+
   const lead = group.applications[0]
   const latest = latestPlanningApplication(group.applications) ?? lead
   // The scheme's own decision, not the newest condition submission's "registered".
@@ -1564,12 +1591,19 @@ function PlanningDevelopmentRow({
   const dwellings = planningDwellingLabel(lead)
   const date =
     formatPlanningDate(latest.decidedDate) ?? formatPlanningDate(latest.dateValidated)
-  const count = group.applications.length
-  const subline = [`${count} applications`, dwellings, date && `latest ${date}`]
+  const subline = [planningCountLabel(group), dwellings, date && `latest ${date}`]
     .filter(Boolean)
     .join(' · ')
   return (
-    <div className="rounded-xl border border-sm-border bg-sm-surface">
+    <div
+      ref={cardRef}
+      onMouseEnter={() => setHoveredPlanningKey(group.key)}
+      onMouseLeave={() => setHoveredPlanningKey(null)}
+      className={
+        'scroll-mt-3 rounded-xl border bg-sm-surface transition-shadow duration-300 ' +
+        (flash ? 'border-sm-violet shadow-[0_0_0_3px_rgba(112,51,255,0.18)]' : 'border-sm-border')
+      }
+    >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -1620,7 +1654,7 @@ function PlanningDevelopmentRow({
           )}
           <div
             className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-sm-ink3"
-            title="Applications in this list; others for the same development may fall outside this area or the scheme filter"
+            title="Applications outside this area or the scheme filter are still shown in the history"
           >
             {subline}
           </div>
@@ -1630,7 +1664,7 @@ function PlanningDevelopmentRow({
           className={'text-sm-ink4 transition-transform ' + (open ? 'rotate-90' : '')}
         />
       </button>
-      {open && <PlanningTimeline applications={group.applications} onOpen={onOpen} />}
+      {open && <PlanningTimeline applications={entries} onOpen={onOpen} />}
     </div>
   )
 }
