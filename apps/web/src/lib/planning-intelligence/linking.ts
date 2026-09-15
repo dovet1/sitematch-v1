@@ -125,6 +125,22 @@ export function followOnKind(application: Pick<LinkableApplication, 'description
   return null
 }
 
+const FOLLOW_ON_PROCEDURES = new Set(['discharge', 'amendment', 'reserved-matters'])
+
+/**
+ * Whether an application restates homes an existing consent already granted, whether or not it has
+ * been linked to that consent. Narrower than followOnKind: condition wording only counts at the
+ * start of the description, because a genuine scheme often says "details of access" mid-sentence
+ * ("outline for 300 homes with all matters reserved except details of access").
+ */
+export function restatesExistingConsent(application: Pick<LinkableApplication, 'description' | 'procedure'>): boolean {
+  const description = application.description ?? ''
+  return FOLLOW_ON_PROCEDURES.has(application.procedure ?? '')
+    || CONDITION_LEAD.test(description)
+    || AMENDMENT_WORDING.test(description)
+    || RESERVED_MATTERS_WORDING.test(description)
+}
+
 // No spaces inside a reference: allowing them glued "2024/3141 - minor" and "ref. 2026/0443" into
 // tokens that match no council format. Some councils use no separator at all (Ealing 244424FUL,
 // Waltham Forest 202881); those are read separately and must match the council's own format.

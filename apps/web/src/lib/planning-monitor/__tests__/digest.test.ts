@@ -121,6 +121,23 @@ describe('countChanges', () => {
     expect(counts.knownNewDwellings).toBe(0)
   })
 
+  it.each([
+    ['a discharge', { procedure: 'discharge', description: 'Details of landscaping for 300 dwellings' }],
+    ['reserved matters', { procedure: 'reserved-matters', description: 'Appearance, layout and scale for 300 dwellings' }],
+    ['an amendment', { procedure: 'amendment', description: 'Changes to elevations of 300 dwellings' }],
+    ['a condition submission the council labels full', { procedure: 'full', description: 'Discharge of condition 12 of 23/01234/OUT (300 dwellings)' }],
+    ['a section 73 variation the council labels full', { procedure: 'full', description: 'Variation of condition 2 of 23/01234/FUL to amend house types, 300 dwellings' }],
+  ])('adds no homes for %s that was never linked to its permission', (_label, fields) => {
+    // Unlinked paperwork sits alone as the primary of its own development.
+    const r = row({ applicationId: 'unlinked', developmentId: 'solo-dev', developmentRole: 'primary', stage: 'approved', dateDecided: '2026-09-16', dwellings: 300, ...fields })
+    expect(countChanges(categoriseChanges({ ...PERIOD, kind: 'scheduled', rows: [r], events: [] })).knownNewDwellings).toBe(0)
+  })
+
+  it('still counts an outline scheme that mentions details of access', () => {
+    const r = row({ applicationId: 'outline', developmentId: 'dev4', developmentRole: 'primary', procedure: 'outline', stage: 'approved', dateDecided: '2026-09-16', dwellings: 300, description: 'Outline application for up to 300 dwellings with all matters reserved except details of access' })
+    expect(countChanges(categoriseChanges({ ...PERIOD, kind: 'scheduled', rows: [r], events: [] })).knownNewDwellings).toBe(300)
+  })
+
   it('counts a standalone approval that belongs to no development', () => {
     const r = row({ applicationId: 'solo', stage: 'approved', dateDecided: '2026-09-16', dwellings: 40 })
     expect(countChanges(categoriseChanges({ ...PERIOD, kind: 'scheduled', rows: [r], events: [] })).knownNewDwellings).toBe(40)

@@ -1,3 +1,4 @@
+import { restatesExistingConsent } from '@/lib/planning-intelligence/linking'
 import type { DigestHighlight, DigestReport, MonitorRow } from './types'
 
 /**
@@ -140,7 +141,8 @@ export function countChanges(changes: CategorisedChange[]): NonNullable<DigestRe
 
   // Homes are counted from the approval of the scheme's own application only. Reserved matters,
   // amendments and discharges restate a permission that was counted when it was granted, possibly
-  // in an earlier week, so approving them adds no homes. A standalone application has no role.
+  // in an earlier week, so approving them adds no homes. Family role alone is not enough: paperwork
+  // that was never linked sits alone as its own primary, so its procedure and wording decide too.
   // A family still waiting for its original permission contributes nothing to the confident total.
   const homesByDevelopment = new Map<string, number>()
   const unresolved = new Set<string>()
@@ -148,6 +150,7 @@ export function countChanges(changes: CategorisedChange[]): NonNullable<DigestRe
     const row = change.row
     if (!row.isResidential || row.dwellings == null) continue
     if (row.developmentId && !HOME_STATING_ROLES.has(row.developmentRole ?? '')) continue
+    if (restatesExistingConsent(row)) continue
     if (row.familyState === 'awaiting_original') {
       unresolved.add(groupKey(row))
       continue

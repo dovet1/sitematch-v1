@@ -230,7 +230,7 @@ export async function generateRun(run: RunRecord, db: PlanningAdminClient = crea
   if (!parsed.ok) {
     // A capability this revision relies on has gone. Pause rather than broaden.
     await db.from('planning_monitor_patches').update({ needs_attention: parsed.error }).eq('id', run.patch_id)
-    await db.from('planning_monitor_digest_runs').update({ status: 'failed', error: `Criteria need attention: ${parsed.error}`, lease_owner: null }).eq('id', run.id)
+    await stillClaimed(db.from('planning_monitor_digest_runs').update({ status: 'failed', error: `Criteria need attention: ${parsed.error}`, lease_owner: null, lease_expires_at: null }), run)
     return { runId: run.id, status: 'failed', error: parsed.error }
   }
 
@@ -238,11 +238,11 @@ export async function generateRun(run: RunRecord, db: PlanningAdminClient = crea
   const ageHours = (Date.now() - Date.parse(run.created_at)) / 3_600_000
   if (freshness.stale && run.kind === 'scheduled' && ageHours < COVERAGE_RECOVERY_HOURS) {
     // Never turn failed ingestion into "no changes". Wait for recovery, then issue a labelled partial report.
-    await db.from('planning_monitor_digest_runs').update({
+    await stillClaimed(db.from('planning_monitor_digest_runs').update({
       status: 'queued', lease_owner: null, lease_expires_at: null, attempts: Math.max(0, run.attempts - 1),
       not_before: new Date(Date.now() + 2 * 3_600_000).toISOString(),
       coverage: { stale: true, staleReason: freshness.staleReason, note: 'Waiting for planning data to recover' },
-    }).eq('id', run.id)
+    }), run)
     return { runId: run.id, status: 'requeued' }
   }
   const coverageNote = freshness.stale
@@ -356,6 +356,14 @@ async function deliveryRecipient(db: PlanningAdminClient, run: RunRecord, ownerI
   return { subscription_id: sub.id as string, user_id: sub.user_id as string, email: user.email as string, delivery_key: `pm-${run.id}-${sub.user_id}` }
 }
 
+/**
+ * Narrow a run update to the claim that made it: still running, under this worker's lease, on this
+ * attempt. A generated report, or a run another worker has since reclaimed, is left untouched.
+ */
+function stillClaimed<Q extends { eq: (column: string, value: unknown) => Q }>(query: Q, run: Pick<RunRecord, 'id' | 'lease_owner' | 'attempts'>): Q {
+  return query.eq('id', run.id).eq('status', 'running').eq('lease_owner', run.lease_owner).eq('attempts', run.attempts)
+}
+
 /** Claim and generate up to `limit` runs. Failures past the attempt limit are marked failed. */
 export async function processRuns(workerId: string, limit: number, db: PlanningAdminClient = createPlanningAdminClient()): Promise<RunOutcome[]> {
   const outcomes: RunOutcome[] = []
@@ -370,13 +378,15 @@ export async function processRuns(workerId: string, limit: number, db: PlanningA
       const message = err instanceof Error ? err.message : 'Unknown error'
       console.error(`[planning-monitor] run ${run.id} failed`, err)
       const exhausted = run.attempts >= 3
-      await db.from('planning_monitor_digest_runs').update({
+      // The error may have come after the report committed (a dropped response from the finish
+      // call), so only a run still held by this claim is sent back or failed.
+      await stillClaimed(db.from('planning_monitor_digest_runs').update({
         status: exhausted ? 'failed' : 'queued',
         error: message,
         lease_owner: null,
         lease_expires_at: null,
         not_before: new Date(Date.now() + 10 * 60_000 * run.attempts).toISOString(),
-      }).eq('id', run.id)
+      }), run)
       outcomes.push({ runId: run.id, status: 'failed', error: message })
     }
   }
