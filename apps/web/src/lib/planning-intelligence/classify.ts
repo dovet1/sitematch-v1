@@ -5,13 +5,19 @@ import {
   configuredBudget,
 } from './budget'
 import type { PlanningAdminClient } from './db'
+import { buildFamilyInput, familyInputHash, type FamilyInput, type FamilyMember } from './family-input'
 import {
+  classificationInput,
+  classifyFamilyWithOpenRouter,
   classifyWithOpenRouter,
   CLASSIFICATION_ATTEMPT_TIMEOUT_MS,
   DEFAULT_OPENROUTER_MODEL,
   MAX_CLASSIFICATION_ATTEMPTS,
+  PLANNING_FAMILY_PROMPT_VERSION,
+  PLANNING_FAMILY_SCHEMA_VERSION,
   PLANNING_PROMPT_VERSION,
   PLANNING_SCHEMA_VERSION,
+  type PlanningFamilyClassification,
 } from './openrouter'
 import type { PlanningClassification, PlotaApplication } from './types'
 
@@ -30,6 +36,8 @@ export const CLASSIFICATION_ITEM_TIMEOUT_MS =
 // The lease is deliberately longer than the complete worst-case queue item. A fresh lease
 // must never be reclaimed merely because a provider call is slow.
 export const CLASSIFICATION_LEASE_MS = CLASSIFICATION_ITEM_TIMEOUT_MS + 60_000
+// A family's input can be several times a single application's; its reservation covers that.
+export const FAMILY_RESERVATION_MULTIPLIER = 3
 
 function classificationItemDeadline(): { signal: AbortSignal; cleanup: () => void } {
   const controller = new AbortController()
@@ -66,26 +74,80 @@ async function linkedDevelopment(
 
 /**
  * What a classification may write, by the application's place in its Development. See
- * docs/planning-development-linking-plan.md, step 5.3.
+ * docs/planning-development-linking-plan.md, step 5.3, and the grouped worker (pilot plan 3a).
  *
- * - `development`: the principal, or a single application, describes the scheme.
- * - `application`: a significant follow-on (section 73, reserved matters, material amendment) is
- *   read, and its run and figures stay attributed to it, but it never overwrites the scheme.
- * - `skip`: paperwork and companion consents are never sent to the model on their own.
+ * - `development`: the principal, or a single application, describes the scheme. A principal
+ *   with a family is graded from the family's input, so its changes are read with it.
+ * - `skip`: everything else. Significant follow-ons are read inside their family's grade rather
+ *   than on their own; paperwork and companion consents are never sent to the model.
  *
- * Because only one application in a Development can have `development` scope, the order in which
- * members are classified cannot change what the Development says.
+ * Only one application in a Development can have `development` scope, so the order in which
+ * members are claimed cannot change what the Development says.
  */
-export type ClassificationScope = 'development' | 'application' | 'skip'
+export type ClassificationScope = 'development' | 'skip'
 
 export function classificationScope(
   role: string,
   principalApplicationId: string | null,
   applicationId: string
 ): ClassificationScope {
-  if (role === 'condition' || role === 'related' || role === 'member') return 'skip'
-  if (principalApplicationId) return principalApplicationId === applicationId ? 'development' : 'application'
-  return role === 'primary' || role === 'principal' ? 'development' : 'application'
+  if (principalApplicationId) return principalApplicationId === applicationId ? 'development' : 'skip'
+  return role === 'primary' || role === 'principal' ? 'development' : 'skip'
+}
+
+export interface LoadedFamily {
+  input: FamilyInput
+  hash: string
+  idByReference: Map<string, string>
+  memberIds: string[]
+}
+
+/**
+ * The family a principal describes, or null when it describes only itself. Members come with the
+ * raw provider record the single-application path already reads, so both paths see the same facts.
+ */
+export async function loadFamily(db: PlanningAdminClient, application: Pick<QueueRow, 'id' | 'raw'>, developmentId: string): Promise<LoadedFamily | null> {
+  const { data, error } = await db
+    .from('development_applications')
+    .select('role,planning_application_id,planning_applications(reference,raw)')
+    .eq('development_id', developmentId)
+  if (error) throw error
+  const rows = (data ?? []) as unknown as Array<{ role: string; planning_application_id: string; planning_applications: { reference: string; raw: PlotaApplication } | null }>
+  if (rows.length < 2) return null
+  const members: FamilyMember[] = rows
+    .filter((row) => row.planning_application_id !== application.id && row.planning_applications?.raw)
+    .map((row) => ({ role: row.role, raw: row.planning_applications!.raw }))
+  const { data: development, error: developmentError } = await db
+    .from('developments').select('family_state').eq('id', developmentId).single()
+  if (developmentError) throw developmentError
+  const originalHeld = (development as { family_state?: string }).family_state !== 'awaiting_original'
+  let citedOriginals: string[] = []
+  if (!originalHeld) {
+    const { data: links, error: linksError } = await db
+      .from('planning_application_links')
+      .select('parent_reference')
+      .in('child_application_id', rows.map((row) => row.planning_application_id))
+      .is('parent_application_id', null).is('removed_at', null).eq('strength', 'strong')
+    if (linksError) throw linksError
+    citedOriginals = [...new Set(((links ?? []) as Array<{ parent_reference: string }>).map((link) => link.parent_reference))]
+  }
+  const input = buildFamilyInput({ mainInput: classificationInput(application.raw), members, originalHeld, citedOriginals })
+  return {
+    input,
+    hash: familyInputHash(input),
+    idByReference: new Map(rows.filter((row) => row.planning_applications).map((row) => [row.planning_applications!.reference, row.planning_application_id])),
+    memberIds: rows.map((row) => row.planning_application_id),
+  }
+}
+
+/** The single-application shape of a family grade, for the columns both paths write. */
+function withoutSources(classification: PlanningFamilyClassification): PlanningClassification {
+  const { sourceReference: _dwellingSource, ...dwellings } = classification.dwellings
+  return {
+    ...classification,
+    dwellings,
+    observations: classification.observations.map(({ sourceReference: _source, ...observation }) => observation),
+  } as PlanningClassification
 }
 
 /**
@@ -158,7 +220,7 @@ async function persistClassification(
   developmentId: string,
   classification: PlanningClassification,
   runId: string,
-  scope: Exclude<ClassificationScope, 'skip'> = 'development'
+  family: { loaded: LoadedFamily; output: PlanningFamilyClassification } | null = null
 ) {
   const now = new Date().toISOString()
   const { storable, gaps } = partitionObservations(classification)
@@ -170,9 +232,6 @@ async function persistClassification(
       review_state: 'pending',
       updated_at: now,
     }).eq('id', application.id),
-    // A follow-on's reading stays on its own run and observations; only the principal describes
-    // the scheme.
-    scope === 'application' ? Promise.resolve({ error: null }) :
     // Never overwrite a human. Reclassification would otherwise replace a reviewer's verdict
     // with the model's and reset the row to pending, silently discarding the decision AND the
     // only free label the product produces. The machine answer is not lost: it stays in the
@@ -199,19 +258,24 @@ async function persistClassification(
   if (developmentError) throw developmentError
 
   // A changed input supersedes unreviewed machine observations. Human-approved evidence
-  // is retained and can only be changed explicitly through the review endpoint.
-  const { error: deleteObservationsError } = await db
-    .from('development_observations')
-    .delete()
-    .eq('planning_application_id', application.id)
-    .eq('review_state', 'pending')
+  // is retained and can only be changed explicitly through the review endpoint. A family grade
+  // speaks for every member, so it supersedes their unreviewed observations too.
+  const { error: deleteObservationsError } = await (family
+    ? db.from('development_observations').delete().in('planning_application_id', family.loaded.memberIds).eq('review_state', 'pending')
+    : db.from('development_observations').delete().eq('planning_application_id', application.id).eq('review_state', 'pending'))
   if (deleteObservationsError) throw deleteObservationsError
+
+  // Each figure stays with the application that states it; an unknown reference falls back to
+  // the principal rather than being dropped.
+  const sources = family?.output.observations ?? []
+  const sourceOf = (index: number) =>
+    family?.loaded.idByReference.get(sources[classification.observations.indexOf(storable[index])]?.sourceReference ?? '') ?? application.id
 
   if (storable.length > 0) {
     const { error } = await db.from('development_observations').insert(
-      storable.map((observation) => ({
+      storable.map((observation, index) => ({
         development_id: developmentId,
-        planning_application_id: application.id,
+        planning_application_id: sourceOf(index),
         metric: observation.metric,
         scope: observation.scope,
         action: observation.action,
@@ -254,7 +318,8 @@ async function persistClassification(
   // reviewable projection for product queries.
   const { error: runError } = await db
     .from('planning_classification_runs')
-    .update({ output: classification, development_id: developmentId })
+    // A family run keeps the attributed output, so each figure's source stays inspectable.
+    .update({ output: family ? family.output : classification, development_id: developmentId })
     .eq('id', runId)
   if (runError) throw runError
 }
@@ -314,6 +379,9 @@ export async function classifyPlanningBatch(input: {
       continue
     }
     const developmentId = membership.id
+    const family = await loadFamily(input.db, application, developmentId)
+    // A family's input is larger; reserve enough that the hard budget still holds.
+    const itemReservation = family ? reservation * FAMILY_RESERVATION_MULTIPLIER : reservation
     const { data: run, error: runError } = await input.db
       .from('planning_classification_runs')
       .upsert({
@@ -322,9 +390,11 @@ export async function classifyPlanningBatch(input: {
         stage: 'initial',
         provider: 'openrouter',
         model,
-        prompt_version: PLANNING_PROMPT_VERSION,
-        schema_version: PLANNING_SCHEMA_VERSION,
-        input_hash: application.input_hash,
+        prompt_version: family ? PLANNING_FAMILY_PROMPT_VERSION : PLANNING_PROMPT_VERSION,
+        schema_version: family ? PLANNING_FAMILY_SCHEMA_VERSION : PLANNING_SCHEMA_VERSION,
+        // A family run is keyed on what the scheme is, so a new composition writes a new run
+        // beside the old one rather than over it.
+        input_hash: family ? family.hash : application.input_hash,
         status: 'running',
         error: null,
         started_at: new Date().toISOString(),
@@ -344,7 +414,7 @@ export async function classifyPlanningBatch(input: {
         p_stage: 'initial',
         p_provider: 'openrouter',
         p_model: model,
-        p_reserved_usd: reservation,
+        p_reserved_usd: itemReservation,
         p_monthly_budget_usd: monthlyBudget,
         p_stage_budget_usd: stageBudget,
       }
@@ -368,20 +438,22 @@ export async function classifyPlanningBatch(input: {
 
     const deadline = classificationItemDeadline()
     try {
-      const classified = await classifyWithOpenRouter(application.raw, {
-        apiKey: input.apiKey,
-        model,
-        signal: deadline.signal,
-      })
+      const options = { apiKey: input.apiKey, model, signal: deadline.signal }
+      const classified = family
+        ? await classifyFamilyWithOpenRouter(family.input, options)
+        : await classifyWithOpenRouter(application.raw, options)
+      const classification = family
+        ? withoutSources(classified.classification as PlanningFamilyClassification)
+        : (classified.classification as PlanningClassification)
       await persistClassification(
         input.db,
         application,
         developmentId,
-        classified.classification,
+        classification,
         run.id,
-        scope
+        family ? { loaded: family, output: classified.classification as PlanningFamilyClassification } : null
       )
-      const actualCost = classified.costUsd ?? reservation
+      const actualCost = classified.costUsd ?? itemReservation
       const now = new Date().toISOString()
       const [{ error: finishRunError }, { error: finishUsageError }] = await Promise.all([
         input.db.from('planning_classification_runs').update({
@@ -412,14 +484,14 @@ export async function classifyPlanningBatch(input: {
           classification_state: 'failed', classification_started_at: null,
         }).eq('id', application.id),
         input.db.from('planning_classification_runs').update({
-          status: 'failed', error: message, cost_usd: reservation,
+          status: 'failed', error: message, cost_usd: itemReservation,
           finished_at: new Date().toISOString(),
         }).eq('id', run.id),
         // Once a call starts, conservatively charge its full reservation. Some failures
         // happen after a provider has generated (and billed for) an invalid answer; treating
         // them as free would let retries push the account beyond the hard ceiling.
         input.db.from('planning_ai_usage').update({
-          status: 'complete', actual_usd: reservation,
+          status: 'complete', actual_usd: itemReservation,
         }).eq('id', usageId),
       ])
       result.failed++

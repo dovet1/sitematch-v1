@@ -1,7 +1,12 @@
 const mockClassifyWithOpenRouter = jest.fn()
+const mockClassifyFamilyWithOpenRouter = jest.fn()
 jest.mock('../openrouter', () => {
   const actual = jest.requireActual('../openrouter')
-  return { ...actual, classifyWithOpenRouter: (...args: unknown[]) => mockClassifyWithOpenRouter(...args) }
+  return {
+    ...actual,
+    classifyWithOpenRouter: (...args: unknown[]) => mockClassifyWithOpenRouter(...args),
+    classifyFamilyWithOpenRouter: (...args: unknown[]) => mockClassifyFamilyWithOpenRouter(...args),
+  }
 })
 
 import { DEFAULT_CLASSIFICATION_RESERVATION_USD } from '../budget'
@@ -17,6 +22,7 @@ type Write = { table: string; op: string; payload: unknown }
 
 class Builder implements PromiseLike<Result> {
   private op = ''
+  private one = false
   constructor(private table: string, private writes: Write[]) {}
   select() { if (!this.op) this.op = 'select'; return this }
   insert(payload: unknown) { this.op = 'insert'; this.writes.push({ table: this.table, op: this.op, payload }); return this }
@@ -24,14 +30,22 @@ class Builder implements PromiseLike<Result> {
   update(payload: unknown) { this.op = 'update'; this.writes.push({ table: this.table, op: this.op, payload }); return this }
   delete() { this.op = 'delete'; return this }
   eq() { return this }
-  single() { return this }
+  in() { return this }
+  is() { return this }
+  single() { this.one = true; return this }
   then<A, B>(
     onfulfilled?: ((value: Result) => A | PromiseLike<A>) | null,
     onrejected?: ((reason: unknown) => B | PromiseLike<B>) | null
   ): PromiseLike<A | B> {
     let result: Result = { data: null, error: null }
-    if (this.table === 'development_applications' && this.op === 'select') {
+    if (this.table === 'development_applications' && this.op === 'select' && this.one) {
       result = { data: { development_id: 'development-1', role: membershipRole, developments: { principal_application_id: principalApplicationId } }, error: null }
+    } else if (this.table === 'development_applications' && this.op === 'select') {
+      result = { data: familyRows, error: null }
+    } else if (this.table === 'developments' && this.op === 'select') {
+      result = { data: { family_state: 'family' }, error: null }
+    } else if (this.table === 'planning_application_links' && this.op === 'select') {
+      result = { data: [], error: null }
     } else if (this.table === 'planning_classification_runs' && this.op === 'upsert') {
       result = { data: { id: 'run-1', status: 'running' }, error: null }
     }
@@ -53,6 +67,7 @@ function application(state: string, startedAt: string | null = null) {
 
 let membershipRole = 'primary'
 let principalApplicationId: string | null = null
+let familyRows: Array<Record<string, unknown>> = []
 
 function makeDb(candidates: ReturnType<typeof application>[]) {
   const writes: Write[] = []
@@ -100,17 +115,46 @@ const result = {
 
 describe('grouped members', () => {
   beforeEach(() => { jest.clearAllMocks(); mockClassifyWithOpenRouter.mockResolvedValue(result) })
-  afterEach(() => { membershipRole = 'primary'; principalApplicationId = null })
+  afterEach(() => { membershipRole = 'primary'; principalApplicationId = null; familyRows = [] })
 
-  it('classifies a section 73 in a family but keeps its reading off the development', async () => {
+  it('never grades a section 73 on its own; its family grade reads it', async () => {
     membershipRole = 'amendment'
     principalApplicationId = 'the-original'
     const { db, writes } = makeDb([application('queued')])
     const batch = await classifyPlanningBatch({ db, apiKey: 'key', limit: 1 })
-    expect(batch.classified).toBe(1)
-    expect(mockClassifyWithOpenRouter).toHaveBeenCalledTimes(1)
+    expect(batch.considered).toBe(1)
+    expect(mockClassifyWithOpenRouter).not.toHaveBeenCalled()
+    expect(mockClassifyFamilyWithOpenRouter).not.toHaveBeenCalled()
     expect(writes.some(write => write.table === 'developments')).toBe(false)
-    expect(writes).toContainEqual(expect.objectContaining({ table: 'planning_classification_runs', payload: expect.objectContaining({ development_id: 'development-1' }) }))
+  })
+
+  it('grades a principal with a family once, from the family input, under the family prompt', async () => {
+    membershipRole = 'principal'
+    principalApplicationId = 'queued-application'
+    familyRows = [
+      { role: 'principal', planning_application_id: 'queued-application', planning_applications: { reference: 'queued-reference', raw: application('queued').raw } },
+      { role: 'amendment', planning_application_id: 's73', planning_applications: { reference: '2026/0301', raw: { id: 's73', reference: '2026/0301', authority: { slug: 'test', name: 'Test Council' }, description: 'Variation of condition 2 to add a hotel', date_received: '2026-03-01' } } },
+      { role: 'condition', planning_application_id: 'cond', planning_applications: { reference: '2026/0994', raw: { id: 'cond', reference: '2026/0994', authority: { slug: 'test', name: 'Test Council' }, description: 'Details of condition 9', date_received: '2026-06-01' } } },
+    ]
+    mockClassifyFamilyWithOpenRouter.mockResolvedValue({
+      ...result,
+      classification: {
+        ...result.classification,
+        dwellings: { ...result.classification.dwellings, sourceReference: 'queued-reference' },
+        observations: [{ metric: 'commercial_floorspace', scope: 'proposed', action: 'create', value: 900, unit: 'sqm', evidence: 'hotel', confidence: 0.8, sourceReference: '2026/0301' }],
+      },
+    })
+    const { db, writes } = makeDb([application('queued')])
+    const batch = await classifyPlanningBatch({ db, apiKey: 'key', limit: 1 })
+    expect(batch.classified).toBe(1)
+    expect(mockClassifyWithOpenRouter).not.toHaveBeenCalled()
+    const [familyInput] = mockClassifyFamilyWithOpenRouter.mock.calls[0]
+    expect(familyInput.changes.map((c: { reference: string }) => c.reference)).toEqual(['2026/0301'])
+    expect(familyInput.paperwork).toMatchObject({ conditionSubmissions: 1 })
+    expect(writes).toContainEqual(expect.objectContaining({ table: 'planning_classification_runs', op: 'upsert', payload: expect.objectContaining({ prompt_version: 'planning-family-v1' }) }))
+    // The hotel floorspace is attributed to the variation that states it, not to the original.
+    expect(writes).toContainEqual(expect.objectContaining({ table: 'development_observations', op: 'insert', payload: [expect.objectContaining({ planning_application_id: 's73', value: 900 })] }))
+    expect(writes).toContainEqual(expect.objectContaining({ table: 'developments', op: 'update', payload: expect.objectContaining({ relevance: 'high' }) }))
   })
 
   it('lets the principal write its development', async () => {
@@ -201,13 +245,13 @@ describe('classificationScope', () => {
   it('lets only one member of a family describe it', () => {
     expect(classificationScope('primary', null, 'a')).toBe('development')
     expect(classificationScope('principal', 'a', 'a')).toBe('development')
-    expect(classificationScope('amendment', 'a', 'b')).toBe('application')
-    expect(classificationScope('amendment', null, 'b')).toBe('application')
+    expect(classificationScope('amendment', 'a', 'b')).toBe('skip')
+    expect(classificationScope('amendment', null, 'b')).toBe('skip')
     expect(classificationScope('condition', 'a', 'c')).toBe('skip')
     expect(classificationScope('related', null, 'c')).toBe('skip')
     expect(classificationScope('member', 'a', 'd')).toBe('skip')
     // A legacy primary row left behind in a family no longer describes it once a principal is set.
-    expect(classificationScope('primary', 'a', 'b')).toBe('application')
+    expect(classificationScope('primary', 'a', 'b')).toBe('skip')
   })
 
   it('makes the development\'s description independent of classification order', () => {

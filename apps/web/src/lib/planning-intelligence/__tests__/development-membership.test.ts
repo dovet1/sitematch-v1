@@ -69,9 +69,10 @@ describe('planFamilyMemberships', () => {
       [development('d1'), development('d2')],
     )))
 
+    // The section 73 joining changes what the scheme may be, so the original is graded again.
     expect(plan).toMatchObject({
       action: 'apply', targetDevelopmentId: 'd1', principalApplicationId: original.id, familyState: 'family',
-      clearMachineGrade: false, queueClassification: [], admitByFamily: [], missingParentKeys: [],
+      clearMachineGrade: false, queueClassification: [original.id], admitByFamily: [], missingParentKeys: [],
     })
     if (plan.action !== 'apply') throw new Error('expected apply')
     expect(plan.members.map(m => [m.applicationId, m.role]).sort()).toEqual([

@@ -223,7 +223,13 @@ export function planFamilyMemberships(input: MembershipInput): FamilyPlan[] {
     }
 
     const principal = principalApplicationId ? byId.get(principalApplicationId)! : null
-    const queueClassification = principal && principalChanges ? [principal.id] : []
+    // The principal is graded again, from its family, when what the scheme is may have changed: a
+    // new principal, or a significant change joining (pilot plan 3a). Paperwork joining never
+    // triggers a grade; it only lengthens the timeline.
+    const significantJoined = changes.some((change) =>
+      !PAPERWORK_ROLES.has(change.role) && change.applicationId !== principalApplicationId
+      && membershipOf.get(change.applicationId)?.developmentId !== target?.id)
+    const queueClassification = principal && (principalChanges || significantJoined) ? [principal.id] : []
     const admitByFamily = principal && !principal.intelligence_tier ? [principal.id] : []
     const clearMachineGrade = principalApplicationId === null && author !== null
     const stateChanges = !target

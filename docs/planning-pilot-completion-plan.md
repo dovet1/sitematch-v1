@@ -195,6 +195,28 @@ originals per council; one family fetch can answer several, so these are upper b
 - The re-grade and the backlog queue wait for the grouped path.
 - Routine ingestion moves to the grouped path when linking is switched on in the workers.
 
+**Grouped classification worker, built 15 September (not yet deployed or run live):**
+- The queue is unchanged: a family's principal stands for its development. When claimed, a
+  principal with other members is graded once from `family-input.ts`: the main application in
+  full, significant changes newest first (8 at most, descriptions trimmed), paperwork as counts and
+  a latest date only, and the cited references when the original is missing.
+- Prompt `planning-family-v1` is `planning-stage1-v6`'s rules word for word (checked against the
+  committed prompt) plus family rules: figures name their source application, are never summed, and
+  paperwork is never read as progress. Schema `planning-classification-v3-family` adds only
+  `sourceReference`. Observations are stored against the application that states them.
+- Significant follow-ons are no longer graded alone. A principal is queued again when a significant
+  change joins or the principal changes, never when paperwork joins. The family fingerprint ignores
+  paperwork. A family item reserves three times a single one.
+- **Pilot comparison** (`scripts/compare-family-classification.ts`, read-only, $0.011): the 11 grouped
+  families graded from the family and from the principal alone, twice each. 8 agreed. Family reads
+  were stable on 11 of 11, alone reads on 10 of 11. Claude's reading of the 3 differences (not a
+  label check): 179 Northcote Road and 76 St Johns Hill went high to low, both closer to the rubric
+  (dog grooming, and flats with a retained shop); Church Row's homes went 9 to not countable,
+  arguable either way. **76 St Johns Hill has no significant changes, so the family prompt's wording
+  alone moved the grade.** The family read may grade more strictly in general; 11 families cannot
+  show whether that is right. The national re-grade waits for the labelled selection test set, as
+  decided.
+
 ### 4. Research that ends in a known state
 
 - Research starts from the checklist and only pursues unresolved facts.
@@ -376,9 +398,8 @@ for London schemes.
 
 ## Unfinished, not to be reported as done
 
-- **Grouped classification worker.** Only the guard is built: a grouped member is never classified on
-  its own. Nothing yet assesses a family as one unit, and the guard is not deployed to the workers.
-  Bulk classification stays off.
+- **Grouped classification worker.** Built and compared on the pilot (see 3a); not deployed, and no
+  development has been graded by it live. The national re-grade waits for the selection test set.
 - **Selection rewrite and filter test (step 3).** Not started. That covers the new question, the
   labelled set, admitting extensions and the rejected-application samples.
 - **Transactional merge and detach (step 5).** Built 15 September (see the linking plan, step 5):
