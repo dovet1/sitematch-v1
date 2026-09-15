@@ -81,7 +81,7 @@ export function usePlanningList(enabled: boolean): PlanningListState {
       })
       .catch((error) => {
         if (error?.name === 'AbortError' || id !== requestId.current) return
-        setState((s) => ({ ...s, rows: [], totals: null, loading: false, error: error instanceof Error ? error.message : 'Planning data failed' }))
+        setState((s) => ({ ...s, rows: [], totals: null, totalsUnavailable: null, nextCursor: null, loading: false, error: error instanceof Error ? error.message : 'Planning data failed' }))
       })
     return () => controller.abort()
     // criteriaKey stands for criteria.

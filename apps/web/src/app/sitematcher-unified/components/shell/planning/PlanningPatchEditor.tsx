@@ -346,7 +346,7 @@ export function PlanningPatchEditor({
       <div className="relative mt-3 overflow-hidden rounded-2xl bg-[#0E1522]">
         <div ref={containerRef} className="h-[300px] w-full sm:h-[380px]" aria-label="Patch map" />
         {helper && (
-          <p className="pointer-events-none absolute bottom-3 left-3 right-3 text-[12.5px] font-semibold text-[#E5DEFF] [text-shadow:0_1px_2px_rgba(0,0,0,.6)]">{helper}</p>
+          <p className="pointer-events-none absolute left-3 right-24 top-3 text-[12.5px] font-semibold text-[#E5DEFF] [text-shadow:0_1px_2px_rgba(0,0,0,.6)]">{helper}</p>
         )}
         {mode === 'draw' && (
           <div className="absolute right-2 top-2 flex gap-1.5">

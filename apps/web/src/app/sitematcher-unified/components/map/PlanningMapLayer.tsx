@@ -181,11 +181,18 @@ export function PlanningMapLayer({
 
   const latest = useRef({ clusters, patchGeometry, stores, selectedKey, hoveredKey, onPickSingle })
   latest.current = { clusters, patchGeometry, stores, selectedKey, hoveredKey, onPickSingle }
+  // Set when an update could not be applied because the style was busy (isStyleLoaded is false
+  // while tiles load after a move). The next idle applies the latest data instead of dropping it.
+  const pending = useRef(false)
 
   // Sources, layers, viewport tracking and clicks: registered once per map.
   useEffect(() => {
     const sync = () => {
-      if (!ensureLayers(map)) return
+      if (!ensureLayers(map)) {
+        pending.current = true
+        return
+      }
+      pending.current = false
       const { clusters: c, patchGeometry: g, stores: st, selectedKey: sel, hoveredKey: hov } = latest.current
       ;(map.getSource(SRC_POINTS) as mapboxgl.GeoJSONSource).setData(clustersToGeoJSON(c))
       ;(map.getSource(SRC_PATCH) as mapboxgl.GeoJSONSource).setData(g ? { type: 'Feature', geometry: g, properties: {} } : EMPTY)
@@ -203,10 +210,10 @@ export function PlanningMapLayer({
       setViewport({ bbox: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], zoom: map.getZoom() })
     }
     const onStyle = () => sync()
-    // 'idle' only restores layers a style swap removed. Re-sending data on every idle would
-    // re-render the map and fire idle again, forever.
+    // 'idle' restores layers a style swap removed and applies an update that arrived while the style
+    // was busy. Re-sending data on every idle would re-render the map and fire idle again, forever.
     const onIdle = () => {
-      if (!map.getSource(SRC_POINTS)) sync()
+      if (pending.current || !map.getSource(SRC_POINTS)) sync()
     }
     const onClick = (e: mapboxgl.MapMouseEvent) => {
       const layers = [L_SINGLE, L_SINGLE_APPROX, L_CLUSTER].filter((id) => map.getLayer(id))
@@ -258,22 +265,34 @@ export function PlanningMapLayer({
 
   // Data and highlight updates.
   useEffect(() => {
-    if (!ensureLayers(map)) return
+    if (!ensureLayers(map)) {
+      pending.current = true
+      return
+    }
     ;(map.getSource(SRC_POINTS) as mapboxgl.GeoJSONSource).setData(clustersToGeoJSON(clusters))
   }, [map, clusters])
   useEffect(() => {
-    if (!ensureLayers(map)) return
+    if (!ensureLayers(map)) {
+      pending.current = true
+      return
+    }
     ;(map.getSource(SRC_PATCH) as mapboxgl.GeoJSONSource).setData(patchGeometry ? { type: 'Feature', geometry: patchGeometry, properties: {} } : EMPTY)
   }, [map, patchGeometry])
   useEffect(() => {
-    if (!ensureLayers(map)) return
+    if (!ensureLayers(map)) {
+      pending.current = true
+      return
+    }
     ;(map.getSource(SRC_STORES) as mapboxgl.GeoJSONSource).setData({
       type: 'FeatureCollection',
       features: stores.map((s) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [s.lon, s.lat] }, properties: { id: s.id } })),
     })
   }, [map, stores])
   useEffect(() => {
-    if (!ensureLayers(map)) return
+    if (!ensureLayers(map)) {
+      pending.current = true
+      return
+    }
     map.setFilter(L_SELECTED, ['==', ['get', 'rowKey'], selectedKey ?? '__none__'])
     map.setFilter(L_HOVER, ['==', ['get', 'rowKey'], hoveredKey ?? '__none__'])
   }, [map, selectedKey, hoveredKey])

@@ -164,6 +164,8 @@ export function PlanningMonitorPanel({
             </>
           ) : list.totalsUnavailable ? (
             <span className="text-sm-ink3">Too many to count at once — zoom in or narrow the dates.</span>
+          ) : list.error ? (
+            <span className="text-sm-ink3">Counts are unavailable for this view.</span>
           ) : null}
         </p>
         {mapState.viewportApplications != null && (

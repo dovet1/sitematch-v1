@@ -6,13 +6,37 @@ Date: 15 September 2026. Companion to `docs/planning-monitor-implementation-plan
 
 1. ~~Apply `supabase/migrations/20261012000000_planning_monitor.sql`~~ (applied 15 Sep). It adds tables, functions and triggers, and seeds three flags as **off**. It also adds two indexes on `planning_applications`: `date_decided` and `date_validated`.
 1a. ~~Apply `supabase/migrations/20261014000000_planning_monitor_review_fixes.sql`~~ (applied 15 Sep). The worker now calls `planning_monitor_finish_run`, which this migration adds. Without it, every run fails at save. The migration fixes three review findings: weekly reports are scheduled regardless of email preference, a report and its delivery commit together, and ambiguous delivery retries are leased. The fixtures are in `supabase/tests/planning-monitor/review-fixes.sql`, and they pass on local PostGIS.
+1b. **Apply `supabase/migrations/20261015000000_planning_monitor_national_proximity.sql`.** Then re-time All UK with store proximity (see "Desktop walkthrough" below). Results are unchanged; only `planning_monitor_match_sql` is replaced. The fixtures are in `supabase/tests/planning-monitor/national-proximity.sql`: the national path matched the per-record probe in all 12 cases, and `fixtures.sql` output is identical.
 2. From `apps/web`, run the Phase 2 gate: `../../node_modules/.bin/tsx scripts/check-planning-monitor-queries.ts`. It times count, view and list reads on the live store and checks that they agree. Compare the results with the plan's targets: count under 1 s, viewport under 1.5 s.
-3. Turn on `planning_monitor_enabled` for internal testing only. The Planning rail item appears, and the APIs stop returning 404.
-4. Check the UI signed in: national → patch → edit → save/cancel → select a row or pin → report, then mobile width and every existing mode.
+3. ~~Turn on `planning_monitor_enabled` for internal testing only.~~ (on since 15 Sep; the code is on `july-sitematcher-upgrade` only, not deployed). The Planning rail item appears, and the APIs stop returning 404.
+4. Desktop only (mobile is out of scope). Walked through signed in on 15 Sep; see "Desktop walkthrough". Still to check: save, watch, and a report. Check the UI signed in: national → patch → edit → save/cancel → select a row or pin → report, then mobile width and every existing mode.
 5. AI briefings: set `PLANNING_MONITOR_MODEL`, then flip `planning_monitor_ai_enabled`. Choose the model by evaluation; none is hard-coded. Optional: `PLANNING_MONITOR_MONTHLY_BUDGET_USD` (default 10).
 6. Email: configure the Resend webhook (`email.bounced`, `email.complained`) to `/api/webhooks/resend-planning-monitor`. Set `RESEND_PLANNING_MONITOR_WEBHOOK_SECRET`, then flip `planning_monitor_email_enabled` for internal recipients first.
 
 The migration is applied. Nothing is deployed, all flags are off, and no subscription or schedule is live.
+
+## Desktop walkthrough (15 Sep, signed in, local dev against live data)
+
+Worked:
+- Patch view: totals, "may be in this area", criteria chips, the list in both groupings, clusters, the patch outline and the estate's store squares.
+- Selecting a row flies the map to it and opens the popover.
+- The criteria editor frames the saved patch and shows a live count. Cancel leaves the patch unchanged.
+- Switching to Assess and back restores each mode's basemap and layers.
+
+Fixed in the working tree:
+- **Stale map markers.** Cluster updates were dropped when they arrived while tiles loaded after a move, because `isStyleLoaded()` was false. They are now applied at the next idle.
+- **A failed list kept the previous scope's "Show more".** The totals line also went blank without saying why.
+- **The editor's draw hint overlapped the Mapbox logo.**
+- **All UK with store proximity timed out.** Live timings for Lidl and Aldi at 3 miles, all UK by received date:
+  - this year: 5.5–5.8 s count, against 0.3–0.5 s without proximity
+  - 90 days: 2.1 s
+  - 30 days: 0.55 s
+  - The page reads the count and the list together, which passes 8 s. Fixed by migration 20261015; still to be re-timed live.
+
+Open:
+- **Duplicate applications from shared portals.** Mid Kent's `26/503351/FULL` is stored three times, under Swale, Maidstone and Mid Kent, and counts three times. This is ingest, not the Monitor. A separate task was suggested.
+- **An intermittent 404 from `/api/planning-monitor/query`.** Two were seen during rapid scope and grouping switches; 12 sequential and 16 parallel requests did not reproduce it. The access guard reads the flag and fails closed, which would return this 404, so it is a candidate.
+- **"Preparing your first briefing" never resolves locally**, because no worker runs there. Reports were not seen.
 
 ## Phase 1 — core data and contracts
 
