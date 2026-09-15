@@ -23,6 +23,10 @@
     {
       "path": "/api/cron/match-store-floor-areas",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/planning-monitor",
+      "schedule": "*/15 * * * *"
     }
   ],
   "functions": {
@@ -54,6 +58,9 @@
       "maxDuration": 300
     },
     "app/api/cron/classify-planning/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/cron/planning-monitor/route.ts": {
       "maxDuration": 300
     }
   },

@@ -53,3 +53,22 @@ export const RETAIL_CENTRE_GAPS_FLAG = 'retail_centre_gaps_enabled'
 export function isRetailCentreGapsEnabled(): Promise<boolean> {
   return isFeatureEnabled(RETAIL_CENTRE_GAPS_FLAG)
 }
+
+// Planning Monitor (SiteMatcher unified workspace, Planning mode). Three independent switches so
+// a send problem never takes the map down: the mode itself, AI briefing generation, and weekly
+// email sending. All off by default. See docs/planning-monitor-implementation-plan.md §6.
+export const PLANNING_MONITOR_FLAG = 'planning_monitor_enabled'
+export const PLANNING_MONITOR_AI_FLAG = 'planning_monitor_ai_enabled'
+export const PLANNING_MONITOR_EMAIL_FLAG = 'planning_monitor_email_enabled'
+
+export function isPlanningMonitorEnabled(): Promise<boolean> {
+  return isFeatureEnabled(PLANNING_MONITOR_FLAG)
+}
+
+export function isPlanningMonitorAiEnabled(): Promise<boolean> {
+  return isFeatureEnabled(PLANNING_MONITOR_AI_FLAG)
+}
+
+export function isPlanningMonitorEmailEnabled(): Promise<boolean> {
+  return isFeatureEnabled(PLANNING_MONITOR_EMAIL_FLAG)
+}
