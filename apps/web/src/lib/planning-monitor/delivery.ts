@@ -85,6 +85,8 @@ export async function processDeliveries(limit: number, db: PlanningAdminClient =
     const delivery = ((data ?? []) as DeliveryRecord[])[0]
     if (!delivery) break
     const now = new Date()
+    // Every write below is fenced on this claim's attempt number: a worker whose lease expired and
+    // was reclaimed cannot overwrite the newer claim's outcome.
 
     const decision = decideDelivery({
       state: delivery.state,
@@ -93,7 +95,7 @@ export async function processDeliveries(limit: number, db: PlanningAdminClient =
       eligible: await stillEligible(db, delivery),
     })
     if (decision === 'suppress') {
-      await db.from('planning_monitor_deliveries').update({ state: 'suppressed', lease_expires_at: null, updated_at: now.toISOString() }).eq('id', delivery.id)
+      await db.from('planning_monitor_deliveries').update({ state: 'suppressed', lease_expires_at: null, updated_at: now.toISOString() }).eq('id', delivery.id).eq('attempts', delivery.attempts)
       outcomes.push({ id: delivery.id, state: 'suppressed' })
       continue
     }
@@ -104,7 +106,7 @@ export async function processDeliveries(limit: number, db: PlanningAdminClient =
         next_attempt_at: '9999-12-31T00:00:00Z',
         lease_expires_at: null,
         updated_at: now.toISOString(),
-      }).eq('id', delivery.id)
+      }).eq('id', delivery.id).eq('attempts', delivery.attempts)
       outcomes.push({ id: delivery.id, state: 'ambiguous' })
       continue
     }
@@ -150,7 +152,7 @@ export async function processDeliveries(limit: number, db: PlanningAdminClient =
           next_attempt_at: new Date(now.getTime() + backoffMs(delivery.attempts)).toISOString(),
           lease_expires_at: null,
           updated_at: now.toISOString(),
-        }).eq('id', delivery.id)
+        }).eq('id', delivery.id).eq('attempts', delivery.attempts)
         outcomes.push({ id: delivery.id, state: 'failed', error: message })
         continue
       }
@@ -161,7 +163,7 @@ export async function processDeliveries(limit: number, db: PlanningAdminClient =
         last_error: null,
         lease_expires_at: null,
         updated_at: now.toISOString(),
-      }).eq('id', delivery.id)
+      }).eq('id', delivery.id).eq('attempts', delivery.attempts)
       outcomes.push({ id: delivery.id, state: 'sent' })
     } catch (err) {
       // Network failure: the provider may or may not have accepted it. Retry under the same key.
@@ -172,7 +174,7 @@ export async function processDeliveries(limit: number, db: PlanningAdminClient =
         next_attempt_at: new Date(now.getTime() + backoffMs(delivery.attempts)).toISOString(),
         lease_expires_at: null,
         updated_at: now.toISOString(),
-      }).eq('id', delivery.id)
+      }).eq('id', delivery.id).eq('attempts', delivery.attempts)
       outcomes.push({ id: delivery.id, state: 'ambiguous', error: message })
     }
   }

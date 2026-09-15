@@ -42,6 +42,7 @@ import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
 import { useSubscriptionTier } from '@/hooks/useSubscriptionTier'
 import { TIER_FEATURES } from '@/lib/sitesketcher-v2/constants'
 import {
+  PlanningMobilePaneSwitch,
   PlanningModeMapOverlay,
   PlanningModeModals,
   PlanningModePanel,
@@ -588,6 +589,8 @@ export function UnifiedWorkspace() {
             />
           )}
         </main>
+
+        {isPlanning && <PlanningMobilePaneSwitch />}
 
         {isSketch && sketchActive && <USketchInspector />}
 

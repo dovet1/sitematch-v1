@@ -28,6 +28,30 @@ export const NEW_APPLICATION_GRACE_DAYS = 14
 
 const DECISION_STAGES = new Set(['approved', 'refused', 'withdrawn'])
 
+const UK_DATE = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' })
+
+/**
+ * The UK calendar date (YYYY-MM-DD) of an instant. Council dates are UK calendar dates, and a
+ * period boundary is local midnight, which in summer is 23:00 UTC the day before; slicing the
+ * ISO string would put the whole week one day early.
+ */
+export function ukDate(instant: string | number): string {
+  return UK_DATE.format(new Date(instant))
+}
+
+/** A calendar date moved by whole days, independent of clock changes. */
+export function addDays(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10)
+}
+
+/** The UK calendar dates a period [start, end) covers, as an inclusive first day and an exclusive end day. */
+export function periodDates(periodStart: string, periodEnd: string): { startDate: string; endDate: string } {
+  return { startDate: ukDate(periodStart), endDate: ukDate(periodEnd) }
+}
+
+/** Only the scheme's own application states its homes; follow-ons restate a permission already counted. */
+const HOME_STATING_ROLES = new Set(['primary', 'principal'])
+
 function decisionCategory(stage: string | null): ChangeCategory {
   if (stage === 'approved' || stage === 'refused' || stage === 'withdrawn') return stage
   return 'decided_other'
@@ -45,9 +69,8 @@ export function categoriseChanges(input: {
   periodEnd: string
   kind: 'initial' | 'preview' | 'scheduled'
 }): CategorisedChange[] {
-  const startDate = input.periodStart.slice(0, 10)
-  const endDate = input.periodEnd.slice(0, 10)
-  const graceStart = new Date(Date.parse(input.periodStart) - NEW_APPLICATION_GRACE_DAYS * 86_400_000).toISOString().slice(0, 10)
+  const { startDate, endDate } = periodDates(input.periodStart, input.periodEnd)
+  const graceStart = addDays(startDate, -NEW_APPLICATION_GRACE_DAYS)
   const byApplication = new Map<string, ChangeEvent[]>()
   const byDevelopment = new Map<string, ChangeEvent[]>()
   for (const event of input.events) {
@@ -115,14 +138,16 @@ export function countChanges(changes: CategorisedChange[]): NonNullable<DigestRe
   const newOnes = changes.filter((c) => has(c, 'new'))
   const approvals = changes.filter((c) => has(c, 'approved'))
 
-  // Homes are counted once per development: a parent permission, its reserved matters and its
-  // discharges all state the same scheme. The largest known figure in the family stands for it.
+  // Homes are counted from the approval of the scheme's own application only. Reserved matters,
+  // amendments and discharges restate a permission that was counted when it was granted, possibly
+  // in an earlier week, so approving them adds no homes. A standalone application has no role.
   // A family still waiting for its original permission contributes nothing to the confident total.
   const homesByDevelopment = new Map<string, number>()
   const unresolved = new Set<string>()
   for (const change of approvals) {
     const row = change.row
     if (!row.isResidential || row.dwellings == null) continue
+    if (row.developmentId && !HOME_STATING_ROLES.has(row.developmentRole ?? '')) continue
     if (row.familyState === 'awaiting_original') {
       unresolved.add(groupKey(row))
       continue

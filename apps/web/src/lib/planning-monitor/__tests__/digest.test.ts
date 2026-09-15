@@ -74,6 +74,22 @@ describe('categoriseChanges', () => {
     expect(categoriseChanges({ ...PERIOD, kind: 'scheduled', rows: [r], events: [] })[0].categories).toEqual(['refused'])
   })
 
+  it('reads a summer week as UK calendar dates, not the UTC day before', () => {
+    // Local midnight 14 Sep is 23:00 UTC on 13 Sep; the week runs 14–20 Sep inclusive.
+    const sundayBefore = row({ applicationId: 'sun13', dateReceived: '2026-01-01', stage: 'approved', dateDecided: '2026-09-13' })
+    const lastDay = row({ applicationId: 'sun20', dateReceived: '2026-01-01', stage: 'approved', dateDecided: '2026-09-20' })
+    const changes = categoriseChanges({ ...PERIOD, kind: 'scheduled', rows: [sundayBefore, lastDay], events: [] })
+    expect(changes.map((c) => c.row.applicationId)).toEqual(['sun20'])
+  })
+
+  it('treats the new-application grace window in UK dates', () => {
+    // Grace starts 14 days before 14 Sep, on 31 Aug; 30 Aug is a late discovery.
+    const edge = row({ applicationId: 'edge', dateReceived: '2026-08-31' })
+    const before = row({ applicationId: 'before', dateReceived: '2026-08-30' })
+    const changes = categoriseChanges({ ...PERIOD, kind: 'scheduled', rows: [edge, before], events: [event('observed', 'edge'), event('observed', 'before')] })
+    expect(changes.map((c) => [c.row.applicationId, c.categories])).toEqual([['edge', ['new']], ['before', ['late_discovery']]])
+  })
+
   it('maps development-level dwelling reviews to the development’s rows', () => {
     const r = row({ applicationId: 'z', developmentId: 'dev', dateReceived: '2026-01-01' })
     expect(categoriseChanges({ ...PERIOD, kind: 'scheduled', rows: [r], events: [event('dwellings_reviewed', null, null, 'dev')] })[0].categories).toEqual(['dwellings_changed'])
@@ -91,6 +107,23 @@ describe('countChanges', () => {
     expect(counts.knownNewDwellings).toBe(300)
     expect(rankChanges(changes)).toHaveLength(1)
     expect(rankChanges(changes)[0].row.applicationId).toBe('parent')
+  })
+
+  it('adds no homes when only paperwork on an existing scheme is approved', () => {
+    // The 300-home permission was granted weeks ago; this week a condition and reserved matters are approved.
+    const followOns = [
+      row({ applicationId: 'cond', developmentId: 'dev3', developmentRole: 'condition', stage: 'approved', dateDecided: '2026-09-16', dateReceived: '2026-07-01', dwellings: 300 }),
+      row({ applicationId: 'rm', developmentId: 'dev3', developmentRole: 'member', stage: 'approved', dateDecided: '2026-09-17', dateReceived: '2026-06-01', dwellings: 300 }),
+      row({ applicationId: 'var', developmentId: 'dev3', developmentRole: 'amendment', stage: 'approved', dateDecided: '2026-09-18', dateReceived: '2026-06-01', dwellings: 300 }),
+    ]
+    const counts = countChanges(categoriseChanges({ ...PERIOD, kind: 'scheduled', rows: followOns, events: followOns.map((r) => event('decided', r.applicationId, { stage: 'approved' })) }))
+    expect(counts.approvals).toBe(3)
+    expect(counts.knownNewDwellings).toBe(0)
+  })
+
+  it('counts a standalone approval that belongs to no development', () => {
+    const r = row({ applicationId: 'solo', stage: 'approved', dateDecided: '2026-09-16', dwellings: 40 })
+    expect(countChanges(categoriseChanges({ ...PERIOD, kind: 'scheduled', rows: [r], events: [] })).knownNewDwellings).toBe(40)
   })
 
   it('keeps a family awaiting its original out of confident totals', () => {

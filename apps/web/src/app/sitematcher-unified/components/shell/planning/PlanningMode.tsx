@@ -190,8 +190,6 @@ export function PlanningModeMapOverlay({ map }: { map: mapboxgl.Map }) {
   const patches = usePlanningMonitorStore((s) => s.patches)
   const activePatchId = usePlanningMonitorStore((s) => s.activePatchId)
   const scope = usePlanningMonitorStore((s) => s.scope)
-  const mobilePane = usePlanningMonitorStore((s) => s.mobilePane)
-  const setMobilePane = usePlanningMonitorStore((s) => s.setMobilePane)
   const setPlanningModal = useWorkspaceStore((s) => s.setPlanningModal)
   const patch = patches.find((p) => p.id === activePatchId) ?? null
 
@@ -233,14 +231,25 @@ export function PlanningModeMapOverlay({ map }: { map: mapboxgl.Map }) {
         <p className="mt-1 flex items-center gap-2"><span className="h-3 w-3 rounded-full border-[3px] border-[#8B6CFF]" />Approximate location</p>
         {stores.length > 0 && <p className="mt-1 flex items-center gap-2"><span className="h-3 w-3 rounded-[3px] bg-[#0EAE73]" />Selected store estate</p>}
       </div>
-      <button
-        type="button"
-        onClick={() => setMobilePane(mobilePane === 'map' ? 'list' : 'map')}
-        className="absolute bottom-6 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#1C1B22] px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg lg:hidden"
-      >
-        {mobilePane === 'map' ? <><List size={15} aria-hidden /> List</> : <><MapIcon size={15} aria-hidden /> Map</>}
-      </button>
     </>
+  )
+}
+
+/**
+ * The small-screen Map/List switch. It sits outside both panes, because whichever pane is not
+ * showing is hidden, and a switch inside it would vanish with it.
+ */
+export function PlanningMobilePaneSwitch() {
+  const mobilePane = usePlanningMonitorStore((s) => s.mobilePane)
+  const setMobilePane = usePlanningMonitorStore((s) => s.setMobilePane)
+  return (
+    <button
+      type="button"
+      onClick={() => setMobilePane(mobilePane === 'map' ? 'list' : 'map')}
+      className="fixed bottom-6 left-1/2 z-30 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#1C1B22] px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg lg:hidden"
+    >
+      {mobilePane === 'map' ? <><List size={15} aria-hidden /> List</> : <><MapIcon size={15} aria-hidden /> Map</>}
+    </button>
   )
 }
 

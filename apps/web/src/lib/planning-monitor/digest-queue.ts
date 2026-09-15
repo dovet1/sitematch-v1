@@ -5,8 +5,10 @@ import { FRESHNESS_UNAVAILABLE, readPlanningFreshness } from '@/lib/planning-int
 import { isPlanningMonitorAiEnabled, isPlanningMonitorEmailEnabled } from '@/lib/feature-flags'
 import { buildPredicate, parseCriteria, type MonitorCriteria } from './criteria'
 import {
+  addDays,
   categoriseChanges,
   countChanges,
+  periodDates,
   evidencePacket,
   rankChanges,
   toHighlight,
@@ -80,6 +82,7 @@ interface RunRecord {
   period_end: string
   period_label: string
   attempts: number
+  lease_owner: string | null
   created_at: string
 }
 
@@ -157,8 +160,9 @@ export async function selectChanges(
 ): Promise<FrozenSelection> {
   const watches = await loadWatches(db, input.userId)
   const base = buildPredicate(input.criteria, { boundary: input.geometry, watchedApplicationIds: watches.applicationIds, applyDates: false })
-  const startDate = input.run.period_start.slice(0, 10)
-  const endDate = new Date(Date.parse(input.run.period_end) - 1).toISOString().slice(0, 10)
+  // The RPC's date range is inclusive, so the last day is the day before the exclusive end.
+  const { startDate, endDate: endExclusive } = periodDates(input.run.period_start, input.run.period_end)
+  const endDate = addDays(endExclusive, -1)
 
   const byId = new Map<string, MonitorRow>()
   const add = (rows: MonitorRow[]) => rows.forEach((r) => byId.set(r.applicationId, r))
@@ -171,7 +175,9 @@ export async function selectChanges(
     const ids = [...new Set([...events.map((e) => e.applicationId).filter((id): id is string => Boolean(id)), ...(await applicationIdsForDevelopments(db, devIds))])]
     for (let i = 0; i < ids.length; i += 1000) add(await matchedRows(db, { ...base, application_ids: ids.slice(i, i + 1000) }, watches))
     // Watched families with events, regardless of the patch's filters (base eligibility still applies).
-    const watchedIds = ids.filter((id) => watches.applications.has(id))
+    // Watching one application watches its whole development, so a changed sibling counts too.
+    const watchedFamily = new Set([...watches.applications, ...(await applicationIdsForDevelopments(db, [...watches.developments]))])
+    const watchedIds = ids.filter((id) => watchedFamily.has(id))
     if (watchedIds.length) {
       const watchedPredicate = buildPredicate(
         { ...input.criteria, residential: { enabled: true, minDwellings: 15 }, commercial: { enabled: true, work: [] }, stages: [], procedures: [], proximity: null, keywords: { include: [], exclude: [] }, watchedOnly: false, exactLocationsOnly: false },
@@ -312,10 +318,14 @@ export async function generateRun(run: RunRecord, db: PlanningAdminClient = crea
     changes: selection.changes.map((c) => ({ applicationId: c.row.applicationId, developmentId: c.row.developmentId, categories: c.categories, watched: c.watched, row: c.row })),
   }
 
-  const { data: updated, error: updateError } = await db
-    .from('planning_monitor_digest_runs')
-    .update({
-      status: 'generated',
+  const recipient = run.kind === 'scheduled' ? await deliveryRecipient(db, run, patchRow.owner_id, selection.changes.length === 0) : null
+
+  // The report and its delivery commit together: a crash can leave the run running (and it is
+  // reclaimed when the lease expires), never generated without the email it owes.
+  const { data: finished, error: finishError } = await db.rpc('planning_monitor_finish_run', {
+    p_run_id: run.id,
+    p_lease_owner: run.lease_owner,
+    p_result: {
       report,
       input_snapshot: inputSnapshot,
       summary_kind: summaryKind!,
@@ -325,35 +335,25 @@ export async function generateRun(run: RunRecord, db: PlanningAdminClient = crea
       prompt_version: model ? DIGEST_PROMPT_VERSION : null,
       usage,
       latency_ms: Date.now() - started,
-      generated_at: new Date().toISOString(),
-      lease_owner: null,
-      lease_expires_at: null,
-      error: null,
-    })
-    .eq('id', run.id)
-    .eq('status', 'running')
-    .select('id')
-  if (updateError) throw updateError
-  if (!updated?.length) return { runId: run.id, status: 'failed', error: 'Lease lost before save' }
-
-  const deliveries = run.kind === 'scheduled' ? await createDeliveries(db, run, patchRow.owner_id, selection.changes.length === 0) : 0
-  return { runId: run.id, status: 'generated', summaryKind: summaryKind!, deliveries }
+    },
+    p_delivery: recipient,
+  })
+  if (finishError) throw finishError
+  if (finished !== true) return { runId: run.id, status: 'failed', error: 'Lease lost before save' }
+  return { runId: run.id, status: 'generated', summaryKind: summaryKind!, deliveries: recipient ? 1 : 0 }
 }
 
-/** One delivery per scheduled run and recipient, keyed so a retried worker cannot create a second. */
-async function createDeliveries(db: PlanningAdminClient, run: RunRecord, ownerId: string, quiet: boolean): Promise<number> {
-  if (!run.subscription_id || !(await isPlanningMonitorEmailEnabled())) return 0
-  const { data: sub } = await db.from('planning_monitor_subscriptions').select('id, user_id, email_enabled, skip_quiet_weeks, unsubscribed_at').eq('id', run.subscription_id).maybeSingle()
-  if (!sub || !sub.email_enabled || sub.unsubscribed_at || sub.user_id !== ownerId) return 0
-  if (quiet && sub.skip_quiet_weeks) return 0
-  const { data: user } = await db.from('users').select('email').eq('id', sub.user_id).maybeSingle()
-  if (!user?.email) return 0
-  const { error } = await db.from('planning_monitor_deliveries').upsert(
-    { run_id: run.id, subscription_id: sub.id, user_id: sub.user_id, email: user.email, delivery_key: `pm-${run.id}-${sub.user_id}` },
-    { onConflict: 'delivery_key', ignoreDuplicates: true }
-  )
+/** The one recipient a scheduled run owes an email, or null. The delivery key stops a retry creating a second. */
+async function deliveryRecipient(db: PlanningAdminClient, run: RunRecord, ownerId: string, quiet: boolean) {
+  if (!run.subscription_id || !(await isPlanningMonitorEmailEnabled())) return null
+  const { data: sub, error } = await db.from('planning_monitor_subscriptions').select('id, user_id, email_enabled, skip_quiet_weeks, unsubscribed_at').eq('id', run.subscription_id).maybeSingle()
   if (error) throw error
-  return 1
+  if (!sub || !sub.email_enabled || sub.unsubscribed_at || sub.user_id !== ownerId) return null
+  if (quiet && sub.skip_quiet_weeks) return null
+  const { data: user, error: userError } = await db.from('users').select('email').eq('id', sub.user_id).maybeSingle()
+  if (userError) throw userError
+  if (!user?.email) return null
+  return { subscription_id: sub.id as string, user_id: sub.user_id as string, email: user.email as string, delivery_key: `pm-${run.id}-${sub.user_id}` }
 }
 
 /** Claim and generate up to `limit` runs. Failures past the attempt limit are marked failed. */
