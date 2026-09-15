@@ -74,10 +74,32 @@ describe('fetchStoredPlanningApplications', () => {
   it('asks the database to rank and cap, rather than doing either here', async () => {
     pages({ data: [row()], error: null })
     await fetchStoredPlanningApplications(BOUNDARY)
-    expect(rpc).toHaveBeenCalledWith('planning_tab_applications_v3', {
+    expect(rpc).toHaveBeenCalledWith('planning_tab_applications_v4', {
       p_boundary: BOUNDARY,
       p_limit: 2001,
     })
+  })
+
+  it('falls back to v3 until the v4 migration is applied, and carries roles when v4 answers', async () => {
+    pages({ data: [row()], error: null })
+    const original = rpc.getMockImplementation()!
+    rpc.mockImplementation((fn: string, args: unknown) => {
+      if (fn === 'planning_tab_applications_v4') {
+        const missing = { code: 'PGRST202', message: 'Could not find the function' }
+        const builder = { order: () => builder, range: () => builder, then: (f: (v: unknown) => unknown) => Promise.resolve({ data: null, error: missing }).then(f) }
+        return builder
+      }
+      return original(fn, args)
+    })
+    const fallback = await fetchStoredPlanningApplications(BOUNDARY)
+    expect(rpc).toHaveBeenCalledWith('planning_tab_applications_v3', expect.anything())
+    expect(fallback.applications).toHaveLength(1)
+    expect(fallback.applications[0].developmentRole).toBeNull()
+
+    pages({ data: [row({ development_role: 'condition', family_state: 'awaiting_original' })], error: null })
+    const [app] = (await fetchStoredPlanningApplications(BOUNDARY)).applications
+    expect(app.developmentRole).toBe('condition')
+    expect(app.familyState).toBe('awaiting_original')
   })
 
   it('carries the classification through to the tab', async () => {

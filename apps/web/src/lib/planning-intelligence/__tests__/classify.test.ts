@@ -8,6 +8,7 @@ import { DEFAULT_CLASSIFICATION_RESERVATION_USD } from '../budget'
 import {
   CLASSIFICATION_ITEM_TIMEOUT_MS,
   CLASSIFICATION_LEASE_MS,
+  classificationScope,
   classifyPlanningBatch,
 } from '../classify'
 
@@ -30,7 +31,7 @@ class Builder implements PromiseLike<Result> {
   ): PromiseLike<A | B> {
     let result: Result = { data: null, error: null }
     if (this.table === 'development_applications' && this.op === 'select') {
-      result = { data: { development_id: 'development-1', role: membershipRole }, error: null }
+      result = { data: { development_id: 'development-1', role: membershipRole, developments: { principal_application_id: principalApplicationId } }, error: null }
     } else if (this.table === 'planning_classification_runs' && this.op === 'upsert') {
       result = { data: { id: 'run-1', status: 'running' }, error: null }
     }
@@ -51,6 +52,7 @@ function application(state: string, startedAt: string | null = null) {
 }
 
 let membershipRole = 'primary'
+let principalApplicationId: string | null = null
 
 function makeDb(candidates: ReturnType<typeof application>[]) {
   const writes: Write[] = []
@@ -98,7 +100,26 @@ const result = {
 
 describe('grouped members', () => {
   beforeEach(() => { jest.clearAllMocks(); mockClassifyWithOpenRouter.mockResolvedValue(result) })
-  afterEach(() => { membershipRole = 'primary' })
+  afterEach(() => { membershipRole = 'primary'; principalApplicationId = null })
+
+  it('classifies a section 73 in a family but keeps its reading off the development', async () => {
+    membershipRole = 'amendment'
+    principalApplicationId = 'the-original'
+    const { db, writes } = makeDb([application('queued')])
+    const batch = await classifyPlanningBatch({ db, apiKey: 'key', limit: 1 })
+    expect(batch.classified).toBe(1)
+    expect(mockClassifyWithOpenRouter).toHaveBeenCalledTimes(1)
+    expect(writes.some(write => write.table === 'developments')).toBe(false)
+    expect(writes).toContainEqual(expect.objectContaining({ table: 'planning_classification_runs', payload: expect.objectContaining({ development_id: 'development-1' }) }))
+  })
+
+  it('lets the principal write its development', async () => {
+    membershipRole = 'principal'
+    principalApplicationId = 'queued-application'
+    const { db, writes } = makeDb([application('queued')])
+    await classifyPlanningBatch({ db, apiKey: 'key', limit: 1 })
+    expect(writes).toContainEqual(expect.objectContaining({ table: 'developments', op: 'update', payload: expect.objectContaining({ relevance: 'high' }) }))
+  })
 
   it('never classifies an application grouped into another development, and leaves that development alone', async () => {
     membershipRole = 'related'
@@ -173,5 +194,38 @@ describe('classification worker leases', () => {
       table: 'planning_applications', op: 'update',
       payload: { classification_state: 'failed', classification_started_at: null },
     })
+  })
+})
+
+describe('classificationScope', () => {
+  it('lets only one member of a family describe it', () => {
+    expect(classificationScope('primary', null, 'a')).toBe('development')
+    expect(classificationScope('principal', 'a', 'a')).toBe('development')
+    expect(classificationScope('amendment', 'a', 'b')).toBe('application')
+    expect(classificationScope('amendment', null, 'b')).toBe('application')
+    expect(classificationScope('condition', 'a', 'c')).toBe('skip')
+    expect(classificationScope('related', null, 'c')).toBe('skip')
+    expect(classificationScope('member', 'a', 'd')).toBe('skip')
+    // A legacy primary row left behind in a family no longer describes it once a principal is set.
+    expect(classificationScope('primary', 'a', 'b')).toBe('application')
+  })
+
+  it('makes the development\'s description independent of classification order', () => {
+    const family = [
+      { id: 'original', role: 'principal', summary: 'Warehouse club' },
+      { id: 's73', role: 'amendment', summary: 'Varied layout' },
+      { id: 'condition', role: 'condition', summary: 'Travel plan details' },
+      { id: 'nma', role: 'related', summary: 'Mezzanine sizes' },
+    ]
+    const permutations = (items: typeof family): Array<typeof family> => items.length <= 1 ? [items]
+      : items.flatMap((item, index) => permutations([...items.slice(0, index), ...items.slice(index + 1)]).map(rest => [item, ...rest]))
+    const outcomes = new Set(permutations(family).map(order => {
+      let described: string | null = null
+      for (const member of order) {
+        if (classificationScope(member.role, 'original', member.id) === 'development') described = member.summary
+      }
+      return described
+    }))
+    expect([...outcomes]).toEqual(['Warehouse club'])
   })
 })

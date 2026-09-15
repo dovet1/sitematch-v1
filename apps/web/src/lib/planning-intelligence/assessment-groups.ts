@@ -51,7 +51,9 @@ export interface AssessmentPlan {
   awaitingParent: Array<{ applicationIds: string[]; missingParentReferences: string[] }>
 }
 
-const NON_MATERIAL = /\bnon[\s-]*material\b/i
+// A section 96A application is a non-material amendment by law, whether or not the description says
+// so: "Application under s96a ... for amendments to Condition 2 (Approved drawings)" at Nine Elms.
+const NON_MATERIAL = /\bnon[\s-]*material\b|\bs(?:ection)?\.?\s*96\s*a\b/i
 
 /** Paperwork that does not change what is built. */
 export function isRoutineFollowOn(application: Pick<LinkableApplication, 'description' | 'procedure'>): boolean {

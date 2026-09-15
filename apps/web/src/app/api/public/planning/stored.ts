@@ -48,6 +48,9 @@ interface StoredRow {
   eligibility_limbs?: string[] | null
   intelligence_tier: boolean
   development_id: string | null
+  /** v4 onwards: the application's role in its Development, and that Development's family state. */
+  development_role?: string | null
+  family_state?: string | null
   relevance: 'high' | 'medium' | 'low' | null
   summary: string | null
   model_dwelling_basis?: string | null
@@ -80,6 +83,31 @@ function isVisiblePlanningScheme(row: StoredRow): boolean {
   return commercial || (dwellings != null && dwellings >= 15)
 }
 
+const TAB_READ_V4 = 'planning_tab_applications_v4'
+const TAB_READ_V3 = 'planning_tab_applications_v3'
+
+function isMissingFunction(error: unknown): boolean {
+  return (error as { code?: string } | null)?.code === 'PGRST202'
+}
+
+async function readRanked(
+  db: ReturnType<typeof createPlanningAdminClient>,
+  name: string,
+  boundary: Boundary
+): Promise<StoredRow[]> {
+  const rows: StoredRow[] = []
+  for (const [from, to] of [[0, 999], [1000, 1999], [2000, 2000]] as const) {
+    const { data, error } = await db
+      .rpc(name, { p_boundary: boundary, p_limit: RECORD_CAP + 1 })
+      .order('sort_rank', { ascending: true })
+      .range(from, to)
+    if (error) throw error
+    rows.push(...((data ?? []) as StoredRow[]))
+    if ((data ?? []).length < to - from + 1) break
+  }
+  return rows
+}
+
 export async function fetchStoredPlanningApplications(boundary: Boundary): Promise<PlanningResult> {
   const db = createPlanningAdminClient()
   // Read freshness alongside the applications, not after them. A caller that has to ask a
@@ -108,16 +136,14 @@ export async function fetchStoredPlanningApplications(boundary: Boundary): Promi
   // for uncertain points outside the boundary. Measured 14 Sep 2026 on Micro compute: warm
   // reads 0.1-1.0 s against v2's 0.2-5.1 s, identical apart from a few rows on the 1,500 m
   // allowance line (see migration 20261005000000).
-  const rows: StoredRow[] = []
-  for (const [from, to] of [[0, 999], [1000, 1999], [2000, 2000]] as const) {
-    const { data, error } = await db
-      .rpc('planning_tab_applications_v3', { p_boundary: boundary, p_limit: RECORD_CAP + 1 })
-      .order('sort_rank', { ascending: true })
-      .range(from, to)
-    if (error) throw error
-    rows.push(...((data ?? []) as StoredRow[]))
-    if ((data ?? []).length < to - from + 1) break
-  }
+  //
+  // v4 adds each application's role in its Development and ranks paperwork after every scheme
+  // (linking plan, step 5). Until its migration is applied the read falls back to v3, which has the
+  // same rows without roles, so deploying this code first cannot break the tab.
+  const rows = await readRanked(db, TAB_READ_V4, boundary).catch(async (error: unknown) => {
+    if (!isMissingFunction(error)) throw error
+    return readRanked(db, TAB_READ_V3, boundary)
+  })
 
   const applications: PlanningApplication[] = []
   for (const row of rows.slice(0, RECORD_CAP)) {
@@ -142,6 +168,8 @@ export async function fetchStoredPlanningApplications(boundary: Boundary): Promi
       agentAddress: null,
       provider: 'plota',
       developmentId: row.development_id,
+      developmentRole: row.development_role ?? null,
+      familyState: row.family_state ?? null,
       intelligenceTier: row.intelligence_tier,
       locationProvenance: row.location_provenance,
       commercialWork: row.commercial_work,

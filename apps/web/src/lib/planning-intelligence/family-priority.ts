@@ -17,10 +17,16 @@ export interface LookupSignals {
   latestChildReceived: string | null
   /** A follow-on's description quotes a parent proposal that reads as commercial or major housing. */
   quotesMajorProposal: boolean
+  /**
+   * A follow-on is grouped into a paperwork-only Development waiting for this original (step 5).
+   * Fetching it is how the family gets a principal at all, so it outranks every other signal combined.
+   */
+  awaitingOriginal?: boolean
 }
 
 export function lookupPriority(signals: LookupSignals, now = new Date()): number {
   let score = 0
+  if (signals.awaitingOriginal) score += 10000
   if (signals.bestRelevance === 'high') score += 4000
   else if (signals.bestRelevance === 'medium') score += 3000
   else if (signals.anyChildInTier) score += 2000
@@ -80,15 +86,23 @@ export async function prioritiseFamilyLookups(db: PlanningAdminClient, councils?
     const childIds = [...new Set(links.map(link => link.child_application_id))]
     const children = new Map<string, { intelligence_tier: boolean; date_received: string | null; description: string | null }>()
     const relevance = new Map<string, string>()
+    const awaiting = new Set<string>()
     for (const ids of chunks(childIds)) {
       const { data, error: childError } = await db.from('planning_applications').select('id,intelligence_tier,date_received,description').in('id', ids)
       if (childError) throw childError
       for (const row of (data ?? []) as Array<{ id: string; intelligence_tier: boolean; date_received: string | null; description: string | null }>) children.set(row.id, row)
-      const { data: developments, error: developmentError } = await db.from('development_applications')
-        .select('planning_application_id,developments(relevance)').in('planning_application_id', ids)
+      let { data: developments, error: developmentError }: { data: unknown; error: unknown } = await db.from('development_applications')
+        .select('planning_application_id,developments(relevance,family_state,principal_application_id)').in('planning_application_id', ids)
+      // Before the step 5 migration there are no family columns and so no waiting families.
+      if ((developmentError as { code?: string } | null)?.code === '42703') {
+        ({ data: developments, error: developmentError } = await db.from('development_applications')
+          .select('planning_application_id,developments(relevance)').in('planning_application_id', ids))
+      }
       if (developmentError) throw developmentError
-      for (const row of (developments ?? []) as unknown as Array<{ planning_application_id: string; developments: { relevance: string | null } | null }>) {
+      for (const row of ((developments ?? []) as unknown[]) as unknown as Array<{ planning_application_id: string; developments: { relevance: string | null; family_state?: string | null; principal_application_id?: string | null } | null }>) {
         if (row.developments?.relevance) relevance.set(row.planning_application_id, row.developments.relevance)
+        // Only a family with no principal at all depends on this lookup to be described.
+        if (row.developments?.family_state === 'awaiting_original' && !row.developments.principal_application_id) awaiting.add(row.planning_application_id)
       }
     }
     for (const lookup of councilLookups) {
@@ -102,6 +116,7 @@ export async function prioritiseFamilyLookups(db: PlanningAdminClient, councils?
         anyChildInTier: unique.some(id => children.get(id)?.intelligence_tier),
         latestChildReceived: unique.map(id => children.get(id)?.date_received).filter(Boolean).sort().at(-1) ?? null,
         quotesMajorProposal: unique.some(id => quotesMajorProposal(children.get(id)?.description, lookup.parent_reference)),
+        awaitingOriginal: unique.some(id => awaiting.has(id)),
       }
       const priority = lookupPriority(signals)
       if (priority === lookup.priority) continue

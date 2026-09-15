@@ -158,6 +158,13 @@ export interface PlanningApplication {
   agentAddress: string | null
   provider?: 'plota'
   developmentId?: string | null
+  /**
+   * The application's place in its Development: 'principal' or 'primary' describes it, 'amendment'
+   * and 'member' are read with it, 'condition' and 'related' are paperwork on its timeline.
+   */
+  developmentRole?: string | null
+  /** 'awaiting_original' when the family's original permission has not been found yet. */
+  familyState?: string | null
   intelligenceTier?: boolean
   locationProvenance?: 'source_exact' | 'source_centroid' | 'postcode_centroid' | 'missing'
   commercialWork?: string | null

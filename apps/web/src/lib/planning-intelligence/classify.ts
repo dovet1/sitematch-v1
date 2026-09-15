@@ -46,24 +46,46 @@ export interface ClassificationBatchResult {
   deferredBudget: number
 }
 
-async function linkedDevelopment(db: PlanningAdminClient, applicationId: string): Promise<{ id: string; role: string }> {
+async function linkedDevelopment(
+  db: PlanningAdminClient,
+  applicationId: string
+): Promise<{ id: string; role: string; principalApplicationId: string | null }> {
   const { data, error } = await db
     .from('development_applications')
-    .select('development_id,role')
+    .select('development_id,role,developments(principal_application_id)')
     .eq('planning_application_id', applicationId)
     .single()
   if (error) throw error
-  return { id: data.development_id as string, role: (data.role as string | undefined) ?? 'primary' }
+  const development = (data as { developments?: { principal_application_id?: string | null } | null }).developments
+  return {
+    id: data.development_id as string,
+    role: (data.role as string | undefined) ?? 'primary',
+    principalApplicationId: development?.principal_application_id ?? null,
+  }
 }
 
 /**
- * An application grouped into another application's development (a significant amendment read in
- * the family's assessment, or paperwork on its timeline) is covered by that assessment. Classifying
- * it on its own would overwrite the family's description, relevance and figures with a reading of
- * one follow-up, so it is never sent to the model. See docs/planning-pilot-completion-plan.md, 3a.
+ * What a classification may write, by the application's place in its Development. See
+ * docs/planning-development-linking-plan.md, step 5.3.
+ *
+ * - `development`: the principal, or a single application, describes the scheme.
+ * - `application`: a significant follow-on (section 73, reserved matters, material amendment) is
+ *   read, and its run and figures stay attributed to it, but it never overwrites the scheme.
+ * - `skip`: paperwork and companion consents are never sent to the model on their own.
+ *
+ * Because only one application in a Development can have `development` scope, the order in which
+ * members are classified cannot change what the Development says.
  */
-export function isGroupedMember(role: string): boolean {
-  return role !== 'primary' && role !== 'principal'
+export type ClassificationScope = 'development' | 'application' | 'skip'
+
+export function classificationScope(
+  role: string,
+  principalApplicationId: string | null,
+  applicationId: string
+): ClassificationScope {
+  if (role === 'condition' || role === 'related' || role === 'member') return 'skip'
+  if (principalApplicationId) return principalApplicationId === applicationId ? 'development' : 'application'
+  return role === 'primary' || role === 'principal' ? 'development' : 'application'
 }
 
 /**
@@ -135,7 +157,8 @@ async function persistClassification(
   application: QueueRow,
   developmentId: string,
   classification: PlanningClassification,
-  runId: string
+  runId: string,
+  scope: Exclude<ClassificationScope, 'skip'> = 'development'
 ) {
   const now = new Date().toISOString()
   const { storable, gaps } = partitionObservations(classification)
@@ -147,6 +170,9 @@ async function persistClassification(
       review_state: 'pending',
       updated_at: now,
     }).eq('id', application.id),
+    // A follow-on's reading stays on its own run and observations; only the principal describes
+    // the scheme.
+    scope === 'application' ? Promise.resolve({ error: null }) :
     // Never overwrite a human. Reclassification would otherwise replace a reviewer's verdict
     // with the model's and reset the row to pending, silently discarding the decision AND the
     // only free label the product produces. The machine answer is not lost: it stays in the
@@ -279,7 +305,8 @@ export async function classifyPlanningBatch(input: {
     const application = data as QueueRow
     result.considered++
     const membership = await linkedDevelopment(input.db, application.id)
-    if (isGroupedMember(membership.role)) {
+    const scope = classificationScope(membership.role, membership.principalApplicationId, application.id)
+    if (scope === 'skip') {
       const { error: memberError } = await input.db.from('planning_applications').update({
         classification_state: 'classified', classification_started_at: null, updated_at: new Date().toISOString(),
       }).eq('id', application.id)
@@ -351,7 +378,8 @@ export async function classifyPlanningBatch(input: {
         application,
         developmentId,
         classified.classification,
-        run.id
+        run.id,
+        scope
       )
       const actualCost = classified.costUsd ?? reservation
       const now = new Date().toISOString()

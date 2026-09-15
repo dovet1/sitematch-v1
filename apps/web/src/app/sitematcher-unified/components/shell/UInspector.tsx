@@ -17,6 +17,7 @@ import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import {
   groupPlanningApplications,
   latestPlanningApplication,
+  planningPaperworkLabel,
   type PlanningDevelopmentGroup,
   type PlanningGrouping,
 } from '../../lib/planning-groups'
@@ -1388,7 +1389,10 @@ function PlanningRow({
     formatPlanningDate(app.decidedDate) ?? formatPlanningDate(app.dateValidated)
   const dwellings = planningDwellingLabel(app)
   const subline = [app.appType, app.appSize, dwellings, date].filter(Boolean).join(' · ')
-  const relevance = inDevelopment ? null : planningRelevanceBadge(app.relevance)
+  const paperwork = planningPaperworkLabel(app)
+  // Paperwork inherits its development's grade in the data, but a grade is a judgement of the
+  // scheme, not of a condition submission, so it is never shown on paperwork.
+  const relevance = inDevelopment || paperwork ? null : planningRelevanceBadge(app.relevance)
   const reference = app.name.slice(app.name.indexOf('/') + 1)
   return (
     <button
@@ -1421,6 +1425,11 @@ function PlanningRow({
               {relevance.label}
             </span>
           )}
+          {paperwork && (
+            <span className="rounded-full border border-sm-border bg-sm-bg px-2 py-[2px] font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3">
+              {paperwork}
+            </span>
+          )}
           {/* An approximate position is marked on the record itself, not only in the
               caption under the count, because a single row is often read on its own. */}
           {isApproximatelyLocated(app) && (
@@ -1437,7 +1446,7 @@ function PlanningRow({
         </div>
         {/* The classifier's one sentence is what makes a ranked list readable rather than
             merely sorted, so it sits above the metadata line and is allowed two lines. */}
-        {!inDevelopment && app.summary && (
+        {!inDevelopment && !paperwork && app.summary && (
           <div className="mt-1 line-clamp-2 text-[12px] leading-snug text-sm-ink3">
             {app.summary}
           </div>
@@ -1468,7 +1477,7 @@ function PlanningDevelopmentRow({
   const [open, setOpen] = useState(false)
   const lead = group.applications[0]
   const latest = latestPlanningApplication(group.applications) ?? lead
-  const relevance = planningRelevanceBadge(lead.relevance)
+  const relevance = planningPaperworkLabel(lead) ? null : planningRelevanceBadge(lead.relevance)
   const approximate = group.applications.some(isApproximatelyLocated)
   const dwellings = planningDwellingLabel(lead)
   const date =
@@ -1520,6 +1529,11 @@ function PlanningDevelopmentRow({
           {lead.summary && (
             <div className="mt-1 line-clamp-2 text-[12px] leading-snug text-sm-ink3">
               {lead.summary}
+            </div>
+          )}
+          {lead.familyState === 'awaiting_original' && (
+            <div className="mt-1 text-[12px] leading-snug text-sm-ink4">
+              The original permission has not been found yet.
             </div>
           )}
           <div

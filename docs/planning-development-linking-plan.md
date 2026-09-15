@@ -431,30 +431,168 @@ no requests spent.**
 
 ### Step 5 — One Development per family, with rules that protect it
 
-Ship together with step 3's writes, never before:
-- **Schema:** the links table (evidence, source, strength, created, removed-by with reason);
-  `principal_application_id` and `latest_activity_at` on `developments`; a `phase` or `scope`
-  label on membership.
-- **Membership:** strongly linked applications join the family's Development, and non-tier members
-  join as history entries.
-- **Merge and undo:** transactional merge and detach functions move members, observations, brand
-  signals and review history. They refuse Developments a human has reviewed, and a detach is
-  remembered.
-- **Eligibility:** computed per family. A family qualifies if its principal or any member does.
-- **Classification:** reads the principal's substantive proposal.
-  - Condition submissions and non-material amendments are marked `linked_member`. They do not
-    change the Development's description, relevance or figures.
-  - Section 73 approvals and reserved matters keep their own figures and phase labels.
-  - Figures are never summed across members or alternative permissions.
-  - A test proves classification order cannot change a Development's output.
-- **Ambiguity:** families with several missing parents, conflicting evidence or competing
-  permissions stay separate pending review.
+Ship together with step 3's writes, never before. **Detailed plan agreed with the user on 15
+September 2026.**
+
+Two facts shape it:
+- **Paperwork is the problem, not merging.** Most families lack their original, and most paperwork
+  has no Development of its own. Only 3.6% of Developments would merge nationally.
+- **Ingestion order.** The Development trigger gives a tier application its own Development the
+  moment it is stored, before linking runs after the page. Without a gate, the classifier can grade
+  a new follow-on alone before it joins its family.
+
+**Rules stay in `assessment-groups.ts`** (lead, members read with it, paperwork, uncertainty). A
+new planner turns them into membership changes, and one database function applies each family's
+changes in a single transaction. This replaces `scripts/group-pilot-family.ts` and its undo file.
+
+#### 5.1 Migration (Claude writes, the user applies)
+
+- `developments`: `principal_application_id`, `latest_activity_at`, `merged_into_development_id`,
+  `merged_at`, `family_state` (`single`, `family`, `awaiting_original`, `held_for_review`).
+- `development_applications`: `phase`, `joined_at`, `previous_development_id` (the Development it
+  left, for detach), `link_ids` (the links that justified joining).
+- `development_membership_events`: every attach, move, principal change and detach, with before and
+  after, actor and reason.
+- `planning_applications.linking_state`: set to `pending` at ingestion when linking is on. The
+  classification claim skips pending rows; linking and membership clear it.
+- `planning_apply_family_plan(plan)`: under row locks, moves or attaches each member with its
+  observations and brand signals, sets the principal, and marks emptied Developments merged
+  (relevance cleared, research not eligible; kept for undo). It refuses a source Development a
+  person reviewed, one with admin-decided facts, or one whose research started, and it refuses
+  anything but paperwork joining a reviewed target.
+- `planning_detach_application(application, actor, reason)`: marks the links that joined it removed,
+  and restores its previous Development or gives it a new one. A removed link is never recreated by
+  the linker or a Plota family, so it cannot rejoin automatically.
+- Trigger: stage, address and name come only from the principal (or the sole application); any
+  member may improve the location and advance `latest_activity_at`.
+- `planning_tab_applications_v4`: v3's rows plus the member's role and the family state. Paperwork
+  ranks after every scheme, so it never crowds schemes out of the 2,000-row cap. Re-timed on Micro
+  before the tab switches.
+
+#### 5.2 Planner (`development-membership.ts`)
+
+Reads a family's applications, its stored strong links that have not been removed, current
+memberships, guards and Plota conflicts, and returns a plan per family. It never writes.
+
+| Case | Result |
+|---|---|
+| Original stored and in a Development | Members join it: significant follow-ons as `amendment`, companions as `member`, paperwork as `condition` or `related` |
+| Original stored, not in the tier, a member is | A family Development headed by the original; the original is admitted with eligibility limb `F` (family) and queued for classification |
+| Original missing, significant member present | The best significant member leads; `awaiting_original` |
+| Original missing, paperwork only (Broadland today) | One Development, `awaiting_original`, no principal, never classified; a machine grade taken from paperwork is cleared (the run history keeps it) |
+| Several missing originals (not one quoted chain), weak links only, or a pending Plota conflict | No change; listed for review |
+| A Development involved is reviewed, has decided facts or started research, other than as the target of paperwork | No change; listed for review |
+
+When the original later arrives, the next run makes it principal of the existing family Development
+and queues it for classification, unless that Development has been reviewed, which goes to review.
+
+The planner also runs at ingestion, straight after linking, for the families the page touched.
+
+#### 5.3 Classification (`classify.ts`)
+
+- Only the principal's result (or a single application's) writes the Development's description,
+  relevance, figures and research state.
+- Significant members are still classified; their run and figures stay attributed to their own
+  application and phase.
+- Paperwork is never classified (existing guard).
+- A test proves classification order cannot change a Development's output.
+- Out of scope: assessing a family as one unit with members' text together. That is the grouped
+  classification worker (pilot plan, 3a).
+
+#### 5.4 Originals come first
+
+- Plota fetches are how a paperwork-only family gets its principal. `awaiting_original` is the
+  waiting room, not the destination.
+- A family marked `awaiting_original` raises its lookup above every other signal.
+- **Pilot order from 1 October:** run the family lookups for the pilot's paperwork-only families
+  first (Broadland's 2024/3141 included), then commit step 5 for those councils, so most merge with
+  their real principal. This also measures whether archive ids (`h_…`) work on the family endpoint.
+- A lookup that fails, or a family Plota has no original for, stays grouped as `awaiting_original`
+  and is listed for review, never left silently ungraded.
+- No Plota requests in September (discovery reserve). Fetching earlier needs the user's decision.
+
+#### 5.5 Tools, verification and rollout
+
+- `scripts/assign-development-families.ts`: dry run by default, `--councils`; reports moves,
+  `awaiting_original`, held-for-review families, refusals with reasons, and classifications it would
+  queue. `--commit` applies.
+- `scripts/verify-development-membership.ts`: labelled synthetic fixtures, removed in `finally`, as
+  `verify-planning-review.ts` does. It checks that a condition submission arriving leaves the
+  Development unchanged, that a move then detach restores every moved row, and that a detached link
+  is not recreated by relinking.
+- The Wandsworth pilot family moves onto the new functions; the script grouping is retired.
+- Scope: Broadland, Wandsworth and Glasgow only. `PLANNING_MEMBERSHIP_ENABLED` requires linking to
+  be on. The user deploys the workers. National rollout waits for the pilot's measured results.
 
 Done when:
 - a condition submission arriving leaves the Development's description, relevance and figures
   unchanged;
 - merge, detach and the non-recreation of a detached link pass the verification script;
 - ambiguous families are listed for review instead of merged.
+
+**Built, 15 September 2026. Migrations `20261008000000` and `20261011000000` applied by the user the
+same day. Verified live: `scripts/verify-development-membership.ts` passed 16 of 16 checks on labelled
+fixtures, all removed afterwards. Flag off.**
+
+**Committed to live records, 15 September:** the 11 pilot families whose original is stored (3 at
+South Norfolk Broadland, 8 at Wandsworth), with `--only=family`, at the user's request; they do not
+depend on a Plota lookup. All 11 applied with no failures; a repeat dry run reports them unchanged.
+No Development was emptied: members either had none or their Development became the family's.
+Four originals outside the tier (2025/4604, 2025/3189 RAM Brewery, 2025/4373, 2025/3258) were
+admitted by family and queued. Until the hourly classifier reads them, those four Developments
+still show the grade their former lead member was given. The 14 families awaiting an original wait
+for the October lookups.
+
+Tab read v4 against v3 on Micro, three warm reads each: identical rows in central London (736),
+Battersea (653), Canterbury (47) and Manchester (94); v4 0.29–0.35 s in London against v3's
+0.34–0.37 s. The only paperwork role live so far is the script-grouped Wandsworth pilot family.
+- **Planner** `development-membership.ts` (11 tests), on stored links through `familiesFromLinks`
+  (now shared with the in-memory linker).
+- **Database:** `planning_apply_family_plan`, `planning_detach_application`, the principal-only
+  trigger, the classification gate and `planning_tab_applications_v4`. Checked on a throwaway local
+  PostgreSQL 18 + PostGIS copy of the tables involved: 26 scenario checks pass (merge, undo restores
+  grade and queue state, detached link not recreated, principal detach refused, reviewed source
+  refused, only paperwork into a reviewed target, stale gate ignored, tab roles and paperwork
+  ranking). That run caught a `text[] || 'F'` bug before it reached the migration. The live
+  equivalent is `scripts/verify-development-membership.ts`, to run after the migration.
+- **Classifier:** `classificationScope` in `classify.ts`; a permutation test proves order cannot change
+  what a Development says.
+- **Ingestion:** `membership-ingest.ts`, after linking when `PLANNING_MEMBERSHIP_ENABLED=true`, and
+  after each stored Plota family. The gate is always cleared, even on failure.
+- **Tab:** reads v4 and falls back to v3 until the migration is applied; the principal leads its
+  group, paperwork is labelled and never shows a grade, and a waiting family says so.
+- **Lookup priority:** a paperwork-only family awaiting its original outranks every other signal
+  combined (+10,000).
+
+**Dry run on the pilot councils** (15 Sep, `scripts/assign-development-families.ts`, read-only):
+
+| Council | Families with a tier member | To apply | Awaiting original | Held for review | Classifications queued | Paperwork grades cleared |
+|---|---|---|---|---|---|---|
+| South Norfolk Broadland | 6 | 6 | 3 | 0 | 0 | 0 |
+| Wandsworth | 22 | 19 | 11 | 3 | 5 | 5 |
+| Glasgow | 1 | 0 | 0 | 1 | 0 | 0 |
+
+Reading the plans changed three things before anything was written:
+- **Single applications are left alone.** One stored application citing a missing original is not a
+  family: the first run would have cleared lone Glasgow discharges' grades and put a 1989 reference
+  at the top of the lookup queue.
+- **Section 96A is paperwork.** Nine Elms (2021/4900) would have been led and classified by "s96a …
+  amendments to Condition 2 (Approved drawings)"; `assessment-groups.ts` now reads s96a as
+  non-material, which also slightly changes the grouped assessment counts.
+- **The lookup boost is for families with no principal only.**
+
+Read and judged genuine: RAM Brewery (2025/3189, 11 applications), Nine Elms (21), Springfield
+Hospital phase 2b (22, paperwork only). Held: three Wandsworth masterplans (51, 10 and 2
+applications) and one Glasgow chain.
+
+**Broadland Business Park is not in the dry run.** Its eleven follow-ons are all outside the tier,
+so no family member qualifies until 2024/3141 is fetched and passes the tier. That is the October
+lookup, and it is why lookups go first.
+
+**Found while building (since applied):** `20261008000000_planning_family_lookups.sql` was not applied live
+(`planning_copy_family_location`, `planning_family_lookups.family_id`, `conflict` and `review_state`
+are missing), although the step 4 notes say it is. It must be applied before any family lookup, and
+before this migration. Step 5's code tolerates its absence (no stored family means no conflict).
 
 ### Step 6 — One pin and a basic history
 

@@ -29,6 +29,16 @@ describe('planCouncilAssessments', () => {
     })
   })
 
+  it('treats a section 96A application as paperwork even when it does not say non-material', () => {
+    const apps = council([
+      application('2026/2224', 'Application under s96a of the Town and Country Planning Act 1990 for amendments to Condition 2 (Approved drawings) of planning permission ref. 2021/4900', { procedure: 'amendment' }),
+      application('2026/1877', 'Submission of details pursuant to the discharge of Condition 26 (Cycle storage) of planning permission ref. 2021/4900', { procedure: 'discharge' }),
+    ])
+    const plan = planCouncilAssessments(apps)
+    expect(plan.units).toEqual([])
+    expect(plan.awaitingParent).toEqual([expect.objectContaining({ missingParentReferences: ['2021/4900'] })])
+  })
+
   it('flags paperwork whose original is missing for parent retrieval instead of assessing it', () => {
     const apps = council([
       application('2026/0994', 'Details for condition 9 - Travel Plan of permission 2024/3141', { procedure: 'discharge' }),

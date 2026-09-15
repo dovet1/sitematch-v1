@@ -215,6 +215,12 @@ describe('lookup priority', () => {
     expect(quoted).toBeGreaterThan(householder)
   })
 
+  it('fetches the original of a paperwork-only family before anything else', () => {
+    const waiting = lookupPriority({ ...base, awaitingOriginal: true }, now)
+    const everythingElse = lookupPriority({ ...base, bestRelevance: 'high', quotesMajorProposal: true, childCount: 10, latestChildReceived: '2026-09-07' }, now)
+    expect(waiting).toBeGreaterThan(everythingElse)
+  })
+
   it('reads a major proposal quoted by a single follow-on', () => {
     expect(quotesMajorProposal('Details pursuant to condition 14 (archaeology) of planning permission ref. 2021/3958 dated 13/7/2023 (for "Demolition of existing buildings and erection of 392 dwellings")', '2021/3958')).toBe(true)
     expect(quotesMajorProposal('Details of condition 6 of 2025/0103 (Erection of a warehouse and distribution unit)', '2025/0103')).toBe(true)

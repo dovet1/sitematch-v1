@@ -29,7 +29,7 @@ export interface LinkableApplication {
 export type FollowOnKind = 'condition' | 'amendment' | 'reserved_matters'
 export type LinkKind = FollowOnKind | 'companion' | 'cited'
 export type LinkStrength = 'strong' | 'weak'
-export type LinkSource = 'cited_reference' | 'reference_core'
+export type LinkSource = 'cited_reference' | 'reference_core' | 'plota_associated' | 'manual'
 
 export interface ApplicationLink {
   childId: string
@@ -381,16 +381,27 @@ export function linkCouncilApplications(applications: LinkableApplication[]): {
   links: ApplicationLink[]
   families: ApplicationFamily[]
 } {
-  const byId = new Map(applications.map(application => [application.id, application]))
-  const byReference = new Map(applications.map(application => [normaliseReference(application.reference), application]))
   const profile = buildCouncilLinkProfile(applications)
   const resolver = resolverFor(applications)
   const links = applications.flatMap(application => linksForApplication(application, profile, resolver))
+  return { links, families: familiesFromLinks(applications, links) }
+}
+
+/**
+ * Families from links, whether computed in memory or read back from `planning_application_links`.
+ * Only strong links join a family. Every application a strong link names must be supplied.
+ */
+export function familiesFromLinks(
+  applications: LinkableApplication[],
+  links: Array<Pick<ApplicationLink, 'childId' | 'parentId' | 'parentReference' | 'strength'>>
+): ApplicationFamily[] {
+  const byId = new Map(applications.map(application => [application.id, application]))
+  const byReference = new Map(applications.map(application => [normaliseReference(application.reference), application]))
 
   const families = new UnionFind()
   const referenceKey = (reference: string) => `ref:${referenceCore(reference)?.core ?? normaliseReference(reference)}`
   for (const application of applications) families.union(`app:${application.id}`, referenceKey(application.reference))
-  const strong = links.filter(link => link.strength === 'strong')
+  const strong = links.filter(link => link.strength === 'strong' && byId.has(link.childId) && (!link.parentId || byId.has(link.parentId)))
   for (const link of strong) families.union(`app:${link.childId}`, link.parentId ? `app:${link.parentId}` : referenceKey(link.parentReference))
 
   const groups = new Map<string, { ids: Set<string>; missing: Set<string> }>()
@@ -406,27 +417,24 @@ export function linkCouncilApplications(applications: LinkableApplication[]): {
     else entry.missing.add(link.parentReference)
   }
 
-  return {
-    links,
-    families: [...groups.values()].map(({ ids, missing }) => {
-      const members = [...ids].map(id => byId.get(id)!).sort((a, b) => a.reference.localeCompare(b.reference))
-      const root = [...members].sort((a, b) => principalRank(a) - principalRank(b) || a.reference.localeCompare(b.reference))
-        .find(member => principalRank(member) === 0) ?? null
-      // "21/03456/FUL" cited in one description and case number "21/03456" on a sibling are one
-      // missing parent; report it once, by its fullest form.
-      const missingByKey = new Map<string, string>()
-      for (const reference of missing) {
-        if (byReference.has(reference)) continue
-        const key = referenceKey(reference)
-        if ((missingByKey.get(key)?.length ?? 0) < reference.length) missingByKey.set(key, reference)
-      }
-      const missingParentReferences = [...missingByKey.values()].sort()
-      return {
-        key: root ? `app:${root.id}` : `ref:${missingParentReferences[0] ?? members[0].reference}`,
-        applicationIds: members.map(member => member.id),
-        rootId: root?.id ?? null,
-        missingParentReferences,
-      }
-    }).sort((a, b) => a.key.localeCompare(b.key)),
-  }
+  return [...groups.values()].map(({ ids, missing }) => {
+    const members = [...ids].map(id => byId.get(id)!).sort((a, b) => a.reference.localeCompare(b.reference))
+    const root = [...members].sort((a, b) => principalRank(a) - principalRank(b) || a.reference.localeCompare(b.reference))
+      .find(member => principalRank(member) === 0) ?? null
+    // "21/03456/FUL" cited in one description and case number "21/03456" on a sibling are one
+    // missing parent; report it once, by its fullest form.
+    const missingByKey = new Map<string, string>()
+    for (const reference of missing) {
+      if (byReference.has(reference)) continue
+      const key = referenceKey(reference)
+      if ((missingByKey.get(key)?.length ?? 0) < reference.length) missingByKey.set(key, reference)
+    }
+    const missingParentReferences = [...missingByKey.values()].sort()
+    return {
+      key: root ? `app:${root.id}` : `ref:${missingParentReferences[0] ?? members[0].reference}`,
+      applicationIds: members.map(member => member.id),
+      rootId: root?.id ?? null,
+      missingParentReferences,
+    }
+  }).sort((a, b) => a.key.localeCompare(b.key))
 }

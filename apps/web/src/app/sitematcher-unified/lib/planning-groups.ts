@@ -6,7 +6,7 @@ export interface PlanningDevelopmentGroup {
   /** The development id, or the application's own name when it has none. */
   key: string
   developmentId: string | null
-  /** Members in the tab's ranked order; the first is the group's lead. */
+  /** The application that describes the development first, then the rest in the tab's ranked order. */
   applications: PlanningApplication[]
 }
 
@@ -42,7 +42,25 @@ export function groupPlanningApplications(
     byDevelopment.set(developmentId, group)
     groups.push(group)
   }
+  // Paperwork ranks after every scheme, so a group is already placed by its scheme. Within it, the
+  // application that describes the development leads, even when a newer amendment outranks it.
+  for (const group of groups) {
+    const lead = group.applications.findIndex(describesDevelopment)
+    if (lead > 0) group.applications.unshift(...group.applications.splice(lead, 1))
+  }
   return groups
+}
+
+/** The principal of a family, or the sole application of a development that has no family. */
+export function describesDevelopment(app: PlanningApplication): boolean {
+  return app.developmentRole === 'principal' || app.developmentRole === 'primary'
+}
+
+/** A plain label for paperwork on a development's timeline; null for anything that is a scheme. */
+export function planningPaperworkLabel(app: PlanningApplication): string | null {
+  if (app.developmentRole === 'condition') return 'Condition details'
+  if (app.developmentRole === 'related') return 'Paperwork'
+  return null
 }
 
 function timeOf(iso: string | null): number {

@@ -13,6 +13,7 @@ import {
   type LinkIngestResult,
   type StoredApplication,
 } from './link-ingest'
+import { assignMembershipsFor, clearLinkingPending, planningMembershipEnabled } from './membership-ingest'
 import {
   buildSearchSpecs,
   maySpendPlotaRequest,
@@ -65,6 +66,8 @@ export interface SyncResult {
   stoppedForReserve: boolean
   /** Present only when PLANNING_LINKING_ENABLED is on. A linking failure is counted, never thrown. */
   linking?: { pages: number; links: number; strongLinks: number; lookupsRequested: number; failures: number }
+  /** Present only when PLANNING_MEMBERSHIP_ENABLED is also on. */
+  membership?: { applied: number; held: number; failed: number; queuedClassifications: number }
 }
 
 function geometry(application: PlotaApplication): string | null {
@@ -84,10 +87,13 @@ function rowFor(
   decision: ReturnType<typeof decideEligibility>,
   inputHash: string,
   preserveClassified: boolean,
-  withReferenceKeys: boolean
+  withReferenceKeys: boolean,
+  awaitMembership = false
 ) {
   return {
     ...(withReferenceKeys ? referenceKeys(application.reference) : {}),
+    // The classifier waits until linking has placed this application in its family (step 5).
+    ...(awaitMembership ? { linking_state: 'pending' } : {}),
     provider: 'plota',
     provider_id: application.id,
     authority_slug: application.authority.slug,
@@ -228,7 +234,7 @@ async function upsertApplications(
     if (decision.intelligenceTier) intelligence++
     const hash = classificationInputHash(application)
     const preserveClassified = prior?.input_hash === hash && prior.classification_state === 'classified'
-    const row = rowFor(application, decision, hash, preserveClassified, linking)
+    const row = rowFor(application, decision, hash, preserveClassified, linking, linking && planningMembershipEnabled())
     if (!providerMatch && referenceMatch) byReferenceRows.push(row)
     else byProviderRows.push(row)
   }
@@ -383,6 +389,8 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
     const aliases = await loadAliasIndex(input.db)
     const linking = planningLinkingEnabled()
     if (linking) stats.linking = { pages: 0, links: 0, strongLinks: 0, lookupsRequested: 0, failures: 0 }
+    const membership = linking && planningMembershipEnabled()
+    if (membership) stats.membership = { applied: 0, held: 0, failed: 0, queuedClassifications: 0 }
     let pagesLeft = input.maxPages
     let completeSpecs = 0
 
@@ -489,9 +497,23 @@ export async function runPlotaSync(input: SyncInput): Promise<SyncResult> {
             stats.linking.links += linked.links
             stats.linking.strongLinks += linked.strongLinks
             stats.linking.lookupsRequested += linked.lookupsRequested
+            if (stats.membership) {
+              const assigned = await assignMembershipsFor(input.db, written.stored.map(row => row.id), 'system:ingestion')
+              stats.membership.applied += assigned.applied
+              stats.membership.held += assigned.held
+              stats.membership.failed += assigned.failed.length
+              stats.membership.queuedClassifications += assigned.queuedClassifications
+              for (const failure of assigned.failed) console.error('[planning-membership] Family not applied', failure)
+            }
           } catch (linkError) {
             stats.linking.failures++
             console.error('[planning-linking] Failed to link a page', linkError)
+          } finally {
+            // Clear the gate whatever happened: a failure should delay classification, never stop it.
+            if (stats.membership) {
+              await clearLinkingPending(input.db, written.stored.map(row => row.id))
+                .catch(error => console.error('[planning-membership] Failed to clear the linking gate', error))
+            }
           }
         }
         await recordCoverage(input.db, result.page.data, input)

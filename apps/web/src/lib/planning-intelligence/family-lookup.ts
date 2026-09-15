@@ -1,6 +1,7 @@
 import { createHash } from 'crypto'
 import type { PlanningAdminClient } from './db'
 import { storageRowFor } from './ingest'
+import { assignMembershipsFor, planningMembershipEnabled } from './membership-ingest'
 import { canHeadFamily, familyKey, normaliseReference, referenceCore, type LinkKind } from './linking'
 import { maySpendPlotaRequest, PlotaError, type PlotaClient } from './plota'
 import type { PlotaApplication, PlotaFamily, PlotaFamilyMember } from './types'
@@ -35,6 +36,7 @@ export interface StoredFamilyResult {
   skippedRemovedLinks: number
   lookupsClosed: number
   conflict: FamilyConflict | null
+  memberIds: string[]
 }
 
 export interface FamilyConflict {
@@ -229,7 +231,7 @@ export async function storeFamily(
 
   return {
     familyId, members: members.length, newApplications: fresh.length, links: linkRows.length,
-    skippedRemovedLinks, lookupsClosed: 1 + (closed?.length ?? 0), conflict,
+    skippedRemovedLinks, lookupsClosed: 1 + (closed?.length ?? 0), conflict, memberIds,
   }
 }
 
@@ -346,7 +348,14 @@ export async function runFamilyLookups(
       remaining = usage.monthlyRemaining ?? remaining
       await db.from('planning_provider_usage').insert({ provider: 'plota', endpoint: FAMILY_ENDPOINT, request_id: usage.requestId,
         monthly_limit: usage.monthlyLimit, monthly_remaining: usage.monthlyRemaining, status_code: 200 })
-      result.stored.push(await storeFamily(db, { lookup, family, requestedVia: via, admitToTier: options.admitToTier }))
+      const storedFamily = await storeFamily(db, { lookup, family, requestedVia: via, admitToTier: options.admitToTier })
+      result.stored.push(storedFamily)
+      // The paid part is done and stored; placing the family is repeatable, so its failure is logged
+      // and never marks the lookup failed.
+      if (planningMembershipEnabled()) {
+        await assignMembershipsFor(db, storedFamily.memberIds, 'system:family-lookup')
+          .catch(membershipError => console.error('[planning-membership] Failed to place a fetched family', membershipError))
+      }
     } catch (error) {
       const status = error instanceof PlotaError ? error.status : null
       if (error instanceof PlotaError) {

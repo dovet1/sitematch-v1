@@ -381,8 +381,11 @@ for London schemes.
   Bulk classification stays off.
 - **Selection rewrite and filter test (step 3).** Not started. That covers the new question, the
   labelled set, admitting extensions and the rejected-application samples.
-- **Transactional merge and detach (step 5).** The pilot family was grouped by a script with an undo
-  file. The development trigger still lets a member's stage update its development.
+- **Transactional merge and detach (step 5).** Built 15 September (see the linking plan, step 5):
+  migrations `20261008000000` and `20261011000000` applied and verified live (16 of 16). The 11
+  pilot families with a stored original are committed; the 14 awaiting an original wait for the
+  October lookups; the ingestion flag is off. The Wandsworth pilot family is still the script's
+  grouping until the step 5 run replaces it.
 - **One pin per development.** A grouped family still shows one row and pin per application.
 - **Agent usefulness check (step 6).** Not done.
 - **Known defects.** The standard-form applicant reader can record "Address" as a name, and repeats an

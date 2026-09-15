@@ -1,5 +1,5 @@
 import type { PlanningApplication } from '../../types/unified-workspace'
-import { groupPlanningApplications, latestPlanningApplication } from '../planning-groups'
+import { groupPlanningApplications, latestPlanningApplication, planningPaperworkLabel } from '../planning-groups'
 
 function app(name: string, overrides: Partial<PlanningApplication> = {}): PlanningApplication {
   return {
@@ -46,6 +46,22 @@ describe('groupPlanningApplications', () => {
       ['B', null, 1],
       ['d1', 'd1', 1],
     ])
+  })
+
+  it('leads each group with the application that describes the development', () => {
+    const groups = groupPlanningApplications([
+      app('amendment', { developmentId: 'd1', developmentRole: 'amendment' }),
+      app('original', { developmentId: 'd1', developmentRole: 'principal' }),
+      app('condition', { developmentId: 'd1', developmentRole: 'condition' }),
+    ])
+    expect(groups[0].applications.map(a => a.name)).toEqual(['original', 'amendment', 'condition'])
+  })
+
+  it('labels paperwork and nothing else', () => {
+    expect(planningPaperworkLabel(app('a', { developmentRole: 'condition' }))).toBe('Condition details')
+    expect(planningPaperworkLabel(app('b', { developmentRole: 'related' }))).toBe('Paperwork')
+    expect(planningPaperworkLabel(app('c', { developmentRole: 'amendment' }))).toBeNull()
+    expect(planningPaperworkLabel(app('d'))).toBeNull()
   })
 
   it('returns no groups for no applications', () => {
