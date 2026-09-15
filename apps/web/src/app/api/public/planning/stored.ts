@@ -161,6 +161,7 @@ export async function fetchStoredPlanningApplications(boundary: Boundary): Promi
       lat: row.latitude,
       lng: row.longitude,
       decidedDate: row.date_decided,
+      dateReceived: row.date_received,
       dateValidated: row.date_validated,
       nDwellings: row.model_dwelling_basis === 'human_review' ? row.model_dwelling_count : row.stated_dwelling_count,
       dwellingCountReviewed: row.model_dwelling_basis === 'human_review',

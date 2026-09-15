@@ -1,5 +1,11 @@
 import type { PlanningApplication } from '../../types/unified-workspace'
-import { groupPlanningApplications, latestPlanningApplication, planningPaperworkLabel } from '../planning-groups'
+import {
+  groupPlanningApplications,
+  latestPlanningApplication,
+  planningKindLabel,
+  planningPaperworkLabel,
+  planningTimeline,
+} from '../planning-groups'
 
 function app(name: string, overrides: Partial<PlanningApplication> = {}): PlanningApplication {
   return {
@@ -59,7 +65,7 @@ describe('groupPlanningApplications', () => {
 
   it('labels paperwork and nothing else', () => {
     expect(planningPaperworkLabel(app('a', { developmentRole: 'condition' }))).toBe('Condition details')
-    expect(planningPaperworkLabel(app('b', { developmentRole: 'related' }))).toBe('Paperwork')
+    expect(planningPaperworkLabel(app('b', { developmentRole: 'related' }))).toBe('Minor amendment')
     expect(planningPaperworkLabel(app('c', { developmentRole: 'amendment' }))).toBeNull()
     expect(planningPaperworkLabel(app('d'))).toBeNull()
   })
@@ -73,6 +79,27 @@ describe('groupPlanningApplications', () => {
     const flattened = groupPlanningApplications(input).flatMap(g => g.applications)
     expect(flattened).toHaveLength(input.length)
     expect(new Set(flattened)).toEqual(new Set(input))
+  })
+})
+
+describe('planningTimeline', () => {
+  it('orders a history oldest first, undated first, main application ahead on a tie', () => {
+    const order = planningTimeline([
+      app('condition', { developmentRole: 'condition', dateReceived: '2026-07-01' }),
+      app('amendment', { developmentRole: 'amendment', dateValidated: '2026-03-01' }),
+      app('original', { developmentRole: 'principal' }),
+      app('same-day paperwork', { developmentRole: 'related', dateReceived: '2026-07-01' }),
+      app('same-day main', { developmentRole: 'primary', dateReceived: '2026-07-01' }),
+    ]).map(a => a.name)
+    expect(order).toEqual(['original', 'amendment', 'same-day main', 'condition', 'same-day paperwork'])
+  })
+
+  it('names each kind of application in plain words', () => {
+    expect(planningKindLabel(app('a', { developmentRole: 'principal' }))).toBe('Main application')
+    expect(planningKindLabel(app('b', { developmentRole: 'amendment' }))).toBe('Amendment')
+    expect(planningKindLabel(app('c', { developmentRole: 'member' }))).toBe('Linked consent')
+    expect(planningKindLabel(app('d', { developmentRole: 'condition' }))).toBe('Condition details')
+    expect(planningKindLabel(app('e'))).toBeNull()
   })
 })
 

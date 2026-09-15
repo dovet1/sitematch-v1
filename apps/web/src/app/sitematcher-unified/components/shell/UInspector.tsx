@@ -15,9 +15,13 @@ import {
 import { getClearbitLogoUrl } from '@/lib/clearbit-logo'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import {
+  describesDevelopment,
   groupPlanningApplications,
   latestPlanningApplication,
+  planningKindLabel,
   planningPaperworkLabel,
+  planningTimeline,
+  planningTimelineDate,
   type PlanningDevelopmentGroup,
   type PlanningGrouping,
 } from '../../lib/planning-groups'
@@ -1374,36 +1378,24 @@ function formatPlanningDate(iso: string | null): string | null {
 function PlanningRow({
   app,
   onOpen,
-  inDevelopment = false,
 }: {
   app: PlanningApplication
   onOpen: (app: PlanningApplication) => void
-  /**
-   * Listed inside a development card. Relevance and summary belong to the development, so
-   * the card already shows them once; repeating them on every member is the noise grouping
-   * exists to remove. The reference takes their place because it is what tells members apart.
-   */
-  inDevelopment?: boolean
 }) {
   const date =
     formatPlanningDate(app.decidedDate) ?? formatPlanningDate(app.dateValidated)
-  const dwellings = planningDwellingLabel(app)
-  const subline = [app.appType, app.appSize, dwellings, date].filter(Boolean).join(' · ')
   const paperwork = planningPaperworkLabel(app)
-  // Paperwork inherits its development's grade in the data, but a grade is a judgement of the
-  // scheme, not of a condition submission, so it is never shown on paperwork.
-  const relevance = inDevelopment || paperwork ? null : planningRelevanceBadge(app.relevance)
-  const reference = app.name.slice(app.name.indexOf('/') + 1)
+  // Paperwork inherits its development's grade and homes figure in the data, but both describe
+  // the scheme, not a condition submission, so neither is shown on it. Its label also replaces the
+  // provider's type, which files some condition submissions as "reserved matters".
+  const dwellings = paperwork ? null : planningDwellingLabel(app)
+  const subline = [paperwork ? null : app.appType, app.appSize, dwellings, date].filter(Boolean).join(' · ')
+  const relevance = paperwork ? null : planningRelevanceBadge(app.relevance)
   return (
     <button
       type="button"
       onClick={() => onOpen(app)}
-      className={
-        'grid cursor-pointer grid-cols-[1fr_auto] items-center gap-3 text-left transition-colors hover:bg-sm-bg ' +
-        (inDevelopment
-          ? 'rounded-lg bg-sm-surface px-2.5 py-2'
-          : 'rounded-xl border border-sm-border bg-sm-surface p-3')
-      }
+      className="grid cursor-pointer grid-cols-[1fr_auto] items-center gap-3 rounded-xl border border-sm-border bg-sm-surface p-3 text-left transition-colors hover:bg-sm-bg"
     >
       <div className="min-w-0">
         <div className="mb-1.5 flex items-center gap-1.5">
@@ -1442,11 +1434,11 @@ function PlanningRow({
           )}
         </div>
         <div className="truncate text-[13px] font-medium text-sm-ink2">
-          {inDevelopment ? reference : app.address || app.name}
+          {app.address || app.name}
         </div>
         {/* The classifier's one sentence is what makes a ranked list readable rather than
             merely sorted, so it sits above the metadata line and is allowed two lines. */}
-        {!inDevelopment && !paperwork && app.summary && (
+        {!paperwork && app.summary && (
           <div className="mt-1 line-clamp-2 text-[12px] leading-snug text-sm-ink3">
             {app.summary}
           </div>
@@ -1462,10 +1454,98 @@ function PlanningRow({
   )
 }
 
+// Decision state as text colour, for the timeline where a filled badge per entry is too loud.
+// Amber only for states still waiting on the council; a decision whose outcome the source does
+// not give ("final decision") or a withdrawal is neutral, not pending.
+function planningStateTextClass(state: string): string {
+  const s = state.toLowerCase()
+  if (s === 'permitted' || s === 'approved') return 'text-emerald-700'
+  if (s === 'rejected' || s === 'refused') return 'text-rose-700'
+  if (/pending|registered|submitted|valid|awaiting|new|consultation|undecided/.test(s)) return 'text-amber-700'
+  return 'text-sm-ink2'
+}
+
 /**
- * A development with more than one application in the list. The lead member -- the
- * best-ranked one -- names it and carries the development's relevance and summary; the
- * state shown is the most recently dated member's, because that is where the scheme stands.
+ * A development's applications as a history, oldest first. The main application is a filled
+ * marker, amendments a smaller filled one, paperwork a hollow one, so the shape of the scheme --
+ * one proposal, a few changes, a run of sign-offs -- reads before any text does.
+ */
+function PlanningTimeline({
+  applications,
+  onOpen,
+}: {
+  applications: PlanningApplication[]
+  onOpen: (app: PlanningApplication) => void
+}) {
+  const entries = planningTimeline(applications)
+  return (
+    <div className="border-t border-sm-border-soft px-3 pb-2 pt-2.5">
+      <div className="mb-1.5 flex items-baseline justify-between">
+        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.13em] text-sm-ink3">
+          History
+        </span>
+        <span className="font-mono text-[10px] text-sm-ink4">oldest first</span>
+      </div>
+      <ol className="relative">
+        {/* The rail runs through the marker centres and stops at the first and last entries. */}
+        <span aria-hidden className="absolute bottom-4 left-[6px] top-4 w-px bg-sm-ink4/60" />
+        {entries.map((app) => {
+          const kind = planningKindLabel(app) ?? (app.appType || 'Application')
+          const main = describesDevelopment(app)
+          const paperwork = planningPaperworkLabel(app) !== null
+          const date = formatPlanningDate(planningTimelineDate(app))
+          const decided = formatPlanningDate(app.decidedDate)
+          const reference = app.name.slice(app.name.indexOf('/') + 1)
+          return (
+            <li key={app.name} className="relative">
+              <span
+                aria-hidden
+                className={
+                  'absolute top-[13px] rounded-full ' +
+                  (main
+                    ? 'left-0 h-[13px] w-[13px] bg-sm-violet ring-[3px] ring-sm-surface'
+                    : paperwork
+                      ? 'left-[2px] h-[9px] w-[9px] border-[1.5px] border-sm-ink4 bg-sm-surface ring-2 ring-sm-surface'
+                      : 'left-[2px] h-[9px] w-[9px] bg-sky-500 ring-2 ring-sm-surface')
+                }
+              />
+              <button
+                type="button"
+                onClick={() => onOpen(app)}
+                className="ml-5 block w-[calc(100%-1.25rem)] cursor-pointer rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-sm-bg"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className={'truncate text-[12.5px] ' + (paperwork ? 'text-sm-ink3' : 'font-semibold text-sm-ink')}>
+                    {kind}
+                  </span>
+                  <span className="shrink-0 font-mono text-[10.5px] text-sm-ink3">{date ?? 'No date'}</span>
+                </div>
+                <div className="mt-px flex items-center gap-1.5 text-[11.5px]">
+                  <span className="font-mono text-sm-ink3">{reference}</span>
+                  <span className="text-sm-ink4">·</span>
+                  <span className={'capitalize ' + planningStateTextClass(app.appState)}>
+                    {app.appState.toLowerCase() || 'status unknown'}
+                    {decided && ` ${decided}`}
+                  </span>
+                </div>
+                {app.description && (
+                  <div className={'mt-0.5 text-[11.5px] leading-snug text-sm-ink3 ' + (main ? 'line-clamp-2' : 'line-clamp-1')}>
+                    {app.description}
+                  </div>
+                )}
+              </button>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
+/**
+ * A development with more than one application in the list. The application that describes it
+ * names it and carries its relevance, summary and decision; the latest activity date says how
+ * recently anything happened.
  */
 function PlanningDevelopmentRow({
   group,
@@ -1477,6 +1557,8 @@ function PlanningDevelopmentRow({
   const [open, setOpen] = useState(false)
   const lead = group.applications[0]
   const latest = latestPlanningApplication(group.applications) ?? lead
+  // The scheme's own decision, not the newest condition submission's "registered".
+  const stateOf = describesDevelopment(lead) ? lead : latest
   const relevance = planningPaperworkLabel(lead) ? null : planningRelevanceBadge(lead.relevance)
   const approximate = group.applications.some(isApproximatelyLocated)
   const dwellings = planningDwellingLabel(lead)
@@ -1499,10 +1581,10 @@ function PlanningDevelopmentRow({
             <span
               className={
                 'rounded-full px-2 py-[3px] font-mono text-[9.5px] font-semibold uppercase tracking-wider text-white ' +
-                planningStateBadgeClass(latest.appState)
+                planningStateBadgeClass(stateOf.appState)
               }
             >
-              {latest.appState}
+              {stateOf.appState}
             </span>
             {relevance && (
               <span
@@ -1548,13 +1630,7 @@ function PlanningDevelopmentRow({
           className={'text-sm-ink4 transition-transform ' + (open ? 'rotate-90' : '')}
         />
       </button>
-      {open && (
-        <div className="flex flex-col gap-0.5 border-t border-sm-border-soft px-1.5 py-1.5">
-          {group.applications.map((app) => (
-            <PlanningRow key={app.name} app={app} onOpen={onOpen} inDevelopment />
-          ))}
-        </div>
-      )}
+      {open && <PlanningTimeline applications={group.applications} onOpen={onOpen} />}
     </div>
   )
 }

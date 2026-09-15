@@ -56,11 +56,55 @@ export function describesDevelopment(app: PlanningApplication): boolean {
   return app.developmentRole === 'principal' || app.developmentRole === 'primary'
 }
 
-/** A plain label for paperwork on a development's timeline; null for anything that is a scheme. */
+/**
+ * A plain label for paperwork on a development's timeline; null for anything that is a scheme.
+ * Routine paperwork is either a condition submission or a non-material amendment (including
+ * section 96A), which is what the 'related' role holds.
+ */
 export function planningPaperworkLabel(app: PlanningApplication): string | null {
   if (app.developmentRole === 'condition') return 'Condition details'
-  if (app.developmentRole === 'related') return 'Paperwork'
+  if (app.developmentRole === 'related') return 'Minor amendment'
   return null
+}
+
+/**
+ * What an application is within its development, in words a reader does not need planning
+ * vocabulary for. Null outside a family, where the provider's own type is all we have.
+ *
+ * For paperwork this deliberately replaces the provider's type: Plota files some condition
+ * submissions as "reserved matters", and showing both gives the reader two answers.
+ */
+export function planningKindLabel(app: PlanningApplication): string | null {
+  switch (app.developmentRole) {
+    case 'principal':
+    case 'primary':
+      return 'Main application'
+    case 'amendment':
+      return 'Amendment'
+    case 'member':
+      return 'Linked consent'
+    default:
+      return planningPaperworkLabel(app)
+  }
+}
+
+/** The date an application entered the history: received, else validated, else decided. */
+export function planningTimelineDate(app: PlanningApplication): string | null {
+  return app.dateReceived ?? app.dateValidated ?? app.decidedDate ?? null
+}
+
+/**
+ * A development's applications as a history, oldest first. Undated records go first, because
+ * the one most often undated is an original fetched from the archive, and the history starts there.
+ * Ties keep the main application ahead of what followed it.
+ */
+export function planningTimeline(applications: PlanningApplication[]): PlanningApplication[] {
+  return [...applications].sort((a, b) => {
+    const da = timeOf(planningTimelineDate(a))
+    const db = timeOf(planningTimelineDate(b))
+    if (da !== db) return da - db
+    return Number(describesDevelopment(b)) - Number(describesDevelopment(a))
+  })
 }
 
 function timeOf(iso: string | null): number {

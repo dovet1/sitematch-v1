@@ -152,6 +152,8 @@ export interface PlanningApplication {
   lng: number
   decidedDate: string | null
   dateValidated: string | null
+  /** When the council received it; the date a development's history is ordered by. */
+  dateReceived?: string | null
   nDwellings: number | null
   dwellingCountReviewed?: boolean
   applicantAddress: string | null
