@@ -1,9 +1,11 @@
 'use client'
 
-import { MapPin, Search, PenTool, Layers, HelpCircle } from 'lucide-react'
+import { MapPin, Search, PenTool, Layers, HelpCircle, Radar } from 'lucide-react'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import { useSketchStore } from '@/lib/sitesketcher-v2/state-manager'
 import type { WorkspaceMode } from '../../types/unified-workspace'
+import { usePlanningMonitorEnabled } from '../../lib/planning-monitor-flag-context'
+import { usePlanningMonitorStore } from '../../lib/stores/planning-monitor-store'
 
 // Requirements mode is deferred in v1 (see plan). Directory is a full-pane, map-less mode.
 const MODES: { id: WorkspaceMode; label: string; Icon: typeof MapPin }[] = [
@@ -13,9 +15,14 @@ const MODES: { id: WorkspaceMode; label: string; Icon: typeof MapPin }[] = [
   { id: 'directory', label: 'Directory', Icon: Layers },
 ]
 
+// Offered only while the Planning Monitor flag is on.
+const PLANNING_MODE = { id: 'planning' as const, label: 'Planning monitor', Icon: Radar }
+
 export function URail() {
   const view = useWorkspaceStore((s) => s.view)
   const setMode = useWorkspaceStore((s) => s.setMode)
+  const planningEnabled = usePlanningMonitorEnabled()
+  const modes = planningEnabled ? [...MODES.slice(0, 3), PLANNING_MODE, MODES[3]] : MODES
 
   // Leaving a dirty sketch session prompts before discarding the work.
   const handleModeClick = (id: WorkspaceMode) => {
@@ -30,12 +37,14 @@ export function URail() {
       }
       sketch.reset()
     }
+    // Leaving Planning drops its selection and any open editor; saved patches are untouched.
+    if (view === 'planning') usePlanningMonitorStore.getState().reset()
     setMode(id)
   }
 
   return (
     <nav className="flex h-full w-14 flex-col items-center gap-1 border-r border-sm-border bg-sm-surface py-3">
-      {MODES.map(({ id, label, Icon }) => {
+      {modes.map(({ id, label, Icon }) => {
         const active = view === id
         return (
           <button

@@ -6,6 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { MAP_STYLES, MAPBOX_TOKEN } from '@/lib/sitesketcher-v2/constants'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
 import { planningPins, type PlanningGrouping } from '../../lib/planning-groups'
+import { PLANNING_STYLE } from '../../lib/planning-monitor-ui'
 import type { NearbyStore } from '../../lib/services/gaps-service'
 import type {
   PlanningApplication,
@@ -1073,7 +1074,8 @@ export function UnifiedMap({
     // from stale style-load closures. addLayers early-returns in sketch, so the
     // notSketch guard is belt-and-braces.
     const st = useWorkspaceStore.getState()
-    const notSketch = st.view !== 'sketch'
+    // Planning keeps its dark map clear of the discovery overlays it has no controls for.
+    const notSketch = st.view !== 'sketch' && st.view !== 'planning'
     if (map.getLayer(TRAFFIC_HEAT_LAYER)) {
       map.setLayoutProperty(
         TRAFFIC_HEAT_LAYER,
@@ -1101,7 +1103,7 @@ export function UnifiedMap({
     const map = new mapboxgl.Map({
       container: containerRef.current,
       // Discovery base style. The SketchLayer takes over the style in sketch mode.
-      style: MAP_STYLES.hybrid,
+      style: useWorkspaceStore.getState().view === 'planning' ? PLANNING_STYLE : MAP_STYLES.hybrid,
       center: NATIONAL_VIEWPORT.center,
       zoom: NATIONAL_VIEWPORT.zoom,
       antialias: true,
@@ -1362,9 +1364,11 @@ export function UnifiedMap({
     // SetStyleOptions marks the font-family fields as required.
     // Assess/Find are 2D-only, so flatten the map in case the sketch left it
     // pitched/rotated in 3D (setStyle alone preserves camera pitch & bearing).
-    if (prev === 'sketch') {
+    // Planning uses a dark basemap, so entering or leaving it swaps the style the same way;
+    // PlanningMapLayer re-adds its own layers on the resulting 'style.load'.
+    if (prev === 'sketch' || view === 'planning' || prev === 'planning') {
       readyRef.current = false
-      map.setStyle(MAP_STYLES.hybrid, { diff: false } as any)
+      map.setStyle(view === 'planning' ? PLANNING_STYLE : MAP_STYLES.hybrid, { diff: false } as any)
       map.easeTo({ pitch: 0, bearing: 0, duration: 400 })
       // Re-add the discovery layers once the reloaded style settles. 'idle'
       // fires reliably for both full and diffed swaps (unlike 'style.load'),

@@ -1,7 +1,7 @@
 // Shared types for the unified workspace. Shapes follow the design handoff
 // state contract in /docs/design_handoff_unified_workspace/README.md.
 
-export type WorkspaceMode = 'assess' | 'find' | 'sketch' | 'directory'
+export type WorkspaceMode = 'assess' | 'find' | 'sketch' | 'directory' | 'planning'
 
 export type InspectorTab = 'missing' | 'present' | 'catchment' | 'planning' | 'sketch'
 

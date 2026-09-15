@@ -70,6 +70,7 @@ export function decideMapClick(
   // exactly, since the old early-returns made road clicks unreachable anyway.
   if (
     st.view !== 'sketch' &&
+    st.view !== 'planning' &&
     st.tab !== 'catchment' &&
     st.tab !== 'planning' &&
     st.overlays.roadTraffic &&
