@@ -14,6 +14,12 @@ import {
 } from 'lucide-react'
 import { getClearbitLogoUrl } from '@/lib/clearbit-logo'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
+import {
+  groupPlanningApplications,
+  latestPlanningApplication,
+  type PlanningDevelopmentGroup,
+  type PlanningGrouping,
+} from '../../lib/planning-groups'
 import { toFilterSet } from '../../lib/services/gaps-service'
 import { exportBUAsToCSV } from '@/lib/buas/export-utils'
 import type {
@@ -1367,20 +1373,33 @@ function formatPlanningDate(iso: string | null): string | null {
 function PlanningRow({
   app,
   onOpen,
+  inDevelopment = false,
 }: {
   app: PlanningApplication
   onOpen: (app: PlanningApplication) => void
+  /**
+   * Listed inside a development card. Relevance and summary belong to the development, so
+   * the card already shows them once; repeating them on every member is the noise grouping
+   * exists to remove. The reference takes their place because it is what tells members apart.
+   */
+  inDevelopment?: boolean
 }) {
   const date =
     formatPlanningDate(app.decidedDate) ?? formatPlanningDate(app.dateValidated)
   const dwellings = planningDwellingLabel(app)
   const subline = [app.appType, app.appSize, dwellings, date].filter(Boolean).join(' · ')
-  const relevance = planningRelevanceBadge(app.relevance)
+  const relevance = inDevelopment ? null : planningRelevanceBadge(app.relevance)
+  const reference = app.name.slice(app.name.indexOf('/') + 1)
   return (
     <button
       type="button"
       onClick={() => onOpen(app)}
-      className="grid cursor-pointer grid-cols-[1fr_auto] items-center gap-3 rounded-xl border border-sm-border bg-sm-surface p-3 text-left transition-colors hover:bg-sm-bg"
+      className={
+        'grid cursor-pointer grid-cols-[1fr_auto] items-center gap-3 text-left transition-colors hover:bg-sm-bg ' +
+        (inDevelopment
+          ? 'rounded-lg bg-sm-surface px-2.5 py-2'
+          : 'rounded-xl border border-sm-border bg-sm-surface p-3')
+      }
     >
       <div className="min-w-0">
         <div className="mb-1.5 flex items-center gap-1.5">
@@ -1414,11 +1433,11 @@ function PlanningRow({
           )}
         </div>
         <div className="truncate text-[13px] font-medium text-sm-ink2">
-          {app.address || app.name}
+          {inDevelopment ? reference : app.address || app.name}
         </div>
         {/* The classifier's one sentence is what makes a ranked list readable rather than
             merely sorted, so it sits above the metadata line and is allowed two lines. */}
-        {app.summary && (
+        {!inDevelopment && app.summary && (
           <div className="mt-1 line-clamp-2 text-[12px] leading-snug text-sm-ink3">
             {app.summary}
           </div>
@@ -1433,6 +1452,103 @@ function PlanningRow({
     </button>
   )
 }
+
+/**
+ * A development with more than one application in the list. The lead member -- the
+ * best-ranked one -- names it and carries the development's relevance and summary; the
+ * state shown is the most recently dated member's, because that is where the scheme stands.
+ */
+function PlanningDevelopmentRow({
+  group,
+  onOpen,
+}: {
+  group: PlanningDevelopmentGroup
+  onOpen: (app: PlanningApplication) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const lead = group.applications[0]
+  const latest = latestPlanningApplication(group.applications) ?? lead
+  const relevance = planningRelevanceBadge(lead.relevance)
+  const approximate = group.applications.some(isApproximatelyLocated)
+  const dwellings = planningDwellingLabel(lead)
+  const date =
+    formatPlanningDate(latest.decidedDate) ?? formatPlanningDate(latest.dateValidated)
+  const count = group.applications.length
+  const subline = [`${count} applications`, dwellings, date && `latest ${date}`]
+    .filter(Boolean)
+    .join(' · ')
+  return (
+    <div className="rounded-xl border border-sm-border bg-sm-surface">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="grid w-full cursor-pointer grid-cols-[1fr_auto] items-center gap-3 rounded-xl p-3 text-left transition-colors hover:bg-sm-bg"
+      >
+        <div className="min-w-0">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <span
+              className={
+                'rounded-full px-2 py-[3px] font-mono text-[9.5px] font-semibold uppercase tracking-wider text-white ' +
+                planningStateBadgeClass(latest.appState)
+              }
+            >
+              {latest.appState}
+            </span>
+            {relevance && (
+              <span
+                className={
+                  'rounded-full border px-2 py-[2px] font-mono text-[9.5px] font-semibold uppercase tracking-wider ' +
+                  relevance.className
+                }
+              >
+                {relevance.label}
+              </span>
+            )}
+            {approximate && (
+              <span
+                title="Some applications are placed by ward, parish or postcode centre rather than the site itself"
+                className="rounded-full border border-sm-border bg-sm-bg px-2 py-[2px] font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3"
+              >
+                Approx
+              </span>
+            )}
+          </div>
+          <div className="truncate text-[13px] font-medium text-sm-ink2">
+            {lead.address || lead.name}
+          </div>
+          {lead.summary && (
+            <div className="mt-1 line-clamp-2 text-[12px] leading-snug text-sm-ink3">
+              {lead.summary}
+            </div>
+          )}
+          <div
+            className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-sm-ink3"
+            title="Applications in this list; others for the same development may fall outside this area or the scheme filter"
+          >
+            {subline}
+          </div>
+        </div>
+        <ChevronRight
+          size={15}
+          className={'text-sm-ink4 transition-transform ' + (open ? 'rotate-90' : '')}
+        />
+      </button>
+      {open && (
+        <div className="flex flex-col gap-0.5 border-t border-sm-border-soft px-1.5 py-1.5">
+          {group.applications.map((app) => (
+            <PlanningRow key={app.name} app={app} onOpen={onOpen} inDevelopment />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const PLANNING_GROUPINGS: { id: PlanningGrouping; label: string }[] = [
+  { id: 'developments', label: 'Developments' },
+  { id: 'applications', label: 'Applications' },
+]
 
 function PlanningBody({
   loading,
@@ -1454,6 +1570,10 @@ function PlanningBody({
   const warning = planningTruncationMessage(truncationReason)
   const staleness = planningFreshnessMessage(freshness)
   const approximateNote = planningApproximateNote(applications)
+  const grouping = useWorkspaceStore((s) => s.planningGrouping)
+  const setGrouping = useWorkspaceStore((s) => s.setPlanningGrouping)
+  const groups = useMemo(() => groupPlanningApplications(applications), [applications])
+  const byDevelopment = grouping === 'developments'
   return (
     <>
       {loading && (
@@ -1469,8 +1589,26 @@ function PlanningBody({
             Planning applications
           </div>
           <span className="font-mono text-[12px] text-sm-ink2">
-            {applications.length}
+            {byDevelopment
+              ? `${groups.length} ${groups.length === 1 ? 'development' : 'developments'} · ${applications.length}`
+              : applications.length}
           </span>
+        </div>
+        <div className="mt-2.5 inline-flex rounded-full border border-sm-border bg-sm-surface p-0.5">
+          {PLANNING_GROUPINGS.map((g) => (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => setGrouping(g.id)}
+              aria-pressed={grouping === g.id}
+              className={
+                'rounded-full px-3 py-1 text-[11.5px] font-medium transition-colors duration-150 ' +
+                (grouping === g.id ? 'bg-sm-ink text-white' : 'text-sm-ink3 hover:text-sm-ink2')
+              }
+            >
+              {g.label}
+            </button>
+          ))}
         </div>
         <p className="mt-1 text-[12.5px] leading-relaxed text-sm-ink3">
           Commercial schemes and residential schemes of 15 or more homes, most relevant first.
@@ -1508,9 +1646,17 @@ function PlanningBody({
           </div>
         )}
         {!error &&
-          applications.map((app) => (
-            <PlanningRow key={app.name} app={app} onOpen={onOpen} />
-          ))}
+          (byDevelopment
+            ? groups.map((group) =>
+                group.applications.length > 1 ? (
+                  <PlanningDevelopmentRow key={group.key} group={group} onOpen={onOpen} />
+                ) : (
+                  <PlanningRow key={group.key} app={group.applications[0]} onOpen={onOpen} />
+                )
+              )
+            : applications.map((app) => (
+                <PlanningRow key={app.name} app={app} onOpen={onOpen} />
+              )))}
       </div>
     </>
   )

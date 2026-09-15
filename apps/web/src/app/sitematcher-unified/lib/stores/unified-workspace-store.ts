@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { SizeBandId } from '../size-filter'
+import type { PlanningGrouping } from '../planning-groups'
 import type {
   WorkspaceMode,
   InspectorTab,
@@ -78,6 +79,9 @@ interface WorkspaceState {
   brandInfoId: string | null
   // Planning-application detail modal (Planning tab list row or map pin).
   planningModal: PlanningApplication | null
+  // Planning tab: applications folded into developments, or listed one by one. A reading
+  // preference, so area and view resets leave it alone.
+  planningGrouping: PlanningGrouping
 
   // Assess brand-list filters (shared across the Missing/Present tabs).
   brandFilterCategoryIds: string[]
@@ -136,6 +140,7 @@ interface WorkspaceState {
   setBrandModal: (missing: MissingFascia | null) => void
   setBrandInfoId: (brandId: string | null) => void
   setPlanningModal: (app: PlanningApplication | null) => void
+  setPlanningGrouping: (grouping: PlanningGrouping) => void
   setBrandFilterCategoryIds: (ids: string[]) => void
   setBrandFilterBrandIds: (ids: string[]) => void
   setBrandFilterSizeBandId: (id: SizeBandId | null) => void
@@ -183,6 +188,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   brandModal: null,
   brandInfoId: null,
   planningModal: null,
+  planningGrouping: 'developments',
 
   brandFilterCategoryIds: [],
   brandFilterBrandIds: [],
@@ -275,6 +281,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setBrandModal: (brandModal) => set({ brandModal }),
   setBrandInfoId: (brandInfoId) => set({ brandInfoId }),
   setPlanningModal: (planningModal) => set({ planningModal }),
+  setPlanningGrouping: (planningGrouping) => set({ planningGrouping }),
   setBrandFilterCategoryIds: (brandFilterCategoryIds) =>
     set({ brandFilterCategoryIds }),
   setBrandFilterBrandIds: (brandFilterBrandIds) => set({ brandFilterBrandIds }),
