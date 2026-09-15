@@ -36,6 +36,7 @@ function row(overrides: Record<string, unknown> = {}) {
     date_decided: null,
     date_validated: '2026-09-09',
     stated_dwelling_count: null,
+    eligibility_limbs: ['A'],
     intelligence_tier: true,
     development_id: '22222222-2222-2222-2222-222222222222',
     relevance: 'high',
@@ -87,6 +88,92 @@ describe('fetchStoredPlanningApplications', () => {
     expect(app.summary).toBe('A new foodstore on the site of a former car showroom.')
     expect(app.modelDwellingCount).toBe(9)
     expect(app.createsCommercialSpace).toBe('yes')
+  })
+
+  it.each([null, 0, 14])(
+    'hides a non-commercial scheme with %s dwellings',
+    async (count) => {
+      pages({
+        data: [row({
+          commercial_work: null,
+          eligibility_limbs: [],
+          creates_commercial_space: 'no',
+          stated_dwelling_count: count,
+          model_dwelling_count: null,
+        })],
+        error: null,
+      })
+
+      const result = await fetchStoredPlanningApplications(BOUNDARY)
+      expect(result.applications).toEqual([])
+    }
+  )
+
+  it('shows a residential scheme at the inclusive 15-home boundary', async () => {
+    pages({
+      data: [row({
+        commercial_work: null,
+        eligibility_limbs: ['B'],
+        creates_commercial_space: 'no',
+        stated_dwelling_count: 15,
+        model_dwelling_count: null,
+      })],
+      error: null,
+    })
+
+    const result = await fetchStoredPlanningApplications(BOUNDARY)
+    expect(result.applications).toHaveLength(1)
+  })
+
+  it('uses the model dwelling count only when the provider count is missing', async () => {
+    pages({
+      data: [row({
+        commercial_work: null,
+        eligibility_limbs: ['B'],
+        creates_commercial_space: 'no',
+        stated_dwelling_count: null,
+        model_dwelling_count: 15,
+      })],
+      error: null,
+    })
+
+    const result = await fetchStoredPlanningApplications(BOUNDARY)
+    expect(result.applications).toHaveLength(1)
+  })
+
+  it('lets a human dwelling correction hide a residential scheme below 15', async () => {
+    pages({
+      data: [row({
+        commercial_work: null,
+        eligibility_limbs: ['B'],
+        creates_commercial_space: 'no',
+        stated_dwelling_count: 40,
+        model_dwelling_count: 14,
+        model_dwelling_basis: 'human_review',
+      })],
+      error: null,
+    })
+
+    const result = await fetchStoredPlanningApplications(BOUNDARY)
+    expect(result.applications).toEqual([])
+  })
+
+  it.each([
+    { commercial_work: 'new', eligibility_limbs: ['A'], creates_commercial_space: 'no' },
+    { commercial_work: null, eligibility_limbs: ['A-described'], creates_commercial_space: 'unclear' },
+    { commercial_work: null, eligibility_limbs: [], creates_commercial_space: 'yes' },
+  ])('shows a commercial scheme identified by source or classification', async (commercial) => {
+    pages({
+      data: [row({
+        ...commercial,
+        stated_dwelling_count: null,
+        model_dwelling_count: null,
+      })],
+      error: null,
+    })
+
+    const result = await fetchStoredPlanningApplications(BOUNDARY)
+    expect(result.applications).toHaveLength(1)
   })
 
   it('carries how precisely each record is placed', async () => {

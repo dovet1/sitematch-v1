@@ -45,6 +45,7 @@ interface StoredRow {
   date_decided: string | null
   date_validated: string | null
   stated_dwelling_count: number | null
+  eligibility_limbs?: string[] | null
   intelligence_tier: boolean
   development_id: string | null
   relevance: 'high' | 'medium' | 'low' | null
@@ -52,6 +53,31 @@ interface StoredRow {
   model_dwelling_basis?: string | null
   model_dwelling_count: number | null
   creates_commercial_space: 'yes' | 'no' | 'unclear' | null
+}
+
+const COMMERCIAL_WORK = new Set(['new', 'to-commercial', 'between', 'loss'])
+const COMMERCIAL_ELIGIBILITY_LIMBS = new Set(['A', 'A-described', 'D', 'D-described'])
+
+/**
+ * The public tab is an opportunities view, not the full planning census. Keep schemes that
+ * create/change commercial space (including commercial loss), or housing schemes with a
+ * confirmed count of at least 15 homes. A human dwelling correction is authoritative,
+ * including a correction to unknown; otherwise the provider's stated count wins and the
+ * classifier fills the gaps where the provider supplied no count.
+ *
+ * The database applies this before ranking and the record cap. Repeating it here is a
+ * fail-closed guard during a rolling migration and makes the display contract explicit.
+ */
+function isVisiblePlanningScheme(row: StoredRow): boolean {
+  const commercial =
+    (row.commercial_work != null && COMMERCIAL_WORK.has(row.commercial_work)) ||
+    (row.eligibility_limbs?.some((limb) => COMMERCIAL_ELIGIBILITY_LIMBS.has(limb)) ?? false) ||
+    row.creates_commercial_space === 'yes'
+  const dwellings = row.model_dwelling_basis === 'human_review'
+    ? row.model_dwelling_count
+    : row.stated_dwelling_count ?? row.model_dwelling_count
+
+  return commercial || (dwellings != null && dwellings >= 15)
 }
 
 export async function fetchStoredPlanningApplications(boundary: Boundary): Promise<PlanningResult> {
@@ -96,6 +122,7 @@ export async function fetchStoredPlanningApplications(boundary: Boundary): Promi
   const applications: PlanningApplication[] = []
   for (const row of rows.slice(0, RECORD_CAP)) {
     if (row.longitude == null || row.latitude == null) continue
+    if (!isVisiblePlanningScheme(row)) continue
     applications.push({
       name: `${row.authority_name}/${row.reference}`,
       uid: row.provider_id,

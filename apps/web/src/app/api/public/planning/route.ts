@@ -18,8 +18,9 @@ function errorResponse(message: string, status: number) {
 }
 
 /**
- * Planning applications inside a boundary — used by the unified workspace's
- * Planning tab (Find Gaps BUA polygon / Assess Area circle or isochrone).
+ * Commercial schemes and residential schemes of at least 15 homes inside a boundary — used
+ * by the unified workspace's Planning tab (Find Gaps BUA polygon / Assess Area circle or
+ * isochrone).
  *
  * POST body: { boundary: GeoJSON Polygon | MultiPolygon }
  *

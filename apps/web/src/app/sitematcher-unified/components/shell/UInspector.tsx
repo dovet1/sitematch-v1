@@ -1473,7 +1473,7 @@ function PlanningBody({
           </span>
         </div>
         <p className="mt-1 text-[12.5px] leading-relaxed text-sm-ink3">
-          Planning applications in this area, most relevant first.
+          Commercial schemes and residential schemes of 15 or more homes, most relevant first.
         </p>
         {/* Where the count is read is the only place this caveat does any work. */}
         {approximateNote && !loading && !error && (
