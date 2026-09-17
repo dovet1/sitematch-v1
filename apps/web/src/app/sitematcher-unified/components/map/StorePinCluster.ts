@@ -8,15 +8,17 @@ type LeafProps = { store: NearbyStore }
 const CLUSTER_RADIUS_PX = 40
 const CLUSTER_MAX_ZOOM = 14
 
+const CLUSTER_COLOR = '#7033FF'
+
 // Builds the count-bubble element shown for an aggregated cluster.
-function buildClusterBubble(count: number): HTMLDivElement {
+function buildClusterBubble(count: number, color: string): HTMLDivElement {
   const el = document.createElement('div')
   const size = count >= 100 ? 44 : count >= 25 ? 38 : 32
   el.style.cssText =
     `width:${size}px;height:${size}px;border-radius:50%;` +
     'display:flex;align-items:center;justify-content:center;' +
-    'background:#7033FF;color:#fff;font-weight:600;font-size:13px;' +
-    'box-shadow:0 0 0 3px rgba(112,51,255,0.35),0 2px 6px rgba(0,0,0,0.3);' +
+    `background:${color};color:#fff;font-weight:600;font-size:13px;` +
+    `box-shadow:0 0 0 3px color-mix(in srgb, ${color} 35%, transparent),0 2px 6px rgba(0,0,0,0.3);` +
     'cursor:pointer;pointer-events:auto;'
   el.textContent = count >= 1000 ? `${Math.round(count / 100) / 10}k` : String(count)
   return el
@@ -33,10 +35,13 @@ export class StorePinCluster {
   private markerStores = new Map<string | number, NearbyStore>()
   private markerClusterIds = new Map<string | number, number>()
   private hoveredBrandId: string | null = null
+  private clusterColor: string
   private boundRender = () => this.render()
 
-  constructor(map: mapboxgl.Map) {
+  // Planning passes its own cluster colour: violet there means residential applications.
+  constructor(map: mapboxgl.Map, options: { clusterColor?: string } = {}) {
     this.map = map
+    this.clusterColor = options.clusterColor ?? CLUSTER_COLOR
     this.map.on('moveend', this.boundRender)
     this.map.on('zoomend', this.boundRender)
   }
@@ -100,7 +105,7 @@ export class StorePinCluster {
       let store: NearbyStore | undefined
       if (isCluster) {
         const clusterProps = props as Supercluster.ClusterProperties
-        el = buildClusterBubble(clusterProps.point_count)
+        el = buildClusterBubble(clusterProps.point_count, this.clusterColor)
         el.addEventListener('click', (e) => {
           e.stopPropagation()
           const expZoom = this.index?.getClusterExpansionZoom(clusterProps.cluster_id)

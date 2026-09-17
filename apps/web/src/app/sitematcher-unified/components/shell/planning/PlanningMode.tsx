@@ -10,7 +10,7 @@ import type { ReferenceData } from '../../../types/unified-workspace'
 import { selectActiveCriteria, selectPatch, usePlanningMonitorStore, type LngLat, type StackPick } from '../../../lib/stores/planning-monitor-store'
 import { useWorkspaceStore } from '../../../lib/stores/unified-workspace-store'
 import { usePatchDigest, usePlanningList, usePlanningMap, usePlanningPatches } from '../../../lib/hooks/usePlanningMonitor'
-import { cellBounds, documentCount, filterChips, inCell, isNewRow, londonTodayIso, removeFilterChip, rowTitle } from '../../../lib/planning-monitor-ui'
+import { cellBounds, documentCount, filterChips, inCell, isNewRow, londonTodayIso, milesLabel, removeFilterChip, rowTitle } from '../../../lib/planning-monitor-ui'
 import {
   archivePatch,
   createPatch as createPatchRequest,
@@ -36,8 +36,15 @@ import { PlanningWeeklySummary } from './PlanningWeeklySummary'
 import { PlanningDeleteDialog, PlanningPatchMenu } from './PlanningPatchMenu'
 import { FilterChipView } from './PlanningUi'
 
-/** Estate stores are drawn from this zoom; nationally they would be thousands of points with no meaning. */
-const STORE_MIN_ZOOM = 8
+/** Brand stores are drawn from this zoom; below it a large estate is a smear of points with no meaning. */
+const STORE_MIN_ZOOM = 6
+
+/** A bbox grown by `meters` on every side. */
+function padBbox([w, s, e, n]: [number, number, number, number], meters: number): [number, number, number, number] {
+  const dLat = meters / 111320
+  const dLng = meters / (111320 * Math.cos((((s + n) / 2) * Math.PI) / 180))
+  return [w - dLng, s - dLat, e + dLng, n + dLat]
+}
 
 /** Read `?mode=planning&patch=…&report=…&settings=notifications` once, so email links land in the right place. */
 export function usePlanningDeepLink() {
@@ -92,13 +99,16 @@ export function PlanningModeProvider({ enabled, map, refData, children }: { enab
     },
   }), [digestState, activePatchId, bump])
 
-  // Stores for the chosen brands, in view.
+  // Stores for the chosen brands, in view, each drawn with the filter's radius.
   const [stores, setStores] = useState<NearbyStore[]>([])
+  const storeRadiusMeters = criteria.proximity?.radiusMeters ?? null
   const fasciaIds = useMemo(() => {
     const ids = criteria.proximity?.brandIds ?? []
     return refData.brands.filter((b) => ids.includes(b.id)).flatMap((b) => b.fascias.map((f) => f.id))
   }, [criteria.proximity, refData.brands])
-  const storeKey = enabled && viewport && viewport.zoom >= STORE_MIN_ZOOM && fasciaIds.length ? `${fasciaIds.join(',')}|${viewport.bbox.map((n) => n.toFixed(3)).join(',')}` : null
+  const storeKey = enabled && viewport && viewport.zoom >= STORE_MIN_ZOOM && fasciaIds.length
+    ? `${fasciaIds.join(',')}|${storeRadiusMeters}|${viewport.bbox.map((n) => n.toFixed(3)).join(',')}`
+    : null
   useEffect(() => {
     if (!storeKey || !viewport) {
       setStores([])
@@ -106,7 +116,8 @@ export function PlanningModeProvider({ enabled, map, refData, children }: { enab
     }
     const controller = new AbortController()
     const timer = setTimeout(() => {
-      fetchStoresInViewport(viewport.bbox, { fasciaIds }, controller.signal)
+      // Padded by the radius, so a ring reaching into view from a store just outside it still draws.
+      fetchStoresInViewport(padBbox(viewport.bbox, storeRadiusMeters ?? 0), { fasciaIds }, controller.signal)
         .then((res) => setStores(res.stores))
         .catch(() => undefined)
     }, 300)
@@ -256,8 +267,8 @@ export function PlanningModeProvider({ enabled, map, refData, children }: { enab
   }, [])
 
   const value = useMemo<PlanningModeValue>(
-    () => ({ map, list, mapState, digest, stores, refData, userEmail, selectRow, pickSingle, openStack, toggleWatch, savePatch, createPatch, setEmail, deletePatch }),
-    [map, list, mapState, digest, stores, refData, userEmail, selectRow, pickSingle, openStack, toggleWatch, savePatch, createPatch, setEmail, deletePatch]
+    () => ({ map, list, mapState, digest, stores, storeRadiusMeters, refData, userEmail, selectRow, pickSingle, openStack, toggleWatch, savePatch, createPatch, setEmail, deletePatch }),
+    [map, list, mapState, digest, stores, storeRadiusMeters, refData, userEmail, selectRow, pickSingle, openStack, toggleWatch, savePatch, createPatch, setEmail, deletePatch]
   )
   return <PlanningModeContext.Provider value={value}>{children}</PlanningModeContext.Provider>
 }
@@ -362,7 +373,7 @@ function HoverTooltip({ map }: { map: mapboxgl.Map }) {
   )
 }
 
-function Legend({ patch, stores }: { patch: boolean; stores: boolean }) {
+function Legend({ patch, stores, radiusMeters }: { patch: boolean; stores: boolean; radiusMeters: number | null }) {
   const dot = (color: string) => <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
   return (
     <div className="absolute bottom-6 left-4 z-10 rounded-[12px] bg-white/95 px-3.5 py-3 text-[12px] text-sm-ink shadow-[0_4px_12px_-4px_rgba(0,0,0,.4)]">
@@ -387,14 +398,19 @@ function Legend({ patch, stores }: { patch: boolean; stores: boolean }) {
             <li className="flex items-center gap-2">{dot('#C9C3BA')} Outside the patch — dimmed</li>
           </>
         )}
-        {stores && <li className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-[3px] bg-[#0EAE73]" /> Chosen brands’ stores</li>}
+        {stores && <li className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-white ring-[1.5px] ring-[#2A6FDB]" /> Chosen brands’ stores</li>}
+        {stores && radiusMeters != null && (
+          <li className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full border-[1.5px] border-dashed border-[#0EAE73] bg-[#0EAE73]/10" /> {milesLabel(radiusMeters)} radius
+          </li>
+        )}
       </ul>
     </div>
   )
 }
 
 export function PlanningModeMapOverlay({ map }: { map: mapboxgl.Map }) {
-  const { mapState, stores, pickSingle, openStack, list, refData, savePatch } = usePlanningMode()
+  const { mapState, stores, storeRadiusMeters, pickSingle, openStack, list, refData, savePatch } = usePlanningMode()
   const selected = usePlanningMonitorStore((s) => s.selected)
   const stack = usePlanningMonitorStore((s) => s.stack)
   const patch = usePlanningMonitorStore(selectPatch)
@@ -435,6 +451,7 @@ export function PlanningModeMapOverlay({ map }: { map: mapboxgl.Map }) {
         archived={archivedWeek?.points ?? null}
         patchGeometry={inPatch && !drawing ? patch.displayGeometry : null}
         stores={drawingNew ? [] : stores}
+        storeRadiusMeters={storeRadiusMeters}
         newKeys={newKeys}
         interactive={!drawing}
         onPickSingle={(pick) => pickSingle(pick)}
@@ -459,7 +476,7 @@ export function PlanningModeMapOverlay({ map }: { map: mapboxgl.Map }) {
           {mapState.unavailable ? 'Too many applications to map here. Zoom in or narrow the time frame.' : 'Map data could not be loaded.'}
         </div>
       )}
-      {!drawingNew && <Legend patch={Boolean(inPatch)} stores={stores.length > 0} />}
+      {!drawingNew && <Legend patch={Boolean(inPatch)} stores={stores.length > 0} radiusMeters={storeRadiusMeters} />}
 
       {panel === 'filters' && <div className="absolute inset-0 z-20 bg-[rgba(20,16,10,.35)]" onClick={() => usePlanningMonitorStore.getState().closeFilters()} aria-hidden />}
       <PlanningWeeklySummary />

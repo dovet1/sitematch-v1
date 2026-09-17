@@ -24,6 +24,8 @@ export interface PlanningModeValue {
   mapState: PlanningMapState
   digest: PlanningDigestState
   stores: NearbyStore[]
+  /** The brand filter's radius, drawn around each of `stores`. */
+  storeRadiusMeters: number | null
   refData: ReferenceData
   userEmail: string
   /** Select a row (or clear with null); `fly` also moves the map to it. */

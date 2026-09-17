@@ -7,11 +7,14 @@ import type { PatchGeometry } from '@/lib/planning-monitor/geometry'
 import { usePlanningMonitorStore, type StackPick } from '../../lib/stores/planning-monitor-store'
 import { MAX_CLUSTER_ZOOM, groupByPosition } from '../../lib/planning-monitor-ui'
 import type { NearbyStore } from '../../lib/services/gaps-service'
+import { circleGeometry } from '../../lib/geo'
+import { StorePinCluster } from './StorePinCluster'
 
 /**
  * Planning mode's map: patch outline, server clusters and single developments, NEW badges, the
  * hovered and selected pin, dimmed matches outside the patch, an archived week's points, and the
- * chosen brands' stores. Several applications at one point draw as a stacked pin that opens a list. It owns only its own sources and layers, re-adds them after every style
+ * chosen brands' stores with the filter's radius around each. The stores themselves are the shared
+ * logo-badge markers from Find gaps (HTML, clustered), not a style layer. Several applications at one point draw as a stacked pin that opens a list. It owns only its own sources and layers, re-adds them after every style
  * load, and removes nothing belonging to other modes. Clicks are handled here, so the shared map's
  * click handler has nothing to do in Planning.
  */
@@ -27,7 +30,7 @@ export const PLANNING_COLORS = {
 const SRC_PATCH = 'pm-patch'
 const SRC_POINTS = 'pm-points'
 const SRC_OUTSIDE = 'pm-outside'
-const SRC_STORES = 'pm-stores'
+const SRC_STORE_RADII = 'pm-store-radii'
 const L_PATCH_LINE = 'pm-patch-line'
 const L_OUTSIDE = 'pm-outside'
 const L_OUTSIDE_COUNT = 'pm-outside-count'
@@ -40,12 +43,12 @@ const L_SINGLE = 'pm-single'
 const L_SINGLE_APPROX = 'pm-single-approx'
 const L_FOCUS = 'pm-focus'
 const L_NEW = 'pm-new'
-const L_STORES = 'pm-stores'
-const STORE_IMAGE = 'pm-store-square'
+const L_STORE_RADII_FILL = 'pm-store-radii-fill'
+const L_STORE_RADII_LINE = 'pm-store-radii-line'
 const NEW_IMAGES = { residential: 'pm-new-residential', commercial: 'pm-new-commercial', mixed: 'pm-new-mixed' } as const
-const SOURCES = [SRC_PATCH, SRC_POINTS, SRC_OUTSIDE, SRC_STORES]
+const SOURCES = [SRC_PATCH, SRC_POINTS, SRC_OUTSIDE, SRC_STORE_RADII]
 export const PLANNING_LAYER_IDS = [
-  L_PATCH_LINE, L_STORES, L_OUTSIDE, L_OUTSIDE_COUNT, L_HALO, L_STACK_BACK, L_STACK_MID, L_CLUSTER, L_CLUSTER_COUNT, L_SINGLE_APPROX, L_SINGLE, L_FOCUS, L_NEW,
+  L_STORE_RADII_FILL, L_STORE_RADII_LINE, L_PATCH_LINE, L_OUTSIDE, L_OUTSIDE_COUNT, L_HALO, L_STACK_BACK, L_STACK_MID, L_CLUSTER, L_CLUSTER_COUNT, L_SINGLE_APPROX, L_SINGLE, L_FOCUS, L_NEW,
 ]
 const PICKABLE = [L_NEW, L_FOCUS, L_SINGLE, L_SINGLE_APPROX, L_CLUSTER]
 
@@ -131,23 +134,6 @@ export function highlightsToGeoJSON(points: DigestHighlight[]): GeoJSON.FeatureC
   }
 }
 
-function storeImage(): ImageData {
-  const size = 28
-  const canvas = document.createElement('canvas')
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
-  ctx.fillStyle = '#ffffff'
-  ctx.beginPath()
-  ctx.roundRect(3, 3, 22, 22, 6)
-  ctx.fill()
-  ctx.fillStyle = PLANNING_COLORS.estate
-  ctx.beginPath()
-  ctx.roundRect(6, 6, 16, 16, 4)
-  ctx.fill()
-  return ctx.getImageData(0, 0, size, size)
-}
-
 /** The mono "NEW" badge drawn above a pin, in its use colour. Rendered at 2x. */
 function newBadgeImage(color: string): ImageData {
   const w = 64
@@ -185,7 +171,6 @@ export function mapAlive(map: mapboxgl.Map): boolean {
 
 function ensureLayers(map: mapboxgl.Map) {
   if (!mapAlive(map) || !map.isStyleLoaded()) return false
-  if (!map.hasImage(STORE_IMAGE)) map.addImage(STORE_IMAGE, storeImage(), { pixelRatio: 2 })
   for (const kind of ['residential', 'commercial', 'mixed'] as const) {
     if (!map.hasImage(NEW_IMAGES[kind])) map.addImage(NEW_IMAGES[kind], newBadgeImage(PLANNING_COLORS[kind]), { pixelRatio: 2 })
   }
@@ -195,8 +180,13 @@ function ensureLayers(map: mapboxgl.Map) {
   const add = (layer: mapboxgl.AnyLayer) => {
     if (!map.getLayer(layer.id)) map.addLayer(layer)
   }
+  // Radius rings sit beneath everything else. Overlapping fills deepen, which reads as coverage.
+  add({ id: L_STORE_RADII_FILL, type: 'fill', source: SRC_STORE_RADII, paint: { 'fill-color': PLANNING_COLORS.estate, 'fill-opacity': 0.06 } })
+  add({
+    id: L_STORE_RADII_LINE, type: 'line', source: SRC_STORE_RADII,
+    paint: { 'line-color': PLANNING_COLORS.estate, 'line-width': 1.5, 'line-opacity': 0.7, 'line-dasharray': [2, 2] },
+  })
   add({ id: L_PATCH_LINE, type: 'line', source: SRC_PATCH, paint: { 'line-color': PLANNING_COLORS.patch, 'line-width': 3 } })
-  add({ id: L_STORES, type: 'symbol', source: SRC_STORES, layout: { 'icon-image': STORE_IMAGE, 'icon-size': 1, 'icon-allow-overlap': true } })
   // Matches outside the patch: white and dimmed, so an edge case is still visible.
   add({
     id: L_OUTSIDE, type: 'circle', source: SRC_OUTSIDE,
@@ -280,6 +270,7 @@ interface LayerData {
   archived: DigestHighlight[] | null
   patchGeometry: PatchGeometry | null
   stores: NearbyStore[]
+  storeRadiusMeters: number | null
   newKeys: string[]
   focusKeys: string[]
   interactive: boolean
@@ -290,10 +281,10 @@ function apply(map: mapboxgl.Map, data: LayerData) {
   source(SRC_POINTS).setData(data.archived ? highlightsToGeoJSON(data.archived) : clustersToGeoJSON(data.clusters))
   source(SRC_OUTSIDE).setData(data.archived ? EMPTY : clustersToGeoJSON(data.outside))
   source(SRC_PATCH).setData(data.patchGeometry ? { type: 'Feature', geometry: data.patchGeometry, properties: {} } : EMPTY)
-  source(SRC_STORES).setData({
+  source(SRC_STORE_RADII).setData(data.storeRadiusMeters ? {
     type: 'FeatureCollection',
-    features: data.stores.map((s) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [s.lon, s.lat] }, properties: { id: s.id } })),
-  })
+    features: data.stores.map((s) => ({ type: 'Feature', geometry: circleGeometry(s.lon, s.lat, data.storeRadiusMeters! / 1000, 48), properties: { id: s.id } })),
+  } : EMPTY)
   applyFilters(map, data)
 }
 
@@ -312,6 +303,7 @@ export function PlanningMapLayer({
   archived,
   patchGeometry,
   stores,
+  storeRadiusMeters,
   newKeys,
   interactive,
   onPickSingle,
@@ -325,6 +317,8 @@ export function PlanningMapLayer({
   archived: DigestHighlight[] | null
   patchGeometry: PatchGeometry | null
   stores: NearbyStore[]
+  /** Drawn as a ring around each store; null draws none. */
+  storeRadiusMeters: number | null
   /** Row keys added in the last 7 days. */
   newKeys: string[]
   /** False while drawing: the draw layer owns clicks. */
@@ -341,7 +335,7 @@ export function PlanningMapLayer({
   const select = usePlanningMonitorStore((s) => s.select)
   const focusKeys = [selectedKey, hoveredKey].filter(Boolean) as string[]
 
-  const data: LayerData = { clusters, outside, clusterZoom, archived, patchGeometry, stores, newKeys, focusKeys, interactive }
+  const data: LayerData = { clusters, outside, clusterZoom, archived, patchGeometry, stores, storeRadiusMeters, newKeys, focusKeys, interactive }
   const latest = useRef({ data, onPickSingle, onPickStack })
   latest.current = { data, onPickSingle, onPickStack }
   // Set when an update could not be applied because the style was busy (isStyleLoaded is false
@@ -451,7 +445,7 @@ export function PlanningMapLayer({
   }, [map, setViewport, setHovered, setHoverStack, select])
 
   // Data updates.
-  const dataKey = [clusters, outside, archived, patchGeometry, stores]
+  const dataKey = [clusters, outside, archived, patchGeometry, stores, storeRadiusMeters]
   useEffect(() => {
     if (!ensureLayers(map)) {
       pending.current = true
@@ -460,6 +454,21 @@ export function PlanningMapLayer({
     apply(map, latest.current.data)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, ...dataKey])
+
+  // Store badges: HTML markers, so they survive style swaps without re-adding. Hidden while drawing,
+  // where they would sit over the vertices being placed.
+  const pinsRef = useRef<StorePinCluster | null>(null)
+  useEffect(() => {
+    const pins = new StorePinCluster(map, { clusterColor: PLANNING_COLORS.estate })
+    pinsRef.current = pins
+    return () => {
+      pins.destroy()
+      pinsRef.current = null
+    }
+  }, [map])
+  useEffect(() => {
+    pinsRef.current?.setPins(interactive ? stores : [])
+  }, [map, stores, interactive])
 
   // Highlight updates.
   const filterKey = `${newKeys.join(',')}|${focusKeys.join(',')}`
