@@ -138,6 +138,8 @@ export interface DigestHighlight {
   /** What happened to it in the period: 'new' and/or a decision ('approved', 'refused', …). */
   categories?: string[]
   rowKey?: string
+  /** Stored from 17 Sep 2026. */
+  description?: string
   isResidential?: boolean
   isCommercial?: boolean
   dwellings?: number | null

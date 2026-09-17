@@ -7,6 +7,7 @@ import { selectPatch, usePlanningMonitorStore } from '../../../lib/stores/planni
 import {
   KIND_LABELS,
   USE_COLORS,
+  developmentsCsv,
   documentCount,
   downloadCsv,
   isNewRow,
@@ -15,7 +16,6 @@ import {
   markerKind,
   rowMeta,
   rowTitle,
-  rowsToCsv,
 } from '../../../lib/planning-monitor-ui'
 import { usePlanningMode } from './PlanningModeContext'
 import { DocumentRows, useDevelopmentDocuments } from './PlanningDevelopmentCard'
@@ -169,7 +169,7 @@ export function PlanningResultsPanel() {
           <button
             type="button"
             disabled={list.rows.length === 0}
-            onClick={() => downloadCsv(`planning-${inPatch ? patch.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'view'}.csv`, rowsToCsv(list.rows))}
+            onClick={() => downloadCsv(`planning-${inPatch ? patch.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'view'}.csv`, developmentsCsv(list.rows))}
             title={list.nextCursor ? `Exports the ${list.rows.length} rows loaded so far` : undefined}
             className="ml-auto inline-flex items-center gap-1 rounded-full bg-sm-ink px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.04em] text-white hover:bg-black disabled:opacity-40"
           >

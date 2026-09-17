@@ -396,14 +396,24 @@ export function downloadCsv(filename: string, csv: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-export function rowsToCsv(rows: MonitorRow[]): string {
+type CsvDevelopment = Pick<DigestHighlight, 'reference' | 'address' | 'description' | 'isResidential' | 'isCommercial' | 'dwellings' | 'stage'>
+
+/** The developments download: the same columns from the results list and a weekly summary. */
+export function developmentsCsv(items: CsvDevelopment[]): string {
   return toCsv([
-    ['Address', 'Authority', 'Reference', 'Use', 'Dwellings', 'Status', 'Received', 'Validated', 'Decided', 'Documents', 'Latitude', 'Longitude', 'Location', 'Link'],
-    ...rows.map((r) => [
-      r.address, r.authorityName, r.reference, KIND_LABELS[markerKind(r)], r.dwellings, stageLabel(r.stage),
-      r.dateReceived, r.dateValidated, r.dateDecided, r.matchedApplications, r.lat, r.lng,
-      isApproximateLocation(r.locationProvenance) ? 'approximate' : 'site', r.sourceUrl,
-    ]),
+    ['Planning ref', 'Address', 'Description', 'Use', 'Dwellings', 'Status'],
+    ...items.map((d) => {
+      // Reports stored before the use flags were kept have neither; leave the use blank.
+      const known = d.isResidential !== undefined || d.isCommercial !== undefined
+      return [
+        d.reference,
+        d.address,
+        d.description,
+        known ? KIND_LABELS[markerKind({ isResidential: Boolean(d.isResidential), isCommercial: Boolean(d.isCommercial) })] : '',
+        d.isResidential ? d.dwellings : null,
+        d.stage === undefined ? '' : stageLabel(d.stage),
+      ]
+    }),
   ])
 }
 

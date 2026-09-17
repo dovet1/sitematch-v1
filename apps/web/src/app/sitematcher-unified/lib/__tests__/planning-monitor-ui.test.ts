@@ -5,6 +5,7 @@ import {
   clusterCellSize,
   countsLabel,
   crossingEdges,
+  developmentsCsv,
   filterChips,
   groupByPosition,
   inCell,
@@ -157,6 +158,19 @@ describe('new this week', () => {
 describe('csv', () => {
   it('quotes cells and neutralises formulas', () => {
     expect(toCsv([['a"b', '=SUM(A1)', null, 3]])).toBe('"a""b","\'=SUM(A1)","","3"')
+  })
+
+  it('downloads only ref, address, description, use, dwellings and status', () => {
+    const lines = developmentsCsv([
+      row(),
+      row({ reference: '26/2', address: 'Retail Park', description: 'Drive-thru', isResidential: false, isCommercial: true, dwellings: 4, stage: 'pending' }),
+      { reference: '26/3', address: 'Old report', description: undefined, stage: undefined },
+    ]).split('\r\n')
+    expect(lines[0]).toBe('"Planning ref","Address","Description","Use","Dwellings","Status"')
+    expect(lines[1]).toBe('"26/1","Kirkstall Forge","Homes","Residential","320","Approved"')
+    // Dwellings only for residential schemes.
+    expect(lines[2]).toMatch(/^"26\/2","Retail Park","Drive-thru","Commercial","",/)
+    expect(lines[3]).toBe('"26/3","Old report","","","",""')
   })
 })
 

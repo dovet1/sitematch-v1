@@ -6,7 +6,7 @@ import { groupHighlights, highlightMeta, weekRangeLabel, type DigestGroup } from
 import type { DigestHighlight, DigestReport } from '@/lib/planning-monitor/types'
 import { selectPatch, usePlanningMonitorStore } from '../../../lib/stores/planning-monitor-store'
 import { useReport } from '../../../lib/hooks/usePlanningMonitor'
-import { USE_COLORS, downloadCsv, formatShortDate, milesLabel, toCsv } from '../../../lib/planning-monitor-ui'
+import { USE_COLORS, developmentsCsv, downloadCsv, formatShortDate, milesLabel } from '../../../lib/planning-monitor-ui'
 import { usePlanningMode } from './PlanningModeContext'
 import { markSummarySeen } from './PlanningHomePanel'
 import { Spinner, Toggle } from './PlanningUi'
@@ -83,15 +83,6 @@ function Group({ group, onOpen }: { group: DigestGroup; onOpen: (h: DigestHighli
       )}
     </section>
   )
-}
-
-function weekCsv(report: DigestReport): string {
-  return toCsv([
-    ['Group', 'Address', 'Authority', 'Reference', 'What happened', 'Dwellings', 'Status', 'Validated', 'Decided', 'Link'],
-    ...groupHighlights(report.highlights).flatMap((g) =>
-      g.items.map((h) => [g.label, h.address, h.authorityName, h.reference, h.headline, h.dwellings, h.stage, h.dateValidated, h.dateDecided, h.sourceUrl])
-    ),
-  ])
 }
 
 /**
@@ -356,7 +347,7 @@ export function PlanningWeeklySummary() {
           <button
             type="button"
             disabled={!report || report.highlights.length === 0}
-            onClick={() => report && downloadCsv(`${patch.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${report.periodStart.slice(0, 10)}.csv`, weekCsv(report))}
+            onClick={() => report && downloadCsv(`${patch.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${report.periodStart.slice(0, 10)}.csv`, developmentsCsv(report.highlights))}
             className="inline-flex items-center gap-1.5 rounded-sm-btn border border-[#EDEBE7] px-3.5 py-2 text-[13px] font-semibold text-sm-ink hover:bg-sm-bg disabled:opacity-40"
           >
             Export week <Download size={13} />

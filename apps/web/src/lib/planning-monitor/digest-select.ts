@@ -252,6 +252,7 @@ export function toHighlight(change: CategorisedChange): DigestHighlight {
     approximateLocation: isApproximateLocation(row.locationProvenance),
     categories: change.categories,
     rowKey: row.key,
+    description: row.description,
     isResidential: row.isResidential,
     isCommercial: row.isCommercial,
     dwellings: row.dwellings,
