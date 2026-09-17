@@ -221,7 +221,7 @@ export async function generateRun(run: RunRecord, db: PlanningAdminClient = crea
   const started = Date.now()
   const { data: revision, error: revisionError } = await db
     .from('planning_monitor_patch_revisions')
-    .select('id, revision, name, geometry, criteria, planning_monitor_patches!inner(owner_id, archived_at)')
+    .select('id, revision, name, geometry, criteria, planning_monitor_patches!planning_monitor_patch_revisions_patch_id_fkey!inner(owner_id, archived_at)')
     .eq('id', run.revision_id)
     .single()
   if (revisionError || !revision) throw revisionError ?? new Error('Revision not found')
@@ -375,7 +375,7 @@ export async function processRuns(workerId: string, limit: number, db: PlanningA
     try {
       outcomes.push(await generateRun(run, db))
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error'
+      const message = err instanceof Error ? err.message : (err as { message?: string } | null)?.message ?? 'Unknown error'
       console.error(`[planning-monitor] run ${run.id} failed`, err)
       const exhausted = run.attempts >= 3
       // The error may have come after the report committed (a dropped response from the finish

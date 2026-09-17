@@ -168,7 +168,7 @@ export async function processDeliveries(limit: number, db: PlanningAdminClient =
       outcomes.push({ id: delivery.id, state: 'sent' })
     } catch (err) {
       // Network failure: the provider may or may not have accepted it. Retry under the same key.
-      const message = err instanceof Error ? err.message : 'Unknown error'
+      const message = err instanceof Error ? err.message : (err as { message?: string } | null)?.message ?? 'Unknown error'
       await db.from('planning_monitor_deliveries').update({
         state: delivery.attempts >= MAX_ATTEMPTS ? 'failed' : 'ambiguous',
         last_error: message,
