@@ -4,7 +4,7 @@
 -- The national (no boundary) path must return exactly what the per-record probe returns.
 \set ON_ERROR_STOP 1
 -- Stores around the fixture records, including one just beyond an exact record's radius and one
--- that reaches a centroid record only through its 1,500 m allowance.
+-- that reached a centroid record only through its 1,500 m allowance (no longer a match since 20261018).
 INSERT INTO brands VALUES ('20000000-0000-0000-0000-000000000002','Lidl') ON CONFLICT DO NOTHING;
 INSERT INTO stores (brand_id, location) VALUES
   ('20000000-0000-0000-0000-000000000002','SRID=4326;POINT(-1.58 53.7945)'),
@@ -32,7 +32,7 @@ FROM (
          EXISTS (SELECT 1 FROM stores s WHERE s.brand_id = ANY (ARRAY(SELECT jsonb_array_elements_text(c.brands))::uuid[]) AND ST_DWithin(s.location, e.location, c.radius_m)) AS near
        FROM planning_monitor_eligible e
        WHERE EXISTS (SELECT 1 FROM stores s WHERE s.brand_id = ANY (ARRAY(SELECT jsonb_array_elements_text(c.brands))::uuid[])
-                     AND ST_DWithin(s.location, e.location, c.radius_m + planning_location_uncertainty_m(e.location_provenance)))
+                     AND ST_DWithin(s.location, e.location, c.radius_m))
      ) m) AS probe
   FROM prox_case c
 ) t;

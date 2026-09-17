@@ -33,9 +33,9 @@ export interface MonitorRow {
   lat: number
   locationProvenance: 'source_exact' | 'source_centroid' | 'postcode_centroid' | 'missing'
   locationUncertaintyM: number
-  /** False: shown because an approximate position may fall inside, not because it does. */
+  /** Always true for a patch match since 20261018: records match on their stored point alone. */
   inside: boolean
-  /** Straight-line proximity to the selected estate without the location allowance. Null when no estate is selected. */
+  /** Straight-line proximity of the stored point to the selected estate. Null when no estate is selected. */
   nearConfirmed: boolean | null
   dwellings: number | null
   dwellingsReviewed: boolean
@@ -54,7 +54,7 @@ export interface MonitorCluster {
   count: number
   residential: number
   commercial: number
-  /** Units shown because an approximate position may be inside the patch. */
+  /** Units whose point is outside the patch. Always 0 since 20261018; kept for the response shape. */
   possible: number
   /** Set when the cell holds exactly one unit. */
   single: { applicationId: string; key: string; exact: boolean } | null

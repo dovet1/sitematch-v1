@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { getClearbitLogoUrl } from '@/lib/clearbit-logo'
 import { useWorkspaceStore } from '../../lib/stores/unified-workspace-store'
+import { isApproximateLocation } from '@/lib/planning-intelligence/location-provenance'
 import { useDevelopmentHistory } from '../../lib/hooks/useDevelopmentHistory'
 import {
   describesDevelopment,
@@ -1313,23 +1314,19 @@ export function planningDwellingLabel(app: PlanningApplication): string | null {
   return null
 }
 
-/** True when the record is shown only because an approximate position might be inside. */
+/** True when the record's pin is an area centre rather than its site or postcode. */
 export function isApproximatelyLocated(app: PlanningApplication): boolean {
-  return app.insideBoundary === false || (app.locationUncertaintyM ?? 0) > 0
+  return isApproximateLocation(app.locationProvenance)
 }
 
 /**
- * The caption under the count, when some positions are not real site locations.
- *
- * Plota places many applications at the centre of their ward or parish, so the tab includes
- * them when that area could overlap the one drawn. That buys back real sites that exact
- * matching hid, at the cost of some records that turn out to be outside -- and the only
- * honest way to spend that is to say so where the count is read.
+ * The caption under the count, when some pins are not the site. Every listed pin is inside the
+ * area; the caption only says that for these the site itself may not be.
  */
 export function planningApproximateNote(applications: PlanningApplication[]): string | null {
   const approximate = applications.filter(isApproximatelyLocated).length
   if (approximate === 0) return null
-  return `${approximate} of these are placed by ward, parish or postcode centre rather than the site itself, so they may sit outside this area.`
+  return `${approximate} of these are placed at an area centre rather than the site itself.`
 }
 
 export function planningTruncationMessage(
@@ -1430,7 +1427,7 @@ function PlanningRow({
               caption under the count, because a single row is often read on its own. */}
           {isApproximatelyLocated(app) && (
             <span
-              title="Placed by ward, parish or postcode centre rather than the site itself"
+              title="Placed at an area centre rather than the site itself"
               className="rounded-full border border-sm-border bg-sm-bg px-2 py-[2px] font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3"
             >
               Approx
@@ -1632,7 +1629,7 @@ function PlanningDevelopmentRow({
             )}
             {approximate && (
               <span
-                title="Some applications are placed by ward, parish or postcode centre rather than the site itself"
+                title="Some applications are placed at an area centre rather than the site itself"
                 className="rounded-full border border-sm-border bg-sm-bg px-2 py-[2px] font-mono text-[9.5px] font-semibold uppercase tracking-wider text-sm-ink3"
               >
                 Approx

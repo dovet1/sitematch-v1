@@ -120,7 +120,7 @@ export function PlanningStackPicker({ map, stack }: { map: mapboxgl.Map; stack: 
 
       {(approximate || stack.more) && (
         <div className="border-t border-[#EDEBE7] bg-sm-bg px-[18px] py-2.5 text-[11.5px] leading-snug text-[#57534E]">
-          {approximate && <p className="text-[#B4531A]">Approximate location — these share a postcode or area centre, not necessarily one site.</p>}
+          {approximate && <p className="text-[#B4531A]">Approximate location — these share an area centre, not necessarily one site.</p>}
           {stack.more && <p className={approximate ? 'mt-1' : ''}>Showing the newest {items?.length}. Narrow the filters to see the rest.</p>}
         </div>
       )}

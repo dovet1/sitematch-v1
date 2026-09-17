@@ -65,19 +65,7 @@ export function usePlanningData(
         if (id !== reqId.current) return
         // The server already filters to the boundary; re-filter as a cheap
         // belt-and-braces guard so a pin can never render outside the outline.
-        //
-        // Except where the server deliberately admitted a point that is outside it.
-        // Roughly 43% of stored positions are a ward, parish or postcode centre rather
-        // than the site, so the stored path includes a record when that uncertainty
-        // overlaps the area. Those arrive with `insideBoundary` false, and this guard
-        // would otherwise strip precisely the records the inclusion rule exists to keep.
-        setApplications(
-          apps.filter(
-            (app) =>
-              app.insideBoundary === false ||
-              pointInGeometry(app.lng, app.lat, boundary)
-          )
-        )
+        setApplications(apps.filter((app) => pointInGeometry(app.lng, app.lat, boundary)))
         setTruncated(wasTruncated)
         setTruncationReason(truncationReason)
         setFreshness(dataFreshness)

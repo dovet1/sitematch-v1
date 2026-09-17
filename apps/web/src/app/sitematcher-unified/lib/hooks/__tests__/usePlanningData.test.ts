@@ -61,19 +61,18 @@ describe('usePlanningData', () => {
     expect(result.current.loading).toBe(true)
   })
 
-  // Roughly 43% of stored positions are a ward, parish or postcode centre rather than the
-  // site, so the stored path admits a record when that uncertainty overlaps the area. Those
-  // arrive flagged, and the client's own boundary guard must not strip them back out.
-  it('keeps a record the server admitted on overlap, though its point is outside', async () => {
+  // Records match on their pin alone, so nothing outside the drawn area is ever shown,
+  // whatever the server says about it.
+  it('drops a record whose point is outside the area', async () => {
     fetchMock.mockResolvedValue({
-      applications: [{ ...app('APPROX/1', 5, 5), insideBoundary: false }],
+      applications: [app('IN/1', 0.5, 0.5), { ...app('OUT/1', 5, 5), insideBoundary: false }],
       truncated: false,
       truncationReason: null,
       freshness: null,
     })
     const { result } = renderHook(() => usePlanningData(boundary, true))
     await waitFor(() => expect(result.current.loading).toBe(false))
-    expect(result.current.applications.map((a) => a.name)).toEqual(['APPROX/1'])
+    expect(result.current.applications.map((a) => a.name)).toEqual(['IN/1'])
   })
 
   it('propagates freshness so the tab can qualify what it shows', async () => {

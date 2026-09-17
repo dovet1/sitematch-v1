@@ -83,7 +83,8 @@ describe('labels', () => {
 
   it('describes approximate locations in words', () => {
     expect(locationNote(row())).toBeNull()
-    expect(locationNote(row({ locationProvenance: 'source_centroid', inside: false }))).toMatch(/may be in this area/)
+    expect(locationNote(row({ locationProvenance: 'postcode_centroid' }))).toBeNull()
+    expect(locationNote(row({ locationProvenance: 'source_centroid' }))).toBe('Approximate location (area centre)')
   })
 
   it('shows only the time frame when nothing narrows the default', () => {
@@ -193,7 +194,7 @@ describe('stacked pins', () => {
   })
 
   it('keys and describes both kinds of item', () => {
-    const r = row({ key: 'dev-1', locationProvenance: 'postcode_centroid' })
+    const r = row({ key: 'dev-1', locationProvenance: 'source_centroid' })
     expect(stackItemKey({ type: 'row', row: r })).toBe('dev-1')
     expect(stackItemView({ type: 'row', row: r })).toMatchObject({ title: 'Kirkstall Forge', description: 'Homes', kind: 'residential', approximate: true })
 

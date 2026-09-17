@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type mapboxgl from 'mapbox-gl'
 import { ArrowLeft, ArrowUpRight, Eye, X } from 'lucide-react'
 import type { MonitorRow } from '@/lib/planning-monitor/types'
+import { isApproximateLocation } from '@/lib/planning-intelligence/location-provenance'
 import type { PlanningApplication } from '../../../types/unified-workspace'
 import { useDevelopmentHistory } from '../../../lib/hooks/useDevelopmentHistory'
 import { selectActiveCriteria, usePlanningMonitorStore } from '../../../lib/stores/planning-monitor-store'
@@ -274,9 +275,8 @@ export function PlanningDevelopmentCard({ map, row }: { map: mapboxgl.Map; row: 
         </dl>
         {criteria.proximity && (
           <p className="mt-3.5 rounded-[10px] bg-[#FDEEE3] px-3 py-2.5 text-[12.5px] leading-[1.45] text-[#7A3B12]">
-            {row.nearConfirmed && row.locationProvenance === 'source_exact'
-              ? <>Within <strong>{milesLabel(criteria.proximity.radiusMeters)}</strong> of {brands.length ? brands.join(', ') : 'a chosen brand'} — inside your brand filter.</>
-              : <>Approximate location — may be within {milesLabel(criteria.proximity.radiusMeters)} of {brands.length ? brands.join(', ') : 'a chosen brand'}.</>}
+            Within <strong>{milesLabel(criteria.proximity.radiusMeters)}</strong> of {brands.length ? brands.join(', ') : 'a chosen brand'}
+            {isApproximateLocation(row.locationProvenance) ? ', measured from the area centre rather than the site.' : ' — inside your brand filter.'}
           </p>
         )}
         {note && !criteria.proximity && <p className="mt-3 text-[12px] font-medium text-[#B4531A]">{note}</p>}

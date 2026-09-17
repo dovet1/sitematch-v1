@@ -1,6 +1,7 @@
 import { MAP_STYLES } from '@/lib/sitesketcher-v2/constants'
 import { MIN_RESIDENTIAL_DWELLINGS, defaultCriteria, type DatePreset, type MonitorCriteria } from '@/lib/planning-monitor/criteria'
 import type { BBox, DigestHighlight, MonitorRow, MonitorTotals } from '@/lib/planning-monitor/types'
+import { isApproximateLocation } from '@/lib/planning-intelligence/location-provenance'
 import type { PlanningApplication, RefBrand } from '../types/unified-workspace'
 
 /** Presentation rules for Planning mode, kept pure so they can be tested without a map or DOM. */
@@ -223,10 +224,8 @@ export function isNewRow(row: Pick<MonitorRow, 'dateValidated' | 'dateReceived'>
 }
 
 /** Why a location is shown, in words: never colour alone. */
-export function locationNote(row: Pick<MonitorRow, 'locationProvenance' | 'inside'>): string | null {
-  if (row.locationProvenance === 'source_exact') return null
-  const what = row.locationProvenance === 'postcode_centroid' ? 'postcode centre' : 'area centre'
-  return row.inside ? `Approximate location (${what})` : `Approximate location (${what}) — may be in this area`
+export function locationNote(row: Pick<MonitorRow, 'locationProvenance'>): string | null {
+  return isApproximateLocation(row.locationProvenance) ? 'Approximate location (area centre)' : null
 }
 
 /** The existing planning detail modal's shape. Rows never carry applicant or agent details. */
@@ -346,7 +345,7 @@ export function stackItemView(item: StackItem): StackItemView {
       description: row.description.trim(),
       meta: rowMeta(row),
       kind: markerKind(row),
-      approximate: row.locationProvenance !== 'source_exact',
+      approximate: isApproximateLocation(row.locationProvenance),
     }
   }
   const h = item.highlight
@@ -403,7 +402,7 @@ export function rowsToCsv(rows: MonitorRow[]): string {
     ...rows.map((r) => [
       r.address, r.authorityName, r.reference, KIND_LABELS[markerKind(r)], r.dwellings, stageLabel(r.stage),
       r.dateReceived, r.dateValidated, r.dateDecided, r.matchedApplications, r.lat, r.lng,
-      r.locationProvenance === 'source_exact' ? 'exact' : 'approximate', r.sourceUrl,
+      isApproximateLocation(r.locationProvenance) ? 'approximate' : 'site', r.sourceUrl,
     ]),
   ])
 }

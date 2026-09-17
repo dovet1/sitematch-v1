@@ -81,16 +81,17 @@ describe('approximate locations', () => {
     expect(isApproximatelyLocated(application())).toBe(false)
   })
 
-  it('treats a ward or postcode centre as approximate', () => {
+  it('treats an area centre as approximate', () => {
     expect(isApproximatelyLocated(application({
       locationProvenance: 'source_centroid', locationUncertaintyM: 1500,
     }))).toBe(true)
   })
 
-  // A record admitted only because its uncertainty overlapped the area is approximate
-  // whatever its radius says.
-  it('treats a record shown on overlap alone as approximate', () => {
-    expect(isApproximatelyLocated(application({ insideBoundary: false }))).toBe(true)
+  // A postcode centre is within a street or two, so it is shown as the site.
+  it('treats a postcode centre as the site', () => {
+    expect(isApproximatelyLocated(application({
+      locationProvenance: 'postcode_centroid', locationUncertaintyM: 200,
+    }))).toBe(false)
   })
 
   it('says nothing when every position is a real site', () => {
@@ -101,10 +102,12 @@ describe('approximate locations', () => {
     const note = planningApproximateNote([
       application(),
       application({ locationProvenance: 'source_centroid', locationUncertaintyM: 1500 }),
-      application({ insideBoundary: false }),
+      application({ locationProvenance: 'source_centroid', locationUncertaintyM: 1500 }),
+      application({ locationProvenance: 'postcode_centroid', locationUncertaintyM: 200 }),
     ])
     expect(note).toContain('2 of these')
-    expect(note).toContain('may sit outside this area')
+    expect(note).toContain('area centre')
+    expect(note).not.toContain('outside')
   })
 })
 

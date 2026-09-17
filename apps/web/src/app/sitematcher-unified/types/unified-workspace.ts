@@ -178,9 +178,8 @@ export interface PlanningApplication {
   /** Assumed positional error in metres. Zero when the provider states an exact site. */
   locationUncertaintyM?: number | null
   /**
-   * Whether the stored point itself falls inside the drawn area. False means the record is
-   * shown because an approximate position might be inside, so no distance may be quoted
-   * from it and the count it contributes to is "may be in this area".
+   * Whether the stored point itself falls inside the drawn area. Always true from the stored
+   * path since 20261018, which matches on the point alone; kept for the response shape.
    */
   insideBoundary?: boolean
   /** The classifier's judgement, or a reviewer's correction of it. */

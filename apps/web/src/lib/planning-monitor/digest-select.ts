@@ -1,4 +1,5 @@
 import { restatesExistingConsent } from '@/lib/planning-intelligence/linking'
+import { isApproximateLocation } from '@/lib/planning-intelligence/location-provenance'
 import type { DigestHighlight, DigestReport, MonitorRow } from './types'
 
 /**
@@ -183,8 +184,8 @@ export function countChanges(changes: CategorisedChange[]): NonNullable<DigestRe
     newResidential: newOnes.filter((c) => c.row.isResidential).length,
     newResidentialDwellings: [...proposedByDevelopment.values()].reduce((sum, n) => sum + n, 0),
     newCommercial: newOnes.filter((c) => c.row.isCommercial).length,
-    // Only confirmed straight-line matches; approximate points never count as near.
-    newNearStores: newOnes.filter((c) => c.row.nearConfirmed === true && c.row.locationProvenance === 'source_exact').length,
+    // Area-centre points never count as near: the distance is from the centre, not the site.
+    newNearStores: newOnes.filter((c) => c.row.nearConfirmed === true && !isApproximateLocation(c.row.locationProvenance)).length,
   }
 }
 
@@ -248,7 +249,7 @@ export function toHighlight(change: CategorisedChange): DigestHighlight {
     address: row.address,
     headline: `${CATEGORY_WORDS[lead]} · ${typeLabel(row)}`,
     sourceUrl: row.sourceUrl,
-    approximateLocation: row.locationProvenance !== 'source_exact',
+    approximateLocation: isApproximateLocation(row.locationProvenance),
     categories: change.categories,
     rowKey: row.key,
     isResidential: row.isResidential,
@@ -259,7 +260,7 @@ export function toHighlight(change: CategorisedChange): DigestHighlight {
     dateValidated: row.dateValidated,
     dateDecided: row.dateDecided,
     matchedApplications: row.matchedApplications,
-    nearConfirmed: row.locationProvenance === 'source_exact' ? row.nearConfirmed : null,
+    nearConfirmed: isApproximateLocation(row.locationProvenance) ? null : row.nearConfirmed,
     lng: row.lng,
     lat: row.lat,
   }
@@ -309,9 +310,9 @@ export function evidencePacket(ranked: CategorisedChange[]): { items: EvidenceIt
       knownDwellings: row.dwellings,
       dwellingCountReviewedByPerson: row.dwellingsReviewed,
       familyAwaitingOriginal: row.familyState === 'awaiting_original',
-      approximateLocation: row.locationProvenance !== 'source_exact',
-      // Only a confirmed straight-line match; approximate points never get a proximity claim.
-      nearSelectedStores: row.locationProvenance === 'source_exact' ? row.nearConfirmed : null,
+      approximateLocation: isApproximateLocation(row.locationProvenance),
+      // Area-centre points never get a proximity claim.
+      nearSelectedStores: isApproximateLocation(row.locationProvenance) ? null : row.nearConfirmed,
       watched: change.watched,
       sourceUrl: row.sourceUrl,
     }
